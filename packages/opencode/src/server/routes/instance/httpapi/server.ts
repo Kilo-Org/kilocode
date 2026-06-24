@@ -23,6 +23,7 @@ import { Ripgrep } from "@/file/ripgrep"
 import { Format } from "@/format"
 import { Git } from "@/git" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { StackService } from "@/kilocode/stack/service" // kilocode_change
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
@@ -240,6 +241,7 @@ export function createRoutes(
       Storage.defaultLayer, // kilocode_change
       SyncEvent.defaultLayer,
       EventV2Bridge.defaultLayer,
+      StackService.defaultLayer, // kilocode_change
       Skill.defaultLayer,
       Todo.defaultLayer,
       ToolRegistry.defaultLayer,

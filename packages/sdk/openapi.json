@@ -5713,6 +5713,9 @@
                     "required": ["id", "providerID"],
                     "additionalProperties": false
                   },
+                  "metadata": {
+                    "type": "object"
+                  },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
                   },
@@ -6039,6 +6042,9 @@
                 "properties": {
                   "title": {
                     "type": "string"
+                  },
+                  "metadata": {
+                    "type": "object"
                   },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
@@ -10708,11 +10714,14 @@
             }
           },
           "400": {
-            "description": "BadRequest | InvalidRequestError",
+            "description": "WorkspaceCreateError | BadRequest | InvalidRequestError",
             "content": {
               "application/json": {
                 "schema": {
                   "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkspaceCreateError"
+                    },
                     {
                       "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
                     },
@@ -16228,6 +16237,327 @@
         ]
       }
     },
+    "/kilocode/stack/catalog": {
+      "get": {
+        "tags": ["stack"],
+        "operationId": "stack.catalog",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stack catalog and Marketplace availability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackCatalogResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "StackMarketplaceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackMarketplaceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get the built-in Stack taxonomy joined with current Marketplace resource availability.",
+        "summary": "Get Stack catalog",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.stack.catalog({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/stack": {
+      "get": {
+        "tags": ["stack"],
+        "operationId": "stack.get",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current project Stack state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "StackInvalidConfigError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/StackInvalidConfigError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "StackMarketplaceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackMarketplaceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get persisted Stack selections, managed resources, drift, and current revisions.",
+        "summary": "Get Stack state",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.stack.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/stack/preview": {
+      "post": {
+        "tags": ["stack"],
+        "operationId": "stack.preview",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deterministic Stack review plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "StackInvalidConfigError | StackInvalidDraftError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/StackInvalidConfigError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/StackInvalidDraftError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Validate Stack selections and return a deterministic plan without writing project state.",
+        "summary": "Preview Stack changes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StackPreviewInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.stack.preview({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/stack/apply": {
+      "post": {
+        "tags": ["stack"],
+        "operationId": "stack.apply",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Applied Stack results and refreshed state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackApplyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "StackInvalidConfigError | StackInvalidDraftError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/StackInvalidConfigError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/StackInvalidDraftError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "StackStalePlanError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackStalePlanError"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "StackMissingResourceError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackMissingResourceError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "StackApplyError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackApplyError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "StackMarketplaceUnavailableError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackMarketplaceUnavailableError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Apply a matching reviewed Stack plan transactionally and return refreshed project state.",
+        "summary": "Apply Stack changes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StackApplyInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.stack.apply({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/telemetry/capture": {
       "post": {
         "tags": ["telemetry"],
@@ -16403,20 +16733,32 @@
             "required": true
           },
           {
-            "name": "directory",
             "in": "query",
+            "name": "directory",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
           },
           {
-            "name": "workspace",
             "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticket",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -16730,6 +17072,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventPluginAdded"
           },
           {
             "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -17869,7 +18214,7 @@
           },
           "pid": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "minimum": 0
           },
           "sessionID": {
             "anyOf": [
@@ -19145,6 +19490,9 @@
           "version": {
             "type": "string"
           },
+          "metadata": {
+            "type": "object"
+          },
           "time": {
             "type": "object",
             "properties": {
@@ -19500,6 +19848,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventPluginAdded"
               },
               {
                 "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -20175,7 +20526,20 @@
                     "enum": [false]
                   }
                 ],
-                "description": "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout."
+                "description": "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout."
+              },
+              "headerTimeout": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "boolean",
+                    "enum": [false]
+                  }
+                ],
+                "description": "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout."
               },
               "chunkTimeout": {
                 "type": "integer",
@@ -20324,7 +20688,6 @@
                       }
                     }
                   },
-                  "required": ["input", "output"],
                   "additionalProperties": false
                 },
                 "experimental": {
@@ -20648,6 +21011,90 @@
           },
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
+          },
+          "stack": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "number",
+                "enum": [1]
+              },
+              "catalog_revision": {
+                "type": "string"
+              },
+              "verticals": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["technologies"],
+                  "additionalProperties": false
+                }
+              },
+              "resources": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                }
+              },
+              "managed": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "marketplace_id": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "digest": {
+                      "type": "string"
+                    },
+                    "fingerprint": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["marketplace_id", "version", "digest", "fingerprint"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["version", "catalog_revision", "verticals", "resources", "managed"],
+            "additionalProperties": false
           },
           "console": {
             "type": "object",
@@ -21017,6 +21464,12 @@
               "mcp_timeout": {
                 "type": "integer",
                 "exclusiveMinimum": 0
+              },
+              "policies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ConfigV2ExperimentalPolicy"
+                }
               }
             },
             "additionalProperties": false
@@ -21691,6 +22144,9 @@
           },
           "version": {
             "type": "string"
+          },
+          "metadata": {
+            "type": "object"
           },
           "time": {
             "type": "object",
@@ -23041,6 +23497,27 @@
         "required": ["id", "type", "name", "projectID", "timeUsed"],
         "additionalProperties": false
       },
+      "WorkspaceCreateError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["WorkspaceCreateError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "WorkspaceWarpError": {
         "type": "object",
         "properties": {
@@ -23661,6 +24138,1877 @@
         "required": ["ok", "id"],
         "additionalProperties": false
       },
+      "Objects_": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "technologies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": ["technology"],
+              "additionalProperties": false
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Objects_"
+            }
+          }
+        },
+        "required": ["id", "name", "technologies", "categories"],
+        "additionalProperties": false
+      },
+      "StackCatalogResponse": {
+        "type": "object",
+        "properties": {
+          "catalog": {
+            "type": "object",
+            "properties": {
+              "revision": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}\\.\\d+$"
+              },
+              "verticals": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "resources": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "ref": {
+                                  "type": "string",
+                                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                                },
+                                "default": {
+                                  "type": "boolean"
+                                },
+                                "trust": {
+                                  "type": "string",
+                                  "enum": ["official", "provider", "community"]
+                                },
+                                "maturity": {
+                                  "type": "string",
+                                  "enum": ["stable", "preview", "beta", "experimental", "alpha", "unsupported"]
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "pattern": "^https:\\/\\/[^\\s]+$"
+                                },
+                                "rationale": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "warnings": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "parameters": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "pattern": "^[a-z0-9]+(?:[_-][a-z0-9]+)*$"
+                                          },
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "required": {
+                                            "type": "boolean"
+                                          },
+                                          "sensitive": {
+                                            "type": "boolean",
+                                            "enum": [false]
+                                          },
+                                          "description": {
+                                            "type": "string"
+                                          },
+                                          "default": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["id", "label", "required", "sensitive"],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "pattern": "^[a-z0-9]+(?:[_-][a-z0-9]+)*$"
+                                          },
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "required": {
+                                            "type": "boolean"
+                                          },
+                                          "sensitive": {
+                                            "type": "boolean",
+                                            "enum": [true]
+                                          },
+                                          "env": {
+                                            "type": "string",
+                                            "pattern": "^[A-Z][A-Z0-9_]*$"
+                                          },
+                                          "description": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["id", "label", "required", "sensitive", "env"],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": ["ref", "default", "trust", "maturity", "source", "rationale", "warnings"],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": ["id", "name", "resources"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Objects_"
+                      }
+                    }
+                  },
+                  "required": ["id", "name", "technologies", "categories"],
+                  "additionalProperties": false
+                }
+              },
+              "resources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ref": {
+                      "type": "string",
+                      "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": ["skill", "mcp"]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "trust": {
+                      "type": "string",
+                      "enum": ["official", "provider", "community"]
+                    },
+                    "maturity": {
+                      "type": "string",
+                      "enum": ["stable", "preview", "beta", "experimental", "alpha", "unsupported"]
+                    },
+                    "source": {
+                      "type": "string",
+                      "pattern": "^https:\\/\\/[^\\s]+$"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9]+(?:[_-][a-z0-9]+)*$"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "required": {
+                                "type": "boolean"
+                              },
+                              "sensitive": {
+                                "type": "boolean",
+                                "enum": [false]
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "default": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["id", "label", "required", "sensitive"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9]+(?:[_-][a-z0-9]+)*$"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "required": {
+                                "type": "boolean"
+                              },
+                              "sensitive": {
+                                "type": "boolean",
+                                "enum": [true]
+                              },
+                              "env": {
+                                "type": "string",
+                                "pattern": "^[A-Z][A-Z0-9_]*$"
+                              },
+                              "description": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["id", "label", "required", "sensitive", "env"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["ref", "id", "kind", "name", "trust", "maturity", "source", "warnings"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["revision", "verticals", "resources"],
+            "additionalProperties": false
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resource": {
+                  "type": "object",
+                  "properties": {
+                    "ref": {
+                      "type": "string",
+                      "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": ["skill", "mcp"]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "trust": {
+                      "type": "string",
+                      "enum": ["official", "provider", "community"]
+                    },
+                    "maturity": {
+                      "type": "string",
+                      "enum": ["stable", "preview", "beta", "experimental", "alpha", "unsupported"]
+                    },
+                    "source": {
+                      "type": "string",
+                      "pattern": "^https:\\/\\/[^\\s]+$"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9]+(?:[_-][a-z0-9]+)*$"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "required": {
+                                "type": "boolean"
+                              },
+                              "sensitive": {
+                                "type": "boolean",
+                                "enum": [false]
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "default": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["id", "label", "required", "sensitive"],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9]+(?:[_-][a-z0-9]+)*$"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "required": {
+                                "type": "boolean"
+                              },
+                              "sensitive": {
+                                "type": "boolean",
+                                "enum": [true]
+                              },
+                              "env": {
+                                "type": "string",
+                                "pattern": "^[A-Z][A-Z0-9_]*$"
+                              },
+                              "description": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["id", "label", "required", "sensitive", "env"],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["ref", "id", "kind", "name", "trust", "maturity", "source", "warnings"],
+                  "additionalProperties": false
+                },
+                "availability": {
+                  "type": "string",
+                  "enum": ["available", "missing", "blocked"]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "item": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                        },
+                        "version": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+                        },
+                        "source_revision": {
+                          "type": "string",
+                          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 8192
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 8192
+                        },
+                        "publisher": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 8192
+                            },
+                            "trust": {
+                              "type": "string",
+                              "enum": ["first-party", "verified", "community", "unverified"]
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["id", "name", "trust"],
+                          "additionalProperties": false
+                        },
+                        "maturity": {
+                          "type": "string",
+                          "enum": ["stable", "preview", "experimental", "unsupported"]
+                        },
+                        "support": {
+                          "type": "string",
+                          "enum": ["kilo", "publisher", "community", "unsupported"]
+                        },
+                        "source_url": {
+                          "type": "string"
+                        },
+                        "installability": {
+                          "type": "object",
+                          "properties": {
+                            "installable": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 8192
+                            }
+                          },
+                          "required": ["installable"],
+                          "additionalProperties": false
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          }
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": ["skill"]
+                        },
+                        "artifact": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string"
+                            },
+                            "digest": {
+                              "type": "string",
+                              "pattern": "^sha256:[0-9a-f]{64}$"
+                            },
+                            "size": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 20971520
+                            },
+                            "format": {
+                              "type": "string",
+                              "enum": ["tar.gz"]
+                            }
+                          },
+                          "required": ["url", "digest", "size", "format"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "source_revision",
+                        "name",
+                        "description",
+                        "publisher",
+                        "maturity",
+                        "support",
+                        "source_url",
+                        "installability",
+                        "tags",
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                        },
+                        "version": {
+                          "type": "string",
+                          "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+                        },
+                        "source_revision": {
+                          "type": "string",
+                          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 8192
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 8192
+                        },
+                        "publisher": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 8192
+                            },
+                            "trust": {
+                              "type": "string",
+                              "enum": ["first-party", "verified", "community", "unverified"]
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["id", "name", "trust"],
+                          "additionalProperties": false
+                        },
+                        "maturity": {
+                          "type": "string",
+                          "enum": ["stable", "preview", "experimental", "unsupported"]
+                        },
+                        "support": {
+                          "type": "string",
+                          "enum": ["kilo", "publisher", "community", "unsupported"]
+                        },
+                        "source_url": {
+                          "type": "string"
+                        },
+                        "installability": {
+                          "type": "object",
+                          "properties": {
+                            "installable": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 8192
+                            }
+                          },
+                          "required": ["installable"],
+                          "additionalProperties": false
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                          }
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": ["mcp"]
+                        },
+                        "methods": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 8192
+                              },
+                              "template": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": ["local"]
+                                      },
+                                      "command": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 8192
+                                        }
+                                      },
+                                      "environment": {
+                                        "type": "object",
+                                        "patternProperties": {
+                                          "^[A-Z_][A-Z0-9_]*$": {
+                                            "type": "string",
+                                            "allOf": [
+                                              {
+                                                "minLength": 1
+                                              },
+                                              {
+                                                "maxLength": 8192
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      },
+                                      "enabled": {
+                                        "type": "boolean",
+                                        "enum": [false]
+                                      },
+                                      "timeout": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0
+                                      }
+                                    },
+                                    "required": ["type", "command", "enabled"],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "enum": ["remote"]
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 8192
+                                      },
+                                      "headers": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 8192
+                                        }
+                                      },
+                                      "oauth": {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "clientId": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 8192
+                                              },
+                                              "clientSecret": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 8192
+                                              },
+                                              "scope": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 8192
+                                              },
+                                              "callbackPort": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 65535
+                                              },
+                                              "redirectUri": {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 8192
+                                              }
+                                            },
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "boolean",
+                                            "enum": [false]
+                                          }
+                                        ]
+                                      },
+                                      "enabled": {
+                                        "type": "boolean",
+                                        "enum": [false]
+                                      },
+                                      "timeout": {
+                                        "type": "integer",
+                                        "exclusiveMinimum": 0
+                                      }
+                                    },
+                                    "required": ["type", "url", "enabled"],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "parameters": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "pattern": "^[a-z][a-z0-9_]*$"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 8192
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 8192
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "enum": ["string", "path", "url", "integer", "boolean"]
+                                    },
+                                    "required": {
+                                      "type": "boolean"
+                                    },
+                                    "sensitive": {
+                                      "type": "boolean"
+                                    },
+                                    "environment": {
+                                      "type": "string",
+                                      "pattern": "^[A-Z_][A-Z0-9_]*$"
+                                    },
+                                    "default": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        }
+                                      ]
+                                    },
+                                    "allowed_values": {
+                                      "type": "array",
+                                      "minItems": 1,
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": ["id", "name", "type", "required", "sensitive"],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "prerequisites": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 8192
+                                }
+                              },
+                              "platforms": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": {
+                                  "type": "string",
+                                  "enum": ["darwin", "linux", "win32"]
+                                }
+                              },
+                              "auth": {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": ["none", "environment", "oauth"]
+                                  },
+                                  "environment": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^[A-Z_][A-Z0-9_]*$"
+                                    }
+                                  }
+                                },
+                                "required": ["mode"],
+                                "additionalProperties": false
+                              },
+                              "warnings": {
+                                "type": "object",
+                                "properties": {
+                                  "writes": {
+                                    "type": "boolean"
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 8192
+                                  }
+                                },
+                                "required": ["writes"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "template",
+                              "parameters",
+                              "prerequisites",
+                              "platforms",
+                              "auth",
+                              "warnings"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "source_revision",
+                        "name",
+                        "description",
+                        "publisher",
+                        "maturity",
+                        "support",
+                        "source_url",
+                        "installability",
+                        "tags",
+                        "kind",
+                        "methods"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": ["resource", "availability"],
+              "additionalProperties": false
+            }
+          },
+          "expected_resources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        },
+        "required": ["catalog", "resources", "expected_resources"],
+        "additionalProperties": false
+      },
+      "StackMarketplaceUnavailableError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["marketplace_unavailable"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "StackStateResponse": {
+        "type": "object",
+        "properties": {
+          "config": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "number",
+                "enum": [1]
+              },
+              "catalog_revision": {
+                "type": "string"
+              },
+              "verticals": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["technologies"],
+                  "additionalProperties": false
+                }
+              },
+              "resources": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                }
+              },
+              "managed": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "marketplace_id": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "digest": {
+                      "type": "string"
+                    },
+                    "fingerprint": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["marketplace_id", "version", "digest", "fingerprint"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["version", "catalog_revision", "verticals", "resources", "managed"],
+            "additionalProperties": false
+          },
+          "draft": {
+            "type": "object",
+            "properties": {
+              "verticals": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["technologies"],
+                  "additionalProperties": false
+                }
+              },
+              "resources": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["verticals", "resources"],
+            "additionalProperties": false
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resource": {
+                  "type": "string",
+                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "managed": {
+                  "type": "boolean"
+                },
+                "inherited": {
+                  "type": "boolean"
+                },
+                "drift": {
+                  "type": "string",
+                  "enum": ["none", "missing", "modified", "desired"]
+                }
+              },
+              "required": ["resource", "enabled", "managed", "inherited", "drift"],
+              "additionalProperties": false
+            }
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "invalid_draft",
+                    "invalid_config",
+                    "stale_plan",
+                    "missing_marketplace_resource",
+                    "marketplace_unavailable",
+                    "apply_failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "resource": {
+                  "type": "string",
+                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "install",
+                    "remove",
+                    "keep",
+                    "already_available_unmanaged",
+                    "relinquish_modified",
+                    "missing",
+                    "blocked"
+                  ]
+                }
+              },
+              "required": ["code", "message"],
+              "additionalProperties": false
+            }
+          },
+          "config_revision": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "catalog_revision": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}\\.\\d+$"
+          }
+        },
+        "required": ["draft", "resources", "conflicts", "config_revision", "catalog_revision"],
+        "additionalProperties": false
+      },
+      "StackInvalidConfigError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["invalid_config"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "StackPreviewInput": {
+        "type": "object",
+        "properties": {
+          "draft": {
+            "type": "object",
+            "properties": {
+              "verticals": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["technologies"],
+                  "additionalProperties": false
+                }
+              },
+              "resources": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["verticals", "resources"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["draft"],
+        "additionalProperties": false
+      },
+      "StackPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "draft": {
+            "type": "object",
+            "properties": {
+              "verticals": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["technologies"],
+                  "additionalProperties": false
+                }
+              },
+              "resources": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["verticals", "resources"],
+            "additionalProperties": false
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "install",
+                    "remove",
+                    "keep",
+                    "already_available_unmanaged",
+                    "relinquish_modified",
+                    "missing",
+                    "blocked"
+                  ]
+                },
+                "resource": {
+                  "type": "string",
+                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "technologies": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  }
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "prerequisites": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["action", "resource", "technologies", "reason", "warnings", "prerequisites"],
+              "additionalProperties": false
+            }
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "invalid_draft",
+                    "invalid_config",
+                    "stale_plan",
+                    "missing_marketplace_resource",
+                    "marketplace_unavailable",
+                    "apply_failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "resource": {
+                  "type": "string",
+                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "install",
+                    "remove",
+                    "keep",
+                    "already_available_unmanaged",
+                    "relinquish_modified",
+                    "missing",
+                    "blocked"
+                  ]
+                }
+              },
+              "required": ["code", "message"],
+              "additionalProperties": false
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "config_revision": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "catalog_revision": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}\\.\\d+$"
+          },
+          "plan_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "draft",
+          "actions",
+          "conflicts",
+          "warnings",
+          "prerequisites",
+          "config_revision",
+          "catalog_revision",
+          "plan_hash"
+        ],
+        "additionalProperties": false
+      },
+      "StackInvalidDraftError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["invalid_draft"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "StackApplyInput": {
+        "type": "object",
+        "properties": {
+          "draft": {
+            "type": "object",
+            "properties": {
+              "verticals": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "technologies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["technologies"],
+                  "additionalProperties": false
+                }
+              },
+              "resources": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "method": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["enabled"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["verticals", "resources"],
+            "additionalProperties": false
+          },
+          "plan_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": ["draft", "plan_hash"],
+        "additionalProperties": false
+      },
+      "StackApplyResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resource": {
+                  "type": "string",
+                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "install",
+                    "remove",
+                    "keep",
+                    "already_available_unmanaged",
+                    "relinquish_modified",
+                    "missing",
+                    "blocked"
+                  ]
+                },
+                "success": {
+                  "type": "boolean"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["resource", "action", "success", "message"],
+              "additionalProperties": false
+            }
+          },
+          "state": {
+            "type": "object",
+            "properties": {
+              "config": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "number",
+                    "enum": [1]
+                  },
+                  "catalog_revision": {
+                    "type": "string"
+                  },
+                  "verticals": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "technologies": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": ["technologies"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "resources": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "method": {
+                          "type": "string"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "required": ["enabled"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "managed": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "marketplace_id": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        },
+                        "digest": {
+                          "type": "string"
+                        },
+                        "fingerprint": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["marketplace_id", "version", "digest", "fingerprint"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": ["version", "catalog_revision", "verticals", "resources", "managed"],
+                "additionalProperties": false
+              },
+              "draft": {
+                "type": "object",
+                "properties": {
+                  "verticals": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "technologies": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": ["technologies"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "resources": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "method": {
+                          "type": "string"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "required": ["enabled"],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": ["verticals", "resources"],
+                "additionalProperties": false
+              },
+              "resources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "resource": {
+                      "type": "string",
+                      "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "managed": {
+                      "type": "boolean"
+                    },
+                    "inherited": {
+                      "type": "boolean"
+                    },
+                    "drift": {
+                      "type": "string",
+                      "enum": ["none", "missing", "modified", "desired"]
+                    }
+                  },
+                  "required": ["resource", "enabled", "managed", "inherited", "drift"],
+                  "additionalProperties": false
+                }
+              },
+              "conflicts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_draft",
+                        "invalid_config",
+                        "stale_plan",
+                        "missing_marketplace_resource",
+                        "marketplace_unavailable",
+                        "apply_failed"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "resource": {
+                      "type": "string",
+                      "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "install",
+                        "remove",
+                        "keep",
+                        "already_available_unmanaged",
+                        "relinquish_modified",
+                        "missing",
+                        "blocked"
+                      ]
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "additionalProperties": false
+                }
+              },
+              "config_revision": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "catalog_revision": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}\\.\\d+$"
+              }
+            },
+            "required": ["draft", "resources", "conflicts", "config_revision", "catalog_revision"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["results", "state"],
+        "additionalProperties": false
+      },
+      "StackStalePlanError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["stale_plan"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "StackMissingResourceError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["missing_marketplace_resource"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+            }
+          }
+        },
+        "required": ["code", "message", "resources"],
+        "additionalProperties": false
+      },
+      "StackApplyError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["apply_failed"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "rollback": {
+            "type": "boolean"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resource": {
+                  "type": "string",
+                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "install",
+                    "remove",
+                    "keep",
+                    "already_available_unmanaged",
+                    "relinquish_modified",
+                    "missing",
+                    "blocked"
+                  ]
+                },
+                "success": {
+                  "type": "boolean"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["resource", "action", "success", "message"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["code", "message", "rollback", "results"],
+        "additionalProperties": false
+      },
       "effect_HttpApiError_Forbidden": {
         "type": "object",
         "properties": {
@@ -24125,6 +26473,16 @@
                       }
                     ]
                   },
+                  "metadata": {
+                    "anyOf": [
+                      {
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "time": {
                     "type": "object",
                     "properties": {
@@ -24348,7 +26706,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -24580,7 +26938,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -27141,7 +29499,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -27404,7 +29762,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -28220,6 +30578,30 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventPluginAdded": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["plugin.added"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "ModelV2Info": {
         "type": "object",
         "properties": {
@@ -28737,6 +31119,27 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "PolicyEffect": {
+        "type": "string",
+        "enum": ["allow", "deny"]
+      },
+      "ConfigV2ExperimentalPolicy": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["provider.use"]
+          },
+          "effect": {
+            "$ref": "#/components/schemas/PolicyEffect"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": ["action", "effect", "resource"],
+        "additionalProperties": false
+      },
       "SessionInfo": {
         "type": "object",
         "properties": {
@@ -28774,7 +31177,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "cost": {
@@ -28902,7 +31305,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           }
         },
@@ -29281,7 +31684,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "content": {
@@ -30130,6 +32533,10 @@
     {
       "name": "suggestion",
       "description": "Kilo suggestion routes."
+    },
+    {
+      "name": "stack",
+      "description": "Project Stack selection routes."
     },
     {
       "name": "telemetry",

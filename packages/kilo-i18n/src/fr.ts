@@ -1,4 +1,7 @@
+import { stackFallback } from "./en"
+
 export const dict = {
+  ...stackFallback,
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.line1":
     "Kilo Gateway vous donne accès à une sélection de modèles fiables et optimisés pour les agents de codage.",

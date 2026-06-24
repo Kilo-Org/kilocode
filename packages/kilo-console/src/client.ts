@@ -23,6 +23,16 @@ import type {
   ProviderListResponse,
   Session as KiloSession,
   SessionStatus,
+  StackApplyError,
+  StackApplyError2,
+  StackApplyResponse,
+  StackCatalogError,
+  StackCatalogResponse,
+  StackGetError,
+  StackPreviewError,
+  StackPreviewInput,
+  StackPreviewResponse,
+  StackStateResponse,
   ToolIdsResponse,
   ToolListResponse,
   TuiConfigGetResponse,
@@ -32,6 +42,10 @@ import type {
   WorktreeDiffItem,
   WorktreeListResponse,
 } from "@kilocode/sdk/v2/client"
+import type { StackBundle } from "./routes/config/stack/types"
+
+type StackDraft = StackPreviewInput["draft"]
+type StackApiError = StackCatalogError | StackGetError | StackPreviewError | StackApplyError2
 
 export type Scope = "global" | "project"
 
@@ -111,9 +125,9 @@ export type AgentPayload = {
   prompt: string
 }
 
-type Result<T> = {
+type Result<T, E = unknown> = {
   data: T | undefined
-  error?: unknown
+  error?: E
 }
 
 type Hit = {
@@ -762,4 +776,104 @@ export async function saveAgent(input: Query, payload: AgentPayload): Promise<Ag
     prompt: payload.prompt,
   })
   return demand("Save agent", result)
+}
+
+export class StackRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly code?: string,
+    readonly detail?: StackApiError,
+    options?: ErrorOptions,
+  ) {
+    super(message, options)
+    this.name = "StackRequestError"
+  }
+}
+
+function stackError(input: unknown): StackApiError | undefined {
+  if (!input || typeof input !== "object") return undefined
+  if (
+    "code" in input &&
+    [
+      "invalid_config",
+      "invalid_draft",
+      "stale_plan",
+      "missing_marketplace_resource",
+      "apply_failed",
+      "marketplace_unavailable",
+    ].includes(String(input.code))
+  )
+    return input as StackApiError
+  if ("_tag" in input && input._tag === "InvalidRequestError") return input as StackApiError
+  return undefined
+}
+
+function stackCode(input: StackApiError) {
+  if ("code" in input && typeof input.code === "string") return input.code
+  if ("_tag" in input && typeof input._tag === "string") return input._tag
+  return undefined
+}
+
+function stackMessage(label: string, input: StackApiError | undefined, fallback: unknown) {
+  if (input && "message" in input && typeof input.message === "string") return input.message
+  if (fallback === undefined) return `${label}: empty response`
+  return `${label}: ${message(fallback)}`
+}
+
+function stackDemand<T, E>(label: string, result: Result<T, E> & { response?: Response }) {
+  if (!result.error && result.data !== undefined) return result.data
+  const detail = stackError(result.error)
+  throw new StackRequestError(
+    stackMessage(label, detail, result.error),
+    result.response?.status,
+    detail ? stackCode(detail) : undefined,
+    detail,
+    { cause: result.error },
+  )
+}
+
+export function stackApplyFailure(input: unknown): StackApplyError | undefined {
+  if (!(input instanceof StackRequestError)) return undefined
+  const detail = input.detail
+  if (!detail || !("code" in detail) || detail.code !== "apply_failed") return undefined
+  return detail
+}
+
+export async function loadStack(input: Query, signal?: AbortSignal): Promise<StackBundle> {
+  const sdk = client(input)
+  const [catalog, state] = await Promise.all([
+    sdk.stack.catalog(undefined, { signal }),
+    sdk.stack.get(undefined, { signal }),
+  ])
+  return {
+    catalog: stackDemand<StackCatalogResponse, StackCatalogError>("Stack catalog", catalog),
+    state: stackDemand<StackStateResponse, StackGetError>("Stack state", state),
+  }
+}
+
+export async function loadStackState(input: Query, signal?: AbortSignal): Promise<StackStateResponse> {
+  const result = await client(input).stack.get(undefined, { signal })
+  return stackDemand("Stack state", result)
+}
+
+export async function previewStack(
+  input: Query,
+  draft: StackDraft,
+  signal?: AbortSignal,
+): Promise<StackPreviewResponse> {
+  const sdk = client(input)
+  const result = await sdk.stack.preview({ stackPreviewInput: { draft } }, { signal })
+  return stackDemand("Preview Stack", result)
+}
+
+export async function applyStack(
+  input: Query,
+  draft: StackDraft,
+  hash: string,
+  signal?: AbortSignal,
+): Promise<StackApplyResponse> {
+  const sdk = client(input)
+  const result = await sdk.stack.apply({ stackApplyInput: { draft, plan_hash: hash } }, { signal })
+  return stackDemand("Apply Stack", result)
 }

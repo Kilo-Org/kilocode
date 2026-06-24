@@ -59,6 +59,7 @@ import { DataMigration } from "@/data-migration"
 import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { StackService } from "@/kilocode/stack/service" // kilocode_change
 
 const CoreLayer = Layer.mergeAll(
   Npm.defaultLayer,
@@ -122,6 +123,7 @@ const FeatureLayer = Layer.mergeAll(
   SyncEvent.defaultLayer,
   EventV2Bridge.defaultLayer,
   DataMigration.defaultLayer,
+  StackService.defaultLayer, // kilocode_change
 )
 
 export const AppLayer = Layer.mergeAll(CoreLayer, SessionLayer, FeatureLayer).pipe(

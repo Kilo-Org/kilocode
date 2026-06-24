@@ -212,6 +212,9 @@ async function main() {
   // Build Marketplace webview (SolidJS, standalone catalog panel)
   const marketplaceCtx = await createBrowserWebviewContext("webview-ui/marketplace/index.tsx", "dist/marketplace.js")
 
+  // Build Stack Builder webview (SolidJS, standalone project panel)
+  const stackCtx = await createBrowserWebviewContext("webview-ui/stack/index.tsx", "dist/stack.js")
+
   // Build Diff Viewer webview (SolidJS, reuses Agent Manager diff components)
   const diffViewerCtx = await createBrowserWebviewContext("webview-ui/diff-viewer/index.tsx", "dist/diff-viewer.js")
 
@@ -233,6 +236,7 @@ async function main() {
       diffVirtualCtx.watch(),
       kiloClawCtx.watch(),
       marketplaceCtx.watch(),
+      stackCtx.watch(),
       shikiWorkerCtx.watch(),
     ])
   } else {
@@ -242,6 +246,7 @@ async function main() {
       agentManagerCtx.rebuild(),
       kiloClawCtx.rebuild(),
       marketplaceCtx.rebuild(),
+      stackCtx.rebuild(),
       diffViewerCtx.rebuild(),
       diffVirtualCtx.rebuild(),
       shikiWorkerCtx.rebuild(),
@@ -254,6 +259,7 @@ async function main() {
       diffVirtualCtx.dispose(),
       kiloClawCtx.dispose(),
       marketplaceCtx.dispose(),
+      stackCtx.dispose(),
       shikiWorkerCtx.dispose(),
     ])
   }

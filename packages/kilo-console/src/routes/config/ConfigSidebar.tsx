@@ -1,7 +1,7 @@
 import { A, useLocation, useParams } from "@solidjs/router"
 import { createMemo, For } from "solid-js"
 import { Icon } from "@kilocode/kilo-web-ui/icon"
-import { configNav, type ConfigGroup, type ConfigNode } from "./sections"
+import { configNavigation, type ConfigGroup, type ConfigNode } from "./sections"
 import { friendly } from "../../shared/utils"
 import { settings, strip } from "../../shared/navigation"
 import { useConfig } from "../../context/config"
@@ -32,7 +32,7 @@ export function ConfigSidebar() {
   const href = (path: string) => `${path === "/" ? base() : `${base()}${path}`}${loc.search}`
   const current = (path: string) => path === active() || (path !== "/" && active().startsWith(`${path}/`))
   const group = (item: ConfigNode): item is ConfigGroup => "items" in item
-  const navigation = createMemo(() => configNav.filter((item) => !project() || !group(item) || !item.globalOnly))
+  const navigation = createMemo(() => configNavigation(project() ? "project" : "global"))
 
   return (
     <aside class="config-sidebar" aria-label="Configuration sections">

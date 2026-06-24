@@ -17,6 +17,7 @@
     "agent-manager/**/*",
     "kiloclaw/**/*",
     "marketplace/**/*",
+    "stack/**/*",
     "diff-viewer/**/*",
     "diff-virtual/**/*"
   ]

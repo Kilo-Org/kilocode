@@ -46,6 +46,8 @@ import type {
   MigrationStateMessage,
 } from "./migration"
 
+export type StackExtensionMessage = import("../stack").StackExtensionMessage
+
 // ============================================
 // Messages FROM extension TO webview
 // ============================================
@@ -960,6 +962,7 @@ export interface RemoteStatusMessage {
 }
 
 export type ExtensionMessage =
+  | StackExtensionMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage

@@ -1,0 +1,847 @@
+.kilo-console .stack-wizard {
+  --stack-accent: var(--text-interactive-base);
+  --stack-rail-width: 13rem;
+  display: grid;
+  grid-template-columns: var(--stack-rail-width) minmax(0, 1fr);
+  gap: 1rem;
+  min-height: calc(100vh - var(--app-header-height) - clamp(2rem, 4.8vw, 4rem));
+}
+
+.kilo-console .stack-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kilo-console .stack-content {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.kilo-console .stack-rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  padding: 1.25rem 0.75rem;
+}
+
+.kilo-console .stack-rail-section {
+  display: grid;
+  grid-template-columns: 1.2rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.kilo-console .stack-rail-index {
+  padding-top: 0.1rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.62rem;
+}
+
+.kilo-console .stack-rail-label,
+.kilo-console .stack-rail-heading {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.kilo-console .stack-rail-label {
+  display: inline-block;
+  padding: 0.1rem 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kilo-console .stack-rail-label:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.kilo-console .stack-rail-label.active,
+.kilo-console .stack-rail-heading.active {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.kilo-console .stack-rail-nav {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0.35rem 0 0 0.35rem;
+}
+
+.kilo-console .stack-rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kilo-console .stack-rail-item:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.kilo-console .stack-rail-item span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .stack-rail-item span:last-child {
+  color: var(--muted-foreground);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.62rem;
+}
+
+.kilo-console .stack-rail-item.active {
+  background: color-mix(in oklab, var(--surface-brand-base) 13%, transparent);
+  box-shadow: inset 2px 0 0 var(--stack-accent);
+  color: var(--foreground);
+}
+
+.kilo-console .stack-rail-item.active span:last-child {
+  color: var(--text-interactive-base);
+}
+
+.kilo-console .stack-progress {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  padding: 0.75rem 1rem;
+}
+
+.kilo-console .stack-progress [data-component="progress"] {
+  width: 100%;
+}
+
+.kilo-console .stack-progress ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kilo-console .stack-progress li {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+}
+
+.kilo-console .stack-progress li > [data-component="tag"] {
+  flex: 0 0 1.25rem;
+  width: 1.25rem;
+  padding: 0;
+}
+
+.kilo-console .stack-progress li.active,
+.kilo-console .stack-progress li.complete {
+  color: var(--foreground);
+}
+
+.kilo-console .stack-progress li.active > [data-component="tag"],
+.kilo-console .stack-progress li.complete > [data-component="tag"] {
+  border-color: var(--stack-accent);
+  background: color-mix(in srgb, var(--surface-brand-base) 24%, var(--background-base));
+  color: var(--text-interactive-base);
+}
+
+.kilo-console .stack-step {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  padding: 1.25rem;
+}
+
+.kilo-console .stack-step-heading {
+  max-width: 42rem;
+}
+
+.kilo-console .stack-category-heading {
+  max-width: none;
+}
+
+.kilo-console .stack-category-heading > div {
+  max-width: 42rem;
+}
+
+.kilo-console .stack-category-heading > [data-slot="config-tag"] {
+  margin-left: auto;
+}
+
+.kilo-console .stack-step-heading h2,
+.kilo-console .stack-resource-group h3,
+.kilo-console .stack-review-group h3,
+.kilo-console .stack-resource-kind h4,
+.kilo-console .stack-subcategory {
+  margin: 0;
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.kilo-console .stack-step-heading h2 {
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.kilo-console .stack-subcategory {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.kilo-console [data-stack-focus]:focus {
+  outline: none;
+}
+
+.kilo-console .stack-step-heading p:not(.eyebrow),
+.kilo-console .stack-resource-group header p,
+.kilo-console .stack-review-group header p,
+.kilo-console .stack-empty-card p {
+  margin: 0.4rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.kilo-console .stack-step .eyebrow {
+  margin-bottom: 0.55rem !important;
+  font-size: 0.62rem !important;
+}
+
+.kilo-console .stack-category-heading,
+.kilo-console .stack-resource-group > header,
+.kilo-console .stack-review-group > header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.kilo-console .stack-category-heading > div,
+.kilo-console .stack-resource-group > header > div,
+.kilo-console .stack-review-group > header > div {
+  min-width: 0;
+}
+
+.kilo-console .stack-verticals,
+.kilo-console .stack-technologies {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  align-content: start;
+}
+
+.kilo-console .stack-vertical-card,
+.kilo-console .stack-technology-card {
+  display: grid;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--background-base) 72%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.9rem;
+  text-align: left;
+}
+
+.kilo-console .stack-vertical-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 6rem;
+}
+
+.kilo-console .stack-vertical-card:hover:not(:disabled),
+.kilo-console .stack-technology-card:hover,
+.kilo-console .stack-vertical-card.selected,
+.kilo-console .stack-technology-card.selected {
+  border-color: var(--border-focus);
+  background: color-mix(in srgb, var(--surface-brand-base) 13%, var(--background-base));
+}
+
+.kilo-console .stack-vertical-card:focus-visible,
+.kilo-console .stack-technology-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--border-focus) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.kilo-console .stack-vertical-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.kilo-console .stack-vertical-mark {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--border-focus) 55%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-brand-base) 20%, var(--background-base));
+  color: var(--text-interactive-base);
+  font-family: var(--font-family-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.kilo-console .stack-vertical-copy,
+.kilo-console .stack-technology-copy {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.kilo-console .stack-vertical-copy strong,
+.kilo-console .stack-technology-card strong,
+.kilo-console .stack-empty-card strong {
+  color: var(--foreground);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.kilo-console .stack-vertical-copy small,
+.kilo-console .stack-technology-card small,
+.kilo-console .stack-parameter small,
+.kilo-console .stack-secret-field small,
+.kilo-console .stack-mcp-config label > small {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.kilo-console .stack-revision,
+.kilo-console .stack-optional {
+  align-self: end;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.67rem;
+}
+
+.kilo-console .stack-drift,
+.kilo-console .stack-review-notice,
+.kilo-console .stack-error,
+.kilo-console .stack-stale,
+.kilo-console .stack-busy {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+}
+
+.kilo-console .stack-drift p,
+.kilo-console .stack-error p,
+.kilo-console .stack-stale p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+}
+
+.kilo-console .stack-drift ul,
+.kilo-console .stack-review-notice ul,
+.kilo-console .stack-error ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+}
+
+.kilo-console .stack-announcements:empty {
+  display: none;
+}
+
+.kilo-console .stack-technologies {
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+
+.kilo-console .stack-technology-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 4.75rem;
+}
+
+.kilo-console .stack-technology-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--background-base) 82%, white);
+}
+
+.kilo-console .stack-technology-icon img {
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
+}
+
+.kilo-console .stack-check {
+  display: grid;
+  width: 1.15rem;
+  height: 1.15rem;
+  place-items: center;
+  justify-self: end;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  background: var(--input-base);
+}
+
+.kilo-console .stack-technology-card.selected .stack-check {
+  border-color: var(--stack-accent);
+  background: var(--stack-accent);
+}
+
+.kilo-console .stack-technology-card.selected .stack-check::after {
+  width: 0.42rem;
+  height: 0.2rem;
+  border-bottom: 1.5px solid var(--background-base);
+  border-left: 1.5px solid var(--background-base);
+  content: "";
+  transform: translateY(-0.06rem) rotate(-45deg);
+}
+
+.kilo-console .stack-empty,
+.kilo-console .stack-review-empty {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.kilo-console .stack-resource-groups,
+.kilo-console .stack-review-groups {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.kilo-console .stack-resource-group,
+.kilo-console .stack-review-group {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--background-base) 55%, transparent);
+  padding: 0.85rem;
+}
+
+.kilo-console .stack-resource-group h3,
+.kilo-console .stack-review-group h3 {
+  font-size: 0.85rem;
+}
+
+.kilo-console .stack-resource-kind {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.kilo-console .stack-resource-kind h4 {
+  color: var(--muted-foreground);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kilo-console .stack-resource-list,
+.kilo-console .stack-action-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kilo-console .stack-resource-card,
+.kilo-console .stack-action-card {
+  display: grid;
+  gap: 0.6rem;
+  border-color: var(--border);
+  background: var(--card);
+  padding: 0.75rem;
+}
+
+.kilo-console .stack-resource-card.selected {
+  border-color: color-mix(in srgb, var(--border-focus) 70%, var(--border));
+  box-shadow: inset 2px 0 var(--stack-accent);
+}
+
+.kilo-console .stack-resource-main,
+.kilo-console .stack-action-main {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.kilo-console .stack-resource-main [data-component="checkbox"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kilo-console .stack-resource-tags {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.kilo-console .stack-resource-rationale,
+.kilo-console .stack-mcp-note,
+.kilo-console .stack-action-card > p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.kilo-console .stack-mcp-config {
+  display: grid;
+  gap: 0.65rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.7rem;
+}
+
+.kilo-console .stack-mcp-config > label,
+.kilo-console .stack-parameter,
+.kilo-console .stack-secret-field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.kilo-console .stack-mcp-config label > span,
+.kilo-console .stack-parameter > span,
+.kilo-console .stack-secret-field > span {
+  color: var(--foreground);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.kilo-console .stack-mcp-config select,
+.kilo-console .stack-parameter input,
+.kilo-console .stack-parameter select {
+  min-height: 2.2rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  font-size: 0.72rem;
+}
+
+.kilo-console .stack-method-details {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-brand-base) 7%, transparent);
+  padding: 0.65rem;
+}
+
+.kilo-console .stack-method-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.kilo-console .stack-method-meta > div,
+.kilo-console .stack-method-warning {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.kilo-console .stack-method-meta span,
+.kilo-console .stack-method-warning strong,
+.kilo-console .stack-prerequisites > strong {
+  color: var(--muted-foreground);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.kilo-console .stack-method-meta strong {
+  color: var(--foreground);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.kilo-console .stack-method-warning {
+  border-left: 2px solid var(--status-error-base, var(--border-critical-base));
+  padding-left: 0.55rem;
+}
+
+.kilo-console .stack-method-warning p {
+  margin: 0;
+  color: var(--status-error-base, var(--text-critical-base));
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.kilo-console .stack-parameters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.kilo-console .stack-secret-field {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface-brand-base) 7%, transparent);
+  padding: 0.65rem;
+}
+
+.kilo-console .stack-secret-field code,
+.kilo-console .stack-action-main code,
+.kilo-console .stack-result-row code {
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+  font-family: var(--font-family-mono);
+  font-size: 0.66rem;
+}
+
+.kilo-console .stack-field-error,
+.kilo-console .stack-resource-warnings,
+.kilo-console .stack-action-followup {
+  color: var(--status-error-base, var(--text-critical-base)) !important;
+}
+
+.kilo-console .stack-parameter.invalid input,
+.kilo-console .stack-mcp-config label.invalid select {
+  border-color: var(--status-error-base, var(--border-critical-base));
+}
+
+.kilo-console .stack-prerequisites {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+}
+
+.kilo-console .stack-prerequisites ul,
+.kilo-console .stack-resource-warnings {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.kilo-console .stack-source {
+  width: fit-content;
+  color: var(--text-interactive-base);
+  font-size: 0.68rem;
+  text-decoration: none;
+}
+
+.kilo-console .stack-source:hover {
+  text-decoration: underline;
+}
+
+.kilo-console .stack-review-group.blocked {
+  border-color: color-mix(in srgb, var(--status-error-base, #d55) 55%, var(--border));
+}
+
+.kilo-console .stack-action-main > div:first-child,
+.kilo-console .stack-result-row > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.kilo-console .stack-action-main strong,
+.kilo-console .stack-result-row strong {
+  color: var(--foreground);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.kilo-console .stack-action-tech {
+  color: var(--text-weak) !important;
+}
+
+.kilo-console .stack-plan-hash {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background-base);
+  padding: 0.7rem;
+}
+
+.kilo-console .stack-plan-hash span {
+  color: var(--muted-foreground);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kilo-console .stack-plan-hash code {
+  overflow-wrap: anywhere;
+  color: var(--foreground);
+  font-family: var(--font-family-mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.kilo-console .stack-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: auto;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: color-mix(in srgb, var(--background-base) 92%, transparent);
+  padding: 0.65rem 1.25rem;
+  backdrop-filter: blur(12px);
+}
+
+.kilo-console .stack-footer > div {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.kilo-console .stack-result {
+  align-content: start;
+  justify-items: start;
+}
+
+.kilo-console .stack-result-mark {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid var(--status-success-base);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-success-base) 14%, transparent);
+  color: var(--status-success-base);
+  font-family: var(--font-family-mono);
+  font-size: 0.7rem;
+}
+
+.kilo-console .stack-result-list {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.kilo-console .stack-result-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background-base);
+  padding: 0.65rem;
+}
+
+.kilo-console .stack-result-row small {
+  color: var(--muted-foreground);
+  font-size: 0.67rem;
+}
+
+@media (max-width: 720px) {
+  .kilo-console .stack-wizard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .kilo-console .stack-rail {
+    flex-direction: row;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .kilo-console .stack-rail-section {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+  }
+
+  .kilo-console .stack-rail-nav {
+    flex-direction: row;
+    margin: 0 0 0 0.35rem;
+  }
+
+  .kilo-console .stack-progress ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kilo-console .stack-step {
+    padding: 0.9rem;
+  }
+
+  .kilo-console .stack-verticals,
+  .kilo-console .stack-technologies,
+  .kilo-console .stack-method-meta,
+  .kilo-console .stack-parameters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kilo-console .stack-vertical-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .kilo-console .stack-vertical-card [data-component="tag"] {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .kilo-console .stack-resource-main,
+  .kilo-console .stack-action-main,
+  .kilo-console .stack-category-heading,
+  .kilo-console .stack-resource-group > header,
+  .kilo-console .stack-review-group > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kilo-console .stack-resource-tags {
+    justify-content: flex-start;
+  }
+
+  .kilo-console .stack-footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .kilo-console .stack-footer > div,
+  .kilo-console .stack-footer [data-component="button"] {
+    flex: 1 1 auto;
+  }
+}

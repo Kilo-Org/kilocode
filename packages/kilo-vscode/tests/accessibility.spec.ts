@@ -13,6 +13,12 @@ const STORIES = [
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
   { id: "marketplace--skills-tab-empty", name: "Marketplace / skills empty state" },
   { id: "marketplace--agents-tab-empty", name: "Marketplace / agents empty state" },
+  { id: "stackbuilder--category-selection", name: "Stack Builder / category selection" },
+  { id: "stackbuilder--resource-configuration", name: "Stack Builder / resource configuration" },
+  { id: "stackbuilder--install-remove-review", name: "Stack Builder / blocked review" },
+  { id: "stackbuilder--catalog-not-ready", name: "Stack Builder / partial Marketplace coverage" },
+  { id: "stackbuilder--project-required", name: "Stack Builder / project required" },
+  { id: "stackbuilder--failed-result", name: "Stack Builder / failed result" },
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
 ]
 
@@ -121,6 +127,70 @@ test.describe("webview accessibility ratchet", () => {
     })
     await page.keyboard.press("Enter")
     await expect(login).toHaveAttribute("data-keyboard-activated", "true")
+  })
+
+  test("Stack Builder exposes labeled checkboxes and keyboard category navigation", async ({ page }) => {
+    await open(page, "stackbuilder--category-selection")
+
+    const heading = page.getByRole("heading", { name: "Orchestration" })
+    await expect(heading).toBeFocused()
+    await expect(page.getByRole("checkbox", { name: /Apache Airflow/ })).toBeVisible()
+
+    const transformation = page.getByRole("button", { name: /Transformation/ })
+    await transformation.focus()
+    await expect(transformation).toBeFocused()
+    await page.keyboard.press("Enter")
+    await expect(page.getByRole("heading", { name: "Transformation" })).toBeVisible()
+    await expect(page.getByRole("checkbox", { name: /dbt/ })).toBeVisible()
+  })
+
+  test("Stack Builder restores heading focus after step navigation", async ({ page }) => {
+    await open(page, "stackbuilder--category-selection")
+
+    const next = page.getByRole("button", { name: "Next" })
+    await next.click()
+    await next.click()
+    await expect(page.getByRole("heading", { name: "Choose Skills and MCP servers" })).toBeFocused()
+  })
+
+  test("Stack Builder continues with partial Marketplace coverage", async ({ page }) => {
+    await open(page, "stackbuilder--catalog-not-ready")
+
+    await expect(page.getByRole("status")).toContainText("You can continue with available resources")
+    const start = page.getByRole("button", { name: "Start" })
+    await expect(start).toBeEnabled()
+    await start.click()
+
+    const next = page.getByRole("button", { name: "Next" })
+    await next.click()
+    await next.click()
+
+    const unavailable = page.getByRole("checkbox", { name: /Airflow MCP/ })
+    await expect(unavailable).toBeChecked()
+    await expect(unavailable).toBeEnabled()
+    await unavailable.focus()
+    await page.keyboard.press("Space")
+    await expect(unavailable).not.toBeChecked()
+    await expect(page.getByRole("button", { name: "Review plan" })).toBeEnabled()
+  })
+
+  test("Stack Builder announces progress without opening a confirmation dialog", async ({ page }) => {
+    await open(page, "stackbuilder--exact-plan-ready")
+
+    await page.getByRole("button", { name: "Confirm exact plan" }).click()
+    const progress = page.getByRole("status")
+    await expect(progress).toContainText("Applying the reviewed plan transactionally")
+    await expect(page.locator("main.stack-content")).toHaveAttribute("aria-busy", "true")
+    await expect(page.getByRole("dialog")).toHaveCount(0)
+  })
+
+  test("Stack Builder announces blocked and failed actions", async ({ page }) => {
+    await open(page, "stackbuilder--install-remove-review")
+    await expect(page.getByRole("button", { name: "Confirm exact plan" })).toBeDisabled()
+    await expect(page.getByRole("alert").filter({ hasText: "Airflow MCP" }).first()).toBeVisible()
+
+    await open(page, "stackbuilder--failed-result")
+    await expect(page.getByRole("alert").filter({ hasText: "dbt Analytics Engineering" })).toBeVisible()
   })
 
   test("Agent Manager sidebar search filters and selects with the keyboard", async ({ page }) => {

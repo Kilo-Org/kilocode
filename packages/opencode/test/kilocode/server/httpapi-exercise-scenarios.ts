@@ -1,9 +1,73 @@
-import { Effect } from "effect"
+import { createHash } from "node:crypto"
+import { Effect, Schema } from "effect"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
+import { LegacyMarketplace } from "../../../src/kilocode/marketplace/legacy"
+import { Planner } from "../../../src/kilocode/stack/planner"
+import { Stack } from "../../../src/kilocode/stack/schema"
+import { StackStore } from "../../../src/kilocode/stack/store"
+import { builtin } from "../../../src/kilocode/stack/catalog"
 import { array, check, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
+import { skillArchive } from "../marketplace/fixture"
+
+const endpoint = "https://api.kilo.ai/api/marketplace"
+const release = "https://api.github.com/repos/Kilo-Org/kilo-marketplace/releases/tags/skills-latest"
+const skill = "dbt-analytics-engineering"
+const artifact =
+  "https://github.com/Kilo-Org/kilo-marketplace/releases/download/skills-latest/dbt-analytics-engineering.tar.gz"
+const bytes = skillArchive(skill)
+const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`
+const skills = `items:
+  - id: dbt-analytics-engineering
+    description: A fixture dbt Skill
+    category: data
+    githubUrl: https://github.com/Kilo-Org/kilo-marketplace/tree/main/skills/dbt-analytics-engineering
+    rawUrl: https://raw.githubusercontent.com/Kilo-Org/kilo-marketplace/main/skills/dbt-analytics-engineering/SKILL.md
+    content: ${artifact}
+`
+const mcps = "items: []\n"
+const encoder = new TextEncoder()
+const asset = { url: artifact, digest, size: bytes.byteLength }
+const market = Effect.runSync(
+  LegacyMarketplace.decode({
+    skills: encoder.encode(skills),
+    mcps: encoder.encode(mcps),
+    assets: new Map([[artifact, asset]]),
+  }),
+)
+const native = globalThis.fetch
+globalThis.fetch = Object.assign((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+  const url = typeof input === "string" || input instanceof URL ? input.toString() : input.url
+  if (url === `${endpoint}/skills`) {
+    return Promise.resolve(new Response(skills, { headers: { "content-type": "text/yaml" } }))
+  }
+  if (url === `${endpoint}/mcps`) {
+    return Promise.resolve(new Response(mcps, { headers: { "content-type": "text/yaml" } }))
+  }
+  if (url === release) {
+    return Promise.resolve(
+      new Response(
+        JSON.stringify({ assets: [{ browser_download_url: artifact, size: bytes.byteLength, digest }] }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    )
+  }
+  if (url === artifact) {
+    return Promise.resolve(
+      new Response(bytes, {
+        headers: { "content-type": "application/gzip", "content-length": String(bytes.byteLength) },
+      }),
+    )
+  }
+  return native(input, init)
+}, globalThis.fetch)
+
+const draft = Schema.decodeUnknownSync(Stack.Draft)({
+  verticals: { data: { technologies: ["dbt"] } },
+  resources: {},
+})
 
 function directory(ctx: ScenarioContext) {
   if (!ctx.directory) throw new Error("scenario needs a project directory")
@@ -16,6 +80,24 @@ function file(ctx: ScenarioContext, name: string, content: string) {
     await mkdir(path.dirname(target), { recursive: true })
     await Bun.write(target, content)
     return target
+  })
+}
+
+function platform(): Planner.Platform {
+  if (process.platform === "darwin") return "darwin"
+  if (process.platform === "win32") return "win32"
+  return "linux"
+}
+
+function plan() {
+  return Planner.plan({
+    catalog: builtin,
+    marketplace: market,
+    draft,
+    inventory: { project: {}, inherited: [] },
+    receipts: {},
+    config_revision: StackStore.revision(undefined),
+    platform: platform(),
   })
 }
 
@@ -131,6 +213,64 @@ export const kiloScenarios: Scenario[] = [
   http.protected.get("/indexing/status", "indexing.status").json(200, object),
   http.protected.get("/indexing/models", "indexing.models").json(200, object),
   http.protected.get("/indexing/warnings", "indexing.warnings").json(200, array),
+  http.protected.get("/kilocode/stack/catalog", "stack.catalog").json(200, (body) => {
+    object(body)
+    object(body.catalog)
+    array(body.resources)
+    array(body.expected_resources)
+    check(body.expected_resources.includes("skill:dbt-analytics-engineering"), "Stack catalog should list dbt Skill")
+  }),
+  http.protected.get("/kilocode/stack", "stack.get").json(200, (body) => {
+    object(body)
+    object(body.draft)
+    array(body.resources)
+    check(typeof body.config_revision === "string", "Stack state should include config revision")
+    check(body.catalog_revision === "2026-06-23.1", "Stack state should include catalog revision")
+  }),
+  http.protected
+    .post("/kilocode/stack/preview", "stack.preview")
+    .at((ctx) => ({ path: "/kilocode/stack/preview", headers: ctx.headers(), body: { draft } }))
+    .json(200, (body) => {
+      object(body)
+      array(body.actions)
+      check(typeof body.plan_hash === "string", "Stack preview should include plan hash")
+      check(
+        body.actions.some((entry) => {
+          object(entry)
+          return entry.resource === "skill:dbt-analytics-engineering" && entry.action === "install"
+        }),
+        "Stack preview should plan dbt Skill installation",
+      )
+    }),
+  http.protected
+    .post("/kilocode/stack/apply", "stack.apply")
+    .mutating()
+    .seeded(() => Effect.sync(() => plan().plan_hash))
+    .at((ctx) => ({
+      path: "/kilocode/stack/apply",
+      headers: ctx.headers(),
+      body: { draft, plan_hash: ctx.state },
+    }))
+    .jsonEffect(200, (body, ctx) =>
+      Effect.gen(function* () {
+        object(body)
+        array(body.results)
+        object(body.state)
+        check(
+          body.results.every((entry) => typeof entry === "object" && entry !== null && "success" in entry),
+          "Stack apply should return result records",
+        )
+        check(
+          body.results.every((entry) => {
+            object(entry)
+            return entry.success === true
+          }),
+          "Stack apply should succeed",
+        )
+        const target = path.join(directory(ctx), ".kilo", "skills", skill, "SKILL.md")
+        check(yield* Effect.promise(() => Bun.file(target).exists()), "Stack apply should install the dbt Skill")
+      }),
+    ),
   http.protected.get("/kilo/profile", "kilo.profile").probe({ path: "/path" }).status(401),
   http.protected.get("/kilo/auth-status", "kilo.authStatus").json(200, (body) => {
     object(body)

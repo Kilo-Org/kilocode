@@ -15,6 +15,7 @@ import { ProvidersRoute } from "./ProvidersRoute"
 import { ServersRoute } from "./ServersRoute"
 import { SourcesRoute } from "./SourcesRoute"
 import { ToolsRoute } from "./ToolsRoute"
+import { StackRoute } from "./StackRoute"
 
 export type ConfigSection = {
   path: string
@@ -22,12 +23,15 @@ export type ConfigSection = {
   icon: IconProps["name"]
   label: string
   component: Component
+  globalOnly?: boolean
+  projectOnly?: boolean
 }
 
 export type ConfigGroup = {
   id: string
   label: string
   globalOnly?: boolean
+  projectOnly?: boolean
   items: ConfigSection[]
 }
 
@@ -70,6 +74,20 @@ export const configNav: ConfigNode[] = [
     id: "general",
     label: "General",
     items: [{ path: "/", href: "/settings", icon: "home", label: "Overview", component: OverviewRoute }],
+  },
+  {
+    id: "project",
+    label: "Project",
+    projectOnly: true,
+    items: [
+      {
+        path: "/stack",
+        href: "/settings/stack",
+        icon: "circuit-board",
+        label: "Stack",
+        component: StackRoute,
+      },
+    ],
   },
   providers,
   {
@@ -150,12 +168,23 @@ export const configNav: ConfigNode[] = [
   },
 ]
 
-function sections(item: ConfigNode) {
-  if ("items" in item) return item.items
-  return [item]
+export type ConfigScope = "global" | "project"
+
+function allowed(item: { globalOnly?: boolean; projectOnly?: boolean }, scope: ConfigScope) {
+  if (scope === "project") return !item.globalOnly
+  return !item.projectOnly
 }
 
-export const configSections = [
+function sections(item: ConfigNode): ConfigSection[] {
+  if (!("items" in item)) return [item]
+  return item.items.map((section) => ({
+    ...section,
+    globalOnly: section.globalOnly ?? item.globalOnly,
+    projectOnly: section.projectOnly ?? item.projectOnly,
+  }))
+}
+
+export const configSections: ConfigSection[] = [
   ...configNav.flatMap(sections),
   { path: "/agents/new", href: "/settings/agents/new", icon: "task", label: "New Agent", component: AgentBuilderRoute },
   {
@@ -167,3 +196,21 @@ export const configSections = [
   },
   { path: "/models", href: "/settings/models/default", icon: "models", label: "Models", component: ModelsRoute },
 ]
+
+export function configRoutes(scope: ConfigScope) {
+  return configSections.filter((item) => allowed(item, scope))
+}
+
+export function configNavigation(scope: ConfigScope): ConfigNode[] {
+  const output: ConfigNode[] = []
+  for (const item of configNav) {
+    if (!allowed(item, scope)) continue
+    if (!("items" in item)) {
+      output.push(item)
+      continue
+    }
+    const items = item.items.filter((section) => allowed(section, scope))
+    if (items.length) output.push({ ...item, items })
+  }
+  return output
+}

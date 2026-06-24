@@ -15,6 +15,8 @@ import type {
   StartMigrationMessage,
 } from "./migration"
 
+export type StackWebviewMessage = import("../stack").StackWebviewMessage
+
 // ============================================
 // Messages FROM webview TO extension
 // ============================================
@@ -1097,6 +1099,7 @@ export interface DismissAgentMigrationBannerMessage {
 }
 
 export type WebviewMessage =
+  | StackWebviewMessage
   | SendMessageRequest
   | AbortRequest
   | RevertSessionRequest
