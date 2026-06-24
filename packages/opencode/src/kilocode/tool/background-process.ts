@@ -4,6 +4,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { containsPath } from "@/project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
 import { Effect, Schema } from "effect"
+import { enabled as sandboxed } from "@kilocode/sandbox"
 import DESCRIPTION from "./background-process.txt"
 import path from "path"
 
@@ -103,6 +104,10 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
               : "No background processes are running for this session.",
             metadata: { count: list.length },
           }
+        }
+
+        if ((params.action === "start" || params.action === "restart") && (yield* sandboxed)) {
+          return invalid(params.action, "Background processes are unavailable while the sandbox is enabled")
         }
 
         if (params.action !== "start") {

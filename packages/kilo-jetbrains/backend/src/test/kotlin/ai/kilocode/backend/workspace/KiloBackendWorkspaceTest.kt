@@ -31,15 +31,18 @@ class KiloBackendWorkspaceTest {
     private val mock = MockCliServer()
     private val log = TestLog()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val apps = mutableListOf<KiloBackendAppService>()
 
     @AfterTest
     fun tearDown() {
+        apps.forEach { it.dispose() }
+        apps.clear()
         scope.cancel()
         mock.close()
     }
 
     private fun setup(): KiloBackendAppService =
-        KiloBackendAppService.create(scope, FakeCliServer(mock), log)
+        KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
 
     private suspend fun ready(app: KiloBackendAppService): KiloBackendWorkspace {
         app.connect()
@@ -296,11 +299,14 @@ class KiloBackendWorkspaceTest {
 
     @Test
     fun `agents response filters hidden and subagent`() = runBlocking {
+        mock.providers = PROVIDERS_JSON
         mock.agents = """[
             {"name":"code","mode":"primary","permission":[],"options":{}},
             {"name":"helper","mode":"subagent","permission":[],"options":{}},
             {"name":"secret","mode":"primary","hidden":true,"permission":[],"options":{}}
         ]"""
+        mock.commands = COMMANDS_JSON
+        mock.skills = SKILLS_JSON
         val app = setup()
         val ws = ready(app)
 

@@ -287,6 +287,12 @@ export const dict = {
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
+  "prompt.action.sandbox.enable": "Omogući sandbox",
+  "prompt.action.sandbox.disable": "Onemogući sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox je omogućen. Shell komande agenta su ograničene na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox je onemogućen. Kliknite da ograničite pisanje shell komandi agenta na direktorije projekta i Kilo.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
@@ -796,6 +802,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimenzija vektora",
   "settings.indexing.enable.description": "Uključite ili isključite semantičko indeksiranje baze koda.",
+  "settings.indexing.showButton.title": "Prikaži dugme kada je indeksiranje isključeno",
+  "settings.indexing.showButton.description":
+    "Prikaži dugme za indeksiranje ispod polja za unos dok je indeksiranje isključeno. Ako je dugme skriveno, otvorite Postavke > Indeksiranje da biste omogućili indeksiranje.",
   "settings.indexing.enable.title": "Omogući indeksiranje",
   "settings.indexing.globalEnable.title": "Omogući globalno",
   "settings.indexing.globalEnable.description": "Omogući indeksiranje za svaki radni prostor.",
@@ -1325,6 +1334,10 @@ export const dict = {
   "settings.models.speechToTextModel.description": "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
+  "settings.sandboxing.title": "Rad u izoliranom okruženju",
+  "settings.sandboxing.network.title": "Ograniči pristup mreži",
+  "settings.sandboxing.network.description":
+    "Blokiraj odlazni mrežni pristup za naredbe koje potiču od modela i HTTP alate. Lokalni MCP serveri i hookovi dodataka izvršavaju se izvan ovog ograničenja. Saobraćaj za inferenciju pružatelja i modela ostaje dostupan.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1457,6 +1470,9 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
 
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",

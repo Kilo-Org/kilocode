@@ -283,6 +283,12 @@ export const dict = {
   "prompt.action.autoApprove.disable": "Disable auto-approve",
   "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
   "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
+  "prompt.action.sandbox.enable": "Enable sandbox",
+  "prompt.action.sandbox.disable": "Disable sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox is enabled. Agent shell commands are confined to the project and Kilo directories.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox is disabled. Click to confine agent shell command writes to the project and Kilo directories.",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -1081,6 +1087,9 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
   "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
+  "settings.indexing.showButton.title": "Show button when indexing is off",
+  "settings.indexing.showButton.description":
+    "Show the indexing button below the prompt while indexing is off. If hidden, open Settings > Indexing to enable indexing.",
   "settings.indexing.globalEnable.title": "Enable globally",
   "settings.indexing.globalEnable.description": "Enable indexing for every workspace.",
   "settings.indexing.projectEnable.title": "Enable for this project",
@@ -1302,6 +1311,13 @@ export const dict = {
   "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Run agent shell commands inside an OS-level sandbox that restricts writes to the project and Kilo state directories",
+  "settings.sandboxing.title": "Sandboxing",
+  "settings.sandboxing.network.title": "Restrict Network Access",
+  "settings.sandboxing.network.description":
+    "Block outbound network access from model-originated commands and HTTP tools. Local MCP servers and plugin hooks run outside this restriction. Provider and model inference traffic remains available.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",

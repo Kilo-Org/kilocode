@@ -23,6 +23,7 @@ import { ReadTool } from "../../src/tool/read"
 import * as Tool from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
 import { WriteTool } from "../../src/tool/write"
+import * as EncodedIO from "../../src/kilocode/tool/encoded-io"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -588,6 +589,34 @@ describe("tool encoding preservation", () => {
         }),
       ),
     )
+  })
+
+  describe("formatter output preserves the source encoding", () => {
+    const cases: Array<[string, string, boolean]> = [
+      ["UTF-16 LE", "utf-16le", false],
+      ["Windows-1251", "windows-1251", false],
+      ["UTF-8 with BOM", UTF8_BOM, true],
+    ]
+
+    for (const [label, encoding, bom] of cases) {
+      it.live(`re-encodes formatted ${label} content`, () =>
+        provideTmpdirInstance((dir) =>
+          Effect.gen(function* () {
+            const filepath = path.join(dir, "formatted.txt")
+            const content = encoding === "windows-1251" ? samples.windows1251 : samples.utf8
+            const afs = yield* AppFileSystem.Service
+
+            // Formatters commonly rewrite through UTF-8 regardless of the source encoding.
+            yield* afs.writeFile(filepath, Buffer.from(content, "utf-8"))
+            const synced = yield* EncodedIO.sync(afs, filepath, bom, encoding)
+
+            expect(synced).toBe(content)
+            const bytes = yield* loadBytes(filepath)
+            expect(bytes.equals(encodeBytes(content, encoding))).toBe(true)
+          }),
+        ),
+      )
+    }
   })
 })
 

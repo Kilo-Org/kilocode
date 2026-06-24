@@ -314,6 +314,13 @@ export interface IndexingStatusLoadedMessage {
   status: IndexingStatus
 }
 
+export interface IndexingSettingsLoadedMessage {
+  type: "indexingSettingsLoaded"
+  settings: {
+    showButtonWhenDisabled: boolean
+  }
+}
+
 export interface KiloEmbeddingModelsLoadedMessage {
   type: "kiloEmbeddingModelsLoaded"
   catalog: KiloEmbeddingModelCatalog
@@ -994,6 +1001,7 @@ export type ExtensionMessage =
   | DeviceAuthCancelledMessage
   | NavigateMessage
   | IndexingStatusLoadedMessage
+  | IndexingSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage

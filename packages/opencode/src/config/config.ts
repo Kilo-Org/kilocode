@@ -403,6 +403,16 @@ export const Info = Schema.Struct({
       continue_loop_on_deny: Schema.optional(Schema.Boolean).annotate({
         description: "Continue the agent loop when a tool call is denied",
       }),
+      // kilocode_change start
+      sandbox: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access",
+      }),
+      sandbox_restrict_network: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)",
+      }),
+      // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
       }),

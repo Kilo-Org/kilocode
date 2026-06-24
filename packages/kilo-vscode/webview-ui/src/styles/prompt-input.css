@@ -560,11 +560,11 @@
   color: var(--vscode-errorForeground, #f48771);
 }
 
-.prompt-auto-approve-button {
+.prompt-status-button {
   position: relative;
 }
 
-.prompt-auto-approve-button--active {
+.prompt-status-button--active {
   color: var(--vscode-testing-iconPassed, #73c991);
 
   [data-slot="icon-svg"] {
@@ -572,7 +572,7 @@
   }
 }
 
-.prompt-auto-approve-button--active::after {
+.prompt-status-button--active::after {
   content: "";
   position: absolute;
   right: 4px;

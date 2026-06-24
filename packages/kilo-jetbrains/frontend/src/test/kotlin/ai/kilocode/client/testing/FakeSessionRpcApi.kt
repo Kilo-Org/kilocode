@@ -84,7 +84,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var enhanced = "Enhanced prompt"
     var enhanceGate: CompletableDeferred<Unit>? = null
     var enhanceThrows: Exception? = null
+    var commandThrows: Exception? = null
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
+    val commands = mutableListOf<CommandCall>()
     val attachmentParts = mutableListOf<AttachmentCall>()
     val aborts = mutableListOf<Pair<String, String>>()
     val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
@@ -106,6 +108,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
+    data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
 
     // --- Implementation ---
 
@@ -193,6 +196,12 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
         assertNotEdt("prompt")
         prompts.add(Triple(id, directory, prompt))
+    }
+
+    override suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto) {
+        assertNotEdt("command")
+        commandThrows?.let { throw it }
+        commands.add(CommandCall(id, directory, command, arguments, prompt))
     }
 
     override suspend fun abort(id: String, directory: String) {

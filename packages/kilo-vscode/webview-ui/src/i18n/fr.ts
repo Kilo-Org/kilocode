@@ -289,6 +289,12 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
+  "prompt.action.sandbox.enable": "Activer le sandbox",
+  "prompt.action.sandbox.disable": "Désactiver le sandbox",
+  "prompt.action.sandbox.enabled":
+    "Le sandbox est activé. Les commandes shell de l'agent sont limitées aux répertoires du projet et de Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Le sandbox est désactivé. Cliquez pour limiter les écritures des commandes shell de l'agent aux répertoires du projet et de Kilo.",
 
   "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
   "speechToText.tooltip.stop": "Arrêter la capture audio",
@@ -722,6 +728,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimension vectorielle",
   "settings.indexing.enable.description": "Activer ou désactiver l'indexation sémantique de la base de code.",
+  "settings.indexing.showButton.title": "Afficher le bouton lorsque l’indexation est désactivée",
+  "settings.indexing.showButton.description":
+    "Affichez le bouton d’indexation sous le champ de saisie lorsque l’indexation est désactivée. S’il est masqué, ouvrez Paramètres > Indexation pour activer l’indexation.",
   "settings.indexing.enable.title": "Activer l'indexation",
   "settings.indexing.globalEnable.title": "Activer globalement",
   "settings.indexing.globalEnable.description": "Activer l'indexation pour chaque espace de travail.",
@@ -1351,6 +1360,10 @@ export const dict = {
   "settings.experimental.continueOnDeny.title": "Continuer en cas de refus",
   "settings.experimental.continueOnDeny.description":
     "Continuer la boucle de l'agent lorsqu'une autorisation est refusée",
+  "settings.sandboxing.title": "Mise en bac à sable",
+  "settings.sandboxing.network.title": "Restreindre l'accès au réseau",
+  "settings.sandboxing.network.description":
+    "Bloquer l'accès réseau sortant des commandes provenant du modèle et des outils HTTP. Les serveurs MCP locaux et les hooks de plugin ne sont pas soumis à cette restriction. Le trafic d'inférence des fournisseurs et des modèles reste disponible.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1488,6 +1501,9 @@ export const dict = {
     "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Modèle",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",
 
   "settings.autoApprove.description":
     "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",

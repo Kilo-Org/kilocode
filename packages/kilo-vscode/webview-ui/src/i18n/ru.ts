@@ -285,6 +285,11 @@ export const dict = {
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
+  "prompt.action.sandbox.enable": "Включить песочницу",
+  "prompt.action.sandbox.disable": "Отключить песочницу",
+  "prompt.action.sandbox.enabled": "Песочница включена. Команды оболочки агента ограничены каталогами проекта и Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Песочница отключена. Нажмите, чтобы ограничить запись команд оболочки агента каталогами проекта и Kilo.",
 
   "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
   "speechToText.tooltip.stop": "Остановить захват звука",
@@ -793,6 +798,9 @@ export const dict = {
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
   "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
+  "settings.indexing.showButton.title": "Показывать кнопку, когда индексация отключена",
+  "settings.indexing.showButton.description":
+    "Показывать кнопку индексации под полем ввода, пока индексация отключена. Если кнопка скрыта, откройте «Настройки > Индексация», чтобы включить индексацию.",
   "settings.indexing.globalEnable.title": "Включить глобально",
   "settings.indexing.globalEnable.description": "Включить индексирование для каждого рабочего пространства.",
   "settings.indexing.projectEnable.title": "Включить для этого проекта",
@@ -1324,6 +1332,10 @@ export const dict = {
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
+  "settings.sandboxing.title": "Изоляция в песочнице",
+  "settings.sandboxing.network.title": "Ограничить доступ к сети",
+  "settings.sandboxing.network.description":
+    "Блокировать исходящий доступ к сети для команд, инициированных моделью, и HTTP-инструментов. Локальные серверы MCP и хуки плагинов не подпадают под это ограничение. Трафик к провайдерам и моделям для инференса остаётся доступным.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1456,6 +1468,9 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.experimental.sandbox.title": "Песочница",
+  "settings.experimental.sandbox.description":
+    "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":
     "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
