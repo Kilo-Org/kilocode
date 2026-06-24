@@ -9,7 +9,7 @@ import { MessageV2 } from "@/session/message-v2"
 
 const log = Log.create({ service: "plugin.copilot" })
 
-const CLIENT_ID = "Ov23li8tweQw6odWQebz"
+const CLIENT_ID = "Ov23li5v4CagFoQACXl2" // kilocode_change
 // Add a small safety buffer when polling to avoid hitting the server
 // slightly too early due to clock skew / timer drift.
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000 // 3 seconds
