@@ -6,7 +6,9 @@ import { attachWith } from "./run-service"
 import { Instance, type InstanceContext } from "@/kilocode/instance" // kilocode_change
 
 export interface Shape {
-  readonly promise: <A, E, R>(effect: Effect.Effect<A, E, R>) => Promise<A>
+  // kilocode_change start - propagate callback abort signals
+  readonly promise: <A, E, R>(effect: Effect.Effect<A, E, R>, options?: Effect.RunOptions) => Promise<A>
+  // kilocode_change end
   readonly fork: <A, E, R>(effect: Effect.Effect<A, E, R>) => Fiber.Fiber<A, E>
   readonly run: <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E>
   readonly bind: <Args extends readonly unknown[], Result>(fn: (...args: Args) => Result) => (...args: Args) => Result
@@ -72,8 +74,10 @@ export function make(): Effect.Effect<Shape> {
       attachWith(effect.pipe(Effect.provide(ctx)) as Effect.Effect<A, E, never>, { instance, workspace })
 
     return {
-      promise: <A, E, R>(effect: Effect.Effect<A, E, R>) =>
-        restore(instance, workspace, () => Effect.runPromise(wrap(effect))), // kilocode_change
+      // kilocode_change start - propagate callback abort signals while preserving Kilo contexts
+      promise: <A, E, R>(effect: Effect.Effect<A, E, R>, options?: Effect.RunOptions) =>
+        restore(instance, workspace, () => Effect.runPromise(wrap(effect), options)),
+      // kilocode_change end
       fork: <A, E, R>(effect: Effect.Effect<A, E, R>) =>
         restore(instance, workspace, () => Effect.runFork(wrap(effect))), // kilocode_change
       run: <A, E, R>(effect: Effect.Effect<A, E, R>) =>

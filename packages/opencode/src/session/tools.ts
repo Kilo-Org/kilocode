@@ -111,6 +111,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             }
             return output
           }),
+          { signal: options.abortSignal }, // kilocode_change - interrupt the Effect tool with the AI SDK cancellation
         )
       },
     })
@@ -204,6 +205,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           }
           return output
         }),
+        { signal: opts.abortSignal }, // kilocode_change - interrupt the Effect tool with the AI SDK cancellation
       )
     tools[key] = item
   }
