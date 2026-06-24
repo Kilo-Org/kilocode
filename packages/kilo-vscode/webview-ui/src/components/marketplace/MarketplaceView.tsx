@@ -1,18 +1,11 @@
-import { createSignal, createMemo, createEffect, onCleanup, onMount, Show } from "solid-js"
-import { Tabs } from "@kilocode/kilo-ui/tabs"
+import { createSignal, createEffect, onCleanup, onMount, Show } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useVSCode } from "../../context/vscode"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import type {
-  MarketplaceItem,
-  McpMarketplaceItem,
-  AgentMarketplaceItem,
-  SkillMarketplaceItem,
-  MarketplaceInstalledMetadata,
-} from "../../types/marketplace"
+import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 import { MarketplaceListView } from "./MarketplaceListView"
 import { InstallModal } from "./InstallModal"
@@ -31,13 +24,8 @@ export const MarketplaceView = () => {
   const [metadata, setMetadata] = createSignal<MarketplaceInstalledMetadata>(EMPTY_METADATA)
   const [fetching, setFetching] = createSignal(true)
   const [errors, setErrors] = createSignal<string[]>([])
-  const [tab, setTab] = createSignal("agent")
   const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
   const [showMigrationBanner, setShowMigrationBanner] = createSignal(false)
-
-  const skills = createMemo(() => items().filter((i): i is SkillMarketplaceItem => i.type === "skill"))
-  const mcps = createMemo(() => items().filter((i): i is McpMarketplaceItem => i.type === "mcp"))
-  const agents = createMemo(() => items().filter((i): i is AgentMarketplaceItem => i.type === "agent"))
 
   const fetchData = () => {
     setFetching(true)
@@ -158,62 +146,23 @@ export const MarketplaceView = () => {
         ))}
       </Show>
 
-      <Tabs value={tab()} onChange={setTab} class="marketplace-tabs-root">
-        <Tabs.List>
-          <Tabs.Trigger value="agent">{t("marketplace.tab.agents")}</Tabs.Trigger>
-          <Tabs.Trigger value="mcp">{t("marketplace.tab.mcp")}</Tabs.Trigger>
-          <Tabs.Trigger value="skill">{t("marketplace.tab.skills")}</Tabs.Trigger>
-        </Tabs.List>
-
-        <div class="marketplace-content">
-          <Tabs.Content value="agent">
-            <Show when={showMigrationBanner()}>
-              <Card variant="info" class="marketplace-error-banner">
-                <span>{t("marketplace.migration.notice")}</span>
-                <Button variant="ghost" size="small" onClick={dismissMigrationBanner}>
-                  {t("marketplace.error.dismiss")}
-                </Button>
-              </Card>
-            </Show>
-            <MarketplaceListView
-              items={agents()}
-              metadata={metadata()}
-              fetching={fetching()}
-              type="agent"
-              searchPlaceholder={t("marketplace.search")}
-              emptyMessage={t("marketplace.empty")}
-              onInstall={handleInstall}
-              onRemove={handleRemove}
-            />
-          </Tabs.Content>
-
-          <Tabs.Content value="mcp">
-            <MarketplaceListView
-              items={mcps()}
-              metadata={metadata()}
-              fetching={fetching()}
-              type="mcp"
-              searchPlaceholder={t("marketplace.search")}
-              emptyMessage={t("marketplace.empty")}
-              onInstall={handleInstall}
-              onRemove={handleRemove}
-            />
-          </Tabs.Content>
-
-          <Tabs.Content value="skill">
-            <MarketplaceListView
-              items={skills()}
-              metadata={metadata()}
-              fetching={fetching()}
-              type="skill"
-              searchPlaceholder={t("marketplace.search")}
-              emptyMessage={t("marketplace.empty")}
-              onInstall={handleInstall}
-              onRemove={handleRemove}
-            />
-          </Tabs.Content>
-        </div>
-      </Tabs>
+      <Show when={showMigrationBanner()}>
+        <Card variant="info" class="marketplace-error-banner">
+          <span>{t("marketplace.migration.notice")}</span>
+          <Button variant="ghost" size="small" onClick={dismissMigrationBanner}>
+            {t("marketplace.error.dismiss")}
+          </Button>
+        </Card>
+      </Show>
+      <MarketplaceListView
+        items={items()}
+        metadata={metadata()}
+        fetching={fetching()}
+        searchPlaceholder={t("marketplace.search")}
+        emptyMessage={t("marketplace.empty")}
+        onInstall={handleInstall}
+        onRemove={handleRemove}
+      />
     </div>
   )
 }

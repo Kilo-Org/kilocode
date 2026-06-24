@@ -15,6 +15,7 @@ import { previewSound } from "./services/attention"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
+import { notebookUri } from "./services/autocomplete/continuedev/core/autocomplete/notebook"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
@@ -3432,14 +3433,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const result = new Set<string>()
     for (const group of vscode.window.tabGroups.all) {
       for (const tab of group.tabs) {
-        if (tab.input instanceof vscode.TabInputText) {
-          const uri = tab.input.uri
-          if (uri.scheme === "file") {
-            const rel = path.relative(dir, uri.fsPath)
-            if (!rel.startsWith("..") && !path.isAbsolute(rel) && controller.validateAccess(uri.fsPath)) {
-              result.add(rel.replaceAll("\\", "/"))
-            }
-          }
+        const uri =
+          tab.input instanceof vscode.TabInputText || tab.input instanceof vscode.TabInputNotebook
+            ? tab.input.uri
+            : undefined
+        if (uri?.scheme !== "file") continue
+
+        const rel = path.relative(dir, uri.fsPath)
+        if (!rel.startsWith("..") && !path.isAbsolute(rel) && controller.validateAccess(uri.fsPath)) {
+          result.add(rel.replaceAll("\\", "/"))
         }
       }
     }
@@ -3477,21 +3479,30 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Visible files (capped to avoid bloating context, filtered through .kilocodeignore)
-    const visibleFiles = vscode.window.visibleTextEditors
-      .map((e) => e.document.uri)
-      .filter((uri) => uri.scheme === "file")
-      .map((uri) => toRelative(uri.fsPath))
-      .filter((p): p is string => p !== undefined && controller.validateAccess(path.resolve(workspaceDir, p)))
-      .slice(0, 200)
+    const visibleFiles = [
+      ...new Set(
+        [
+          ...vscode.window.visibleTextEditors.map((editor) => notebookUri(editor.document.uri)),
+          ...vscode.window.visibleNotebookEditors.map((editor) => editor.notebook.uri),
+        ]
+          .filter((uri): uri is vscode.Uri => uri?.scheme === "file")
+          .map((uri) => toRelative(uri.fsPath))
+          .filter(
+            (file): file is string => file !== undefined && controller.validateAccess(path.resolve(workspaceDir, file)),
+          ),
+      ),
+    ].slice(0, 200)
 
-    // Open tabs — use instanceof TabInputText to exclude notebooks, diffs, custom editors
+    // Open tabs — text and notebook files only; exclude diffs and custom editors
     const openTabs = [...(await this.getOpenTabPaths(workspaceDir))].slice(0, 20)
 
     // Active file (also filtered through .kilocodeignore)
     const activeEditor = vscode.window.activeTextEditor
-    const activeRel =
-      activeEditor?.document.uri.scheme === "file" ? toRelative(activeEditor.document.uri.fsPath) : undefined
-    const activeFile = activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
+    const activeUri = activeEditor
+      ? notebookUri(activeEditor.document.uri)
+      : vscode.window.activeNotebookEditor?.notebook.uri
+    const activeRel = activeUri ? toRelative(activeUri.fsPath) : undefined
+    const activeFile = activeRel && activeUri && controller.validateAccess(activeUri.fsPath) ? activeRel : undefined
 
     // Shell
     const shell = vscode.env.shell || undefined
