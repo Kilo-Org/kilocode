@@ -6,6 +6,7 @@ import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment } from "./agent-manager"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { RefreshProviderUsageMessage, RequestProviderUsageMessage } from "./provider-usage"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -1096,6 +1097,8 @@ export type WebviewMessage =
   | LoginRequest
   | LogoutRequest
   | RefreshProfileRequest
+  | RequestProviderUsageMessage
+  | RefreshProviderUsageMessage
   | OpenExternalRequest
   | OpenSettingsPanelRequest
   | OpenVSCodeSettingsRequest

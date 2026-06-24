@@ -7,14 +7,20 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import DeviceAuthCard from "./DeviceAuthCard"
-import type { ProfileData, DeviceAuthState } from "../../types/messages"
+import type { ProfileData, ProviderUsageData, DeviceAuthState } from "../../types/messages"
+import { ProviderUsageCards } from "./ProviderUsageCards"
 
 export type { ProfileData }
 
 export interface ProfileViewProps {
   profileData: ProfileData | null | undefined
   deviceAuth: DeviceAuthState
+  providerUsage?: ProviderUsageData
+  providerUsageLoading?: boolean
+  providerUsageError?: string
   onLogin: () => void
+  onRequestProviderUsage?: () => void
+  onRefreshProviderUsage?: () => void
 }
 
 const formatBalance = (amount: number): string => {
@@ -37,6 +43,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   // Always fetch fresh profile+balance when navigating to this view
   onMount(() => {
     vscode.postMessage({ type: "refreshProfile" })
+    props.onRequestProviderUsage?.()
   })
 
   // Reset pending target whenever profileData changes (success or failure both send a fresh profile)
@@ -91,6 +98,10 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
 
   const handleDashboard = () => {
     vscode.postMessage({ type: "openExternal", url: "https://app.kilo.ai/profile" })
+  }
+
+  const openExternal = (url: string) => {
+    vscode.postMessage({ type: "openExternal", url })
   }
 
   const handleCancelLogin = () => {
@@ -262,6 +273,14 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
             </div>
           )}
         </Show>
+
+        <ProviderUsageCards
+          data={props.providerUsage}
+          loading={props.providerUsageLoading ?? !props.providerUsage}
+          error={props.providerUsageError}
+          onRefresh={() => props.onRefreshProviderUsage?.()}
+          onOpen={openExternal}
+        />
       </div>
     </div>
   )

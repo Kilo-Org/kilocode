@@ -257,6 +257,14 @@ export const kiloScenarios: Scenario[] = [
         check(!(yield* Effect.promise(() => Bun.file(ctx.state).exists())), "removed agent should not remain on disk")
       }),
     ),
+  http.protected.get("/kilocode/provider-usage", "kilocode.providerUsage.get").json(200, (body) => {
+    object(body)
+    array(body.items)
+  }),
+  http.protected.post("/kilocode/provider-usage/refresh", "kilocode.providerUsage.refresh").json(200, (body) => {
+    object(body)
+    array(body.items)
+  }),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()

@@ -279,6 +279,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private configWarningsShown = false
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
+  /** Cached provider usage payload for profile view remounts and temporary disconnects. */
+  private cachedProviderUsageMessage: unknown = null
+  private providerUsageRequested = false
+  private providerUsageGeneration = 0
   private pendingKiloModelID: string | null = null
   private pendingReviewComments: { comments: unknown[]; autoSend: boolean }[] = []
   private readyResolvers: (() => void)[] = []
@@ -394,7 +398,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public setProjectDirectory(directory: string | null): void {
     if (this.projectDirectory === directory) return
     this.projectDirectory = directory
+    this.providerUsageGeneration++
+    this.cachedProviderUsageMessage = null
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    if (this.providerUsageRequested) void this.fetchAndSendProviderUsage()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -890,6 +897,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "refreshProfile":
           await handleRefreshProfile(this.authCtx)
+          break
+        case "requestProviderUsage":
+          await this.fetchAndSendProviderUsage()
+          break
+        case "refreshProviderUsage":
+          await this.fetchAndSendProviderUsage(true)
           break
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
@@ -1784,6 +1797,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         message: getErrorMessage(error) || "Failed to export session transcript",
       })
     }
+  }
+
+  private async fetchAndSendProviderUsage(force = false): Promise<void> {
+    this.providerUsageRequested = true
+    const generation = ++this.providerUsageGeneration
+    const client = this.client
+    if (!client) {
+      if (this.cachedProviderUsageMessage) this.postMessage(this.cachedProviderUsageMessage)
+      return
+    }
+
+    const directory = this.getProjectDirectory(this.currentSession?.id)
+    const result = await (
+      force ? client.kilocode.providerUsage.refresh({ directory }) : client.kilocode.providerUsage.get({ directory })
+    ).catch(() => undefined)
+    if (generation !== this.providerUsageGeneration) return
+    if (!result?.data) {
+      if (this.cachedProviderUsageMessage) {
+        this.postMessage(this.cachedProviderUsageMessage)
+        return
+      }
+      this.postMessage({ type: "providerUsageLoaded", error: "Provider usage could not be loaded." })
+      return
+    }
+
+    const message = { type: "providerUsageLoaded", data: result.data }
+    this.cachedProviderUsageMessage = message
+    this.postMessage(message)
   }
 
   /** Fetch providers and send to webview. Coalesced: at most one in-flight + one queued. */
@@ -2997,6 +3038,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Re-fetch all server-side state after an auth change. */
   private async reloadAfterAuthChange(): Promise<void> {
+    this.providerUsageGeneration++
+    this.cachedProviderUsageMessage = null
+    if (this.providerUsageRequested) this.postMessage({ type: "providerUsageLoaded", reset: true })
     await this.fetchAndSendConfig()
     await Promise.all([
       this.fetchAndSendProviders(),
@@ -3005,6 +3049,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.fetchAndSendCommands(),
       this.fetchAndSendIndexingStatus(),
       this.fetchAndSendNotifications(),
+      this.providerUsageRequested ? this.fetchAndSendProviderUsage() : Promise.resolve(),
     ])
   }
 

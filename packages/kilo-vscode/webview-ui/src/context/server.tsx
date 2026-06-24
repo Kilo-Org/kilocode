@@ -5,7 +5,14 @@
 
 import { createContext, useContext, createSignal, onMount, onCleanup, ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { ConnectionState, ServerInfo, ProfileData, DeviceAuthState, ExtensionMessage } from "../types/messages"
+import type {
+  ConnectionState,
+  ServerInfo,
+  ProfileData,
+  ProviderUsageData,
+  DeviceAuthState,
+  ExtensionMessage,
+} from "../types/messages"
 import { applyFontSize } from "../font-size"
 
 interface ServerContextValue {
@@ -16,6 +23,11 @@ interface ServerContextValue {
   errorDetails: Accessor<string | undefined>
   isConnected: Accessor<boolean>
   profileData: Accessor<ProfileData | null>
+  providerUsage: Accessor<ProviderUsageData | undefined>
+  providerUsageLoading: Accessor<boolean>
+  providerUsageError: Accessor<string | undefined>
+  requestProviderUsage: () => void
+  refreshProviderUsage: () => void
   deviceAuth: Accessor<DeviceAuthState>
   startLogin: () => void
   goToLogin: () => void
@@ -38,6 +50,10 @@ export const ServerProvider: ParentComponent = (props) => {
   const [errorMessage, setErrorMessage] = createSignal<string | undefined>()
   const [errorDetails, setErrorDetails] = createSignal<string | undefined>()
   const [profileData, setProfileData] = createSignal<ProfileData | null>(null)
+  const [providerUsage, setProviderUsage] = createSignal<ProviderUsageData>()
+  const [providerUsageLoading, setProviderUsageLoading] = createSignal(false)
+  const [providerUsageError, setProviderUsageError] = createSignal<string>()
+  let providerUsageRetry: ReturnType<typeof setTimeout> | undefined
   const [deviceAuth, setDeviceAuth] = createSignal<DeviceAuthState>(initialDeviceAuth)
   const [vscodeLanguage, setVscodeLanguage] = createSignal<string | undefined>()
   const [languageOverride, setLanguageOverride] = createSignal<string | undefined>()
@@ -52,6 +68,35 @@ export const ServerProvider: ParentComponent = (props) => {
     if (m.type === "ready" && m.fontSize !== undefined) applyFontSize(m.fontSize)
     if (m.type === "fontSizeChanged") applyFontSize(m.fontSize)
   })
+
+  const usageSub = vscode.onMessage((m: ExtensionMessage) => {
+    if (m.type !== "providerUsageLoaded") return
+    if (providerUsageRetry) clearTimeout(providerUsageRetry)
+    providerUsageRetry = undefined
+    if (m.reset) {
+      setProviderUsage(undefined)
+      setProviderUsageError(undefined)
+      setProviderUsageLoading(true)
+      return
+    }
+    if (m.data) setProviderUsage(m.data)
+    setProviderUsageError(m.error)
+    setProviderUsageLoading(false)
+  })
+
+  const usageReadySub = vscode.onMessage((m: ExtensionMessage) => {
+    if (m.type !== "extensionDataReady" || !providerUsageLoading() || providerUsage()) return
+    if (providerUsageRetry) clearTimeout(providerUsageRetry)
+    providerUsageRetry = undefined
+    vscode.postMessage({ type: "requestProviderUsage" })
+  })
+
+  const resetProviderUsageForDirectory = () => {
+    if (providerUsage() === undefined && !providerUsageLoading()) return
+    setProviderUsage(undefined)
+    setProviderUsageError(undefined)
+    setProviderUsageLoading(true)
+  }
 
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
@@ -76,6 +121,7 @@ export const ServerProvider: ParentComponent = (props) => {
 
         case "workspaceDirectoryChanged":
           setWorkspaceDirectory(message.directory)
+          resetProviderUsageForDirectory()
           break
 
         case "languageChanged":
@@ -137,6 +183,9 @@ export const ServerProvider: ParentComponent = (props) => {
     onCleanup(() => {
       gitSub()
       fontSub()
+      usageSub()
+      usageReadySub()
+      if (providerUsageRetry) clearTimeout(providerUsageRetry)
       unsubscribe()
     })
 
@@ -168,6 +217,27 @@ export const ServerProvider: ParentComponent = (props) => {
     startLogin()
   }
 
+  const retryProviderUsage = () => {
+    if (providerUsageRetry) clearTimeout(providerUsageRetry)
+    providerUsageRetry = setTimeout(() => {
+      providerUsageRetry = undefined
+      if (providerUsageLoading() && !providerUsage()) vscode.postMessage({ type: "requestProviderUsage" })
+    }, 3000)
+  }
+
+  const requestProviderUsage = () => {
+    setProviderUsageLoading(true)
+    setProviderUsageError(undefined)
+    vscode.postMessage({ type: "requestProviderUsage" })
+    retryProviderUsage()
+  }
+
+  const refreshProviderUsage = () => {
+    setProviderUsageLoading(true)
+    setProviderUsageError(undefined)
+    vscode.postMessage({ type: "refreshProviderUsage" })
+  }
+
   const value: ServerContextValue = {
     connectionState,
     serverInfo,
@@ -176,6 +246,11 @@ export const ServerProvider: ParentComponent = (props) => {
     errorDetails,
     isConnected: () => connectionState() === "connected",
     profileData,
+    providerUsage,
+    providerUsageLoading,
+    providerUsageError,
+    requestProviderUsage,
+    refreshProviderUsage,
     deviceAuth,
     startLogin,
     goToLogin,

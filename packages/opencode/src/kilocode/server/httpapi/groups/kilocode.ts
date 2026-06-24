@@ -7,6 +7,7 @@ import {
   WorkspaceRoutingQuery,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import { Info as ProviderUsageInfo } from "@/kilocode/provider-usage/schema"
 
 const root = "/kilocode"
 
@@ -22,6 +23,8 @@ export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  providerUsage: `${root}/provider-usage`,
+  providerUsageRefresh: `${root}/provider-usage/refresh`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -62,6 +65,28 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Remove a custom agent",
             description:
               "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+          }),
+        ),
+        HttpApiEndpoint.get("providerUsage", KilocodePaths.providerUsage, {
+          query: WorkspaceRoutingQuery,
+          success: described(ProviderUsageInfo, "Current provider usage"),
+          error: HttpApiError.ServiceUnavailable,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.providerUsage.get",
+            summary: "Get provider usage",
+            description: "Get cache-aware, secret-free provider plan usage and personal billing status.",
+          }),
+        ),
+        HttpApiEndpoint.post("providerUsageRefresh", KilocodePaths.providerUsageRefresh, {
+          query: WorkspaceRoutingQuery,
+          success: described(ProviderUsageInfo, "Refreshed provider usage"),
+          error: HttpApiError.ServiceUnavailable,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.providerUsage.refresh",
+            summary: "Refresh provider usage",
+            description: "Refresh provider plan usage while coalescing concurrent source requests.",
           }),
         ),
       )
