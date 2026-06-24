@@ -7,17 +7,13 @@ import {
   formatCost,
   formatCount,
   formatRate,
+  label,
+  member,
   select,
-  type SessionModelUsage,
   type UsageResult,
 } from "@/kilocode/plugins/model-usage"
 
 const id = "internal:kilo-sidebar-usage"
-
-function identity(model: SessionModelUsage["models"][number]) {
-  if (model.providerID === "kilo" && model.modelID.includes("/")) return model.modelID
-  return `${model.providerID}/${model.modelID}`
-}
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
   const theme = () => props.api.theme.current
@@ -47,14 +43,24 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
 
   onMount(() => {
     const refresh = () => void refetch()
+    const related = (sessionID: string, info?: ReturnType<typeof props.api.state.session.get>) =>
+      member({ root: props.session_id, sessionID, info, get: props.api.state.session.get })
     const offs = [
       props.api.event.on("message.part.updated", (event) => {
-        if (event.properties.part.type === "step-finish") refresh()
+        if (event.properties.part.type === "step-finish" && related(event.properties.sessionID)) refresh()
       }),
-      props.api.event.on("message.part.removed", refresh),
-      props.api.event.on("message.removed", refresh),
-      props.api.event.on("session.created", refresh),
-      props.api.event.on("session.deleted", refresh),
+      props.api.event.on("message.part.removed", (event) => {
+        if (related(event.properties.sessionID)) refresh()
+      }),
+      props.api.event.on("message.removed", (event) => {
+        if (related(event.properties.sessionID)) refresh()
+      }),
+      props.api.event.on("session.created", (event) => {
+        if (related(event.properties.sessionID, event.properties.info)) refresh()
+      }),
+      props.api.event.on("session.deleted", (event) => {
+        if (related(event.properties.sessionID, event.properties.info)) refresh()
+      }),
       props.api.event.on("server.connected", refresh),
     ]
     onCleanup(() => {
@@ -108,7 +114,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                   {(model) => (
                     <box>
                       <text fg={theme().text} wrapMode="char">
-                        <b>{identity(model)}</b>
+                        <b>{label(model)}</b>
                       </text>
                       <text fg={theme().textMuted} wrapMode="word">
                         Steps {formatCount(model.steps)} | Cost {formatCost(model.cost)}

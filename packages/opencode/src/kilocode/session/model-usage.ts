@@ -1,7 +1,7 @@
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
-import { InstanceState } from "@/effect/instance-state"
 import { ModelID, ProviderID } from "@/provider/schema"
+import { ProjectID } from "@/project/schema"
 import { SessionID } from "@/session/schema"
 import { Database } from "@/storage/db"
 
@@ -37,6 +37,10 @@ export namespace ModelUsage {
 
   type Info = typeof Info.Type
 
+  type Anchor = {
+    projectID: ProjectID
+  }
+
   type Ancestor = {
     id: SessionID
     parentID: SessionID | null
@@ -53,6 +57,8 @@ export namespace ModelUsage {
     read: number
     write: number
   }
+
+  const ANCHOR_SQL = "SELECT project_id AS projectID FROM session WHERE id = ?"
 
   const ANCESTORS_SQL = `
     WITH RECURSIVE ancestor(id, parent_id) AS (
@@ -125,16 +131,16 @@ export namespace ModelUsage {
   })
 
   export const get = Effect.fn("ModelUsage.get")(function* (sessionID: SessionID) {
-    const ctx = yield* InstanceState.context
     return yield* Effect.sync(() => {
       const db = Database.Client().$client
-      const args = [sessionID, ctx.project.id, ctx.project.id] as const
-      const ancestors = db.prepare<Ancestor, [string, string, string]>(ANCESTORS_SQL).all(...args)
-      if (ancestors.length === 0) return undefined
+      const anchor = db.prepare<Anchor, [string]>(ANCHOR_SQL).get(sessionID)
+      if (!anchor) return undefined
 
+      const args = [sessionID, anchor.projectID, anchor.projectID] as const
+      const ancestors = db.prepare<Ancestor, [string, string, string]>(ANCESTORS_SQL).all(...args)
       const ids = new Set(ancestors.map((item) => item.id))
       const rootID = ancestors.find((item) => !item.parentID || !ids.has(item.parentID))?.id ?? sessionID
-      const familyArgs = [rootID, ctx.project.id, ctx.project.id] as const
+      const familyArgs = [rootID, anchor.projectID, anchor.projectID] as const
       const rows = db.prepare<Row, [string, string, string]>(USAGE_SQL).all(...familyArgs)
       const totals = empty()
       const models = rows.map((row): Model => {

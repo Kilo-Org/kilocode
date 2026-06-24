@@ -1,10 +1,15 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { ModelUsage } from "@/kilocode/session/model-usage"
+import { ProjectTable } from "@/project/project.sql"
+import { ProjectID } from "@/project/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
+import { SessionTable } from "@/session/session.sql"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
+import { Database, eq } from "@/storage/db"
+import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Session.defaultLayer)
@@ -64,6 +69,7 @@ describe("session model usage", () => {
   it.instance("aggregates direct step usage by model across the top-level session tree", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
+      const test = yield* TestInstance
       const root = yield* sessions.create({ title: "root" })
       const child = yield* sessions.create({ title: "child", parentID: root.id })
       const sibling = yield* sessions.create({ title: "sibling", parentID: root.id })
@@ -103,6 +109,23 @@ describe("session model usage", () => {
         messageID: unrelatedMessage.id,
         cost: 9,
         tokens: { input: 9_000, output: 9_000, reasoning: 9_000, cache: { read: 9_000, write: 9_000 } },
+      })
+
+      const project = ProjectID.make("legacy-project")
+      Database.use((db) => {
+        db.insert(ProjectTable)
+          .values({
+            id: project,
+            worktree: test.directory,
+            vcs: "git",
+            time_created: Date.now(),
+            time_updated: Date.now(),
+            sandboxes: [],
+          })
+          .run()
+        for (const session of [root, child, sibling]) {
+          db.update(SessionTable).set({ project_id: project }).where(eq(SessionTable.id, session.id)).run()
+        }
       })
 
       expect(yield* ModelUsage.get(child.id)).toEqual({
