@@ -410,6 +410,43 @@ describe("config overlay routes", () => {
     expect(reset).toMatchObject({ enabled: false, version: 0 })
   })
 
+  test.serial("mixed global saves clear overrides when sandbox returns to its default", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { experimental: { sandbox: true } })
+    const session = await json<{ id: string }>(
+      await req(project.path, "/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+    const before = await json<{ available: boolean }>(await req(project.path, `/session/${session.id}/sandbox`))
+    if (!before.available) return
+
+    expect(
+      await json<{ enabled: boolean; version: number }>(
+        await req(project.path, `/session/${session.id}/sandbox/toggle`, { method: "POST" }),
+      ),
+    ).toMatchObject({ enabled: false, version: 1 })
+
+    await json(
+      await request(Server.Default().app, undefined, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "global",
+          set: { share: "disabled" },
+          unset: [["experimental", "sandbox"]],
+        }),
+      }),
+    )
+
+    expect(
+      await json<{ enabled: boolean; version: number }>(await req(project.path, `/session/${session.id}/sandbox`)),
+    ).toMatchObject({ enabled: false, version: 0 })
+  })
+
   test.serial("refreshes sandbox settings in every loaded project without disposing instances", async () => {
     await using global = await tmpdir()
     await using first = await tmpdir()

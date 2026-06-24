@@ -102,6 +102,41 @@ it.instance(
   { config: { experimental: { sandbox: true } } },
 )
 
+it.instance(
+  "waits for an in-flight toggle before resetting every override",
+  () =>
+    Effect.gen(function* () {
+      const id = SessionID.make("ses_sandbox_reset_race")
+      if (!(yield* SandboxPolicy.status(id)).available) return
+      const entered = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      const started = yield* Deferred.make<void>()
+      const done = yield* Deferred.make<void>()
+      const toggle = yield* SandboxPolicy.toggleGuarded(
+        id,
+        Effect.gen(function* () {
+          yield* Deferred.succeed(entered, undefined)
+          yield* Deferred.await(release)
+        }),
+      ).pipe(Effect.forkChild)
+      yield* Deferred.await(entered)
+      const reset = yield* Effect.gen(function* () {
+        yield* Deferred.succeed(started, undefined)
+        yield* SandboxPolicy.reset()
+        yield* Deferred.succeed(done, undefined)
+      }).pipe(Effect.forkChild)
+      yield* Deferred.await(started)
+      yield* Effect.yieldNow
+      expect(yield* Deferred.isDone(done)).toBe(false)
+
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(toggle)
+      yield* Fiber.join(reset)
+      expect(yield* SandboxPolicy.status(id)).toMatchObject({ enabled: true, version: 0 })
+    }),
+  { config: { experimental: { sandbox: true } } },
+)
+
 it.instance("isolates concurrent session overrides and clears them", () =>
   Effect.gen(function* () {
     const first = SessionID.make("ses_sandbox_first")

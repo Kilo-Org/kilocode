@@ -13,6 +13,7 @@ import * as Network from "./network"
 
 const overrides = new Map<string, { enabled: boolean; version: number }>()
 const locks = new Map<SessionID, { semaphore: Semaphore.Semaphore; refs: number }>()
+const mutation = Semaphore.makeUnsafe(1)
 
 function key(directory: string, sessionID: SessionID) {
   return directory + "\0" + sessionID
@@ -125,22 +126,24 @@ export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: Se
 })
 
 function change<E, R>(sessionID: SessionID, guard: Effect.Effect<unknown, E, R>) {
-  return Effect.gen(function* () {
-    const directory = yield* InstanceState.directory
-    const id = key(directory, sessionID)
-    return yield* locked(
-      sessionID,
-      Effect.gen(function* () {
-        yield* guard
-        const current = yield* status(sessionID)
-        if (!current.enabled && !current.available) return current
-        const value = { ...current, enabled: !current.enabled, version: current.version + 1 }
-        overrides.set(id, { enabled: value.enabled, version: value.version })
-        yield* (yield* Bus.Service).publish(Changed, { sessionID, ...value })
-        return value
-      }),
-    )
-  })
+  return mutation.withPermits(1)(
+    Effect.gen(function* () {
+      const directory = yield* InstanceState.directory
+      const id = key(directory, sessionID)
+      return yield* locked(
+        sessionID,
+        Effect.gen(function* () {
+          yield* guard
+          const current = yield* status(sessionID)
+          if (!current.enabled && !current.available) return current
+          const value = { ...current, enabled: !current.enabled, version: current.version + 1 }
+          overrides.set(id, { enabled: value.enabled, version: value.version })
+          yield* (yield* Bus.Service).publish(Changed, { sessionID, ...value })
+          return value
+        }),
+      )
+    }),
+  )
 }
 
 export const toggle = Effect.fn("SandboxPolicy.toggle")((sessionID: SessionID) => change(sessionID, Effect.void))
@@ -153,7 +156,9 @@ export const clear = Effect.fn("SandboxPolicy.clear")(function* (sessionID: Sess
   yield* retire(sessionID, yield* InstanceState.directory, Effect.void)
 })
 
-export const reset = Effect.fn("SandboxPolicy.reset")(() => Effect.sync(() => overrides.clear()))
+export const reset = Effect.fn("SandboxPolicy.reset")(() =>
+  mutation.withPermits(1)(Effect.sync(() => overrides.clear())),
+)
 
 export function retire<A, E, R>(
   sessionID: SessionID,
