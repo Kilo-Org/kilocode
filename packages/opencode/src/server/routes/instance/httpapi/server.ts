@@ -13,7 +13,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Account } from "@/account/account"
 import { Agent } from "@/agent/agent"
 import { Auth } from "@/auth"
-import { Bus } from "@/bus"
+import { sharedBusLayer } from "@/kilocode/server/httpapi/bus-layer" // kilocode_change
 import { Config } from "@/config/config"
 import { Command } from "@/command"
 import * as Observability from "@opencode-ai/core/effect/observability"
@@ -246,7 +246,7 @@ export function createRoutes(
       Vcs.defaultLayer,
       Workspace.defaultLayer,
       Worktree.appLayer,
-      Bus.layer,
+      sharedBusLayer, // kilocode_change
       AppFileSystem.defaultLayer,
       FetchHttpClient.layer,
       HttpServer.layerServices,
