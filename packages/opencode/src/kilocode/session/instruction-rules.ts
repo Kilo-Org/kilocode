@@ -1,5 +1,4 @@
 import path from "path"
-import matter from "gray-matter"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { ConfigMarkdown } from "@/config/markdown"
 import { KilocodeMarkdown } from "../config/markdown"
@@ -18,45 +17,30 @@ export namespace KilocodeInstructionRules {
     project: boolean
   }
 
-  const frontmatter = (text: string) => /^---\r?\n[\s\S]*?\r?\n---/.test(text)
-
-  const values = (value: unknown) => {
+  const paths = (data: Record<string, unknown>) => {
+    if (!Object.prototype.hasOwnProperty.call(data, "paths")) return undefined
+    const value = data.paths
     if (typeof value === "string") return [value]
     if (!Array.isArray(value)) return []
     return value.filter((item): item is string => typeof item === "string")
   }
 
-  const paths = (data: Record<string, unknown>) => {
-    if (!Object.prototype.hasOwnProperty.call(data, "paths")) return undefined
-    return values(data.paths)
-  }
-
-  async function body(text: string, item: string) {
-    const parsed = matter(text)
-    return {
-      content: await KilocodeMarkdown.substitute(parsed.content, item),
-      paths: paths(parsed.data),
-    }
-  }
-
   export async function parse(text: string, item: string): Promise<Rule> {
-    if (!frontmatter(text)) return { content: await KilocodeMarkdown.substitute(text, item) }
-
     try {
-      return await body(text, item)
-    } catch {
-      try {
-        return await body(ConfigMarkdown.fallbackSanitization(text), item)
-      } catch {
-        return { content: await KilocodeMarkdown.substitute(text, item) }
+      const md = await ConfigMarkdown.parseText(text, item)
+      return {
+        content: md.content,
+        paths: paths(md.data),
       }
+    } catch {
+      return { content: await KilocodeMarkdown.substitute(text, item) }
     }
   }
 
   export function match(rule: Rule, filepath: string, root: string) {
     if (!rule.paths) return false
+    if (!inside(filepath, root)) return false
     const rel = path.relative(root, filepath).replaceAll(path.sep, "/")
-    if (rel.startsWith("..") || path.isAbsolute(rel)) return false
     return rule.paths.some((pattern) => Glob.match(pattern, rel))
   }
 

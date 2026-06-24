@@ -68,9 +68,8 @@ export function fallbackSanitization(content: string): string {
   return content.replace(frontmatter, () => processed)
 }
 
-export async function parse(filePath: string) {
-  const template = await Filesystem.readText(filePath)
-
+// kilocode_change start - allow Kilo callers that already have file contents to reuse the same parser
+export async function parseText(template: string, filePath: string) {
   // kilocode_change start - substitute content and retry invalid frontmatter with permissive sanitization
   try {
     const md = matter(template)
@@ -94,6 +93,12 @@ export async function parse(filePath: string) {
   // kilocode_change end
 }
 
+export async function parse(filePath: string) {
+  const template = await Filesystem.readText(filePath)
+  return parseText(template, filePath)
+}
+// kilocode_change end
+
 // kilocode_change start - export structured frontmatter parse errors
 export const FrontmatterError = NamedError.create("ConfigFrontmatterError", {
   path: Schema.String,
@@ -108,6 +113,7 @@ export const ConfigMarkdown = {
   files,
   shell,
   fallbackSanitization,
+  parseText,
   parse,
   FrontmatterError,
 }
