@@ -13,9 +13,10 @@ const push = process.argv.includes("--push") || process.env.PUSH === "1"
 
 const root = path.join(rootDir, "package.json")
 const pkg = await Bun.file(root).json()
-const manager = pkg.packageManager ?? ""
-const bun = manager.startsWith("bun@") ? manager.slice(4) : ""
-if (!bun) throw new Error("packageManager must be bun@<version>")
+// kilocode_change start - install the same immutable Rust Bun revision as CI and Nix.
+const revision = pkg.config?.bunRevision ?? ""
+if (!revision) throw new Error("config.bunRevision must be set")
+// kilocode_change end
 
 const images = ["base", "bun-node", "jetbrains", "rust", "tauri-linux", "publish"] // kilocode_change
 
@@ -51,13 +52,15 @@ for (const name of images) {
   if (name === "bun-node") {
     if (push) {
       console.log(
-        `docker buildx build --platform ${platform} -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_VERSION=${bun} --push .`,
+        `docker buildx build --platform ${platform} -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_REVISION=${revision} --push .`, // kilocode_change
       )
-      await $`docker buildx build --platform ${platform} -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_VERSION=${bun} --push .`
+      await $`docker buildx build --platform ${platform} -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_REVISION=${revision} --push .` // kilocode_change
     }
     if (!push) {
-      console.log(`docker build -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_VERSION=${bun} .`)
-      await $`docker build -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_VERSION=${bun} .`
+      console.log(
+        `docker build -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_REVISION=${revision} .`,
+      ) // kilocode_change
+      await $`docker build -f ${file} -t ${image} --build-arg REGISTRY=${reg} --build-arg BUN_REVISION=${revision} .` // kilocode_change
     }
   }
   if (name !== "base" && name !== "bun-node") {
