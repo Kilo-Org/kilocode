@@ -80,7 +80,8 @@ describe("sandbox launch preparation", () => {
   })
 
   test("merges profile environment values and applies exact deny names", async () => {
-    const result = await Effect.runPromise(Effect.scoped(run(makeProfile(), prepare(launch))))
+    const target = { ...launch, command: process.execPath, cwd: process.cwd() }
+    const result = await Effect.runPromise(Effect.scoped(run(makeProfile(), prepare(target))))
     expect(result.environment?.KEEP).toBe("profile")
     expect(result.environment?.DROP).toBeUndefined()
     expect(result.environment?.RESET).toBeUndefined()

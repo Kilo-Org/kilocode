@@ -63,6 +63,38 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
+      - name: Setup Zig
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "zig-0.16.0.zip"
+          $target = Join-Path $env:RUNNER_TEMP "zig-0.16.0"
+          Invoke-WebRequest "https://ziglang.org/download/0.16.0/zig-x86_64-windows-0.16.0.zip" -OutFile $archive
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          $expected = "68659eb5f1e4eb1437a722f1dd889c5a322c9954607f5edcf337bc3684a75a7e"
+          if ($actual -ne $expected) { throw "Unexpected Zig archive checksum: $actual" }
+          Expand-Archive $archive -DestinationPath $target
+          Add-Content $env:GITHUB_PATH (Join-Path $target "zig-x86_64-windows-0.16.0")
+
+      - name: Build Windows sandbox helpers
+        if: runner.os == 'Windows'
+        working-directory: packages/kilo-sandbox/windows
+        run: |
+          zig build test
+          zig build -Dtarget=x86_64-windows-gnu -Doptimize=Debug --prefix dist/windows-x64
+          zig build -Dtarget=aarch64-windows-gnu -Doptimize=Debug --prefix dist/windows-arm64
+          echo "KILO_WINDOWS_SANDBOX_HELPER=$(cygpath -w "$PWD/dist/windows-x64/bin/kilo-sandbox-windows.exe")" >> "$GITHUB_ENV"
+          echo "KILO_WINDOWS_SANDBOX_PROBE=$(cygpath -w "$PWD/dist/windows-x64/bin/kilo-sandbox-windows-probe.exe")" >> "$GITHUB_ENV"
+          echo "KILO_WINDOWS_SANDBOX_PROTOTYPE=1" >> "$GITHUB_ENV"
+          echo "NODE_ENV=test" >> "$GITHUB_ENV"
+
+      - name: Run Windows sandbox kernel test
+        if: runner.os == 'Windows'
+        working-directory: packages/kilo-sandbox
+        run: bun test test/windows.integration.test.ts --timeout 30000
+      # kilocode_change end
+
       - name: Configure git identity
         run: |
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
