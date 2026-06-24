@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-06-24  
 **Scope:** All open issues and open pull requests in `Kilo-Org/kilocode`  
-**Inventory source:** `docs/audits/work/issues_raw.json` (662 open issues), `docs/audits/work/prs_body_files.json` (166 open PRs)  
+**Inventory source:** GitHub GraphQL API queries against `Kilo-Org/kilocode` open issues and open PRs (662 issues and 166 PRs as of 2026-06-24).  
 **Method:** Programmatic grouping by exact/near titles, distinctive error signatures, file-path overlap, and explicit issue references, followed by manual review of bodies, comments, and diffs. Title similarity alone was not treated as sufficient evidence.
 
 ---
