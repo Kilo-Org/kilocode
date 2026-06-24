@@ -38,7 +38,7 @@ High-confidence means the issues share the same root-cause component and the sam
 - **Evidence:** All three describe the same failure mode: the agent cannot create/edit files under `.kilo/plans/` despite explicit allow rules. #11439 provides the precise root cause (`ReadPermission.harden()` injects a `.kilo/**` deny rule after user rules, ignoring the `EXCLUDED_SUBDIRS = ["plans/"]` exemption). #10983 and #10978 show the same error message with the same allow/deny rule list.
 - **Confidence:** High
 - **Canonical:** #11439 (most detailed root-cause analysis)
-- **Suggested action:** Close #10983 and #10978 as duplicates of #11439. PR #11512 already closes #11439.
+- **Suggested action:** Close #10983 and #10978 as duplicates of #11439; do this while #11439 is still open, because PR #11512 already references closing #11439 and the duplicate links should remain resolvable against the canonical issue.
 
 ### 1.4 Kimi-2.6 "engine overloaded" with `.kilo/node_modules/` bloating context
 - **Issues:**
@@ -107,19 +107,19 @@ These PRs mention an open issue in the title or body, yet GitHub's `closingIssue
 - **Confidence:** High
 - **Suggested action:** Add "Fixes #9138" to the PR description or manually close #9138 when merged.
 
-### 2.2 PR #11590 → Issue #11542
+### 2.2 PR #11590 → Issue #11541
 - **PR:** https://github.com/Kilo-Org/kilocode/pull/11590
-- **Issue:** https://github.com/Kilo-Org/kilocode/issues/11542
-- **Evidence:** Body explains the PR addresses Windows sandboxing and references #11542, but no closing link.
+- **Issue:** https://github.com/Kilo-Org/kilocode/issues/11541
+- **Evidence:** Body explains the PR addresses Windows sandboxing and references #11542, but #11541 is the canonical issue (#11542 is the duplicate in §1.8). No closing link.
 - **Confidence:** High
-- **Suggested action:** Link PR to #11542 (may use "Related to #11542" rather than "Fixes" because it is a prototype).
+- **Suggested action:** Link PR to #11541 (may use "Related to #11541" rather than "Fixes" because it is a prototype).
 
-### 2.3 PR #11589 → Issue #11542
+### 2.3 PR #11589 → Issue #11541
 - **PR:** https://github.com/Kilo-Org/kilocode/pull/11589
-- **Issue:** https://github.com/Kilo-Org/kilocode/issues/11542
-- **Evidence:** Same as above: body references #11542, no closing link. This is a competing Windows confinement prototype to #11590.
+- **Issue:** https://github.com/Kilo-Org/kilocode/issues/11541
+- **Evidence:** Same as above: body references #11542, but #11541 is the canonical issue (#11542 is the duplicate in §1.8). No closing link. This is a competing Windows confinement prototype to #11590.
 - **Confidence:** High
-- **Suggested action:** Link PR to #11542 (as "Related to" or "Fixes" depending on prototype intent).
+- **Suggested action:** Link PR to #11541 (as "Related to" or "Fixes" depending on prototype intent).
 
 ### 2.4 PR #10570 → Issue #10375
 - **PR:** https://github.com/Kilo-Org/kilocode/pull/10570
