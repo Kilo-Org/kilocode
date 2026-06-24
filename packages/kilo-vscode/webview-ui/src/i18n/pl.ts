@@ -1291,6 +1291,10 @@ export const dict = {
     "Wybierz model transkrypcji Kilo Gateway dla wprowadzania głosowego.",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
+  "settings.sandboxing.title": "Izolacja w piaskownicy",
+  "settings.sandboxing.network.title": "Ogranicz dostęp do sieci",
+  "settings.sandboxing.network.description":
+    "Blokuj wychodzący dostęp do sieci z poleceń pochodzących od modelu i narzędzi HTTP. Lokalne serwery MCP i hooki wtyczek nie podlegają temu ograniczeniu. Ruch do dostawców i modeli na potrzeby wnioskowania pozostaje dostępny.",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",

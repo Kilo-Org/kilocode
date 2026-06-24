@@ -13,6 +13,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Format } from "@/format"
 import { LSP } from "@/lsp/lsp"
+import * as ToolNetwork from "@/kilocode/sandbox/network"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
 import { ProjectID } from "@/project/schema"
@@ -139,7 +140,7 @@ const registry = Layer.effect(
   Effect.gen(function* () {
     const write = yield* WriteTool.pipe(Effect.flatMap(Tool.init))
     const shell = yield* ShellTool.pipe(Effect.flatMap(Tool.init))
-    const list = [write, shell]
+    const list = [ToolNetwork.builtin(write), ToolNetwork.builtin(shell)]
     return ToolRegistry.Service.of({
       ids: () => Effect.succeed(list.map((item) => item.id)),
       all: () => Effect.succeed(list),
@@ -149,6 +150,7 @@ const registry = Layer.effect(
   }),
 ).pipe(Layer.provideMerge(base))
 const it = testEffect(registry)
+const mac = process.platform === "darwin" && existsSync("/usr/bin/sandbox-exec") ? it.live : it.live.skip
 
 function resolve(ctx: InstanceContext) {
   return SessionTools.resolve({
@@ -220,7 +222,7 @@ function fixture() {
   })
 }
 
-it.live("confines model-originated file mutations to the active worktree", () =>
+mac("confines model-originated file mutations to the active worktree", () =>
   Effect.gen(function* () {
     const dirs = yield* fixture()
     const tools = yield* resolve(dirs.ctx)
@@ -279,7 +281,7 @@ it.live("confines model-originated file mutations to the active worktree", () =>
   }),
 )
 
-it.live("keeps model-originated file mutations writable in a local checkout", () =>
+mac("keeps model-originated file mutations writable in a local checkout", () =>
   Effect.gen(function* () {
     const dirs = yield* fixture()
     const ctx = context(dirs.local, dirs.main, [dirs.a, dirs.b])
@@ -295,7 +297,7 @@ it.live("keeps model-originated file mutations writable in a local checkout", ()
   }),
 )
 
-it.live("keeps concurrent session profiles call-local", () =>
+mac("keeps concurrent session profiles call-local", () =>
   Effect.gen(function* () {
     const dirs = yield* fixture()
     const left = yield* resolve(context(dirs.a, dirs.main, [dirs.a, dirs.b]))
@@ -326,8 +328,6 @@ it.live("keeps concurrent session profiles call-local", () =>
     expect(yield* exists(escapeB)).toBe(false)
   }),
 )
-
-const mac = process.platform === "darwin" && existsSync("/usr/bin/sandbox-exec") ? it.live : it.live.skip
 
 mac("confines a model-originated sandboxed process to the active worktree", () =>
   Effect.gen(function* () {

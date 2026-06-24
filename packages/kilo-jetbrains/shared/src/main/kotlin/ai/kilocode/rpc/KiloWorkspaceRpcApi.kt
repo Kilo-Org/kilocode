@@ -1,6 +1,7 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
@@ -45,6 +46,12 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
 
     /** Resolve [path] to matching files, scoped primarily to [directory]. */
     suspend fun files(directory: String, path: String): List<WorkspaceFileDto>
+
+    /** Fuzzy file/folder search via the backend IDE index. */
+    suspend fun searchFiles(directory: String, query: String, limit: Int = 50): FileSearchResultDto
+
+    /** Current uncommitted git changes as a unified diff for @git-changes mentions. */
+    suspend fun gitChanges(directory: String): String?
 
     /** Open an absolute backend file path in the IDE. */
     suspend fun openFile(path: String): Boolean

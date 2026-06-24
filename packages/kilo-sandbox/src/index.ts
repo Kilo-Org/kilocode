@@ -1,4 +1,7 @@
 export type { Profile } from "./profile"
 export { assertWrite, enabled, run } from "./context"
-export { decorateFileSystem } from "./filesystem"
+export { decorateFileSystem, ensureDirectory } from "./filesystem"
+export { assertNetwork, decorateHttpClient, httpLayer as networkHttpLayer } from "./network"
+export { batchMutations, mutate, withRunner, type Runner as MutationRunner } from "./mutation"
+export type { Request as MutationRequest } from "./mutation-protocol"
 export { prepareCommand } from "./backend"

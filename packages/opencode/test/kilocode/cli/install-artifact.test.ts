@@ -1,11 +1,10 @@
-// kilocode_change - new file
 import { describe, expect, test } from "bun:test"
 import { $ } from "bun"
 import fs from "fs/promises"
 import os from "os"
 import path from "path"
 
-const root = path.join(import.meta.dir, "..", "..")
+const root = path.join(import.meta.dir, "..", "..", "..")
 const wrapper = path.join(root, "bin", "kilo")
 const postinstall = path.join(root, "script", "postinstall.mjs")
 
@@ -49,6 +48,7 @@ describe("npm install artifact behavior", () => {
       )
       const binary = "#!/bin/sh\n# binary\nexit 0\n"
       await Bun.write(path.join(bin, "kilo"), binary)
+      await Bun.write(path.join(bin, "kilo-sandbox-mutation-worker.js"), "worker")
       await Bun.write(path.join(bin, "tree-sitter", "tree-sitter.wasm"), "wasm")
       await Bun.write(path.join(bin, "console", "index.html"), "console")
       await Bun.write(path.join(bin, "console", "assets", "app.js"), "asset")
@@ -56,6 +56,7 @@ describe("npm install artifact behavior", () => {
       const proc = Bun.spawn([node, path.join(pkg, "postinstall.mjs")], { cwd: pkg })
       expect(await proc.exited).toBe(0)
       expect(await Bun.file(path.join(pkg, "bin", ".kilo")).text()).toBe(binary)
+      expect(await Bun.file(path.join(pkg, "bin", "kilo-sandbox-mutation-worker.js")).text()).toBe("worker")
       expect(await Bun.file(path.join(pkg, "bin", "tree-sitter", "tree-sitter.wasm")).text()).toBe("wasm")
       expect(await Bun.file(path.join(pkg, "bin", "console", "index.html")).text()).toBe("console")
       expect(await Bun.file(path.join(pkg, "bin", "console", "assets", "app.js")).text()).toBe("asset")
@@ -117,5 +118,5 @@ describe("npm install artifact behavior", () => {
     } finally {
       await fs.rm(tmp, { recursive: true, force: true })
     }
-  }, 60_000) // kilocode_change
+  }, 60_000)
 })

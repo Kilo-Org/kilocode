@@ -16,9 +16,9 @@ export interface MarketplaceItemBase {
   id: string
   name: string
   description: string
+  category: string
   author?: string
   authorUrl?: string
-  tags?: string[]
   prerequisites?: string[]
 }
 
@@ -44,7 +44,6 @@ export interface AgentMarketplaceItem extends MarketplaceItemBase {
 
 export interface SkillMarketplaceItem extends MarketplaceItemBase {
   type: "skill"
-  category: string
   githubUrl: string
   content: string
   displayName: string
@@ -66,5 +65,5 @@ export interface MarketplaceInstalledMetadata {
 export interface MarketplaceFilters {
   type?: string
   search?: string
-  tags?: string[]
+  categories?: string[]
 }

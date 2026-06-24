@@ -758,6 +758,10 @@ export type StepFinishPart = {
   type: "step-finish"
   reason: string
   snapshot?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
   cost: number
   tokens: {
     total?: number
@@ -1541,6 +1545,7 @@ export type Config = {
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean
+    sandbox_restrict_network?: boolean
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }

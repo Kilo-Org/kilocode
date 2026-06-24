@@ -1312,6 +1312,10 @@ export const dict = {
   "settings.models.speechToTextModel.description": "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
+  "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
+  "settings.sandboxing.network.title": "จำกัดการเข้าถึงเครือข่าย",
+  "settings.sandboxing.network.description":
+    "บล็อกการเข้าถึงเครือข่ายขาออกจากคำสั่งที่มาจากโมเดลและเครื่องมือ HTTP เซิร์ฟเวอร์ MCP ภายในเครื่องและฮุกของปลั๊กอินทำงานอยู่นอกข้อจำกัดนี้ การรับส่งข้อมูลสำหรับการอนุมานของผู้ให้บริการและโมเดลยังคงใช้งานได้",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
