@@ -6,6 +6,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { setTimeout as sleep } from "node:timers/promises"
 import { CopilotModels } from "./models"
 import { MessageV2 } from "@/session/message-v2"
+import { ServerAuth } from "@/server/auth" // kilocode_change
 
 const log = Log.create({ service: "plugin.copilot" })
 
@@ -169,7 +170,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
 
             // kilocode_change start - clear stored token on 401 so the user is prompted to re-auth
             if (res.status === 401) {
-              fetch(new URL(`/auth/github-copilot`, input.serverUrl), { method: "DELETE" }).catch((err) => {
+              fetch(new URL(`/auth/github-copilot`, input.serverUrl), { method: "DELETE", headers: ServerAuth.headers() }).catch((err) => { // kilocode_change
                 log.error("failed to clear copilot auth on 401", { err })
               })
             }
