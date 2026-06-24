@@ -1,0 +1,2319 @@
+[
+  {
+    "sim": 1.0,
+    "a": {
+      "number": 10939,
+      "title": "Kilo \u591a\u6b21\u4f7f\u7528\u4f20\u9500\u54cd\u5e94\u610f\u5916",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10939",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10771,
+      "title": "\u767b\u5f55\u4e0d\u4e86",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10771",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.999,
+    "a": {
+      "number": 10785,
+      "title": "java.lang.Throwable: File should be parsed when changing editor state, otherwise UI might be frozen for a considerable time",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10785",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10784,
+      "title": "java.lang.Throwable: Write-unsafe context",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10784",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.961,
+    "a": {
+      "number": 10784,
+      "title": "java.lang.Throwable: Write-unsafe context",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10784",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10766,
+      "title": "java.lang.Throwable: Already disposed",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10766",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.961,
+    "a": {
+      "number": 10785,
+      "title": "java.lang.Throwable: File should be parsed when changing editor state, otherwise UI might be frozen for a considerable time",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10785",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10766,
+      "title": "java.lang.Throwable: Already disposed",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10766",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.937,
+    "a": {
+      "number": 10771,
+      "title": "\u767b\u5f55\u4e0d\u4e86",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10771",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10123,
+      "title": "\u5e94\u8be5\u5141\u8bb8\u672c\u5730\u4f7f\u7528",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10123",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.937,
+    "a": {
+      "number": 10939,
+      "title": "Kilo \u591a\u6b21\u4f7f\u7528\u4f20\u9500\u54cd\u5e94\u610f\u5916",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10939",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10123,
+      "title": "\u5e94\u8be5\u5141\u8bb8\u672c\u5730\u4f7f\u7528",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10123",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.899,
+    "a": {
+      "number": 11192,
+      "title": "[Bug] Edit Provider Broken \u2014 Stream Can't Be Disabled",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11192",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 11191,
+      "title": "[Bug] Edit Provider Broken \u2014 Headers Can't Be Removed",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11191",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.892,
+    "a": {
+      "number": 10983,
+      "title": "[BUG] Plan - .kilo/plans/*.md - denied",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10983",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10978,
+      "title": ".kilo/plans/create-agents-md.md is not created after /init command in snap folder",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10978",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.877,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.867,
+    "a": {
+      "number": 10771,
+      "title": "\u767b\u5f55\u4e0d\u4e86",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10771",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9570,
+      "title": "error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9570",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.867,
+    "a": {
+      "number": 10939,
+      "title": "Kilo \u591a\u6b21\u4f7f\u7528\u4f20\u9500\u54cd\u5e94\u610f\u5916",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10939",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9570,
+      "title": "error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9570",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.861,
+    "a": {
+      "number": 11426,
+      "title": "[Feature] Custom Provider \u2014 Add Bulk \"Enable Reasoning Effort\" Option Instead of Manually Creating Variants per Level",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11426",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 11191,
+      "title": "[Bug] Edit Provider Broken \u2014 Headers Can't Be Removed",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11191",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.86,
+    "a": {
+      "number": 10384,
+      "title": "Auto-Approve tab: add sorting, filtering, and grouping for permissions",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10384",
+      "labels": []
+    },
+    "b": {
+      "number": 10368,
+      "title": "Auto-Approve tab: add sorting, filtering, and grouping for permissions",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10368",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.85,
+    "a": {
+      "number": 10938,
+      "title": "kilo in vs code cannot use with 7.3.31 version!",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10938",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10936,
+      "title": "\u83ab\u540d\u5176\u5999\u7684\u95ee\u9898",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10936",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.844,
+    "a": {
+      "number": 11426,
+      "title": "[Feature] Custom Provider \u2014 Add Bulk \"Enable Reasoning Effort\" Option Instead of Manually Creating Variants per Level",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11426",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 11192,
+      "title": "[Bug] Edit Provider Broken \u2014 Stream Can't Be Disabled",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11192",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.842,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.813,
+    "a": {
+      "number": 10123,
+      "title": "\u5e94\u8be5\u5141\u8bb8\u672c\u5730\u4f7f\u7528",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10123",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9570,
+      "title": "error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9570",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.807,
+    "a": {
+      "number": 10986,
+      "title": "400 error with Kimi Code BYOK: thinking is enabled but reasoning_content is missing in assistant tool call message at index 2",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10986",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10276,
+      "title": "the message at position 163 with role 'assistant' must not be empty",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10276",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.796,
+    "a": {
+      "number": 10936,
+      "title": "\u83ab\u540d\u5176\u5999\u7684\u95ee\u9898",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10936",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10927,
+      "title": "problem on macos",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10927",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.791,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.788,
+    "a": {
+      "number": 9763,
+      "title": "Compaction exhausted: context still exceeds model limits after 3 attempts",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9763",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9494,
+      "title": "compaction strategy/experience is horrible",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9494",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.784,
+    "a": {
+      "number": 11089,
+      "title": "login or model dropdown error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11089",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 11088,
+      "title": "login error or model dropdown error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11088",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.78,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 9493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.78,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 10344,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10344",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.78,
+    "a": {
+      "number": 10975,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10975",
+      "labels": []
+    },
+    "b": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.78,
+    "a": {
+      "number": 11595,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11595",
+      "labels": []
+    },
+    "b": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.753,
+    "a": {
+      "number": 10313,
+      "title": "frequent Kimi-2.6 \"engine overloaded\" \u2014 .kilo/node_modules/ likely bloating context payload (v7.2.52)",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10313",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10260,
+      "title": "Kimi-2.6 \"engine overloaded\" on large workspaces \u2014 .kilo/node_modules/ likely bloating context payload (v7.2.52)",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10260",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.745,
+    "a": {
+      "number": 11135,
+      "title": "Bug: Android app does not show pending session questions, making blocked sessions appear idle",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11135",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 11114,
+      "title": "Bug: Android app sends kilo/MiniMax-M3 as model ID instead of minimax/minimax-m3, causing UnknownError when answering a pending question",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11114",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.738,
+    "a": {
+      "number": 10938,
+      "title": "kilo in vs code cannot use with 7.3.31 version!",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10938",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10927,
+      "title": "problem on macos",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10927",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.732,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 9493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.732,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 10344,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10344",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.732,
+    "a": {
+      "number": 10975,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10975",
+      "labels": []
+    },
+    "b": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.732,
+    "a": {
+      "number": 11595,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11595",
+      "labels": []
+    },
+    "b": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.732,
+    "a": {
+      "number": 9987,
+      "title": "Cloudflare Workers AI / AI Gateway provider connect dialog doesn't prompt for Account ID",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9987",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9528,
+      "title": "[BUG] kilo-docs: Cloudflare Workers AI and Cloudflare AI Gateway providers are fully implemented but missing from docs and sidebar nav",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9528",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.726,
+    "a": {
+      "number": 10989,
+      "title": "[FEATURE]: Add OrcaRouter as a provider",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10989",
+      "labels": []
+    },
+    "b": {
+      "number": 10576,
+      "title": "[FEATURE]: Add OrcaRouter as a built-in AI provider",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10576",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.715,
+    "a": {
+      "number": 11474,
+      "title": "[BUG] Kilo Code CLI repeats completed shell tool results",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11474",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 11440,
+      "title": "Kilo Code CLI repeats an invalid write-tool result under repeated tool-use state",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11440",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.71,
+    "a": {
+      "number": 11523,
+      "title": "[BUG] Subagent permission error shows non-existent rules that block allowed commands",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11523",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10983,
+      "title": "[BUG] Plan - .kilo/plans/*.md - denied",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10983",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.705,
+    "a": {
+      "number": 10244,
+      "title": "perf(cli): keep skill context overhead bounded",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10244",
+      "labels": [
+        "CLI",
+        "enhancement",
+        "performance"
+      ]
+    },
+    "b": {
+      "number": 9627,
+      "title": "Skills are used less often after 7.x prompt changes",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9627",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.703,
+    "a": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "b": {
+      "number": 9493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.703,
+    "a": {
+      "number": 10344,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10344",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.703,
+    "a": {
+      "number": 10975,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10975",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.703,
+    "a": {
+      "number": 11595,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11595",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.703,
+    "a": {
+      "number": 10872,
+      "title": "API Error: 451 Unavailable For Legal Reasons",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10872",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10276,
+      "title": "the message at position 163 with role 'assistant' must not be empty",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10276",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.685,
+    "a": {
+      "number": 10244,
+      "title": "perf(cli): keep skill context overhead bounded",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10244",
+      "labels": [
+        "CLI",
+        "enhancement",
+        "performance"
+      ]
+    },
+    "b": {
+      "number": 10101,
+      "title": "Skill content injected as user-visible tool result instead of system prompt context",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10101",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.684,
+    "a": {
+      "number": 10771,
+      "title": "\u767b\u5f55\u4e0d\u4e86",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10771",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9657,
+      "title": "issue",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9657",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.684,
+    "a": {
+      "number": 10939,
+      "title": "Kilo \u591a\u6b21\u4f7f\u7528\u4f20\u9500\u54cd\u5e94\u610f\u5916",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10939",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9657,
+      "title": "issue",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9657",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.68,
+    "a": {
+      "number": 11600,
+      "title": "Startup tries to npm-install non-existent @kilocode/plugin-atomic-chat \u2192 404 (should use declared @ai-sdk/openai-compatible)",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11600",
+      "labels": []
+    },
+    "b": {
+      "number": 11443,
+      "title": "7.3.46 still tries to install unpublished @kilocode/plugin-atomic-chat package",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11443",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.677,
+    "a": {
+      "number": 10123,
+      "title": "\u5e94\u8be5\u5141\u8bb8\u672c\u5730\u4f7f\u7528",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10123",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9657,
+      "title": "issue",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9657",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.661,
+    "a": {
+      "number": 9932,
+      "title": "Model not found: kilo/kilo-auto/free.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9932",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9789,
+      "title": "Model not found: kilo/kilo-auto/free.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9789",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.651,
+    "a": {
+      "number": 10344,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10344",
+      "labels": []
+    },
+    "b": {
+      "number": 9493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.651,
+    "a": {
+      "number": 10975,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10975",
+      "labels": []
+    },
+    "b": {
+      "number": 9493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.651,
+    "a": {
+      "number": 10975,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10975",
+      "labels": []
+    },
+    "b": {
+      "number": 10344,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10344",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.651,
+    "a": {
+      "number": 11595,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11595",
+      "labels": []
+    },
+    "b": {
+      "number": 9493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.651,
+    "a": {
+      "number": 11595,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11595",
+      "labels": []
+    },
+    "b": {
+      "number": 10344,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10344",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.651,
+    "a": {
+      "number": 11595,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11595",
+      "labels": []
+    },
+    "b": {
+      "number": 10975,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10975",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.634,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 9770,
+      "title": "[FEATURE]: Windows folder structure support.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9770",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.628,
+    "a": {
+      "number": 11523,
+      "title": "[BUG] Subagent permission error shows non-existent rules that block allowed commands",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11523",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10978,
+      "title": ".kilo/plans/create-agents-md.md is not created after /init command in snap folder",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10978",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.628,
+    "a": {
+      "number": 10249,
+      "title": "Implement permission classifier runtime foundation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10249",
+      "labels": []
+    },
+    "b": {
+      "number": 10248,
+      "title": "Track permission classifier rollout",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10248",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.624,
+    "a": {
+      "number": 10432,
+      "title": "Preserve Kilo cloud defaults when config providers moves to Effect HttpApi",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10432",
+      "labels": []
+    },
+    "b": {
+      "number": 9831,
+      "title": "Complete Effect HttpApi bridge parity for Kilo overlay routes",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9831",
+      "labels": [
+        "bug",
+        "opencode-merge"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.621,
+    "a": {
+      "number": 10254,
+      "title": "Add permission classifier CLI inspection commands",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10254",
+      "labels": []
+    },
+    "b": {
+      "number": 10249,
+      "title": "Implement permission classifier runtime foundation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10249",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.619,
+    "a": {
+      "number": 10101,
+      "title": "Skill content injected as user-visible tool result instead of system prompt context",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10101",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9627,
+      "title": "Skills are used less often after 7.x prompt changes",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9627",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.618,
+    "a": {
+      "number": 10321,
+      "title": "In VS Code on Windows 11, there is no notification sound when running.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10321",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9543,
+      "title": "No completion sound",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9543",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.613,
+    "a": {
+      "number": 10986,
+      "title": "400 error with Kimi Code BYOK: thinking is enabled but reasoning_content is missing in assistant tool call message at index 2",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10986",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10872,
+      "title": "API Error: 451 Unavailable For Legal Reasons",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10872",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.599,
+    "a": {
+      "number": 10254,
+      "title": "Add permission classifier CLI inspection commands",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10254",
+      "labels": []
+    },
+    "b": {
+      "number": 10251,
+      "title": "Expose permission classifier status in the TUI",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10251",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.595,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 9770,
+      "title": "[FEATURE]: Windows folder structure support.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9770",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.594,
+    "a": {
+      "number": 9657,
+      "title": "issue",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9657",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9570,
+      "title": "error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9570",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.592,
+    "a": {
+      "number": 11518,
+      "title": "[Bug] Custom Provider \u2014 Cannot Add More Than 1 Variant in Edit Provider",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11518",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10150,
+      "title": "Subagent does not inherit parent variant (thinking/reasoning effort) when model falls back",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10150",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.59,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 9594,
+      "title": "[FEATURE]: See response as MD preview",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9594",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.576,
+    "a": {
+      "number": 11462,
+      "title": "server",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11462",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9570,
+      "title": "error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9570",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.576,
+    "a": {
+      "number": 11166,
+      "title": "[FEATURE]: goal command",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11166",
+      "labels": []
+    },
+    "b": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.575,
+    "a": {
+      "number": 9799,
+      "title": "The url is not correct, that is why it failing with Gemini Text Embeddings Model",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9799",
+      "labels": []
+    },
+    "b": {
+      "number": 9775,
+      "title": "IDX Failed to initialize: Authentication failed. Please check your API key.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9775",
+      "labels": [
+        "question"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.574,
+    "a": {
+      "number": 10251,
+      "title": "Expose permission classifier status in the TUI",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10251",
+      "labels": []
+    },
+    "b": {
+      "number": 10249,
+      "title": "Implement permission classifier runtime foundation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10249",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.574,
+    "a": {
+      "number": 11493,
+      "title": "Notification sound doesn't play in Remote SSH and WSL",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11493",
+      "labels": []
+    },
+    "b": {
+      "number": 9543,
+      "title": "No completion sound",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9543",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.571,
+    "a": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "b": {
+      "number": 9770,
+      "title": "[FEATURE]: Windows folder structure support.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9770",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.566,
+    "a": {
+      "number": 10893,
+      "title": "[FEATURE]: Explicitly disable specific tools",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10893",
+      "labels": []
+    },
+    "b": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.564,
+    "a": {
+      "number": 10383,
+      "title": "Auto-Approve: show full command text for commands up to a reasonable length",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10383",
+      "labels": [
+        "enhancement"
+      ]
+    },
+    "b": {
+      "number": 10367,
+      "title": "Always show full command as an option in command suggestions (up to a reasonable length)",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10367",
+      "labels": [
+        "enhancement"
+      ]
+    },
+    "shared_labels": [
+      "enhancement"
+    ]
+  },
+  {
+    "sim": 0.564,
+    "a": {
+      "number": 11605,
+      "title": "[FEATURE]: Upgrade to AI SDK 6.0",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11605",
+      "labels": []
+    },
+    "b": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.561,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 9948,
+      "title": "[FEATURE]:Save/perserve model in task",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9948",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.56,
+    "a": {
+      "number": 11427,
+      "title": "[Bug] Claude Opus 4.7 / 4.8 fails on every Bedrock-fronted route",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11427",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 11099,
+      "title": "thinking.type.enabled not supported for Claude 4.7/4.8 \u2014 causes 400 ValidationException",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11099",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.557,
+    "a": {
+      "number": 10251,
+      "title": "Expose permission classifier status in the TUI",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10251",
+      "labels": []
+    },
+    "b": {
+      "number": 10250,
+      "title": "Add VS Code settings and indicator for permission classifier",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10250",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.554,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 9594,
+      "title": "[FEATURE]: See response as MD preview",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9594",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.548,
+    "a": {
+      "number": 11546,
+      "title": "Sandbox: network isolation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11546",
+      "labels": []
+    },
+    "b": {
+      "number": 11538,
+      "title": "Sandbox: centralized multi-platform agent capability confinement",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11538",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.547,
+    "a": {
+      "number": 10251,
+      "title": "Expose permission classifier status in the TUI",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10251",
+      "labels": []
+    },
+    "b": {
+      "number": 10248,
+      "title": "Track permission classifier rollout",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10248",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.541,
+    "a": {
+      "number": 11166,
+      "title": "[FEATURE]: goal command",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11166",
+      "labels": []
+    },
+    "b": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.538,
+    "a": {
+      "number": 10768,
+      "title": "kilo acp: session/prompt never returns (no result, no session/update) for headless stdio ACP clients",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10768",
+      "labels": []
+    },
+    "b": {
+      "number": 8016,
+      "title": "kilo acp: add --model flag to allow model selection in ACP server mode",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/8016",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.537,
+    "a": {
+      "number": 9524,
+      "title": "ACP: provider errors are reported as successful end_turn, causing clients to save blank assistant messages",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9524",
+      "labels": []
+    },
+    "b": {
+      "number": 8016,
+      "title": "kilo acp: add --model flag to allow model selection in ACP server mode",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/8016",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.536,
+    "a": {
+      "number": 11462,
+      "title": "server",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11462",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10771,
+      "title": "\u767b\u5f55\u4e0d\u4e86",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10771",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.536,
+    "a": {
+      "number": 11462,
+      "title": "server",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11462",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10939,
+      "title": "Kilo \u591a\u6b21\u4f7f\u7528\u4f20\u9500\u54cd\u5e94\u610f\u5916",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10939",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.536,
+    "a": {
+      "number": 10250,
+      "title": "Add VS Code settings and indicator for permission classifier",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10250",
+      "labels": []
+    },
+    "b": {
+      "number": 10249,
+      "title": "Implement permission classifier runtime foundation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10249",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.533,
+    "a": {
+      "number": 11055,
+      "title": "[FEATURE]:minimax3.0",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11055",
+      "labels": []
+    },
+    "b": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.532,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 10893,
+      "title": "[FEATURE]: Explicitly disable specific tools",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10893",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.531,
+    "a": {
+      "number": 10894,
+      "title": "Custom provider model ignores modalities config - image input blocked",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10894",
+      "labels": []
+    },
+    "b": {
+      "number": 10102,
+      "title": "Bug Report & Fix: Images Not Sent to Model via OpenAI-Compatible API",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10102",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.53,
+    "a": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "b": {
+      "number": 9594,
+      "title": "[FEATURE]: See response as MD preview",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9594",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.53,
+    "a": {
+      "number": 10254,
+      "title": "Add permission classifier CLI inspection commands",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10254",
+      "labels": []
+    },
+    "b": {
+      "number": 10250,
+      "title": "Add VS Code settings and indicator for permission classifier",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10250",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.53,
+    "a": {
+      "number": 10254,
+      "title": "Add permission classifier CLI inspection commands",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10254",
+      "labels": []
+    },
+    "b": {
+      "number": 10248,
+      "title": "Track permission classifier rollout",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10248",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.529,
+    "a": {
+      "number": 9770,
+      "title": "[FEATURE]: Windows folder structure support.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9770",
+      "labels": []
+    },
+    "b": {
+      "number": 9493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9493",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.529,
+    "a": {
+      "number": 10344,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10344",
+      "labels": []
+    },
+    "b": {
+      "number": 9770,
+      "title": "[FEATURE]: Windows folder structure support.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9770",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.529,
+    "a": {
+      "number": 10975,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10975",
+      "labels": []
+    },
+    "b": {
+      "number": 9770,
+      "title": "[FEATURE]: Windows folder structure support.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9770",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.529,
+    "a": {
+      "number": 11595,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11595",
+      "labels": []
+    },
+    "b": {
+      "number": 9770,
+      "title": "[FEATURE]: Windows folder structure support.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9770",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.527,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 9529,
+      "title": "[FEATURE]: Edit prompt",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9529",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.527,
+    "a": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "b": {
+      "number": 9948,
+      "title": "[FEATURE]:Save/perserve model in task",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9948",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.527,
+    "a": {
+      "number": 10768,
+      "title": "kilo acp: session/prompt never returns (no result, no session/update) for headless stdio ACP clients",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10768",
+      "labels": []
+    },
+    "b": {
+      "number": 9524,
+      "title": "ACP: provider errors are reported as successful end_turn, causing clients to save blank assistant messages",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9524",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.525,
+    "a": {
+      "number": 9201,
+      "title": "Google provider not working",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9201",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 6018,
+      "title": "Function call is missing a thought_signature model Gemini 3.1 Pro",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/6018",
+      "labels": [
+        "backend",
+        "jetbrains",
+        "kilo-auto-fix",
+        "kilo-triaged",
+        "native-tool-calls"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.524,
+    "a": {
+      "number": 10907,
+      "title": "Model not found: kilo/kilo-auto/free when using Kilo Code Auto Free model",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10907",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9932,
+      "title": "Model not found: kilo/kilo-auto/free.",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9932",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.524,
+    "a": {
+      "number": 11076,
+      "title": "Auto-compaction fails for local Ollama models (32K context) with \"Compaction exhausted\" error",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11076",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 9763,
+      "title": "Compaction exhausted: context still exceeds model limits after 3 attempts",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9763",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.522,
+    "a": {
+      "number": 11484,
+      "title": "fix(cli): config read-merge order contradicts write target \u2014 opencode.json silently overrides kilo.json",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11484",
+      "labels": []
+    },
+    "b": {
+      "number": 9503,
+      "title": "`kilo plugin` writes to `.opencode/` / `opencode.jsonc` instead of Kilo-named config",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9503",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.519,
+    "a": {
+      "number": 11166,
+      "title": "[FEATURE]: goal command",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11166",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.519,
+    "a": {
+      "number": 10771,
+      "title": "\u767b\u5f55\u4e0d\u4e86",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10771",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 6795,
+      "title": "Make statusbar a generic thing for kilo instead of an autocomplete feature",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/6795",
+      "labels": [
+        "autocomplete",
+        "bug",
+        "enhancement",
+        "kilo-auto-fix",
+        "kilo-triaged",
+        "proposal",
+        "user-interface"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.519,
+    "a": {
+      "number": 10939,
+      "title": "Kilo \u591a\u6b21\u4f7f\u7528\u4f20\u9500\u54cd\u5e94\u610f\u5916",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10939",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 6795,
+      "title": "Make statusbar a generic thing for kilo instead of an autocomplete feature",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/6795",
+      "labels": [
+        "autocomplete",
+        "bug",
+        "enhancement",
+        "kilo-auto-fix",
+        "kilo-triaged",
+        "proposal",
+        "user-interface"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.517,
+    "a": {
+      "number": 10252,
+      "title": "Migrate legacy Gatekeeper settings to permission classifier",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10252",
+      "labels": []
+    },
+    "b": {
+      "number": 9138,
+      "title": "LLM-based bash command auto-approval (inspired by Claude Code \"auto mode\" / legacy kilo \"gatekeeper\")",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9138",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.517,
+    "a": {
+      "number": 10249,
+      "title": "Implement permission classifier runtime foundation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10249",
+      "labels": []
+    },
+    "b": {
+      "number": 9138,
+      "title": "LLM-based bash command auto-approval (inspired by Claude Code \"auto mode\" / legacy kilo \"gatekeeper\")",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9138",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.516,
+    "a": {
+      "number": 11577,
+      "title": "Allow Android app to interact with any cloud session, not just when a question is pending",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11577",
+      "labels": []
+    },
+    "b": {
+      "number": 11135,
+      "title": "Bug: Android app does not show pending session questions, making blocked sessions appear idle",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11135",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.516,
+    "a": {
+      "number": 10564,
+      "title": "Feature: Silent auto-retry for transient stream errors (suppress visual interruption)",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10564",
+      "labels": []
+    },
+    "b": {
+      "number": 9792,
+      "title": "isRetryable: true requests not auto-retried after stream error \u2014 session goes offline instead of retrying",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9792",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.515,
+    "a": {
+      "number": 9584,
+      "title": "[Bug] Plan Mode Saves Plans with Malformed / Unexpected Names to .kilo/plans Directory",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9584",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 6230,
+      "title": "Consider re-adding Architect mode (or enhancing Plan mode to write plans to /plans)",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/6230",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.514,
+    "a": {
+      "number": 11013,
+      "title": "[FEATURE]: Add Cline Provider",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11013",
+      "labels": []
+    },
+    "b": {
+      "number": 10498,
+      "title": "how make the editor working such as cline",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10498",
+      "labels": [
+        "question"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.512,
+    "a": {
+      "number": 10521,
+      "title": "Plan mode support and plan-to-implementation switch in the JetBrains plugin",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10521",
+      "labels": [
+        "jetbrains"
+      ]
+    },
+    "b": {
+      "number": 10300,
+      "title": "[FEATURE]: config setting for plan mode handoff",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10300",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.511,
+    "a": {
+      "number": 11546,
+      "title": "Sandbox: network isolation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11546",
+      "labels": []
+    },
+    "b": {
+      "number": 11545,
+      "title": "Sandbox: network isolation",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11545",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.51,
+    "a": {
+      "number": 10893,
+      "title": "[FEATURE]: Explicitly disable specific tools",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10893",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.507,
+    "a": {
+      "number": 11538,
+      "title": "Sandbox: centralized multi-platform agent capability confinement",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11538",
+      "labels": []
+    },
+    "b": {
+      "number": 9136,
+      "title": "Sandbox: persistent agent process confinement for MCP and background tasks",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9136",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.506,
+    "a": {
+      "number": 11452,
+      "title": "How to see usage of Minimax token plan?",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11452",
+      "labels": [
+        "question"
+      ]
+    },
+    "b": {
+      "number": 10795,
+      "title": "[FEATURE]: Update MiniMax Token Plan provider to include M3",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10795",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.505,
+    "a": {
+      "number": 9948,
+      "title": "[FEATURE]:Save/perserve model in task",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9948",
+      "labels": []
+    },
+    "b": {
+      "number": 9777,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9777",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.504,
+    "a": {
+      "number": 10834,
+      "title": "Removing a skill on Settings page does not refresh the UI immediately",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10834",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10244,
+      "title": "perf(cli): keep skill context overhead bounded",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10244",
+      "labels": [
+        "CLI",
+        "enhancement",
+        "performance"
+      ]
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.503,
+    "a": {
+      "number": 11462,
+      "title": "server",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11462",
+      "labels": [
+        "bug"
+      ]
+    },
+    "b": {
+      "number": 10123,
+      "title": "\u5e94\u8be5\u5141\u8bb8\u672c\u5730\u4f7f\u7528",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10123",
+      "labels": [
+        "bug"
+      ]
+    },
+    "shared_labels": [
+      "bug"
+    ]
+  },
+  {
+    "sim": 0.501,
+    "a": {
+      "number": 11055,
+      "title": "[FEATURE]:minimax3.0",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/11055",
+      "labels": []
+    },
+    "b": {
+      "number": 10904,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10904",
+      "labels": []
+    },
+    "shared_labels": []
+  },
+  {
+    "sim": 0.5,
+    "a": {
+      "number": 10493,
+      "title": "[FEATURE]:",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/10493",
+      "labels": []
+    },
+    "b": {
+      "number": 9517,
+      "title": "[FEATURE]: Checkpoint cleanup in v7",
+      "url": "https://github.com/Kilo-Org/kilocode/issues/9517",
+      "labels": []
+    },
+    "shared_labels": []
+  }
+]

@@ -1,0 +1,103 @@
+[
+  {
+    "pr_number": 11619,
+    "pr_title": "feat(opencode): LLM command-approval classifier (#9138)",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/11619",
+    "referenced_issues": [
+      {
+        "number": 9138,
+        "title": "LLM-based bash command auto-approval (inspired by Claude Code \"auto mode\" / legacy kilo \"gatekeeper\")",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/9138"
+      }
+    ]
+  },
+  {
+    "pr_number": 11596,
+    "pr_title": "feat(cli): add Linux filesystem sandbox",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/11596",
+    "referenced_issues": [
+      {
+        "number": 11538,
+        "title": "Sandbox: centralized multi-platform agent capability confinement",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/11538"
+      }
+    ]
+  },
+  {
+    "pr_number": 11590,
+    "pr_title": "feat(sandbox): prototype Zig Windows confinement",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/11590",
+    "referenced_issues": [
+      {
+        "number": 11542,
+        "title": "Sandbox: Windows support",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/11542"
+      }
+    ]
+  },
+  {
+    "pr_number": 11589,
+    "pr_title": "feat(sandbox): prototype Windows process confinement",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/11589",
+    "referenced_issues": [
+      {
+        "number": 11542,
+        "title": "Sandbox: Windows support",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/11542"
+      }
+    ]
+  },
+  {
+    "pr_number": 11131,
+    "pr_title": "Add agent step checkpoints to VS Code",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/11131",
+    "referenced_issues": [
+      {
+        "number": 11060,
+        "title": "Attribute workspace changes to sessions before reverting shared-directory work",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/11060"
+      }
+    ]
+  },
+  {
+    "pr_number": 10570,
+    "pr_title": "fix(issue 10375): add \"reasoning\" interleaved field for Cerebras zai-glm-4.7 compatibility",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/10570",
+    "referenced_issues": [
+      {
+        "number": 10375,
+        "title": "cerabras messages.2.assistant.reasoning_content: property 'messages.2.assistant.reasoning_content' is unsupported",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/10375"
+      }
+    ]
+  },
+  {
+    "pr_number": 10538,
+    "pr_title": "fix(cli): allow questions for custom agents",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/10538",
+    "referenced_issues": [
+      {
+        "number": 10315,
+        "title": "question tool not allowed by default for custom modes/agents",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/10315"
+      }
+    ]
+  },
+  {
+    "pr_number": 10267,
+    "pr_title": "feat(core): add Gatekeeper config schema and policy defaults",
+    "pr_url": "https://github.com/Kilo-Org/kilocode/pull/10267",
+    "referenced_issues": [
+      {
+        "number": 10249,
+        "title": "Implement permission classifier runtime foundation",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/10249"
+      },
+      {
+        "number": 9138,
+        "title": "LLM-based bash command auto-approval (inspired by Claude Code \"auto mode\" / legacy kilo \"gatekeeper\")",
+        "url": "https://github.com/Kilo-Org/kilocode/issues/9138"
+      }
+    ]
+  }
+]
