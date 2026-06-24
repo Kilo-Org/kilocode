@@ -20,6 +20,7 @@ const generated = await import("./generate.ts")
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 import { LanceDBRuntime } from "../src/kilocode/lancedb" // kilocode_change
+import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker" // kilocode_change
 
 // Load migrations from migration directories
 const migrationDirs = (
@@ -251,6 +252,7 @@ const targets = singleFlag
 
 await $`rm -rf dist`
 const kiloConsoleDist = await buildKiloConsole() // kilocode_change
+const kiloSandboxWorker = await KiloSandboxWorker.bundle() // kilocode_change
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
@@ -324,6 +326,7 @@ for (const item of targets) {
       KILO_WORKER_PATH: workerPath,
       KILO_SESSION_EXPORT_WORKER_PATH: sessionExportWorkerPath, // kilocode_change
       KILO_INDEXING_WORKER_PATH: indexingWorkerPath, // kilocode_change
+      KILO_SANDBOX_MUTATION_WORKER_PATH: JSON.stringify(KiloSandboxWorker.filename), // kilocode_change
       KILO_CHANNEL: `'${Script.channel}'`,
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
       KILO_BUILD_KIND: Script.release ? `'release'` : `'source'`, // kilocode_change
@@ -332,6 +335,7 @@ for (const item of targets) {
 
   await copyTreeSitterWasms(path.resolve(dir, `dist/${name}/bin`)) // kilocode_change
   await copyKiloConsole(kiloConsoleDist, path.resolve(dir, `dist/${name}/bin`)) // kilocode_change
+  await KiloSandboxWorker.copy(kiloSandboxWorker, path.resolve(dir, `dist/${name}/bin`)) // kilocode_change
 
   // kilocode_change start - fix Nix-specific ELF interpreter paths for Linux binaries
   if (item.os === "linux") {
@@ -364,6 +368,8 @@ for (const item of targets) {
       console.log(`Running smoke test: ${binaryPath} --pure models anthropic`)
       await smokeModels(binaryPath)
       console.log("Models snapshot smoke test passed")
+      await KiloSandboxWorker.smoke(binaryPath) // kilocode_change
+      console.log("Kilo sandbox mutation worker smoke test passed") // kilocode_change
     } catch (e) {
       console.error(`Smoke test failed for ${name}:`, e)
       process.exit(1)

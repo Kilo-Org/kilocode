@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Result } from "effect"
-import { backendSupport, prepare, type Launch } from "../src/backend"
+import { Effect, PlatformError, Result } from "effect"
+import { backendSupport, confine, prepare, type Launch } from "../src/backend"
 import { run } from "../src/context"
+import { settle } from "../src/mutation"
 import type { Profile } from "../src/profile"
 import { generate } from "../src/seatbelt"
 
@@ -111,6 +112,38 @@ describe("sandbox launch preparation", () => {
       expect(result.failure.reason._tag).toBe("BadResource")
       expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
     }
+  })
+
+  test("fails allowed-host profiles closed through explicit confinement", async () => {
+    const input = makeProfile("allow")
+    const result = await Effect.runPromise(
+      Effect.scoped(confine({ ...input, network: { mode: "allow", allowedHosts: ["example.com"] } }, launch)).pipe(
+        Effect.result,
+      ),
+    )
+    expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure.reason._tag).toBe("BadResource")
+      expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+    }
+  })
+
+  test("preserves worker stderr when the request pipe also fails", async () => {
+    const pipe = Object.assign(new Error("write EPIPE"), { code: "EPIPE" })
+    const cause = await settle(
+      Promise.reject(pipe),
+      Promise.resolve(Buffer.alloc(0)),
+      Promise.resolve(Buffer.from("useful worker failure")),
+      Promise.resolve(7),
+      "/workspace/value.txt",
+    ).then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    expect(cause).toBeInstanceOf(PlatformError.PlatformError)
+    if (!(cause instanceof PlatformError.PlatformError)) return
+    expect(cause.reason.description).toBe("useful worker failure")
+    expect(cause.reason.cause).toBe(pipe)
   })
 
   test("reports backend support with a reason when unavailable", () => {
