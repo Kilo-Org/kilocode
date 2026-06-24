@@ -1373,7 +1373,7 @@ export const dict = {
     "Rules are instruction files that guide agent behaviour. Local Markdown files can include paths frontmatter to load only when matching files are read.",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
-    "Configured paths or globs for additional instruction files. Auto-discovered .claude/rules files are controlled by Claude Code Compatibility.",
+    "Paths or globs for additional instruction files.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
   "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
   "settings.agentBehaviour.claudeCompat.description":
