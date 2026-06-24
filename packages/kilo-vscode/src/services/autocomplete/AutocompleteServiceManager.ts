@@ -153,6 +153,7 @@ export class AutocompleteServiceManager {
     // or added credits, so we should give autocomplete a fresh chance.
     this.unsubscribeState = connectionService.onStateChange(() => {
       this.inlineCompletionProvider.resetBackoff()
+      this.nextEditProvider.resetBackoff()
       void this.load()
     })
 
@@ -161,7 +162,10 @@ export class AutocompleteServiceManager {
     // reliable signal that credentials may have changed.
     this.unsubscribeEvent = connectionService.onEventFiltered(
       (event) => event.type === "global.disposed",
-      () => this.inlineCompletionProvider.resetBackoff(),
+      () => {
+        this.inlineCompletionProvider.resetBackoff()
+        this.nextEditProvider.resetBackoff()
+      },
     )
 
     void this.load()
