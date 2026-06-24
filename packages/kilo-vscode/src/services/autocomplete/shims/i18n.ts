@@ -1,10 +1,9 @@
 // i18n bridge for autocomplete module
-// Provides a t() function using the autocomplete English dictionary as fallback.
-// Can be wired to locale detection later.
 
-import { dict as enDict } from "../i18n/en"
+import * as vscode from "vscode"
+import { load } from "../i18n"
 
-const translations: Record<string, string> = { ...enDict }
+const translations = load(vscode.env.language)
 
 export function t(key: string, vars?: Record<string, string | number>): string {
   let text = translations[key] ?? key

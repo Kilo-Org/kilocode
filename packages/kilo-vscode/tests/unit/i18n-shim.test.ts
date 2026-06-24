@@ -1,4 +1,5 @@
 import { describe, it, expect } from "bun:test"
+import { load } from "../../src/services/autocomplete/i18n"
 import { t } from "../../src/services/autocomplete/shims/i18n"
 
 describe("t()", () => {
@@ -62,5 +63,23 @@ describe("t()", () => {
     const result = t("kilocode:autocomplete.statusBar.enabled", {})
     expect(typeof result).toBe("string")
     expect(result).not.toContain("{{")
+  })
+})
+
+describe("load()", () => {
+  it("loads localized autocomplete errors", () => {
+    const translations = load("de-DE")
+    expect(translations["kilocode:autocomplete.creditsExhausted.message"]).toContain("Mögliche Ursachen")
+    expect(translations["kilocode:autocomplete.authError.message"]).toContain("API-Schlüssel")
+  })
+
+  it("resolves regional locale variants", () => {
+    expect(load("pt-BR")["kilocode:autocomplete.authError.message"]).toContain("autenticação")
+    expect(load("zh-TW")["kilocode:autocomplete.authError.message"]).toContain("身分驗證")
+    expect(load("nb-NO")["kilocode:autocomplete.authError.message"]).toContain("autentiseringsproblem")
+  })
+
+  it("falls back to English for unsupported locales", () => {
+    expect(load("unknown")["kilocode:autocomplete.statusBar.enabled"]).toBe("$(kilo-logo) Autocomplete")
   })
 })
