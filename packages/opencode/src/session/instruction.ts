@@ -143,8 +143,8 @@ export const layer: Layer.Layer<
       }
 
       // Add .claude/rules Markdown files as ordinary local instruction candidates.
-      const compat = yield* Effect.promise(() =>
-        KilocodeInstruction.compatibility({
+      const claude = yield* Effect.promise(() =>
+        KilocodeInstruction.claudeRules({
           home: global.home,
           directory: ctx.directory,
           worktree: ctx.worktree,
@@ -152,7 +152,7 @@ export const layer: Layer.Layer<
           project: !Flag.KILO_DISABLE_PROJECT_CONFIG,
         }),
       )
-      compat.forEach((item) => paths.add(path.resolve(item)))
+      claude.forEach((item) => paths.add(path.resolve(item)))
 
       if (config.instructions) {
         for (const raw of config.instructions) {

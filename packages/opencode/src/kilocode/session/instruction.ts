@@ -5,7 +5,7 @@ import { ConfigMarkdown } from "@/config/markdown"
 import { KilocodeMarkdown } from "../config/markdown"
 
 export namespace KilocodeInstruction {
-  export interface CompatibilityInput {
+  export interface ClaudeRulesInput {
     home: string
     directory: string
     worktree: string
@@ -66,7 +66,7 @@ export namespace KilocodeInstruction {
     return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))
   }
 
-  export async function compatibility(input: CompatibilityInput) {
+  export async function claudeRules(input: ClaudeRulesInput) {
     const result = new Set<string>()
     if (!input.enabled) return []
 
