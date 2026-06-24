@@ -1,18 +1,31 @@
 import type { ClassifierProvider } from "../types"
 
-// kilocode_change start — og-saas / og-local backend (issue #9138)
+// kilocode_change start — vendor-agnostic HTTP classifier backend (issue #9138)
 
 const TIMEOUT_MS = 10_000
 
 /**
- * og-saas / og-local backend: POST the classifier contract to the
- * OpenGuardrails service (`POST {endpoint}/v1/classify`) and map the structured
- * response. Same contract whether the endpoint is the hosted SaaS or a locally
- * served model. Fails closed (`unavailable`) on any error, timeout, non-2xx, or
- * malformed body — the caller then escalates to a human.
+ * `http` backend: POST the classifier contract to a user-configured HTTP
+ * service and map its structured response. Vendor-agnostic — any service that
+ * implements the documented contract works (a self-hosted model, a locally
+ * served endpoint, or a hosted guardrails API); the URL and auth come entirely
+ * from config.
+ *
+ * Request — `POST {endpoint}` with `content-type: application/json` and, when an
+ * API key is configured, `Authorization: Bearer {apiKey}`:
+ *
+ *   { transcript: TranscriptEntry[], action: ClassifierAction, policy: ClassifierPolicy }
+ *
+ * Response — JSON:
+ *
+ *   { should_block: boolean, reason?: string, unavailable?: boolean, model?: string }
+ *
+ * Fails closed (`unavailable`) on any error, timeout, non-2xx, or malformed
+ * body — the caller then escalates to a human (`ask`).
  */
-export function ogProvider(opts: { endpoint: string; apiKey?: string; label: string }): ClassifierProvider {
-  const url = opts.endpoint.replace(/\/+$/, "") + "/v1/classify"
+export function httpProvider(opts: { endpoint: string; apiKey?: string; label?: string }): ClassifierProvider {
+  const url = opts.endpoint.trim()
+  const label = opts.label ?? "http"
   return {
     async classify(input, signal) {
       const controller = new AbortController()
@@ -26,7 +39,7 @@ export function ogProvider(opts: { endpoint: string; apiKey?: string; label: str
           signal: controller.signal,
           headers: {
             "content-type": "application/json",
-            ...(opts.apiKey ? { "x-api-key": opts.apiKey } : {}),
+            ...(opts.apiKey ? { authorization: `Bearer ${opts.apiKey}` } : {}),
           },
           body: JSON.stringify({
             transcript: input.transcript,
@@ -38,8 +51,8 @@ export function ogProvider(opts: { endpoint: string; apiKey?: string; label: str
           return {
             shouldBlock: true,
             unavailable: true,
-            reason: `OG classifier service returned ${res.status}`,
-            model: opts.label,
+            reason: `classifier service returned ${res.status}`,
+            model: label,
           }
         }
         const d = (await res.json()) as {
@@ -52,22 +65,22 @@ export function ogProvider(opts: { endpoint: string; apiKey?: string; label: str
           return {
             shouldBlock: true,
             unavailable: true,
-            reason: "OG classifier service returned a malformed response",
-            model: opts.label,
+            reason: "classifier service returned a malformed response",
+            model: label,
           }
         }
         return {
           shouldBlock: d.should_block,
           reason: typeof d.reason === "string" ? d.reason : undefined,
           unavailable: d.unavailable === true,
-          model: typeof d.model === "string" ? d.model : opts.label,
+          model: typeof d.model === "string" ? d.model : label,
         }
       } catch (e) {
         return {
           shouldBlock: true,
           unavailable: true,
-          reason: e instanceof Error ? e.message : "OG classifier service unavailable",
-          model: opts.label,
+          reason: e instanceof Error ? e.message : "classifier service unavailable",
+          model: label,
         }
       } finally {
         clearTimeout(timer)

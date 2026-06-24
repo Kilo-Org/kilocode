@@ -6,10 +6,11 @@ import { ConfigModelID } from "./model-id"
 /**
  * Which backend evaluates gated tool calls.
  * - `own`: the user's configured model (default; zero extra dependency).
- * - `og-local`: a locally-served OpenGuardrails model over HTTP (Ollama / GGUF).
- * - `og-saas`: the OpenGuardrails hosted API.
+ * - `http`: a user-configured HTTP service implementing the classifier
+ *   contract (a self-hosted model, a local endpoint, or a hosted guardrails
+ *   API). Vendor-agnostic — the URL and auth come from `endpoint`/`apiKey`.
  */
-export const Backend = Schema.Literals(["own", "og-local", "og-saas"]).annotate({
+export const Backend = Schema.Literals(["own", "http"]).annotate({
   identifier: "ClassifierBackend",
 })
 export type Backend = Schema.Schema.Type<typeof Backend>
@@ -30,10 +31,10 @@ export const Info = Schema.Struct({
     description: "Model for backend='own', e.g. 'anthropic/claude-haiku-4-5'. Defaults to the small/main model.",
   }),
   endpoint: Schema.optional(Schema.String).annotate({
-    description: "HTTP endpoint for backend='og-local' (e.g. http://localhost:11434).",
+    description: "Full URL the classifier contract is POSTed to. Required for backend='http' (e.g. http://localhost:8000/classify).",
   }),
   apiKey: Schema.optional(Schema.String).annotate({
-    description: "API key for backend='og-saas'. Supports ${ENV_VAR} expansion.",
+    description: "Bearer token for backend='http', sent as 'Authorization: Bearer <key>'. Supports ${ENV_VAR} expansion.",
   }),
   twoStage: Schema.optional(Schema.Boolean).annotate({
     description: "Run a fast single-token pass, then a chain-of-thought pass only on blocks. backend='own' only.",

@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { isSafeAllowlisted } from "../../src/kilocode/classifier/allowlist"
 import { buildTranscript, projectToolInput } from "../../src/kilocode/classifier/transcript"
 import { buildSystemPrompt, DEFAULT_SOFT_DENY, parseVerdict, resolvePolicy } from "../../src/kilocode/classifier/prompt"
+import { httpProvider } from "../../src/kilocode/classifier/provider/http"
+import type { ClassifierInput } from "../../src/kilocode/classifier/types"
 import type { MessageV2 } from "../../src/session/message-v2"
 
 // Minimal structural fixtures — buildTranscript only reads info.role/id and
@@ -91,5 +93,68 @@ describe("policy slots are copy-then-edit", () => {
     expect(sys).toContain("prettier is fine")
     expect(sys).toContain("trusted: the repo")
     expect(sys).toContain("never the agent's prose")
+  })
+})
+
+describe("http backend is vendor-agnostic and fails closed", () => {
+  const input: ClassifierInput = {
+    transcript: [],
+    action: { tool: "bash", input: { command: "ls" } },
+    policy: { environment: [], allow: [], soft_deny: [] },
+  }
+  const signal = new AbortController().signal
+
+  async function withFetch<T>(impl: typeof fetch, fn: () => Promise<T>): Promise<T> {
+    const orig = globalThis.fetch
+    globalThis.fetch = impl
+    try {
+      return await fn()
+    } finally {
+      globalThis.fetch = orig
+    }
+  }
+
+  test("maps a structured block response", async () => {
+    const v = await withFetch(
+      (async () => new Response(JSON.stringify({ should_block: true, reason: "irreversible", model: "svc-1" }), { status: 200 })) as unknown as typeof fetch,
+      () => httpProvider({ endpoint: "http://svc/classify" }).classify(input, signal),
+    )
+    expect(v.shouldBlock).toBe(true)
+    expect(v.reason).toBe("irreversible")
+    expect(v.unavailable).toBe(false)
+    expect(v.model).toBe("svc-1")
+  })
+
+  test("POSTs the contract to the exact endpoint with a bearer token", async () => {
+    let captured: { url: unknown; init: RequestInit | undefined } | undefined
+    await withFetch(
+      (async (url: unknown, init?: RequestInit) => {
+        captured = { url, init }
+        return new Response(JSON.stringify({ should_block: false }), { status: 200 })
+      }) as unknown as typeof fetch,
+      () => httpProvider({ endpoint: "https://svc.example/classify", apiKey: "secret" }).classify(input, signal),
+    )
+    expect(captured?.url).toBe("https://svc.example/classify")
+    expect(captured?.init?.method).toBe("POST")
+    expect((captured?.init?.headers as Record<string, string>).authorization).toBe("Bearer secret")
+    expect(JSON.parse(captured?.init?.body as string).action.tool).toBe("bash")
+  })
+
+  test("malformed body → unavailable (fail closed)", async () => {
+    const v = await withFetch(
+      (async () => new Response(JSON.stringify({ reason: "no verdict field" }), { status: 200 })) as unknown as typeof fetch,
+      () => httpProvider({ endpoint: "http://svc/classify" }).classify(input, signal),
+    )
+    expect(v.unavailable).toBe(true)
+    expect(v.shouldBlock).toBe(true)
+  })
+
+  test("non-2xx → unavailable (fail closed)", async () => {
+    const v = await withFetch(
+      (async () => new Response("nope", { status: 503 })) as unknown as typeof fetch,
+      () => httpProvider({ endpoint: "http://svc/classify" }).classify(input, signal),
+    )
+    expect(v.unavailable).toBe(true)
+    expect(v.reason).toContain("503")
   })
 })

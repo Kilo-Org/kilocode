@@ -6,7 +6,7 @@ import type { MessageV2 } from "@/session/message-v2"
 import { isSafeAllowlisted } from "./allowlist"
 import { resolvePolicy } from "./prompt"
 import { ownModelProvider } from "./provider/own-model"
-import { ogProvider } from "./provider/og"
+import { httpProvider } from "./provider/http"
 import { buildTranscript, projectToolInput } from "./transcript"
 import type { ClassifierDecision } from "./types"
 
@@ -19,10 +19,6 @@ const block = (reason: string): ClassifierDecision => ({ kind: "block", reason }
 // Escalation backstop: too many denials in one turn → escalate to the human.
 const MAX_CONSECUTIVE_DENIALS = 3
 const MAX_TOTAL_DENIALS = 20
-
-// Default OpenGuardrails endpoints; override per backend via `classifier.endpoint`.
-const OG_SAAS_ENDPOINT = "https://api.openguardrails.com"
-const OG_LOCAL_ENDPOINT = "http://localhost:8000"
 
 /**
  * Per-session denial counters. Reset when the latest user message changes
@@ -89,10 +85,18 @@ export const evaluate = Effect.fn("Classifier.evaluate")(function* (input: {
   }
 
   const verdict = yield* Effect.gen(function* () {
-    // og-saas / og-local: POST the contract to the OpenGuardrails service.
-    if (backend === "og-saas" || backend === "og-local") {
-      const endpoint = cfg.endpoint ?? (backend === "og-saas" ? OG_SAAS_ENDPOINT : OG_LOCAL_ENDPOINT)
-      const p = ogProvider({ endpoint, apiKey: cfg.apiKey, label: backend })
+    // http: POST the contract to a user-configured classifier service.
+    if (backend === "http") {
+      if (!cfg.endpoint) {
+        // No endpoint to call → fail closed (the caller escalates to a human).
+        return {
+          shouldBlock: true,
+          unavailable: true,
+          reason: "classifier backend 'http' requires an endpoint",
+          model: "http",
+        }
+      }
+      const p = httpProvider({ endpoint: cfg.endpoint, apiKey: cfg.apiKey })
       return yield* Effect.promise(() => p.classify(classifierInput, input.abort))
     }
     // own: the user's configured model via the AI SDK.
