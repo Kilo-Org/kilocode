@@ -13,7 +13,7 @@ export function failed(result: UsageResult | undefined, sessionID: string) {
   return result?.sessionID === sessionID && !result.data
 }
 
-export function member(input: {
+export function isSessionTreeMember(input: {
   root: string
   sessionID: string
   get: (sessionID: string) => Session | undefined

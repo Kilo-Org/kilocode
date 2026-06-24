@@ -7,8 +7,8 @@ import {
   formatCost,
   formatCount,
   formatRate,
+  isSessionTreeMember,
   label,
-  member,
   select,
   type UsageResult,
 } from "@/kilocode/plugins/model-usage"
@@ -44,7 +44,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   onMount(() => {
     const refresh = () => void refetch()
     const related = (sessionID: string, info?: ReturnType<typeof props.api.state.session.get>) =>
-      member({ root: props.session_id, sessionID, info, get: props.api.state.session.get })
+      isSessionTreeMember({ root: props.session_id, sessionID, info, get: props.api.state.session.get })
     const offs = [
       props.api.event.on("message.part.updated", (event) => {
         if (event.properties.part.type === "step-finish" && related(event.properties.sessionID)) refresh()

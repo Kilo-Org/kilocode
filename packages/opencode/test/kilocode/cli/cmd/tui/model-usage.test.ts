@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import type { Session } from "@kilocode/sdk/v2"
-import { failed, formatRate, label, member, select, type SessionModelUsage } from "@/kilocode/plugins/model-usage"
+import {
+  failed,
+  formatRate,
+  isSessionTreeMember,
+  label,
+  select,
+  type SessionModelUsage,
+} from "@/kilocode/plugins/model-usage"
 
 const session = (id: string, parentID?: string) =>
   ({
@@ -33,16 +40,16 @@ describe("TUI model usage", () => {
     expect(failed({ sessionID: "ses_old" }, "ses_current")).toBeFalse()
     expect(select({ sessionID: "ses_current", data }, "ses_current")).toBe(data)
     expect(failed({ sessionID: "ses_current" }, "ses_current")).toBeTrue()
-    expect(member({ root: root.id, sessionID: child.id, get: (id) => sessions.get(id) })).toBeTrue()
+    expect(isSessionTreeMember({ root: root.id, sessionID: child.id, get: (id) => sessions.get(id) })).toBeTrue()
     expect(
-      member({
+      isSessionTreeMember({
         root: root.id,
         sessionID: "ses_new",
         info: session("ses_new", child.id),
         get: (id) => sessions.get(id),
       }),
     ).toBeTrue()
-    expect(member({ root: root.id, sessionID: "ses_other", get: () => undefined })).toBeFalse()
+    expect(isSessionTreeMember({ root: root.id, sessionID: "ses_other", get: () => undefined })).toBeFalse()
     expect(
       label({
         providerID: "kilo",
