@@ -38,7 +38,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { config, loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
+  const { config, loading, isDirty, disruptive, saving, saveError, saveConfig, discardConfig, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
@@ -48,7 +48,7 @@ const Settings: Component<SettingsProps> = (props) => {
 
   const handleSave = () => {
     const busy = busyCount()
-    if (busy === 0) {
+    if (!disruptive() || busy === 0) {
       saveConfig()
       return
     }

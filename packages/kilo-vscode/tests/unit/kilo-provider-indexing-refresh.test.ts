@@ -109,6 +109,18 @@ describe("KiloProvider indexing refresh", () => {
     expect(indexing).toBe(0)
   })
 
+  it("does not drain active sessions for sandbox-only updates", async () => {
+    const conn = createConnection()
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    internal.connectionState = "connected"
+
+    await internal.handleUpdateConfig({ experimental: { sandbox: true } })
+
+    expect(conn.drains()).toBe(0)
+    expect(conn.patches()).toHaveLength(1)
+  })
+
   it("refreshes providers when prompt-training model visibility changes", async () => {
     const conn = createConnection()
     const provider = new KiloProvider({} as never, conn.service as never)

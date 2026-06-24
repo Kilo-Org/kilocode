@@ -54,6 +54,7 @@ import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
+import { KilocodeConfigHotUpdate } from "@/kilocode/config/hot-update"
 import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
@@ -1155,7 +1156,7 @@ export const layer = Layer.effect(
       yield* invalidateGlobal
     })
 
-    // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes
+    // kilocode_change start - add dispose option for hot global config changes
     const updateGlobal = Effect.fn("Config.updateGlobal")(function* (config: Info, options?: { dispose?: boolean }) {
       const dispose = options?.dispose ?? true
       // kilocode_change end
@@ -1182,7 +1183,7 @@ export const layer = Layer.effect(
       // kilocode_change start - skip dispose when caller opts out
       if (!dispose) {
         yield* invalidateGlobal
-        yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
+        yield* KilocodeConfigHotUpdate.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
         yield* Effect.sync(() =>
           GlobalBus.emit("event", {
             directory: "global",

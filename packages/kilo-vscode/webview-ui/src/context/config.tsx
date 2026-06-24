@@ -5,7 +5,7 @@
  *
  * Changes are accumulated in a local draft and only sent to the extension
  * when saveConfig() is called. This allows batching multiple settings
- * changes into a single write (which triggers disposeAll on the CLI).
+ * changes into a single write.
  */
 
 import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
@@ -21,6 +21,7 @@ import {
   resolveConfig,
 } from "../utils/config-utils"
 import { splitConfigByScope } from "../utils/config-scope"
+import { disposesInstances } from "../../../src/shared/config-update"
 
 function has(value: Record<string, unknown>) {
   return Object.keys(value).length > 0
@@ -39,6 +40,7 @@ interface ConfigContextValue {
   features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
   isDirty: Accessor<boolean>
+  disruptive: Accessor<boolean>
   saving: Accessor<boolean>
   saveError: Accessor<SaveError | null>
   updateConfig: (partial: Partial<Config>) => void
@@ -71,6 +73,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       has(projectDraft() as Record<string, unknown>) ||
       has(settingsDraft()),
   )
+  const disruptive = createMemo(() => disposesInstances(payload()))
   // Last config received from the server — used to revert on discard
   const [saved, setSaved] = createSignal<Config>({})
   const [savedGlobal, setSavedGlobal] = createSignal<Config>({})
@@ -238,6 +241,18 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
   }
 
+  function payload() {
+    const split = splitConfigByScope(draft())
+    const config = deepMerge(split.global as Config, globalDraft())
+    const projectConfig = deepMerge(split.project as Config, projectDraft())
+    return {
+      config: pruneConfigSet(config) as Config,
+      projectConfig: pruneConfigSet(projectConfig) as Config,
+      globalUnset: configUnsetPaths(config),
+      projectUnset: configUnsetPaths(projectConfig),
+    }
+  }
+
   function saveConfig() {
     const changes = draft()
     const globals = globalDraft()
@@ -266,16 +281,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     // Split so per-project settings (e.g. commit_message.prompt) land in the
     // workspace's kilo.json instead of the global one. Send one message so the
     // extension confirms only after both scopes are saved.
-    const split = splitConfigByScope(changes)
-    const next = deepMerge(split.global as Config, globals)
-    const project = deepMerge(split.project as Config, projects)
-    vscode.postMessage({
-      type: "updateConfig",
-      config: pruneConfigSet(next) as Config,
-      projectConfig: pruneConfigSet(project) as Config,
-      globalUnset: configUnsetPaths(next),
-      projectUnset: configUnsetPaths(project),
-    })
+    vscode.postMessage({ type: "updateConfig", ...payload() })
   }
 
   function discardConfig() {
@@ -298,6 +304,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     features,
     loading,
     isDirty,
+    disruptive,
     saving,
     saveError,
     updateConfig,

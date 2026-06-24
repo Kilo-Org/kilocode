@@ -153,6 +153,8 @@ export const clear = Effect.fn("SandboxPolicy.clear")(function* (sessionID: Sess
   yield* retire(sessionID, yield* InstanceState.directory, Effect.void)
 })
 
+export const reset = Effect.fn("SandboxPolicy.reset")(() => Effect.sync(() => overrides.clear()))
+
 export function retire<A, E, R>(
   sessionID: SessionID,
   directory: string,

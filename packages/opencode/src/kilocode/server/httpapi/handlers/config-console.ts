@@ -2,9 +2,12 @@ import { Account } from "@/account/account"
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
+import { BackgroundProcess } from "@/kilocode/background-process"
+import { KilocodeConfigHotUpdate } from "@/kilocode/config/hot-update"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
 import { KilocodeModelState } from "@/kilocode/config/model-state"
+import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { ConfigRules } from "@/kilocode/server/routes/config-rules"
 import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
 import { KilocodeTuiConfig } from "@/kilocode/tui/config"
@@ -79,8 +82,21 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         return yield* config.get()
       }
       if (body.scope === "global") {
-        const hot = Object.keys(patch).every((key) => key === "console")
+        const hot = KilocodeConfigHotUpdate.matches(patch)
+        const before = hot ? yield* config.getGlobal() : undefined
+        const sandbox = patch.experimental?.sandbox
+        const enabling = sandbox === true && before?.experimental?.sandbox !== true
+        if (enabling) yield* Effect.promise(() => BackgroundProcess.stopAll())
         const result = yield* config.updateGlobal(patch, hot ? { dispose: false } : undefined)
+        const toggled =
+          result.changed &&
+          patch.experimental !== undefined &&
+          "sandbox" in patch.experimental &&
+          before?.experimental?.sandbox !== result.info.experimental?.sandbox
+        if (toggled) {
+          yield* SandboxPolicy.reset()
+          if (enabling) yield* Effect.promise(() => BackgroundProcess.stopAll())
+        }
         if (result.changed && !hot) {
           yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
             Effect.catchCause(() => Effect.void),

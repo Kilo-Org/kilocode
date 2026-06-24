@@ -6,7 +6,7 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
-import type { ExtensionMessage } from "../../types/messages"
+import type { ExperimentalConfig, ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface ShareOption {
@@ -40,10 +40,8 @@ const ExperimentalTab: Component = () => {
 
   const experimental = createMemo(() => config().experimental ?? {})
 
-  const updateExperimental = (key: string, value: unknown) => {
-    updateConfig({
-      experimental: { ...experimental(), [key]: value },
-    })
+  const updateExperimental = <K extends keyof ExperimentalConfig>(key: K, value: ExperimentalConfig[K]) => {
+    updateConfig({ experimental: { [key]: value } })
   }
 
   return (

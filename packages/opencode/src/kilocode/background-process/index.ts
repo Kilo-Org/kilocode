@@ -11,7 +11,7 @@ import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import { spawn, type ChildProcess } from "child_process"
-import { Context, Effect, Layer, Schema, Types } from "effect"
+import { Context, Effect, Layer, Schema, ScopedCache, Types } from "effect"
 import net from "net"
 import path from "path"
 import z from "zod"
@@ -139,9 +139,10 @@ export namespace BackgroundProcess {
     processes: Map<ID, Active>
   }
 
-  class StateService extends Context.Service<StateService, { readonly get: () => Effect.Effect<State> }>()(
-    "@kilocode/BackgroundProcess.State",
-  ) {}
+  class StateService extends Context.Service<
+    StateService,
+    { readonly get: () => Effect.Effect<State>; readonly clear: () => Effect.Effect<void> }
+  >()("@kilocode/BackgroundProcess.State") {}
 
   function clone(info: Info): Info {
     return {
@@ -531,7 +532,10 @@ export namespace BackgroundProcess {
           return state
         }),
       )
-      return StateService.of({ get: () => InstanceState.get(ref) })
+      return StateService.of({
+        get: () => InstanceState.get(ref),
+        clear: () => ScopedCache.invalidateAll(ref.cache),
+      })
     }),
   )
 
@@ -587,5 +591,9 @@ export namespace BackgroundProcess {
     const current = await state()
     const list = Array.from(current.processes.values()).filter((active) => active.info.sessionID === sessionID)
     await Promise.all(list.map((active) => terminate(current, active, { remove: true })))
+  }
+
+  export async function stopAll() {
+    return runtime.runPromise((svc) => svc.clear())
   }
 }

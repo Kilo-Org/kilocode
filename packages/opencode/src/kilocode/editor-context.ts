@@ -5,6 +5,7 @@ export interface EditorContext {
   openTabs?: string[]
   activeFile?: string
   shell?: string
+  sandbox?: boolean
 }
 
 /**
@@ -45,6 +46,9 @@ export function environmentDetails(ctx?: EditorContext): string {
   }
   if (ctx?.worktree) {
     lines.push(`Workspace root folder: ${ctx.worktree}`)
+  }
+  if (ctx?.sandbox !== undefined) {
+    lines.push(`Sandbox: ${ctx.sandbox ? "enabled" : "disabled"}`)
   }
   if (ctx?.activeFile) {
     lines.push(`Active file: ${ctx.activeFile}`)

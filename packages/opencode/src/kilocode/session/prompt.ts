@@ -20,6 +20,7 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
+import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -176,26 +177,28 @@ export namespace KiloSessionPrompt {
   })
 
   /**
-   * Mutable cache for environment details, keyed by user message ID
-   * so it recomputes when a new user message arrives.
+   * Mutable cache for environment details, keyed by user message ID and sandbox state
+   * so it recomputes when either changes.
    */
   export interface EnvCache {
     block?: string
     user?: string
+    sandbox?: boolean
   }
 
   /**
    * Ephemerally injects dynamic editor context (visible files, open tabs, etc.)
-   * into the last user message. Caches the result per user message ID so repeated
-   * loop iterations produce byte-identical messages (prompt caching).
+   * into the last user message. Caches the result per user message ID and sandbox state
+   * so unchanged loop iterations produce byte-identical messages (prompt caching).
    */
-  export function injectEditorContext(input: {
+  export const injectEditorContext = Effect.fn("KiloSessionPrompt.injectEditorContext")(function* (input: {
     msgs: MessageV2.WithParts[]
     lastUser: MessageV2.User
     sessionID: SessionID
     cache: EnvCache
   }) {
-    if (input.cache.user !== input.lastUser.id) {
+    const sandbox = (yield* SandboxPolicy.status(input.sessionID)).enabled
+    if (input.cache.user !== input.lastUser.id || input.cache.sandbox !== sandbox) {
       const ctx = (() => {
         try {
           return Instance.current
@@ -206,8 +209,10 @@ export namespace KiloSessionPrompt {
       input.cache.block = environmentDetails({
         ...input.lastUser.editorContext,
         ...(ctx ? { directory: ctx.directory, worktree: ctx.worktree } : {}),
+        sandbox,
       })
       input.cache.user = input.lastUser.id
+      input.cache.sandbox = sandbox
     }
     if (!input.cache.block) return
     const idx = input.msgs.findLastIndex((m) => m.info.role === "user")
@@ -226,7 +231,7 @@ export namespace KiloSessionPrompt {
         } satisfies MessageV2.TextPart,
       ],
     }
-  }
+  })
 
   /**
    * Creates StringDecoder-based helpers for shell stdout/stderr that correctly

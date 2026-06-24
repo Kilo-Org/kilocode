@@ -129,6 +129,7 @@ import {
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { parseReview, reviewMetadata, type ReviewMessageData } from "./shared/review-comments"
+import { disposesInstances } from "./shared/config-update"
 
 import {
   buildActionContext,
@@ -2634,7 +2635,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const dir = this.getWorkspaceDirectory()
 
     try {
-      await this.connectionService.drainPendingPrompts()
+      const hot =
+        hasGlobal && !disposesInstances({ config: partial, globalUnset, projectConfig: project, projectUnset })
+      if (!hot) await this.connectionService.drainPendingPrompts()
       if (hasGlobal) {
         await this.client.config.overlayUpdate(
           { scope: "global", set: partial, unset: globalUnset, directory: dir },

@@ -100,6 +100,34 @@ setInterval(() => {}, 1_000)
     }),
   )
 
+  it.instance("stops every process when sandboxing becomes global", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const sessionID = SessionID.descending()
+      const command = yield* Effect.promise(() =>
+        script(
+          test.directory,
+          "sandbox-transition.mjs",
+          `console.log("ready")
+setInterval(() => {}, 1_000)
+`,
+        ),
+      )
+      yield* Effect.promise(() =>
+        BackgroundProcess.start({
+          sessionID,
+          command,
+          cwd: test.directory,
+          ready: { pattern: "ready", timeout: 5_000 },
+        }),
+      )
+
+      expect(yield* Effect.promise(() => BackgroundProcess.list({ sessionID }))).toHaveLength(1)
+      yield* Effect.promise(() => BackgroundProcess.stopAll())
+      expect(yield* Effect.promise(() => BackgroundProcess.list({ sessionID }))).toEqual([])
+    }),
+  )
+
   it.instance("reports explicit readiness ports for VS Code clients", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance

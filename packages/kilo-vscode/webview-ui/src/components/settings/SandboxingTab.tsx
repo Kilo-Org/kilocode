@@ -23,14 +23,7 @@ const SandboxingTab: Component = () => {
         <Switch
           checked={experimental().sandbox_restrict_network !== false}
           inputProps={{ "aria-describedby": description }}
-          onChange={(checked) =>
-            updateConfig({
-              experimental: {
-                ...experimental(),
-                sandbox_restrict_network: checked,
-              },
-            })
-          }
+          onChange={(checked) => updateConfig({ experimental: { sandbox_restrict_network: checked } })}
           hideLabel
         >
           {language.t("settings.sandboxing.network.title")}

@@ -330,6 +330,7 @@ const ConfigWrapper: ParentComponent<{
       features,
       loading: () => false,
       isDirty: dirty,
+      disruptive: () => false,
       saving: () => false,
       saveError: () => null,
       updateConfig: (partial: Partial<Config>) => {

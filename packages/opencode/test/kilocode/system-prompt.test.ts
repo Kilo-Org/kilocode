@@ -128,15 +128,21 @@ describe("SystemPrompt.provider", () => {
 })
 
 describe("environmentDetails", () => {
-  test("includes cwd and worktree in dynamic context", () => {
+  test("includes cwd, worktree, and sandbox state in dynamic context", () => {
     const result = environmentDetails({
       directory: "/repo/.kilo/worktrees/feature",
       worktree: "/repo/.kilo/worktrees/feature",
       activeFile: "src/app.ts",
+      sandbox: true,
     })
 
     expect(result).toContain("Working directory: /repo/.kilo/worktrees/feature")
     expect(result).toContain("Workspace root folder: /repo/.kilo/worktrees/feature")
+    expect(result).toContain("Sandbox: enabled")
     expect(result).toContain("Active file: src/app.ts")
+  })
+
+  test("reports when sandboxing is disabled", () => {
+    expect(environmentDetails({ sandbox: false })).toContain("Sandbox: disabled")
   })
 })

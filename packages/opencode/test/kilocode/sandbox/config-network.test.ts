@@ -1,7 +1,8 @@
-import { Cause, Effect, Exit, Layer } from "effect"
+import { Cause, Effect, Exit, Layer, Ref } from "effect"
 import { expect } from "bun:test"
 import { HttpClient } from "effect/unstable/http"
 import { backendSupport } from "@kilocode/sandbox"
+import { Config } from "@/config/config"
 import { ProjectID } from "@/project/schema"
 import { InstanceRef } from "@/effect/instance-ref"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
@@ -54,6 +55,7 @@ function server() {
 
 const restricted = testEffect(layer())
 const open = testEffect(layer(false))
+const transitions = testEffect(ToolNetwork.httpLayer)
 
 restricted.live("keeps network restriction enabled by default when the sandbox is available", () => {
   const target = server()
@@ -83,5 +85,34 @@ open.live("allows tool network traffic when network restriction is disabled", ()
     )
     expect(yield* response.text).toBe("sandbox-config-ok")
     expect(target.requests()).toBe(1)
+  }).pipe(Effect.ensuring(Effect.promise(() => target.server.stop(true))))
+})
+
+transitions.live("applies live network and sandbox changes without retaining a denied network profile", () => {
+  const target = server()
+  return Effect.gen(function* () {
+    const state = yield* Ref.make<Config.Info>({ experimental: { sandbox: true } })
+    const config = TestConfig.make({ get: () => Ref.get(state) })
+    const http = yield* HttpClient.HttpClient
+    const request = () =>
+      SandboxPolicy.executeTool(sessionID, tool, http.get(target.server.url)).pipe(
+        Effect.provideService(Config.Service, config),
+        Effect.provideService(InstanceRef, ctx),
+      )
+
+    const denied = yield* request().pipe(Effect.exit)
+    if (!backendSupport().available) {
+      expect(Exit.isSuccess(denied)).toBe(true)
+      return
+    }
+    expect(Exit.isFailure(denied)).toBe(true)
+    expect(target.requests()).toBe(0)
+
+    yield* Ref.set(state, { experimental: { sandbox: true, sandbox_restrict_network: false } })
+    expect(yield* (yield* request()).text).toBe("sandbox-config-ok")
+
+    yield* Ref.set(state, { experimental: { sandbox: false } })
+    expect(yield* (yield* request()).text).toBe("sandbox-config-ok")
+    expect(target.requests()).toBe(2)
   }).pipe(Effect.ensuring(Effect.promise(() => target.server.stop(true))))
 })

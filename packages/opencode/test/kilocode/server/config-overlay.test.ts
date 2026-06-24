@@ -4,8 +4,11 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { Server } from "../../../src/server/server"
 import { Config } from "../../../src/config/config"
+import { BackgroundProcess } from "../../../src/kilocode/background-process"
 import { KilocodeConfigOverlay } from "../../../src/kilocode/config/overlay"
+import { provide } from "../../../src/kilocode/instance"
 import { Permission } from "../../../src/permission"
+import { SessionID } from "../../../src/session/schema"
 import { PtyPaths } from "../../../src/server/routes/instance/httpapi/groups/pty"
 import { resetDatabase } from "../../fixture/db"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
@@ -340,7 +343,99 @@ describe("config overlay routes", () => {
     )
   })
 
-  terminal("preserves active terminals after updating global console preferences", async () => {
+  terminal("stops model background processes before globally enabling sandbox", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { experimental: { sandbox: false } })
+    const session = await json<{ id: string }>(
+      await req(project.path, "/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+
+    await provide({
+      directory: project.path,
+      fn: () =>
+        BackgroundProcess.start({
+          sessionID: SessionID.make(session.id),
+          command: "sleep 30",
+          cwd: project.path,
+        }),
+    })
+    expect(await provide({ directory: project.path, fn: () => BackgroundProcess.list() })).toHaveLength(1)
+
+    await json(
+      await request(Server.Default().app, undefined, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { experimental: { sandbox: true } } }),
+      }),
+    )
+
+    expect(await provide({ directory: project.path, fn: () => BackgroundProcess.list() })).toEqual([])
+  })
+
+  test.serial("global sandbox updates clear per-session overrides", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { experimental: { sandbox: true } })
+    const session = await json<{ id: string }>(
+      await req(project.path, "/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+    const before = await json<{ available: boolean }>(await req(project.path, `/session/${session.id}/sandbox`))
+    if (!before.available) return
+
+    const overridden = await json<{ enabled: boolean; version: number }>(
+      await req(project.path, `/session/${session.id}/sandbox/toggle`, { method: "POST" }),
+    )
+    expect(overridden).toMatchObject({ enabled: false, version: 1 })
+
+    await json(
+      await request(Server.Default().app, undefined, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { experimental: { sandbox: false } } }),
+      }),
+    )
+
+    const reset = await json<{ enabled: boolean; version: number }>(
+      await req(project.path, `/session/${session.id}/sandbox`),
+    )
+    expect(reset).toMatchObject({ enabled: false, version: 0 })
+  })
+
+  test.serial("refreshes sandbox settings in every loaded project without disposing instances", async () => {
+    await using global = await tmpdir()
+    await using first = await tmpdir()
+    await using second = await tmpdir()
+    await setGlobal(global.path, { experimental: { sandbox: false } })
+
+    const beforeFirst = await json<Config.Info>(await req(first.path, "/config"))
+    const beforeSecond = await json<Config.Info>(await req(second.path, "/config"))
+    expect(beforeFirst.experimental?.sandbox).toBe(false)
+    expect(beforeSecond.experimental?.sandbox).toBe(false)
+
+    await json(
+      await request(Server.Default().app, undefined, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { experimental: { sandbox: true } } }),
+      }),
+    )
+
+    const afterFirst = await json<Config.Info>(await req(first.path, "/config"))
+    const afterSecond = await json<Config.Info>(await req(second.path, "/config"))
+    expect(afterFirst.experimental?.sandbox).toBe(true)
+    expect(afterSecond.experimental?.sandbox).toBe(true)
+  })
+
+  terminal("preserves active terminals after hot global config updates", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
     ;(Global.Path as { config: string }).config = global.path
@@ -353,17 +448,24 @@ describe("config overlay routes", () => {
     const info = await json<{ id: string }>(created)
 
     try {
-      await json(
-        await request(Server.Default().app, undefined, "/config/overlay", {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ scope: "global", set: { console: { diff_style: "split" } } }),
-        }),
-      )
+      const patches: Config.Info[] = [
+        { console: { diff_style: "split" } },
+        { experimental: { sandbox: true } },
+        { experimental: { sandbox_restrict_network: false } },
+      ]
+      for (const set of patches) {
+        await json(
+          await request(Server.Default().app, undefined, "/config/overlay", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ scope: "global", set }),
+          }),
+        )
 
-      const found = await Server.Default().app.request(PtyPaths.get.replace(":ptyID", info.id), { headers })
-      expect(found.status).toBe(200)
-      expect(await found.json()).toMatchObject({ id: info.id, title: "console", status: "running" })
+        const found = await Server.Default().app.request(PtyPaths.get.replace(":ptyID", info.id), { headers })
+        expect(found.status).toBe(200)
+        expect(await found.json()).toMatchObject({ id: info.id, title: "console", status: "running" })
+      }
     } finally {
       await Server.Default().app.request(PtyPaths.remove.replace(":ptyID", info.id), { method: "DELETE", headers })
     }

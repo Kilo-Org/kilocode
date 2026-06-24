@@ -88,6 +88,20 @@ it.instance("overrides config off to sandbox only one session", () =>
   }),
 )
 
+it.instance(
+  "resets session overrides when the global sandbox default changes",
+  () =>
+    Effect.gen(function* () {
+      const id = SessionID.make("ses_sandbox_reset")
+      if (!(yield* SandboxPolicy.status(id)).available) return
+
+      expect((yield* SandboxPolicy.toggle(id)).enabled).toBe(false)
+      yield* SandboxPolicy.reset()
+      expect((yield* SandboxPolicy.status(id)).enabled).toBe(true)
+    }),
+  { config: { experimental: { sandbox: true } } },
+)
+
 it.instance("isolates concurrent session overrides and clears them", () =>
   Effect.gen(function* () {
     const first = SessionID.make("ses_sandbox_first")
