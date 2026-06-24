@@ -93,8 +93,7 @@ export const layer: Layer.Layer<
 
     // kilocode_change start - parse local rule frontmatter at the Kilo boundary
     const rule = Effect.fnUntraced(function* (filepath: string) {
-      const content = yield* fs.readFileString(filepath).pipe(Effect.catch(() => Effect.succeed(""))) // kilocode_change
-      return yield* Effect.promise(() => KilocodeInstruction.rule(content, filepath))
+      return yield* Effect.promise(() => KilocodeInstruction.rule(filepath))
     })
 
     const read = Effect.fnUntraced(function* (filepath: string) {
