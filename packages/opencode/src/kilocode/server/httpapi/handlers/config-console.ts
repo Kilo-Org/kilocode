@@ -87,7 +87,6 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         const changesSandbox = Object.hasOwn(patch.experimental ?? {}, "sandbox")
         const before = changesSandbox ? yield* config.getGlobal() : undefined
         const enabling = changesSandbox && sandbox === true && before?.experimental?.sandbox !== true
-        if (enabling) yield* Effect.promise(() => BackgroundProcess.stopAll())
         const result = yield* config.updateGlobal(patch, hot ? { dispose: false } : undefined)
         const toggled =
           result.changed && changesSandbox && before?.experimental?.sandbox !== result.info.experimental?.sandbox

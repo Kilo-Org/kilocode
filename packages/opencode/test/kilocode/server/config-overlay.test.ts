@@ -377,6 +377,39 @@ describe("config overlay routes", () => {
     expect(await provide({ directory: project.path, fn: () => BackgroundProcess.list() })).toEqual([])
   })
 
+  terminal("keeps background processes running when enabling sandbox fails to persist", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { experimental: { sandbox: false } })
+    const session = await json<{ id: string }>(
+      await req(project.path, "/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+    )
+
+    await provide({
+      directory: project.path,
+      fn: () =>
+        BackgroundProcess.start({
+          sessionID: SessionID.make(session.id),
+          command: "sleep 30",
+          cwd: project.path,
+        }),
+    })
+    expect(await provide({ directory: project.path, fn: () => BackgroundProcess.list() })).toHaveLength(1)
+    await Bun.write(path.join(global.path, "kilo.jsonc"), "{")
+
+    const response = await request(Server.Default().app, undefined, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "global", set: { experimental: { sandbox: true } } }),
+    })
+    expect(response.status).toBeGreaterThanOrEqual(400)
+    expect(await provide({ directory: project.path, fn: () => BackgroundProcess.list() })).toHaveLength(1)
+  })
+
   test.serial("global sandbox updates clear per-session overrides", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
