@@ -1012,7 +1012,7 @@ const AgentBehaviourTab: Component = () => {
           <div style={{ flex: 1 }}>
             <TextField
               value={newInstruction()}
-              placeholder="e.g. ./INSTRUCTIONS.md"
+              placeholder="e.g. ./.kilo/rules/*.md"
               onChange={(val) => setNewInstruction(val)}
               onKeyDown={(e: KeyboardEvent) => {
                 if (e.key === "Enter") addInstruction()

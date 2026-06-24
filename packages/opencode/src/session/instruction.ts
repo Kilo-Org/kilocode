@@ -91,10 +91,16 @@ export const layer: Layer.Layer<
       return yield* fs.globUp(instruction, root, root).pipe(Effect.catch(() => Effect.succeed([] as string[]))) // kilocode_change
     })
 
-    const read = Effect.fnUntraced(function* (filepath: string) {
+    // kilocode_change start - parse local rule frontmatter at the Kilo boundary
+    const rule = Effect.fnUntraced(function* (filepath: string) {
       const content = yield* fs.readFileString(filepath).pipe(Effect.catch(() => Effect.succeed(""))) // kilocode_change
-      return yield* Effect.promise(() => KilocodeInstruction.content(content, filepath)) // kilocode_change
+      return yield* Effect.promise(() => KilocodeInstruction.rule(content, filepath))
     })
+
+    const read = Effect.fnUntraced(function* (filepath: string) {
+      return (yield* rule(filepath)).content
+    })
+    // kilocode_change end
 
     const fetch = Effect.fnUntraced(function* (url: string) {
       const res = yield* http.execute(HttpClientRequest.get(url)).pipe(
@@ -111,7 +117,8 @@ export const layer: Layer.Layer<
       s.claims.delete(messageID)
     })
 
-    const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
+    // kilocode_change start - share candidate discovery between startup and scoped rules
+    const candidatePaths = Effect.fn("Instruction.candidatePaths")(function* () {
       const config = yield* cfg.get()
       const ctx = yield* InstanceState.context
       const paths = new Set<string>()
@@ -136,6 +143,17 @@ export const layer: Layer.Layer<
         }
       }
 
+      const claude = yield* Effect.promise(() =>
+        KilocodeInstruction.claude({
+          home: global.home,
+          directory: ctx.directory,
+          worktree: ctx.worktree,
+          disabled: flags.disableClaudeCodePrompt,
+          project: !Flag.KILO_DISABLE_PROJECT_CONFIG,
+        }),
+      )
+      claude.forEach((item) => paths.add(path.resolve(item)))
+
       if (config.instructions) {
         for (const raw of config.instructions) {
           if (raw.startsWith("https://") || raw.startsWith("http://")) continue
@@ -155,6 +173,20 @@ export const layer: Layer.Layer<
 
       return paths
     })
+
+    const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
+      const paths = yield* candidatePaths()
+      const scoped = yield* Effect.forEach(
+        Array.from(paths),
+        (item) =>
+          Effect.gen(function* () {
+            return (yield* rule(item)).paths ? undefined : item
+          }),
+        { concurrency: 8 },
+      )
+      return new Set(scoped.filter((item): item is string => typeof item === "string"))
+    })
+    // kilocode_change end
 
     const system = Effect.fn("Instruction.system")(function* () {
       const config = yield* cfg.get()
@@ -185,14 +217,36 @@ export const layer: Layer.Layer<
       filepath: string,
       messageID: MessageID,
     ) {
-      const sys = yield* systemPaths()
+      const candidates = yield* candidatePaths() // kilocode_change
+      const parsed = yield* Effect.forEach(
+        Array.from(candidates),
+        (item) =>
+          Effect.gen(function* () {
+            return { filepath: path.resolve(item), rule: yield* rule(item) }
+          }),
+        { concurrency: 8 },
+      ) // kilocode_change
+      const sys = new Set(parsed.filter((item) => !item.rule.paths).map((item) => item.filepath)) // kilocode_change
       const already = extract(messages)
       const results: { filepath: string; content: string }[] = []
       const s = yield* InstanceState.get(state)
+      const ctx = yield* InstanceState.context // kilocode_change
       const root = path.resolve(yield* InstanceState.directory)
+      const worktree = path.resolve(ctx.worktree === "/" ? ctx.directory : ctx.worktree) // kilocode_change
 
       const target = path.resolve(filepath)
       let current = path.dirname(target)
+
+      // kilocode_change start - share per-message dynamic instruction claims
+      const claim = (item: string) => {
+        const current = s.claims.get(messageID)
+        if (current?.has(item)) return false
+        const set = current ?? new Set<string>()
+        if (!current) s.claims.set(messageID, set)
+        set.add(item)
+        return true
+      }
+      // kilocode_change end
 
       // Walk upward from the file being read and attach nearby instruction files once per message.
       while (current.startsWith(root) && current !== root) {
@@ -202,17 +256,11 @@ export const layer: Layer.Layer<
           continue
         }
 
-        let set = s.claims.get(messageID)
-        if (!set) {
-          set = new Set()
-          s.claims.set(messageID, set)
-        }
-        if (set.has(found)) {
+        if (!claim(found)) {
           current = path.dirname(current)
           continue
         }
 
-        set.add(found)
         const content = yield* read(found)
         if (content) {
           results.push({ filepath: found, content: `Instructions from: ${found}\n${content}` })
@@ -220,6 +268,19 @@ export const layer: Layer.Layer<
 
         current = path.dirname(current)
       }
+
+      // kilocode_change start - append matching path-scoped local rule files after nearby instructions
+      for (const item of parsed) {
+        const resolved = item.filepath
+        if (resolved === target || sys.has(resolved) || already.has(resolved)) continue
+
+        if (!KilocodeInstruction.match(item.rule, target, worktree)) continue
+        if (!claim(resolved)) continue
+        if (item.rule.content) {
+          results.push({ filepath: resolved, content: `Instructions from: ${resolved}\n${item.rule.content}` })
+        }
+      }
+      // kilocode_change end
 
       return results
     })

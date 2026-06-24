@@ -13,15 +13,33 @@ Custom rules allow you to create text-based instructions that all AI models will
 
 ## Rule Format
 
-Custom rules can be written in plain text, but Markdown format is recommended for better structure and comprehension by the AI models. The structured nature of Markdown helps the models parse and understand your rules more effectively.
+Custom rules can be written in plain text, but Markdown format is recommended for better structure and comprehension by the AI models. Local Markdown rule files can also include optional YAML frontmatter with a `paths` field to make the rule load only when matching files are read.
 
 - Use Markdown headers (`#`, `##`, etc.) to define rule categories
 - Use lists (`-`, `*`) to enumerate specific items or constraints
 - Use code blocks (` `) to include code examples when needed
 
+### Path-Scoped Rules
+
+Add `paths` frontmatter to a local Markdown rule when it should apply only to part of the worktree. Kilo matches these globs against worktree-relative paths normalized with `/`, and loads the rule lazily when the Read tool opens a matching file. Rules without `paths` continue to load at session startup.
+
+```markdown
+---
+paths:
+  - "src/api/**/*.ts"
+  - "tests/**/*.test.ts"
+---
+
+# API Rules
+
+Validate inputs and return the standard error shape.
+```
+
+`paths` can be a string or a list of strings. Non-string entries are ignored. This behavior applies to local rule and instruction files only; URL-based instruction sources are fetched at session startup and are not path-scoped.
+
 ## Rule Types
 
-Kilo Code supports two types of custom rules:
+Kilo Code supports two locations for custom rules:
 
 - **Project Rules**: Apply only to the current project workspace
 - **Global Rules**: Apply across all projects and workspaces
@@ -61,7 +79,7 @@ project/
 Global rules are configured via the `instructions` key in your global `kilo.jsonc` config file (typically at `~/.config/kilo/kilo.jsonc`).
 
 {% callout type="note" title="Migration" %}
-The extension is backward compatible with `.kilocode/rules/` directories. Existing rules will continue to work, but migrating to `kilo.jsonc` is recommended.
+The extension is backward compatible with `.kilocode/rules/` directories. Existing rules will continue to work, but migrating to `kilo.jsonc` is recommended. When Claude Code Compatibility is enabled, Kilo also discovers `.claude/rules/**/*.md` files.
 {% /callout %}
 
 {% /tab %}
@@ -97,7 +115,7 @@ project/
 Global rules are configured via the `instructions` key in your global `kilo.jsonc` config file (typically at `~/.config/kilo/kilo.jsonc`).
 
 {% callout type="note" title="Migration" %}
-The CLI is backward compatible with `.kilocode/rules/` directories. Existing rules will continue to work, but migrating to `kilo.jsonc` is recommended.
+The CLI is backward compatible with `.kilocode/rules/` directories. Existing rules will continue to work, but migrating to `kilo.jsonc` is recommended. When Claude Code Compatibility is enabled, Kilo also discovers `.claude/rules/**/*.md` files.
 {% /callout %}
 
 {% /tab %}
@@ -204,7 +222,7 @@ Rules are loaded in the order they appear in the `instructions` array in `kilo.j
 1. **Global instructions** from the global `kilo.jsonc` config
 2. **Project instructions** from the project's `kilo.jsonc`
 
-Files matched by glob patterns are loaded in filesystem order. Project-level instructions take precedence over global instructions for conflicting directives.
+Files matched by glob patterns are loaded in filesystem order. Project-level instructions take precedence over global instructions for conflicting directives. Local Markdown files with `paths` frontmatter are excluded from startup and loaded only after the Read tool opens a matching worktree-relative path.
 
 {% callout type="note" title="Backward Compatibility" %}
 If `.kilocode/rules/` directories exist in your project, their contents are automatically included for backward compatibility. To fully migrate, move your rule files and reference them in `kilo.jsonc`.
@@ -218,7 +236,7 @@ Rules are loaded in the order they appear in the `instructions` array in `kilo.j
 1. **Global instructions** from the global `kilo.jsonc` config
 2. **Project instructions** from the project's `kilo.jsonc`
 
-Files matched by glob patterns are loaded in filesystem order. Project-level instructions take precedence over global instructions for conflicting directives.
+Files matched by glob patterns are loaded in filesystem order. Project-level instructions take precedence over global instructions for conflicting directives. Local Markdown files with `paths` frontmatter are excluded from startup and loaded only after the Read tool opens a matching worktree-relative path.
 
 {% callout type="note" title="Backward Compatibility" %}
 If `.kilocode/rules/` directories exist in your project, their contents are automatically included for backward compatibility. To fully migrate, move your rule files and reference them in `kilo.jsonc`.
@@ -277,6 +295,8 @@ Mode-specific rules are only supported at the project level. When both generic a
 
 Rules are applied on the next interaction. You can also edit `kilo.jsonc` through the **Settings** webview in VS Code.
 
+To make the rule path-scoped, edit the Markdown file itself and add `paths` frontmatter. The Settings UI manages instruction source paths and globs; it does not edit rule frontmatter.
+
 {% /tab %}
 {% tab label="CLI" %}
 
@@ -295,6 +315,8 @@ Rules are applied on the next interaction. You can also edit `kilo.jsonc` throug
 ```
 
 Rules are applied on the next interaction.
+
+To make the rule path-scoped, edit the Markdown file itself and add `paths` frontmatter.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -409,7 +431,8 @@ If your rules aren't being followed:
 
 1. **Check the `instructions` array** in your config to ensure the file path is correct.
 2. **Verify Markdown formatting**: Ensure the file is valid Markdown.
-3. **Restart the session**: Start a new chat session to pick up config changes.
+3. **Check path-scoped globs**: `paths` entries match worktree-relative paths and apply only after the Read tool opens a matching file.
+4. **Restart the session**: Start a new chat session to pick up config changes.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -418,7 +441,8 @@ If your rules aren't being followed:
 
 1. **Check the `instructions` array** in your config to ensure the file path is correct.
 2. **Verify Markdown formatting**: Ensure the file is valid Markdown.
-3. **Restart the session**: Start a new chat session to pick up config changes.
+3. **Check path-scoped globs**: `paths` entries match worktree-relative paths and apply only after the Read tool opens a matching file.
+4. **Restart the session**: Start a new chat session to pick up config changes.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}

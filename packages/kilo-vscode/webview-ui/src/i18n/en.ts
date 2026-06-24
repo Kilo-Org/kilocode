@@ -1366,14 +1366,14 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm": 'Remove skill "{{name}}"? This will delete the skill files from disk.',
   "settings.agentBehaviour.removeSkill.button": "Remove",
   "settings.agentBehaviour.rules.description":
-    "Rules are instruction files that guide agent behaviour. They are included in the system prompt for every conversation. Add file paths below to include additional rules.",
+    "Rules are instruction files that guide agent behaviour. Local Markdown rules can include paths frontmatter to load only when matching files are read. Add file paths or globs below to include additional rules.",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
-    "Paths to additional instruction files that are included in the system prompt",
+    "Paths or globs for additional instruction files. Local Markdown files with paths frontmatter load lazily for matching files.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
   "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
   "settings.agentBehaviour.claudeCompat.description":
-    "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart.",
+    "Load CLAUDE.md instructions, .claude/rules, and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions, rules, and skills. Requires restart.",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
   "settings.agentBehaviour.removeMcp.button": "Remove",
