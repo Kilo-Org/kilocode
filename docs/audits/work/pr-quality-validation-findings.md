@@ -1,6 +1,6 @@
 # Kilocode Open PR Quality and Human-Validation Audit
 
-**Scope:** All open pull requests in `Kilo-Org/kilocode` as of 2026-06-24.  
+**Scope:** All open pull requests in `Kilo-Org/kilocode` as of 2026-06-24T14:15:00Z.  
 **Auditor:** Birch-polecat-61b77f41  
 **Method:** This assessment uses the live GitHub PR inventory reconstructed on 2026-06-24 (the temporary task-0 inventory artifact was not present in `docs/audits/work/`). For every open PR we recorded author, draft status, changed-file/line counts, review/comment authors, status-check results, and the `kilo-code-bot` review summary where present. We then inspected the bodies and diffs of the highest-risk PRs.  
 **Important framing:** This is a risk/evidence audit, not an authorship accusation. We flag concrete quality deficiencies *combined with* absent substantive human validation. AI/automation indicators are reported separately from objective quality findings.
@@ -306,7 +306,7 @@ These PRs show some risk signal but are either expected to be automated, small, 
 3. Require bot-authored PRs to have explicit human approval before merge; consider automatically labeling them `ai-generated` for visibility.
 4. Enforce the PR template check (non-empty issue link, context, and testing evidence) before a PR can be marked ready for review.
 5. For the Windows sandbox prototypes (#11589/#11590) and cloud agent tabs (#11359/#10845), record a decision and close the rejected alternatives.
-6. Re-run this analysis after the backlog cleanup in task 1 to confirm that human validation gaps are closed.
+6. Re-run this analysis after the backlog cleanup described in the convoy issue `Kilocode backlog and PR integrity audit` to confirm that human validation gaps are closed.
 
 ## Methodology notes and limitations
 
