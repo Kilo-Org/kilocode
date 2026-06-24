@@ -33,12 +33,12 @@ Skip when:
 
 Use it:
 - "Add a dark mode toggle and run the tests" -> multi-step feature + explicit verification
-- "Rename getCwd -> getCurrentWorkingDirectory across the repo" -> grep reveals 15 occurrences in 8 files
+- "Rename getCwd -> getCurrentWorkingDirectory across the repo" -> use apply_patch with all 8 files in one patch
 - "Implement registration, catalog, cart, checkout" -> multiple complex features
 
 Skip it:
 - "How do I print Hello World in Python?" -> informational
-- "Add a comment to calculateTotal" -> single edit
+- "Add a comment to calculateTotal" -> single edit (use edit tool)
 - "Run npm install and tell me what happened" -> one command
 
 When in doubt, use it.

@@ -1101,6 +1101,7 @@ export type IndexingConfig = {
     | "bedrock"
     | "openrouter"
     | "voyage"
+    | "noop"
   model?: string | null
   dimension?: number | null
   vectorStore?: "lancedb" | "qdrant"

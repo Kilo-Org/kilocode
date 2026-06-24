@@ -7,7 +7,7 @@
     "rootDir": "./src",
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": false,
-    "types": ["node"],
+    "types": ["node", "bun"],
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "include": ["src/**/*"],

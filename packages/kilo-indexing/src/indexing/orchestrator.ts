@@ -146,6 +146,27 @@ export class CodeIndexOrchestrator {
     return task
   }
 
+  /**
+   * Start only the file watcher without running a scan.
+   * Used when the index is already complete and up-to-date.
+   */
+  public async startWatcherOnly(): Promise<void> {
+    log.info("starting watcher only (index already complete)", {
+      workspacePath: this.workspacePath,
+    })
+    try {
+      this.overlay?.prepare()
+      await this._startWatcher()
+      this.fileWatcher.setCollecting(true)
+      this.stateManager.setSystemState("Indexed", "Index up-to-date. Watching for changes.")
+      log.info("watcher started, index already complete", { workspacePath: this.workspacePath })
+    } catch (err) {
+      log.error("failed to start watcher only", { err })
+      this.emitError("orchestrator:startWatcherOnly", err, "watcher")
+      this.stateManager.setSystemState("Error", `Failed to start file watcher: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
   private async runIndexing(trigger: IndexingTelemetryTrigger): Promise<void> {
     log.info("indexing start requested", {
       workspacePath: this.workspacePath,
@@ -449,6 +470,19 @@ export class CodeIndexOrchestrator {
         workspacePath: this.workspacePath,
         state: this.stateManager.state,
       })
+    }
+  }
+
+  /**
+   * Check if the vector store has complete indexed data.
+   * Used by the manager to decide whether to skip scanning.
+   */
+  public async hasIndexedData(): Promise<boolean> {
+    if (this.overlay || this.independent) return false
+    try {
+      return await this.vectorStore.hasIndexedData()
+    } catch {
+      return false
     }
   }
 

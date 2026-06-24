@@ -5,7 +5,7 @@ import type {
 } from "@kilocode/kilo-indexing/engine"
 import type { IndexingStatus } from "@kilocode/kilo-indexing/status"
 import { withTimeout } from "@/util/timeout"
-import type { Event, Log, Message, Request, Result } from "./indexing-worker-protocol"
+import type { Event, Log, Message, Request, Result, GraphSearchResult, GraphHierarchyResult, GraphDependencyResult, GraphNodeResult, GraphImpactResult, GraphTraceResult, GraphContextResult } from "./indexing-worker-protocol"
 import type { IndexingWarning } from "./indexing-warning"
 
 declare global {
@@ -25,6 +25,15 @@ export namespace IndexingWorker {
     init(input: IndexingConfigInput, baselineDirectory?: string): Promise<IndexingStatus>
     search(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]>
     dispose(): Promise<void>
+    // kilocode_change - graph query methods
+    graphSearch(query: string, kinds?: string[], limit?: number): Promise<GraphSearchResult[]>
+    graphFindReferences(symbol: string, filePath?: string): Promise<{ definitions: GraphNodeResult[]; references: GraphNodeResult[] }>
+    graphCallHierarchy(symbol: string, direction: string, maxDepth: number): Promise<GraphHierarchyResult>
+    graphDependencies(filePath?: string, maxDepth?: number): Promise<{ circular: string[][]; chain: GraphDependencyResult[] }>
+    graphImpact(symbol: string, maxDepth: number): Promise<GraphImpactResult[]>
+    graphTrace(from: string, to: string): Promise<GraphTraceResult>
+    graphContext(symbol: string): Promise<GraphContextResult>
+    graphQuery(sql: string, params?: (string | number)[]): Promise<unknown[]>
   }
 
   export type Factory = (directory: string, root: string, hooks: Hooks) => Driver
@@ -39,6 +48,15 @@ export namespace IndexingWorker {
     | Omit<Extract<Request, { method: "init" }>, "id">
     | Omit<Extract<Request, { method: "search" }>, "id">
     | Omit<Extract<Request, { method: "dispose" }>, "id">
+    // kilocode_change - graph outgoing requests
+    | Omit<Extract<Request, { method: "graph_search" }>, "id">
+    | Omit<Extract<Request, { method: "graph_find_references" }>, "id">
+    | Omit<Extract<Request, { method: "graph_call_hierarchy" }>, "id">
+    | Omit<Extract<Request, { method: "graph_dependencies" }>, "id">
+    | Omit<Extract<Request, { method: "graph_impact" }>, "id">
+    | Omit<Extract<Request, { method: "graph_trace" }>, "id">
+    | Omit<Extract<Request, { method: "graph_context" }>, "id">
+    | Omit<Extract<Request, { method: "graph_query" }>, "id">
 
   type Channel = {
     task: Worker
@@ -173,6 +191,55 @@ export namespace IndexingWorker {
         return call(state, { type: "request", key, method: "search", input: { query, directoryPrefix } }, (message) => {
           if (message.ok && message.method === "search") return message.value
           throw new Error("Unexpected indexing worker search response.")
+        })
+      },
+      // kilocode_change - graph query driver methods
+      graphSearch(query, kinds, limit) {
+        return call(state, { type: "request", key, method: "graph_search", input: { query, kinds, limit } }, (message) => {
+          if (message.ok && message.method === "graph_search") return message.value
+          throw new Error("Unexpected indexing worker graph_search response.")
+        })
+      },
+      graphFindReferences(symbol, filePath) {
+        return call(state, { type: "request", key, method: "graph_find_references", input: { symbol, filePath } }, (message) => {
+          if (message.ok && message.method === "graph_find_references") return message.value
+          throw new Error("Unexpected indexing worker graph_find_references response.")
+        })
+      },
+      graphCallHierarchy(symbol, direction, maxDepth) {
+        return call(state, { type: "request", key, method: "graph_call_hierarchy", input: { symbol, direction, maxDepth } }, (message) => {
+          if (message.ok && message.method === "graph_call_hierarchy") return message.value
+          throw new Error("Unexpected indexing worker graph_call_hierarchy response.")
+        })
+      },
+      graphDependencies(filePath, maxDepth) {
+        return call(state, { type: "request", key, method: "graph_dependencies", input: { filePath, maxDepth: maxDepth ?? 5 } }, (message) => {
+          if (message.ok && message.method === "graph_dependencies") return message.value
+          throw new Error("Unexpected indexing worker graph_dependencies response.")
+        })
+      },
+      graphImpact(symbol, maxDepth) {
+        return call(state, { type: "request", key, method: "graph_impact", input: { symbol, maxDepth } }, (message) => {
+          if (message.ok && message.method === "graph_impact") return message.value
+          throw new Error("Unexpected indexing worker graph_impact response.")
+        })
+      },
+      graphTrace(from, to) {
+        return call(state, { type: "request", key, method: "graph_trace", input: { from, to } }, (message) => {
+          if (message.ok && message.method === "graph_trace") return message.value
+          throw new Error("Unexpected indexing worker graph_trace response.")
+        })
+      },
+      graphContext(symbol) {
+        return call(state, { type: "request", key, method: "graph_context", input: { symbol } }, (message) => {
+          if (message.ok && message.method === "graph_context") return message.value
+          throw new Error("Unexpected indexing worker graph_context response.")
+        })
+      },
+      graphQuery(sql, params) {
+        return call(state, { type: "request", key, method: "graph_query", input: { sql, params } }, (message) => {
+          if (message.ok && message.method === "graph_query") return message.value
+          throw new Error("Unexpected indexing worker graph_query response.")
         })
       },
       async dispose() {

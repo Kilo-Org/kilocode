@@ -64,7 +64,7 @@ interface GitResult {
   readonly stderr: string
 }
 
-export const MAX_DIFF_SIZE = 256 * 1024 // kilocode_change
+export const MAX_DIFF_SIZE = 512 * 1024 // kilocode_change
 
 type State = Omit<Interface, "init">
 

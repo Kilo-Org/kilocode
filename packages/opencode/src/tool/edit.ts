@@ -22,7 +22,7 @@ import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 
-const MAX_DIFF_CONTENT = 500_000 // kilocode_change
+const MAX_DIFF_CONTENT = 1_000_000 // kilocode_change
 
 // kilocode_change start
 export function buildFileDiff(file: string, before: string, after: string): Snapshot.FileDiff {

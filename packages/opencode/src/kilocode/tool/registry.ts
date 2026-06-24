@@ -3,6 +3,13 @@ import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { FindReferencesTool } from "./find-references" // kilocode_change
+import { CallHierarchyTool } from "./call-hierarchy" // kilocode_change
+import { DependencyGraphTool } from "./dependency-graph" // kilocode_change
+import { ImpactAnalysisTool } from "./impact-analysis" // kilocode_change
+import { TraceTool } from "./trace" // kilocode_change
+import { SymbolContextTool } from "./symbol-context" // kilocode_change
+import { GraphQueryTool } from "./graph-query" // kilocode_change
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
@@ -20,7 +27,7 @@ type Loaders = {
 
 export namespace KiloToolRegistry {
   const hint =
-    "- When you are doing an open-ended search where you do not know the exact symbol name, use the `semantic_search` tool first to narrow down the search scope, then follow up with `Grep` and/or `Read`"
+    "- When you are doing an open-ended search where you do not know the exact symbol name, use the `semantic_search` tool first to narrow down the search scope, then follow up with `Grep` and/or `Read`. For understanding symbol relationships, use `find_references`, `call_hierarchy`, or `dependency_graph`."
 
   export function indexing(
     config: Pick<Config.Info, "indexing">,
@@ -37,14 +44,21 @@ export namespace KiloToolRegistry {
       const recall = yield* RecallTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
-      return { codebase, recall, manager, process }
+      const findReferences = yield* FindReferencesTool // kilocode_change
+      const callHierarchy = yield* CallHierarchyTool // kilocode_change
+      const dependencyGraph = yield* DependencyGraphTool // kilocode_change
+      const impactAnalysis = yield* ImpactAnalysisTool // kilocode_change
+      const trace = yield* TraceTool // kilocode_change
+      const symbolContext = yield* SymbolContextTool // kilocode_change
+      const graphQuery = yield* GraphQueryTool // kilocode_change
+      return { codebase, recall, manager, process, findReferences, callHierarchy, dependencyGraph, impactAnalysis, trace, symbolContext, graphQuery }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
-    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info },
+    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info; findReferences: Tool.Info; callHierarchy: Tool.Info; dependencyGraph: Tool.Info; impactAnalysis: Tool.Info; trace: Tool.Info; symbolContext: Tool.Info; graphQuery: Tool.Info },
     deps: Deps,
     loaders: Loaders = {},
   ) {
@@ -54,6 +68,13 @@ export namespace KiloToolRegistry {
         recall: Tool.init(tools.recall),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
+        findReferences: Tool.init(tools.findReferences), // kilocode_change
+        callHierarchy: Tool.init(tools.callHierarchy), // kilocode_change
+        dependencyGraph: Tool.init(tools.dependencyGraph), // kilocode_change
+        impactAnalysis: Tool.init(tools.impactAnalysis), // kilocode_change
+        trace: Tool.init(tools.trace), // kilocode_change
+        symbolContext: Tool.init(tools.symbolContext), // kilocode_change
+        graphQuery: Tool.init(tools.graphQuery), // kilocode_change
       })
       const semantic = yield* semanticTool(deps, loaders)
       return { ...base, semantic }
@@ -99,7 +120,7 @@ export namespace KiloToolRegistry {
 
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
-    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def },
+    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def; process: Tool.Def; findReferences: Tool.Def; callHierarchy: Tool.Def; dependencyGraph: Tool.Def; impactAnalysis: Tool.Def; trace: Tool.Def; symbolContext: Tool.Def; graphQuery: Tool.Def },
     cfg: { experimental?: { codebase_search?: boolean } },
   ): Tool.Def[] {
     return [
@@ -109,6 +130,13 @@ export namespace KiloToolRegistry {
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       // The extension is the only client that can consume the Agent Manager start event.
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      tools.findReferences, // kilocode_change
+      tools.callHierarchy, // kilocode_change
+      tools.dependencyGraph, // kilocode_change
+      tools.impactAnalysis, // kilocode_change
+      tools.trace, // kilocode_change
+      tools.symbolContext, // kilocode_change
+      tools.graphQuery, // kilocode_change
     ]
   }
 

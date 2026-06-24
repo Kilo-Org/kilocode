@@ -7,7 +7,7 @@ import DESCRIPTION from "./webfetch.txt"
 import { isIconMimeType, isImageAttachment } from "@/util/media" // kilocode_change
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 
-const MAX_RESPONSE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_RESPONSE_SIZE = 10 * 1024 * 1024 // 10MB
 const DEFAULT_TIMEOUT = 30 * 1000 // 30 seconds
 const MAX_TIMEOUT = 120 * 1000 // 2 minutes
 

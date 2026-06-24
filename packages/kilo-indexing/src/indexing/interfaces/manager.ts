@@ -47,6 +47,7 @@ export type EmbedderProvider =
   | "bedrock"
   | "openrouter"
   | "voyage"
+  | "noop"
 
 export interface IndexProgressUpdate {
   systemStatus: IndexingState

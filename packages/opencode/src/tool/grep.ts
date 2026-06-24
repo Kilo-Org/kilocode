@@ -8,6 +8,9 @@ import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./grep.txt"
 import * as Tool from "./tool"
 import { Reference } from "@/reference/reference"
+// kilocode_change start
+import * as ToolCache from "../kilocode/tool/cache"
+// kilocode_change end
 
 const MAX_LINE_LENGTH = 2000
 
@@ -142,7 +145,7 @@ export const GrepTool = Tool.define(
             output.push("(Some paths were inaccessible and skipped)")
           }
 
-          return {
+          const output_result = {
             title: params.pattern,
             metadata: {
               matches: total,
@@ -150,6 +153,10 @@ export const GrepTool = Tool.define(
             },
             output: output.join("\n"),
           }
+          // kilocode_change start - cache grep results
+          ToolCache.set("grep", { pattern: params.pattern, path: params.path, include: params.include }, output_result)
+          // kilocode_change end
+          return output_result
         }).pipe(Effect.orDie),
     }
   }),

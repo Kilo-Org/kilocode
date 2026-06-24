@@ -1,0 +1,1 @@
+Run raw SQL queries against the codebase graph database. Tables: graph_nodes (id, kind, name, file_path, start_line, end_line), graph_edges (from_node, to_node, kind, file_path), symbol_table (name, node_id, file_path, kind), import_map (file_path, source_path, imported_name). Use for custom analysis that other tools don't cover.

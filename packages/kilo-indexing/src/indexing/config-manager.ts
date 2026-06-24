@@ -4,6 +4,11 @@ import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_VECTOR_ST
 import { getDefaultModelId, getModelDimension, getModelScoreThreshold } from "./model-registry"
 import { isEmbeddingProfileEqual, resolveEmbeddingProfile } from "./embedding-profile"
 
+const providers = [
+  "kilo", "openai", "ollama", "openai-compatible", "gemini",
+  "mistral", "vercel-ai-gateway", "bedrock", "openrouter", "voyage",
+] as const
+
 /**
  * Raw input fed to CodeIndexConfigManager from the host environment.
  * The host (CLI, extension, tests) builds this object and passes it in;
@@ -163,6 +168,15 @@ export class CodeIndexConfigManager {
     // LanceDB doesn't need a qdrant URL; qdrant does
     const hasStore = isLancedb || !!qdrant
 
+    // kilocode_change - allow zero-config indexing with no-op embedder
+    // When no provider is explicitly configured, we still allow indexing to start
+    // so the graph database works. Semantic search requires a real embedder.
+    const hasProvider = providers.includes(provider as any)
+    if (!hasProvider || !this.hasProviderCredentials(provider)) {
+      // No provider configured — allow graph-only indexing with no-op embedder
+      return hasStore
+    }
+
     if (provider === "kilo")
       return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
     if (provider === "openai") return !!(this.openAiOptions?.apiKey && hasStore)
@@ -174,6 +188,20 @@ export class CodeIndexConfigManager {
     if (provider === "bedrock") return !!(this.bedrockOptions?.region && hasStore)
     if (provider === "openrouter") return !!(this.openRouterOptions?.apiKey && hasStore)
     if (provider === "voyage") return !!(this.voyageOptions?.apiKey && hasStore)
+    return false
+  }
+
+  private hasProviderCredentials(provider: string): boolean {
+    if (provider === "kilo") return !!this.kiloOptions?.apiKey
+    if (provider === "openai") return !!this.openAiOptions?.apiKey
+    if (provider === "ollama") return !!this.ollamaOptions?.baseUrl
+    if (provider === "openai-compatible") return !!this.openAiCompatibleOptions?.baseUrl
+    if (provider === "gemini") return !!this.geminiOptions?.apiKey
+    if (provider === "mistral") return !!this.mistralOptions?.apiKey
+    if (provider === "vercel-ai-gateway") return !!this.vercelAiGatewayOptions?.apiKey
+    if (provider === "bedrock") return !!this.bedrockOptions?.region
+    if (provider === "openrouter") return !!this.openRouterOptions?.apiKey
+    if (provider === "voyage") return !!this.voyageOptions?.apiKey
     return false
   }
 

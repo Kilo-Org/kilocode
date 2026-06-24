@@ -78,7 +78,7 @@ export const CodebaseSearchTool = Tool.define(
             }
           }
 
-          const MAX_OUTPUT_CHARS = 45_000
+          const MAX_OUTPUT_CHARS = 90_000
           const fullOutput = result.contexts.map((c) => `### ${c.file}\n\`\`\`\n${c.content}\n\`\`\``).join("\n\n") // kilocode_change
 
           let output: string

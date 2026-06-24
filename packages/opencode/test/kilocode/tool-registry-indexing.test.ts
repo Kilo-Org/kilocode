@@ -203,6 +203,13 @@ describe("kilocode tool registry indexing", () => {
       recall: def("recall"),
       manager: def("agent_manager"),
       process: def("background_process"),
+      findReferences: def("find_references"),
+      callHierarchy: def("call_hierarchy"),
+      dependencyGraph: def("dependency_graph"),
+      impactAnalysis: def("impact_analysis"),
+      trace: def("trace"),
+      symbolContext: def("symbol_context"),
+      graphQuery: def("graph_query"),
     }
 
     try {
@@ -211,23 +218,37 @@ describe("kilocode tool registry indexing", () => {
         "semantic_search",
         "recall",
         "background_process",
+        "find_references",
+        "call_hierarchy",
+        "dependency_graph",
+        "impact_analysis",
+        "trace",
+        "symbol_context",
+        "graph_query",
       ])
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        ["codebase_search", "semantic_search", "recall", "background_process"],
+        ["codebase_search", "semantic_search", "recall", "background_process", "find_references", "call_hierarchy", "dependency_graph", "impact_analysis", "trace", "symbol_context", "graph_query"],
       )
 
       process.env["KILO_CLIENT"] = "vscode"
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
-        ["codebase_search", "semantic_search", "recall", "background_process", "agent_manager"],
+        ["codebase_search", "semantic_search", "recall", "background_process", "agent_manager", "find_references", "call_hierarchy", "dependency_graph", "impact_analysis", "trace", "symbol_context", "graph_query"],
       )
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
         "recall",
         "background_process",
         "agent_manager",
+        "find_references",
+        "call_hierarchy",
+        "dependency_graph",
+        "impact_analysis",
+        "trace",
+        "symbol_context",
+        "graph_query",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual(["semantic_search", "recall"])
+      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual(["semantic_search", "recall", "find_references", "call_hierarchy", "dependency_graph", "impact_analysis", "trace", "symbol_context", "graph_query"])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
       if (prev !== undefined) process.env["KILO_CLIENT"] = prev

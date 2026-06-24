@@ -52,6 +52,14 @@ describe("indexing worktrees", () => {
         return []
       },
       async dispose() {},
+      graphSearch: async () => [],
+      graphFindReferences: async () => ({ definitions: [], references: [] }),
+      graphCallHierarchy: async () => ({ incoming: [], outgoing: [] }),
+      graphDependencies: async () => ({ circular: [], chain: [] }),
+      graphImpact: async () => [],
+      graphTrace: async () => ({ path: [], pathLength: 0 }),
+      graphContext: async () => ({ definitions: [], callers: [], callees: [], subclasses: [], superclasses: [], imports: [], importedBy: [] }),
+      graphQuery: async () => [],
     }))
 
     await provideTestInstance({
@@ -83,6 +91,14 @@ describe("indexing worktrees", () => {
         return []
       },
       async dispose() {},
+      graphSearch: async () => [],
+      graphFindReferences: async () => ({ definitions: [], references: [] }),
+      graphCallHierarchy: async () => ({ incoming: [], outgoing: [] }),
+      graphDependencies: async () => ({ circular: [], chain: [] }),
+      graphImpact: async () => [],
+      graphTrace: async () => ({ path: [], pathLength: 0 }),
+      graphContext: async () => ({ definitions: [], callers: [], callees: [], subclasses: [], superclasses: [], imports: [], importedBy: [] }),
+      graphQuery: async () => [],
     }))
 
     await provideTestInstance({

@@ -15,9 +15,72 @@ export interface ServerInstance {
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
+const DAEMON_HEALTH_TIMEOUT_MS = 2_000
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
 type ServerExitListener = (code: number | null) => void
+
+interface DaemonState {
+  pid: number
+  hostname: string
+  port: number
+  url: string
+  username: string
+  password: string
+  token: string
+  version: string
+  startedAt: string
+  log: string
+}
+
+function getStateDirectory(): string {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? ""
+  if (process.platform === "win32") {
+    return path.join(process.env.LOCALAPPDATA ?? path.join(home, "AppData", "Local"), "kilo", "state")
+  }
+  if (process.platform === "darwin") {
+    return path.join(home, "Library", "Application Support", "kilo", "state")
+  }
+  return path.join(process.env.XDG_STATE_HOME ?? path.join(home, ".local", "state"), "kilo")
+}
+
+async function readDaemonState(): Promise<DaemonState | undefined> {
+  try {
+    const filePath = path.join(getStateDirectory(), "daemon.json")
+    const raw = await fs.promises.readFile(filePath, "utf-8")
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== "object") return undefined
+    return parsed as DaemonState
+  } catch {
+    return undefined
+  }
+}
+
+async function isDaemonHealthy(state: DaemonState): Promise<boolean> {
+  try {
+    const ctl = new AbortController()
+    const timer = setTimeout(() => ctl.abort(), DAEMON_HEALTH_TIMEOUT_MS)
+    const res = await fetch(`${state.url}/global/health`, {
+      signal: ctl.signal,
+      headers: { authorization: `Basic ${state.token}` },
+    })
+    clearTimeout(timer)
+    if (!res.ok) return false
+    const body = await res.json()
+    return body?.healthy === true
+  } catch {
+    return false
+  }
+}
+
+function isDaemonAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
 
 export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
   return folders?.[0]?.uri.fsPath ?? storage
@@ -35,6 +98,7 @@ export function resolveManagedServerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessE
 export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
+  private usingDaemon = false
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -42,7 +106,8 @@ export class ServerManager {
   ) {}
 
   /**
-   * Get or start the server instance
+   * Get or start the server instance.
+   * Prefers connecting to an existing daemon so indexing survives VS Code restarts.
    */
   async getServer(): Promise<ServerInstance> {
     console.log("[Kilo New] ServerManager: 🔍 getServer called")
@@ -56,6 +121,15 @@ export class ServerManager {
       return this.startupPromise
     }
 
+    // Try to connect to existing daemon first so indexing survives VS Code restarts
+    const daemon = await this.tryConnectToDaemon()
+    if (daemon) {
+      console.log("[Kilo New] ServerManager: ✅ Connected to existing daemon:", { port: daemon.port })
+      this.usingDaemon = true
+      this.instance = daemon
+      return daemon
+    }
+
     console.log("[Kilo New] ServerManager: 🚀 Starting new server instance...")
     this.startupPromise = this.startServer()
     try {
@@ -64,6 +138,19 @@ export class ServerManager {
       return this.instance
     } finally {
       this.startupPromise = null
+    }
+  }
+
+  private async tryConnectToDaemon(): Promise<ServerInstance | null> {
+    const state = await readDaemonState()
+    if (!state) return null
+    if (!isDaemonAlive(state.pid)) return null
+    if (!(await isDaemonHealthy(state))) return null
+
+    return {
+      port: state.port,
+      password: state.password,
+      process: { pid: state.pid } as ChildProcess,
     }
   }
 
@@ -239,6 +326,14 @@ export class ServerManager {
     if (!this.instance) {
       return
     }
+
+    // When connected to a shared daemon, do NOT kill it — other clients may be using it
+    if (this.usingDaemon) {
+      console.log("[Kilo New] ServerManager: 🔌 Disconnecting from shared daemon (not killing)")
+      this.instance = null
+      return
+    }
+
     const proc = this.instance.process
     this.instance = null
 

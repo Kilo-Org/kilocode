@@ -9,6 +9,7 @@ import { scannerExtensions, shouldUseFallbackChunking } from "../shared/supporte
 import { MAX_BLOCK_CHARS, MIN_BLOCK_CHARS, MIN_CHUNK_REMAINDER_CHARS, MAX_CHARS_TOLERANCE_FACTOR } from "../constants"
 import { Log } from "../../util/log"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import { extractRelationships, type RelationshipResult } from "../graph/ast-relationships"
 
 const log = Log.create({ service: "indexing-parser" })
 
@@ -85,6 +86,174 @@ export class CodeParser implements ICodeParser {
 
     // Parse the file
     return this.parseContent(filePath, content, fileHash)
+  }
+
+  /**
+   * Parses a file and returns both code blocks and tree-sitter captures for graph extraction.
+   * @param filePath Path to the file to parse
+   * @param options Optional parsing options
+   * @returns Promise resolving to blocks and captures
+   */
+  async parseFileWithCaptures(
+    filePath: string,
+    options?: {
+      content?: string
+      fileHash?: string
+    },
+  ): Promise<{ blocks: CodeBlock[]; captures: Array<{ name: string; node: { text: string; startPosition: { row: number; column: number }; endPosition: { row: number; column: number } } }> }> {
+    const ext = path.extname(filePath).toLowerCase()
+    if (!this.isSupportedLanguage(ext)) {
+      return { blocks: [], captures: [] }
+    }
+
+    let content: string
+    let fileHash: string
+    if (options?.content) {
+      content = options.content
+      fileHash = options.fileHash || this.createFileHash(content)
+    } else {
+      try {
+        content = await readFile(filePath, "utf8")
+        fileHash = this.createFileHash(content)
+      } catch (error) {
+        log.error(`error reading file ${filePath}`, { err: error })
+        return { blocks: [], captures: [] }
+      }
+    }
+
+    const blocks = await this.parseContent(filePath, content, fileHash)
+    const captures = await this.getCaptures(filePath, content)
+    return { blocks, captures }
+  }
+
+  /**
+   * Parses a file and returns code blocks, captures, AND AST relationships.
+   * This is the enterprise-grade method that does a SECOND PASS over the AST
+   * to extract calls, imports, extends, implements, exports — similar to
+   * how GitNexus (parse → crossFile → scopeResolution) and Graphify work.
+   * @param filePath Path to the file to parse
+   * @param options Optional parsing options
+   * @returns Promise resolving to blocks, captures, and relationships
+   */
+  async parseFileWithRelationships(
+    filePath: string,
+    options?: {
+      content?: string
+      fileHash?: string
+    },
+  ): Promise<{
+    blocks: CodeBlock[]
+    captures: Array<{ name: string; node: { text: string; startPosition: { row: number; column: number }; endPosition: { row: number; column: number } } }>
+    relationships: RelationshipResult
+  }> {
+    const ext = path.extname(filePath).toLowerCase()
+    if (!this.isSupportedLanguage(ext)) {
+      return { blocks: [], captures: [], relationships: { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] } }
+    }
+
+    let content: string
+    let fileHash: string
+    if (options?.content) {
+      content = options.content
+      fileHash = options.fileHash || this.createFileHash(content)
+    } else {
+      try {
+        content = await readFile(filePath, "utf8")
+        fileHash = this.createFileHash(content)
+      } catch (error) {
+        log.error(`error reading file ${filePath}`, { err: error })
+        return { blocks: [], captures: [], relationships: { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] } }
+      }
+    }
+
+    const blocks = await this.parseContent(filePath, content, fileHash)
+    const captures = await this.getCaptures(filePath, content)
+    const relationships = await this.getRelationships(filePath, content)
+    return { blocks, captures, relationships }
+  }
+
+  /**
+   * Extract AST relationships by doing a SECOND PASS tree walk.
+   * This is the key innovation that makes our graph actually useful.
+   */
+  private async getRelationships(
+    filePath: string,
+    content: string,
+  ): Promise<RelationshipResult> {
+    const ext = path.extname(filePath).slice(1).toLowerCase()
+    if (ext === "md" || ext === "markdown" || shouldUseFallbackChunking(`.${ext}`) || this.failedParsers.has(ext)) {
+      return { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] }
+    }
+
+    if (!this.loadedParsers[ext]) {
+      const pendingLoad = this.pendingLoads.get(ext)
+      if (pendingLoad) {
+        try { await pendingLoad } catch { return { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] } }
+      } else {
+        const loadPromise = loadRequiredLanguageParsers([filePath])
+        this.pendingLoads.set(ext, loadPromise)
+        try {
+          const newParsers = await loadPromise
+          if (newParsers) this.loadedParsers = { ...this.loadedParsers, ...newParsers }
+        } catch { return { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] } } finally { this.pendingLoads.delete(ext) }
+      }
+    }
+
+    const language = this.loadedParsers[ext]
+    if (!language) return { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] }
+
+    try {
+      const tree = language.parser.parse(content)
+      if (!tree) return { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] }
+      return extractRelationships(tree, filePath, ext)
+    } catch {
+      return { calls: [], imports: [], extends: [], implements: [], exports: [], references: [] }
+    }
+  }
+
+  /**
+   * Extract tree-sitter captures for graph extraction.
+   */
+  private async getCaptures(
+    filePath: string,
+    content: string,
+  ): Promise<Array<{ name: string; node: { text: string; startPosition: { row: number; column: number }; endPosition: { row: number; column: number } } }>> {
+    const ext = path.extname(filePath).slice(1).toLowerCase()
+    if (ext === "md" || ext === "markdown" || shouldUseFallbackChunking(`.${ext}`) || this.failedParsers.has(ext)) {
+      return []
+    }
+
+    if (!this.loadedParsers[ext]) {
+      const pendingLoad = this.pendingLoads.get(ext)
+      if (pendingLoad) {
+        try { await pendingLoad } catch { return [] }
+      } else {
+        const loadPromise = loadRequiredLanguageParsers([filePath])
+        this.pendingLoads.set(ext, loadPromise)
+        try {
+          const newParsers = await loadPromise
+          if (newParsers) this.loadedParsers = { ...this.loadedParsers, ...newParsers }
+        } catch { return [] } finally { this.pendingLoads.delete(ext) }
+      }
+    }
+
+    const language = this.loadedParsers[ext]
+    if (!language) return []
+
+    try {
+      const tree = language.parser.parse(content)
+      const rawCaptures = tree ? language.query.captures(tree.rootNode) : []
+      return rawCaptures.map((c: any) => ({
+        name: c.name,
+        node: {
+          text: c.node.text,
+          startPosition: { row: c.node.startPosition.row, column: c.node.startPosition.column },
+          endPosition: { row: c.node.endPosition.row, column: c.node.endPosition.column },
+        },
+      }))
+    } catch {
+      return []
+    }
   }
 
   /**

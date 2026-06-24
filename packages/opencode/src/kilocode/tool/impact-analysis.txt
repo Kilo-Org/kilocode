@@ -1,0 +1,1 @@
+Analyze the blast radius of changing a symbol. Returns all affected symbols grouped by depth with confidence scores. Depth 1 = will break, Depth 2 = likely affected, Depth 3+ = potentially affected. Use before refactoring to understand what else needs updating.

@@ -63,6 +63,7 @@ export type IndexingProvider =
   | "bedrock"
   | "openrouter"
   | "voyage"
+  | "noop"
 
 export interface IndexingConfig {
   enabled?: boolean

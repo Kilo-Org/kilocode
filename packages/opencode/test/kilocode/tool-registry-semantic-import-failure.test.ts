@@ -51,6 +51,13 @@ function infos() {
     recall: info("recall"),
     manager: info("agent_manager"),
     process: info("background_process"),
+    findReferences: info("find_references"),
+    callHierarchy: info("call_hierarchy"),
+    dependencyGraph: info("dependency_graph"),
+    impactAnalysis: info("impact_analysis"),
+    trace: info("trace"),
+    symbolContext: info("symbol_context"),
+    graphQuery: info("graph_query"),
   }
 }
 

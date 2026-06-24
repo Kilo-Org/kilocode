@@ -113,7 +113,8 @@ Usage notes:
     - File search: Use Glob (NOT find or ls)
     - Content search: Use Grep (NOT grep or rg)
     - Read files: Use Read (NOT cat/head/tail)
-    - Edit files: Use Edit (NOT sed/awk)
+    - Batch edit multiple files/locations: Use apply_patch (NOT sed/awk)
+    - Single edit: Use Edit (NOT sed/awk)
     - Write files: Use Write (NOT echo >/cat <<EOF)
     - Communication: Output text directly (NOT echo/printf)
   - When issuing multiple commands:
@@ -166,7 +167,8 @@ Usage notes:
     - File search: Use Glob (NOT Get-ChildItem)
     - Content search: Use Grep (NOT Select-String)
     - Read files: Use Read (NOT Get-Content)
-    - Edit files: Use Edit (NOT Set-Content)
+    - Batch edit multiple files/locations: Use apply_patch (NOT Set-Content)
+    - Single edit: Use Edit (NOT Set-Content)
     - Write files: Use Write (NOT Set-Content/Out-File or here-strings)
     - Communication: Output text directly (NOT Write-Output/Write-Host)
   - When issuing multiple commands:
@@ -216,7 +218,8 @@ Usage notes:
     - File search: Use Glob (NOT dir /s)
     - Content search: Use Grep (NOT findstr)
     - Read files: Use Read (NOT type)
-    - Edit files: Use Edit (NOT copy)
+    - Batch edit multiple files/locations: Use apply_patch (NOT copy)
+    - Single edit: Use Edit (NOT copy)
     - Write files: Use Write (NOT echo > file)
     - Communication: Output text directly (NOT echo)
   - When issuing multiple commands:

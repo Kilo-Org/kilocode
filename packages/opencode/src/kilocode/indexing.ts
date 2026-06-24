@@ -516,4 +516,62 @@ export namespace KiloIndexing {
     if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
     return entry.engine.search(query, directoryPrefix)
   }
+
+  // kilocode_change start - native graph indexing via worker
+  export async function graphSearch(query: string, kinds?: string[], limit?: number) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
+    return entry.engine.graphSearch(query, kinds, limit)
+  }
+
+  export async function graphFindReferences(symbol: string, filePath?: string) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return { definitions: [], references: [] }
+    return entry.engine.graphFindReferences(symbol, filePath)
+  }
+
+  export async function graphCallHierarchy(symbol: string, direction: string, maxDepth: number) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return { incoming: [], outgoing: [] }
+    return entry.engine.graphCallHierarchy(symbol, direction, maxDepth)
+  }
+
+  export async function graphDependencies(filePath?: string, maxDepth?: number) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return { circular: [], chain: [] }
+    return entry.engine.graphDependencies(filePath, maxDepth)
+  }
+
+  export async function graphImpact(symbol: string, maxDepth = 3) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
+    return entry.engine.graphImpact(symbol, maxDepth)
+  }
+
+  export async function graphTrace(from: string, to: string) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return { path: [], pathLength: 0 }
+    return entry.engine.graphTrace(from, to)
+  }
+
+  export async function graphContext(symbol: string) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return { definitions: [], callers: [], callees: [], subclasses: [], superclasses: [], imports: [], importedBy: [] }
+    return entry.engine.graphContext(symbol)
+  }
+
+  export async function graphQuery(sql: string, params?: (string | number)[]) {
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
+    if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
+    return entry.engine.graphQuery(sql, params)
+  }
+  // kilocode_change end
 }

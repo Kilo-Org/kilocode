@@ -27,7 +27,25 @@ Example patch:
 *** End Patch
 ```
 
+Multi-chunk example (multiple edits in ONE file):
+```
+*** Begin Patch
+*** Update File: src/app.ts
+@@ function oldName():
+-function oldName() {
++function newName() {
+@@ class User:
+-oldProp: string
++newProp: number
+@@ export default:
+-oldExport
++newExport
+*** End Patch
+```
+
 It is important to remember:
 
 - You must include a header with your intended action (Add/Delete/Update)
 - You must prefix new lines with `+` even when creating a new file
+- A single Update File section can contain MULTIPLE @@ chunks for different parts of the same file
+- Combine all related file changes into ONE patch — do not send separate patches or edit calls

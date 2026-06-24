@@ -23,6 +23,29 @@ import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 
 const log = Log.create({ service: "session.tools" })
 
+// kilocode_change start - Tool call deduplication cache
+// Maps "toolID:argsHash" → in-flight promise to deduplicate identical concurrent calls
+const inflight = new Map<string, Promise<unknown>>()
+
+function dedupKey(tool: string, args: Record<string, unknown>): string {
+  return `${tool}:${JSON.stringify(args)}`
+}
+
+function dedup<T>(tool: string, args: Record<string, unknown>, execute: () => Promise<T>): Promise<T> {
+  const key = dedupKey(tool, args)
+  const existing = inflight.get(key)
+  if (existing) {
+    log.debug("deduplicating tool call", { tool, key })
+    return existing as Promise<T>
+  }
+  const promise = execute().finally(() => {
+    inflight.delete(key)
+  })
+  inflight.set(key, promise)
+  return promise
+}
+// kilocode_change end
+
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   agent: Agent.Info
   model: Provider.Model
@@ -81,37 +104,41 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
       description: item.description,
       inputSchema: jsonSchema(schema),
       execute(args, options) {
-        return run.promise(
-          Effect.gen(function* () {
-            const ctx = context(args, options)
-            yield* plugin.trigger(
-              "tool.execute.before",
-              { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
-              { args },
-            )
-            // kilocode_change start
-            const result = yield* SandboxPolicy.executeTool(item, item.execute(args, ctx))
-            // kilocode_change end
-            const output = {
-              ...result,
-              attachments: result.attachments?.map((attachment) => ({
-                ...attachment,
-                id: PartID.ascending(),
-                sessionID: ctx.sessionID,
-                messageID: input.processor.message.id,
-              })),
-            }
-            yield* plugin.trigger(
-              "tool.execute.after",
-              { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
-              output,
-            )
-            if (options.abortSignal?.aborted) {
-              yield* input.processor.completeToolCall(options.toolCallId, output)
-            }
-            return output
-          }),
+        // kilocode_change start - deduplicate identical concurrent tool calls
+        return dedup(item.id, args, () =>
+          run.promise(
+            Effect.gen(function* () {
+              const ctx = context(args, options)
+              yield* plugin.trigger(
+                "tool.execute.before",
+                { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
+                { args },
+              )
+              // kilocode_change start
+              const result = yield* SandboxPolicy.executeTool(item, item.execute(args, ctx))
+              // kilocode_change end
+              const output = {
+                ...result,
+                attachments: result.attachments?.map((attachment) => ({
+                  ...attachment,
+                  id: PartID.ascending(),
+                  sessionID: ctx.sessionID,
+                  messageID: input.processor.message.id,
+                })),
+              }
+              yield* plugin.trigger(
+                "tool.execute.after",
+                { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
+                output,
+              )
+              if (options.abortSignal?.aborted) {
+                yield* input.processor.completeToolCall(options.toolCallId, output)
+              }
+              return output
+            }),
+          ),
         )
+        // kilocode_change end
       },
     })
   }
@@ -124,23 +151,25 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     const transformed = ProviderTransform.schema(input.model, schema)
     item.inputSchema = jsonSchema(transformed)
     item.execute = (args, opts) =>
-      run.promise(
-        Effect.gen(function* () {
-          const ctx = context(args, opts)
-          yield* plugin.trigger(
-            "tool.execute.before",
-            { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
-            { args },
-          )
-          // kilocode_change start
-          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
-            item,
-            Effect.gen(function* () {
-              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-              return yield* Effect.promise(() => execute(args, opts))
-            }),
-          ).pipe(
-            // kilocode_change end
+      // kilocode_change start - deduplicate identical concurrent MCP calls
+      dedup(key, args, () =>
+        run.promise(
+          Effect.gen(function* () {
+            const ctx = context(args, opts)
+            yield* plugin.trigger(
+              "tool.execute.before",
+              { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
+              { args },
+            )
+            // kilocode_change start
+            const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
+              item,
+              Effect.gen(function* () {
+                yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+                return yield* Effect.promise(() => execute(args, opts))
+              }),
+            ).pipe(
+              // kilocode_change end
             Effect.withSpan("Tool.execute", {
               attributes: {
                 "tool.name": key,
@@ -204,7 +233,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           }
           return output
         }),
-      )
+      ),
+    )
+    // kilocode_change end
     tools[key] = item
   }
 

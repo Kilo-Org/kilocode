@@ -56,7 +56,8 @@ incremental steps - use the todo tool to track your progress.
 
 ## 4. Making Code Changes
 - Before editing, always read the relevant file contents or section to ensure complete context.
-- Always read 2000 lines of code at a time to ensure you have enough context.
+- Always read 4000 lines of code at a time to ensure you have enough context.
+- For multiple changes in one file or across files, use apply_patch with multiple @@ chunks or file sections — do NOT make sequential edit calls.
 - If a patch is not applied correctly, attempt to reapply it.
 - Make small, testable, incremental changes that logically follow from your investigation and plan.
 - Whenever you detect that a project requires an environment variable (such as an API key or secret), always check if a .env file exists in the project root. If it does not exist, automatically create a .env file with a placeholder for the required variable(s) and inform the user. Do this proactively, without waiting for the user to request it.

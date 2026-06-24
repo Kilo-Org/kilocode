@@ -97,6 +97,15 @@ function inline(directory: string, root: string, hooks: IndexingWorker.Hooks): I
       telemetry.dispose()
       await manager.dispose()
     },
+    // kilocode_change - graph stub methods for tests
+    graphSearch: async () => [],
+    graphFindReferences: async () => ({ definitions: [], references: [] }),
+    graphCallHierarchy: async () => ({ incoming: [], outgoing: [] }),
+    graphDependencies: async () => ({ circular: [], chain: [] }),
+    graphImpact: async () => [],
+    graphTrace: async () => ({ path: [], pathLength: 0 }),
+    graphContext: async () => ({ definitions: [], callers: [], callees: [], subclasses: [], superclasses: [], imports: [], importedBy: [] }),
+    graphQuery: async () => [],
   }
 }
 
@@ -237,6 +246,14 @@ describe("indexing startup degradation", () => {
           return []
         },
         async dispose() {},
+        graphSearch: async () => [],
+        graphFindReferences: async () => ({ definitions: [], references: [] }),
+        graphCallHierarchy: async () => ({ incoming: [], outgoing: [] }),
+        graphDependencies: async () => ({ circular: [], chain: [] }),
+        graphImpact: async () => [],
+        graphTrace: async () => ({ path: [], pathLength: 0 }),
+        graphContext: async () => ({ definitions: [], callers: [], callees: [], subclasses: [], superclasses: [], imports: [], importedBy: [] }),
+        graphQuery: async () => [],
       }
     })
 
@@ -342,6 +359,14 @@ describe("indexing startup degradation", () => {
         return []
       },
       async dispose() {},
+      graphSearch: async () => [],
+      graphFindReferences: async () => ({ definitions: [], references: [] }),
+      graphCallHierarchy: async () => ({ incoming: [], outgoing: [] }),
+      graphDependencies: async () => ({ circular: [], chain: [] }),
+      graphImpact: async () => [],
+      graphTrace: async () => ({ path: [], pathLength: 0 }),
+      graphContext: async () => ({ definitions: [], callers: [], callees: [], subclasses: [], superclasses: [], imports: [], importedBy: [] }),
+      graphQuery: async () => [],
     }))
 
     await using tmp = await tmpdir({ git: true, config: cfg })

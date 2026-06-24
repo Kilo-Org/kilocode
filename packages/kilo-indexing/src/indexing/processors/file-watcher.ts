@@ -20,7 +20,9 @@ import {
   type IVectorStore,
   type PointStruct,
   type BatchProcessingSummary,
+  type CodeBlock,
 } from "../interfaces"
+import type { GraphIntegration } from "../graph/integration"
 import type { IndexingTelemetryMeta, IndexingTelemetryReporter } from "../interfaces/telemetry"
 import { codeParser } from "./parser"
 import { CacheManager } from "../cache-manager"
@@ -75,6 +77,7 @@ export class FileWatcher implements IFileWatcher {
     maxBatchRetries?: number,
     private readonly onTelemetry?: IndexingTelemetryReporter,
     private readonly telemetryMeta?: IndexingTelemetryMeta,
+    private readonly graphIntegration?: GraphIntegration,
   ) {
     if (ignoreInstance) {
       this.ignoreInstance = ignoreInstance
@@ -299,6 +302,13 @@ export class FileWatcher implements IFileWatcher {
     if (allPathsToClearFromDB.size > 0 && this.vectorStore) {
       try {
         await this.vectorStore.deletePointsByMultipleFilePaths(Array.from(allPathsToClearFromDB))
+
+        // kilocode_change - delete graph nodes for removed/changed files
+        if (this.graphIntegration) {
+          for (const p of allPathsToClearFromDB) {
+            await this.graphIntegration.onFileChanged(p)
+          }
+        }
 
         for (const path of pathsToExplicitlyDelete) {
           this.cacheManager.deleteHash(path)
@@ -710,7 +720,16 @@ export class FileWatcher implements IFileWatcher {
       }
 
       // Parse file
-      const blocks = await codeParser.parseFile(filePath, { content, fileHash: newHash })
+      let blocks: CodeBlock[]
+      if (this.graphIntegration) {
+        const parsed = await codeParser.parseFileWithRelationships(filePath, { content, fileHash: newHash })
+        blocks = parsed.blocks
+        if (parsed.captures.length > 0 || parsed.relationships.calls.length > 0 || parsed.relationships.imports.length > 0) {
+          await this.graphIntegration.onFileParsed(filePath, content, parsed.captures, parsed.relationships)
+        }
+      } else {
+        blocks = await codeParser.parseFile(filePath, { content, fileHash: newHash })
+      }
 
       // Prepare points for batch processing
       let pointsToUpsert: PointStruct[] = []

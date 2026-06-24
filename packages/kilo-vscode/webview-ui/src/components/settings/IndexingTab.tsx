@@ -3,6 +3,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
 import { formatKiloEmbeddingModelLabel, getKiloEmbeddingModel } from "@kilocode/kilo-indexing/embedding-models"
+import { getEmbeddingModelOption } from "@kilocode/kilo-indexing/model-registry"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
@@ -15,6 +16,7 @@ import { useServer } from "../../context/server"
 import type { IndexingConfig, IndexingProvider as ProviderId } from "../../types/messages"
 import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
+import IndexingModelSelector from "./IndexingModelSelector"
 import {
   indexingConfig,
   indexingDescription,
@@ -103,6 +105,7 @@ const IndexingTab: Component = () => {
   const [storeDrafts, setStoreDrafts] = createSignal<Record<string, string>>({})
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
   const [scope, setScope] = createSignal<IndexingScope>("global")
+  const [customModelDraft, setCustomModelDraft] = createSignal<Record<string, string>>({})
 
   const globalCfg = createMemo<IndexingConfig>(() => globalConfig().indexing ?? {})
   const projectCfg = createMemo<IndexingConfig>(() => projectConfig().indexing ?? {})
@@ -177,12 +180,6 @@ const IndexingTab: Component = () => {
     updateIndexing({ enabled })
   }
 
-  const saveModel = (value: string) => {
-    if (selectedProvider() === "kilo") return
-    const trimmed = value.trim()
-    updateIndexing({ model: trimmed || null })
-  }
-
   const providerValue = (group: string, key: string) => {
     const draftKey = `${scope()}.${group}.${key}`
     const draft = providerDrafts()[draftKey]
@@ -200,8 +197,8 @@ const IndexingTab: Component = () => {
   }
 
   const saveProviderField = (group: ProviderId, key: string, value: string) => {
-    const current = (raw()[group] as Record<string, string | undefined> | undefined) ?? {}
-    updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } })
+    const current = (raw()[group as keyof IndexingConfig] as Record<string, string | undefined> | undefined) ?? {}
+    updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } } as Partial<IndexingConfig>)
     const draftKey = `${scope()}.${group}.${key}`
     setProviderDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
   }
@@ -352,13 +349,28 @@ const IndexingTab: Component = () => {
           </Show>
         </Show>
         <Show when={selectedProvider() !== "kilo"}>
-          <SettingsRow
-            title={language.t("settings.indexing.model.title")}
-            description={description(language.t("settings.indexing.model.description"), [["model"]])}
+          <IndexingModelSelector
+            provider={selectedProvider()}
+            model={cfg().model}
+            scope={scope()}
+            customDraft={customModelDraft()}
             tag={() => tag(scope(), [["model"]])}
-          >
-            <TextField value={cfg().model ?? ""} placeholder="Enter model ID" onChange={saveModel} />
-          </SettingsRow>
+            description={description(language.t("settings.indexing.model.description"), [["model"]])}
+            onSelect={(model, dimension, scoreThreshold) =>
+              updateIndexing({ model: model || null, dimension, searchMinScore: scoreThreshold })
+            }
+            onCustomChange={(draft, model) => {
+              setCustomModelDraft(draft)
+              const p = selectedProvider()
+              if (!p || p === "kilo") return
+              const opt = model ? getEmbeddingModelOption(p, model) : undefined
+              updateIndexing({
+                model,
+                dimension: opt?.dimension ?? null,
+                searchMinScore: opt?.scoreThreshold,
+              })
+            }}
+          />
         </Show>
         <SettingsRow
           title={language.t("settings.indexing.dimension.title")}
