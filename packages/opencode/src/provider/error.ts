@@ -64,6 +64,9 @@ function isOverflow(message: string) {
 function message(providerID: ProviderID, e: APICallError) {
   return iife(() => {
     // kilocode_change start - surface a branded reauth hint for expired Copilot tokens
+    if (providerID.includes("github-copilot") && e.statusCode === 401) {
+      return "Your GitHub Copilot session has expired or is no longer valid. Please sign in again."
+    }
     if (providerID.includes("github-copilot") && e.statusCode === 403) {
       return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Kilo."
     }
