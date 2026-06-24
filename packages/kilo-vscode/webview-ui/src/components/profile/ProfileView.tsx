@@ -8,6 +8,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import DeviceAuthCard from "./DeviceAuthCard"
 import type { ProfileData, DeviceAuthState } from "../../types/messages"
+import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 
 export type { ProfileData }
 
@@ -95,6 +96,14 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
 
   const handleCancelLogin = () => {
     vscode.postMessage({ type: "cancelLogin" })
+  }
+
+  const handleKiloPass = () => {
+    vscode.postMessage({
+      type: "telemetry",
+      event: TelemetryEventName.KILO_PASS_BANNER_CLICKED,
+    })
+    vscode.postMessage({ type: "openExternal", url: "https://app.kilo.ai/profile" })
   }
 
   return (
@@ -245,6 +254,37 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                   </Card>
                 )}
               </Show>
+
+              {/* Kilo Pass banner */}
+              <Card
+                style={{
+                  background: "var(--vscode-textLink-foreground, #0078d4)",
+                  "border-color": "transparent",
+                }}
+              >
+                <p
+                  style={{
+                    "font-size": "var(--kilo-font-size-13)",
+                    "font-weight": "600",
+                    color: "#fff",
+                    margin: "0 0 4px 0",
+                  }}
+                >
+                  {language.t("profile.kiloPass.title")}
+                </p>
+                <p
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    color: "rgba(255,255,255,0.85)",
+                    margin: "0 0 10px 0",
+                  }}
+                >
+                  {language.t("profile.kiloPass.description")}
+                </p>
+                <Button variant="primary" size="small" onClick={handleKiloPass}>
+                  {language.t("profile.kiloPass.action")}
+                </Button>
+              </Card>
 
               {/* Action buttons */}
               <div style={{ display: "flex", gap: "8px" }}>
