@@ -255,6 +255,17 @@ describe("SessionStreamScheduler / focus and lifecycle", () => {
     expect(stats.active).toBe(0)
   })
 
+  it("exposes the active session id via the getter so pruneDeletedSession can match it", () => {
+    const queue = new SessionStreamScheduler(() => {})
+    expect(queue.active).toBeUndefined()
+    queue.focus("sess-1")
+    expect(queue.active).toBe("sess-1")
+    queue.focus("sess-2")
+    expect(queue.active).toBe("sess-2")
+    queue.focus(undefined)
+    expect(queue.active).toBeUndefined()
+  })
+
   it("dispose() stops further emissions from queued work", async () => {
     const sent: Sent[] = []
     const queue = new SessionStreamScheduler((msg) => sent.push(msg), {

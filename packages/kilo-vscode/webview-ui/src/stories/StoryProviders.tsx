@@ -191,6 +191,7 @@ export function mockSessionValue(overrides?: {
     submitting: () => false,
     draftSessionID: () => undefined,
     setDraftSessionID: noop,
+    userClearedSession: () => false,
     messageMutation: () => undefined,
     messages: () => [],
     visibleMessages: () => [],

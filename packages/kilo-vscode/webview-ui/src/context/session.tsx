@@ -73,6 +73,7 @@ import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
+import { deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 
 const RECENT_LIMIT = 5
@@ -286,6 +287,12 @@ interface SessionContextValue {
   selectCloudSession: (cloudSessionId: string) => void
   draftSessionID: Accessor<string | undefined>
   setDraftSessionID: (id: string | undefined) => void
+  // True when the user explicitly transitioned to the empty state via
+  // clearCurrentSession() or by deleting their current/draft session.
+  // restoreFailed uses this to suppress restore into :new when the user
+  // asked for a fresh task vs. an external session.deleted landing them
+  // back in :new with a stale failure pending.
+  userClearedSession: Accessor<boolean>
 }
 
 export const SessionContext = createContext<SessionContextValue>()
@@ -300,6 +307,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
   const [draftSessionID, setDraftSessionID] = createSignal<string | undefined>()
+  const [userClearedSession, setUserClearedSession] = createSignal(false)
 
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
@@ -1224,6 +1232,7 @@ export const SessionProvider: ParentComponent = (props) => {
       if (!draftID || draft === draftID || active === draftID) {
         setCurrentSessionID(session.id)
         setDraftSessionID(session.id)
+        setUserClearedSession(false)
       }
     })
   }
@@ -1914,7 +1923,25 @@ export const SessionProvider: ParentComponent = (props) => {
           return next
         })
       }
+      const staleResponding = new Set(
+        permissions()
+          .filter((p) => p.sessionID === sessionID)
+          .map((p) => p.id),
+      )
       setPermissions((prev) => removeSessionPermissions(prev, sessionID))
+      setRespondingPermissions((prev) => {
+        if (staleResponding.size === 0) return prev
+        const next = new Set(prev)
+        for (const id of staleResponding) next.delete(id)
+        if (next.size === prev.size) return prev
+        return next
+      })
+      setLoaded((prev) => {
+        if (!prev.has(sessionID)) return prev
+        const next = new Set(prev)
+        next.delete(sessionID)
+        return next
+      })
       setStatusMap(
         produce((map) => {
           delete map[sessionID]
@@ -1926,11 +1953,27 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
+      setStore(
+        "sessionOverrides",
+        produce((map) => {
+          delete map[sessionID]
+        }),
+      )
+      setStore(
+        "variantSelections",
+        produce((variants) => {
+          for (const key of sessionVariantKeys(variants, sessionID)) delete variants[key]
+        }),
+      )
       if (currentSessionID() === sessionID) {
         setCurrentSessionID(undefined)
         setLoading(false)
       }
+      if (draftSessionID() === sessionID) {
+        setDraftSessionID(undefined)
+      }
     })
+    deleteDraftsForSession(sessionID)
   }
 
   // Splices the message from the store and deletes its parts.
@@ -2172,12 +2215,25 @@ export const SessionProvider: ParentComponent = (props) => {
       rejectQuestion(q.id)
     }
 
-    const scope = draftID ?? sid
+    // When there is no current session and the caller didn't supply a draftID
+    // (e.g. the active session was just deleted externally), mint a fresh
+    // draftID so the extension can echo it back in sessionCreated and the
+    // webview can migrate the in-flight draft from ":pending:<id>" into the
+    // newly created session. Without this, the round-trip has no key to tie
+    // the unsent text to the new session and the user's typed message is lost.
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, text, files, review)
       startSubmission(scope, messageID)
-      if (!sid) setDraftSessionID(scope)
+      if (!sid) {
+        // The user is starting a fresh draft from the empty prompt. Clear
+        // any lingering userClearedSession flag so a failure that races ahead
+        // of sessionCreated is not suppressed as a stale clear.
+        setUserClearedSession(false)
+        setDraftSessionID(scope)
+      }
     }
     const agent = promptAgent(scope)
 
@@ -2186,7 +2242,7 @@ export const SessionProvider: ParentComponent = (props) => {
       text,
       messageID,
       sessionID: sid,
-      draftID,
+      draftID: effectiveDraftID,
       providerID,
       modelID,
       agent,
@@ -2240,12 +2296,21 @@ export const SessionProvider: ParentComponent = (props) => {
       rejectQuestion(q.id)
     }
 
-    const scope = draftID ?? sid
+    // See sendMessage: mint a draftID when there's no current session so the
+    // extension can attach the round-trip sessionCreated migration to it.
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
       startSubmission(scope, messageID)
-      if (!sid) setDraftSessionID(scope)
+      if (!sid) {
+        // Same reasoning as sendMessage: starting a fresh draft from the
+        // empty prompt overrides any lingering userClearedSession flag so a
+        // failure that races ahead of sessionCreated is not suppressed.
+        setUserClearedSession(false)
+        setDraftSessionID(scope)
+      }
     }
     const agent = promptAgent(scope)
 
@@ -2255,7 +2320,7 @@ export const SessionProvider: ParentComponent = (props) => {
       arguments: args,
       messageID,
       sessionID: sid,
-      draftID,
+      draftID: effectiveDraftID,
       providerID,
       modelID,
       agent,
@@ -2402,6 +2467,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function clearCurrentSession() {
+    setUserClearedSession(true)
     setCurrentSessionID(undefined)
     setDraftSessionID(undefined)
     setCloudPreviewId(null)
@@ -2445,6 +2511,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const ready = loaded().has(id)
     setCurrentSessionID(id)
     setDraftSessionID(id)
+    setUserClearedSession(false)
     setLoading(!ready)
     if (ready) {
       vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "focus" })
@@ -2485,7 +2552,11 @@ export const SessionProvider: ParentComponent = (props) => {
       next.delete(id)
       return next
     })
-    vscode.postMessage({ type: "deleteSession", sessionID: id })
+    if (id === currentSessionID() || id === draftSessionID()) setUserClearedSession(true)
+    vscode.postMessage({
+      type: "deleteSession",
+      sessionID: id,
+    })
   }
 
   function renameSession(id: string, title: string) {
@@ -2816,6 +2887,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectCloudSession,
     draftSessionID,
     setDraftSessionID,
+    userClearedSession,
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>
