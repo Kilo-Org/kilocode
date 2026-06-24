@@ -250,6 +250,49 @@ describe("path-scoped instruction rules", () => {
     }),
   )
 
+  it.live("injects matching path-scoped per-directory AGENTS.md", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpWithFiles({
+        "src/AGENTS.md": ["---", "paths: src/api/**/*.ts", "---", "", "# API Directory Rule"].join("\n"),
+        "src/api/user.ts": "export const user = true",
+      })
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        const results = yield* svc.resolve(
+          [],
+          path.join(dir, "src", "api", "user.ts"),
+          MessageID.make("msg_message-scoped-agents-1"),
+        )
+
+        expect(results).toHaveLength(1)
+        expect(results[0].filepath).toBe(path.join(dir, "src", "AGENTS.md"))
+        expect(results[0].content).toContain("# API Directory Rule")
+        expect(results[0].content).not.toContain("paths:")
+      }).pipe(provideInstance(dir), provideInstruction({ home: dir, config: dir }))
+    }),
+  )
+
+  it.live("does not inject non-matching path-scoped per-directory AGENTS.md", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpWithFiles({
+        "src/AGENTS.md": ["---", "paths: src/api/**/*.ts", "---", "", "# API Directory Rule"].join("\n"),
+        "src/ui/view.ts": "export const view = true",
+      })
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        const results = yield* svc.resolve(
+          [],
+          path.join(dir, "src", "ui", "view.ts"),
+          MessageID.make("msg_message-scoped-agents-2"),
+        )
+
+        expect(results).toEqual([])
+      }).pipe(provideInstance(dir), provideInstruction({ home: dir, config: dir }))
+    }),
+  )
+
   it.live("discovers .claude/rules only when Claude compatibility is enabled", () =>
     Effect.gen(function* () {
       const home = yield* tmpWithFiles({

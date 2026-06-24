@@ -256,14 +256,21 @@ export const layer: Layer.Layer<
           continue
         }
 
+        // kilocode_change start - honor paths frontmatter on nearby instruction files
+        const parsed = yield* rule(found)
+        if (parsed.paths && !KilocodeInstruction.match(parsed, target, worktree)) {
+          current = path.dirname(current)
+          continue
+        }
+        // kilocode_change end
+
         if (!claim(found)) {
           current = path.dirname(current)
           continue
         }
 
-        const content = yield* read(found)
-        if (content) {
-          results.push({ filepath: found, content: `Instructions from: ${found}\n${content}` })
+        if (parsed.content) {
+          results.push({ filepath: found, content: `Instructions from: ${found}\n${parsed.content}` })
         }
 
         current = path.dirname(current)
