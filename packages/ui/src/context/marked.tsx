@@ -10,7 +10,7 @@ import katex from "katex"
 import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
 // kilocode_change end
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { parseFilePath } from "../file-path" // kilocode_change
+import { extractSuffix, normalizeCandidatePath, extractFilePathFromHref } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
 import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_change
@@ -110,8 +110,6 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 }
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
-
-// kilocode_change: parseFilePath imported from ../file-path
 
 // kilocode_change start: highlight cache for deferred highlighting
 
@@ -276,23 +274,32 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
         renderer: {
           link({ href, title, text }) {
             const titleAttr = title ? ` title="${title}"` : ""
+            // kilocode_change: file-path links get a distinct class for styling
+            const isFile = href ? extractFilePathFromHref(href) : undefined
+            if (isFile) {
+              return `<a href="${href}"${titleAttr} class="external-link file-path-link">${text}</a>`
+            }
             return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           },
-          // kilocode_change start
+          // kilocode_change start — every code span is a file-link candidate.
+          // Post-render validation (via filesystem stat) will strip the class
+          // from candidates that don't correspond to real files.
           codespan({ text }) {
-            const file = parseFilePath(text)
             const escaped = text
               .replace(/&/g, "&amp;")
               .replace(/</g, "&lt;")
               .replace(/>/g, "&gt;")
               .replace(/"/g, "&quot;")
               .replace(/'/g, "&#39;")
-            if (file) {
-              const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
-              const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-              return `<code class="file-link" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
+            // Skip obvious non-paths: contains spaces, URLs, or is empty
+            if (!text || text.includes(" ") || text.includes("://")) {
+              return `<code>${escaped}</code>`
             }
-            return `<code>${escaped}</code>`
+            const { candidate, line, column } = extractSuffix(text)
+            const normalized = normalizeCandidatePath(candidate)
+            const lineAttr = line ? ` data-file-line="${line}"` : ""
+            const colAttr = column ? ` data-file-col="${column}"` : ""
+            return `<code class="file-link-candidate" data-file-candidate="${normalized}"${lineAttr}${colAttr}>${escaped}</code>`
           },
           code({ text, lang }) {
             const escaped = text
