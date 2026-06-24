@@ -1370,10 +1370,10 @@ export const dict = {
   "settings.agentBehaviour.removeSkill.confirm": 'Remove skill "{{name}}"? This will delete the skill files from disk.',
   "settings.agentBehaviour.removeSkill.button": "Remove",
   "settings.agentBehaviour.rules.description":
-    "Rules are instruction files that guide agent behaviour. Local Markdown rules can include paths frontmatter to load only when matching files are read. Add file paths or globs below to include additional rules.",
+    "Rules are instruction files that guide agent behaviour. Local Markdown files can include paths frontmatter to load only when matching files are read.",
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
-    "Paths or globs for additional instruction files. Local Markdown files with paths frontmatter load lazily for matching files.",
+    "Configured paths or globs for additional instruction files. Auto-discovered .claude/rules files are controlled by Claude Code Compatibility.",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
   "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
   "settings.agentBehaviour.claudeCompat.description":
