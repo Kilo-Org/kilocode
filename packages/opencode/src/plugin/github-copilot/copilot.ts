@@ -163,20 +163,20 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
             delete headers["x-api-key"]
             delete headers["authorization"]
 
+            // kilocode_change start - clear stored token on 401 so the user is prompted to re-auth
             const res = await fetch(request, {
               ...init,
               headers,
             })
 
-            // kilocode_change start - clear stored token on 401 so the user is prompted to re-auth
             if (res.status === 401) {
-              fetch(new URL(`/auth/github-copilot`, input.serverUrl), { method: "DELETE", headers: ServerAuth.headers() }).catch((err) => { // kilocode_change
+              fetch(new URL(`/auth/github-copilot`, input.serverUrl), { method: "DELETE", headers: ServerAuth.headers() }).catch((err) => {
                 log.error("failed to clear copilot auth on 401", { err })
               })
             }
-            // kilocode_change end
 
             return res
+            // kilocode_change end
           },
         }
       },
