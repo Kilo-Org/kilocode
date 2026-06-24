@@ -1449,6 +1449,7 @@ export type Config = {
   agent?: {
     plan?: AgentConfig
     build?: AgentConfig
+    data?: AgentConfig
     debug?: AgentConfig
     orchestrator?: AgentConfig
     ask?: AgentConfig

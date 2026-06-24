@@ -20736,6 +20736,9 @@
               "build": {
                 "$ref": "#/components/schemas/AgentConfig"
               },
+              "data": {
+                "$ref": "#/components/schemas/AgentConfig"
+              },
               "debug": {
                 "$ref": "#/components/schemas/AgentConfig"
               },

@@ -725,6 +725,7 @@ it.instance(
     config: {
       agent: {
         code: { disable: true },
+        data: { disable: true }, // kilocode_change
         plan: { disable: true },
         debug: { disable: true },
         orchestrator: { disable: true },

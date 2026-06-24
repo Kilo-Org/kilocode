@@ -13,6 +13,7 @@ import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
+import PROMPT_DATA from "./prompt/data.txt"
 
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
@@ -304,7 +305,7 @@ export function telemetryOptions(_cfg: Config.Info) {
 // - Patch plan with readOnlyBash, mcpRules, .kilo paths
 // - Patch explore with codebase_search and conditional prompt
 // - Patch appropriate agents with semantic_search
-// - Add debug, orchestrator, ask agents
+// - Add data, debug, orchestrator, ask agents
 export function patchAgents(
   agents: Record<
     string,
@@ -347,6 +348,17 @@ export function patchAgents(
       ),
     }
     delete agents.build
+  }
+
+  agents.data = {
+    name: "data",
+    description: "Run notebook-first data analysis by appending and executing cells for each request.",
+    prompt: PROMPT_DATA,
+    options: {},
+    permission: [...agents.code.permission],
+    mode: "primary",
+    native: true,
+    color: "#2563EB",
   }
 
   // Patch plan mode

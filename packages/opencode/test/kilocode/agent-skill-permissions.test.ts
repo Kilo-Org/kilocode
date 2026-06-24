@@ -14,7 +14,7 @@ function action(name: string, ruleset: Permission.Ruleset) {
 it.instance("skill tool available for non-system native agents and denied for system agents", () =>
   Effect.gen(function* () {
     const svc = yield* Agent.Service
-    const allow = ["code", "plan", "debug", "orchestrator", "ask", "general", "explore"]
+    const allow = ["code", "data", "plan", "debug", "orchestrator", "ask", "general", "explore"]
     for (const name of allow) {
       const agent = yield* svc.get(name)
       expect(agent).toBeDefined()
