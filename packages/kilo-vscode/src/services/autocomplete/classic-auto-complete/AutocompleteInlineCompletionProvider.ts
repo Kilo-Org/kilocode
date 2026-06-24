@@ -32,7 +32,7 @@ import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
 import { shouldSkipAutocomplete } from "./contextualSkip"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
-import { ErrorBackoff } from "./ErrorBackoff"
+import { BackoffGate } from "./BackoffGate"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 
@@ -127,12 +127,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private telemetry: AutocompleteTelemetry | null
   /** Information about the last suggestion shown to the user */
   private lastSuggestion: LastSuggestionInfo | null = null
-  /** Circuit breaker / exponential backoff for API errors */
-  public readonly backoff = new ErrorBackoff()
-  /** Optional callback fired once when a fatal (non-retriable) error is first detected */
-  private onFatalError: ((status: number | null) => void) | null = null
-  /** Whether the fatal error notification has already been fired (avoid repeating) */
-  private fatalNotified = false
+  /** Circuit breaker, fatal-notify latch, and 402 self-heal — shared with next-edit. */
+  private readonly gate: BackoffGate
 
   constructor(
     context: vscode.ExtensionContext,
@@ -148,7 +144,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     this.connectionService = connectionService
     this.costTrackingCallback = costTrackingCallback
     this.getSettings = getSettings
-    this.onFatalError = onFatalError ?? null
+    this.gate = new BackoffGate(connectionService, onFatalError)
 
     this.ignoreController = (async () => {
       const ignoreController = new FileIgnoreController(workspacePath)
@@ -288,8 +284,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
    * Call this when auth state changes (login, reconnect, org switch).
    */
   public resetBackoff(): void {
-    this.backoff.reset()
-    this.fatalNotified = false
+    this.gate.reset()
   }
 
   public dispose(): void {
@@ -355,19 +350,9 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     // Circuit breaker / backoff: skip requests when the API is returning errors.
     // This prevents flooding the API with thousands of failed requests when
     // credits are depleted (402), auth is invalid (401/403), or the server
-    // is rate-limiting (429) / having issues (5xx).
-    if (this.backoff.blocked()) {
-      // For 402 (credits depleted), periodically check the balance endpoint
-      // instead of sending a probe FIM request. If the user has added credits,
-      // reset the backoff so autocomplete resumes.
-      if (this.backoff.getFatalStatus() === 402 && this.backoff.shouldProbe()) {
-        if (await this.hasBalance()) {
-          this.backoff.reset()
-          this.fatalNotified = false
-        }
-      }
-      if (this.backoff.blocked()) return []
-    }
+    // is rate-limiting (429) / having issues (5xx). The gate also self-heals
+    // from a 402 by periodically probing the credit balance.
+    if (!(await this.gate.allow())) return []
 
     if (!document?.uri?.fsPath) {
       return []
@@ -622,8 +607,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       this.costTrackingCallback(result.cost, result.inputTokens, result.outputTokens)
 
       // Successful response — reset any backoff / circuit breaker state
-      this.backoff.success()
-      this.fatalNotified = false
+      this.gate.success()
 
       // Always update suggestions, even if text is empty (for caching)
       this.updateSuggestions(result.suggestion)
@@ -640,29 +624,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
         telemetryContext,
       )
 
-      // Update circuit breaker / backoff state based on the error kind
-      const kind = this.backoff.failure(error)
-
-      // Notify once when a fatal error (402/401/403) is first detected
-      if (kind === "fatal" && !this.fatalNotified) {
-        this.fatalNotified = true
-        this.onFatalError?.(this.backoff.getFatalStatus())
-      }
-    }
-  }
-
-  /**
-   * Check the user's credit balance via the profile endpoint.
-   * Returns true if the user has a positive balance, false otherwise.
-   * Returns false on any error (not connected, fetch failed, etc.).
-   */
-  private async hasBalance(): Promise<boolean> {
-    try {
-      const client = await this.connectionService.getClientAsync()
-      const result = await client.kilo.profile().catch(() => null)
-      return (result?.data?.balance?.balance ?? 0) > 0
-    } catch {
-      return false
+      // Update circuit breaker / backoff state and notify once on a fatal error.
+      this.gate.failure(error)
     }
   }
 }
