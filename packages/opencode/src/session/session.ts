@@ -20,7 +20,6 @@ import * as Log from "@opencode-ai/core/util/log"
 import { MessageV2 } from "./message-v2"
 import type { InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
-import { capture } from "@/kilocode/instance" // kilocode_change - children() scopes by current project when available
 import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
@@ -622,18 +621,22 @@ export const layer: Layer.Layer<
       )
     })
 
-    // kilocode_change start - scope by project_id when instance context is available
+    // kilocode_change start - scope children by persisted parent project_id
     const children = Effect.fn("Session.children")(function* (parentID: SessionID) {
-      const ctx = capture()
-      const conditions = [eq(SessionTable.parent_id, parentID)]
-      if (ctx) conditions.push(eq(SessionTable.project_id, ctx.project.id))
-      const rows = yield* db((d) =>
-        d
+      const rows = yield* db((d) => {
+        const parent = d
+          .select({ projectID: SessionTable.project_id })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, parentID))
+          .get()
+        const conditions = [eq(SessionTable.parent_id, parentID)]
+        if (parent) conditions.push(eq(SessionTable.project_id, parent.projectID))
+        return d
           .select()
           .from(SessionTable)
           .where(and(...conditions))
-          .all(),
-      )
+          .all()
+      })
       return rows.map(fromRow)
     })
     // kilocode_change end

@@ -6,6 +6,7 @@ import { run as runSandbox, type Profile } from "@kilocode/sandbox"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import type { InstanceContext } from "@/project/instance-context"
+import * as Network from "./network"
 
 function root(path: string) {
   return { path, kind: "subtree" as const }
@@ -41,7 +42,7 @@ function isolated(ctx: InstanceContext) {
   return linked(path.resolve(ctx.directory), path.resolve(ctx.worktree))
 }
 
-export function profile(ctx: InstanceContext): Profile {
+export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] = "deny"): Profile {
   const project = isolated(ctx)
     ? [ctx.directory]
     : ctx.directory === ctx.worktree
@@ -66,7 +67,7 @@ export function profile(ctx: InstanceContext): Profile {
       temporaryDirectory: Global.Path.tmp,
     },
     network: {
-      mode: "allow",
+      mode,
       allowedHosts: [],
     },
     environment: {
@@ -85,6 +86,15 @@ export function execute<A, E, R>(effect: Effect.Effect<A, E, R>) {
     const config = yield* Config.Service
     const cfg = yield* config.get()
     if (!cfg.experimental?.sandbox) return yield* effect
-    return yield* runSandbox(profile(yield* InstanceState.context), effect)
+    const mode = cfg.experimental.sandbox_restrict_network === false ? "allow" : "deny"
+    return yield* runSandbox(profile(yield* InstanceState.context, mode), effect)
   })
+}
+
+export function executeTool<A, E, R>(tool: { id: string }, effect: Effect.Effect<A, E, R>) {
+  return execute(Network.tool(tool, effect))
+}
+
+export function executeMcp<A, E, R>(tool: object, effect: Effect.Effect<A, E, R>) {
+  return execute(Network.mcp(tool, effect))
 }

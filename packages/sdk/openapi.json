@@ -18728,6 +18728,19 @@
           "snapshot": {
             "type": "string"
           },
+          "model": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "modelID": {
+                "type": "string"
+              }
+            },
+            "required": ["providerID", "modelID"],
+            "additionalProperties": false
+          },
           "cost": {
             "type": "number"
           },
@@ -21013,6 +21026,14 @@
               },
               "continue_loop_on_deny": {
                 "type": "boolean"
+              },
+              "sandbox": {
+                "type": "boolean",
+                "description": "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access"
+              },
+              "sandbox_restrict_network": {
+                "type": "boolean",
+                "description": "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)"
               },
               "mcp_timeout": {
                 "type": "integer",
