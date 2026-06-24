@@ -1,0 +1,1475 @@
+diff --git a/.changeset/bright-notebooks-complete.md b/.changeset/bright-notebooks-complete.md
+new file mode 100644
+index 00000000000..afe6eb43733
+--- /dev/null
++++ b/.changeset/bright-notebooks-complete.md
+@@ -0,0 +1,5 @@
++---
++"kilo-code": minor
++---
++
++Enable autocomplete in Jupyter notebooks.
+diff --git a/packages/kilo-vscode/THIRD_PARTY_LICENSES/continue.txt b/packages/kilo-vscode/THIRD_PARTY_LICENSES/continue.txt
+new file mode 100644
+index 00000000000..9aea05f9b72
+--- /dev/null
++++ b/packages/kilo-vscode/THIRD_PARTY_LICENSES/continue.txt
+@@ -0,0 +1,201 @@
++Apache License
++Version 2.0, January 2004
++http://www.apache.org/licenses/
++
++TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
++
++1. Definitions.
++
++"License" shall mean the terms and conditions for use, reproduction,
++and distribution as defined by Sections 1 through 9 of this document.
++
++"Licensor" shall mean the copyright owner or entity authorized by
++the copyright owner that is granting the License.
++
++"Legal Entity" shall mean the union of the acting entity and all
++other entities that control, are controlled by, or are under common
++control with that entity. For the purposes of this definition,
++"control" means (i) the power, direct or indirect, to cause the
++direction or management of such entity, whether by contract or
++otherwise, or (ii) ownership of fifty percent (50%) or more of the
++outstanding shares, or (iii) beneficial ownership of such entity.
++
++"You" (or "Your") shall mean an individual or Legal Entity
++exercising permissions granted by this License.
++
++"Source" form shall mean the preferred form for making modifications,
++including but not limited to software source code, documentation
++source, and configuration files.
++
++"Object" form shall mean any form resulting from mechanical
++transformation or translation of a Source form, including but
++not limited to compiled object code, generated documentation,
++and conversions to other media types.
++
++"Work" shall mean the work of authorship, whether in Source or
++Object form, made available under the License, as indicated by a
++copyright notice that is included in or attached to the work
++(an example is provided in the Appendix below).
++
++"Derivative Works" shall mean any work, whether in Source or Object
++form, that is based on (or derived from) the Work and for which the
++editorial revisions, annotations, elaborations, or other modifications
++represent, as a whole, an original work of authorship. For the purposes
++of this License, Derivative Works shall not include works that remain
++separable from, or merely link (or bind by name) to the interfaces of,
++the Work and Derivative Works thereof.
++
++"Contribution" shall mean any work of authorship, including
++the original version of the Work and any modifications or additions
++to that Work or Derivative Works thereof, that is intentionally
++submitted to Licensor for inclusion in the Work by the copyright owner
++or by an individual or Legal Entity authorized to submit on behalf of
++the copyright owner. For the purposes of this definition, "submitted"
++means any form of electronic, verbal, or written communication sent
++to the Licensor or its representatives, including but not limited to
++communication on electronic mailing lists, source code control systems,
++and issue tracking systems that are managed by, or on behalf of, the
++Licensor for the purpose of discussing and improving the Work, but
++excluding communication that is conspicuously marked or otherwise
++designated in writing by the copyright owner as "Not a Contribution."
++
++"Contributor" shall mean Licensor and any individual or Legal Entity
++on behalf of whom a Contribution has been received by Licensor and
++subsequently incorporated within the Work.
++
++2. Grant of Copyright License. Subject to the terms and conditions of
++this License, each Contributor hereby grants to You a perpetual,
++worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++copyright license to reproduce, prepare Derivative Works of,
++publicly display, publicly perform, sublicense, and distribute the
++Work and such Derivative Works in Source or Object form.
++
++3. Grant of Patent License. Subject to the terms and conditions of
++this License, each Contributor hereby grants to You a perpetual,
++worldwide, non-exclusive, no-charge, royalty-free, irrevocable
++(except as stated in this section) patent license to make, have made,
++use, offer to sell, sell, import, and otherwise transfer the Work,
++where such license applies only to those patent claims licensable
++by such Contributor that are necessarily infringed by their
++Contribution(s) alone or by combination of their Contribution(s)
++with the Work to which such Contribution(s) was submitted. If You
++institute patent litigation against any entity (including a
++cross-claim or counterclaim in a lawsuit) alleging that the Work
++or a Contribution incorporated within the Work constitutes direct
++or contributory patent infringement, then any patent licenses
++granted to You under this License for that Work shall terminate
++as of the date such litigation is filed.
++
++4. Redistribution. You may reproduce and distribute copies of the
++Work or Derivative Works thereof in any medium, with or without
++modifications, and in Source or Object form, provided that You
++meet the following conditions:
++
++(a) You must give any other recipients of the Work or
++    Derivative Works a copy of this License; and
++
++(b) You must cause any modified files to carry prominent notices
++    stating that You changed the files; and
++
++(c) You must retain, in the Source form of any Derivative Works
++    that You distribute, all copyright, patent, trademark, and
++    attribution notices from the Source form of the Work,
++    excluding those notices that do not pertain to any part of
++    the Derivative Works; and
++
++(d) If the Work includes a "NOTICE" text file as part of its
++    distribution, then any Derivative Works that You distribute must
++    include a readable copy of the attribution notices contained
++    within such NOTICE file, excluding those notices that do not
++    pertain to any part of the Derivative Works, in at least one
++    of the following places: within a NOTICE text file distributed
++    as part of the Derivative Works; within the Source form or
++    documentation, if provided along with the Derivative Works; or,
++    within a display generated by the Derivative Works, if and
++    wherever such third-party notices normally appear. The contents
++    of the NOTICE file are for informational purposes only and
++    do not modify the License. You may add Your own attribution
++    notices within Derivative Works that You distribute, alongside
++    or as an addendum to the NOTICE text from the Work, provided
++    that such additional attribution notices cannot be construed
++    as modifying the License.
++
++You may add Your own copyright statement to Your modifications and
++may provide additional or different license terms and conditions
++for use, reproduction, or distribution of Your modifications, or
++for any such Derivative Works as a whole, provided Your use,
++reproduction, and distribution of the Work otherwise complies with
++the conditions stated in this License.
++
++5. Submission of Contributions. Unless You explicitly state otherwise,
++any Contribution intentionally submitted for inclusion in the Work
++by You to the Licensor shall be under the terms and conditions of
++this License, without any additional terms or conditions.
++Notwithstanding the above, nothing herein shall supersede or modify
++the terms of any separate license agreement you may have executed
++with Licensor regarding such Contributions.
++
++6. Trademarks. This License does not grant permission to use the trade
++names, trademarks, service marks, or product names of the Licensor,
++except as required for reasonable and customary use in describing the
++origin of the Work and reproducing the content of the NOTICE file.
++
++7. Disclaimer of Warranty. Unless required by applicable law or
++agreed to in writing, Licensor provides the Work (and each
++Contributor provides its Contributions) on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
++implied, including, without limitation, any warranties or conditions
++of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
++PARTICULAR PURPOSE. You are solely responsible for determining the
++appropriateness of using or redistributing the Work and assume any
++risks associated with Your exercise of permissions under this License.
++
++8. Limitation of Liability. In no event and under no legal theory,
++whether in tort (including negligence), contract, or otherwise,
++unless required by applicable law (such as deliberate and grossly
++negligent acts) or agreed to in writing, shall any Contributor be
++liable to You for damages, including any direct, indirect, special,
++incidental, or consequential damages of any character arising as a
++result of this License or out of the use or inability to use the
++Work (including but not limited to damages for loss of goodwill,
++work stoppage, computer failure or malfunction, or any and all other
++commercial damages or losses), even if such Contributor has been
++advised of the possibility of such damages.
++
++9. Accepting Warranty or Additional Liability. While redistributing
++the Work or Derivative Works thereof, You may choose to offer,
++and charge a fee for, acceptance of support, warranty, indemnity,
++or other liability obligations and/or rights consistent with this
++License. However, in accepting such obligations, You may act only
++on Your own behalf and on Your sole responsibility, not on behalf
++of any other Contributor, and only if You agree to indemnify,
++defend, and hold each Contributor harmless for any liability
++incurred by, or claims asserted against, such Contributor by reason
++of your accepting any such warranty or additional liability.
++
++END OF TERMS AND CONDITIONS
++
++APPENDIX: How to apply the Apache License to your work.
++
++To apply the Apache License to your work, attach the following
++boilerplate notice, with the fields enclosed by brackets "[]"
++replaced with your own identifying information. (Don't include
++the brackets!) The text should be enclosed in the appropriate
++comment syntax for the file format. We also recommend that a
++file or class name and description of purpose be included on the
++same "printed page" as the copyright notice for easier
++identification within third-party archives.
++
++Copyright 2023 Continue Dev, Inc.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
+diff --git a/packages/kilo-vscode/src/KiloProvider.ts b/packages/kilo-vscode/src/KiloProvider.ts
+index 18ef1427c09..820c8769ecf 100644
+--- a/packages/kilo-vscode/src/KiloProvider.ts
++++ b/packages/kilo-vscode/src/KiloProvider.ts
+@@ -15,6 +15,7 @@ import { previewSound } from "./services/attention"
+ import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
+ import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
+ import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
++import { notebookUri } from "./services/autocomplete/continuedev/core/autocomplete/notebook"
+ import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+ import { saveImage } from "./kilo-provider/save-image"
+ import { handleEditorAction } from "./kilo-provider/editor-actions"
+@@ -3432,14 +3433,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
+     const result = new Set<string>()
+     for (const group of vscode.window.tabGroups.all) {
+       for (const tab of group.tabs) {
+-        if (tab.input instanceof vscode.TabInputText) {
+-          const uri = tab.input.uri
+-          if (uri.scheme === "file") {
+-            const rel = path.relative(dir, uri.fsPath)
+-            if (!rel.startsWith("..") && !path.isAbsolute(rel) && controller.validateAccess(uri.fsPath)) {
+-              result.add(rel.replaceAll("\\", "/"))
+-            }
+-          }
++        const uri =
++          tab.input instanceof vscode.TabInputText || tab.input instanceof vscode.TabInputNotebook
++            ? tab.input.uri
++            : undefined
++        if (uri?.scheme !== "file") continue
++
++        const rel = path.relative(dir, uri.fsPath)
++        if (!rel.startsWith("..") && !path.isAbsolute(rel) && controller.validateAccess(uri.fsPath)) {
++          result.add(rel.replaceAll("\\", "/"))
+         }
+       }
+     }
+@@ -3477,21 +3479,30 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
+     }
+ 
+     // Visible files (capped to avoid bloating context, filtered through .kilocodeignore)
+-    const visibleFiles = vscode.window.visibleTextEditors
+-      .map((e) => e.document.uri)
+-      .filter((uri) => uri.scheme === "file")
+-      .map((uri) => toRelative(uri.fsPath))
+-      .filter((p): p is string => p !== undefined && controller.validateAccess(path.resolve(workspaceDir, p)))
+-      .slice(0, 200)
+-
+-    // Open tabs — use instanceof TabInputText to exclude notebooks, diffs, custom editors
++    const visibleFiles = [
++      ...new Set(
++        [
++          ...vscode.window.visibleTextEditors.map((editor) => notebookUri(editor.document.uri)),
++          ...vscode.window.visibleNotebookEditors.map((editor) => editor.notebook.uri),
++        ]
++          .filter((uri): uri is vscode.Uri => uri?.scheme === "file")
++          .map((uri) => toRelative(uri.fsPath))
++          .filter(
++            (file): file is string => file !== undefined && controller.validateAccess(path.resolve(workspaceDir, file)),
++          ),
++      ),
++    ].slice(0, 200)
++
++    // Open tabs — text and notebook files only; exclude diffs and custom editors
+     const openTabs = [...(await this.getOpenTabPaths(workspaceDir))].slice(0, 20)
+ 
+     // Active file (also filtered through .kilocodeignore)
+     const activeEditor = vscode.window.activeTextEditor
+-    const activeRel =
+-      activeEditor?.document.uri.scheme === "file" ? toRelative(activeEditor.document.uri.fsPath) : undefined
+-    const activeFile = activeRel && controller.validateAccess(activeEditor!.document.uri.fsPath) ? activeRel : undefined
++    const activeUri = activeEditor
++      ? notebookUri(activeEditor.document.uri)
++      : vscode.window.activeNotebookEditor?.notebook.uri
++    const activeRel = activeUri ? toRelative(activeUri.fsPath) : undefined
++    const activeFile = activeRel && activeUri && controller.validateAccess(activeUri.fsPath) ? activeRel : undefined
+ 
+     // Shell
+     const shell = vscode.env.shell || undefined
+diff --git a/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts b/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts
+index 7a2eeaebbaf..4e33d81992d 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts
+@@ -12,10 +12,24 @@ import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager
+ import { toAllowedMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
+ import type { KiloConnectionService } from "../cli-backend"
+ import { hasValidCredentials } from "./fim"
+-import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
++import {
++  DEFAULT_AUTOCOMPLETE_MODEL,
++  getAutocompleteModel,
++  getAutocompleteModelById,
++} from "../../shared/autocomplete-models"
+ 
+ const CONFIG_SECTION = "kilo-code.new.autocomplete"
+ 
++export function selector(kind: "classic" | "next-edit"): vscode.DocumentSelector {
++  return kind === "classic" ? [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }] : [{ scheme: "file" }]
++}
++
++export function notebookModel(provider?: string, model?: string) {
++  const info = getAutocompleteModel(provider, model)
++  if (info.kind !== "edit") return info
++  return getAutocompleteModelById(info.fimModelID)
++}
++
+ export interface AutocompleteServiceSettings {
+   enableAutoTrigger?: boolean
+   enableSmartInlineTaskKeybinding?: boolean
+@@ -68,6 +82,7 @@ export class AutocompleteServiceManager {
+   public readonly nextEditProvider: NextEditInlineCompletionProvider
+   public readonly nextEditSuggestionManager: NextEditSuggestionManager
+   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
++  private notebookCompletionProviderDisposable: vscode.Disposable | null = null
+   private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
+   private unsubscribeState: (() => void) | null = null
+   private unsubscribeEvent: (() => void) | null = null
+@@ -177,7 +192,7 @@ export class AutocompleteServiceManager {
+   public async load() {
+     this.settings = readSettings()
+ 
+-    this.inlineCompletionProvider.setModel(getAutocompleteModel(this.settings.provider, this.settings.model).id)
++    this.inlineCompletionProvider.setModel(notebookModel(this.settings.provider, this.settings.model).id)
+ 
+     await this.updateGlobalContext()
+     this.updateStatusBar()
+@@ -204,7 +219,9 @@ export class AutocompleteServiceManager {
+     ) {
+       if (this.inlineCompletionProviderKind === "next-edit") this.nextEditSuggestionManager.clear()
+       this.inlineCompletionProviderDisposable?.dispose()
++      this.notebookCompletionProviderDisposable?.dispose()
+       this.inlineCompletionProviderDisposable = null
++      this.notebookCompletionProviderDisposable = null
+       this.inlineCompletionProviderKind = null
+     }
+ 
+@@ -216,7 +233,9 @@ export class AutocompleteServiceManager {
+ 
+     if (!shouldBeRegistered) {
+       this.inlineCompletionProviderDisposable!.dispose()
++      this.notebookCompletionProviderDisposable?.dispose()
+       this.inlineCompletionProviderDisposable = null
++      this.notebookCompletionProviderDisposable = null
+       this.inlineCompletionProviderKind = null
+       return
+     }
+@@ -224,9 +243,15 @@ export class AutocompleteServiceManager {
+     const provider: vscode.InlineCompletionItemProvider =
+       desiredKind === "next-edit" ? this.nextEditProvider : this.inlineCompletionProvider
+     this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+-      { scheme: "file" },
++      selector(desiredKind),
+       provider,
+     )
++    if (desiredKind === "next-edit") {
++      this.notebookCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
++        [{ scheme: "vscode-notebook-cell" }],
++        this.inlineCompletionProvider,
++      )
++    }
+     this.inlineCompletionProviderKind = desiredKind
+   }
+ 
+@@ -459,6 +484,8 @@ export class AutocompleteServiceManager {
+       this.inlineCompletionProviderDisposable = null
+       this.inlineCompletionProviderKind = null
+     }
++    this.notebookCompletionProviderDisposable?.dispose()
++    this.notebookCompletionProviderDisposable = null
+ 
+     // Dispose inline completion provider resources
+     this.inlineCompletionProvider.dispose()
+diff --git a/packages/kilo-vscode/src/services/autocomplete/__tests__/AutocompleteServiceManager.spec.ts b/packages/kilo-vscode/src/services/autocomplete/__tests__/AutocompleteServiceManager.spec.ts
+index 5fc37a76bf8..d5e93a6969a 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/__tests__/AutocompleteServiceManager.spec.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/__tests__/AutocompleteServiceManager.spec.ts
+@@ -251,12 +251,41 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
+       await (manager as any).ensureInlineCompletionProviderRegistration()
+ 
+       expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenCalledWith(
+-        { scheme: "file" },
++        [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }],
+         manager.inlineCompletionProvider,
+       )
+       expect((manager as any).inlineCompletionProviderDisposable).toBe(disposable)
+     })
+ 
++    it("registers classic notebook fallback when Next Edit is selected", async () => {
++      const manager = await createManager()
++
++      const primary = { dispose: vi.fn() }
++      const notebook = { dispose: vi.fn() }
++      vi.mocked(vscode.languages.registerInlineCompletionItemProvider)
++        .mockReturnValueOnce(primary as any)
++        .mockReturnValueOnce(notebook as any)
++      ;(manager as any).settings = {
++        enableAutoTrigger: true,
++        provider: "kilo",
++        model: "inception/mercury-next-edit",
++      }
++
++      await (manager as any).ensureInlineCompletionProviderRegistration()
++
++      expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenNthCalledWith(
++        1,
++        [{ scheme: "file" }],
++        manager.nextEditProvider,
++      )
++      expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenNthCalledWith(
++        2,
++        [{ scheme: "vscode-notebook-cell" }],
++        manager.inlineCompletionProvider,
++      )
++      expect((manager as any).notebookCompletionProviderDisposable).toBe(notebook)
++    })
++
+     it("does not register the provider when snoozed", async () => {
+       const manager = await createManager()
+ 
+diff --git a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts
+index cc38a899e43..1fd3128145d 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts
+@@ -15,6 +15,7 @@ import {
+ } from "../types"
+ import {
+   findMatchingSuggestion as _findMatchingSuggestion,
++  findCoveringPendingRequest,
+   applyFirstLineOnly as _applyFirstLineOnly,
+   calcDebounceDelay,
+   MatchingSuggestionWithFillIn as _MatchingSuggestionWithFillIn,
+@@ -32,10 +33,21 @@ import { postprocessAutocompleteSuggestion } from "./uselessSuggestionFilter"
+ import { shouldSkipAutocomplete } from "./contextualSkip"
+ import { FileIgnoreController } from "../shims/FileIgnoreController"
+ import { AutocompleteTelemetry } from "./AutocompleteTelemetry"
++import {
++  autocompleteScope,
++  getNotebookContext,
++  notebookUri,
++  supportsNotebook,
++} from "../continuedev/core/autocomplete/notebook"
+ import { ErrorBackoff } from "./ErrorBackoff"
+ 
+ const MAX_SUGGESTIONS_HISTORY = 20
+ 
++export function accessible(controller: FileIgnoreController, document: vscode.TextDocument): boolean {
++  const uri = notebookUri(document.uri)
++  return controller.validateAccess(uri?.fsPath ?? document.fileName)
++}
++
+ /**
+  * Minimum debounce delay in milliseconds.
+  * The adaptive debounce delay will never go below this value, even when
+@@ -70,11 +82,12 @@ export type { CostTrackingCallback, AutocompletePrompt, MatchingSuggestionResult
+ export type MatchingSuggestionWithFillIn = _MatchingSuggestionWithFillIn
+ 
+ export function findMatchingSuggestion(
++  scope: string,
+   prefix: string,
+   suffix: string,
+   suggestionsHistory: FillInAtCursorSuggestion[],
+ ): MatchingSuggestionWithFillIn | null {
+-  return _findMatchingSuggestion(prefix, suffix, suggestionsHistory)
++  return _findMatchingSuggestion(scope, prefix, suffix, suggestionsHistory)
+ }
+ 
+ export function applyFirstLineOnly(
+@@ -118,8 +131,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+   private debouncedPendingRequest: PendingRequest | null = null
+   private isFirstCall: boolean = true
+   public readonly ignoreController: Promise<FileIgnoreController>
+-  /** Abort controller for the current in-flight FIM request */
+-  private fimAbortController: AbortController | null = null
++  /** Abort controllers for in-flight FIM requests, scoped by file/notebook context. */
++  private fimAbortControllers = new Map<string, AbortController>()
+   private acceptedCommand: vscode.Disposable | null = null
+   private contextService: ContextRetrievalService | null = null
+   private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
+@@ -178,6 +191,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+   public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
+     const isDuplicate = this.suggestionsHistory.some(
+       (existing) =>
++        existing.scope === fillInAtCursor.scope &&
+         existing.text === fillInAtCursor.text &&
+         existing.prefix === fillInAtCursor.prefix &&
+         existing.suffix === fillInAtCursor.suffix,
+@@ -211,7 +225,16 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+       recentlyEditedRanges,
+     }
+ 
+-    const autocompleteInput = contextToAutocompleteInput(context)
++    const input = contextToAutocompleteInput(context)
++    const notebook = getNotebookContext(document, position)
++    const autocompleteInput = notebook
++      ? {
++          ...input,
++          filepath: notebook.filepath,
++          pos: { line: notebook.position.line, character: notebook.position.character },
++          manuallyPassFileContents: notebook.contents,
++        }
++      : input
+ 
+     const { prefix, suffix } = extractPrefixSuffix(document, position)
+     const languageId = document.languageId
+@@ -235,6 +258,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+ 
+   private processSuggestion(
+     suggestionText: string,
++    scope: string,
+     prefix: string,
+     suffix: string,
+     telemetryContext: AutocompleteContext,
+@@ -242,7 +266,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+   ): FillInAtCursorSuggestion {
+     if (!suggestionText) {
+       this.telemetry?.captureSuggestionFiltered("empty_response", telemetryContext)
+-      return { text: "", prefix, suffix }
++      return { text: "", scope, prefix, suffix }
+     }
+ 
+     const processedText = postprocessAutocompleteSuggestion({
+@@ -254,11 +278,11 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+     })
+ 
+     if (processedText) {
+-      return { text: processedText, prefix, suffix }
++      return { text: processedText, scope, prefix, suffix }
+     }
+ 
+     this.telemetry?.captureSuggestionFiltered("filtered_by_postprocessing", telemetryContext)
+-    return { text: "", prefix, suffix }
++    return { text: "", scope, prefix, suffix }
+   }
+ 
+   private async disposeIgnoreController(): Promise<void> {
+@@ -299,8 +323,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+     }
+     this.settleDebouncedPendingRequest()
+     this.pendingRequests.length = 0
+-    this.fimAbortController?.abort()
+-    this.fimAbortController = null
++    for (const controller of this.fimAbortControllers.values()) {
++      controller.abort()
++    }
++    this.fimAbortControllers.clear()
+     this.telemetry?.dispose()
+     this.contextService?.dispose()
+     this.contextService = null
+@@ -336,6 +362,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+     _token: vscode.CancellationToken,
+   ): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
+     vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
++    if (!supportsNotebook(document)) return []
+ 
+     // Build telemetry context
+     const telemetryContext: AutocompleteContext = {
+@@ -389,8 +416,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+             return []
+           }
+ 
+-          const isAccessible = controller.validateAccess(document.fileName)
+-          if (!isAccessible) {
++          if (!accessible(controller, document)) {
+             return []
+           }
+         } catch {
+@@ -399,10 +425,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+         }
+       }
+ 
++      const scope = autocompleteScope(document)
+       const { prefix, suffix } = extractPrefixSuffix(document, position)
+ 
+       // Check cache first - allow mid-word lookups from cache
+-      const matchingResult = applyFirstLineOnly(findMatchingSuggestion(prefix, suffix, this.suggestionsHistory), prefix)
++      const matchingResult = applyFirstLineOnly(
++        findMatchingSuggestion(scope, prefix, suffix, this.suggestionsHistory),
++        prefix,
++      )
+ 
+       if (matchingResult !== null) {
+         this.lastSuggestion = {
+@@ -425,9 +455,12 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+ 
+       const { prompt, prefix: promptPrefix, suffix: promptSuffix } = await this.getPrompt(document, position)
+ 
+-      await this.debouncedFetchAndCacheSuggestion(prompt, promptPrefix, promptSuffix, document.languageId)
++      await this.debouncedFetchAndCacheSuggestion(scope, prompt, promptPrefix, promptSuffix, document.languageId)
+ 
+-      const cachedResult = applyFirstLineOnly(findMatchingSuggestion(prefix, suffix, this.suggestionsHistory), prefix)
++      const cachedResult = applyFirstLineOnly(
++        findMatchingSuggestion(scope, prefix, suffix, this.suggestionsHistory),
++        prefix,
++      )
+       if (cachedResult) {
+         this.lastSuggestion = {
+           ...telemetryContext,
+@@ -448,31 +481,6 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+     }
+   }
+ 
+-  /**
+-   * Find a pending request that covers the current prefix/suffix.
+-   * A request covers the current position if:
+-   * 1. The suffix matches (user hasn't changed text after cursor)
+-   * 2. The current prefix either equals or extends the pending prefix
+-   *    (user is typing forward, not backspacing or editing earlier)
+-   *
+-   * @returns The covering pending request, or null if none found
+-   */
+-  private findCoveringPendingRequest(prefix: string, suffix: string): PendingRequest | null {
+-    for (const pendingRequest of this.pendingRequests) {
+-      // Suffix must match exactly (text after cursor unchanged)
+-      if (suffix !== pendingRequest.suffix) {
+-        continue
+-      }
+-
+-      // Current prefix must start with the pending prefix (user typed more)
+-      // or be exactly equal (same position)
+-      if (prefix.startsWith(pendingRequest.prefix)) {
+-        return pendingRequest
+-      }
+-    }
+-    return null
+-  }
+-
+   /**
+    * Remove a pending request from the list when it completes.
+    */
+@@ -499,13 +507,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+    * - If a pending request covers the current prefix/suffix, reuse it instead of starting a new one
+    */
+   private debouncedFetchAndCacheSuggestion(
++    scope: string,
+     prompt: AutocompletePrompt,
+     prefix: string,
+     suffix: string,
+     languageId: string,
+   ): Promise<void> {
+     // Check if any existing pending request covers this one
+-    const coveringRequest = this.findCoveringPendingRequest(prefix, suffix)
++    const coveringRequest = findCoveringPendingRequest(scope, prefix, suffix, this.pendingRequests)
+     if (coveringRequest) {
+       // Wait for the existing request to complete - no need to start a new one
+       return coveringRequest.promise
+@@ -515,8 +524,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+     // but still track it as a pending request so subsequent calls can reuse it
+     if (this.isFirstCall && this.debounceTimer === null) {
+       this.isFirstCall = false
+-      const promise = this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
+-      const leading: PendingRequest = { prefix, suffix, promise }
++      const promise = this.fetchAndCacheSuggestion(scope, prompt, prefix, suffix, languageId)
++      const leading: PendingRequest = { scope, prefix, suffix, promise }
+       promise.finally(() => this.removePendingRequest(leading))
+       this.pendingRequests.push(leading)
+       return promise
+@@ -533,6 +542,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+ 
+     // Create the pending request object first so we can reference it in the cleanup
+     const pendingRequest: PendingRequest = {
++      scope,
+       prefix,
+       suffix,
+       promise: null!, // Will be set immediately below
+@@ -545,7 +555,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+         this.debouncedPendingRequest = null
+         this.isFirstCall = true // Reset for next sequence
+         try {
+-          await this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
++          await this.fetchAndCacheSuggestion(scope, prompt, prefix, suffix, languageId)
+         } finally {
+           this.removePendingRequest(pendingRequest)
+           resolve()
+@@ -566,15 +576,22 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+   }
+ 
+   public async fetchAndCacheSuggestion(
++    scope: string,
+     prompt: AutocompletePrompt,
+     prefix: string,
+     suffix: string,
+     languageId: string,
+   ): Promise<void> {
+-    // Abort any previous in-flight FIM request before starting a new one
+-    this.fimAbortController?.abort()
++    // Defense-in-depth: credentials may become invalid between the provider gate and the actual
++    // debounced execution. In that case, do not attempt an LLM call at all.
++    if (!hasValidCredentials(this.connectionService)) {
++      return
++    }
++
++    // Abort only the request superseded within this file/notebook scope.
++    this.fimAbortControllers.get(scope)?.abort()
+     const controller = new AbortController()
+-    this.fimAbortController = controller
++    this.fimAbortControllers.set(scope, controller)
+ 
+     const startTime = performance.now()
+ 
+@@ -585,16 +602,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+       provider: getAutocompleteModelById(this.contextProvider.modelId).provider,
+     }
+ 
+-    // Defense-in-depth: credentials may become invalid between the provider gate and the actual
+-    // debounced execution. In that case, do not attempt an LLM call at all.
+-    if (!hasValidCredentials(this.connectionService)) {
+-      return
+-    }
+-
+     try {
+-      // Curry processSuggestion with prefix, suffix, telemetry context, and languageId
++      // Curry processSuggestion with request context
+       const curriedProcessSuggestion = (text: string) =>
+-        this.processSuggestion(text, prefix, suffix, telemetryContext, languageId)
++        this.processSuggestion(text, scope, prefix, suffix, telemetryContext, languageId)
+ 
+       const result = await this.fimPromptBuilder.getFromFIM(
+         this.connectionService,
+@@ -648,6 +659,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+         this.fatalNotified = true
+         this.onFatalError?.(this.backoff.getFatalStatus())
+       }
++    } finally {
++      if (this.fimAbortControllers.get(scope) === controller) {
++        this.fimAbortControllers.delete(scope)
++      }
+     }
+   }
+ 
+diff --git a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/__tests__/AutocompleteTelemetry.test.ts b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/__tests__/AutocompleteTelemetry.test.ts
+index aa5752aed70..e93b4fb50db 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/__tests__/AutocompleteTelemetry.test.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/__tests__/AutocompleteTelemetry.test.ts
+@@ -16,6 +16,7 @@ describe("AutocompleteTelemetry", () => {
+   function createSuggestion(index: number): FillInAtCursorSuggestion {
+     return {
+       text: `text-${index}`,
++      scope: `scope-${index}`,
+       prefix: `prefix-${index}`,
+       suffix: `suffix-${index}`,
+     }
+diff --git a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/inline-utils.ts b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/inline-utils.ts
+index b570605e744..74dc958e961 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/inline-utils.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/inline-utils.ts
+@@ -1,4 +1,4 @@
+-import type { FillInAtCursorSuggestion, MatchingSuggestionResult } from "../types"
++import type { FillInAtCursorSuggestion, MatchingSuggestionResult, PendingRequest } from "../types"
+ 
+ export interface MatchingSuggestionWithFillIn extends MatchingSuggestionResult {
+   fillInAtCursor: FillInAtCursorSuggestion
+@@ -12,12 +12,14 @@ const MAX_DEBOUNCE_DELAY_MS = 1000
+  * Searches from most recent to least recent.
+  */
+ export function findMatchingSuggestion(
++  scope: string,
+   prefix: string,
+   suffix: string,
+   suggestionsHistory: FillInAtCursorSuggestion[],
+ ): MatchingSuggestionWithFillIn | null {
+   for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
+     const fillInAtCursor = suggestionsHistory[i]!
++    if (scope !== fillInAtCursor.scope) continue
+ 
+     if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
+       return { text: fillInAtCursor.text, matchType: "exact", fillInAtCursor }
+@@ -42,6 +44,19 @@ export function findMatchingSuggestion(
+   return null
+ }
+ 
++export function findCoveringPendingRequest(
++  scope: string,
++  prefix: string,
++  suffix: string,
++  requests: PendingRequest[],
++): PendingRequest | null {
++  for (const request of requests) {
++    if (scope !== request.scope || suffix !== request.suffix) continue
++    if (prefix.startsWith(request.prefix)) return request
++  }
++  return null
++}
++
+ /**
+  * Counts the number of lines in a text string.
+  * A single trailing newline does not count as an additional line.
+diff --git a/packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/notebook.ts b/packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/notebook.ts
+new file mode 100644
+index 00000000000..2dca033b18e
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/continuedev/core/autocomplete/notebook.ts
+@@ -0,0 +1,99 @@
++// Copied from Continue's VS Code autocomplete provider:
++// https://github.com/continuedev/continue/blob/d0a3c0b626b5bebc3bef4742eec05a0242be0bab/extensions/vscode/src/autocomplete/completionProvider.ts#L226-L263
++// Copyright 2023 Continue
++// Licensed under the Apache License, Version 2.0.
++// Modified by Kilo Code for notebook paths, cursor positions, and cache scoping.
++
++import * as vscode from "vscode"
++
++export interface NotebookContext {
++  contents: string
++  filepath: string
++  position: vscode.Position
++}
++
++interface NotebookResolution {
++  notebook: vscode.NotebookDocument
++  cells: vscode.NotebookCell[]
++  cell: vscode.NotebookCell
++  index: number
++  version: number
++}
++
++const resolutions = new WeakMap<vscode.Uri, NotebookResolution>()
++
++function resolveNotebook(uri: vscode.Uri): NotebookResolution | undefined {
++  const id = uri.toString()
++  const cached = resolutions.get(uri)
++  if (
++    cached &&
++    cached.notebook.version === cached.version &&
++    vscode.workspace.notebookDocuments.includes(cached.notebook)
++  ) {
++    return cached
++  }
++
++  resolutions.delete(uri)
++  for (const notebook of vscode.workspace.notebookDocuments) {
++    const cells = notebook.getCells()
++    const index = cells.findIndex((cell) => cell.document.uri.toString() === id)
++    if (index < 0) continue
++    const resolved = { notebook, cells, cell: cells[index]!, index, version: notebook.version }
++    resolutions.set(uri, resolved)
++    return resolved
++  }
++}
++
++export function notebookUri(uri: vscode.Uri): vscode.Uri | undefined {
++  if (uri.scheme === "file") return uri
++  if (uri.scheme !== "vscode-notebook-cell") return
++  return resolveNotebook(uri)?.notebook.uri
++}
++
++export function supportsNotebook(document: vscode.TextDocument): boolean {
++  if (document.uri.scheme !== "vscode-notebook-cell") return true
++  const resolved = resolveNotebook(document.uri)
++  return resolved?.cell.kind === vscode.NotebookCellKind.Code && document.languageId === "python"
++}
++
++export function autocompleteScope(document: vscode.TextDocument): string {
++  const id = document.uri.toString()
++  const resolved = resolveNotebook(document.uri)
++  if (!resolved) return id
++
++  const siblings = resolved.cells
++    .filter((_, index) => index !== resolved.index)
++    .map((cell) => [cell.document.uri.toString(), cell.kind, cell.document.languageId, cell.document.version])
++  return JSON.stringify([id, resolved.notebook.uri.toString(), resolved.index, siblings])
++}
++
++export function getNotebookContext(
++  document: vscode.TextDocument,
++  position: vscode.Position,
++): NotebookContext | undefined {
++  if (document.uri.scheme !== "vscode-notebook-cell" || !supportsNotebook(document)) return
++
++  const resolved = resolveNotebook(document.uri)
++  if (!resolved) return
++
++  const cells = resolved.cells
++  const contents = cells
++    .map((cell) => {
++      const text = cell.document.getText()
++      if (cell.kind === vscode.NotebookCellKind.Markup) {
++        return `"""${text}"""`
++      }
++      return text
++    })
++    .join("\n\n")
++
++  const line = cells
++    .slice(0, resolved.index)
++    .reduce((line, cell) => line + cell.document.getText().split("\n").length + 1, position.line)
++
++  return {
++    contents,
++    filepath: resolved.notebook.uri.fsPath,
++    position: new vscode.Position(line, position.character),
++  }
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/types.ts b/packages/kilo-vscode/src/services/autocomplete/types.ts
+index 765f1d6f4b9..b7a88433828 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/types.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/types.ts
+@@ -52,6 +52,7 @@ export interface FillInAtCursorSuggestion {
+   text: string
+   prefix: string
+   suffix: string
++  scope: string
+ }
+ 
+ export interface MatchingSuggestionResult {
+@@ -105,6 +106,7 @@ export interface LastSuggestionInfo extends AutocompleteContext {
+ }
+ 
+ export interface PendingRequest {
++  scope: string
+   prefix: string
+   suffix: string
+   promise: Promise<void>
+diff --git a/packages/kilo-vscode/tests/setup/vscode-mock.ts b/packages/kilo-vscode/tests/setup/vscode-mock.ts
+index ee234232d41..4b2b2845d7d 100644
+--- a/packages/kilo-vscode/tests/setup/vscode-mock.ts
++++ b/packages/kilo-vscode/tests/setup/vscode-mock.ts
+@@ -47,6 +47,7 @@ const mockVscode = {
+   workspace: {
+     workspaceFolders: [{ uri: { fsPath: "/repo" } }],
+     textDocuments: [] as Array<unknown>,
++    notebookDocuments: [] as Array<unknown>,
+     onDidOpenTextDocument: () => ({ dispose: noop }),
+     onDidChangeTextDocument: () => ({ dispose: noop }),
+     onDidCloseTextDocument: () => ({ dispose: noop }),
+@@ -73,7 +74,9 @@ const mockVscode = {
+   },
+   window: {
+     activeTextEditor: undefined,
++    activeNotebookEditor: undefined,
+     visibleTextEditors: [],
++    visibleNotebookEditors: [],
+     tabGroups: { all: [] },
+     showTextDocument: async () => {},
+     showWarningMessage: async () => undefined,
+@@ -132,6 +135,10 @@ const mockVscode = {
+   TabInputText: class {
+     constructor(public uri: { scheme: string; fsPath: string }) {}
+   },
++  TabInputNotebook: class {
++    constructor(public uri: { scheme: string; fsPath: string }) {}
++  },
++  NotebookCellKind: { Markup: 1, Code: 2 },
+   Position: class {
+     constructor(
+       public line: number,
+diff --git a/packages/kilo-vscode/tests/unit/autocomplete-abort-scope.test.ts b/packages/kilo-vscode/tests/unit/autocomplete-abort-scope.test.ts
+new file mode 100644
+index 00000000000..18d6b37ce8c
+--- /dev/null
++++ b/packages/kilo-vscode/tests/unit/autocomplete-abort-scope.test.ts
+@@ -0,0 +1,126 @@
++import { describe, expect, it } from "bun:test"
++import * as vscode from "vscode"
++import { AutocompleteInlineCompletionProvider } from "../../src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider"
++
++function createProvider(state = "connected") {
++  ;(vscode.window as any).onDidChangeActiveTextEditor = () => ({ dispose: () => {} })
++  ;(vscode.window as any).onDidChangeTextEditorSelection = () => ({ dispose: () => {} })
++  return new AutocompleteInlineCompletionProvider(
++    {} as any,
++    "kilo/mistralai/codestral-2508",
++    { getConnectionState: () => state } as any,
++    () => {},
++    () => ({ enableAutoTrigger: true }),
++    "/repo",
++  )
++}
++
++function prompt() {
++  return {
++    prefix: "",
++    suffix: "",
++    modelName: "codestral",
++    completionOptions: {},
++    selectedCompletionInfo: undefined,
++  } as any
++}
++
++async function tick() {
++  await new Promise((resolve) => setTimeout(resolve, 0))
++}
++
++describe("autocomplete FIM abort scope", () => {
++  it("does not abort in-flight requests from another scope", async () => {
++    const provider = createProvider()
++    const signals: AbortSignal[] = []
++    const resolvers: Array<() => void> = []
++    ;(provider as any).fimPromptBuilder = {
++      getFromFIM: async (
++        _connection: unknown,
++        _model: string,
++        _prompt: unknown,
++        process: (text: string) => unknown,
++        signal: AbortSignal,
++      ) => {
++        signals.push(signal)
++        return new Promise((resolve) => {
++          resolvers.push(() => {
++            resolve({
++              suggestion: process("value"),
++              cost: 0,
++              inputTokens: 0,
++              outputTokens: 0,
++            })
++          })
++        })
++      },
++    }
++
++    const first = provider.fetchAndCacheSuggestion("scope-a", prompt(), "", "", "python")
++    await tick()
++
++    const second = provider.fetchAndCacheSuggestion("scope-b", prompt(), "", "", "python")
++    await tick()
++
++    expect(signals[0]?.aborted).toBe(false)
++    expect(signals[1]?.aborted).toBe(false)
++
++    resolvers.forEach((resolve) => resolve())
++    await Promise.all([first, second])
++    provider.dispose()
++  })
++
++  it("aborts older in-flight requests in the same scope", async () => {
++    const provider = createProvider()
++    const signals: AbortSignal[] = []
++    const resolvers: Array<() => void> = []
++    ;(provider as any).fimPromptBuilder = {
++      getFromFIM: async (
++        _connection: unknown,
++        _model: string,
++        _prompt: unknown,
++        process: (text: string) => unknown,
++        signal: AbortSignal,
++      ) => {
++        signals.push(signal)
++        return new Promise((resolve) => {
++          resolvers.push(() => {
++            resolve({
++              suggestion: process("value"),
++              cost: 0,
++              inputTokens: 0,
++              outputTokens: 0,
++            })
++          })
++        })
++      },
++    }
++
++    const first = provider.fetchAndCacheSuggestion("scope-a", prompt(), "", "", "python")
++    await tick()
++
++    const second = provider.fetchAndCacheSuggestion("scope-a", prompt(), "", "", "python")
++    await tick()
++
++    expect(signals[0]?.aborted).toBe(true)
++    expect(signals[1]?.aborted).toBe(false)
++
++    resolvers.forEach((resolve) => resolve())
++    await Promise.all([first, second])
++    provider.dispose()
++  })
++
++  it("does not retain controllers when credentials are invalid", async () => {
++    const provider = createProvider("disconnected")
++    ;(provider as any).fimPromptBuilder = {
++      getFromFIM: () => {
++        throw new Error("should not fetch")
++      },
++    }
++
++    await provider.fetchAndCacheSuggestion("scope-a", prompt(), "", "", "python")
++
++    expect((provider as any).fimAbortControllers.size).toBe(0)
++    provider.dispose()
++  })
++})
+diff --git a/packages/kilo-vscode/tests/unit/autocomplete-inline-utils.test.ts b/packages/kilo-vscode/tests/unit/autocomplete-inline-utils.test.ts
+index 7f171f84b78..4ccae8102b8 100644
+--- a/packages/kilo-vscode/tests/unit/autocomplete-inline-utils.test.ts
++++ b/packages/kilo-vscode/tests/unit/autocomplete-inline-utils.test.ts
+@@ -6,11 +6,14 @@ import {
+   shouldShowOnlyFirstLine,
+   getFirstLine,
+   calcDebounceDelay,
++  findCoveringPendingRequest,
+ } from "../../src/services/autocomplete/classic-auto-complete/inline-utils"
+-import type { FillInAtCursorSuggestion } from "../../src/services/autocomplete/types"
++import type { FillInAtCursorSuggestion, PendingRequest } from "../../src/services/autocomplete/types"
+ 
+-function makeSuggestion(prefix: string, text: string, suffix = ""): FillInAtCursorSuggestion {
+-  return { prefix, suffix, text }
++const scope = "file:///workspace/file.ts"
++
++function makeSuggestion(prefix: string, text: string, suffix = "", value = scope): FillInAtCursorSuggestion {
++  return { scope: value, prefix, suffix, text }
+ }
+ 
+ describe("countLines", () => {
+@@ -89,46 +92,68 @@ describe("shouldShowOnlyFirstLine", () => {
+ 
+ describe("findMatchingSuggestion", () => {
+   it("returns null for empty history", () => {
+-    expect(findMatchingSuggestion("prefix", "suffix", [])).toBeNull()
++    expect(findMatchingSuggestion(scope, "prefix", "suffix", [])).toBeNull()
+   })
+ 
+   it("returns exact match", () => {
+     const hist = [makeSuggestion("hello ", "world")]
+-    const result = findMatchingSuggestion("hello ", "", hist)
++    const result = findMatchingSuggestion(scope, "hello ", "", hist)
+     expect(result?.matchType).toBe("exact")
+     expect(result?.text).toBe("world")
+   })
+ 
+   it("returns partial_typing match when user typed beginning of suggestion", () => {
+     const hist = [makeSuggestion("he", "llo world")]
+-    const result = findMatchingSuggestion("hell", "", hist)
++    const result = findMatchingSuggestion(scope, "hell", "", hist)
+     expect(result?.matchType).toBe("partial_typing")
+     expect(result?.text).toBe("o world")
+   })
+ 
+   it("returns backward_deletion match when user deleted chars", () => {
+     const hist = [makeSuggestion("hello world", "more", "suffix")]
+-    const result = findMatchingSuggestion("hello", "suffix", hist)
++    const result = findMatchingSuggestion(scope, "hello", "suffix", hist)
+     expect(result?.matchType).toBe("backward_deletion")
+     expect(result?.text).toBe(" worldmore")
+   })
+ 
+   it("prefers most recent suggestion (searches from end)", () => {
+     const hist = [makeSuggestion("prefix", "old suggestion"), makeSuggestion("prefix", "new suggestion")]
+-    const result = findMatchingSuggestion("prefix", "", hist)
++    const result = findMatchingSuggestion(scope, "prefix", "", hist)
+     expect(result?.text).toBe("new suggestion")
+   })
+ 
+   it("returns null when no match found", () => {
+     const hist = [makeSuggestion("different", "no match")]
+-    expect(findMatchingSuggestion("unrelated", "suffix", hist)).toBeNull()
++    expect(findMatchingSuggestion(scope, "unrelated", "suffix", hist)).toBeNull()
+   })
+ 
+   it("does not match empty suggestion text for partial_typing", () => {
+     const hist = [makeSuggestion("prefix", "")]
+-    const result = findMatchingSuggestion("prefix more", "", hist)
++    const result = findMatchingSuggestion(scope, "prefix more", "", hist)
+     expect(result).toBeNull()
+   })
++
++  it("does not reuse suggestions from another scope", () => {
++    const hist = [makeSuggestion("value = ", "first()", "", "vscode-notebook-cell:notebook.ipynb#cell-a")]
++    const result = findMatchingSuggestion("vscode-notebook-cell:notebook.ipynb#cell-b", "value = ", "", hist)
++    expect(result).toBeNull()
++  })
++})
++
++describe("findCoveringPendingRequest", () => {
++  function request(value: string): PendingRequest {
++    return { scope: value, prefix: "pri", suffix: "", promise: Promise.resolve() }
++  }
++
++  it("reuses forward-typing requests within the same scope", () => {
++    const pending = request(scope)
++    expect(findCoveringPendingRequest(scope, "print", "", [pending])).toBe(pending)
++  })
++
++  it("does not reuse requests from another scope", () => {
++    const pending = request("vscode-notebook-cell:notebook.ipynb#cell-a")
++    expect(findCoveringPendingRequest("vscode-notebook-cell:notebook.ipynb#cell-b", "print", "", [pending])).toBeNull()
++  })
+ })
+ 
+ describe("applyFirstLineOnly", () => {
+@@ -138,21 +163,21 @@ describe("applyFirstLineOnly", () => {
+ 
+   it("returns empty result unchanged", () => {
+     const hist = [makeSuggestion("p", "")]
+-    const result = findMatchingSuggestion("p", "", hist)!
++    const result = findMatchingSuggestion(scope, "p", "", hist)!
+     const applied = applyFirstLineOnly(result, "p")
+     expect(applied?.text).toBe("")
+   })
+ 
+   it("truncates to first line when mid-line suggestion", () => {
+     const hist = [makeSuggestion("function foo() { return ", "x\n  const y = 1\n}")]
+-    const result = findMatchingSuggestion("function foo() { return ", "", hist)!
++    const result = findMatchingSuggestion(scope, "function foo() { return ", "", hist)!
+     const applied = applyFirstLineOnly(result, "function foo() { return ")
+     expect(applied?.text).toBe("x")
+   })
+ 
+   it("preserves full multi-line suggestion when starting with newline", () => {
+     const hist = [makeSuggestion("foo", "\n  const x = 1\n  const y = 2")]
+-    const result = findMatchingSuggestion("foo", "", hist)!
++    const result = findMatchingSuggestion(scope, "foo", "", hist)!
+     const applied = applyFirstLineOnly(result, "foo")
+     expect(applied?.text).toBe("\n  const x = 1\n  const y = 2")
+   })
+diff --git a/packages/kilo-vscode/tests/unit/autocomplete-selector.test.ts b/packages/kilo-vscode/tests/unit/autocomplete-selector.test.ts
+new file mode 100644
+index 00000000000..2293a531cce
+--- /dev/null
++++ b/packages/kilo-vscode/tests/unit/autocomplete-selector.test.ts
+@@ -0,0 +1,18 @@
++import { describe, expect, it } from "bun:test"
++import { notebookModel, selector } from "../../src/services/autocomplete/AutocompleteServiceManager"
++
++describe("autocomplete document selector", () => {
++  it("registers classic autocomplete for files and notebook cells", () => {
++    expect(selector("classic")).toEqual([{ scheme: "file" }, { scheme: "vscode-notebook-cell" }])
++  })
++
++  it("keeps Next Edit limited to files", () => {
++    expect(selector("next-edit")).toEqual([{ scheme: "file" }])
++  })
++
++  it("uses the matching FIM model for notebook fallback", () => {
++    expect(notebookModel("kilo", "inception/mercury-next-edit").id).toBe("kilo/inception/mercury-edit-2")
++    expect(notebookModel("inception", "mercury-next-edit").id).toBe("inception/mercury-edit-2")
++    expect(notebookModel("kilo", "mistralai/codestral-2508").id).toBe("kilo/mistralai/codestral-2508")
++  })
++})
+diff --git a/packages/kilo-vscode/tests/unit/autocomplete-telemetry-utils.test.ts b/packages/kilo-vscode/tests/unit/autocomplete-telemetry-utils.test.ts
+index 9848c21c9e0..3c5ad8d7ab4 100644
+--- a/packages/kilo-vscode/tests/unit/autocomplete-telemetry-utils.test.ts
++++ b/packages/kilo-vscode/tests/unit/autocomplete-telemetry-utils.test.ts
+@@ -6,29 +6,29 @@ import {
+ 
+ describe("getSuggestionKey", () => {
+   it("combines prefix, suffix, and text with pipe separators", () => {
+-    const key = getSuggestionKey({ prefix: "hello ", suffix: "\n}", text: "world" })
++    const key = getSuggestionKey({ scope: "", prefix: "hello ", suffix: "\n}", text: "world" })
+     expect(key).toBe("hello |\n}|world")
+   })
+ 
+   it("produces unique keys for different suggestions", () => {
+-    const k1 = getSuggestionKey({ prefix: "a", suffix: "c", text: "b" })
+-    const k2 = getSuggestionKey({ prefix: "a", suffix: "c", text: "x" })
++    const k1 = getSuggestionKey({ scope: "", prefix: "a", suffix: "c", text: "b" })
++    const k2 = getSuggestionKey({ scope: "", prefix: "a", suffix: "c", text: "x" })
+     expect(k1).not.toBe(k2)
+   })
+ 
+   it("same content produces same key (stable)", () => {
+-    const s = { prefix: "const x = ", suffix: ";", text: "42" }
++    const s = { scope: "", prefix: "const x = ", suffix: ";", text: "42" }
+     expect(getSuggestionKey(s)).toBe(getSuggestionKey(s))
+   })
+ 
+   it("different prefix produces different key", () => {
+-    const k1 = getSuggestionKey({ prefix: "a", suffix: "", text: "t" })
+-    const k2 = getSuggestionKey({ prefix: "b", suffix: "", text: "t" })
++    const k1 = getSuggestionKey({ scope: "", prefix: "a", suffix: "", text: "t" })
++    const k2 = getSuggestionKey({ scope: "", prefix: "b", suffix: "", text: "t" })
+     expect(k1).not.toBe(k2)
+   })
+ 
+   it("handles empty strings", () => {
+-    const key = getSuggestionKey({ prefix: "", suffix: "", text: "" })
++    const key = getSuggestionKey({ scope: "", prefix: "", suffix: "", text: "" })
+     expect(key).toBe("||")
+   })
+ })
+diff --git a/packages/kilo-vscode/tests/unit/notebook-context.test.ts b/packages/kilo-vscode/tests/unit/notebook-context.test.ts
+new file mode 100644
+index 00000000000..c4f2742936c
+--- /dev/null
++++ b/packages/kilo-vscode/tests/unit/notebook-context.test.ts
+@@ -0,0 +1,188 @@
++import { beforeEach, describe, expect, it } from "bun:test"
++import * as vscode from "vscode"
++import {
++  autocompleteScope,
++  getNotebookContext,
++  notebookUri,
++  supportsNotebook,
++} from "../../src/services/autocomplete/continuedev/core/autocomplete/notebook"
++import { accessible } from "../../src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider"
++import type { FileIgnoreController } from "../../src/services/autocomplete/shims/FileIgnoreController"
++
++function uri(scheme: string, path: string, fragment = ""): vscode.Uri {
++  const value = `${scheme}:${path}${fragment ? `#${fragment}` : ""}`
++  return {
++    scheme,
++    fsPath: path,
++    toString: () => value,
++  } as vscode.Uri
++}
++
++function document(id: string, text: string, languageId = "python", version = 1): vscode.TextDocument {
++  return {
++    uri: uri("vscode-notebook-cell", "/workspace/example.ipynb", id),
++    fileName: `/workspace/${id}.py`,
++    languageId,
++    version,
++    getText: () => text,
++  } as vscode.TextDocument
++}
++
++function notebooks(value: vscode.NotebookDocument[]): void {
++  Object.defineProperty(vscode.workspace, "notebookDocuments", {
++    configurable: true,
++    value,
++  })
++}
++
++describe("notebook context", () => {
++  beforeEach(() => notebooks([]))
++
++  it("flattens notebook cells and translates the cursor", () => {
++    const markdown = document("markdown", "# Title\nNotes")
++    const code = document("code", "const value = 1\nvalue += 1", "javascript")
++    const current = document("current", "print(value)\nprint('done')")
++    const notebook = {
++      uri: uri("file", "/workspace/example.ipynb"),
++      getCells: () => [
++        { kind: vscode.NotebookCellKind.Markup, document: markdown },
++        { kind: vscode.NotebookCellKind.Code, document: code },
++        { kind: vscode.NotebookCellKind.Code, document: current },
++      ],
++    } as vscode.NotebookDocument
++    notebooks([notebook])
++
++    const context = getNotebookContext(current, new vscode.Position(1, 5))
++
++    expect(context).toEqual({
++      contents: `"""# Title\nNotes"""\n\nconst value = 1\nvalue += 1\n\nprint(value)\nprint('done')`,
++      filepath: "/workspace/example.ipynb",
++      position: new vscode.Position(7, 5),
++    })
++  })
++
++  it("limits notebook completion to Python code cells", () => {
++    const python = document("python", "value = 1")
++    const javascript = document("javascript", "const value = 1", "javascript")
++    const markdown = document("markdown", "# Heading", "markdown")
++    const notebook = {
++      uri: uri("file", "/workspace/example.ipynb"),
++      getCells: () => [
++        { kind: vscode.NotebookCellKind.Code, document: python },
++        { kind: vscode.NotebookCellKind.Code, document: javascript },
++        { kind: vscode.NotebookCellKind.Markup, document: markdown },
++      ],
++    } as vscode.NotebookDocument
++    notebooks([notebook])
++
++    expect(supportsNotebook(python)).toBe(true)
++    expect(supportsNotebook(javascript)).toBe(false)
++    expect(supportsNotebook(markdown)).toBe(false)
++    expect(getNotebookContext(javascript, new vscode.Position(0, 0))).toBeUndefined()
++    expect(getNotebookContext(markdown, new vscode.Position(0, 0))).toBeUndefined()
++    expect(supportsNotebook({ uri: uri("file", "/workspace/file.ts") } as vscode.TextDocument)).toBe(true)
++  })
++
++  it("resolves file and notebook cell URIs", () => {
++    const file = uri("file", "/workspace/file.ts")
++    const cell = document("code", "value = 1")
++    const notebook = {
++      uri: uri("file", "/workspace/example.ipynb"),
++      getCells: () => [{ kind: vscode.NotebookCellKind.Code, document: cell }],
++    } as vscode.NotebookDocument
++    notebooks([notebook])
++
++    expect(notebookUri(file)).toBe(file)
++    expect(notebookUri(cell.uri)).toBe(notebook.uri)
++    expect(notebookUri(uri("untitled", "Untitled-1"))).toBeUndefined()
++  })
++
++  it("scopes autocomplete cache to the cell and sibling versions", () => {
++    const current = document("current", "value = 1")
++    const sibling = document("sibling", "other = 1")
++    const cells = [
++      { kind: vscode.NotebookCellKind.Code, document: current },
++      { kind: vscode.NotebookCellKind.Code, document: sibling },
++    ] as vscode.NotebookCell[]
++    const notebook = {
++      uri: uri("file", "/workspace/example.ipynb"),
++      version: 1,
++      getCells: () => cells,
++    } as vscode.NotebookDocument
++    notebooks([notebook])
++
++    const initial = autocompleteScope(current)
++    Object.assign(current, { version: 2 })
++    Object.assign(notebook, { version: 2 })
++    expect(autocompleteScope(current)).toBe(initial)
++
++    Object.assign(sibling, { version: 2 })
++    Object.assign(notebook, { version: 3 })
++    expect(autocompleteScope(current)).not.toBe(initial)
++    expect(autocompleteScope(current)).not.toBe(autocompleteScope(sibling))
++  })
++
++  it("changes autocomplete scope when sibling order changes", () => {
++    const current = document("current", "value = 1")
++    const first = document("first", "first = 1")
++    const second = document("second", "second = 1")
++    const cells = [
++      { kind: vscode.NotebookCellKind.Code, document: first },
++      { kind: vscode.NotebookCellKind.Code, document: second },
++      { kind: vscode.NotebookCellKind.Code, document: current },
++    ] as vscode.NotebookCell[]
++    const notebook = {
++      uri: uri("file", "/workspace/example.ipynb"),
++      version: 1,
++      getCells: () => cells,
++    } as vscode.NotebookDocument
++    notebooks([notebook])
++
++    const initial = autocompleteScope(current)
++    cells.splice(0, 2, cells[1]!, cells[0]!)
++    Object.assign(notebook, { version: 2 })
++
++    expect(autocompleteScope(current)).not.toBe(initial)
++  })
++
++  it("reuses notebook resolution within the same notebook version", () => {
++    const current = document("current", "value = 1")
++    const cells = [{ kind: vscode.NotebookCellKind.Code, document: current }] as vscode.NotebookCell[]
++    let calls = 0
++    const notebook = {
++      uri: uri("file", "/workspace/example.ipynb"),
++      version: 1,
++      getCells: () => {
++        calls++
++        return cells
++      },
++    } as vscode.NotebookDocument
++    notebooks([notebook])
++
++    expect(supportsNotebook(current)).toBe(true)
++    expect(notebookUri(current.uri)).toBe(notebook.uri)
++    expect(getNotebookContext(current, new vscode.Position(0, 0))).toBeDefined()
++    expect(calls).toBe(1)
++  })
++
++  it("validates notebook parent paths regardless of URI scheme", () => {
++    for (const scheme of ["file", "untitled", "memfs"]) {
++      const cell = document(scheme, "value = 1")
++      const notebook = {
++        uri: uri(scheme, `/workspace/${scheme}.ipynb`),
++        getCells: () => [{ kind: vscode.NotebookCellKind.Code, document: cell }],
++      } as vscode.NotebookDocument
++      const paths: string[] = []
++      const controller = {
++        validateAccess: (path: string) => {
++          paths.push(path)
++          return false
++        },
++      } as FileIgnoreController
++      notebooks([notebook])
++
++      expect(accessible(controller, cell)).toBe(false)
++      expect(paths).toEqual([`/workspace/${scheme}.ipynb`])
++    }
++  })
++})
