@@ -48,6 +48,24 @@ export async function copyTreeSitterResources(source: string, target: string): P
   await fs.promises.cp(from, to, { recursive: true })
 }
 
+export async function copySandboxResources(source: string, target: string): Promise<void> {
+  const from = path.dirname(source)
+  const to = path.dirname(target)
+  const helper = path.join(to, "bwrap")
+  const destination = path.join(to, "licenses", "bubblewrap")
+  await fs.promises.rm(helper, { force: true })
+  await fs.promises.rm(destination, { recursive: true, force: true })
+
+  const bwrap = path.join(from, "bwrap")
+  if (!fs.existsSync(bwrap)) return
+  await fs.promises.copyFile(bwrap, helper)
+  await fs.promises.chmod(helper, 0o755)
+
+  const licenses = path.join(from, "licenses", "bubblewrap")
+  if (!fs.existsSync(licenses)) return
+  await fs.promises.cp(licenses, destination, { recursive: true })
+}
+
 export async function copyKiloSandboxWorker(source: string, target: string): Promise<void> {
   const from = kiloSandboxWorkerForBinary(source)
   const to = kiloSandboxWorkerForBinary(target)
