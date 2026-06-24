@@ -1,5 +1,11 @@
 import type { MarketplaceInstalledMetadata, MarketplaceItem } from "../../types/marketplace"
 
+export function category(item: MarketplaceItem): string {
+  const value: unknown = item.category
+  if (typeof value !== "string") return "other"
+  return value.trim() || "other"
+}
+
 export function retain<T>(selected: T[], available: T[]): T[] {
   const values = new Set(available)
   const next = selected.filter((value) => values.has(value))
@@ -32,7 +38,7 @@ function matches(item: MarketplaceItem, query: string, labels: Partial<Record<Ma
     item.id.toLowerCase().includes(query) ||
     item.name.toLowerCase().includes(query) ||
     item.description.toLowerCase().includes(query) ||
-    item.category.replaceAll("-", " ").toLowerCase().includes(query) ||
+    category(item).replaceAll("-", " ").toLowerCase().includes(query) ||
     item.type.includes(query) ||
     (labels[item.type]?.toLowerCase().includes(query) ?? false) ||
     (item.author?.toLowerCase().includes(query) ?? false) ||
@@ -55,7 +61,7 @@ export function filterItems(
       if (status === "installed" && !isInstalled(item.id, item.type, metadata)) return false
       if (status === "notInstalled" && isInstalled(item.id, item.type, metadata)) return false
       if (types.length > 0 && !types.includes(item.type)) return false
-      if (categories.length > 0 && !categories.includes(item.category)) return false
+      if (categories.length > 0 && !categories.includes(category(item))) return false
       if (!query) return true
       return matches(item, query, labels)
     })

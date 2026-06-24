@@ -10,7 +10,7 @@ import type {
   MarketplaceInstalledMetadata,
 } from "../../types/marketplace"
 import { useLanguage } from "../../context/language"
-import { filterItems, retain } from "./utils"
+import { category, filterItems, retain } from "./utils"
 import { ItemCard } from "./ItemCard"
 import { MarketplaceContribute } from "./MarketplaceContribute"
 
@@ -52,7 +52,7 @@ export const MarketplaceListView = (props: Props) => {
     const available = new Set(props.items.map((item) => item.type))
     return (["agent", "mcp", "skill"] as const).filter((type) => available.has(type))
   })
-  const allCategories = createMemo(() => Array.from(new Set(props.items.map((item) => item.category))).sort())
+  const allCategories = createMemo(() => Array.from(new Set(props.items.map(category))).sort())
 
   const typeLabel = (type: MarketplaceItem["type"]) => {
     if (type === "mcp") return t("marketplace.badge.mcpServer")
@@ -167,7 +167,7 @@ export const MarketplaceListView = (props: Props) => {
                     linkUrl={skill?.githubUrl ?? mcp?.url}
                     onInstall={props.onInstall}
                     onRemove={props.onRemove}
-                    footer={<Tag>{label(item.category)}</Tag>}
+                    footer={<Tag>{label(category(item))}</Tag>}
                   />
                 )
               }}
