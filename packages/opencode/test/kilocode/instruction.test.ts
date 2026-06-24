@@ -192,6 +192,26 @@ describe("path-scoped instruction rules", () => {
     }),
   )
 
+  it.live("falls back to raw instructions when frontmatter cannot be parsed", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpWithFiles({
+        "rules/raw.md": ["---", "paths: [unterminated", "---", "", "# Raw Rule"].join("\n"),
+      })
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        const rules = yield* svc.system()
+
+        expect(rules).toHaveLength(1)
+        expect(rules[0]).toContain("paths: [unterminated")
+        expect(rules[0]).toContain("# Raw Rule")
+      }).pipe(
+        provideInstance(dir),
+        provideInstruction({ home: dir, config: dir }, { instructions: [path.join(dir, "rules", "raw.md")] }),
+      )
+    }),
+  )
+
   it.live("injects matching configured path-scoped rules and strips frontmatter", () =>
     Effect.gen(function* () {
       const dir = yield* tmpWithFiles({

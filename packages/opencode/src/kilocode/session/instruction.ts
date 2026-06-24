@@ -1,6 +1,8 @@
 import path from "path"
 import { Glob } from "@opencode-ai/core/util/glob"
+import { Filesystem } from "@/util/filesystem"
 import { ConfigMarkdown } from "@/config/markdown"
+import { KilocodeMarkdown } from "../config/markdown"
 
 export namespace KilocodeInstruction {
   export interface CompatibilityInput {
@@ -27,7 +29,8 @@ export namespace KilocodeInstruction {
         paths: scopes(md.data),
       }
     } catch {
-      return { content: "" }
+      const content = await Filesystem.readText(item).catch(() => "")
+      return { content: await KilocodeMarkdown.substitute(content, item) }
     }
   }
 
