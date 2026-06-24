@@ -1536,6 +1536,9 @@ export const dict = {
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.fontSize.title": "Rozmiar czcionki",
   "settings.display.fontSize.description": "Dostosuj rozmiar czcionki webview UI Kilo niezależnie od VS Code.",
+  "settings.display.limitChatContentWidth.title": "Ogranicz szerokość zawartości czatu",
+  "settings.display.limitChatContentWidth.description":
+    "Umieść zawartość czatu i prompt w wyśrodkowanej kolumnie o czytelnej szerokości. Wyłącz, aby używać pełnej szerokości panelu.",
   "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
   "settings.display.reasoningAutoCollapse.description":
     "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",

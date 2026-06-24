@@ -1528,6 +1528,9 @@ export const dict = {
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
+  "settings.display.limitChatContentWidth.title": "Begræns chatindholdets bredde",
+  "settings.display.limitChatContentWidth.description":
+    "Hold chatindholdet og prompten i en centreret kolonne med en læsevenlig bredde. Slå fra for at bruge hele panelets bredde.",
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",

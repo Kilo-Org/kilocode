@@ -15,7 +15,7 @@ import { previewSound } from "./services/attention"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
-import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+import { buildWebviewHtml, getChatContentWidthLimit, getWebviewFontSize } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
@@ -63,6 +63,7 @@ import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-fil
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch } from "./kilo-provider/file-search"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
+import { watchChatContentWidthConfig } from "./kilo-provider/chat-width"
 import { getTerminalContents } from "./services/terminal/context"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
@@ -567,6 +568,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Always push connection state first so the UI can render appropriately.
     this.postConnectionState()
     pushTelemetryState((m) => this.postMessage(m))
+    this.postMessage({ type: "chatContentWidthLimitChanged", limited: getChatContentWidthLimit() })
 
     // Re-send ready so the webview can recover after refresh.
     if (serverInfo) {
@@ -1308,6 +1310,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+    this.webviewMessageDisposable = watchChatContentWidthConfig(
+      (msg) => this.postMessage(msg),
+      this.webviewMessageDisposable,
+    )
     this.webviewMessageDisposable = watchWorkStyleConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
   }
 

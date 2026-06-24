@@ -1498,6 +1498,9 @@ export const dict = {
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
   "settings.display.fontSize.title": "حجم الخط",
   "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
+  "settings.display.limitChatContentWidth.title": "تقييد عرض محتوى المحادثة",
+  "settings.display.limitChatContentWidth.description":
+    "أبقِ محتوى المحادثة والموجّه في عمود يتوسط اللوحة وبعرض مريح للقراءة. عطّل هذا الخيار لاستخدام عرض اللوحة بالكامل.",
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
   "settings.display.reasoningAutoCollapse.description":
     "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",

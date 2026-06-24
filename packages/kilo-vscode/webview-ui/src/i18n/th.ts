@@ -1506,6 +1506,9 @@ export const dict = {
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
   "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
+  "settings.display.limitChatContentWidth.title": "จำกัดความกว้างของเนื้อหาแชต",
+  "settings.display.limitChatContentWidth.description":
+    "แสดงเนื้อหาแชตและพรอมต์ในคอลัมน์กึ่งกลางที่มีความกว้างพอเหมาะต่อการอ่าน ปิดเพื่อใช้ความกว้างเต็มแผง",
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
   "settings.display.reasoningAutoCollapse.description":
     "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",

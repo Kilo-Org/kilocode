@@ -1538,6 +1538,9 @@ export const dict = {
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.fontSize.title": "Veličina fonta",
   "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
+  "settings.display.limitChatContentWidth.title": "Ograniči širinu sadržaja razgovora",
+  "settings.display.limitChatContentWidth.description":
+    "Zadržite sadržaj razgovora i prompt u centriranoj koloni širine prilagođene čitanju. Isključite za korištenje pune širine panela.",
   "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
   "settings.display.reasoningAutoCollapse.description":
     "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",

@@ -18,12 +18,18 @@ export function getWebviewFontSize(): number {
   return clamp(raw)
 }
 
-function fontStyle(): string {
+export function getChatContentWidthLimit(): boolean {
+  return vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("limitChatContentWidth", true)
+}
+
+function rootStyle(): string {
   const base = getWebviewFontSize()
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(base * size) / 13}px;`).join("\n      ")
+  const width = getChatContentWidthLimit() ? "initial" : "100%"
   return `:root {
       ${vars}
       --kilo-font-scale: ${base / 13};
+      --kilo-chat-content-width: ${width};
       --font-size-x-small: var(--kilo-font-size-10);
       --font-size-small: var(--kilo-font-size-11);
       --font-size-base: var(--kilo-font-size-13);
@@ -55,7 +61,7 @@ export function buildWebviewHtml(
   <link rel="stylesheet" href="${opts.styleUri}">
   <title>${opts.title}</title>
   <style>
-    ${fontStyle()}
+    ${rootStyle()}
     html {
       scrollbar-color: auto;
 

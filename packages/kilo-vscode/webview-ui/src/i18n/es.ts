@@ -1552,6 +1552,9 @@ export const dict = {
   "settings.display.fontSize.title": "Tamaño de fuente",
   "settings.display.fontSize.description":
     "Ajusta el tamaño de fuente de la webview UI de Kilo de forma independiente a VS Code.",
+  "settings.display.limitChatContentWidth.title": "Limitar el ancho del contenido del chat",
+  "settings.display.limitChatContentWidth.description":
+    "Mantén el contenido del chat y el prompt en una columna centrada con un ancho cómodo para la lectura. Desactiva esta opción para usar todo el ancho del panel.",
   "settings.display.reasoningAutoCollapse.title": "Contraer razonamiento automáticamente",
   "settings.display.reasoningAutoCollapse.description":
     "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",

@@ -1489,6 +1489,9 @@ export const dict = {
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
+  "settings.display.limitChatContentWidth.title": "Обмежити ширину вмісту чату",
+  "settings.display.limitChatContentWidth.description":
+    "Розміщуйте вміст чату та поле введення запиту в центрованому стовпці зручної для читання ширини. Вимкніть, щоб використовувати всю ширину панелі.",
   "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
   "settings.display.reasoningAutoCollapse.description":
     "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",

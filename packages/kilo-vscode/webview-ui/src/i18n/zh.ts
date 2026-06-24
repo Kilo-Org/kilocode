@@ -1469,6 +1469,9 @@ export const dict = {
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.fontSize.title": "字体大小",
   "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
+  "settings.display.limitChatContentWidth.title": "限制聊天内容宽度",
+  "settings.display.limitChatContentWidth.description":
+    "让聊天内容和提示词以适合阅读的宽度居中显示。关闭后将使用面板的完整宽度。",
   "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
   "settings.display.reasoningAutoCollapse.description":
     "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",

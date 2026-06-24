@@ -1535,6 +1535,9 @@ export const dict = {
   "settings.display.username.description": "Пользовательское имя в разговорах",
   "settings.display.fontSize.title": "Размер шрифта",
   "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
+  "settings.display.limitChatContentWidth.title": "Ограничить ширину содержимого чата",
+  "settings.display.limitChatContentWidth.description":
+    "Размещайте содержимое чата и поле ввода запроса в центрированном столбце удобной для чтения ширины. Отключите, чтобы использовать всю ширину панели.",
   "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
   "settings.display.reasoningAutoCollapse.description":
     "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",

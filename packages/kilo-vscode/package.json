@@ -952,6 +952,11 @@
           "maximum": 24,
           "description": "Font size in pixels for the Kilo Code webview UI."
         },
+        "kilo-code.new.limitChatContentWidth": {
+          "type": "boolean",
+          "default": true,
+          "description": "Limit chat content to a centered, readable-width column on wide panels. Disable this to use the full panel width."
+        },
         "kilo-code.new.browserAutomation.enabled": {
           "type": "boolean",
           "default": false,

@@ -64,6 +64,21 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.limitChatContentWidth.title")}
+          description={language.t("settings.display.limitChatContentWidth.description")}
+        >
+          <Switch
+            checked={display.limitChatContentWidth()}
+            onChange={(checked: boolean) => {
+              display.setLimitChatContentWidth(checked)
+            }}
+            hideLabel
+          >
+            {language.t("settings.display.limitChatContentWidth.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.reasoningAutoCollapse.title")}
           description={language.t("settings.display.reasoningAutoCollapse.description")}
         >
