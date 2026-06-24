@@ -168,7 +168,8 @@ class KiloBackendChatManager(
                     val raw = response.body?.string()
                     log.warn("prompt_async failed: HTTP $code")
                     raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=prompt op=prompt_async error=${ChatLogSummary.body(it)}" } }
-                    throw RuntimeException("prompt_async failed: HTTP $code")
+                    val detail = raw?.takeIf { it.isNotBlank() }?.let { ": ${ChatLogSummary.body(it)}" }.orEmpty()
+                    throw RuntimeException("prompt_async failed: HTTP $code$detail")
                 }
                 log.debug { "${ChatLogSummary.sid(id)} kind=prompt op=prompt_async ok=true code=$code" }
             }
@@ -178,6 +179,12 @@ class KiloBackendChatManager(
             log.warn("${ChatLogSummary.sid(id)} kind=prompt op=prompt_async dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             throw RuntimeException("prompt_async HTTP call failed: ${e.message}", e)
         }
+    }
+
+    fun command(id: String, dir: String, command: String, args: String, prompt: PromptDto) {
+        log.info("${ChatLogSummary.sid(id)} kind=command command=$command args=${args.length} parts=${prompt.parts.size}")
+        val body = KiloCliDataParser.buildCommandJson(command, args, prompt)
+        post("/session/$id/command?directory=${encode(dir)}", body, "command", "${ChatLogSummary.sid(id)} kind=command command=$command")
     }
 
     // ------ abort ------

@@ -30,6 +30,8 @@ jobs:
         settings:
           - name: linux
             host: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
+          - name: macos
+            host: macos-15 # kilocode_change
           - name: windows
             host: blacksmith-4vcpu-windows-2025 # kilocode_change
     runs-on: ${{ matrix.settings.host }}
@@ -79,9 +81,10 @@ jobs:
         run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
+          KILO_TEST_PROFILE: ${{ runner.os == 'macOS' && github.event_name == 'pull_request' && 'darwin' || '' }} # kilocode_change
 
       - name: Run HttpApi exerciser gates
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' # kilocode_change
         working-directory: packages/opencode
         run: bun run test:httpapi
 

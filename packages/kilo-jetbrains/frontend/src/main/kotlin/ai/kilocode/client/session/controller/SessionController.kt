@@ -54,6 +54,7 @@ import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -97,6 +98,14 @@ class SessionController(
     private data class OrganizationTarget(val org: String?)
     private data class Followup(val dir: String, val time: Long)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
+    private data class Dispatch(
+        val kind: String,
+        val source: String,
+        val text: String,
+        val props: Map<String, String>,
+        val start: String,
+        val exists: Boolean,
+    )
 
     companion object {
         private val LOG = KiloLog.create(SessionController::class.java)
@@ -134,6 +143,7 @@ class SessionController(
     private var tool: String? = null
     private var eventJob: Job? = null
     private var drainJob: Job? = null
+    private var creating: CompletableDeferred<String?>? = null
     private val childJobs: MutableMap<String, Job> = mutableMapOf()
     private val childIds: MutableSet<String> = mutableSetOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
@@ -239,40 +249,41 @@ class SessionController(
         val dto = promptDto(text, files)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
+        dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
+            sessions.prompt(id, directory, dto)
+        }
+    }
+
+    fun command(command: String, args: String, files: List<PromptPartDto> = emptyList()) {
+        assertEdt()
+        val start = sid ?: ref?.key ?: "pending"
+        val exists = sid != null
+        val dto = promptDto("", files)
+        val props = promptProps(files)
+        LOG.debug { "${ChatLogSummary.sid(start)} kind=command command=$command args=${args.length} ${ChatLogSummary.dir(directory)}" }
+        dispatch(Dispatch("command", "command", args, props, start, exists)) { id ->
+            sessions.command(id, directory, command, args, dto)
+        }
+    }
+
+    private fun dispatch(data: Dispatch, send: suspend (String) -> Unit) {
+        assertEdt()
         capture("Conversation Send Clicked", sessionProps(sid ?: ref?.key) + mapOf(
-            "source" to "user",
-            "hasExistingSession" to exists.toString(),
-            "textLength" to bucket(text),
-        ) + props)
+            "source" to data.source,
+            "hasExistingSession" to data.exists.toString(),
+            "textLength" to bucket(data.text),
+        ) + data.props)
         showSession()
+        val pending = sid?.let { CompletableDeferred(it) } ?: session()
         cs.launch {
             try {
-                val id = sid ?: run {
-                    val session = sessions.create(directory)
-                    runEdt {
-                        if (disposed) return@runEdt
-                        ref = SessionRef.Local(session)
-                        setRecentSessionsState(RecentsState.Idle)
-                        updateModel {
-                            model.setSession(session)
-                        }
-                    }
-                    if (disposed) return@launch
-                    val meta = if (LOG.isDebugEnabled) ChatLogSummary.dir(directory) else "kind=session"
-                    LOG.info("${ChatLogSummary.sid(session.id)} kind=session $meta created=true")
-                    capture("Task Created", sessionProps(session.id) + mapOf("source" to "jetbrains"))
-                    runEdt {
-                        if (disposed) return@runEdt
-                        subscribeEvents()
-                    }
-                    session.id
-                }
-                sessions.prompt(id, directory, dto)
-                capture("Conversation Message", sessionProps(id) + mapOf("source" to "user", "hasExistingSession" to exists.toString()) + props)
-                LOG.debug { "${ChatLogSummary.sid(id)} kind=prompt dispatched=true" }
+                val id = pending.await() ?: return@launch
+                send(id)
+                capture("Conversation Message", sessionProps(id) + mapOf("source" to data.source, "hasExistingSession" to data.exists.toString()) + data.props)
+                LOG.debug { "${ChatLogSummary.sid(id)} kind=${data.kind} dispatched=true" }
             } catch (e: Exception) {
-                capture("Session Error", sessionProps(sid ?: ref?.key ?: start) + mapOf("context" to "prompt", "errorClass" to e::class.java.name))
-                LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: start)} kind=prompt dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                capture("Session Error", sessionProps(sid ?: ref?.key ?: data.start) + mapOf("context" to data.kind, "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: data.start)} kind=${data.kind} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
                     val msg = e.message ?: KiloBundle.message("session.error.prompt")
@@ -282,6 +293,47 @@ class SessionController(
                 }
             }
         }
+    }
+
+    private fun session(): CompletableDeferred<String?> {
+        assertEdt()
+        val pending = creating
+        if (pending != null) return pending
+        val next = CompletableDeferred<String?>()
+        creating = next
+        cs.launch {
+            try {
+                next.complete(createSession())
+            } catch (e: Exception) {
+                next.completeExceptionally(e)
+            } finally {
+                edt {
+                    if (creating === next) creating = null
+                }
+            }
+        }
+        return next
+    }
+
+    private suspend fun createSession(): String? {
+        val session = sessions.create(directory)
+        runEdt {
+            if (disposed) return@runEdt
+            ref = SessionRef.Local(session)
+            setRecentSessionsState(RecentsState.Idle)
+            updateModel {
+                model.setSession(session)
+            }
+        }
+        if (disposed) return null
+        val meta = if (LOG.isDebugEnabled) ChatLogSummary.dir(directory) else "kind=session"
+        LOG.info("${ChatLogSummary.sid(session.id)} kind=session $meta created=true")
+        capture("Task Created", sessionProps(session.id) + mapOf("source" to "jetbrains"))
+        runEdt {
+            if (disposed) return@runEdt
+            subscribeEvents()
+        }
+        return session.id
     }
 
     fun abort() {
