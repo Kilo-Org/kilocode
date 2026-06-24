@@ -83,6 +83,24 @@ For changes under `packages/kilo-vscode/webview-ui/`:
 - Significant visual or layout changes should have a Storybook story added under `webview-ui/src/stories/`. Minor tweaks and i18n-only changes don't need one.
 - Don't ask for locally generated baseline PNGs — those must come from Linux CI.
 
+### 8. Defensive invariant checks
+
+When code relies on a structural precondition — a boundary marker being reachable, a data shape implying a particular state, a sequence being well-ordered — validate that precondition explicitly rather than inferring it from shape or position.
+
+**Prefer explicit state over inferred shape.** If a code path should be entered only when a specific condition was set intentionally (e.g., a preflight compaction was triggered, a record was fully constructed), persist a dedicated flag at the point the condition occurs. Checking that flag is unambiguous; checking whether the resulting data *looks like* the condition was met can match unrelated states.
+
+**Validate structural boundaries before traversal or mutation.** Before walking a node range, consuming a bounded sequence, or removing a slice of a data structure, verify that both boundaries are present, share the expected parent/container, and are reachable from one another. If a boundary is missing or unreachable, abort and fall back to a clean rebuild rather than continuing and potentially mutating adjacent records or entries.
+
+**Cover boundary edge cases in sequence utilities.** Functions that append, merge, or deduplicate ordered sequences must handle all subset relationships:
+- `next` extends `existing` (common case)
+- `next` equals `existing`
+- `next` is already a prefix of `existing`
+- `next` is already a suffix of `existing`
+
+Missing a case typically produces silent duplication. Add a regression test for each edge case alongside the fix.
+
+**Pair each defensive check with a regression test.** When adding a guard for a previously unhandled violation, include a test that drives the code through the violation path and asserts the safe fallback behaviour. This documents the invariant and prevents silent reversion.
+
 ## How to comment
 
 - Leave comments on the exact line via `gh api .../pulls/{n}/comments`.
