@@ -295,7 +295,7 @@ Mode-specific rules are only supported at the project level. When both generic a
 
 Rules are applied on the next interaction. You can also edit `kilo.jsonc` through the **Settings** webview in VS Code.
 
-To make the rule path-scoped, add `paths` frontmatter to the Markdown file. The Settings UI shows instruction files loaded from config and Kilo rules directories.
+To make a rule path-scoped, add `paths` frontmatter to the Markdown file. The Settings UI can be used to manage additional instruction file paths and globs.
 
 {% /tab %}
 {% tab label="CLI" %}
