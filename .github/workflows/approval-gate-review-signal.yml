@@ -1,0 +1,19 @@
+# kilocode_change - new file
+name: Approval gate review signal
+
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions:
+  contents: read
+
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate pull request event
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: '[[ "$PR_NUMBER" =~ ^[0-9]+$ ]]'

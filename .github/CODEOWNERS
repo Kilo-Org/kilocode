@@ -1,5 +1,1 @@
-# web + desktop packages
-packages/app/      @adamdotdevin
-packages/tauri/    @adamdotdevin
-packages/desktop/src-tauri/  @brendonovich
-packages/desktop/  @adamdotdevin
+# kilocode_change - intentionally empty; approvals are enforced without automatic reviewer requests
