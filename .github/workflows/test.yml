@@ -24,7 +24,7 @@ jobs:
   # kilocode_change start
   unit:
     name: unit (${{ matrix.settings.name }})
-    strategy:
+    strategy: # kilocode_change
       fail-fast: false
       matrix:
         settings:
@@ -128,7 +128,7 @@ jobs:
       - jetbrains
     if: always()
     steps:
-      - name: Verify upstream test jobs passed
+      - name: Verify upstream test jobs passed # kilocode_change
         run: |
           echo "unit=${{ needs.unit.result }}"
           echo "jetbrains=${{ needs.jetbrains.result }}"
