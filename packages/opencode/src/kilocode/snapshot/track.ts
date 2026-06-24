@@ -40,13 +40,14 @@
 // All of this is Kilo-specific — the upstream snapshot module remains a thin
 // shim that calls into here.
 
-import { Duration, Effect, Fiber } from "effect"
+import { Duration, Effect, Fiber, Option } from "effect"
 import { applyEdits, modify } from "jsonc-parser"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Question } from "@/question"
 import type { MessageID, PartID, SessionID } from "@/session/schema"
 import { PartID as PartIDSchema } from "@/session/schema"
 import type { MessageV2 } from "@/session/message-v2"
+import { KiloPartLifecycle } from "@/kilocode/session/part-lifecycle"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import { ConfigParse } from "@/config/parse"
 import * as Log from "@opencode-ai/core/util/log"
@@ -83,14 +84,18 @@ type SessionRuntime = {
 export namespace KiloSnapshotTrack {
   const log = Log.create({ service: "snapshot.track" })
 
-  export const TIMEOUT_MS = iife(() => {
-    const raw = process.env["KILO_SNAPSHOT_TRACK_TIMEOUT_MS"]
-    if (raw) {
-      const parsed = Number(raw)
-      if (Number.isFinite(parsed) && parsed > 0) return parsed
-    }
-    return 10_000
-  })
+  const duration = (name: string, fallback: number) =>
+    iife(() => {
+      const raw = process.env[name]
+      if (raw) {
+        const parsed = Number(raw)
+        if (Number.isFinite(parsed) && parsed > 0) return parsed
+      }
+      return fallback
+    })
+
+  export const TIMEOUT_MS = duration("KILO_SNAPSHOT_TRACK_TIMEOUT_MS", 10_000)
+  export const TURN_TIMEOUT_MS = duration("KILO_SNAPSHOT_TURN_TIMEOUT_MS", 120_000)
 
   // Wire values — also function as i18n keys via `labelKey`/`headerKey`.
   // The backend matches replies on `label`, so the canonical English strings
@@ -140,6 +145,65 @@ export namespace KiloSnapshotTrack {
     asked: false,
   })
 
+  export const makeStates = () => {
+    const states = new Map<string, State>()
+    return (directory: string) => {
+      const found = states.get(directory)
+      if (found) return found
+      const state = makeState()
+      states.set(directory, state)
+      return state
+    }
+  }
+
+  export interface ProtectInput<A> {
+    readonly inner: Effect.Effect<A>
+    readonly state: State
+    readonly fallback: A
+    readonly operation: "track" | "patch"
+    readonly timeoutMs?: number
+  }
+
+  /**
+   * Enforces the turn-facing snapshot availability budget without waiting for
+   * cancellation. Snapshot tracking and patching are optional metadata work;
+   * once either exceeds this budget, later calls in the same directory bypass
+   * the potentially poisoned lock owner for the lifetime of this service.
+   */
+  export const protect = <A>(input: ProtectInput<A>): Effect.Effect<A> =>
+    Effect.gen(function* () {
+      if (input.state.disabledForSession) return input.fallback
+      const timeoutMs = input.timeoutMs ?? TURN_TIMEOUT_MS
+      return yield* Effect.acquireUseRelease(
+        Effect.forkDetach(input.inner, { startImmediately: true }),
+        (fiber) =>
+          Effect.gen(function* () {
+            const result = yield* Fiber.join(fiber).pipe(
+              Effect.timeoutOption(Duration.millis(timeoutMs)),
+              Effect.catchCause((cause) => {
+                input.state.disabledForSession = true
+                log.error("snapshot turn operation failed; bypassing snapshots for this directory", {
+                  cause,
+                  operation: input.operation,
+                })
+                return Effect.succeed(Option.some(input.fallback))
+              }),
+            )
+            if (Option.isSome(result)) return result.value
+            input.state.disabledForSession = true
+            log.warn("snapshot turn operation exceeded availability budget; bypassing snapshots for this directory", {
+              operation: input.operation,
+              timeoutMs,
+            })
+            return input.fallback
+          }),
+        (fiber) =>
+          Effect.sync(() => {
+            setTimeout(() => Effect.runFork(Fiber.interrupt(fiber)), 0)
+          }),
+      )
+    })
+
   /** Answer shape returned by `askUser`. Three-valued because dismiss !== disable. */
   export type Answer = "continue" | "disable" | "dismissed"
 
@@ -152,7 +216,7 @@ export namespace KiloSnapshotTrack {
    */
   export interface Hooks {
     /** Ask the user. Returns "dismissed" if the question is rejected. */
-    readonly ask: (input: { sessionID: SessionID }) => Promise<Answer>
+    readonly ask: (input: { sessionID: SessionID }, signal?: AbortSignal) => Promise<Answer>
     /** Persist `"snapshot": false` to the project config without disposing the instance. */
     readonly persistDisable: () => Promise<void>
     /** Publish the synthetic progress part allocated by the wrapper. */
@@ -383,7 +447,7 @@ export namespace KiloSnapshotTrack {
             input.state.owner = owner
 
             const sessionID = input.sessionID
-            const answer = yield* Effect.promise(() => hooks.ask({ sessionID }))
+            const answer = yield* Effect.promise((signal) => hooks.ask({ sessionID }, signal))
 
             if (answer === "continue") {
               log.info("user chose to keep waiting for snapshot; joining fiber")
@@ -443,7 +507,7 @@ export namespace KiloSnapshotTrack {
   }
 
   /** Build the synthetic progress part payload so both start/update share one shape. */
-  const progressPart = (input: {
+  export const progressPart = (input: {
     sessionID: SessionID
     messageID: MessageID
     partID: PartID
@@ -455,6 +519,7 @@ export namespace KiloSnapshotTrack {
     type: "text",
     text: input.text,
     synthetic: true,
+    metadata: { [KiloPartLifecycle.key]: "transient" },
   })
 
   export const defaultHooks: Hooks = {
@@ -503,46 +568,55 @@ export namespace KiloSnapshotTrack {
       )
     },
 
-    async ask(input) {
-      const answers = await questionRt
-        .runPromise((svc) =>
-          svc.ask({
-            sessionID: input.sessionID,
-            blocking: true,
-            questions: [
-              {
-                header: "Snapshot is slow",
-                headerKey: "snapshot.slowRepo.header",
-                question:
-                  "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\n" +
-                  "Do you want to disable Snapshots for this repository?",
-                questionKey: "snapshot.slowRepo.question",
-                custom: false,
-                options: [
-                  {
-                    label: ANSWER_CONTINUE,
-                    labelKey: "snapshot.slowRepo.answer.continue",
-                    description:
-                      "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
-                    descriptionKey: "snapshot.slowRepo.answer.continue.description",
-                  },
-                  {
-                    label: ANSWER_DISABLE,
-                    labelKey: "snapshot.slowRepo.answer.disable",
-                    description:
-                      "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
-                    descriptionKey: "snapshot.slowRepo.answer.disable.description",
-                  },
-                ],
-              },
-            ],
-          }),
+    async ask(input, signal) {
+      return questionRt
+        .runPromise(
+          (svc) =>
+            svc.ask({
+              sessionID: input.sessionID,
+              blocking: true,
+              questions: [
+                {
+                  header: "Snapshot is slow",
+                  headerKey: "snapshot.slowRepo.header",
+                  question:
+                    "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\n" +
+                    "Do you want to disable Snapshots for this repository?",
+                  questionKey: "snapshot.slowRepo.question",
+                  custom: false,
+                  options: [
+                    {
+                      label: ANSWER_CONTINUE,
+                      labelKey: "snapshot.slowRepo.answer.continue",
+                      description:
+                        "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+                      descriptionKey: "snapshot.slowRepo.answer.continue.description",
+                    },
+                    {
+                      label: ANSWER_DISABLE,
+                      labelKey: "snapshot.slowRepo.answer.disable",
+                      description:
+                        "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+                      descriptionKey: "snapshot.slowRepo.answer.disable.description",
+                    },
+                  ],
+                },
+              ],
+            }),
+          { signal },
         )
-        .catch(() => undefined)
-      const pick = answers?.[0]?.[0]
-      if (pick === ANSWER_CONTINUE) return "continue"
-      if (pick === ANSWER_DISABLE) return "disable"
-      return "dismissed"
+        .then((answers): Answer => {
+          const pick = answers[0]?.[0]
+          if (pick === ANSWER_CONTINUE) return "continue"
+          if (pick === ANSWER_DISABLE) return "disable"
+          return "dismissed"
+        })
+        .catch((err): Answer => {
+          if (!signal?.aborted && !(err instanceof Question.RejectedError)) {
+            log.warn("snapshot question failed; treating as dismissed", { err })
+          }
+          return "dismissed"
+        })
     },
 
     async persistDisable() {

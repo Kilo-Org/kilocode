@@ -1,12 +1,39 @@
 import { readFileSync, statSync } from "node:fs"
 import path from "node:path"
-import { Effect } from "effect"
+import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
-import { run as runSandbox, type Profile } from "@kilocode/sandbox"
+import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
+import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import type { InstanceContext } from "@/project/instance-context"
+import type { SessionID } from "@/session/schema"
+import { Changed } from "./event"
 import * as Network from "./network"
+
+const overrides = new Map<string, { enabled: boolean; version: number }>()
+const locks = new Map<SessionID, { semaphore: Semaphore.Semaphore; refs: number }>()
+
+function key(directory: string, sessionID: SessionID) {
+  return directory + "\0" + sessionID
+}
+
+function locked<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
+  return Effect.acquireUseRelease(
+    Effect.sync(() => {
+      const entry = locks.get(sessionID) ?? { semaphore: Semaphore.makeUnsafe(1), refs: 0 }
+      entry.refs++
+      locks.set(sessionID, entry)
+      return entry
+    }),
+    (entry) => entry.semaphore.withPermits(1)(effect),
+    (entry) =>
+      Effect.sync(() => {
+        entry.refs--
+        if (entry.refs === 0 && locks.get(sessionID) === entry) locks.delete(sessionID)
+      }),
+  )
+}
 
 function root(path: string) {
   return { path, kind: "subtree" as const }
@@ -81,20 +108,91 @@ export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] =
   }
 }
 
-export function execute<A, E, R>(effect: Effect.Effect<A, E, R>) {
+export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: SessionID) {
+  const config = yield* Config.Service
+  const cfg = yield* config.get()
+  const directory = yield* InstanceState.directory
+  const override = overrides.get(key(directory, sessionID))
+  const enabled = override?.enabled ?? cfg.experimental?.sandbox ?? false
+  return {
+    directory,
+    enabled: enabled && backendSupport.available,
+    available: backendSupport.available,
+    reason: backendSupport.reason,
+    version: override?.version ?? 0,
+  }
+})
+
+function change<E, R>(sessionID: SessionID, guard: Effect.Effect<unknown, E, R>) {
   return Effect.gen(function* () {
+    const directory = yield* InstanceState.directory
+    const id = key(directory, sessionID)
+    return yield* locked(
+      sessionID,
+      Effect.gen(function* () {
+        yield* guard
+        const current = yield* status(sessionID)
+        if (!current.enabled && !current.available) return current
+        const value = { ...current, enabled: !current.enabled, version: current.version + 1 }
+        overrides.set(id, { enabled: value.enabled, version: value.version })
+        yield* (yield* Bus.Service).publish(Changed, { sessionID, ...value })
+        return value
+      }),
+    )
+  })
+}
+
+export const toggle = Effect.fn("SandboxPolicy.toggle")((sessionID: SessionID) => change(sessionID, Effect.void))
+
+export function toggleGuarded<E, R>(sessionID: SessionID, guard: Effect.Effect<unknown, E, R>) {
+  return change(sessionID, guard)
+}
+
+export const clear = Effect.fn("SandboxPolicy.clear")(function* (sessionID: SessionID) {
+  yield* retire(sessionID, yield* InstanceState.directory, Effect.void)
+})
+
+export function retire<A, E, R>(
+  sessionID: SessionID,
+  directory: string,
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> {
+  return locked(
+    sessionID,
+    Effect.gen(function* () {
+      overrides.delete(key(directory, sessionID))
+      return yield* effect
+    }),
+  )
+}
+
+export function dispose<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> {
+  return locked(
+    sessionID,
+    Effect.gen(function* () {
+      const suffix = "\0" + sessionID
+      for (const id of overrides.keys()) {
+        if (id.endsWith(suffix)) overrides.delete(id)
+      }
+      return yield* effect
+    }),
+  )
+}
+
+function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
+  return Effect.gen(function* () {
+    if (!(yield* status(sessionID)).enabled) return yield* unrestricted(effect)
     const config = yield* Config.Service
     const cfg = yield* config.get()
-    if (!cfg.experimental?.sandbox) return yield* effect
-    const mode = cfg.experimental.sandbox_restrict_network === false ? "allow" : "deny"
+    const mode = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
     return yield* runSandbox(profile(yield* InstanceState.context, mode), effect)
   })
 }
 
-export function executeTool<A, E, R>(tool: { id: string }, effect: Effect.Effect<A, E, R>) {
-  return execute(Network.tool(tool, effect))
+export function executeTool<A, E, R>(sessionID: SessionID, tool: { id: string }, effect: Effect.Effect<A, E, R>) {
+  return execute(sessionID, Network.tool(tool, effect))
 }
 
-export function executeMcp<A, E, R>(tool: object, effect: Effect.Effect<A, E, R>) {
-  return execute(Network.mcp(tool, effect))
+export function executeMcp<A, E, R>(sessionID: SessionID, tool: object, effect: Effect.Effect<A, E, R>) {
+  return execute(sessionID, Network.mcp(tool, effect))
 }

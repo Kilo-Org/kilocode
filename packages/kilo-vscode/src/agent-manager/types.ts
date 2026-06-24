@@ -639,6 +639,15 @@ interface SendCommandIn {
   contextDirectory?: string
 }
 
+interface ToggleSandboxIn {
+  type: "toggleSandbox"
+  sessionID?: string
+  draftID?: string
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
 interface RequestTerminalContextIn {
   type: "requestTerminalContext"
   requestId: string
@@ -783,6 +792,7 @@ export type AgentManagerInMessage =
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn
+  | ToggleSandboxIn
   | RequestTerminalContextIn
   | ClearSessionIn
   | AbortIn

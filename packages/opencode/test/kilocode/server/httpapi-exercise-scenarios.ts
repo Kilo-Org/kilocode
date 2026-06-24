@@ -189,6 +189,33 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "missing network reject should remain a no-op success")),
+  http.protected
+    .get("/session/{sessionID}/sandbox", "sandbox.status")
+    .seeded((ctx) => ctx.session({ title: "Sandbox status" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/sandbox", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.enabled === "boolean", "sandbox status should report enabled state")
+      check(typeof body.available === "boolean", "sandbox status should report backend availability")
+      check(typeof body.version === "number", "sandbox status should report its revision")
+    }),
+  http.protected
+    .post("/session/{sessionID}/sandbox/toggle", "sandbox.toggle")
+    .mutating()
+    .seeded((ctx) => ctx.session({ title: "Sandbox toggle" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/sandbox/toggle", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.enabled === "boolean", "sandbox toggle should report enabled state")
+      check(typeof body.available === "boolean", "sandbox toggle should report backend availability")
+      check(typeof body.version === "number", "sandbox toggle should report its revision")
+    }),
   http.protected.get("/remote/status", "remote.status").json(200, (body) => {
     object(body)
     check(body.enabled === false && body.connected === false, "remote should start disabled")
