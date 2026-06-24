@@ -13,6 +13,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Format } from "@/format"
 import { LSP } from "@/lsp/lsp"
+import * as ToolNetwork from "@/kilocode/sandbox/network"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
 import { ProjectID } from "@/project/schema"
@@ -139,7 +140,7 @@ const registry = Layer.effect(
   Effect.gen(function* () {
     const write = yield* WriteTool.pipe(Effect.flatMap(Tool.init))
     const shell = yield* ShellTool.pipe(Effect.flatMap(Tool.init))
-    const list = [write, shell]
+    const list = [ToolNetwork.builtin(write), ToolNetwork.builtin(shell)]
     return ToolRegistry.Service.of({
       ids: () => Effect.succeed(list.map((item) => item.id)),
       all: () => Effect.succeed(list),

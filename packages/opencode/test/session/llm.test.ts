@@ -499,7 +499,12 @@ describe("session.llm.ai-sdk adapter", () => {
     expect(events).toHaveLength(1)
     const stepFinish = events[0]
     if (stepFinish.type !== "step-finish") throw new Error("expected step-finish")
-    expect(stepFinish.providerMetadata).toEqual({ anthropic: { cacheCreationInputTokens: 300 } })
+    // kilocode_change start
+    expect(stepFinish.providerMetadata).toEqual({
+      anthropic: { cacheCreationInputTokens: 300 },
+      kilocode: { routedModelID: "claude-3-5-sonnet" },
+    })
+    // kilocode_change end
     expect(stepFinish.usage?.cacheWriteInputTokens).toBeUndefined()
     expect(stepFinish.usage?.cacheReadInputTokens).toBe(200)
 

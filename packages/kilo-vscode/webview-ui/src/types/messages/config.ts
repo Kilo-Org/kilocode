@@ -45,6 +45,7 @@ export interface ExperimentalConfig {
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
   sandbox?: boolean
+  sandbox_restrict_network?: boolean
 }
 
 export interface CommitMessageConfig {

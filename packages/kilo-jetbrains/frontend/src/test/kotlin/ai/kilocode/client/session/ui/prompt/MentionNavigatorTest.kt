@@ -17,6 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import kotlin.test.fail
 
 @Suppress("UnstableApiUsage")
 class MentionNavigatorTest : BasePlatformTestCase() {
@@ -110,10 +111,11 @@ class MentionNavigatorTest : BasePlatformTestCase() {
     private fun file(path: String) = WorkspaceFileDto(path = path, name = path.substringAfterLast('/'))
 
     private fun waitFor(done: () -> Boolean) {
-        repeat(50) {
+        repeat(250) {
             UIUtil.dispatchAllInvocationEvents()
             if (done()) return
             Thread.sleep(20)
         }
+        fail("condition was not met")
     }
 }
