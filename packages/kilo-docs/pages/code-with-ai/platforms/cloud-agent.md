@@ -20,6 +20,7 @@ Before using Cloud Agents:
 
 - **GitHub or GitLab Integration must be configured**
   Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories.
+  When you connect your GitHub account, PRs the agent opens are authored by you, with the Kilo bot included as co-author.
 
 ## Cost
 
