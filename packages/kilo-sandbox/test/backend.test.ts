@@ -1,18 +1,19 @@
 import { describe, expect, test } from "bun:test"
-import { Effect } from "effect"
-import { backendSupport, prepare, type Launch } from "../src/backend"
+import { Effect, PlatformError, Result } from "effect"
+import { backendSupport, confine, prepare, type Launch } from "../src/backend"
 import { run } from "../src/context"
+import { settle } from "../src/mutation"
 import type { Profile } from "../src/profile"
 import { generate } from "../src/seatbelt"
 
-function makeProfile(): Profile {
+function makeProfile(mode: Profile["network"]["mode"] = "deny"): Profile {
   return {
     filesystem: {
       allowWrite: [{ path: "/workspace", kind: "subtree" }],
       denyWrite: [{ path: "/workspace/.git", kind: "subtree" }],
       denyNames: [".git"],
     },
-    network: { mode: "deny", allowedHosts: ["example.com"] },
+    network: { mode, allowedHosts: mode === "proxy" ? ["example.com"] : [] },
     environment: { deny: ["DROP", "RESET"], set: { KEEP: "profile", RESET: "removed" } },
   }
 }
@@ -21,7 +22,12 @@ const launch: Launch = {
   command: "/bin/echo",
   args: ["hello"],
   cwd: "/workspace",
-  environment: { KEEP: "launch", DROP: "secret" },
+  environment: {
+    KEEP: "launch",
+    DROP: "secret",
+    HTTPS_PROXY: "http://127.0.0.1:9000",
+    no_proxy: "*",
+  },
 }
 
 describe("sandbox launch preparation", () => {
@@ -33,12 +39,23 @@ describe("sandbox launch preparation", () => {
     expect(policy).toContain('(require-not (subpath (param "DENY_WRITE_0")))')
     expect(policy).toContain('(require-not (regex #"(^|/)\\.git(/|$)"))')
     expect(policy).toContain("(allow file-read*)")
-    expect(policy).toContain("(allow network-outbound)")
+    expect(policy).toContain("sandbox network mode: deny")
+    expect(policy).toContain("(deny network-outbound")
+    expect(policy).not.toContain("(allow network-outbound)")
     expect(policy).toContain("(allow network-inbound)")
     expect(policy).not.toContain("/workspace/.git")
     expect(result.args).toContain("-DALLOW_WRITE_0=/workspace")
     expect(result.args).toContain("-DDENY_WRITE_0=/workspace/.git")
     expect(result.args.slice(-3)).toEqual(["--", "/bin/echo", "hello"])
+  })
+
+  test("preserves unrestricted networking in allow mode", () => {
+    const result = generate(makeProfile("allow"), launch)
+    const policy = result.args[1]
+    expect(policy).toContain("sandbox network mode: allow")
+    expect(policy).toContain("(allow network-outbound)")
+    expect(policy).toContain("(allow network-inbound)")
+    expect(policy).not.toContain("(deny network-outbound")
   })
 
   test("places shell commands inside the sandbox backend", () => {
@@ -67,7 +84,66 @@ describe("sandbox launch preparation", () => {
     expect(result.environment?.KEEP).toBe("profile")
     expect(result.environment?.DROP).toBeUndefined()
     expect(result.environment?.RESET).toBeUndefined()
+    expect(result.environment?.HTTPS_PROXY).toBeUndefined()
+    expect(result.environment?.no_proxy).toBeUndefined()
     expect(result.environment?.PATH).toBeUndefined()
+  })
+
+  test("fails proxy mode closed before launching a process", async () => {
+    const result = await Effect.runPromise(
+      Effect.scoped(run(makeProfile("proxy"), prepare(launch))).pipe(Effect.result),
+    )
+    expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure.reason._tag).toBe("BadResource")
+      expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+    }
+  })
+
+  test("fails non-empty allowedHosts closed before launching a process", async () => {
+    const input = makeProfile("allow")
+    const result = await Effect.runPromise(
+      Effect.scoped(run({ ...input, network: { mode: "allow", allowedHosts: ["example.com"] } }, prepare(launch))).pipe(
+        Effect.result,
+      ),
+    )
+    expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure.reason._tag).toBe("BadResource")
+      expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+    }
+  })
+
+  test("fails allowed-host profiles closed through explicit confinement", async () => {
+    const input = makeProfile("allow")
+    const result = await Effect.runPromise(
+      Effect.scoped(confine({ ...input, network: { mode: "allow", allowedHosts: ["example.com"] } }, launch)).pipe(
+        Effect.result,
+      ),
+    )
+    expect(Result.isFailure(result)).toBe(true)
+    if (Result.isFailure(result)) {
+      expect(result.failure.reason._tag).toBe("BadResource")
+      expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+    }
+  })
+
+  test("preserves worker stderr when the request pipe also fails", async () => {
+    const pipe = Object.assign(new Error("write EPIPE"), { code: "EPIPE" })
+    const cause = await settle(
+      Promise.reject(pipe),
+      Promise.resolve(Buffer.alloc(0)),
+      Promise.resolve(Buffer.from("useful worker failure")),
+      Promise.resolve(7),
+      "/workspace/value.txt",
+    ).then(
+      () => undefined,
+      (error: unknown) => error,
+    )
+    expect(cause).toBeInstanceOf(PlatformError.PlatformError)
+    if (!(cause instanceof PlatformError.PlatformError)) return
+    expect(cause.reason.description).toBe("useful worker failure")
+    expect(cause.reason.cause).toBe(pipe)
   })
 
   test("reports backend support with a reason when unavailable", () => {

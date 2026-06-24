@@ -20,7 +20,6 @@ import * as Log from "@opencode-ai/core/util/log"
 import { MessageV2 } from "./message-v2"
 import type { InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
-import { capture } from "@/kilocode/instance" // kilocode_change - children() scopes by current project when available
 import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
@@ -34,6 +33,7 @@ import { Global } from "@opencode-ai/core/global"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
 import { SessionExport } from "@/kilocode/session-export"
+import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { baseKey, cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
@@ -622,18 +622,22 @@ export const layer: Layer.Layer<
       )
     })
 
-    // kilocode_change start - scope by project_id when instance context is available
+    // kilocode_change start - scope children by persisted parent project_id
     const children = Effect.fn("Session.children")(function* (parentID: SessionID) {
-      const ctx = capture()
-      const conditions = [eq(SessionTable.parent_id, parentID)]
-      if (ctx) conditions.push(eq(SessionTable.project_id, ctx.project.id))
-      const rows = yield* db((d) =>
-        d
+      const rows = yield* db((d) => {
+        const parent = d
+          .select({ projectID: SessionTable.project_id })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, parentID))
+          .get()
+        const conditions = [eq(SessionTable.parent_id, parentID)]
+        if (parent) conditions.push(eq(SessionTable.project_id, parent.projectID))
+        return d
           .select()
           .from(SessionTable)
           .where(and(...conditions))
-          .all(),
-      )
+          .all()
+      })
       return rows.map(fromRow)
     })
     // kilocode_change end
@@ -655,20 +659,27 @@ export const layer: Layer.Layer<
         }
 
         // kilocode_change start
-        yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
-        KiloSession.clearPlatformOverride(sessionID)
-        if (hasInstance) {
-          yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
-          void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
-            app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(() => {}),
-          )
-        }
+        yield* SandboxPolicy.dispose(
+          sessionID,
+          Effect.gen(function* () {
+            yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
+            KiloSession.clearPlatformOverride(sessionID)
+            if (hasInstance) {
+              yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
+              void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
+                app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(
+                  () => {},
+                ),
+              )
+            }
+            yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
+            // kilocode_change - capture final session-export workspace delta on close/delete
+            const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
+            yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
+            yield* sync.remove(sessionID)
+          }),
+        )
         // kilocode_change end
-        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
-        // kilocode_change - capture final session-export workspace delta on close/delete
-        const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
-        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
-        yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)
       }

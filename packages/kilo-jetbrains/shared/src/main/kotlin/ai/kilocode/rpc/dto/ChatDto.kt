@@ -75,6 +75,26 @@ data class PartDto(
     val mime: String? = null,
     val url: String? = null,
     val filename: String? = null,
+    val synthetic: Boolean? = null,
+    val source: PartSourceDto? = null,
+)
+
+@Serializable
+data class PartSourceDto(
+    val type: String,
+    val text: PartSourceTextDto,
+    val path: String? = null,
+    val clientName: String? = null,
+    val uri: String? = null,
+    val name: String? = null,
+    val kind: Int? = null,
+)
+
+@Serializable
+data class PartSourceTextDto(
+    val value: String,
+    val start: Double,
+    val end: Double,
 )
 
 @Serializable
@@ -103,6 +123,7 @@ data class PromptPartDto(
     val mime: String? = null,
     val url: String? = null,
     val filename: String? = null,
+    val source: PartSourceDto? = null,
 )
 
 // --- Streaming Events ---

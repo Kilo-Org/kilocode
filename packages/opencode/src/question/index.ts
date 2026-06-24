@@ -210,9 +210,13 @@ export const layer = Layer.effect(
 
       return yield* Effect.ensuring(
         Deferred.await(deferred),
-        Effect.sync(() => {
-          pending.delete(id)
+        // kilocode_change start - every asked question gets a terminal event when its waiter is interrupted
+        KiloQuestion.finalize({
+          pending,
+          id,
+          publishRejected: () => bus.publish(Event.Rejected, { sessionID: info.sessionID, requestID: info.id }),
         }),
+        // kilocode_change end
       )
     })
 

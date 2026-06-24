@@ -97,9 +97,7 @@ export const base = `(version 1)
   (local-name "com.apple.cfprefsd.agent"))
 (allow user-preference-read)
 
-; network is not confined by the file-level sandbox; allow it fully
-(allow network-outbound)
-(allow network-inbound)
+; system services required by common command-line runtimes
 (allow system-socket)
 (allow mach-lookup
   (global-name "com.apple.bsd.dirhelper")

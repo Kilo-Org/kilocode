@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import type { Backend, Launch, Support } from "./backend"
 import type { PathRule, Profile } from "./profile"
 import { base } from "./seatbelt-base"
+import { networkPolicy } from "./seatbelt-network"
 
 const executable = "/usr/bin/sandbox-exec"
 
@@ -47,7 +48,12 @@ function policy(profile: Profile) {
       ? ""
       : `(allow file-write*\n  (require-all\n    (require-any ${allow.join(" ")})\n    ${[...deny, ...names].join("\n    ")}\n  )\n)`
   return {
-    value: [base, "; reads are not confined by the file-level sandbox\n(allow file-read*)", write].join("\n"),
+    value: [
+      base,
+      networkPolicy(profile),
+      "; reads are not confined by the file-level sandbox\n(allow file-read*)",
+      write,
+    ].join("\n"),
     params,
   }
 }

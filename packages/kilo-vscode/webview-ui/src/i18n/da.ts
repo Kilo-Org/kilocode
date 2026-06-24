@@ -1328,6 +1328,10 @@ export const dict = {
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
+  "settings.sandboxing.title": "Sandboxing",
+  "settings.sandboxing.network.title": "Begræns netværksadgang",
+  "settings.sandboxing.network.description":
+    "Bloker udgående netværksadgang fra kommandoer, der stammer fra modellen, og HTTP-værktøjer. Lokale MCP-servere og plugin-hooks er ikke underlagt denne begrænsning. Inferenstrafik til udbydere og modeller er fortsat tilgængelig.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",

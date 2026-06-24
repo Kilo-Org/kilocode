@@ -65,6 +65,10 @@ export interface StepStartPart extends BasePart {
 export interface StepFinishPart extends BasePart {
   type: "step-finish"
   reason?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
   cost?: number
   tokens?: {
     input: number

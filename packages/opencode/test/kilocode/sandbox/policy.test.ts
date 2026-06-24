@@ -181,6 +181,15 @@ describe("sandbox policy", () => {
     expect(profile(ctx).filesystem.temporaryDirectory).toBe(Global.Path.tmp)
   })
 
+  test("uses deny-by-default and configurable network profiles", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.a, dirs.a, dirs)
+
+    expect(profile(ctx).network).toEqual({ mode: "deny", allowedHosts: [] })
+    expect(profile(ctx, "allow").network).toEqual({ mode: "allow", allowedHosts: [] })
+  })
+
   test("keeps .git denied inside overlapping writable roots", async () => {
     await using tmp = await fixture()
     const dirs = tmp.extra

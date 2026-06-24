@@ -20,17 +20,35 @@ describe("PromptInput connection guard", () => {
 })
 
 describe("PromptInput sandbox toggle", () => {
-  it("writes only the sandbox patch without saving pending settings drafts", () => {
-    const start = src.indexOf("<Show when={features().sandboxControls}>")
-    const end = src.indexOf("</Show>", start)
+  it("toggles or creates the runtime session instead of writing config", () => {
+    const start = src.indexOf("const toggleSandbox = () =>")
+    const end = src.indexOf("let enhanceCounter", start)
     const toggle = src.slice(start, end)
 
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
-    expect(toggle).toContain("vscode.postMessage({")
-    expect(toggle).toContain('type: "updateConfig"')
-    expect(toggle).toContain("config: { experimental: { sandbox: !sandbox() } }")
-    expect(toggle).not.toContain("saveConfig")
-    expect(toggle).not.toContain("updateConfig(")
+    expect(toggle).toContain("const sessionID = sandboxID()")
+    expect(toggle).toContain('type: "toggleSandbox"')
+    expect(toggle).toContain("sessionID,")
+    expect(toggle).toContain("draftID: props.pendingSessionID ?? session.draftSessionID()")
+    expect(toggle).toContain("requestID,")
+    expect(toggle).toContain("setSandboxTarget(sessionID ?? null)")
+    expect(toggle).not.toContain('type: "updateConfig"')
+  })
+
+  it("uses the internal flag for visibility and effective runtime state for the button", () => {
+    expect(src).toContain("features().sandboxControls")
+    expect(src).toContain("<Show when={sandboxVisible()}>")
+    expect(src).toContain('message.type === "sandboxStatus"')
+    expect(src).toContain("message.sessionID !== sandboxID() && !matching")
+    expect(src).toContain("setSandboxState(state)")
+    expect(src).toContain("message.requestID === sandboxRequest()")
+    expect(src).toContain("const target = untrack(sandboxTarget)")
+    expect(src).toContain("if (target && target !== sessionID) clearSandboxRequest()")
+    expect(src).toContain("sandbox()?.enabled ?? (!sandboxID() && config().experimental?.sandbox === true)")
+    expect(src).toContain("aria-pressed={sandboxEnabled()}")
+    expect(src).toContain("!sandboxReady()")
+    expect(src).toContain("if (sandboxRequest() && target === null) return")
+    expect(src).not.toContain("if (state === current) return true")
   })
 })

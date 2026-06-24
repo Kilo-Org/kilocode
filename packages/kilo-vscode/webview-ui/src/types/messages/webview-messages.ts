@@ -924,6 +924,20 @@ export interface ToggleAutoApproveMessage {
   type: "toggleAutoApprove"
 }
 
+export interface RequestSandboxStatusMessage {
+  type: "requestSandboxStatus"
+  sessionID: string
+}
+
+export interface ToggleSandboxMessage {
+  type: "toggleSandbox"
+  sessionID?: string
+  draftID?: string
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
 }
@@ -1257,6 +1271,8 @@ export type WebviewMessage =
   | AgentManagerOpenSessionsMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
+  | RequestSandboxStatusMessage
+  | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage

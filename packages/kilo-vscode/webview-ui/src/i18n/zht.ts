@@ -1255,6 +1255,10 @@ export const dict = {
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
+  "settings.sandboxing.title": "沙盒",
+  "settings.sandboxing.network.title": "限制網路存取",
+  "settings.sandboxing.network.description":
+    "封鎖模型發起的命令和 HTTP 工具的對外網路存取。本機 MCP 伺服器和外掛程式鉤子不受此限制。供應商與模型推論流量仍然可用。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

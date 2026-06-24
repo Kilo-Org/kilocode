@@ -12,6 +12,7 @@ export type Event =
   | EventTuiCommandExecute
   | EventTuiToastShow1
   | EventTuiSessionSelect
+  | EventSandboxStatusChanged
   | EventKilocodeAgentManagerStart
   | EventIndexingStatus
   | EventIndexingWarning
@@ -758,6 +759,10 @@ export type StepFinishPart = {
   type: "step-finish"
   reason: string
   snapshot?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
   cost: number
   tokens: {
     total?: number
@@ -926,6 +931,7 @@ export type GlobalEvent = {
     | EventTuiCommandExecute
     | EventTuiToastShow
     | EventTuiSessionSelect
+    | EventSandboxStatusChanged
     | EventKilocodeAgentManagerStart
     | EventIndexingStatus
     | EventIndexingWarning
@@ -1541,6 +1547,7 @@ export type Config = {
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
     sandbox?: boolean
+    sandbox_restrict_network?: boolean
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }
@@ -2981,6 +2988,19 @@ export type EventGlobalConfigUpdated = {
   type: "global.config.updated"
   properties: {
     [key: string]: unknown
+  }
+}
+
+export type EventSandboxStatusChanged = {
+  id: string
+  type: "sandbox.status.changed"
+  properties: {
+    sessionID: string
+    directory: string
+    enabled: boolean
+    available: boolean
+    reason?: string
+    version: number
   }
 }
 
@@ -10714,6 +10734,86 @@ export type RemoteStatusResponses = {
 }
 
 export type RemoteStatusResponse = RemoteStatusResponses[keyof RemoteStatusResponses]
+
+export type SandboxStatusData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/sandbox"
+}
+
+export type SandboxStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SandboxStatusError = SandboxStatusErrors[keyof SandboxStatusErrors]
+
+export type SandboxStatusResponses = {
+  /**
+   * Session sandbox status
+   */
+  200: {
+    directory: string
+    enabled: boolean
+    available: boolean
+    reason?: string
+    version: number
+  }
+}
+
+export type SandboxStatusResponse = SandboxStatusResponses[keyof SandboxStatusResponses]
+
+export type SandboxToggleData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/sandbox/toggle"
+}
+
+export type SandboxToggleErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SandboxToggleError = SandboxToggleErrors[keyof SandboxToggleErrors]
+
+export type SandboxToggleResponses = {
+  /**
+   * Updated session sandbox status
+   */
+  200: {
+    directory: string
+    enabled: boolean
+    available: boolean
+    reason?: string
+    version: number
+  }
+}
+
+export type SandboxToggleResponse = SandboxToggleResponses[keyof SandboxToggleResponses]
 
 export type KilocodeSessionImportProjectData = {
   body?: {

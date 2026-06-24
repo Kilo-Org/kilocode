@@ -52,6 +52,7 @@ export interface FillInAtCursorSuggestion {
   text: string
   prefix: string
   suffix: string
+  scope: string
 }
 
 export interface MatchingSuggestionResult {
@@ -105,6 +106,7 @@ export interface LastSuggestionInfo extends AutocompleteContext {
 }
 
 export interface PendingRequest {
+  scope: string
   prefix: string
   suffix: string
   promise: Promise<void>
