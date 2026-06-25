@@ -1,5 +1,4 @@
 import type { KilocodeSessionModelUsageResponse, Session } from "@kilocode/sdk/v2"
-import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 
 export type SessionModelUsage = KilocodeSessionModelUsageResponse
 export type UsageResult = { sessionID: string; data?: SessionModelUsage }
@@ -31,8 +30,22 @@ export function isSessionTreeMember(input: {
   return visit(input.sessionID, input.info)
 }
 
-export function label(model: SessionModelUsage["models"][number]) {
-  return KiloRoutedModel.displayName(KiloRoutedModel.display(model.modelID))
+export function groupModelsByProvider(
+  models: SessionModelUsage["models"],
+  providers: ReadonlyArray<{ id: string; name: string }>,
+) {
+  const names = new Map(providers.map((provider) => [provider.id, provider.name]))
+  const groups = new Map<string, { providerID: string; providerName: string; models: SessionModelUsage["models"] }>()
+  for (const model of models) {
+    const group = groups.get(model.providerID) ?? {
+      providerID: model.providerID,
+      providerName: names.get(model.providerID) ?? model.providerID,
+      models: [],
+    }
+    group.models.push(model)
+    groups.set(model.providerID, group)
+  }
+  return [...groups.values()]
 }
 
 const count = new Intl.NumberFormat("en-US")

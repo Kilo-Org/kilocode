@@ -7,8 +7,8 @@ import {
   formatCost,
   formatCount,
   formatRate,
+  groupModelsByProvider,
   isSessionTreeMember,
-  label,
   select,
   type UsageResult,
 } from "@/kilocode/plugins/model-usage"
@@ -28,6 +28,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   )
   const usage = createMemo(() => select(result(), props.session_id))
   const unavailable = createMemo(() => failed(result(), props.session_id))
+  const groups = createMemo(() => groupModelsByProvider(usage()?.models ?? [], props.api.state.provider))
   const bench = createMemo(() => {
     const current = local.model.current()
     if (!current) return undefined
@@ -110,23 +111,34 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
             </text>
             <Show when={data().models.length > 0} fallback={<text fg={theme().textMuted}>No model usage yet</text>}>
               <box gap={1}>
-                <For each={data().models}>
-                  {(model) => (
+                <For each={groups()}>
+                  {(group) => (
                     <box>
-                      <text fg={theme().text} wrapMode="char">
-                        <b>{label(model)}</b>
+                      <text fg={theme().text}>
+                        <b>{group.providerName}</b>
                       </text>
-                      <text fg={theme().textMuted} wrapMode="word">
-                        Steps {formatCount(model.steps)} | Cost {formatCost(model.cost)}
-                      </text>
-                      <text fg={theme().textMuted} wrapMode="word">
-                        In {formatCount(model.tokens.input)} | Out {formatCount(model.tokens.output)} | Reason{" "}
-                        {formatCount(model.tokens.reasoning)}
-                      </text>
-                      <text fg={theme().textMuted} wrapMode="word">
-                        Cache R {formatCount(model.tokens.cache.read)} | W {formatCount(model.tokens.cache.write)} |
-                        Rate {formatRate(model.tokens)}
-                      </text>
+                      <box gap={1} paddingLeft={1}>
+                        <For each={group.models}>
+                          {(model) => (
+                            <box>
+                              <text fg={theme().text} wrapMode="char">
+                                <b>{model.modelID}</b>
+                              </text>
+                              <text fg={theme().textMuted} wrapMode="word">
+                                Steps {formatCount(model.steps)} | Cost {formatCost(model.cost)}
+                              </text>
+                              <text fg={theme().textMuted} wrapMode="word">
+                                In {formatCount(model.tokens.input)} | Out {formatCount(model.tokens.output)} | Reason{" "}
+                                {formatCount(model.tokens.reasoning)}
+                              </text>
+                              <text fg={theme().textMuted} wrapMode="word">
+                                Cache R {formatCount(model.tokens.cache.read)} | W{" "}
+                                {formatCount(model.tokens.cache.write)} | Rate {formatRate(model.tokens)}
+                              </text>
+                            </box>
+                          )}
+                        </For>
+                      </box>
                     </box>
                   )}
                 </For>
