@@ -18,6 +18,13 @@ const assistant = (id: string, parentID: string, opts: Partial<Message> = {}): M
   ...opts,
 })
 const part = (id: string, messageID: string): Part => ({ id, messageID, type: "text", text: id })
+const edit = (id: string, messageID: string, file: string): Part => ({
+  id,
+  messageID,
+  type: "tool",
+  tool: "edit",
+  state: { status: "pending", input: { filePath: file } },
+})
 const lookup = (values: Record<string, Part[]>) => (id: string) => values[id] ?? []
 
 describe("transcriptRows", () => {
@@ -47,6 +54,15 @@ describe("transcriptRows", () => {
       "u2:assistant",
     ])
     expect(rows.filter((row) => row.type === "assistant").map((row) => row.parts.length)).toEqual([8, 2, 1, 1])
+  })
+
+  it("keeps same-file edit runs together across chunk boundaries", () => {
+    const u1 = user("u1")
+    const a1 = assistant("a1", "u1")
+    const edits = Array.from({ length: 9 }, (_, i) => edit(`e${i}`, "a1", "src/app.ts"))
+    const rows = transcriptRows(messageTurns([u1, a1]), lookup({ a1: edits }), { size: 8 })
+
+    expect(rows.filter((row) => row.type === "assistant").map((row) => row.parts.length)).toEqual([9])
   })
 
   it("uses the configured bound and keeps an empty assistant renderable", () => {

@@ -1,6 +1,21 @@
 import type { Message, Part } from "../types/messages"
 import { visibleParts, type MessageTurn, type RevertBoundary } from "./session-queue"
 
+function editPath(part: Part | undefined) {
+  if (part?.type !== "tool" || part.tool !== "edit" || part.state.status === "error") return
+  const path = part.state.input.filePath
+  return typeof path === "string" && path ? path : undefined
+}
+
+function chunkEnd(parts: Part[], start: number, size: number) {
+  const end = Math.min(start + size, parts.length)
+  const path = editPath(parts[end - 1])
+  if (!path) return end
+  let next = end
+  while (next < parts.length && editPath(parts[next]) === path) next += 1
+  return next
+}
+
 interface TranscriptMeta {
   turn: string
   partial: boolean
@@ -165,8 +180,9 @@ export function transcriptRows(
         })
         continue
       }
-      for (let start = 0; start < visible.length; start += size) {
-        const chunk = visible.slice(start, start + size)
+      for (let start = 0; start < visible.length; ) {
+        const end = chunkEnd(visible, start, size)
+        const chunk = visible.slice(start, end)
         rows.push({
           ...meta,
           type: "assistant",
@@ -175,6 +191,7 @@ export function transcriptRows(
           parts: chunk,
           copy: copied,
         })
+        start = end
       }
     }
 

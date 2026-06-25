@@ -156,6 +156,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                   <AssistantMessage
                     message={amsg}
                     showAssistantCopyPartID={showAssistantCopyPartID()}
+                    animateEdits={!props.queued}
                     feedback={{
                       enabled: feedback.telemetryEnabled(),
                       rating: feedback.getRating(amsg.id),

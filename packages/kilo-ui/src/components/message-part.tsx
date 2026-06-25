@@ -146,6 +146,7 @@ export interface MessagePartProps {
   showTurnDiffSummary?: boolean
   turnDiffSummary?: () => JSX.Element
   animate?: boolean
+  bundleCount?: number
   working?: boolean
   feedback?: MessageFeedbackControls
 }
@@ -1025,6 +1026,7 @@ export function Part(props: MessagePartProps) {
         showTurnDiffSummary={props.showTurnDiffSummary}
         turnDiffSummary={props.turnDiffSummary}
         animate={props.animate}
+        bundleCount={props.bundleCount}
         working={props.working}
         feedback={props.feedback}
       />
@@ -1047,6 +1049,7 @@ export interface ToolProps {
   locked?: boolean
   animate?: boolean
   reveal?: boolean
+  bundleCount?: number
 }
 
 export type ToolComponent = Component<ToolProps>
@@ -1293,6 +1296,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               defaultOpen={props.defaultOpen}
               animate
               reveal={props.animate}
+              bundleCount={props.bundleCount}
             />
           </Match>
         </Switch>
@@ -2266,6 +2270,7 @@ ToolRegistry.register({
     const path = createMemo(() => props.metadata?.filediff?.file || props.input.filePath || "")
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
+    const count = () => (props.bundleCount && props.bundleCount > 1 ? props.bundleCount : undefined)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const view = createMemo(() => {
       const diff = props.metadata?.filediff
@@ -2328,6 +2333,13 @@ ToolRegistry.register({
                 <div data-slot="message-part-title">
                   <span data-slot="message-part-title-text">
                     <TextShimmer text={i18n.t("ui.messagePart.title.edit")} active={pending()} />
+                    <Show when={count()}>
+                      {(value) => (
+                        <span data-slot="edit-bundle-count" aria-hidden="true">
+                          ×{value()}
+                        </span>
+                      )}
+                    </Show>
                   </span>
                   <Show when={filename()}>
                     {(name) => (
