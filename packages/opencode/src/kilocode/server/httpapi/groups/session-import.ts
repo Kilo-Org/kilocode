@@ -159,6 +159,7 @@ const ToolStateCompletedSchema = Schema.Struct({
   status: Schema.Literal("completed"),
   input: Schema.Record(Schema.String, Schema.Unknown),
   output: Schema.String,
+  structuredContent: Schema.optional(Schema.Unknown),
   title: Schema.String,
   metadata: Schema.Record(Schema.String, Schema.Unknown),
   time: Schema.Struct({

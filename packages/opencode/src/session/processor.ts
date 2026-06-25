@@ -58,6 +58,7 @@ export interface Handle {
       title: string
       metadata: Record<string, any>
       output: string
+      structuredContent?: unknown // kilocode_change
       attachments?: MessageV2.FilePart[]
     },
   ) => Effect.Effect<void>
@@ -249,6 +250,7 @@ export const layer = Layer.effect(
           title: string
           metadata: Record<string, any>
           output: string
+          structuredContent?: unknown // kilocode_change
           attachments?: MessageV2.FilePart[]
         },
       ) {
@@ -263,6 +265,9 @@ export const layer = Layer.effect(
             metadata: output.metadata,
             title: output.title,
             time: { start: match.part.state.time.start, end: Date.now() },
+            // kilocode_change start
+            ...(output.structuredContent !== undefined ? { structuredContent: output.structuredContent } : {}),
+            // kilocode_change end
             attachments: output.attachments,
           },
         })
@@ -371,12 +376,26 @@ export const layer = Layer.effect(
 
       const toolResultOutput = (
         value: Extract<StreamEvent, { type: "tool-result" }>,
-      ): { title: string; metadata: Record<string, any>; output: string; attachments?: MessageV2.FilePart[] } => {
+      ): {
+        title: string
+        metadata: Record<string, any>
+        output: string
+        structuredContent?: unknown // kilocode_change
+        attachments?: MessageV2.FilePart[]
+      } => {
         if (isRecord(value.result.value) && typeof value.result.value.output === "string") {
+          // kilocode_change start
+          const structured =
+            Object.hasOwn(value.result.value, "structuredContent") &&
+            value.result.value.structuredContent !== undefined
+              ? { structuredContent: value.result.value.structuredContent }
+              : {}
+          // kilocode_change end
           return {
             title: typeof value.result.value.title === "string" ? value.result.value.title : value.name,
             metadata: isRecord(value.result.value.metadata) ? value.result.value.metadata : {},
             output: value.result.value.output,
+            ...structured, // kilocode_change
             attachments: Array.isArray(value.result.value.attachments)
               ? value.result.value.attachments.filter(isFilePart)
               : undefined,

@@ -92,6 +92,7 @@ export namespace SessionImportType {
     status: z.literal("completed"),
     input: z.record(z.string(), z.unknown()),
     output: z.string(),
+    structuredContent: z.unknown().optional(),
     title: z.string(),
     metadata: z.record(z.string(), z.unknown()),
     time: z.object({
