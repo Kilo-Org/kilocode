@@ -89,7 +89,7 @@ describe("Unix socket policy", () => {
     })
   })
 
-  linux("omits discovered paths that are already inaccessible", async () => {
+  linux("omits inaccessible discovered paths outside writable roots", async () => {
     const blocked = path.join(root, "blocked")
     const socket = path.join(blocked, "docker.sock")
     await mkdir(blocked)
@@ -99,6 +99,24 @@ describe("Unix socket policy", () => {
       const result = await Effect.runPromise(socketPolicy(profile(), { DOCKER_HOST: `unix://${socket}` }))
       expect(result.deny).toContain("DOCKER_HOST")
       expect(result.paths.map((rule) => rule.path)).not.toContain(socket)
+    } finally {
+      await chmod(blocked, 0o700)
+    }
+  })
+
+  linux("fails closed for inaccessible aliases into writable roots", async () => {
+    const blocked = path.join(canonical, "blocked-write")
+    const socket = path.join(runtime, "blocked-write", "docker.sock")
+    const input = {
+      ...profile(),
+      filesystem: { allowWrite: [{ path: canonical, kind: "subtree" as const }], denyWrite: [], denyNames: [] },
+    }
+    await mkdir(blocked)
+    await chmod(blocked, 0o000)
+
+    try {
+      const exit = await Effect.runPromise(socketPolicy(input, { DOCKER_HOST: `unix://${socket}` }).pipe(Effect.exit))
+      expect(exit._tag).toBe("Failure")
     } finally {
       await chmod(blocked, 0o700)
     }

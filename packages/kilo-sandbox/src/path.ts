@@ -8,7 +8,7 @@ function code(cause: unknown) {
   return typeof cause.code === "string" ? cause.code : undefined
 }
 
-function resolve(input: string, seen = new Set<string>()) {
+function resolve(input: string, seen = new Set<string>(), inaccessible = false) {
   const target = path.resolve(input)
   if (seen.has(target)) throw Object.assign(new Error("Symlink cycle"), { code: "ELOOP" })
   seen.add(target)
@@ -20,14 +20,17 @@ function resolve(input: string, seen = new Set<string>()) {
       return path.resolve(realpathSync.native(ancestor), ...suffix)
     } catch (cause) {
       const tag = code(cause)
-      if (tag !== "ENOENT" && tag !== "ENOTDIR" && tag !== "EOPNOTSUPP") throw cause
+      const hidden = tag === "EACCES" || tag === "EPERM"
+      if (tag !== "ENOENT" && tag !== "ENOTDIR" && tag !== "EOPNOTSUPP" && !(inaccessible && hidden)) throw cause
       try {
         if (lstatSync(ancestor).isSymbolicLink()) {
           const link = readlinkSync(ancestor)
-          return resolve(path.resolve(path.dirname(ancestor), link, ...suffix), seen)
+          return resolve(path.resolve(path.dirname(ancestor), link, ...suffix), seen, inaccessible)
         }
       } catch (error) {
-        if (code(error) !== "ENOENT" && code(error) !== "ENOTDIR") throw error
+        const reason = code(error)
+        const denied = reason === "EACCES" || reason === "EPERM"
+        if (reason !== "ENOENT" && reason !== "ENOTDIR" && !(inaccessible && denied)) throw error
       }
       const parent = path.dirname(ancestor)
       if (parent === ancestor) throw cause
@@ -54,6 +57,10 @@ function attempt(input: string, method: string, fn: () => string): Effect.Effect
 
 export function canonicalize(input: string): Effect.Effect<string, PlatformError.PlatformError> {
   return attempt(input, "canonicalize", () => resolve(input))
+}
+
+export function canonicalizeAncestor(input: string): Effect.Effect<string, PlatformError.PlatformError> {
+  return attempt(input, "canonicalizeAncestor", () => resolve(input, new Set(), true))
 }
 
 export function canonicalizeEntry(input: string): Effect.Effect<string, PlatformError.PlatformError> {

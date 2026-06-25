@@ -237,7 +237,9 @@ linux("reproduces authority delegation without a socket policy and blocks it whe
     expect(await connect(socket)).toEqual({ data: "ok" })
     expect(await fs.readFile(canary, "utf8")).toBe("mutated")
     await fs.writeFile(canary, "original")
-    expect(Number(await Effect.runPromise(spawn(unixClient(socket, "allow"), root.project, profile([root.project]))))).toBe(0)
+    expect(
+      Number(await Effect.runPromise(spawn(unixClient(socket, "allow"), root.project, profile([root.project])))),
+    ).toBe(0)
     expect(await fs.readFile(canary, "utf8")).toBe("mutated")
     await fs.writeFile(canary, "original")
     const policy = sockets(profile([root.project]), [socket])
@@ -260,9 +262,9 @@ linux("covers symlink aliases and scrubs advertised Unix endpoint variables", as
   await fs.symlink(socket, alias)
   const policy = sockets(profile([root.project]), [alias], ["DOCKER_HOST", "CONTAINER_HOST", "SSH_AUTH_SOCK"])
   const script = [
-    'if (process.env.DOCKER_HOST !== undefined) process.exit(2)',
-    'if (process.env.CONTAINER_HOST !== undefined) process.exit(3)',
-    'if (process.env.SSH_AUTH_SOCK !== undefined) process.exit(4)',
+    "if (process.env.DOCKER_HOST !== undefined) process.exit(2)",
+    "if (process.env.CONTAINER_HOST !== undefined) process.exit(3)",
+    "if (process.env.SSH_AUTH_SOCK !== undefined) process.exit(4)",
     unixClient(alias, "deny"),
   ].join("\n")
   const effect = Effect.scoped(
@@ -290,6 +292,53 @@ linux("covers symlink aliases and scrubs advertised Unix endpoint variables", as
     expect(await fs.readFile(canary, "utf8")).toBe("original")
     expect(service.accepted()).toBe(0)
   } finally {
+    service.server.close()
+    await fs.rm(root.root, { recursive: true, force: true })
+  }
+})
+
+linux("fails closed when an inaccessible authority socket is under a writable root", async () => {
+  const root = await fixture()
+  const hidden = path.join(root.project, "hidden")
+  const socket = path.join(hidden, "authority.sock")
+  const canary = path.join(root.outside, "canary")
+  await fs.mkdir(hidden)
+  await fs.writeFile(canary, "original")
+  const service = await broker(socket, canary)
+  await fs.chmod(hidden, 0o400)
+  const script = [
+    'const fs = require("node:fs")',
+    'const net = require("node:net")',
+    `fs.chmodSync(${JSON.stringify(hidden)}, 0o700)`,
+    `const client = net.connect(${JSON.stringify(socket)})`,
+    'client.on("connect", () => client.write("mutate"))',
+    'client.on("data", () => process.exit(0))',
+    'client.on("error", () => process.exit(2))',
+  ].join("\n")
+  const policy = sockets(profile([root.project]), [])
+  const effect = Effect.scoped(
+    run(
+      policy,
+      ChildProcessSpawner.ChildProcessSpawner.use((spawner) =>
+        spawner
+          .spawn(
+            ChildProcess.make(process.execPath, ["-e", script], {
+              cwd: root.project,
+              env: { DOCKER_HOST: `unix://${socket}` },
+            }),
+          )
+          .pipe(Effect.flatMap((handle) => handle.exitCode)),
+      ),
+    ).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)),
+  )
+
+  try {
+    const exit = await Effect.runPromise(effect.pipe(Effect.exit))
+    expect(exit._tag).toBe("Failure")
+    expect(await fs.readFile(canary, "utf8")).toBe("original")
+    expect(service.accepted()).toBe(0)
+  } finally {
+    await fs.chmod(hidden, 0o700)
     service.server.close()
     await fs.rm(root.root, { recursive: true, force: true })
   }

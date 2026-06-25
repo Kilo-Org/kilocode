@@ -1,6 +1,6 @@
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
-import { canonicalize } from "./path"
+import { canonicalize, canonicalizeAncestor, matches } from "./path"
 import type { PathRule, Profile, SocketCoverage, SocketPolicy } from "./profile"
 
 type Environment = Readonly<Record<string, string | undefined>>
@@ -209,13 +209,16 @@ export function socketProfile(profile: Profile, env: Environment = process.env):
   }
 }
 
-function canonical(input: string) {
-  // The host user already cannot use inaccessible discovered endpoints. Explicit policy paths still fail closed in normalize().
+function canonical(profile: Profile, input: string) {
   return canonicalize(input).pipe(
     Effect.map((path): string | undefined => path),
     Effect.catchIf(
       (err) => err.reason._tag === "PermissionDenied",
-      () => Effect.succeed(undefined),
+      (err) =>
+        Effect.flatMap(canonicalizeAncestor(input), (target) => {
+          if (profile.filesystem.allowWrite.some((rule) => matches(rule, target))) return Effect.fail(err)
+          return Effect.succeed(undefined)
+        }),
     ),
   )
 }
@@ -225,10 +228,13 @@ export function socketPolicy(
   env: Environment = process.env,
 ): Effect.Effect<SocketPolicy, PlatformError.PlatformError> {
   const policy = socketProfile(profile, env)
-  return Effect.map(Effect.forEach(policy.paths, (rule) => canonical(rule.path)), (paths) => ({
-    ...policy,
-    paths: [...new Set(paths.filter((path): path is string => path !== undefined))].map(
-      (path): PathRule => ({ path, kind: "literal" }),
-    ),
-  }))
+  return Effect.map(
+    Effect.forEach(policy.paths, (rule) => canonical(profile, rule.path)),
+    (paths) => ({
+      ...policy,
+      paths: [...new Set(paths.filter((path): path is string => path !== undefined))].map(
+        (path): PathRule => ({ path, kind: "literal" }),
+      ),
+    }),
+  )
 }
