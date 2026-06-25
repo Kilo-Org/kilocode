@@ -457,8 +457,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
+            "HTTP-Referer": "https://relay.dev/", // kilocode_change
+            "X-Title": "Relay", // kilocode_change
             "X-Source": "kilo", // kilocode_change
           },
         },
@@ -468,8 +468,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
+            "HTTP-Referer": "https://relay.dev/", // kilocode_change
+            "X-Title": "Relay", // kilocode_change
           },
         },
       }),
@@ -478,9 +478,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: provider.source === "config",
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
-            "X-BILLING-INVOKE-ORIGIN": "KiloCode", // kilocode_change
+            "HTTP-Referer": "https://relay.dev/", // kilocode_change
+            "X-Title": "Relay", // kilocode_change
+            "X-BILLING-INVOKE-ORIGIN": "Relay", // relay change
           },
         },
       }),
@@ -489,8 +489,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://kilo.ai/", // kilocode_change
-            "x-title": "Kilo Code", // kilocode_change
+            "http-referer": "https://relay.dev/", // kilocode_change
+            "x-title": "Relay", // kilocode_change
           },
         },
       }),
@@ -595,8 +595,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
+            "HTTP-Referer": "https://relay.dev/", // kilocode_change
+            "X-Title": "Relay", // kilocode_change
           },
         },
       }),
@@ -872,7 +872,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "X-Cerebras-3rd-Party-Integration": "Kilo Code", // kilocode_change
+            "X-Cerebras-3rd-Party-Integration": "Relay", // relay change
           },
         },
       }),
@@ -881,8 +881,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
+            "HTTP-Referer": "https://relay.dev/", // kilocode_change
+            "X-Title": "Relay", // kilocode_change
           },
         },
       }),

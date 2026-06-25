@@ -14,11 +14,11 @@ export const LLMGatewayPlugin = PluginV2.define({
           if (item.provider.endpoint.url !== "https://api.llmgateway.io/v1") continue
           if (item.provider.id !== ProviderV2.ID.make("llmgateway")) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
-            provider.options.headers["HTTP-Referer"] = "https://kilo.ai/" // kilocode_change
-            // kilocode_change start
-            provider.options.headers["X-Title"] = "Kilo Code"
-            provider.options.headers["X-Source"] = "kilo"
-            // kilocode_change end
+            provider.options.headers["HTTP-Referer"] = "https://relay.dev/" // relay change
+            // relay change start
+            provider.options.headers["X-Title"] = "Relay"
+            provider.options.headers["X-Source"] = "relay"
+            // relay change end
           })
         }
       }),

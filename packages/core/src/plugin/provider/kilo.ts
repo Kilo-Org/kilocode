@@ -24,9 +24,9 @@ export const KiloPlugin = PluginV2.define({
               url: KILO_OPENROUTER_BASE,
             }
             // kilocode_change end
-            provider.options.headers["HTTP-Referer"] = "https://kilo.ai/"
+            provider.options.headers["HTTP-Referer"] = "https://relay.dev/"
             // kilocode_change start
-            provider.options.headers["X-Title"] = "Kilo Code"
+            provider.options.headers["X-Title"] = "Relay"
             options.kilocodeToken = token ?? "anonymous"
             if (org) options.kilocodeOrganizationId = org
             if (!provider.enabled) provider.enabled = { via: "custom", data: { anonymous: true } }
