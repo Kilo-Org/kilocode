@@ -191,7 +191,51 @@ describe("experimental HttpApi", () => {
         },
       },
     },
+    15_000, // kilocode_change
   )
+
+  // kilocode_change start
+  it.instance(
+    "uses model family metadata for experimental editing tools",
+    () =>
+      Effect.gen(function* () {
+        const tmp = yield* TestInstance
+        const family = yield* request(
+          `${ExperimentalPaths.tool}?provider=test-provider&model=routed-model`,
+          tmp.directory,
+        )
+        const fallback = yield* request(`${ExperimentalPaths.tool}?provider=missing&model=unknown`, tmp.directory)
+
+        expect(family.status).toBe(200)
+        const familyIDs = (yield* json<Array<{ id: string }>>(family)).map((tool) => tool.id)
+        expect(familyIDs).toContain("apply_patch")
+        expect(familyIDs).not.toContain("edit")
+
+        expect(fallback.status).toBe(200)
+        const fallbackIDs = (yield* json<Array<{ id: string }>>(fallback)).map((tool) => tool.id)
+        expect(fallbackIDs).toContain("edit")
+      }),
+    {
+      config: {
+        formatter: false,
+        lsp: false,
+        provider: {
+          "test-provider": {
+            npm: "@ai-sdk/openai-compatible",
+            env: [],
+            models: {
+              "routed-model": {
+                id: "opaque-api-model",
+                family: "gpt-codex",
+              },
+            },
+          },
+        },
+      },
+    },
+    30_000,
+  )
+  // kilocode_change end
 
   it.instance("returns declared worktree errors", () =>
     Effect.gen(function* () {
