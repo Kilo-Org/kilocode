@@ -28,7 +28,12 @@ export interface Entry {
   virtual?: boolean
 }
 
-const SCHEMA = "https://app.kilo.ai/config.json"
+// Relay: the schema URL is referenced by the user's local config files
+// (kilo.jsonc / kilo.json) via $schema. Pointing it at app.kilo.ai would
+// make any IDE that validates the file phone home to Kilo. Use Relay's
+// own domain; the actual schema doc will be hosted once the webapp is
+// online. For now an unreachable URL is preferable to a Kilo URL.
+const SCHEMA = "https://relay.dev/config.json"
 
 const MODERN = ["kilo.jsonc", "kilo.json"]
 const LEGACY = ["opencode.jsonc", "opencode.json"]

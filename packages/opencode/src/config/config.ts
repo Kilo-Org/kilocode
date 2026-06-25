@@ -218,7 +218,7 @@ export const Info = Schema.Struct({
   // kilocode_change start
   // NOTE: Any new kilocode_change key added to Config.Info must also be mirrored in
   // apps/web/src/app/config.json/extras.ts in the cloud repo, otherwise
-  // $schema: https://app.kilo.ai/config.json will not recognize it.
+  // $schema: https://relay.dev/config.json will not recognize it.
   remote_control: Schema.optional(Schema.Boolean).annotate({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
@@ -576,8 +576,8 @@ export const layer = Layer.effect(
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
       if (!data.$schema) {
         // kilocode_change start
-        data.$schema = "https://app.kilo.ai/config.json"
-        const updated = text.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",')
+        data.$schema = "https://relay.dev/config.json"
+        const updated = text.replace(/^\s*\{/, '{\n  "$schema": "https://relay.dev/config.json",')
         // kilocode_change end
         yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
       }
@@ -605,7 +605,7 @@ export const layer = Layer.effect(
         const file = globalConfigFile()
         if (!existsSync(file)) {
           yield* fs
-            .writeWithDirs(file, JSON.stringify({ $schema: "https://app.kilo.ai/config.json" }, null, 2))
+            .writeWithDirs(file, JSON.stringify({ $schema: "https://relay.dev/config.json" }, null, 2))
             .pipe(Effect.catch(() => Effect.void))
         }
       }
@@ -624,7 +624,7 @@ export const layer = Layer.effect(
             .then(async (mod) => {
               const { provider, model, ...rest } = mod.default
               if (provider && model) result.model = `${provider}/${model}`
-              result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
+              result["$schema"] = "https://relay.dev/config.json" // kilocode_change
               result = mergeConfig(result, rest)
               await fsNode.writeFile(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
               await fsNode.unlink(legacy)
@@ -785,7 +785,7 @@ export const layer = Layer.effect(
                   })
                 : {}
               const remoteConfig = mergeConfig(isRecord(wellknown.config) ? wellknown.config : {}, fetchedConfig)
-              if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json"
+              if (!remoteConfig.$schema) remoteConfig.$schema = "https://relay.dev/config.json"
               const next = yield* loadConfig(
                 JSON.stringify(remoteConfig),
                 {

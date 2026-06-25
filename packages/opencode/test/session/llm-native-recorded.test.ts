@@ -321,7 +321,7 @@ const writeConfig = (directory: string, scenario: RecordedScenario, model: Model
   Effect.promise(() =>
     Bun.write(
       path.join(directory, "opencode.json"),
-      JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...scenario.config(model) }), // kilocode_change
+      JSON.stringify({ $schema: "https://relay.dev/config.json", ...scenario.config(model) }), // kilocode_change
     ),
   )
 

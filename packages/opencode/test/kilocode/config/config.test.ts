@@ -140,7 +140,7 @@ describe("kilocode indexing config", () => {
 
     try {
       await writeConfig(globalTmp.path, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://relay.dev/config.json",
         indexing: {
           enabled: true,
           provider: "ollama",
@@ -177,7 +177,7 @@ describe("kilocode indexing config", () => {
 
     try {
       await writeConfig(globalTmp.path, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://relay.dev/config.json",
         indexing: {
           enabled: true,
         },
@@ -490,7 +490,7 @@ describe("bash permission migration", () => {
   for (const action of ["allow", "ask", "deny"] as const) {
     test(`preserves string-form ${action} permission in jsonc`, async () => {
       const input = `{
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://relay.dev/config.json",
   "permission": "${action}"
 }`
       await using tmp = await tmpdir({
@@ -522,7 +522,7 @@ describe("bash permission migration", () => {
 
     test(`preserves string-form ${action} permission in json`, async () => {
       const input = JSON.stringify({
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://relay.dev/config.json",
         permission: action,
       })
       await using tmp = await tmpdir({
@@ -559,7 +559,7 @@ describe("bash permission migration", () => {
         await Filesystem.write(
           path.join(dir, "kilo.jsonc"),
           `{
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://relay.dev/config.json",
   "permission": {
     "read": "allow"
   }

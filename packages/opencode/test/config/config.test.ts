@@ -112,7 +112,7 @@ const layer = configLayer()
 const it = testEffect(layer)
 const configIt = (options?: Parameters<typeof configLayer>[0]) => testEffect(configLayer(options))
 
-const schemaConfig = (config: object) => ({ $schema: "https://app.kilo.ai/config.json", ...config }) // kilocode_change
+const schemaConfig = (config: object) => ({ $schema: "https://relay.dev/config.json", ...config }) // kilocode_change
 
 const provideCurrentInstance = <A, E, R>(effect: Effect.Effect<A, E, R>, ctx: InstanceContext) =>
   effect.pipe(Effect.provideService(InstanceRef, ctx))
@@ -321,7 +321,7 @@ it.effect("creates global jsonc config with schema when no global configs exist"
       yield* Config.use.get().pipe(provideInstanceEffect(dir))
 
       const content = yield* AppFileSystem.use.readFileString(path.join(dir, "kilo.jsonc")) // kilocode_change
-      expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"') // kilocode_change
+      expect(content).toContain('"$schema": "https://relay.dev/config.json"') // kilocode_change
     }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
   ),
 )
@@ -348,7 +348,7 @@ it.instance("loads JSON config file", () =>
     // kilocode_change start
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json",
+      $schema: "https://relay.dev/config.json",
       model: "test/model",
       username: "testuser",
     })
@@ -364,7 +364,7 @@ it.instance("preserves Kilo provider free model metadata", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json",
+      $schema: "https://relay.dev/config.json",
       model: "kilo/free-e2e",
       provider: {
         kilo: {
@@ -494,7 +494,7 @@ it.instance("loads JSONC config file", () =>
       path.join(test.directory, "kilo.jsonc"),
       `{
         // This is a comment
-        "$schema": "https://app.kilo.ai/config.json",
+        "$schema": "https://relay.dev/config.json",
         "model": "test/model",
         "username": "testuser"
       }`,
@@ -512,14 +512,14 @@ it.instance("jsonc overrides json in the same directory", () =>
     yield* writeConfigEffect(
       test.directory,
       {
-        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        $schema: "https://relay.dev/config.json", // kilocode_change
         model: "base",
         username: "base",
       },
       "kilo.jsonc", // kilocode_change
     )
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       model: "override",
     })
     const config = yield* Config.use.get()
@@ -533,11 +533,11 @@ it.instance("prefers .kilo directory config over legacy .kilocode", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(path.join(test.directory, ".kilocode"), {
-      $schema: "https://app.kilo.ai/config.json",
+      $schema: "https://relay.dev/config.json",
       model: "legacy/model",
     })
     yield* writeConfigEffect(path.join(test.directory, ".kilo"), {
-      $schema: "https://app.kilo.ai/config.json",
+      $schema: "https://relay.dev/config.json",
       model: "new/model",
     })
 
@@ -554,7 +554,7 @@ it.instance("handles environment variable substitution", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       yield* writeConfigEffect(test.directory, {
-        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        $schema: "https://relay.dev/config.json", // kilocode_change
         username: "{env:TEST_VAR}",
       })
       const config = yield* Config.use.get()
@@ -591,7 +591,7 @@ it.instance("handles file inclusion substitution", () =>
     const test = yield* TestInstance
     yield* AppFileSystem.use.writeWithDirs(path.join(test.directory, "included.txt"), "test-user")
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       username: "{file:included.txt}",
     })
     const config = yield* Config.use.get()
@@ -604,7 +604,7 @@ it.instance("handles file inclusion with replacement tokens", () =>
     const test = yield* TestInstance
     yield* AppFileSystem.use.writeWithDirs(path.join(test.directory, "included.md"), "const out = await Bun.$`echo hi`")
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       username: "{file:included.md}",
     })
     const config = yield* Config.use.get()
@@ -660,7 +660,7 @@ it.instance("validates config schema and reports warning on invalid fields", () 
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json",
+      $schema: "https://relay.dev/config.json",
       invalid_field: "should cause error",
     })
     // invalid schema surfaces as warnings, not a throw
@@ -687,7 +687,7 @@ it.instance("handles agent configuration", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: {
         test_agent: {
           model: "test/model",
@@ -711,7 +711,7 @@ it.instance("treats agent variant as model-scoped setting (not provider option)"
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: {
         test_agent: {
           model: "openai/gpt-5.2",
@@ -735,7 +735,7 @@ it.instance("handles command configuration", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       command: {
         test_command: {
           template: "test template",
@@ -757,7 +757,7 @@ it.instance("migrates autoshare to share field", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       autoshare: true,
     })
     const config = yield* Config.use.get()
@@ -770,7 +770,7 @@ it.instance("migrates mode field to agent field", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       mode: {
         test_mode: {
           model: "test/model",
@@ -1200,7 +1200,7 @@ it.instance("migrates legacy tools config to permissions - allow", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: { test: { tools: { bash: true, read: true } } },
     })
 
@@ -1216,7 +1216,7 @@ it.instance("migrates legacy tools config to permissions - deny", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: { test: { tools: { bash: false, webfetch: false } } },
     })
 
@@ -1232,7 +1232,7 @@ it.instance("migrates legacy write tool to edit permission", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: { test: { tools: { write: true } } },
     })
 
@@ -1248,7 +1248,7 @@ it.instance(
   "managed settings override user settings",
   Effect.gen(function* () {
     yield* writeManagedSettingsEffect({
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       model: "managed/model",
       share: "disabled",
     })
@@ -1265,7 +1265,7 @@ it.instance(
   "managed settings override project settings",
   Effect.gen(function* () {
     yield* writeManagedSettingsEffect({
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       autoupdate: false,
       disabled_providers: ["openai"],
     })
@@ -1300,7 +1300,7 @@ it.instance("migrates legacy edit tool to edit permission", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: { test: { tools: { edit: false } } },
     })
 
@@ -1313,7 +1313,7 @@ it.instance("migrates legacy patch tool to edit permission", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: { test: { tools: { patch: true } } },
     })
 
@@ -1326,7 +1326,7 @@ it.instance("migrates mixed legacy tools config", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: { test: { tools: { bash: true, write: true, read: false, webfetch: true } } },
     })
 
@@ -1344,7 +1344,7 @@ it.instance("merges legacy tools with existing permission config", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       agent: { test: { permission: { glob: "allow" }, tools: { bash: true } } },
     })
 
@@ -1380,7 +1380,7 @@ it.instance("permission config preserves user key order", () =>
     yield* writeConfigEffect(
       test.directory,
       {
-        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        $schema: "https://relay.dev/config.json", // kilocode_change
         permission: {
           "*": "deny",
           edit: "ask",
@@ -1443,7 +1443,7 @@ it.instance("local mcp accepts `env` as an alias for `environment`", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json",
+      $schema: "https://relay.dev/config.json",
       mcp: {
         context7: {
           type: "local",
@@ -1467,7 +1467,7 @@ it.instance("local mcp prefers `environment` over `env` when both are present", 
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json",
+      $schema: "https://relay.dev/config.json",
       mcp: {
         context7: {
           type: "local",
@@ -1493,7 +1493,7 @@ it.instance("project config can override MCP server enabled status", () =>
     // kilocode_change - base config in .json, override in .jsonc (jsonc loads second and wins)
     // Simulates a base config (like from remote .well-known) with disabled MCP.
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       mcp: {
         jira: {
           type: "remote",
@@ -1511,7 +1511,7 @@ it.instance("project config can override MCP server enabled status", () =>
     yield* writeConfigEffect(
       test.directory,
       {
-        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        $schema: "https://relay.dev/config.json", // kilocode_change
         mcp: {
           jira: {
             type: "remote",
@@ -1543,7 +1543,7 @@ it.instance("MCP config deep merges preserving base config properties", () =>
     // kilocode_change - base config in .json, override in .jsonc (jsonc loads second and wins)
     // kilocode_change - Base config with full MCP definition
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       mcp: {
         myserver: {
           type: "remote",
@@ -1559,7 +1559,7 @@ it.instance("MCP config deep merges preserving base config properties", () =>
     yield* writeConfigEffect(
       test.directory,
       {
-        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        $schema: "https://relay.dev/config.json", // kilocode_change
         mcp: {
           myserver: {
             type: "remote",
@@ -1588,7 +1588,7 @@ it.instance("local .kilo config can override MCP from project config", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://relay.dev/config.json", // kilocode_change
       mcp: {
         docs: {
           type: "remote",
@@ -1600,7 +1600,7 @@ it.instance("local .kilo config can override MCP from project config", () =>
     yield* writeConfigEffect(
       path.join(test.directory, ".kilo"), // kilocode_change
       {
-        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        $schema: "https://relay.dev/config.json", // kilocode_change
         mcp: {
           docs: {
             type: "remote",
@@ -1998,7 +1998,7 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
         const configDir = yield* tmpdirScoped()
         // kilocode_change start
         yield* writeConfigEffect(configDir, {
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://relay.dev/config.json",
           model: "configdir/model",
         })
         // kilocode_change end
