@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises"
+import { chmod, mkdir, mkdtemp, realpath, rm, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { Effect } from "effect"
 import { normalize } from "../src/path"
 import type { Profile } from "../src/profile"
-import { socketProfile } from "../src/socket"
+import { socketPolicy, socketProfile } from "../src/socket"
 
 const linux = process.platform === "linux" ? test : test.skip
 
@@ -87,6 +87,21 @@ describe("Unix socket policy", () => {
       deny: ["DOCKER_HOST"],
       coverage: ["docker"],
     })
+  })
+
+  linux("omits discovered paths that are already inaccessible", async () => {
+    const blocked = path.join(root, "blocked")
+    const socket = path.join(blocked, "docker.sock")
+    await mkdir(blocked)
+    await chmod(blocked, 0o000)
+
+    try {
+      const result = await Effect.runPromise(socketPolicy(profile(), { DOCKER_HOST: `unix://${socket}` }))
+      expect(result.deny).toContain("DOCKER_HOST")
+      expect(result.paths.map((rule) => rule.path)).not.toContain(socket)
+    } finally {
+      await chmod(blocked, 0o700)
+    }
   })
 
   test("adds SSH, GPG, D-Bus, and Wayland only for restrictive IPC", () => {

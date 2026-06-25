@@ -209,13 +209,26 @@ export function socketProfile(profile: Profile, env: Environment = process.env):
   }
 }
 
+function canonical(input: string) {
+  // The host user already cannot use inaccessible discovered endpoints. Explicit policy paths still fail closed in normalize().
+  return canonicalize(input).pipe(
+    Effect.map((path): string | undefined => path),
+    Effect.catchIf(
+      (err) => err.reason._tag === "PermissionDenied",
+      () => Effect.succeed(undefined),
+    ),
+  )
+}
+
 export function socketPolicy(
   profile: Profile,
   env: Environment = process.env,
 ): Effect.Effect<SocketPolicy, PlatformError.PlatformError> {
   const policy = socketProfile(profile, env)
-  return Effect.map(Effect.forEach(policy.paths, (rule) => canonicalize(rule.path)), (paths) => ({
+  return Effect.map(Effect.forEach(policy.paths, (rule) => canonical(rule.path)), (paths) => ({
     ...policy,
-    paths: [...new Set(paths)].map((path): PathRule => ({ path, kind: "literal" })),
+    paths: [...new Set(paths.filter((path): path is string => path !== undefined))].map(
+      (path): PathRule => ({ path, kind: "literal" }),
+    ),
   }))
 }
