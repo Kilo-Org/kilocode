@@ -1,85 +1,23 @@
-import { PostHog } from "posthog-node"
-import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
 
-const POSTHOG_API_KEY = "phc_GK2Pxl0HPj5ZPfwhLRjXrtdz8eD7e9MKnXiFrOqnB6z"
-const POSTHOG_HOST = "https://us.i.posthog.com"
-
 export namespace Client {
-  let client: PostHog | null = null
-  let enabled = true
+  export function init() {}
 
-  export function init() {
-    client = new PostHog(POSTHOG_API_KEY, {
-      host: POSTHOG_HOST,
-      disableGeoip: false,
-    })
+  export function getClient(): null {
+    return null
   }
 
-  export function getClient(): PostHog | null {
-    return client
-  }
-
-  export function setEnabled(value: boolean) {
-    enabled = value
-    if (!client) return
-    if (value) client.optIn()
-    else client.optOut()
-  }
+  export function setEnabled(_value: boolean) {}
 
   export function isEnabled(): boolean {
-    return enabled && client !== null
+    return false
   }
 
-  export function capture(event: TelemetryEvent, properties?: Record<string, unknown>) {
-    if (!enabled || !client) return
+  export function capture(_event: TelemetryEvent, _properties?: Record<string, unknown>) {}
 
-    const distinctId = Identity.getDistinctId()
-    const orgId = Identity.getOrganizationId()
+  export function identify(_distinctId: string, _properties?: Record<string, unknown>) {}
 
-    client.capture({
-      distinctId,
-      event,
-      properties: {
-        ...properties,
-        ...(orgId && { kilocodeOrganizationId: orgId }),
-      },
-    })
-  }
+  export function alias(_distinctId: string, _aliasId: string) {}
 
-  export function identify(distinctId: string, properties?: Record<string, unknown>) {
-    if (!enabled || !client) return
-
-    client.capture({
-      distinctId,
-      event: "$identify",
-      properties: {
-        $set: properties,
-      },
-    })
-  }
-
-  export function alias(distinctId: string, aliasId: string) {
-    if (!enabled || !client) return
-
-    client.alias({
-      distinctId,
-      alias: aliasId,
-    })
-  }
-
-  export async function shutdown(timeoutMs?: number): Promise<void> {
-    if (client) {
-      try {
-        // PostHog's shutdown drains the queue internally and is bounded by
-        // shutdownTimeoutMs. Calling flush() first is redundant and unbounded:
-        // when the endpoint is unreachable (offline, firewall, DNS adblock),
-        // flush retries up to 3x with 3s delays plus 10s per attempt before
-        // throwing, blocking process exit before shutdown's outer cap kicks in.
-        await client.shutdown(timeoutMs)
-      } finally {
-        client = null
-      }
-    }
-  }
+  export async function shutdown(_timeoutMs?: number): Promise<void> {}
 }
