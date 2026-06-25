@@ -69,7 +69,7 @@ export interface IndexingConfig {
   provider?: IndexingProvider
   model?: string | null
   dimension?: number | null
-  vectorStore?: "lancedb" | "qdrant"
+  vectorStore?: "lancedb" | "qdrant" | "valkey"
   kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
   ollama?: { baseUrl?: string }
@@ -82,6 +82,7 @@ export interface IndexingConfig {
   voyage?: { apiKey?: string }
   qdrant?: { url?: string; apiKey?: string }
   lancedb?: { directory?: string }
+  valkey?: { url?: string; password?: string }
   searchMinScore?: number
   searchMaxResults?: number
   embeddingBatchSize?: number
