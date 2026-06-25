@@ -74,8 +74,22 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Run JetBrains typecheck
-        run: ./gradlew typecheck
         working-directory: packages/kilo-jetbrains
+        run: |
+          set +e
+          ./gradlew typecheck 2>&1 | tee "$RUNNER_TEMP/jetbrains-typecheck.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if ! grep -F -A1 'Unable to read plugin descriptor' "$RUNNER_TEMP/jetbrains-typecheck.log" |
+            grep -qF 'java.nio.file.ClosedFileSystemException'; then
+            exit "$status"
+          fi
+          echo '::warning::Retrying JetBrains typecheck after a transient Gradle filesystem failure'
+          ./gradlew --stop
+          ./gradlew typecheck
 
   required:
     name: typecheck
