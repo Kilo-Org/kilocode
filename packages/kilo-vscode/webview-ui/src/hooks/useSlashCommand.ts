@@ -4,6 +4,21 @@ import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../type
 
 export const SLASH_PATTERN = /^\/(\S*)$/
 
+function getMatchScore(cmd: SlashCommandEntry, lower: string): number {
+  const name = cmd.name.toLowerCase()
+  if (name === lower) return 3
+  if (name.startsWith(lower)) return 2
+  if (name.includes(lower)) return 1
+  if (cmd.description?.toLowerCase().includes(lower)) return 1
+  if (cmd.hints.some((h) => h.toLowerCase().includes(lower))) return 1
+  return 0
+}
+
+export function sortByScore(matches: SlashCommandEntry[], query: string): SlashCommandEntry[] {
+  const lower = query.toLowerCase()
+  return [...matches].sort((a, b) => getMatchScore(b, lower) - getMatchScore(a, lower))
+}
+
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -158,12 +173,13 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
     const all = commands()
     if (!q) return all
     const lower = q.toLowerCase()
-    return all.filter(
+    const matches = all.filter(
       (cmd) =>
         cmd.name.toLowerCase().includes(lower) ||
         cmd.description?.toLowerCase().includes(lower) ||
         cmd.hints.some((h) => h.toLowerCase().includes(lower)),
     )
+    return sortByScore(matches, lower)
   }
 
   const unsubscribe = vscode.onMessage((message) => {

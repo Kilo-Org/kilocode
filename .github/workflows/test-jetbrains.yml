@@ -33,6 +33,7 @@ jobs:
           filters: |
             jetbrains:
               - '**'
+              - '!.changeset/**'
               - '!packages/kilo-vscode/**'
               - '!packages/kilo-docs/**'
 
