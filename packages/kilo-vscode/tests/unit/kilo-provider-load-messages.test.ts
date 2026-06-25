@@ -1,4 +1,5 @@
 import { describe, it, expect, spyOn } from "bun:test"
+import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -292,6 +293,7 @@ describe("KiloProvider sandbox status", () => {
 
 describe("KiloProvider sandbox toggle", () => {
   it("creates a session before toggling from the empty composer", async () => {
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
     const client = createClient()
     const { internal, sent } = makeProvider(client)
 
@@ -310,6 +312,25 @@ describe("KiloProvider sandbox toggle", () => {
         enabled: true,
       }),
     )
+    expect(notice).toHaveBeenCalledTimes(1)
+    expect(notice).toHaveBeenCalledWith("Sandbox enabled")
+    notice.mockRestore()
+  })
+
+  it("reports the disabled state in a native notification", async () => {
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+    const sandbox = defer<{ data: unknown }>()
+    const client = createClient({ sandboxDeferred: sandbox })
+    const { internal } = makeProvider(client)
+    internal.currentSession = mkSession()
+
+    const toggle = internal.handleToggleSandbox({ sessionID: "s1", requestID: "sandbox-1" })
+    sandbox.resolve({ data: { directory: "/repo", enabled: false, available: true, version: 2 } })
+    await toggle
+
+    expect(notice).toHaveBeenCalledTimes(1)
+    expect(notice).toHaveBeenCalledWith("Sandbox disabled")
+    notice.mockRestore()
   })
 
   it("shares session creation and finishes the toggle before a prompt", async () => {
@@ -341,6 +362,7 @@ describe("KiloProvider sandbox toggle", () => {
 
   it("does not send a queued prompt when the sandbox toggle fails", async () => {
     const log = spyOn(console, "error").mockImplementation(() => {})
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
     const sandbox = defer<{ data: unknown }>()
     const started = defer<void>()
     const client = createClient({ sandboxDeferred: sandbox, sandboxStarted: started })
@@ -358,11 +380,14 @@ describe("KiloProvider sandbox toggle", () => {
     expect(sent).toContainEqual(
       expect.objectContaining({ type: "sendMessageFailed", sessionID: "s1", messageID: "message-1" }),
     )
+    expect(notice).not.toHaveBeenCalled()
+    notice.mockRestore()
     log.mockRestore()
   })
 
   it("does not send a queued prompt when the sandbox backend is unavailable", async () => {
     const log = spyOn(console, "error").mockImplementation(() => {})
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
     const sandbox = defer<{ data: unknown }>()
     const started = defer<void>()
     const client = createClient({ sandboxDeferred: sandbox, sandboxStarted: started })
@@ -382,6 +407,8 @@ describe("KiloProvider sandbox toggle", () => {
     expect(sent).toContainEqual(
       expect.objectContaining({ type: "sendMessageFailed", sessionID: "s1", messageID: "message-1" }),
     )
+    expect(notice).not.toHaveBeenCalled()
+    notice.mockRestore()
     log.mockRestore()
   })
 

@@ -1,6 +1,6 @@
 import fs from "node:fs/promises"
 import path from "node:path"
-import { expect } from "bun:test"
+import { expect, test } from "bun:test"
 import { Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -14,11 +14,55 @@ import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const it = testEffect(Layer.mergeAll(Bus.layer, Config.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const linux = process.platform === "linux" ? test : test.skip
 const tool = Network.builtin({ id: "read" })
 
 function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
   return SandboxPolicy.executeTool(sessionID, tool, effect)
 }
+
+linux("reports configured network namespace availability", async () => {
+  const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-sandbox-status-"))
+  const helper = path.join(root, "bwrap-no-network")
+  await fs.writeFile(
+    helper,
+    [
+      "#!/bin/sh",
+      'for arg in "$@"; do',
+      '  if [ "$arg" = "--unshare-net" ]; then echo "network namespaces blocked" >&2; exit 42; fi',
+      "done",
+      "exit 0",
+      "",
+    ].join("\n"),
+  )
+  await fs.chmod(helper, 0o755)
+  const script = [
+    'import { Effect, Layer } from "effect"',
+    'import { Config } from "@/config/config"',
+    'import { InstanceRef } from "@/effect/instance-ref"',
+    'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
+    'import { SessionID } from "@/session/schema"',
+    "const directory = process.cwd()",
+    'const context = { directory, worktree: directory, project: { id: "sandbox-status", worktree: directory, vcs: "git", time: { created: 0, updated: 0 }, sandboxes: [] } }',
+    "const status = (restrict) => SandboxPolicy.status(SessionID.make(`ses_sandbox_status_${restrict}`)).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ experimental: { sandbox: true, sandbox_restrict_network: restrict } }) })), Effect.provideService(InstanceRef, context), Effect.runPromise)",
+    "const deny = await status(true)",
+    "const allow = await status(false)",
+    'if (deny.available || deny.enabled || !deny.reason?.includes("Linux network sandbox")) process.exit(2)',
+    "if (!allow.available || !allow.enabled) process.exit(3)",
+  ].join("\n")
+
+  try {
+    const result = Bun.spawnSync([process.execPath, "-e", script], {
+      cwd: import.meta.dir,
+      env: { ...process.env, KILO_BWRAP_PATH: helper },
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    expect(result.exitCode, result.stderr.toString()).toBe(0)
+  } finally {
+    await fs.rm(root, { recursive: true, force: true })
+  }
+})
 
 it.instance(
   "uses config as the default without persisting session toggles",

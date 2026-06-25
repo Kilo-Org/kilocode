@@ -28,12 +28,28 @@ describe("PromptInput sandbox toggle", () => {
     expect(start).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(start)
     expect(toggle).toContain("const sessionID = sandboxID()")
+    expect(toggle).toContain("if (!sessionID) saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())")
     expect(toggle).toContain('type: "toggleSandbox"')
     expect(toggle).toContain("sessionID,")
     expect(toggle).toContain("draftID: props.pendingSessionID ?? session.draftSessionID()")
     expect(toggle).toContain("requestID,")
     expect(toggle).toContain("setSandboxTarget(sessionID ?? null)")
     expect(toggle).not.toContain('type: "updateConfig"')
+  })
+
+  it("captures edits made while sandbox session creation is pending", () => {
+    const start = src.indexOf('if (message.type === "sessionCreated")')
+    const end = src.indexOf('if (message.type === "action"', start)
+    const created = src.slice(start, end)
+    const save = created.indexOf(
+      "if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())",
+    )
+    const move = created.indexOf("movePromptDraft(")
+
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    expect(save).toBeGreaterThan(-1)
+    expect(move).toBeGreaterThan(save)
   })
 
   it("uses the internal flag for visibility and effective runtime state for the button", () => {
