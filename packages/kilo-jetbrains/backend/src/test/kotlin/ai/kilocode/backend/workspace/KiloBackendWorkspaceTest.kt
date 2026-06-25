@@ -2,11 +2,15 @@ package ai.kilocode.backend.workspace
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.KiloBackendSessionManager
+import ai.kilocode.backend.app.SseEvent
+import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.workspace.KiloBackendWorkspace
 import ai.kilocode.backend.workspace.KiloWorkspaceState
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -31,15 +36,18 @@ class KiloBackendWorkspaceTest {
     private val mock = MockCliServer()
     private val log = TestLog()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val apps = mutableListOf<KiloBackendAppService>()
 
     @AfterTest
     fun tearDown() {
+        apps.forEach { it.dispose() }
+        apps.clear()
         scope.cancel()
         mock.close()
     }
 
     private fun setup(): KiloBackendAppService =
-        KiloBackendAppService.create(scope, FakeCliServer(mock), log)
+        KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
 
     private suspend fun ready(app: KiloBackendAppService): KiloBackendWorkspace {
         app.connect()
@@ -296,11 +304,14 @@ class KiloBackendWorkspaceTest {
 
     @Test
     fun `agents response filters hidden and subagent`() = runBlocking {
+        mock.providers = PROVIDERS_JSON
         mock.agents = """[
             {"name":"code","mode":"primary","permission":[],"options":{}},
             {"name":"helper","mode":"subagent","permission":[],"options":{}},
             {"name":"secret","mode":"primary","hidden":true,"permission":[],"options":{}}
         ]"""
+        mock.commands = COMMANDS_JSON
+        mock.skills = SKILLS_JSON
         val app = setup()
         val ws = ready(app)
 
@@ -382,20 +393,27 @@ class KiloBackendWorkspaceTest {
 
     @Test
     fun `concurrent get for same directory returns same instance`() = runBlocking {
-        val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        val port = mock.start()
+        val http = KiloBackendHttpClients.api(mock.password)
+        val api = DefaultApi(basePath = "http://127.0.0.1:$port", client = http)
+        val events = MutableSharedFlow<SseEvent>()
+        val sessions = KiloBackendSessionManager(scope, log)
+        val manager = KiloBackendWorkspaceManager(scope, sessions, log)
+        manager.start(api, http, port, events)
 
-        // Launch many concurrent get() calls for the same directory
-        val results = (1..10).map {
-            async(Dispatchers.Default) {
-                app.workspaces.get("/same/dir")
-            }
-        }.awaitAll()
+        try {
+            val results = (1..10).map {
+                async(Dispatchers.Default) {
+                    manager.get("/same/dir")
+                }
+            }.awaitAll()
 
-        // All must return the exact same instance
-        val first = results[0]
-        results.forEach { assertTrue(it === first) }
+            val first = results[0]
+            results.forEach { assertTrue(it === first) }
+        } finally {
+            manager.stop()
+            KiloBackendHttpClients.shutdown(http)
+        }
     }
 
     @Test

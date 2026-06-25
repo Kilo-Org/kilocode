@@ -277,6 +277,8 @@ export class CodeIndexOrchestrator {
 
   private async _runScan(mode: IndexingTelemetryMode, trigger: IndexingTelemetryTrigger): Promise<void> {
     if (this._cancelRequested) {
+      if (mode === "incremental") await this.vectorStore.markIndexingComplete()
+      this.stateManager.setSystemState("Standby", "Indexing cancelled.")
       log.info("scan skipped: cancellation was requested", { workspacePath: this.workspacePath, mode })
       return
     }
@@ -319,6 +321,10 @@ export class CodeIndexOrchestrator {
     })
 
     if (this._cancelRequested || this.scanner.isCancelled) {
+      if (mode === "incremental" && result.stats.processed === 0 && batchErrors.length === 0) {
+        await this.vectorStore.markIndexingComplete()
+        log.info("preserved unchanged index after cancelled scan", { workspacePath: this.workspacePath })
+      }
       this._isProcessing = false
       if (this.stateManager.state !== "Error") {
         this.stateManager.setSystemState("Standby", "Indexing cancelled.")

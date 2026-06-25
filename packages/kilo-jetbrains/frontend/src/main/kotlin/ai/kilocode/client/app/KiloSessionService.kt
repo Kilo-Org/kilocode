@@ -171,6 +171,12 @@ class KiloSessionService internal constructor(
         LOG.info("${ChatLogSummary.sid(id)} kind=prompt ok=true")
     }
 
+    suspend fun command(id: String, dir: String, command: String, args: String, dto: PromptDto) {
+        LOG.info("${ChatLogSummary.sid(id)} kind=command command=$command parts=${dto.parts.size}")
+        call { command(id, dir, command, args, dto) }
+        LOG.info("${ChatLogSummary.sid(id)} kind=command ok=true")
+    }
+
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, dir: String) {
         call { abort(id, dir) }

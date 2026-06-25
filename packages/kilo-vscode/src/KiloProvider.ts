@@ -151,6 +151,11 @@ import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { stopSessionProcesses } from "./kilo-provider/background-process"
+import {
+  buildIndexingSettingsMessage,
+  validIndexingSetting,
+  watchIndexingConfig,
+} from "./kilo-provider/indexing-settings"
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 type ContextMessage = { contextDirectory?: unknown }
@@ -289,6 +294,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Remembers the last selected session so /new can stay in the same worktree after clearSession. */
   private contextSessionID: string | undefined
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
+  private connectionGeneration = 0
   private loginAttempt = 0
   private isWebviewReady = false
   private readonly extensionVersion =
@@ -305,6 +311,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
   private providersGeneration = 0
+  private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
   private cachedSkillsMessage: unknown = null
@@ -332,6 +339,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
   private readonly checkpoints = new Map<string, Promise<void>>()
+  private readonly sessionCreations = new Map<string, Promise<{ sid: string; dir: string }>>()
+  private readonly sandboxTransitions = new Map<string, Promise<void>>()
   private readonly revisions = new Map<string, { id: string; seq: number }>()
   private readonly refreshes = new Map<string, number>()
   private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
@@ -360,6 +369,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
   private autocompleteConfigDisposable: vscode.Disposable | null = null
+  private indexingConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -707,11 +717,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public setSessionDirectory(sessionId: string, directory: string): void {
     this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), this.getWorkspaceDirectory(sessionId))
     this.sessionDirectories.set(sessionId, directory)
+    if (this.connectionState === "connected") void this.fetchAndSendSandboxStatus(sessionId)
   }
 
   public clearSessionDirectory(sessionId: string): void {
     this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), this.getWorkspaceDirectory(sessionId))
     this.sessionDirectories.delete(sessionId)
+    if (this.connectionState === "connected") void this.fetchAndSendSandboxStatus(sessionId)
   }
 
   /** Exposes the session→directory map so callers outside the webview can resolve worktree paths. */
@@ -797,6 +809,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
+    this.indexingConfigDisposable?.dispose()
+    this.indexingConfigDisposable = watchIndexingConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -1070,6 +1084,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.pendingFollowup = null
           await handleQuestionReject(this.questionCtx, message.requestID, message.sessionID)
           break
+        case "requestSandboxStatus":
+          await this.fetchAndSendSandboxStatus(message.sessionID)
+          break
+        case "toggleSandbox":
+          await this.handleToggleSandbox(message)
+          break
         case "requestConfig":
           this.fetchAndSendConfig().catch((e) => console.error("[Kilo New] fetchAndSendConfig failed:", e))
           break
@@ -1080,6 +1100,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.fetchAndSendIndexingStatus().catch((e) =>
             console.error("[Kilo New] fetchAndSendIndexingStatus failed:", e),
           )
+          break
+        case "requestIndexingSettings":
+          this.postMessage(buildIndexingSettingsMessage())
           break
         case "requestKiloEmbeddingModels":
           this.fetchAndSendKiloEmbeddingModels().catch((e) =>
@@ -1327,6 +1350,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     console.log("[Kilo New] KiloProvider: 🔧 Starting initializeConnection...")
 
     this.connectionState = "connecting"
+    this.connectionGeneration++
     this.postMessage({ type: "connectionState", state: "connecting" })
 
     // Clean up any existing subscriptions (e.g., sidebar re-shown)
@@ -1379,6 +1403,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Subscribe to connection state changes
       this.unsubscribeState = this.connectionService.onStateChange(async (state, error) => {
+        if (this.connectionState !== state) this.connectionGeneration++
         this.connectionState = state
         this.postConnectionState(error)
 
@@ -2445,6 +2470,143 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(getWorkStylePayload())
   }
 
+  private postSandboxError(sessionID: string, error: unknown, revision: number, requestID?: string): void {
+    this.postMessage({
+      type: "sandboxStatusError",
+      sessionID,
+      directory: this.getWorkspaceDirectory(sessionID),
+      message: getErrorMessage(error) || "Failed to update sandbox",
+      requestID,
+      revision,
+    })
+  }
+
+  private async fetchAndSendSandboxStatus(sessionID: string, requestID?: string): Promise<void> {
+    const revision = ++this.sandboxRevision
+    const generation = this.connectionGeneration
+    const client = this.client
+    const sandbox = client?.sandbox
+    if (!sandbox?.status) return
+    if (this.connectionState !== "connected") {
+      this.postSandboxError(sessionID, "Not connected to CLI backend", revision, requestID)
+      return
+    }
+    try {
+      const directory = this.getWorkspaceDirectory(sessionID)
+      const { data } = await sandbox.status({ sessionID, directory }, { throwOnError: true })
+      if (this.connectionState !== "connected" || this.connectionGeneration !== generation || this.client !== client)
+        return
+      if (!sameDirectory(data.directory, this.getWorkspaceDirectory(sessionID))) {
+        if (requestID) void this.fetchAndSendSandboxStatus(sessionID, requestID)
+        return
+      }
+      this.postMessage({ type: "sandboxStatus", sessionID, revision, ...data, requestID })
+    } catch (error) {
+      if (this.connectionState !== "connected" || this.connectionGeneration !== generation || this.client !== client)
+        return
+      this.postSandboxError(sessionID, error, revision, requestID)
+    }
+  }
+
+  private sandboxKey(input: {
+    sessionID?: string
+    draftID?: string
+    agentManagerContext?: string
+    contextDirectory?: string
+  }): string {
+    if (input.sessionID) return `session:${input.sessionID}`
+    if (input.draftID) return `draft:${input.draftID}`
+    return `context:${input.agentManagerContext ?? ""}:${input.contextDirectory ?? this.getRootDirectory()}`
+  }
+
+  private handleToggleSandbox(input: {
+    sessionID?: string
+    draftID?: string
+    requestID: string
+    agentManagerContext?: string
+    contextDirectory?: string
+  }): Promise<void> {
+    const key = this.sandboxKey(input)
+    const pending = this.sandboxTransitions.get(key)
+    if (pending) return pending.catch(() => undefined)
+    const operation = this.runToggleSandbox(input, key)
+    this.sandboxTransitions.set(key, operation)
+    return operation
+      .catch(() => undefined)
+      .finally(() => {
+        for (const [id, active] of this.sandboxTransitions) {
+          if (active === operation) this.sandboxTransitions.delete(id)
+        }
+      })
+  }
+
+  private async runToggleSandbox(
+    input: {
+      sessionID?: string
+      draftID?: string
+      requestID: string
+      agentManagerContext?: string
+      contextDirectory?: string
+    },
+    key: string,
+  ): Promise<void> {
+    const revision = ++this.sandboxRevision
+    const generation = this.connectionGeneration
+    const client = this.client
+    const sandbox = client?.sandbox
+    if (!sandbox?.toggle || this.connectionState !== "connected") {
+      const error = new Error("Not connected to CLI backend")
+      this.postSandboxError(input.sessionID ?? "", error, revision, input.requestID)
+      throw error
+    }
+    const resolved = await this.resolveSession(
+      input.sessionID,
+      input.draftID,
+      input.agentManagerContext,
+      input.contextDirectory,
+    ).catch((error) => {
+      this.postSandboxError(input.sessionID ?? "", error, revision, input.requestID)
+      throw error
+    })
+    if (!resolved) {
+      const error = new Error("Failed to resolve sandbox session")
+      this.postSandboxError(input.sessionID ?? "", error, revision, input.requestID)
+      throw error
+    }
+    const operation = this.sandboxTransitions.get(key)
+    if (operation) this.sandboxTransitions.set(`session:${resolved.sid}`, operation)
+    if (this.connectionGeneration !== generation || this.client !== client) {
+      throw new Error("Sandbox connection changed")
+    }
+    try {
+      const { data } = await sandbox.toggle(
+        { sessionID: resolved.sid, directory: resolved.dir },
+        { throwOnError: true },
+      )
+      if (this.connectionState !== "connected" || this.connectionGeneration !== generation || this.client !== client) {
+        throw new Error("Sandbox connection changed")
+      }
+      if (!data.available) throw new Error(data.reason ?? "Sandbox backend is unavailable")
+      if (!sameDirectory(data.directory, this.getWorkspaceDirectory(resolved.sid))) {
+        throw new Error("Session directory changed during sandbox toggle")
+      }
+      this.postMessage({
+        type: "sandboxStatus",
+        sessionID: resolved.sid,
+        revision,
+        ...data,
+        requestID: input.requestID,
+      })
+      vscode.window.showInformationMessage(data.enabled ? "Sandbox enabled" : "Sandbox disabled")
+    } catch (error) {
+      if (this.connectionState === "connected" && this.connectionGeneration === generation && this.client === client) {
+        this.postSandboxError(resolved.sid, error, revision, input.requestID)
+        void this.fetchAndSendSandboxStatus(resolved.sid)
+      }
+      throw error
+    }
+  }
+
   private async handleUpdateConfig(
     partial: Partial<Config>,
     project: Partial<Config> = {},
@@ -2559,21 +2721,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
 
     if (!sessionID && !this.currentSession) {
-      const { data: session } = await this.client.session.create(
-        { directory: dir, platform: this.opts.platform },
-        { throwOnError: true },
-      )
-      this.stopCurrentSessionProcesses(session.id)
-      this.setCurrentSession(session)
-      this.contextSessionID = session.id
-      this.focusSession(session.id)
-      this.trackDirectory(session.id, dir)
-      this.trackedSessionIds.add(session.id)
-      this.postMessage({
-        type: "sessionCreated",
-        session: this.sessionToWebview(session),
-        draftID,
-      })
+      const key = `${draftID ?? context ?? "new"}\0${dir}`
+      const pending = this.sessionCreations.get(key)
+      if (pending) return pending
+      const creation = (async () => {
+        const { data: session } = await this.client!.session.create(
+          { directory: dir, platform: this.opts.platform },
+          { throwOnError: true },
+        )
+        this.stopCurrentSessionProcesses(session.id)
+        this.setCurrentSession(session)
+        this.contextSessionID = session.id
+        this.focusSession(session.id)
+        this.trackDirectory(session.id, dir)
+        this.trackedSessionIds.add(session.id)
+        this.postMessage({
+          type: "sessionCreated",
+          session: this.sessionToWebview(session),
+          draftID,
+        })
+        return { sid: session.id, dir }
+      })().finally(() => this.sessionCreations.delete(key))
+      this.sessionCreations.set(key, creation)
+      return creation
     }
 
     const sid = sessionID || this.currentSession?.id
@@ -2687,7 +2857,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     let resolved: { sid: string; dir: string } | undefined
     try {
+      const sandbox = this.sandboxTransitions.get(
+        this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
+      )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      if (sandbox) await sandbox
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -2768,7 +2942,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     let resolved: { sid: string; dir: string } | undefined
     try {
+      const sandbox = this.sandboxTransitions.get(
+        this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
+      )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      if (sandbox) await sandbox
 
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
@@ -2999,6 +3177,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
     const { section, leaf } = buildSettingPath(key)
     if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
+    if (section === "indexing" && !validIndexingSetting(leaf, value)) return
     const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
     // Normalize a webview-side clear to `undefined` so VS Code removes the
     // key from settings.json rather than persisting a literal `null`. This
@@ -3045,6 +3224,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Re-send all settings to the webview so the UI reflects the reset
     this.postMessage(buildAutocompleteSettingsMessage())
+    this.postMessage(buildIndexingSettingsMessage())
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
@@ -3329,6 +3509,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return
     }
     const next = msg.type === "messageCreated" ? { ...msg, message: this.slimInfo(msg.message) } : msg
+    if (next.type === "sandboxStatus") {
+      if (!sameDirectory(next.directory, this.getWorkspaceDirectory(next.sessionID))) return
+      this.postMessage({ ...next, revision: ++this.sandboxRevision })
+      return
+    }
     if (next.type === "indexingStatusLoaded") {
       this.cachedIndexingStatusMessage = next
     }
@@ -3660,6 +3845,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
+    this.indexingConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()

@@ -287,6 +287,26 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
+  "prompt.action.sandbox.enable": "Ativar sandbox",
+  "prompt.action.sandbox.disable": "Desativar sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox ativado. Os comandos shell do agente estão limitados aos diretórios do projeto e do Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox desativado. Clique para limitar as escritas dos comandos shell do agente aos diretórios do projeto e do Kilo.",
+  "prompt.action.sandbox.status.enabled": "Sandbox ativado",
+  "prompt.action.sandbox.status.disabled": "Sandbox desativado",
+  "prompt.action.sandbox.filesystem": "Sistema de arquivos",
+  "prompt.action.sandbox.network": "Rede",
+  "prompt.action.sandbox.filesystem.restricted": "Restrito",
+  "prompt.action.sandbox.network.blocked": "Bloqueada",
+  "prompt.action.sandbox.network.allowed": "Permitida",
+  "prompt.action.sandbox.unrestricted": "Sem restrições",
+  "prompt.action.sandbox.description.enabled":
+    "As operações de escrita são limitadas aos diretórios do projeto e do Kilo.",
+  "prompt.action.sandbox.description.disabled":
+    "Clique para restringir as operações de escrita no sistema de arquivos e o acesso à rede.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Clique para restringir as operações de escrita no sistema de arquivos. O acesso à rede continua permitido pelas configurações do sandbox.",
 
   "speechToText.tooltip.start": "Iniciar entrada de voz com o Kilo Gateway",
   "speechToText.tooltip.stop": "Parar captura",
@@ -1130,6 +1150,9 @@ export const dict = {
   "settings.indexing.title": "Indexação",
   "settings.indexing.enable.title": "Ativar indexação",
   "settings.indexing.enable.description": "Ativar ou desativar a indexação semântica da base de código.",
+  "settings.indexing.showButton.title": "Exibir o botão quando a indexação estiver desativada",
+  "settings.indexing.showButton.description":
+    "Exiba o botão de indexação abaixo do campo de entrada enquanto a indexação estiver desativada. Se o botão estiver oculto, abra Configurações > Indexação para ativar a indexação.",
   "settings.indexing.globalEnable.title": "Habilitar globalmente",
   "settings.indexing.globalEnable.description": "Habilitar indexação para todos os workspaces.",
   "settings.indexing.projectEnable.title": "Habilitar para este projeto",
@@ -1327,6 +1350,10 @@ export const dict = {
     "Escolha o modelo de transcrição do Kilo Gateway para entrada de voz.",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
+  "settings.sandboxing.title": "Isolamento em sandbox",
+  "settings.sandboxing.network.title": "Restringir acesso à rede",
+  "settings.sandboxing.network.description":
+    "Bloqueie o acesso de saída à rede para comandos originados pelo modelo e ferramentas HTTP. Servidores MCP locais e hooks de plugins são executados fora dessa restrição. O tráfego de inferência de provedores e modelos permanece disponível.",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1463,6 +1490,9 @@ export const dict = {
     "Nenhum comando personalizado configurado. Adicione comandos ao opencode.json para vê-los aqui.",
   "settings.agentBehaviour.workflows.detail.description": "Descrição",
   "settings.agentBehaviour.workflows.detail.template": "Modelo",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Executar os comandos shell do agente dentro de um sandbox a nível de sistema operacional que restringe escritas aos diretórios de estado do projeto e do Kilo",
 
   "settings.autoApprove.description":
     "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. doom_loop e external_directory têm o padrão Perguntar.",

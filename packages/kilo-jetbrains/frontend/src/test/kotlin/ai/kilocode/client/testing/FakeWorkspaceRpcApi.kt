@@ -2,6 +2,7 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
@@ -27,6 +28,10 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var models = ModelsWorkspaceDto()
     var modelsGate: CompletableDeferred<Unit>? = null
     var fileMatches = emptyList<WorkspaceFileDto>()
+    var fileResolver: ((String) -> List<WorkspaceFileDto>)? = null
+    var searchResult = FileSearchResultDto()
+    var search: ((String) -> FileSearchResultDto)? = null
+    var gitChanges: String? = null
     var openResult = true
     var localConfigPath = "/test/.kilo/kilo.jsonc"
     var globalConfigPath = "/config/kilo.jsonc"
@@ -35,6 +40,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var localConfigExists = true
     var globalConfigExists = true
     val fileCalls = mutableListOf<Pair<String, String>>()
+    val searchQueries = mutableListOf<String>()
     val opened = mutableListOf<String>()
     val localConfigs = mutableListOf<String>()
     var globalConfigs = 0
@@ -67,7 +73,18 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {
         assertNotEdt("files")
         fileCalls.add(directory to path)
-        return fileMatches
+        return fileResolver?.invoke(path) ?: fileMatches
+    }
+
+    override suspend fun searchFiles(directory: String, query: String, limit: Int): FileSearchResultDto {
+        assertNotEdt("searchFiles")
+        searchQueries.add(query)
+        return search?.invoke(query) ?: searchResult
+    }
+
+    override suspend fun gitChanges(directory: String): String? {
+        assertNotEdt("gitChanges")
+        return gitChanges
     }
 
     override suspend fun openFile(path: String): Boolean {

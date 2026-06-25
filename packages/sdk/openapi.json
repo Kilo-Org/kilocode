@@ -15179,6 +15179,192 @@
         ]
       }
     },
+    "/session/{sessionID}/sandbox": {
+      "get": {
+        "tags": ["sandbox"],
+        "operationId": "sandbox.status",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session sandbox status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "directory": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["directory", "enabled", "available", "version"],
+                  "additionalProperties": false,
+                  "description": "Session sandbox status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get the effective sandbox state for one session.",
+        "summary": "Get session sandbox status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sandbox.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/session/{sessionID}/sandbox/toggle": {
+      "post": {
+        "tags": ["sandbox"],
+        "operationId": "sandbox.toggle",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated session sandbox status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "directory": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["directory", "enabled", "available", "version"],
+                  "additionalProperties": false,
+                  "description": "Updated session sandbox status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Toggle the ephemeral sandbox override for one session.",
+        "summary": "Toggle session sandbox",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sandbox.toggle({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/session-import/project": {
       "post": {
         "tags": ["session-import"],
@@ -16487,6 +16673,9 @@
           },
           {
             "$ref": "#/components/schemas/Event.tui.session.select"
+          },
+          {
+            "$ref": "#/components/schemas/EventSandboxStatusChanged"
           },
           {
             "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
@@ -18728,6 +18917,19 @@
           "snapshot": {
             "type": "string"
           },
+          "model": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "modelID": {
+                "type": "string"
+              }
+            },
+            "required": ["providerID", "modelID"],
+            "additionalProperties": false
+          },
           "cost": {
             "type": "number"
           },
@@ -19257,6 +19459,9 @@
               },
               {
                 "$ref": "#/components/schemas/Event.tui.session.select"
+              },
+              {
+                "$ref": "#/components/schemas/EventSandboxStatusChanged"
               },
               {
                 "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
@@ -21013,6 +21218,14 @@
               },
               "continue_loop_on_deny": {
                 "type": "boolean"
+              },
+              "sandbox": {
+                "type": "boolean",
+                "description": "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access"
+              },
+              "sandbox_restrict_network": {
+                "type": "boolean",
+                "description": "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)"
               },
               "mcp_timeout": {
                 "type": "integer",
@@ -25580,6 +25793,46 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventSandboxStatusChanged": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sandbox.status.changed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "directory": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "available": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["sessionID", "directory", "enabled", "available", "version"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventKilocodeAgent_managerStart": {
         "type": "object",
         "properties": {
@@ -30122,6 +30375,10 @@
     {
       "name": "remote",
       "description": "Kilo remote connection routes."
+    },
+    {
+      "name": "sandbox",
+      "description": "Kilo session sandbox routes."
     },
     {
       "name": "session-import",

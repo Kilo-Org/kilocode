@@ -93,6 +93,10 @@ class MockCliServer : AutoCloseable {
     @Volatile var summarizeStatus = 200
     @Volatile var lastSummarizePath: String? = null
     @Volatile var lastSummarizeBody: String? = null
+    @Volatile var promptStatus = 200
+    @Volatile var promptResponse = "true"
+    @Volatile var lastPromptPath: String? = null
+    @Volatile var lastPromptBody: String? = null
     @Volatile var enhanced = """{"text":"Enhanced prompt"}"""
     @Volatile var enhanceStatus = 200
     @Volatile var lastEnhancePath: String? = null
@@ -342,11 +346,11 @@ class MockCliServer : AutoCloseable {
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
-                bare.matches(Regex("/session/ses_.+")) && !bare.contains("/summarize") && method == "GET" ->
+                bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->
                     respond(output, sessionGetStatus, sessionCreate)
-                bare.matches(Regex("/session/ses_.+")) && !bare.contains("/summarize") && method == "DELETE" ->
+                bare.matches(Regex("/session/ses_[^/]+")) && method == "DELETE" ->
                     respond(output, sessionDeleteStatus, "true")
-                bare.matches(Regex("/session/ses_.+")) && !bare.contains("/summarize") && method == "PATCH" -> {
+                bare.matches(Regex("/session/ses_[^/]+")) && method == "PATCH" -> {
                     lastSessionRenamePath = path
                     lastSessionRenameBody = body
                     lastSessionRenameMethod = method
@@ -356,6 +360,11 @@ class MockCliServer : AutoCloseable {
                     lastSummarizePath = path
                     lastSummarizeBody = body
                     respond(output, summarizeStatus, summarizeResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/prompt_async")) && method == "POST" -> {
+                    lastPromptPath = path
+                    lastPromptBody = body
+                    respond(output, promptStatus, promptResponse)
                 }
                 bare == "/enhance-prompt" && method == "POST" -> {
                     lastEnhancePath = path

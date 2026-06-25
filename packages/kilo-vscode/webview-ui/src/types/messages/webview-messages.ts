@@ -430,6 +430,10 @@ export interface RequestIndexingStatusMessage {
   type: "requestIndexingStatus"
 }
 
+export interface RequestIndexingSettingsMessage {
+  type: "requestIndexingSettings"
+}
+
 export interface RequestKiloEmbeddingModelsMessage {
   type: "requestKiloEmbeddingModels"
 }
@@ -920,6 +924,20 @@ export interface ToggleAutoApproveMessage {
   type: "toggleAutoApprove"
 }
 
+export interface RequestSandboxStatusMessage {
+  type: "requestSandboxStatus"
+  sessionID: string
+}
+
+export interface ToggleSandboxMessage {
+  type: "toggleSandbox"
+  sessionID?: string
+  draftID?: string
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
 }
@@ -1164,6 +1182,7 @@ export type WebviewMessage =
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage
+  | RequestIndexingSettingsMessage
   | RequestKiloEmbeddingModelsMessage
   | UpdateConfigMessage
   | OpenSettingsTabRequest
@@ -1252,6 +1271,8 @@ export type WebviewMessage =
   | AgentManagerOpenSessionsMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
+  | RequestSandboxStatusMessage
+  | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage

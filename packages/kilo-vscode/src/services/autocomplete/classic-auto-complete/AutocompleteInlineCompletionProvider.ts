@@ -131,8 +131,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private debouncedPendingRequest: PendingRequest | null = null
   private isFirstCall: boolean = true
   public readonly ignoreController: Promise<FileIgnoreController>
-  /** Abort controller for the current in-flight FIM request */
-  private fimAbortController: AbortController | null = null
+  /** Abort controllers for in-flight FIM requests, scoped by file/notebook context. */
+  private fimAbortControllers = new Map<string, AbortController>()
   private acceptedCommand: vscode.Disposable | null = null
   private contextService: ContextRetrievalService | null = null
   private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
@@ -323,8 +323,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
     this.settleDebouncedPendingRequest()
     this.pendingRequests.length = 0
-    this.fimAbortController?.abort()
-    this.fimAbortController = null
+    for (const controller of this.fimAbortControllers.values()) {
+      controller.abort()
+    }
+    this.fimAbortControllers.clear()
     this.telemetry?.dispose()
     this.contextService?.dispose()
     this.contextService = null
@@ -580,10 +582,16 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     suffix: string,
     languageId: string,
   ): Promise<void> {
-    // Abort any previous in-flight FIM request before starting a new one
-    this.fimAbortController?.abort()
+    // Defense-in-depth: credentials may become invalid between the provider gate and the actual
+    // debounced execution. In that case, do not attempt an LLM call at all.
+    if (!hasValidCredentials(this.connectionService)) {
+      return
+    }
+
+    // Abort only the request superseded within this file/notebook scope.
+    this.fimAbortControllers.get(scope)?.abort()
     const controller = new AbortController()
-    this.fimAbortController = controller
+    this.fimAbortControllers.set(scope, controller)
 
     const startTime = performance.now()
 
@@ -592,12 +600,6 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       languageId,
       modelId: this.contextProvider.modelId,
       provider: getAutocompleteModelById(this.contextProvider.modelId).provider,
-    }
-
-    // Defense-in-depth: credentials may become invalid between the provider gate and the actual
-    // debounced execution. In that case, do not attempt an LLM call at all.
-    if (!hasValidCredentials(this.connectionService)) {
-      return
     }
 
     try {
@@ -656,6 +658,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       if (kind === "fatal" && !this.fatalNotified) {
         this.fatalNotified = true
         this.onFatalError?.(this.backoff.getFatalStatus())
+      }
+    } finally {
+      if (this.fimAbortControllers.get(scope) === controller) {
+        this.fimAbortControllers.delete(scope)
       }
     }
   }

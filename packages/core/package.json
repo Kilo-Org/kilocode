@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.52",
+  "version": "7.3.54",
   "name": "@opencode-ai/core",
   "type": "module",
   "license": "MIT",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@kilocode/kilo-gateway": "workspace:*",
+    "@kilocode/sandbox": "workspace:*",
     "@effect/opentelemetry": "catalog:",
     "@effect/platform-node": "catalog:",
     "@npmcli/arborist": "9.4.0",

@@ -873,7 +873,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
       )
 
       // kilocode_change start - service-local state and cache avoid leaking across Snapshot layer instances
-      const trackState = KiloSnapshotTrack.makeState()
+      const trackState = KiloSnapshotTrack.makeStates()
       const cache = new Map<string, Promise<FileDiff[]>>()
       const max = 100
       // kilocode_change end
@@ -885,20 +885,34 @@ export const layer: Layer.Layer<Service, never, Requirements> =
         cleanup: Effect.fn("Snapshot.cleanup")(function* () {
           return yield* InstanceState.useEffect(state, (s) => s.cleanup())
         }),
-        // kilocode_change start - guard slow snapshots and surface progress to the active session
+        // kilocode_change start - isolate turn-facing snapshot work from poisoned locks
         track: Effect.fn("Snapshot.track")(function* (opts) {
-          return yield* KiloSnapshotTrack.wrap({
-            inner: InstanceState.useEffect(state, (s) => s.track(opts)),
-            state: trackState,
-            snapshotInitialization: opts?.snapshotInitialization,
-            sessionID: opts?.sessionID,
-            messageID: opts?.messageID,
+          const ctx = yield* InstanceState.context
+          const guard = trackState(ctx.worktree)
+          return yield* KiloSnapshotTrack.protect({
+            inner: KiloSnapshotTrack.wrap({
+              inner: InstanceState.useEffect(state, (s) => s.track(opts)),
+              state: guard,
+              snapshotInitialization: opts?.snapshotInitialization,
+              sessionID: opts?.sessionID,
+              messageID: opts?.messageID,
+            }),
+            state: guard,
+            fallback: undefined,
+            operation: "track",
+          })
+        }),
+        patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
+          const ctx = yield* InstanceState.context
+          const guard = trackState(ctx.worktree)
+          return yield* KiloSnapshotTrack.protect({
+            inner: InstanceState.useEffect(state, (s) => s.patch(hash)),
+            state: guard,
+            fallback: { hash, files: [] },
+            operation: "patch",
           })
         }),
         // kilocode_change end
-        patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
-          return yield* InstanceState.useEffect(state, (s) => s.patch(hash))
-        }),
         restore: Effect.fn("Snapshot.restore")(function* (snapshot: string) {
           return yield* InstanceState.useEffect(state, (s) => s.restore(snapshot))
         }),

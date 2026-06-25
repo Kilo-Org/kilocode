@@ -110,6 +110,12 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
         chat.prompt(id, directory, prompt)
     }
 
+    override suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto) {
+        app.requireReady()
+        LOG.info("command RPC: session=$id, dir=$directory, command=$command, parts=${prompt.parts.size}")
+        chat.command(id, directory, command, arguments, prompt)
+    }
+
     override suspend fun abort(id: String, directory: String) =
         ready { chat.abort(id, directory) }
 

@@ -312,7 +312,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
 
 function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv) {
   if (process.platform === "win32" && Shell.ps(shell)) {
-    // kilocode_change start - encoded PowerShell args
+    // kilocode_change start - PowerShell args
     return ChildProcess.make(shell, Shell.args(shell, command, cwd), {
       // kilocode_change end
       cwd,

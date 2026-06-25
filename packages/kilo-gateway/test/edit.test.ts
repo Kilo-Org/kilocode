@@ -29,7 +29,14 @@ describe("Edit target resolution", () => {
       model: "mistralai/codestral-2508",
       url: "",
     })
-    expect(resolveEditTarget()).toMatchObject({ provider: "kilo", url: "" })
+  })
+
+  test("routes the default model to the gateway proxy", () => {
+    expect(resolveEditTarget()).toEqual({
+      provider: "kilo",
+      model: "inception/mercury-edit-2",
+      url: "https://api.kilo.ai/api/edit/completions",
+    })
   })
 })
 
