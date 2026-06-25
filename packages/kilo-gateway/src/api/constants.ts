@@ -3,14 +3,26 @@
  * Centralized configuration for all API endpoints, headers, and settings
  */
 
-/** Environment variable for custom Kilo API URL */
-export const ENV_KILO_API_URL = "KILO_API_URL"
+/** Environment variable for the Relay gateway URL. */
+export const ENV_KILO_API_URL = "RELAY_GATEWAY_URL"
 
-/** Default Kilo API URL */
-export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
+/**
+ * Default Relay gateway URL.
+ *
+ * Relay never talks to api.kilo.ai. The gateway is either:
+ *   - the user's local Docker container (default localhost:4000)
+ *   - the Relay Cloud deployment (set RELAY_GATEWAY_URL=https://gateway.relay.dev)
+ *   - the customer's self-hosted gateway in their VPC
+ *
+ * Legacy KILO_API_URL is honored as a fallback so the transition doesn't
+ * surprise users who already had it set; can be removed once docs/configs
+ * are updated.
+ */
+export const DEFAULT_KILO_API_URL = "http://localhost:4000"
 
-/** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
-export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
+/** Base URL for the Relay gateway. */
+export const KILO_API_BASE =
+  process.env[ENV_KILO_API_URL] || process.env.KILO_API_URL || DEFAULT_KILO_API_URL
 
 /** Environment variable for custom Kilo Chat URL */
 export const KILO_CHAT_URL_ENV = "KILO_CHAT_URL"
@@ -30,8 +42,14 @@ export const KILO_DEFAULT_EVENT_SERVICE_URL = "wss://events.kiloapps.io"
 /** Base URL for Event Service - can be overridden by EVENT_SERVICE_URL env var */
 export const KILO_EVENT_SERVICE_URL = process.env[KILO_EVENT_SERVICE_URL_ENV] || KILO_DEFAULT_EVENT_SERVICE_URL
 
-/** Default base URL for OpenRouter-compatible endpoint */
-export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
+/**
+ * Default base URL for the gateway's OpenAI-compatible endpoint.
+ *
+ * LiteLLM exposes `/v1/chat/completions`, `/v1/embeddings`, `/v1/models`,
+ * etc. Just `${gateway}/v1`. The constant keeps its legacy name so we
+ * don't churn 20 importers; the value it returns is what's accurate.
+ */
+export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/v1`
 
 /** Device auth polling interval in milliseconds */
 export const POLL_INTERVAL_MS = 3000
