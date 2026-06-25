@@ -9,7 +9,8 @@
  * explicitly review and accept it. This check makes that decision explicit:
  * the list of allowed workflows is hardcoded below, and any drift (added or
  * removed file in `.github/workflows/`) fails CI until the list is updated
- * deliberately.
+ * deliberately. It also protects workflow constraints that must survive
+ * upstream merges, such as keeping resource-intensive gates Linux-only.
  *
  * Only runnable workflows are checked (`.yml` / `.yaml`). Files under
  * `.github/workflows/disabled/` are Kilo-specific and can't run, so they're
@@ -19,7 +20,7 @@
  * To drop one: remove its filename from the list.
  */
 
-import { readdirSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "..")
@@ -64,6 +65,16 @@ const actualActive = new Set(readdirSync(DIR).filter(isWorkflow))
 const missing = [...active].filter((f) => !actualActive.has(f)).sort()
 const extra = [...actualActive].filter((f) => !active.has(f)).sort()
 const errs: string[] = []
+
+const test = readFileSync(path.join(DIR, "test.yml"), "utf8")
+const lines = test.split("\n")
+const start = lines.findIndex((line) => line.trim() === "- name: Run HttpApi exerciser gates")
+const end = lines.findIndex((line, i) => i > start && line.trimStart().startsWith("- name:"))
+const step = start === -1 ? [] : lines.slice(start, end === -1 ? undefined : end)
+if (!step.some((line) => line.trim() === "if: runner.os == 'Linux'")) {
+  errs.push("HttpApi exerciser must remain Linux-only in test.yml")
+}
+
 for (const f of extra) {
   errs.push(`unexpected workflow: ${f} — if this was added intentionally, add it to script/check-workflows.ts`)
 }
