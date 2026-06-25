@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { createServer } from "node:net"
 import os from "node:os"
 import path from "node:path"
 import { Effect, PlatformError, Result } from "effect"
@@ -35,6 +36,7 @@ const launch: Launch = {
 }
 
 const linux = process.platform === "linux" ? test : test.skip
+const darwin = process.platform === "darwin" ? test : test.skip
 
 describe("sandbox launch preparation", () => {
   test("generates a globally overriding overlapping deny policy with parameterized paths", () => {
@@ -106,9 +108,11 @@ describe("sandbox launch preparation", () => {
     }
   })
 
-  test("masks normalized Unix sockets after writable roots", () => {
+  test("masks normalized Unix sockets after writable roots", async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-socket-"))
     const socket = path.join(root, "authority.sock")
+    const mask = path.join(path.dirname(root), `mask-${path.basename(root)}`)
+    const server = createServer()
     const profile: Profile = {
       ...makeProfile("allow"),
       filesystem: { allowWrite: [{ path: root, kind: "subtree" }], denyWrite: [], denyNames: [] },
@@ -117,14 +121,49 @@ describe("sandbox launch preparation", () => {
         policy: { paths: [{ path: socket, kind: "literal" }], deny: ["SSH_AUTH_SOCK"], coverage: ["ssh"] },
       },
     }
+    writeFileSync(mask, "", { mode: 0 })
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject)
+      server.listen(socket, () => {
+        server.off("error", reject)
+        resolve()
+      })
+    })
 
     try {
-      writeFileSync(socket, "not a socket")
-      const plain = generateBubblewrap(profile, { ...launch, cwd: root }, "/opt/kilo/bwrap")
-      expect(plain.args).not.toContain("/dev/null")
+      const result = generateBubblewrap(profile, { ...launch, cwd: root }, "/opt/kilo/bwrap", [], mask)
+      const writable = result.args.indexOf("--bind")
+      const blocked = result.args.findIndex((arg, index) => arg === "--ro-bind" && result.args[index + 1] === mask)
+      expect(blocked).toBeGreaterThan(writable)
+      expect(result.args.slice(blocked, blocked + 3)).toEqual(["--ro-bind", mask, socket])
     } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()))
+      rmSync(mask, { force: true })
       rmSync(root, { recursive: true, force: true })
     }
+  })
+
+  darwin("preserves Unix endpoint variables when masking is unsupported", async () => {
+    const profile: Profile = {
+      ...makeProfile("allow"),
+      socket: {
+        ipc: "deny",
+        policy: { paths: [], deny: ["DOCKER_HOST"], coverage: ["docker"] },
+      },
+    }
+    const result = await Effect.runPromise(
+      Effect.scoped(
+        run(
+          profile,
+          confine(profile, {
+            ...launch,
+            environment: { ...launch.environment, DOCKER_HOST: "unix:///tmp/docker.sock" },
+          }),
+        ),
+      ),
+    )
+    expect(result.environment?.DOCKER_HOST).toBe("unix:///tmp/docker.sock")
+    expect(backendSupport(profile).capabilities.unixSockets).toBe(false)
   })
 
   linux("scrubs environment advertised by the normalized socket policy", async () => {
@@ -132,7 +171,7 @@ describe("sandbox launch preparation", () => {
       ...makeProfile("allow"),
       socket: {
         ipc: "deny",
-        policy: { paths: [], deny: ["SSH_AUTH_SOCK", "DOCKER_HOST"], coverage: ["ssh", "docker"] },
+        policy: { paths: [], deny: ["SSH_AUTH_SOCK", "DOCKER_HOST", "CUSTOM_SOCKET"], coverage: ["ssh", "docker"] },
       },
     }
     const result = await Effect.runPromise(
@@ -141,13 +180,19 @@ describe("sandbox launch preparation", () => {
           profile,
           prepare({
             ...launch,
-            environment: { ...launch.environment, SSH_AUTH_SOCK: "/tmp/agent.sock", DOCKER_HOST: "unix:///tmp/docker.sock" },
+            environment: {
+              ...launch.environment,
+              SSH_AUTH_SOCK: "/tmp/agent.sock",
+              DOCKER_HOST: "unix:///tmp/docker.sock",
+              CUSTOM_SOCKET: "/tmp/custom.sock",
+            },
           }),
         ),
       ),
     )
     expect(result.environment?.SSH_AUTH_SOCK).toBeUndefined()
     expect(result.environment?.DOCKER_HOST).toBeUndefined()
+    expect(result.environment?.CUSTOM_SOCKET).toBeUndefined()
   })
 
   test("isolates the Linux network namespace in deny mode", () => {

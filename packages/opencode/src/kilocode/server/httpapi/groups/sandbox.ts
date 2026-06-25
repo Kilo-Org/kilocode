@@ -16,7 +16,7 @@ const SandboxCapabilities = Schema.Struct({
   filesystem: Schema.Boolean,
   network: Schema.Boolean,
   unixSockets: Schema.Boolean,
-  unixSocketCoverage: Schema.Union([Schema.Literal("known"), Schema.Literal("none")]),
+  unixSocketCoverage: Schema.Union([Schema.Literal("known-paths-at-launch"), Schema.Literal("none")]),
 })
 
 export const SandboxStatus = Schema.Struct({

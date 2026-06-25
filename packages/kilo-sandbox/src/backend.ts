@@ -5,7 +5,7 @@ import { current } from "./context"
 import { assertProcessNetwork, networkEnvironment } from "./network"
 import type { Profile } from "./profile"
 import { seatbelt } from "./seatbelt"
-import { socketPolicy } from "./socket"
+import { mergeSockets, socketPolicy } from "./socket"
 
 export interface Launch {
   readonly command: string
@@ -19,7 +19,7 @@ export interface Capabilities {
   readonly filesystem: boolean
   readonly network: boolean
   readonly unixSockets: boolean
-  readonly unixSocketCoverage: "known" | "none"
+  readonly unixSocketCoverage: "known-paths-at-launch" | "none"
 }
 
 export interface Support {
@@ -94,9 +94,23 @@ function unsupported(command: string, method: string, support: Support) {
 
 export function confine(profile: Profile, launch: Launch) {
   return Effect.gen(function* () {
-    const socket = profile.socket
-      ? { ...profile.socket, policy: yield* socketPolicy(profile, { ...launch.environment, ...profile.environment.set }) }
-      : undefined
+    const socket =
+      process.platform === "linux" && profile.socket
+        ? {
+            ...profile.socket,
+            policy: yield* Effect.gen(function* () {
+              const ambient = yield* socketPolicy(profile, process.env)
+              const effective = yield* socketPolicy(profile, {
+                ...process.env,
+                ...launch.environment,
+                ...profile.environment.set,
+              })
+              return mergeSockets(profile.socket?.policy, { ...ambient, deny: [] }, effective)
+            }),
+          }
+        : profile.socket
+          ? { ...profile.socket, policy: undefined }
+          : undefined
     const policy = socket ? { ...profile, socket } : profile
     const next = { ...launch, environment: environment(policy, launch) }
     yield* assertProcessNetwork(policy, launch.command)

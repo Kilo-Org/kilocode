@@ -149,7 +149,7 @@ function unixClient(socket: string, expected: "allow" | "deny") {
     "const client = net.connect(target)",
     'client.on("connect", () => client.write("mutate"))',
     'client.on("data", (data) => process.exit(expected === "allow" && data.toString() === "ok" ? 0 : 3))',
-    'client.on("error", (error) => process.exit(expected === "deny" && error.code !== "ECONNREFUSED" ? 0 : 4))',
+    'client.on("error", (error) => process.exit(expected === "deny" && error.code === "EACCES" ? 0 : 4))',
     "setTimeout(() => process.exit(5), 1000)",
   ].join("\n")
 }
@@ -893,8 +893,10 @@ linux("reports socket-mask support separately and fails required masking closed"
     [
       "#!/bin/sh",
       'previous=""',
+      "binds=0",
       'for arg in "$@"; do',
-      '  if [ "$previous" = "--ro-bind" ] && [ "$arg" = "/dev/null" ]; then echo "socket masks blocked" >&2; exit 42; fi',
+      '  if [ "$previous" = "--ro-bind" ]; then binds=$((binds + 1)); fi',
+      '  if [ "$binds" -gt 1 ]; then echo "socket masks blocked" >&2; exit 42; fi',
       '  previous="$arg"',
       "done",
       `exec ${JSON.stringify(source)} "$@"`,

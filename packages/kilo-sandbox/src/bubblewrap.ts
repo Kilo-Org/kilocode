@@ -1,6 +1,16 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
@@ -64,9 +74,12 @@ function mountpoints() {
   return parseMountinfo(readFileSync("/proc/self/mountinfo", "utf8"))
 }
 
-function validate(allow: ReadonlyArray<PathRule>, executable: string, mounts: ReadonlyArray<string>) {
+function validate(allow: ReadonlyArray<PathRule>, executable: string, mask: string | undefined, mounts: ReadonlyArray<string>) {
   if (allow.some((rule) => beneath(rule.path, executable))) {
     throw new Error(`Bubblewrap executable is writable by the sandbox profile: ${executable}`)
+  }
+  if (mask && allow.some((rule) => beneath(rule.path, mask))) {
+    throw new Error(`Unix-socket mask is writable by the sandbox profile: ${mask}`)
   }
 
   for (const rule of allow) {
@@ -113,8 +126,7 @@ function sockets(profile: Profile) {
   const found = new Set<string>()
   for (const rule of profile.socket?.policy?.paths ?? []) {
     try {
-      const target = realpathSync.native(rule.path)
-      if (statSync(target).isSocket()) found.add(target)
+      if (statSync(rule.path).isSocket()) found.add(rule.path)
     } catch (cause) {
       if (typeof cause === "object" && cause !== null && "code" in cause && cause.code === "ENOENT") continue
       throw cause
@@ -128,9 +140,12 @@ export function generate(
   launch: Launch,
   executable: string,
   mounts = process.platform === "linux" ? mountpoints() : [],
+  mask?: string,
 ): Launch {
   const allow = writable(profile)
-  validate(allow, executable, mounts)
+  const blocked = sockets(profile)
+  if (blocked.length > 0 && !mask) throw new Error("No trusted Unix-socket mask is available")
+  validate(allow, executable, mask, mounts)
   const args = [
     "--unshare-user",
     "--disable-userns",
@@ -147,7 +162,7 @@ export function generate(
 
   for (const rule of allow) args.push("--bind", rule.path, rule.path)
   for (const target of protectedPaths(profile, allow)) args.push("--ro-bind", target, target)
-  for (const target of sockets(profile)) args.push("--ro-bind", "/dev/null", target)
+  if (mask) for (const target of blocked) args.push("--ro-bind", mask, target)
   args.push("--proc", "/proc")
   if (launch.cwd) args.push("--chdir", launch.cwd)
   args.push("--", ...command(launch))
@@ -180,11 +195,8 @@ function resolve(executable: string, expected?: string) {
   }
 }
 
-function probe(executable: string, capability: "filesystem" | "network" | "socket" = "filesystem") {
-  const root = capability === "socket" ? mkdtempSync(path.join(os.tmpdir(), "kilo-bwrap-socket-")) : undefined
-  const target = root ? path.join(root, "target") : undefined
-  if (target) writeFileSync(target, "probe")
-  const result = spawnSync(
+function invoke(executable: string, capability: "filesystem" | "network" | "socket", mask?: string, target?: string) {
+  return spawnSync(
     executable,
     [
       "--unshare-user",
@@ -198,7 +210,7 @@ function probe(executable: string, capability: "filesystem" | "network" | "socke
       "/",
       "--dev",
       "/dev",
-      ...(target ? ["--ro-bind", "/dev/null", target] : []),
+      ...(mask && target ? ["--ro-bind", mask, target] : []),
       "--proc",
       "/proc",
       "--",
@@ -207,7 +219,22 @@ function probe(executable: string, capability: "filesystem" | "network" | "socke
     ],
     { encoding: "utf8", timeout: 5_000 },
   )
-  if (root) rmSync(root, { recursive: true, force: true })
+}
+
+function probe(executable: string, capability: "filesystem" | "network" | "socket" = "filesystem", mask?: string) {
+  const result =
+    capability === "socket" && mask
+      ? (() => {
+          const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bwrap-socket-"))
+          const target = path.join(root, "target")
+          try {
+            writeFileSync(target, "probe")
+            return invoke(executable, capability, mask, target)
+          } finally {
+            rmSync(root, { recursive: true, force: true })
+          }
+        })()
+      : invoke(executable, capability)
   if (result.status === 0) return undefined
   const detail = result.error?.message ?? (result.stderr.trim() || `exited with status ${result.status}`)
   const name =
@@ -227,8 +254,22 @@ function supported(filesystem: boolean, network: boolean, socket: boolean, reaso
       filesystem,
       network,
       unixSockets: socket,
-      unixSocketCoverage: socket ? "known" : "none",
+      unixSocketCoverage: socket ? "known-paths-at-launch" : "none",
     },
+  }
+}
+
+function masking() {
+  const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bwrap-mask-"))
+  const target = path.join(root, "mask")
+  try {
+    writeFileSync(target, "", { mode: 0 })
+    chmodSync(target, 0)
+    process.once("exit", () => rmSync(root, { recursive: true, force: true }))
+    return target
+  } catch (cause) {
+    rmSync(root, { recursive: true, force: true })
+    throw cause
   }
 }
 
@@ -237,6 +278,7 @@ interface Selection {
   readonly support: Support
   network: Support | undefined
   socket: Support | undefined
+  mask: string | undefined
 }
 
 function select(): Selection {
@@ -250,7 +292,9 @@ function select(): Selection {
     const executable = resolve(candidate.executable, candidate.expected)
     if (!executable) continue
     const failure = probe(executable)
-    if (!failure) return { executable, support: supported(true, false, false), network: undefined, socket: undefined }
+    if (!failure) {
+      return { executable, support: supported(true, false, false), network: undefined, socket: undefined, mask: undefined }
+    }
     failures.push(failure)
   }
 
@@ -259,6 +303,7 @@ function select(): Selection {
     support: supported(false, false, false, failures.at(-1) ?? "No usable Bubblewrap executable is available"),
     network: undefined,
     socket: undefined,
+    mask: undefined,
   }
 }
 
@@ -274,6 +319,7 @@ function selection(): Selection {
           support: supported(false, false, false, "Bubblewrap requires Linux"),
           network: undefined,
           socket: undefined,
+          mask: undefined,
         }
   return selected
 }
@@ -281,26 +327,28 @@ function selection(): Selection {
 function support(profile?: Profile): Support {
   const selected = selection()
   if (!selected.support.capabilities.filesystem || !selected.executable) return selected.support
-  const network = profile?.network.mode === "deny"
-  const socket = (profile?.socket?.policy?.coverage.length ?? 0) > 0
-  if (network && !selected.network) {
+  const net = profile?.network.mode === "deny"
+  const unix = profile?.socket !== undefined
+  if (net && !selected.network) {
     const failure = probe(selected.executable, "network")
     selected.network = supported(true, !failure, false, failure)
   }
-  if (socket && !selected.socket) {
-    const failure = probe(selected.executable, "socket")
+  if (unix && !selected.socket) {
+    const failure = (() => {
+      try {
+        selected.mask ??= masking()
+        return probe(selected.executable, "socket", selected.mask)
+      } catch (cause) {
+        const detail = cause instanceof Error ? cause.message : String(cause)
+        return `${selected.executable} could not prepare the Linux Unix-socket authority sandbox: ${detail}`
+      }
+    })()
     selected.socket = supported(true, false, !failure, failure)
   }
-  const reason = selected.network?.reason ?? selected.socket?.reason
-  const networkReady = !network || selected.network?.capabilities.network === true
-  const socketReady = !socket || selected.socket?.capabilities.unixSockets === true
-  return supported(
-    true,
-    network && networkReady,
-    socket && socketReady,
-    reason,
-    networkReady && socketReady,
-  )
+  const reason = (net ? selected.network?.reason : undefined) ?? (unix ? selected.socket?.reason : undefined)
+  const network = !net || selected.network?.capabilities.network === true
+  const socket = !unix || selected.socket?.capabilities.unixSockets === true
+  return supported(true, net && network, unix && socket, reason, network && socket)
 }
 
 function setup(cause: unknown, launch: Launch) {
@@ -320,7 +368,7 @@ export const bubblewrap: Backend = {
     Effect.try({
       try: () => {
         const selected = selection()
-        return selected.executable ? generate(profile, launch, selected.executable) : launch
+        return selected.executable ? generate(profile, launch, selected.executable, undefined, selected.mask) : launch
       },
       catch: (cause) => setup(cause, launch),
     }),

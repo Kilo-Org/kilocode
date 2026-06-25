@@ -14,7 +14,7 @@ export const Changed = BusEvent.define(
       filesystem: Schema.Boolean,
       network: Schema.Boolean,
       unixSockets: Schema.Boolean,
-      unixSocketCoverage: Schema.Union([Schema.Literal("known"), Schema.Literal("none")]),
+      unixSocketCoverage: Schema.Union([Schema.Literal("known-paths-at-launch"), Schema.Literal("none")]),
     }),
     version: Schema.Int,
   }),

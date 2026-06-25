@@ -205,7 +205,7 @@ export const kiloScenarios: Scenario[] = [
       check(typeof body.capabilities.network === "boolean", "sandbox status should report network isolation")
       check(typeof body.capabilities.unixSockets === "boolean", "sandbox status should report Unix socket containment")
       check(
-        body.capabilities.unixSocketCoverage === "known" || body.capabilities.unixSocketCoverage === "none",
+        body.capabilities.unixSocketCoverage === "known-paths-at-launch" || body.capabilities.unixSocketCoverage === "none",
         "sandbox status should report Unix socket coverage",
       )
       check(typeof body.version === "number", "sandbox status should report its revision")

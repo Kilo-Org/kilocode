@@ -3004,7 +3004,7 @@ export type EventSandboxStatusChanged = {
       filesystem: boolean
       network: boolean
       unixSockets: boolean
-      unixSocketCoverage: "known" | "none"
+      unixSocketCoverage: "known-paths-at-launch" | "none"
     }
     version: number
   }
@@ -10779,7 +10779,7 @@ export type SandboxStatusResponses = {
       filesystem: boolean
       network: boolean
       unixSockets: boolean
-      unixSocketCoverage: "known" | "none"
+      unixSocketCoverage: "known-paths-at-launch" | "none"
     }
     version: number
   }
@@ -10825,7 +10825,7 @@ export type SandboxToggleResponses = {
       filesystem: boolean
       network: boolean
       unixSockets: boolean
-      unixSocketCoverage: "known" | "none"
+      unixSocketCoverage: "known-paths-at-launch" | "none"
     }
     version: number
   }

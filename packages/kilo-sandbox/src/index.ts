@@ -1,5 +1,4 @@
 export type { Profile, SocketCoverage, SocketPolicy, SocketProfile } from "./profile"
-export { socketPolicy, socketProfile } from "./socket"
 export { assertWrite, enabled, run, unrestricted } from "./context"
 export { decorateFileSystem, ensureDirectory } from "./filesystem"
 export { assertNetwork, decorateHttpClient, httpLayer as networkHttpLayer } from "./network"

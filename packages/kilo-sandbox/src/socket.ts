@@ -9,7 +9,7 @@ type Scope = "authority" | "ipc"
 interface Endpoint {
   readonly coverage: SocketCoverage
   readonly scope: Scope
-  readonly environment: ReadonlyArray<string>
+  readonly deny: (environment: Environment) => ReadonlyArray<string>
   readonly paths: (environment: Environment) => ReadonlyArray<string | undefined>
 }
 
@@ -17,11 +17,11 @@ const authority: ReadonlyArray<Endpoint> = [
   {
     coverage: "docker",
     scope: "authority",
-    environment: ["DOCKER_HOST"],
+    deny: (env) => advertised(env, "DOCKER_HOST", unix),
     paths: (env) => [
       "/var/run/docker.sock",
       "/run/docker.sock",
-      runtime(env, "docker.sock"),
+      ...runtimes(env, "docker.sock"),
       home(env, ".docker/run/docker.sock"),
       home(env, ".docker/desktop/docker.sock"),
       unix(env.DOCKER_HOST),
@@ -30,33 +30,37 @@ const authority: ReadonlyArray<Endpoint> = [
   {
     coverage: "podman",
     scope: "authority",
-    environment: ["CONTAINER_HOST", "PODMAN_HOST"],
+    deny: (env) => [...advertised(env, "CONTAINER_HOST", endpoint), ...advertised(env, "PODMAN_HOST", endpoint)],
     paths: (env) => [
       "/var/run/podman/podman.sock",
       "/run/podman/podman.sock",
-      runtime(env, "podman/podman.sock"),
+      ...runtimes(env, "podman/podman.sock"),
       home(env, ".local/share/containers/podman/machine/podman.sock"),
-      unix(env.CONTAINER_HOST),
-      unix(env.PODMAN_HOST),
+      endpoint(env.CONTAINER_HOST),
+      endpoint(env.PODMAN_HOST),
     ],
   },
   {
     coverage: "containerd",
     scope: "authority",
-    environment: ["CONTAINERD_ADDRESS"],
+    deny: (env) => advertised(env, "CONTAINERD_ADDRESS", endpoint),
     paths: (env) => [
       "/var/run/containerd/containerd.sock",
       "/run/containerd/containerd.sock",
       "/run/k3s/containerd/containerd.sock",
-      runtime(env, "containerd/containerd.sock"),
-      runtime(env, "containerd-rootless/api.sock"),
+      ...runtimes(env, "containerd/containerd.sock"),
+      ...runtimes(env, "containerd-rootless/api.sock"),
       endpoint(env.CONTAINERD_ADDRESS),
     ],
   },
   {
     coverage: "cri",
     scope: "authority",
-    environment: ["CRI_ENDPOINT", "CONTAINER_RUNTIME_ENDPOINT", "IMAGE_SERVICE_ENDPOINT"],
+    deny: (env) => [
+      ...advertised(env, "CRI_ENDPOINT", endpoint),
+      ...advertised(env, "CONTAINER_RUNTIME_ENDPOINT", endpoint),
+      ...advertised(env, "IMAGE_SERVICE_ENDPOINT", endpoint),
+    ],
     paths: (env) => [
       "/var/run/crio/crio.sock",
       "/run/crio/crio.sock",
@@ -64,9 +68,9 @@ const authority: ReadonlyArray<Endpoint> = [
       "/run/cri-dockerd.sock",
       "/var/run/dockershim.sock",
       "/run/dockershim.sock",
-      unix(env.CRI_ENDPOINT),
-      unix(env.CONTAINER_RUNTIME_ENDPOINT),
-      unix(env.IMAGE_SERVICE_ENDPOINT),
+      endpoint(env.CRI_ENDPOINT),
+      endpoint(env.CONTAINER_RUNTIME_ENDPOINT),
+      endpoint(env.IMAGE_SERVICE_ENDPOINT),
     ],
   },
 ]
@@ -75,28 +79,29 @@ const ipc: ReadonlyArray<Endpoint> = [
   {
     coverage: "ssh",
     scope: "ipc",
-    environment: ["SSH_AUTH_SOCK", "SSH_AGENT_PID"],
+    deny: () => ["SSH_AUTH_SOCK", "SSH_AGENT_PID"],
     paths: (env) => [endpoint(env.SSH_AUTH_SOCK)],
   },
   {
     coverage: "gpg",
     scope: "ipc",
-    environment: ["GPG_AGENT_INFO"],
+    deny: () => ["GPG_AGENT_INFO"],
     paths: (env) => [
       gpg(env.GPG_AGENT_INFO),
-      runtime(env, "gnupg/S.gpg-agent"),
-      runtime(env, "gnupg/S.gpg-agent.ssh"),
-      home(env, ".gnupg/S.gpg-agent"),
-      home(env, ".gnupg/S.gpg-agent.ssh"),
+      ...runtimes(env, "gnupg/S.gpg-agent"),
+      ...runtimes(env, "gnupg/S.gpg-agent.ssh"),
+      gpgHome(env, "S.gpg-agent"),
+      gpgHome(env, "S.gpg-agent.ssh"),
     ],
   },
   {
     coverage: "dbus",
     scope: "ipc",
-    environment: ["DBUS_SESSION_BUS_ADDRESS", "DBUS_SYSTEM_BUS_ADDRESS"],
+    deny: () => ["DBUS_SESSION_BUS_ADDRESS", "DBUS_SYSTEM_BUS_ADDRESS"],
     paths: (env) => [
       "/run/dbus/system_bus_socket",
       "/var/run/dbus/system_bus_socket",
+      ...runtimes(env, "bus"),
       ...dbus(env.DBUS_SESSION_BUS_ADDRESS),
       ...dbus(env.DBUS_SYSTEM_BUS_ADDRESS),
     ],
@@ -104,21 +109,28 @@ const ipc: ReadonlyArray<Endpoint> = [
   {
     coverage: "wayland",
     scope: "ipc",
-    environment: ["WAYLAND_DISPLAY"],
-    paths: (env) => [wayland(env)],
+    deny: () => ["WAYLAND_DISPLAY", "WAYLAND_SOCKET"],
+    paths: (env) => wayland(env),
   },
 ]
 
 const endpoints = [...authority, ...ipc]
 
-function runtime(env: Environment, suffix: string) {
-  if (!env.XDG_RUNTIME_DIR) return undefined
-  return path.join(env.XDG_RUNTIME_DIR, suffix)
+function runtimes(env: Environment, suffix: string) {
+  const roots = new Set<string>()
+  if (env.XDG_RUNTIME_DIR && path.isAbsolute(env.XDG_RUNTIME_DIR)) roots.add(env.XDG_RUNTIME_DIR)
+  if (typeof process.getuid === "function") roots.add(`/run/user/${process.getuid()}`)
+  return [...roots].map((root) => path.join(root, suffix))
 }
 
 function home(env: Environment, suffix: string) {
-  if (!env.HOME) return undefined
+  if (!env.HOME || !path.isAbsolute(env.HOME)) return undefined
   return path.join(env.HOME, suffix)
+}
+
+function gpgHome(env: Environment, suffix: string) {
+  if (env.GNUPGHOME && path.isAbsolute(env.GNUPGHOME)) return path.join(env.GNUPGHOME, suffix)
+  return home(env, path.join(".gnupg", suffix))
 }
 
 function decode(input: string) {
@@ -133,15 +145,18 @@ function unix(input: string | undefined) {
   if (!input) return undefined
   const match = /^(?:unix|[a-z][a-z0-9+.-]*\+unix):\/\/(.*)$/i.exec(input)
   if (!match) return undefined
-  const value = match[1]
-  const pathname = value.startsWith("/") ? value : `/${value}`
-  return decode(pathname)
+  const value = decode(match[1])
+  return value && path.isAbsolute(value) ? value : undefined
 }
 
 function endpoint(input: string | undefined) {
   if (!input) return undefined
   if (path.isAbsolute(input)) return input
   return unix(input)
+}
+
+function advertised(env: Environment, name: string, parse: (input: string | undefined) => string | undefined) {
+  return parse(env[name]) ? [name] : []
 }
 
 function dbus(input: string | undefined) {
@@ -164,13 +179,23 @@ function gpg(input: string | undefined) {
 }
 
 function wayland(env: Environment) {
-  if (!env.WAYLAND_DISPLAY) return undefined
-  if (path.isAbsolute(env.WAYLAND_DISPLAY)) return env.WAYLAND_DISPLAY
-  return runtime(env, env.WAYLAND_DISPLAY)
+  if (!env.WAYLAND_DISPLAY) return []
+  if (path.isAbsolute(env.WAYLAND_DISPLAY)) return [env.WAYLAND_DISPLAY]
+  return runtimes(env, env.WAYLAND_DISPLAY)
 }
 
 function active(profile: Profile, endpoint: Endpoint) {
   return endpoint.scope === "authority" || profile.network.mode !== "allow" || profile.socket?.ipc === "deny"
+}
+
+export function mergeSockets(...policies: ReadonlyArray<SocketPolicy | undefined>): SocketPolicy {
+  const selected = policies.filter((policy): policy is SocketPolicy => policy !== undefined)
+  const paths = selected.flatMap((policy) => policy.paths)
+  return {
+    paths: [...new Map(paths.map((rule) => [rule.path, rule])).values()],
+    deny: [...new Set(selected.flatMap((policy) => policy.deny))],
+    coverage: [...new Set(selected.flatMap((policy) => policy.coverage))],
+  }
 }
 
 export function socketProfile(profile: Profile, env: Environment = process.env): SocketPolicy {
@@ -178,7 +203,7 @@ export function socketProfile(profile: Profile, env: Environment = process.env):
   const paths = selected.flatMap((item) => item.paths(env)).filter((item): item is string => item !== undefined)
   return {
     paths: [...new Set(paths)].map((path): PathRule => ({ path, kind: "literal" })),
-    deny: [...new Set(selected.flatMap((item) => item.environment))],
+    deny: [...new Set(selected.flatMap((item) => item.deny(env)))],
     coverage: [...new Set(selected.map((item) => item.coverage))],
   }
 }

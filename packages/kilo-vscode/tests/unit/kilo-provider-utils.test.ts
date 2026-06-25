@@ -457,7 +457,12 @@ describe("mapSSEEventToWebviewMessage", () => {
         directory: "/tmp",
         enabled: true,
         available: true,
-        capabilities: { filesystem: true, network: true, unixSockets: true, unixSocketCoverage: "known" },
+        capabilities: {
+          filesystem: true,
+          network: true,
+          unixSockets: true,
+          unixSocketCoverage: "known-paths-at-launch",
+        },
         version: 3,
       },
     }
@@ -469,7 +474,7 @@ describe("mapSSEEventToWebviewMessage", () => {
       enabled: true,
       available: true,
       reason: undefined,
-      capabilities: { filesystem: true, network: true, unixSockets: true, unixSocketCoverage: "known" },
+      capabilities: { filesystem: true, network: true, unixSockets: true, unixSocketCoverage: "known-paths-at-launch" },
       version: 3,
     })
   })

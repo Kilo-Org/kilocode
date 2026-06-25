@@ -1,5 +1,6 @@
 ---
 "@kilocode/cli": patch
+"@kilocode/sdk": patch
 "kilo-code": patch
 ---
 

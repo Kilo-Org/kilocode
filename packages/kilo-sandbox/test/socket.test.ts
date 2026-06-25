@@ -56,6 +56,10 @@ describe("Unix socket policy", () => {
     expect(paths).toContain(path.join(canonical, "podman", "podman.sock"))
     expect(paths.filter((item) => item === path.join(canonical, "docker.sock"))).toHaveLength(1)
     expect(result.paths.every((item) => item.kind === "literal")).toBe(true)
+    if (typeof process.getuid === "function") {
+      expect(paths).toContain(`/run/user/${process.getuid()}/docker.sock`)
+      expect(paths).toContain(`/run/user/${process.getuid()}/podman/podman.sock`)
+    }
   })
 
   test("adds SSH, GPG, D-Bus, and Wayland only for restrictive IPC", async () => {
@@ -66,6 +70,7 @@ describe("Unix socket policy", () => {
       XDG_RUNTIME_DIR: runtime,
       SSH_AUTH_SOCK: ssh,
       GPG_AGENT_INFO: `${gpg}:123:1`,
+      GNUPGHOME: path.join(runtime, "custom-gnupg"),
       DBUS_SESSION_BUS_ADDRESS: `unix:path=${encodeURIComponent(bus)},guid=abc;tcp:host=localhost`,
       WAYLAND_DISPLAY: "wayland-0",
     }
@@ -85,9 +90,12 @@ describe("Unix socket policy", () => {
         path.join(canonical, "ssh.sock"),
         path.join(canonical, "gpg.sock"),
         path.join(canonical, "bus socket"),
+        path.join(canonical, "bus"),
+        path.join(canonical, "custom-gnupg", "S.gpg-agent"),
         path.join(canonical, "wayland-0"),
       ]),
     )
+    if (typeof process.getuid === "function") expect(paths).toContain(`/run/user/${process.getuid()}/bus`)
   })
 
   test("parses pathname Unix URLs and ignores non-path endpoints honestly", async () => {
@@ -104,11 +112,22 @@ describe("Unix socket policy", () => {
     const paths = result.paths.map((item) => item.path)
 
     expect(paths).toContain(path.join(canonical, "encoded socket"))
-    const standard = await Effect.runPromise(socketPolicy(profile(), { DOCKER_HOST: `unix://${path.join(runtime, "standard.sock")}` }))
+    const standard = await Effect.runPromise(
+      socketPolicy(profile(), { DOCKER_HOST: `unix://${path.join(runtime, "standard.sock")}` }),
+    )
+    const remote = await Effect.runPromise(
+      socketPolicy(profile(), { DOCKER_HOST: "tcp://builder:2375", CONTAINER_HOST: "ssh://builder" }),
+    )
+    const malformed = await Effect.runPromise(socketPolicy(profile(), { DOCKER_HOST: "unix://relative.sock" }))
     expect(standard.paths.map((item) => item.path)).toContain(path.join(canonical, "standard.sock"))
+    expect(remote.deny).not.toContain("DOCKER_HOST")
+    expect(remote.deny).not.toContain("CONTAINER_HOST")
+    expect(malformed.deny).not.toContain("DOCKER_HOST")
+    expect(malformed.paths.map((item) => item.path)).not.toContain("/relative.sock")
     expect(paths).not.toContain("/run/user/1000/podman.sock")
     expect(paths).not.toContain("/tmp/dbus-abstract")
     expect(paths).not.toContain("wayland-1")
+    expect(result.deny).not.toContain("CONTAINER_HOST")
     expect(result.coverage).toContain("dbus")
   })
 })

@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs"
 import path from "node:path"
 import { Effect, PlatformError, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
-import { backendSupport, run as runSandbox, socketProfile, unrestricted, type Profile } from "@kilocode/sandbox"
+import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
@@ -86,7 +86,7 @@ export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] =
     Global.Path.log,
     Global.Path.repos,
   ].map(root)
-  const base: Profile = {
+  return {
     filesystem: {
       allowWrite: writable,
       denyWrite: [],
@@ -107,7 +107,6 @@ export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] =
     },
     socket: { ipc: mode === "allow" ? "allow" : "deny" },
   }
-  return { ...base, socket: { ipc: mode === "allow" ? "allow" : "deny", policy: socketProfile(base) } }
 }
 
 export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: SessionID) {

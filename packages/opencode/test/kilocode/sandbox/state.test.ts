@@ -29,8 +29,10 @@ linux("fails requested sandbox execution closed when a required capability is un
     [
       "#!/bin/sh",
       'previous=""',
+      "binds=0",
       'for arg in "$@"; do',
-      '  if [ "$previous" = "--ro-bind" ] && [ "$arg" = "/dev/null" ]; then exit 42; fi',
+      '  if [ "$previous" = "--ro-bind" ]; then binds=$((binds + 1)); fi',
+      '  if [ "$binds" -gt 1 ]; then exit 42; fi',
       '  previous="$arg"',
       "done",
       "exit 0",
@@ -94,9 +96,9 @@ linux("reports configured network namespace availability", async () => {
     "const allow = await status(false)",
     'if (deny.available || deny.enabled || !deny.reason?.includes("Linux network sandbox")) process.exit(2)',
     "if (!deny.capabilities.filesystem || deny.capabilities.network) process.exit(3)",
-    "if (!allow.available || !allow.enabled) process.exit(4)",
+    "if (!allow.available || !allow.enabled || allow.reason !== undefined) process.exit(4)",
     "if (!allow.capabilities.filesystem || allow.capabilities.network) process.exit(5)",
-    'if (!["known", "none"].includes(allow.capabilities.unixSocketCoverage)) process.exit(6)',
+    'if (!["known-paths-at-launch", "none"].includes(allow.capabilities.unixSocketCoverage)) process.exit(6)',
   ].join("\n")
 
   try {

@@ -7,7 +7,7 @@ export type SandboxState = {
     filesystem: boolean
     network: boolean
     unixSockets: boolean
-    unixSocketCoverage: "known" | "none"
+    unixSocketCoverage: "known-paths-at-launch" | "none"
   }
   version: number
   directory: string
