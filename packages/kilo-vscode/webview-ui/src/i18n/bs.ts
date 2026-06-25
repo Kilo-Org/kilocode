@@ -1344,6 +1344,9 @@ export const dict = {
     "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text. Speech to Text je trenutno podržan samo uz Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Model govora u tekst",
   "settings.models.speechToTextModel.description": "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
+  "settings.experimental.nativeNotebookTools.title": "Izvorni alati za bilježnice",
+  "settings.experimental.nativeNotebookTools.description":
+    "Omogući eksperimentalne alate za čitanje, uređivanje i izvršavanje VS Code bilježnica",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.sandboxing.title": "Rad u izoliranom okruženju",

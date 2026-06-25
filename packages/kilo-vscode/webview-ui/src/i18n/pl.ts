@@ -1301,6 +1301,9 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Model mowy na tekst",
   "settings.models.speechToTextModel.description":
     "Wybierz model transkrypcji Kilo Gateway dla wprowadzania głosowego.",
+  "settings.experimental.nativeNotebookTools.title": "Natywne narzędzia notatników",
+  "settings.experimental.nativeNotebookTools.description":
+    "Włącz eksperymentalne narzędzia do odczytu, edycji i uruchamiania notatników VS Code",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.sandboxing.title": "Izolacja w piaskownicy",

@@ -7,6 +7,12 @@ import {
   WorkspaceRoutingQuery,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import {
+  Failure as NotebookFailure,
+  Request as NotebookRequest,
+  RequestID as NotebookRequestID,
+  Result as NotebookResult,
+} from "@/kilocode/notebook/protocol"
 
 const root = "/kilocode"
 
@@ -18,10 +24,16 @@ export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
 })
 
+export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
+export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
+
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
+  notebookList: `${root}/notebook`,
+  notebookReply: `${root}/notebook/:requestID/reply`,
+  notebookReject: `${root}/notebook/:requestID/reject`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -62,6 +74,42 @@ export const KilocodeApi = HttpApi.make("kilocode")
             summary: "Remove a custom agent",
             description:
               "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+          }),
+        ),
+        HttpApiEndpoint.get("notebookList", KilocodePaths.notebookList, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(NotebookRequest), "Pending notebook host requests"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.notebook.list",
+            summary: "List pending notebook requests",
+            description: "List pending native notebook requests for the routed workspace.",
+          }),
+        ),
+        HttpApiEndpoint.post("notebookReply", KilocodePaths.notebookReply, {
+          params: { requestID: NotebookRequestID },
+          query: WorkspaceRoutingQuery,
+          payload: NotebookReplyPayload,
+          success: described(Schema.Boolean, "Notebook reply accepted"),
+          error: [HttpApiError.BadRequest, HttpApiError.NotFound],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.notebook.reply",
+            summary: "Reply to a notebook request",
+            description: "Complete a pending native notebook request with a structured result.",
+          }),
+        ),
+        HttpApiEndpoint.post("notebookReject", KilocodePaths.notebookReject, {
+          params: { requestID: NotebookRequestID },
+          query: WorkspaceRoutingQuery,
+          payload: NotebookRejectPayload,
+          success: described(Schema.Boolean, "Notebook rejection accepted"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.notebook.reject",
+            summary: "Reject a notebook request",
+            description: "Complete a pending native notebook request with a structured host error.",
           }),
         ),
       )

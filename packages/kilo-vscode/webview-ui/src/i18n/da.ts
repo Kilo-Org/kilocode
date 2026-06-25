@@ -1338,6 +1338,9 @@ export const dict = {
     "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
+  "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
+  "settings.experimental.nativeNotebookTools.description":
+    "Aktivér eksperimentelle værktøjer til at læse, redigere og køre VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
   "settings.sandboxing.title": "Sandboxing",

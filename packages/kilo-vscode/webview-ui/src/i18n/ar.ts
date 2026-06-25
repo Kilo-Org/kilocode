@@ -1313,6 +1313,9 @@ export const dict = {
     "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
+  "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
+  "settings.experimental.nativeNotebookTools.description":
+    "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.sandboxing.title": "العزل",

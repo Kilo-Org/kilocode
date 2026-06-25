@@ -1159,6 +1159,9 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.codebaseSearch.title": "Ricerca codebase",
   "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
+  "settings.experimental.nativeNotebookTools.title": "Strumenti nativi per notebook",
+  "settings.experimental.nativeNotebookTools.description":
+    "Abilita strumenti sperimentali per leggere, modificare ed eseguire i notebook di VS Code",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
   "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
   "settings.sandboxing.title": "Sandbox",

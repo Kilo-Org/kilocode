@@ -59,6 +59,7 @@ import { DataMigration } from "@/data-migration"
 import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 
 const CoreLayer = Layer.mergeAll(
   Npm.defaultLayer,
@@ -85,6 +86,7 @@ const CoreLayer = Layer.mergeAll(
 
 const SessionLayer = Layer.mergeAll(
   Question.defaultLayer,
+  Notebook.defaultLayer, // kilocode_change
   Permission.defaultLayer,
   Todo.defaultLayer,
   Session.defaultLayer,
