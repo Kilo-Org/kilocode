@@ -39,7 +39,7 @@ export const GettingStartedNav: NavSection[] = [
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
-      { href: "/getting-started/rate-limits-and-costs", children: "Rate Limits and Costs" },
+      { href: "/getting-started/rate-limits-and-costs", children: "Cost Efficiency & Model Selection" },
     ],
   },
   {

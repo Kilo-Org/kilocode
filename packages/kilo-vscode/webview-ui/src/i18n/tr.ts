@@ -290,6 +290,19 @@ export const dict = {
   "prompt.action.sandbox.enabled": "Sandbox etkin. Agent shell komutları proje ve Kilo dizinleriyle sınırlıdır.",
   "prompt.action.sandbox.disabled":
     "Sandbox devre dışı. Agent shell komut yazma işlemlerini proje ve Kilo dizinleriyle sınırlamak için tıklayın.",
+  "prompt.action.sandbox.status.enabled": "Sandbox etkin",
+  "prompt.action.sandbox.status.disabled": "Sandbox devre dışı",
+  "prompt.action.sandbox.filesystem": "Dosya sistemi",
+  "prompt.action.sandbox.network": "Ağ",
+  "prompt.action.sandbox.filesystem.restricted": "Kısıtlı",
+  "prompt.action.sandbox.network.blocked": "Engellendi",
+  "prompt.action.sandbox.network.allowed": "İzin verildi",
+  "prompt.action.sandbox.unrestricted": "Kısıtlanmamış",
+  "prompt.action.sandbox.description.enabled": "Yazma işlemleri proje ve Kilo dizinleriyle sınırlıdır.",
+  "prompt.action.sandbox.description.disabled":
+    "Dosya sistemi yazma işlemlerini ve ağ erişimini kısıtlamak için tıklayın.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Dosya sistemi yazma işlemlerini kısıtlamak için tıklayın. Sandbox ayarlarınız ağ erişimine izin vermeye devam ediyor.",
 
   "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",

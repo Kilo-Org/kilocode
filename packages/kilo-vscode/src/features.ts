@@ -20,7 +20,7 @@ export function agentOnboarding(): boolean {
 export function configFeatures(config?: ConfigLike | null): Features {
   return {
     indexing: hasIndexingPlugin(config?.plugin ?? []),
-    sandboxControls: vscode.workspace.getConfiguration("kilo-code.new.internal").get("sandboxControls", false),
+    sandboxControls: process.platform !== "win32",
     agentSelectionOnboarding: agentOnboarding(),
   }
 }

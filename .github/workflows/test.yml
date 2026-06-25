@@ -63,6 +63,23 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
+      - name: Setup Zig for Linux sandbox helper
+        if: runner.os == 'Linux'
+        run: |
+          curl --fail --location --retry 3 \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+
+      - name: Build Linux sandbox helper
+        if: runner.os == 'Linux'
+        run: |
+          bun packages/opencode/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
+          echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
+      # kilocode_change end
       - name: Configure git identity
         run: |
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
@@ -83,12 +100,14 @@ jobs:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
           KILO_TEST_PROFILE: ${{ runner.os == 'macOS' && github.event_name == 'pull_request' && 'darwin' || '' }} # kilocode_change
 
+      # kilocode_change start
       - name: Run HttpApi exerciser gates
-        if: runner.os == 'Linux' # kilocode_change
+        if: runner.os == 'Linux'
         working-directory: packages/opencode
         run: bun run test:httpapi
+      # kilocode_change end
 
-      - name: Publish unit reports
+      - name: Publish unit reports # kilocode_change
         if: always()
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
         with:

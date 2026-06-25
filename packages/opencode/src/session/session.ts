@@ -33,6 +33,7 @@ import { Global } from "@opencode-ai/core/global"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
 import { SessionExport } from "@/kilocode/session-export"
+import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { baseKey, cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
@@ -658,20 +659,27 @@ export const layer: Layer.Layer<
         }
 
         // kilocode_change start
-        yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
-        KiloSession.clearPlatformOverride(sessionID)
-        if (hasInstance) {
-          yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
-          void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
-            app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(() => {}),
-          )
-        }
+        yield* SandboxPolicy.dispose(
+          sessionID,
+          Effect.gen(function* () {
+            yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
+            KiloSession.clearPlatformOverride(sessionID)
+            if (hasInstance) {
+              yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
+              void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
+                app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(
+                  () => {},
+                ),
+              )
+            }
+            yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
+            // kilocode_change - capture final session-export workspace delta on close/delete
+            const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
+            yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
+            yield* sync.remove(sessionID)
+          }),
+        )
         // kilocode_change end
-        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
-        // kilocode_change - capture final session-export workspace delta on close/delete
-        const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
-        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
-        yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)
       }

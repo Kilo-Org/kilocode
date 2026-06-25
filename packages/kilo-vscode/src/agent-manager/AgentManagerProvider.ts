@@ -439,7 +439,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
-    if ((m.type === "sendMessage" || m.type === "sendCommand") && !m.sessionID) {
+    if ((m.type === "sendMessage" || m.type === "sendCommand" || m.type === "toggleSandbox") && !m.sessionID) {
       const ctx = typeof m.agentManagerContext === "string" ? m.agentManagerContext : undefined
       const worktree = ctx && ctx !== "local" ? this.getStateManager()?.getWorktree(ctx) : undefined
       if (worktree) {
@@ -448,7 +448,11 @@ export class AgentManagerProvider implements Disposable {
       }
     }
 
-    if ((m.type === "sendMessage" || m.type === "sendCommand") && m.draftID && !m.sessionID) {
+    if (
+      (m.type === "sendMessage" || m.type === "sendCommand" || m.type === "toggleSandbox") &&
+      m.draftID &&
+      !m.sessionID
+    ) {
       this.activeSessionId = m.draftID
       return msg
     }

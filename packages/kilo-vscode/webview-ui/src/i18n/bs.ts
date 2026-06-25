@@ -293,6 +293,18 @@ export const dict = {
     "Sandbox je omogućen. Shell komande agenta su ograničene na direktorije projekta i Kilo.",
   "prompt.action.sandbox.disabled":
     "Sandbox je onemogućen. Kliknite da ograničite pisanje shell komandi agenta na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.status.enabled": "Sandbox omogućen",
+  "prompt.action.sandbox.status.disabled": "Sandbox onemogućen",
+  "prompt.action.sandbox.filesystem": "Datotečni sistem",
+  "prompt.action.sandbox.network": "Mreža",
+  "prompt.action.sandbox.filesystem.restricted": "Ograničen",
+  "prompt.action.sandbox.network.blocked": "Blokirana",
+  "prompt.action.sandbox.network.allowed": "Dozvoljena",
+  "prompt.action.sandbox.unrestricted": "Bez ograničenja",
+  "prompt.action.sandbox.description.enabled": "Pisanje je ograničeno na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.description.disabled": "Kliknite da ograničite pisanje u datotečni sistem i pristup mreži.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
