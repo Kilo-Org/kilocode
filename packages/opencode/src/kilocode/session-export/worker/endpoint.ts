@@ -1,16 +1,10 @@
-export const defaultEndpoint = "https://supermassive-black-hole.kiloapps.io/v1/session-export/batch"
+// Stubbed for Relay: removed the default and the allowlist of
+// supermassive-black-hole.kiloapps.io. With session-export now no-op'd
+// upstream, this resolver only returns a string when an explicit endpoint
+// override is passed in.
 
-const hosts = new Set(["supermassive-black-hole.kiloapps.io"])
+export const defaultEndpoint = ""
 
 export function resolveEndpoint(opts: { endpoint?: string; env?: string; allowCustom?: boolean }): string {
-  const endpoint = opts.endpoint ?? opts.env ?? defaultEndpoint
-  if (opts.allowCustom) return endpoint
-  try {
-    const url = new URL(endpoint)
-    if (url.protocol !== "https:") return defaultEndpoint
-    if (!hosts.has(url.hostname)) return defaultEndpoint
-    return endpoint
-  } catch {
-    return defaultEndpoint
-  }
+  return opts.endpoint ?? opts.env ?? defaultEndpoint
 }
