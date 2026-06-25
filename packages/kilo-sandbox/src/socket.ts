@@ -175,7 +175,8 @@ function dbus(input: string | undefined) {
 
 function gpg(input: string | undefined) {
   if (!input) return undefined
-  return endpoint(input.split(":", 1)[0])
+  const match = /^(.*):[^:]*:[^:]*$/.exec(input)
+  return endpoint(match?.[1] ?? input)
 }
 
 function wayland(env: Environment) {

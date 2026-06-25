@@ -108,7 +108,7 @@ describe("sandbox launch preparation", () => {
     }
   })
 
-  test("masks normalized Unix sockets after writable roots", async () => {
+  linux("masks normalized Unix sockets after writable roots", async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-socket-"))
     const socket = path.join(root, "authority.sock")
     const mask = path.join(path.dirname(root), `mask-${path.basename(root)}`)
