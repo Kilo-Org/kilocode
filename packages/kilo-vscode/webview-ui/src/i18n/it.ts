@@ -1210,6 +1210,19 @@ export const dict = {
     "Sandbox abilitata. I comandi shell dell'agente sono limitati alle directory del progetto e di Kilo.",
   "prompt.action.sandbox.disabled":
     "Sandbox disabilitata. Fai clic per limitare le scritture dei comandi shell dell'agente alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.status.enabled": "Sandbox abilitata",
+  "prompt.action.sandbox.status.disabled": "Sandbox disabilitata",
+  "prompt.action.sandbox.filesystem": "File system",
+  "prompt.action.sandbox.network": "Rete",
+  "prompt.action.sandbox.filesystem.restricted": "Limitato",
+  "prompt.action.sandbox.network.blocked": "Bloccata",
+  "prompt.action.sandbox.network.allowed": "Consentita",
+  "prompt.action.sandbox.unrestricted": "Senza restrizioni",
+  "prompt.action.sandbox.description.enabled": "Le scritture sono limitate alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.description.disabled":
+    "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
   "settings.experimental.sandbox.title": "Sandbox",
   "settings.experimental.sandbox.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",

@@ -292,6 +292,18 @@ export const dict = {
   "prompt.action.sandbox.enabled": "Пісочницю увімкнено. Команди оболонки агента обмежені каталогами проєкту та Kilo.",
   "prompt.action.sandbox.disabled":
     "Пісочницю вимкнено. Натисніть, щоб обмежити запис команд оболонки агента каталогами проєкту та Kilo.",
+  "prompt.action.sandbox.status.enabled": "Пісочницю увімкнено",
+  "prompt.action.sandbox.status.disabled": "Пісочницю вимкнено",
+  "prompt.action.sandbox.filesystem": "Файлова система",
+  "prompt.action.sandbox.network": "Мережа",
+  "prompt.action.sandbox.filesystem.restricted": "Обмежено",
+  "prompt.action.sandbox.network.blocked": "Заблоковано",
+  "prompt.action.sandbox.network.allowed": "Дозволено",
+  "prompt.action.sandbox.unrestricted": "Без обмежень",
+  "prompt.action.sandbox.description.enabled": "Запис дозволено лише в каталогах проєкту та Kilo.",
+  "prompt.action.sandbox.description.disabled": "Натисніть, щоб обмежити запис у файлову систему та доступ до мережі.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",

@@ -228,4 +228,28 @@ describe("AgentManagerProvider worktree creation", () => {
       contextDirectory: "/repo/.kilo/worktrees/wt-1",
     })
   })
+
+  it("resolves new sandbox toggles to the selected worktree directory", async () => {
+    const manager = createHarness()
+    const state = {
+      getWorktree: vi.fn().mockReturnValue({ id: "wt-1", path: "/repo/.kilo/worktrees/wt-1" }),
+    }
+    manager.getStateManager.mockReturnValue(state)
+    manager.contextTarget.mockResolvedValue(undefined)
+
+    const result = await manager.onMessage({
+      type: "toggleSandbox",
+      agentManagerContext: "wt-1",
+      draftID: "draft-1",
+      requestID: "request-1",
+    })
+
+    expect(result).toEqual({
+      type: "toggleSandbox",
+      agentManagerContext: "wt-1",
+      draftID: "draft-1",
+      requestID: "request-1",
+      contextDirectory: "/repo/.kilo/worktrees/wt-1",
+    })
+  })
 })

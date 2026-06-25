@@ -288,6 +288,18 @@ export const dict = {
   "prompt.action.sandbox.disable": "禁用沙盒",
   "prompt.action.sandbox.enabled": "沙盒已启用。代理 shell 命令被限制在项目和 Kilo 目录内。",
   "prompt.action.sandbox.disabled": "沙盒已禁用。点击以将代理 shell 命令的写入限制在项目和 Kilo 目录内。",
+  "prompt.action.sandbox.status.enabled": "沙盒已启用",
+  "prompt.action.sandbox.status.disabled": "沙盒已禁用",
+  "prompt.action.sandbox.filesystem": "文件系统",
+  "prompt.action.sandbox.network": "网络",
+  "prompt.action.sandbox.filesystem.restricted": "受限",
+  "prompt.action.sandbox.network.blocked": "已阻止",
+  "prompt.action.sandbox.network.allowed": "允许",
+  "prompt.action.sandbox.unrestricted": "不受限",
+  "prompt.action.sandbox.description.enabled": "写入仅限项目和 Kilo 目录。",
+  "prompt.action.sandbox.description.disabled": "点击以限制文件系统写入和网络访问。",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
   "speechToText.tooltip.stop": "停止捕获音频",
