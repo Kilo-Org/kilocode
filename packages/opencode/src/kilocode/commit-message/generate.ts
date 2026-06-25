@@ -10,6 +10,11 @@ import { getGitContext } from "./git-context"
 
 const log = Log.create({ service: "commit-message" })
 
+// Default maximum time (ms) to wait for the LLM to produce a commit message before
+// aborting. Prevents the HTTP request from hanging indefinitely when the
+// provider is slow or the stream stalls (e.g. due to config state races).
+const DEFAULT_TIMEOUT_MS = 30_000
+
 export const CommitMessageRuntime = {
   context(repoPath: string, selectedFiles?: string[]) {
     return getGitContext(repoPath, selectedFiles)
@@ -20,6 +25,18 @@ export const CommitMessageRuntime = {
         Effect.gen(function* () {
           const ref = yield* svc.defaultModel()
           return (yield* svc.getSmallModel(ref.providerID)) ?? (yield* svc.getModel(ref.providerID, ref.modelID))
+        }),
+      ),
+    )
+  },
+  timeoutMs() {
+    return AppRuntime.runPromise(
+      Provider.Service.use((svc) =>
+        Effect.gen(function* () {
+          const ref = yield* svc.defaultModel()
+          const provider = yield* svc.getProvider(ref.providerID)
+          
+          return provider?.options?.timeout as number ?? DEFAULT_TIMEOUT_MS
         }),
       ),
     )
@@ -138,11 +155,6 @@ function clean(text: string): string {
   return result.trim()
 }
 
-// Maximum time (ms) to wait for the LLM to produce a commit message before
-// aborting. Prevents the HTTP request from hanging indefinitely when the
-// provider is slow or the stream stalls (e.g. due to config state races).
-const TIMEOUT_MS = 30_000
-
 export async function generateCommitMessage(request: CommitMessageRequest): Promise<CommitMessageResponse> {
   const ctx = await CommitMessageRuntime.context(request.path, request.selectedFiles)
   if (ctx.files.length === 0) {
@@ -172,7 +184,8 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
   }
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const timeoutMs = await CommitMessageRuntime.timeoutMs()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const result = await CommitMessageRuntime.generate(
@@ -211,7 +224,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     return { message: clean(result) }
   } catch (err) {
     if (controller.signal.aborted) {
-      throw new Error("Commit message generation timed out after 30 seconds")
+      throw new Error(`Commit message generation timed out after ${Math.round(timeoutMs / 1000)} seconds`)
     }
     const msg = err instanceof Error ? err.message : String(err)
     log.error("generation failed", { error: msg })
