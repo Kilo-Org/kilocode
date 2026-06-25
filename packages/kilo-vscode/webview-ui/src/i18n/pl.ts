@@ -1042,6 +1042,7 @@ export const dict = {
   "workStyle.onboarding.description":
     "Ustawia początkowe wartości domyślne uprawnień, bloków rozumowania, danych wyjściowych terminala i osi czasu kontekstu. Jest stosowane tylko raz i pomija ustawienia, które zostały już przez Ciebie zmienione.",
   "workStyle.onboarding.settingsNote": "Te opcje możesz zmienić w dowolnym momencie w",
+  "workStyle.onboarding.agentSettingsNote": "Domyślnego agenta możesz zmienić w dowolnym momencie w",
   "workStyle.onboarding.settings": "Ustawieniach.",
   "workStyle.onboarding.skip": "Pomiń na razie",
   "workStyle.toast.saved.title": "Tryb został pomyślnie zapisany",

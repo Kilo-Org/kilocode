@@ -53,7 +53,7 @@ export const AgentPicker: Component = () => {
       </div>
 
       <p data-slot="onboarding-settings-note">
-        <span>{language.t("workStyle.onboarding.settingsNote")}</span>
+        <span>{language.t("workStyle.onboarding.agentSettingsNote")}</span>
         <a href="#" onClick={open}>
           <Icon name="settings-gear" size="small" />
           <span>{language.t("workStyle.onboarding.settings")}</span>

@@ -1017,6 +1017,7 @@ export const dict = {
     "這會設定權限、推理區塊、終端機輸出和上下文時間軸的初始預設值。此設定只會套用一次，並會略過你已自訂的設定。",
   "workStyle.onboarding.skip": "暫時略過",
   "workStyle.onboarding.settingsNote": "你可以隨時在以下位置變更這些選項：",
+  "workStyle.onboarding.agentSettingsNote": "你可以隨時在以下位置變更預設代理：",
   "workStyle.onboarding.settings": "設定。",
   "workStyle.toast.saved.title": "模式已成功儲存",
   "workStyle.toast.saved.description": "您可以隨時在「設定」中更新偏好設定。",

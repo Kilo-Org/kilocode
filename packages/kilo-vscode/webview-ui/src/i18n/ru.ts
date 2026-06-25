@@ -1085,6 +1085,7 @@ export const dict = {
     "Задаёт начальные значения разрешений, блоков рассуждений, вывода терминала и временной шкалы контекста. Применяется только один раз и не затрагивает уже изменённые вами настройки.",
   "workStyle.onboarding.skip": "Пока пропустить",
   "workStyle.onboarding.settingsNote": "Эти параметры можно изменить в любое время в разделе",
+  "workStyle.onboarding.agentSettingsNote": "Агента по умолчанию можно изменить в любое время в разделе",
   "workStyle.onboarding.settings": "«Настройки».",
   "workStyle.toast.saved.title": "Режим успешно сохранён",
   "workStyle.toast.saved.description": "Изменить их можно в любое время в настройках.",

@@ -1036,6 +1036,7 @@ export const dict = {
     "Встановлює початкові значення дозволів, блоків міркувань, виводу термінала та часової шкали контексту. Застосовується лише один раз і не змінює вже налаштовані вами параметри.",
   "workStyle.onboarding.skip": "Поки пропустити",
   "workStyle.onboarding.settingsNote": "Ці параметри можна будь-коли змінити в розділі",
+  "workStyle.onboarding.agentSettingsNote": "Агента за замовчуванням можна будь-коли змінити в розділі",
   "workStyle.onboarding.settings": "«Налаштування».",
   "workStyle.toast.saved.title": "Режим успішно збережено",
   "workStyle.toast.saved.description": "Змінити їх можна будь-коли в налаштуваннях.",

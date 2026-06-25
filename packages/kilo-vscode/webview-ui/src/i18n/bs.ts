@@ -1085,6 +1085,7 @@ export const dict = {
   "workStyle.agent.data.notebooks": "Izvršava upite i kreira vizualizacije u Jupyter bilježnicama",
   "workStyle.agent.data.requirement": "Zahtijeva Jupyter ekstenziju",
   "workStyle.onboarding.settingsNote": "Ove opcije možete promijeniti bilo kada u",
+  "workStyle.onboarding.agentSettingsNote": "Zadanog agenta možete promijeniti bilo kada u",
   "workStyle.onboarding.settings": "Postavkama.",
   "workStyle.onboarding.description":
     "Postavlja početne zadane vrijednosti za dozvole, blokove zaključivanja, izlaz terminala i vremensku liniju konteksta. Primjenjuje se samo jednom i preskače postavke koje ste već prilagodili.",

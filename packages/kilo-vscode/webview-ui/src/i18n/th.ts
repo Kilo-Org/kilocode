@@ -1070,6 +1070,7 @@ export const dict = {
     "ตั้งค่าเริ่มต้นสำหรับสิทธิ์ บล็อกการให้เหตุผล เอาต์พุตเทอร์มินัล และไทม์ไลน์บริบท การตั้งค่านี้ใช้เพียงครั้งเดียวและจะข้ามรายการที่คุณปรับแต่งไว้แล้ว",
   "workStyle.onboarding.skip": "ข้ามไปก่อน",
   "workStyle.onboarding.settingsNote": "คุณสามารถเปลี่ยนตัวเลือกเหล่านี้ได้ทุกเมื่อใน",
+  "workStyle.onboarding.agentSettingsNote": "คุณสามารถเปลี่ยนเอเจนต์เริ่มต้นได้ทุกเมื่อใน",
   "workStyle.onboarding.settings": "การตั้งค่า",
   "workStyle.toast.saved.title": "บันทึกโหมดเรียบร้อยแล้ว",
   "workStyle.toast.saved.description": "อัปเดตการตั้งค่าของคุณได้ทุกเมื่อในการตั้งค่า",

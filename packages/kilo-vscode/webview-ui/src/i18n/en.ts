@@ -1000,6 +1000,7 @@ export const dict = {
     "This sets the starting defaults for permissions, reasoning blocks, terminal output, and the context timeline. It only applies once and skips settings you already customized.",
   "workStyle.onboarding.skip": "Skip for now",
   "workStyle.onboarding.settingsNote": "You can change these options anytime in",
+  "workStyle.onboarding.agentSettingsNote": "You can change the default agent anytime in",
   "workStyle.onboarding.settings": "Settings.",
   "workStyle.toast.saved.title": "Mode saved successfully",
   "workStyle.toast.saved.description": "Update your preferences anytime in Settings.",

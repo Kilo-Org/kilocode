@@ -1032,6 +1032,7 @@ export const dict = {
   "workStyle.onboarding.description":
     "권한, 추론 블록, 터미널 출력 및 컨텍스트 타임라인의 초기 기본값을 설정합니다. 한 번만 적용되며 이미 사용자 지정한 설정은 건너뜁니다.",
   "workStyle.onboarding.settingsNote": "이 옵션은 언제든지 다음에서 변경할 수 있습니다:",
+  "workStyle.onboarding.agentSettingsNote": "기본 에이전트는 언제든지 다음에서 변경할 수 있습니다:",
   "workStyle.onboarding.settings": "설정.",
   "workStyle.onboarding.skip": "지금은 건너뛰기",
   "workStyle.toast.saved.title": "모드가 저장되었습니다",

@@ -1043,6 +1043,7 @@ export const dict = {
   "workStyle.onboarding.description":
     "Dette angir startinnstillingene for tillatelser, resonneringsblokker, terminalutdata og konteksttidslinjen. Det brukes bare én gang og hopper over innstillinger du allerede har tilpasset.",
   "workStyle.onboarding.settingsNote": "Du kan endre disse alternativene når som helst under",
+  "workStyle.onboarding.agentSettingsNote": "Du kan endre standardagenten når som helst under",
   "workStyle.onboarding.settings": "Innstillinger.",
   "workStyle.onboarding.skip": "Hopp over inntil videre",
   "workStyle.toast.saved.title": "Modusen er lagret",

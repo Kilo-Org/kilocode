@@ -1088,6 +1088,7 @@ export const dict = {
   "workStyle.agent.data.notebooks": "Ejecuta consultas y crea visualizaciones en cuadernos de Jupyter",
   "workStyle.agent.data.requirement": "Requiere la extensión Jupyter",
   "workStyle.onboarding.settingsNote": "Puedes cambiar estas opciones en cualquier momento en",
+  "workStyle.onboarding.agentSettingsNote": "Puedes cambiar el agente predeterminado en cualquier momento en",
   "workStyle.onboarding.settings": "Configuración.",
   "workStyle.onboarding.description":
     "Esto establece los valores iniciales de permisos, bloques de razonamiento, salida del terminal y cronología de contexto. Solo se aplica una vez y omite los ajustes que ya hayas personalizado.",

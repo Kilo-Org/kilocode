@@ -1036,6 +1036,7 @@ export const dict = {
   "workStyle.onboarding.description":
     "Hiermee stel je de beginwaarden in voor machtigingen, redeneerblokken, terminaluitvoer en de contexttijdlijn. Dit wordt slechts één keer toegepast en slaat instellingen over die je al hebt aangepast.",
   "workStyle.onboarding.settingsNote": "Je kunt deze opties op elk moment wijzigen in",
+  "workStyle.onboarding.agentSettingsNote": "Je kunt de standaardagent op elk moment wijzigen in",
   "workStyle.onboarding.settings": "Instellingen.",
   "workStyle.onboarding.skip": "Voorlopig overslaan",
   "workStyle.toast.saved.title": "Modus succesvol opgeslagen",

@@ -1092,6 +1092,7 @@ export const dict = {
   "workStyle.agent.data.notebooks": "Führt Abfragen aus und erstellt Visualisierungen in Jupyter-Notebooks",
   "workStyle.agent.data.requirement": "Erfordert die Jupyter-Erweiterung",
   "workStyle.onboarding.settingsNote": "Du kannst diese Optionen jederzeit ändern unter",
+  "workStyle.onboarding.agentSettingsNote": "Du kannst den Standard-Agenten jederzeit ändern unter",
   "workStyle.onboarding.settings": "Einstellungen.",
   "workStyle.onboarding.description":
     "Hiermit werden die anfänglichen Standardeinstellungen für Berechtigungen, Denkblöcke, Terminalausgabe und Kontextzeitleiste festgelegt. Dies gilt nur einmal und überspringt Einstellungen, die Sie bereits angepasst haben.",

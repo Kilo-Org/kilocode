@@ -886,6 +886,7 @@ export const dict = {
   "workStyle.onboarding.description":
     "Imposta i valori iniziali per autorizzazioni, blocchi di ragionamento, output del terminale e timeline del contesto. Viene applicato una sola volta e ignora le impostazioni già personalizzate.",
   "workStyle.onboarding.settingsNote": "Puoi modificare queste opzioni in qualsiasi momento in",
+  "workStyle.onboarding.agentSettingsNote": "Puoi modificare l’agente predefinito in qualsiasi momento in",
   "workStyle.onboarding.settings": "Impostazioni.",
   "workStyle.onboarding.skip": "Ignora per ora",
   "workStyle.toast.saved.title": "Modalità salvata correttamente",

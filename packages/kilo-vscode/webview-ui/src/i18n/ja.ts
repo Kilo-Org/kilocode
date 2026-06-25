@@ -1073,6 +1073,7 @@ export const dict = {
   "workStyle.onboarding.description":
     "権限、推論ブロック、ターミナル出力、コンテキストタイムラインの初期設定を行います。適用されるのは一度だけで、すでにカスタマイズした設定は変更されません。",
   "workStyle.onboarding.settingsNote": "これらのオプションはいつでも変更できます：",
+  "workStyle.onboarding.agentSettingsNote": "デフォルトのエージェントはいつでも変更できます：",
   "workStyle.onboarding.settings": "設定。",
   "workStyle.onboarding.skip": "今はスキップ",
   "workStyle.toast.saved.title": "モードを保存しました",

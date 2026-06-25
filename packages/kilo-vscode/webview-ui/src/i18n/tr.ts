@@ -1035,6 +1035,7 @@ export const dict = {
     "İzinler, akıl yürütme blokları, terminal çıktısı ve bağlam zaman çizelgesi için başlangıç varsayılanlarını belirler. Yalnızca bir kez uygulanır ve daha önce özelleştirdiğiniz ayarları atlar.",
   "workStyle.onboarding.skip": "Şimdilik atla",
   "workStyle.onboarding.settingsNote": "Bu seçenekleri istediğiniz zaman şuradan değiştirebilirsiniz:",
+  "workStyle.onboarding.agentSettingsNote": "Varsayılan ajanı istediğiniz zaman şuradan değiştirebilirsiniz:",
   "workStyle.onboarding.settings": "Ayarlar.",
   "workStyle.toast.saved.title": "Mod başarıyla kaydedildi",
   "workStyle.toast.saved.description": "Tercihlerinizi istediğiniz zaman Ayarlar'dan güncelleyebilirsiniz.",

@@ -1077,6 +1077,7 @@ export const dict = {
   "workStyle.agent.data.notebooks": "Kører forespørgsler og opretter visualiseringer i Jupyter-notebooks",
   "workStyle.agent.data.requirement": "Kræver Jupyter-udvidelsen",
   "workStyle.onboarding.settingsNote": "Du kan til enhver tid ændre disse valg under",
+  "workStyle.onboarding.agentSettingsNote": "Du kan til enhver tid ændre standardagenten under",
   "workStyle.onboarding.settings": "Indstillinger.",
   "workStyle.onboarding.description":
     "Dette angiver startindstillingerne for tilladelser, ræsonneringsblokke, terminaloutput og konteksttidslinjen. Det anvendes kun én gang og springer indstillinger over, som du allerede har tilpasset.",

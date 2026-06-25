@@ -1024,6 +1024,7 @@ export const dict = {
   "workStyle.agent.data.notebooks": "يشغّل الاستعلامات وينشئ تصورات في دفاتر Jupyter",
   "workStyle.agent.data.requirement": "يتطلب إضافة Jupyter",
   "workStyle.onboarding.settingsNote": "يمكنك تغيير هذه الخيارات في أي وقت من",
+  "workStyle.onboarding.agentSettingsNote": "يمكنك تغيير الوكيل الافتراضي في أي وقت من",
   "workStyle.onboarding.settings": "الإعدادات.",
   "workStyle.onboarding.description":
     "يحدد هذا الإعداد القيم الافتراضية الأولية للأذونات وكتل الاستدلال ومخرجات المحطة الطرفية والمخطط الزمني للسياق. يُطبّق مرة واحدة فقط ويتجاوز الإعدادات التي خصصتها مسبقًا.",
