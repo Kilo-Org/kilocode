@@ -105,7 +105,7 @@ async function fetchSkills(ctx: MarketplaceActionContext, dir: string) {
   }
 }
 
-async function invalidate(
+export async function invalidate(
   ctx: { connection: KiloConnectionService },
   scope: "project" | "global",
   dir: string,

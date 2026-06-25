@@ -713,9 +713,11 @@ export const SessionProvider: ParentComponent = (props) => {
   // the initial push that arrives before the DOM mounts. This mirrors the
   // pattern used by ProviderProvider for providersLoaded.
   const unsubAgents = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "agentsLoaded") {
+    if (message.type === "workStyleApplied") {
+      if (!currentSessionID()) setPendingAgentSelection(message.agent)
       return
     }
+    if (message.type !== "agentsLoaded") return
     setAgents(message.agents)
     setAllAgents(message.allAgents ?? message.agents)
     setDefaultAgent(message.defaultAgent)

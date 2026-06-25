@@ -17,6 +17,7 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
+const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 
 function readFile(filePath: string): string {
@@ -72,6 +73,14 @@ describe("sendCommand dismisses pending tool requests", () => {
 
   it("rejects questions before sending", () => {
     expect(body).toContain("rejectQuestion")
+  })
+})
+
+describe("new task onboarding bypass contract", () => {
+  const source = readFile(PROMPT_FILE)
+
+  it("dispatches a cancellable task request for typed and extension-triggered tasks", () => {
+    expect(source.match(/new CustomEvent\("taskSubmitRequest", \{ cancelable: true \}\)/g)).toHaveLength(2)
   })
 })
 

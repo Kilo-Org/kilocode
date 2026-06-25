@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, mock } from "bun:test"
 import * as vscode from "vscode"
 import {
+  invalidate,
   removeMarketplaceItem,
   removeMarketplaceItemFromAllScopes,
   type MarketplaceActionContext,
@@ -127,6 +128,24 @@ describe("Marketplace installation metadata", () => {
     ])
     expect(filterItems(items, metadata, "", "installed", [], []).map((item) => item.id)).toEqual(["warehouse"])
     expect(filterItems(items, metadata, "", "all", [], ["mcp"]).map((item) => item.id)).toEqual(["warehouse"])
+  })
+})
+
+describe("Marketplace invalidation", () => {
+  it("refreshes global config and disposes the active CLI instance", async () => {
+    const update = mock(async () => {})
+    const dispose = mock(async () => {})
+    const getClientAsync = mock(async () => ({
+      global: { config: { update } },
+      instance: { dispose },
+    }))
+    const ctx = { connection: { getClientAsync } as unknown as MarketplaceActionContext["connection"] }
+
+    await invalidate(ctx, "global", project)
+
+    expect(getClientAsync).toHaveBeenCalledWith(project)
+    expect(update).toHaveBeenCalledWith({ config: {} })
+    expect(dispose).toHaveBeenCalledWith({ directory: project })
   })
 })
 

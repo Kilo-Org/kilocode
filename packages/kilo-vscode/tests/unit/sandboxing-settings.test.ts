@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { visible } from "../../webview-ui/src/components/settings/sandboxing"
 
-const features = { indexing: false, sandboxControls: false }
+const features = { indexing: false, sandboxControls: false, agentSelectionOnboarding: false }
 
 describe("Sandboxing settings visibility", () => {
   test("requires both the internal feature flag and sandbox experiment", () => {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test"
-import { buildWorkStyleApplyPlan, getInitialWorkStyle, WORK_STYLE_PRESETS } from "../../src/shared/work-style-presets"
+import {
+  buildWorkStyleApplyPlan,
+  getInitialWorkStyle,
+  isOnboardingAgent,
+  ONBOARDING_AGENTS,
+  WORK_STYLE_PRESETS,
+} from "../../src/shared/work-style-presets"
 
 describe("work style presets", () => {
   it("shows onboarding for users without sessions", () => {
@@ -8,6 +14,14 @@ describe("work style presets", () => {
 
   it("skips onboarding for users with existing sessions", () => {
     expect(getInitialWorkStyle(true)).toBe("skipped")
+  })
+
+  it("offers only Code and Data during onboarding", () => {
+    expect(ONBOARDING_AGENTS).toEqual(["code", "data"])
+    expect(isOnboardingAgent("code")).toBe(true)
+    expect(isOnboardingAgent("data")).toBe(true)
+    expect(isOnboardingAgent("ask")).toBe(false)
+    expect(isOnboardingAgent("plan")).toBe(false)
   })
 
   it("uses ask-first permissions for human in the loop", () => {

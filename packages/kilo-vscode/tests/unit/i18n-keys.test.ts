@@ -395,6 +395,26 @@ describe("i18n key validation — no missing translation keys", () => {
   })
 })
 
+describe("onboarding agent translation keys", () => {
+  it("defines Code and Data keys without legacy Ask keys in every app locale", () => {
+    const keys = [
+      "workStyle.agent.code.title",
+      "workStyle.agent.code.default",
+      "workStyle.agent.code.tasks",
+      "workStyle.agent.code.changes",
+      "workStyle.agent.data.title",
+      "workStyle.agent.data.analysis",
+      "workStyle.agent.data.notebooks",
+      "workStyle.agent.data.requirement",
+    ]
+    for (const dict of Object.values(appLocales)) {
+      for (const key of keys) expect(dict[key]).toBeTruthy()
+      expect(dict["workStyle.agent.ask.title"]).toBeUndefined()
+      expect(dict["workStyle.agent.ask.description"]).toBeUndefined()
+    }
+  })
+})
+
 describe("i18n locale completeness — every English key exists in all locales", () => {
   it("shared UI: every English key has a translation in all locales", () => {
     const missing = findMissingLocaleKeys(uiEn, uiLocales)

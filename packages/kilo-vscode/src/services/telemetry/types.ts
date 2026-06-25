@@ -31,6 +31,7 @@ export enum TelemetryEventName {
   TITLE_BUTTON_CLICKED = "Title Button Clicked",
   WORK_STYLE_ONBOARDING_SHOWN = "Work Style Onboarding Shown",
   WORK_STYLE_SELECTED = "Work Style Selected",
+  DATA_AGENT_ONBOARDING_PREPARATION_FAILED = "Data Agent Onboarding Preparation Failed",
   PROMPT_ENHANCED = "Prompt Enhanced",
 
   // Marketplace

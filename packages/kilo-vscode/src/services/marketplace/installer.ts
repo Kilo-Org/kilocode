@@ -17,6 +17,8 @@ import type {
 } from "./types"
 import { MarketplacePaths } from "./paths"
 
+export const AGENT_ALREADY_INSTALLED_ERROR = "Agent already installed. Remove it first."
+
 export class MarketplaceInstaller {
   constructor(private paths: MarketplacePaths) {}
 
@@ -108,7 +110,7 @@ export class MarketplaceInstaller {
 
     try {
       await fs.access(filepath)
-      return { success: false, slug: item.id, error: "Agent already installed. Remove it first." }
+      return { success: false, slug: item.id, error: AGENT_ALREADY_INSTALLED_ERROR }
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err
     }

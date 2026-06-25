@@ -6,7 +6,7 @@ import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
-import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { OnboardingAgent, WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -402,6 +402,7 @@ export interface SetWorkStyleMessage {
 export interface ApplyWorkStyleMessage {
   type: "applyWorkStyle"
   style: WorkStyle
+  agent: OnboardingAgent
 }
 
 export interface StreamSessionVisibleMessage {

@@ -415,6 +415,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "triggerTask") {
       if (isDisabled()) return
+      const task = new CustomEvent("taskSubmitRequest", { cancelable: true })
+      if (!window.dispatchEvent(task)) return
       const sel = session.selected(sid())
       session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
     }
@@ -774,6 +776,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       ...(gitFile ? [gitFile] : []),
     ]
     const attachments = allFiles.length > 0 ? allFiles : undefined
+    const task = new CustomEvent("taskSubmitRequest", { cancelable: true })
+    if (!window.dispatchEvent(task)) return
 
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched && !data) {

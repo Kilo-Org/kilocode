@@ -2,6 +2,7 @@ import { type Component, Show } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useWorkStyle } from "../../context/work-style"
 import { useLanguage } from "../../context/language"
+import { AgentPicker } from "../shared/AgentPicker"
 import { WorkStylePicker } from "../shared/WorkStylePicker"
 import { KiloLogo, WelcomeEmptyState } from "./WelcomeEmptyState"
 
@@ -28,10 +29,12 @@ export const SidebarEmptyState: Component<SidebarEmptyStateProps> = (props) => {
         when={work.shouldShowOnboarding()}
         fallback={<WelcomeEmptyState onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />}
       >
-        <div class="message-list-empty work-style-empty">
+        <div class="message-list-empty onboarding-empty">
           <KiloLogo />
-          <h1 class="work-style-welcome">{language.t("workStyle.onboarding.welcome")}</h1>
-          <WorkStylePicker />
+          <h1 class="onboarding-welcome">{language.t("workStyle.onboarding.welcome")}</h1>
+          <Show when={work.page() === "style"} fallback={<AgentPicker />}>
+            <WorkStylePicker />
+          </Show>
         </div>
       </Show>
     </Show>

@@ -10,6 +10,7 @@ export interface WorkStyleConfig {
 
 export type WorkStyle = "human-in-the-loop" | "autonomous"
 export type WorkStyleState = WorkStyle | "skipped" | "unset"
+export type OnboardingAgent = "code" | "data"
 
 export interface WorkStyleSettings {
   showTaskTimeline: boolean
@@ -59,6 +60,7 @@ const BASH: Record<string, PermissionLevel> = {
 }
 
 export const WORK_STYLE_CHOICES: WorkStyle[] = ["human-in-the-loop", "autonomous"]
+export const ONBOARDING_AGENTS: OnboardingAgent[] = ["code", "data"]
 
 export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
   "human-in-the-loop": {
@@ -101,6 +103,10 @@ export const WORK_STYLE_PRESETS: Record<WorkStyle, WorkStylePreset> = {
       showTaskTimeline: false,
     },
   },
+}
+
+export function isOnboardingAgent(agent: unknown): agent is OnboardingAgent {
+  return agent === "code" || agent === "data"
 }
 
 export function getWorkStylePreset(style: WorkStyle): WorkStylePreset {

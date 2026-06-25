@@ -1,44 +1,52 @@
-import { For } from "solid-js"
+import { For, onMount } from "solid-js"
 import type { Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { ONBOARDING_AGENTS } from "../../../../src/shared/work-style-presets"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorkStyle } from "../../context/work-style"
-import { WORK_STYLE_CHOICES } from "../../../../src/shared/work-style-presets"
 
-const details = ["permissions", "visibility"] as const
+const details = {
+  code: ["default", "tasks", "changes"],
+  data: ["analysis", "notebooks", "requirement"],
+} as const
 
-export const WorkStylePicker: Component = () => {
+export const AgentPicker: Component = () => {
   const language = useLanguage()
   const vscode = useVSCode()
   const work = useWorkStyle()
+  let heading: HTMLHeadingElement | undefined
+  onMount(() => heading?.focus())
   const open = (event: MouseEvent) => {
     event.preventDefault()
-    vscode.postMessage({ type: "openSettingsPanel", tab: "autoApprove" })
+    vscode.postMessage({ type: "openSettingsPanel", tab: "agentBehaviour" })
   }
 
   return (
     <Card class="onboarding-picker">
-      <h2 data-slot="onboarding-title">{language.t("workStyle.onboarding.title")}</h2>
+      <h2 ref={heading} tabIndex={-1} data-slot="onboarding-title">
+        {language.t("workStyle.onboarding.agentTitle")}
+      </h2>
 
       <div data-slot="onboarding-options">
-        <For each={WORK_STYLE_CHOICES}>
-          {(choice) => (
+        <For each={ONBOARDING_AGENTS}>
+          {(agent) => (
             <Button
               class="onboarding-option"
               variant="ghost"
               disabled={work.applying()}
-              onClick={() => work.select(choice)}
+              onClick={() => work.complete(agent)}
             >
               <div data-slot="onboarding-option-copy">
-                <h3 data-slot="onboarding-option-title">{language.t(`workStyle.choice.${choice}.title`)}</h3>
-                <p data-slot="onboarding-option-description">{language.t(`workStyle.choice.${choice}.description`)}</p>
+                <h3 data-slot="onboarding-option-title">{language.t(`workStyle.agent.${agent}.title`)}</h3>
+                <ul data-slot="onboarding-option-details">
+                  <For each={details[agent]}>
+                    {(detail) => <li>{language.t(`workStyle.agent.${agent}.${detail}`)}</li>}
+                  </For>
+                </ul>
               </div>
-              <ul data-slot="onboarding-option-details">
-                <For each={details}>{(detail) => <li>{language.t(`workStyle.choice.${choice}.${detail}`)}</li>}</For>
-              </ul>
             </Button>
           )}
         </For>

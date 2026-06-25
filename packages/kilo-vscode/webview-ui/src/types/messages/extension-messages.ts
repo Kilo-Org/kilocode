@@ -18,7 +18,7 @@ import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
 import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
-import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { OnboardingAgent, WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
@@ -517,11 +517,13 @@ export interface TimelineSettingLoadedMessage {
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
+  dataAgentAvailable: boolean
 }
 
 export interface WorkStyleAppliedMessage {
   type: "workStyleApplied"
   style: WorkStyle
+  agent: OnboardingAgent
 }
 
 export interface WorkStyleApplyFailedMessage {

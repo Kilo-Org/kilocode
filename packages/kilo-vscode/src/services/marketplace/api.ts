@@ -88,7 +88,7 @@ export class MarketplaceApiClient {
     return result
   }
 
-  private async fetchAgents(): Promise<AgentMarketplaceItem[]> {
+  async fetchAgents(): Promise<AgentMarketplaceItem[]> {
     const cached = this.getCached("agents")
     if (cached) return cached as AgentMarketplaceItem[]
 

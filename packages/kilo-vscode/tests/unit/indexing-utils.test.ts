@@ -141,6 +141,10 @@ describe("indexing feature detection", () => {
     expect(configFeatures({ plugin: ["file:///tmp/.opencode/plugin/index.js"] }).indexing).toBe(false)
     expect(configFeatures({}).indexing).toBe(false)
   })
+
+  it("disables agent-selection onboarding by default", () => {
+    expect(configFeatures({}).agentSelectionOnboarding).toBe(false)
+  })
 })
 
 describe("indexing status message handling", () => {

@@ -123,18 +123,22 @@ function OpenModelPicker(props: { children: any }) {
   )
 }
 
-const work: WorkStyleContextValue = {
-  style: () => "unset",
-  loading: () => false,
-  applying: () => false,
-  shouldShowOnboarding: () => true,
-  apply: noop,
+function work(page: "style" | "agent"): WorkStyleContextValue {
+  return {
+    style: () => "unset",
+    page: () => page,
+    loading: () => false,
+    applying: () => false,
+    shouldShowOnboarding: () => true,
+    select: noop,
+    complete: noop,
+  }
 }
 
-function WorkStyleOnboarding() {
+function WorkStyleOnboarding(props: { page: "style" | "agent"; enabled: boolean }) {
   return (
-    <StoryProviders noPadding>
-      <WorkStyleContext.Provider value={work}>
+    <StoryProviders noPadding config={{}} features={{ agentSelectionOnboarding: props.enabled }}>
+      <WorkStyleContext.Provider value={work(props.page)}>
         <div style={{ height: "700px", overflow: "auto" }}>
           <SidebarEmptyState />
         </div>
@@ -145,12 +149,22 @@ function WorkStyleOnboarding() {
 
 export const WorkStyleOnboardingDefault: Story = {
   name: "Work style onboarding — default width",
-  render: () => <WorkStyleOnboarding />,
+  render: () => <WorkStyleOnboarding page="style" enabled={false} />,
 }
 
 export const WorkStyleOnboarding200: Story = {
   name: "Work style onboarding — narrow width",
-  render: () => <WorkStyleOnboarding />,
+  render: () => <WorkStyleOnboarding page="style" enabled={false} />,
+}
+
+export const AgentOnboardingDefault: Story = {
+  name: "Agent onboarding — default width",
+  render: () => <WorkStyleOnboarding page="agent" enabled />,
+}
+
+export const AgentOnboarding200: Story = {
+  name: "Agent onboarding — narrow width",
+  render: () => <WorkStyleOnboarding page="agent" enabled />,
 }
 
 export const AgentBehaviourAgents: Story = {

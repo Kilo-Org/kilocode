@@ -836,6 +836,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           connection: this.connectionService,
           directory: this.getWorkspaceDirectory(this.currentSession?.id),
           post: (msg) => this.postMessage(msg),
+          refresh: async () => {
+            await Promise.all([this.fetchAndSendConfigUpdated(), this.fetchAndSendAgents()])
+          },
         })
       )
         return
@@ -1309,7 +1312,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
-    this.webviewMessageDisposable = watchWorkStyleConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+    this.webviewMessageDisposable = watchWorkStyleConfig(
+      this.connectionService,
+      (msg) => this.postMessage(msg),
+      this.webviewMessageDisposable,
+    )
   }
 
   private handleEditorOpenMessage(message: Parameters<typeof handleEditorAction>[0]): boolean {
@@ -2453,7 +2460,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private sendWorkStyle(): void {
-    this.postMessage(getWorkStylePayload())
+    this.postMessage(getWorkStylePayload(this.connectionService))
   }
 
   private async handleUpdateConfig(

@@ -13,6 +13,9 @@ class TestPaths extends MarketplacePaths {
     if (scope === "global") return path.join(tmpDir, "global", "kilo.json")
     return path.join(tmpDir, "project", ".kilo", "kilo.json")
   }
+  override agentsDir(scope: "project" | "global", workspace?: string): string {
+    return path.join(tmpDir, scope, "agents")
+  }
   override skillsDir(scope: "project" | "global", workspace?: string): string {
     return path.join(tmpDir, "skills")
   }
@@ -121,6 +124,45 @@ describe("MarketplaceInstaller MCP format normalization", () => {
     const written = JSON.parse(await fs.readFile(new TestPaths().configPath("global"), "utf-8"))
     const mcp = written.mcp?.already
     expect(mcp).toEqual({ type: "local", command: ["npx", "-y", "someserver"], environment: { KEY: "val" } })
+  })
+})
+
+describe("MarketplaceInstaller agents", () => {
+  it("installs a global agent without overwriting an existing one", async () => {
+    const paths = new TestPaths()
+    const installer = new MarketplaceInstaller(paths)
+    const item = {
+      type: "agent" as const,
+      id: "data",
+      name: "Data",
+      description: "Analyze data",
+      category: "data",
+      content: {
+        mode: "primary" as const,
+        description: "Analyze and visualize data",
+        prompt: "Use the available data tools.",
+        permission: { bash: "ask" },
+        options: { temperature: 0.2 },
+      },
+    }
+
+    const result = await installer.installAgent(item, "global")
+    const file = path.join(paths.agentsDir("global"), "data.md")
+    const content = await fs.readFile(file, "utf-8")
+
+    expect(result).toEqual({ success: true, slug: "data", filePath: file, line: 1 })
+    expect(content).toContain("mode: primary")
+    expect(content).toContain("permission:")
+    expect(content).toContain("options:")
+    expect(content).toEndWith("\n\nUse the available data tools.\n")
+
+    const again = await installer.installAgent({ ...item, content: { ...item.content, prompt: "Overwrite" } }, "global")
+    expect(again).toEqual({
+      success: false,
+      slug: "data",
+      error: "Agent already installed. Remove it first.",
+    })
+    expect(await fs.readFile(file, "utf-8")).toBe(content)
   })
 })
 

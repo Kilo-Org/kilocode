@@ -319,6 +319,7 @@ const ConfigWrapper: ParentComponent<{
       return {
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
         sandboxControls: props.features?.sandboxControls ?? false,
+        agentSelectionOnboarding: props.features?.agentSelectionOnboarding ?? false,
       }
     })
 
