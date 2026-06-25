@@ -8,6 +8,7 @@ import {
 } from "../../src/services/cli-backend/server-manager"
 import {
   copyKiloSandboxWorker,
+  copySandboxResources,
   copyTreeSitterResources,
   resolveTreeSitterEnv,
   kiloSandboxWorkerForBinary,
@@ -122,6 +123,73 @@ describe("cli tree-sitter resources", () => {
       expect(await fs.readFile(path.join(treeSitterDirForBinary(target), "tree-sitter-typescript.wasm"), "utf8")).toBe(
         "language",
       )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("copies the Linux sandbox helper and license resources", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-sandbox-"))
+    try {
+      const source = path.join(root, "dist", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      const helper = path.join(path.dirname(source), "bwrap")
+      const license = path.join(path.dirname(source), "licenses", "bubblewrap", "COPYING")
+      const notice = path.join(path.dirname(license), "NOTICE")
+
+      await fs.mkdir(path.dirname(license), { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+      await fs.writeFile(source, "binary")
+      await fs.writeFile(target, "binary")
+      await fs.writeFile(helper, "helper")
+      await fs.writeFile(license, "LGPL")
+      await fs.writeFile(notice, "SPDX-License-Identifier: LGPL-2.0-or-later")
+
+      await copySandboxResources(source, target)
+
+      const copied = path.join(path.dirname(target), "bwrap")
+      expect(await fs.readFile(copied, "utf8")).toBe("helper")
+      expect((await fs.stat(copied)).mode & 0o111).not.toBe(0)
+      expect(await fs.readFile(path.join(path.dirname(target), "licenses", "bubblewrap", "COPYING"), "utf8")).toBe(
+        "LGPL",
+      )
+      expect(await fs.readFile(path.join(path.dirname(target), "licenses", "bubblewrap", "NOTICE"), "utf8")).toBe(
+        "SPDX-License-Identifier: LGPL-2.0-or-later",
+      )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("removes stale sandbox resources when the source has none", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-sandbox-stale-"))
+    try {
+      const source = path.join(root, "dist", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      const helper = path.join(path.dirname(target), "bwrap")
+      const license = path.join(path.dirname(target), "licenses", "bubblewrap", "COPYING")
+
+      await fs.mkdir(path.dirname(source), { recursive: true })
+      await fs.mkdir(path.dirname(license), { recursive: true })
+      await fs.writeFile(source, "binary")
+      await fs.writeFile(target, "binary")
+      await fs.writeFile(helper, "stale helper")
+      await fs.writeFile(license, "stale license")
+
+      await copySandboxResources(source, target)
+
+      expect(
+        await fs.stat(helper).then(
+          () => true,
+          () => false,
+        ),
+      ).toBe(false)
+      expect(
+        await fs.stat(path.dirname(license)).then(
+          () => true,
+          () => false,
+        ),
+      ).toBe(false)
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }

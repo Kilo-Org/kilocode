@@ -63,7 +63,7 @@ restricted.live("keeps network restriction enabled by default when the sandbox i
       Effect.provideService(InstanceRef, ctx),
       Effect.exit,
     )
-    if (!backendSupport.available) {
+    if (!backendSupport().available) {
       expect(Exit.isSuccess(exit)).toBe(true)
       expect(target.requests()).toBe(1)
       return

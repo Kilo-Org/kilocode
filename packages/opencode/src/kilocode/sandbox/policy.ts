@@ -114,11 +114,12 @@ export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: Se
   const directory = yield* InstanceState.directory
   const override = overrides.get(key(directory, sessionID))
   const enabled = override?.enabled ?? cfg.experimental?.sandbox ?? false
+  const support = backendSupport()
   return {
     directory,
-    enabled: enabled && backendSupport.available,
-    available: backendSupport.available,
-    reason: backendSupport.reason,
+    enabled: enabled && support.available,
+    available: support.available,
+    reason: support.reason,
     version: override?.version ?? 0,
   }
 })
