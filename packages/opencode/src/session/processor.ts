@@ -1,5 +1,5 @@
 import { Image } from "@/image/image"
-import { Cause, Deferred, Effect, Exit, Layer, Context, Scope, Schema } from "effect"
+import { Cause, Deferred, Effect, Exit, Layer, Context, Runtime, Scope, Schema } from "effect"
 import * as Stream from "effect/Stream"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
@@ -288,10 +288,12 @@ export const layer = Layer.effect(
           },
         })
         // kilocode_change start
+        // Effect.runPromise wraps errors in FiberFailure; unwrap before instanceof checks.
+        const actual = Runtime.isFiberFailure(error) ? Cause.squash(error[Runtime.FiberFailureCauseId]) : error
         if (
-          error instanceof Permission.RejectedError ||
-          error instanceof Question.RejectedError ||
-          error instanceof Suggestion.DismissedError
+          actual instanceof Permission.RejectedError ||
+          actual instanceof Question.RejectedError ||
+          actual instanceof Suggestion.DismissedError
         ) {
           // kilocode_change end
           ctx.blocked = ctx.shouldBreak

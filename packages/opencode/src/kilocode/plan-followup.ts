@@ -17,7 +17,7 @@ import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
-import { Effect, Schema } from "effect"
+import { Cause, Effect, Runtime, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { lazy } from "@/util/lazy"
@@ -339,7 +339,8 @@ export namespace PlanFollowup {
 
     return promise
       .catch((error) => {
-        if (error instanceof Question.RejectedError) return undefined
+        const actual = Runtime.isFiberFailure(error) ? Cause.squash(error[Runtime.FiberFailureCauseId]) : error
+        if (actual instanceof Question.RejectedError) return undefined
         throw error
       })
       .finally(() => {

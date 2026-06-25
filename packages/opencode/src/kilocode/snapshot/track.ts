@@ -40,7 +40,7 @@
 // All of this is Kilo-specific — the upstream snapshot module remains a thin
 // shim that calls into here.
 
-import { Duration, Effect, Fiber, Option } from "effect"
+import { Cause, Duration, Effect, Fiber, Option, Runtime } from "effect"
 import { applyEdits, modify } from "jsonc-parser"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Question } from "@/question"
@@ -612,7 +612,8 @@ export namespace KiloSnapshotTrack {
           return "dismissed"
         })
         .catch((err): Answer => {
-          if (!signal?.aborted && !(err instanceof Question.RejectedError)) {
+          const actual = Runtime.isFiberFailure(err) ? Cause.squash(err[Runtime.FiberFailureCauseId]) : err
+          if (!signal?.aborted && !(actual instanceof Question.RejectedError)) {
             log.warn("snapshot question failed; treating as dismissed", { err })
           }
           return "dismissed"
