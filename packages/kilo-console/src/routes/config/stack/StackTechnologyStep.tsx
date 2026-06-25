@@ -16,7 +16,8 @@ export function StackTechnologyStep(props: { state: StackWizard }) {
       const items = vertical.technologies
         .filter((item) => placements.has(item.id))
         .filter(
-          (item) => !term || `${item.name} ${item.id} ${placements.get(item.id)?.note ?? ""}`.toLowerCase().includes(term),
+          (item) =>
+            !term || `${item.name} ${item.id} ${placements.get(item.id)?.note ?? ""}`.toLowerCase().includes(term),
         )
         .map((item) => ({ technology: item, note: placements.get(item.id)?.note }))
       return { name: group.name, items }
@@ -26,9 +27,7 @@ export function StackTechnologyStep(props: { state: StackWizard }) {
     const current = entry()
     if (!current) return 0
     const ids = new Set(current.groups.flatMap((group) => group.technologies.map((item) => item.technology)))
-    return [...ids].filter((id) =>
-      stackTechnologySelected(props.state.draft(), props.state.vertical(), id),
-    ).length
+    return [...ids].filter((id) => stackTechnologySelected(props.state.draft(), props.state.vertical(), id)).length
   })
 
   return (
@@ -54,9 +53,7 @@ export function StackTechnologyStep(props: { state: StackWizard }) {
       <For each={groups()}>
         {(group) => (
           <Show when={group.items.length > 0}>
-            <Show when={group.name}>
-              {(name) => <h3 class="stack-subcategory">{name()}</h3>}
-            </Show>
+            <Show when={group.name}>{(name) => <h3 class="stack-subcategory">{name()}</h3>}</Show>
             <div class="stack-technologies" role="group" aria-label={group.name || entry()?.category.name}>
               <For each={group.items}>
                 {(item) => {

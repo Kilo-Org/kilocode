@@ -58,7 +58,8 @@ export const layer = Layer.effect(
     const git = yield* Git.Service
 
     const cached = Effect.fnUntraced(function* (dir: string) {
-      return yield* fs.readFileString(path.join(dir, "kilo")).pipe( // kilocode_change
+      return yield* fs.readFileString(path.join(dir, "kilo")).pipe(
+        // kilocode_change
         Effect.map((value) => value.trim()),
         Effect.map((value) => (value ? ID.make(value) : undefined)),
         Effect.catch(() => Effect.succeed(undefined)),

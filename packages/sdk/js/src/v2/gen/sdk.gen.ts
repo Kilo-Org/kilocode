@@ -313,6 +313,8 @@ import type {
   StackApplyResponses,
   StackCatalogErrors,
   StackCatalogResponses,
+  StackDetectErrors,
+  StackDetectResponses,
   StackGetErrors,
   StackGetResponses,
   StackPreviewErrors,
@@ -7789,6 +7791,36 @@ export class Stack extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<StackGetResponses, StackGetErrors, ThrowOnError>({
       url: "/kilocode/stack",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Detect Stack technologies
+   *
+   * Scan the project filesystem and return detected catalog technologies with evidence.
+   */
+  public detect<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<StackDetectResponses, StackDetectErrors, ThrowOnError>({
+      url: "/kilocode/stack/detect",
       ...options,
       ...params,
     })

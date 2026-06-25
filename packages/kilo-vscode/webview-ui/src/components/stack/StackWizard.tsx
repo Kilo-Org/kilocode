@@ -6,6 +6,8 @@ import { useLanguage } from "../../context/language"
 import { useServer } from "../../context/server"
 import { useStack } from "../../context/stack"
 import { CategoryStep } from "./CategoryStep"
+import { DetectedStep } from "./DetectedStep"
+import { IntroStep } from "./IntroStep"
 import { ResourceStep } from "./ResourceStep"
 import { ReviewStep } from "./ReviewStep"
 import { StackLoading, StackProjectRequired, StackResult } from "./StackStates"
@@ -42,11 +44,13 @@ function Rail() {
               >
                 <span>{entry.category.name}</span>
                 <span>
-                  {new Set(
-                    entry.groups
-                      .flatMap((group) => group.technologies.map((item) => item.technology))
-                      .filter((item) => stack.selected().includes(item)),
-                  ).size}
+                  {
+                    new Set(
+                      entry.groups
+                        .flatMap((group) => group.technologies.map((item) => item.technology))
+                        .filter((item) => stack.selected().includes(item)),
+                    ).size
+                  }
                 </span>
               </Button>
             )}
@@ -88,7 +92,43 @@ function Footer() {
         {language.t(stack.step() === "result" ? "stack.action.close" : "stack.action.cancel")}
       </Button>
       <div class="stack-footer-primary">
-        <Show when={stack.step() !== "vertical" && stack.step() !== "result"}>
+        <Show when={stack.step() === "intro"}>
+          <Button variant="secondary" onClick={stack.goManual} disabled={busy()}>
+            {language.t("stack.action.selectManually")}
+          </Button>
+          <Button
+            variant="primary"
+            icon="status"
+            onClick={stack.detect}
+            disabled={busy()}
+          >
+            {language.t("stack.action.autoDetect")}
+          </Button>
+        </Show>
+        <Show when={stack.step() === "detected"}>
+          <Button variant="secondary" icon="arrow-left" onClick={stack.back} disabled={busy()}>
+            {language.t("stack.action.back")}
+          </Button>
+          <Button variant="secondary" onClick={stack.goManual} disabled={busy()}>
+            {language.t("stack.action.selectManually")}
+          </Button>
+          <Button
+            variant="primary"
+            icon="arrow-right"
+            onClick={stack.applyDetection}
+            disabled={busy() || stack.detections().length === 0}
+          >
+            {language.t("stack.action.next")}
+          </Button>
+        </Show>
+        <Show
+          when={
+            stack.step() !== "vertical" &&
+            stack.step() !== "result" &&
+            stack.step() !== "intro" &&
+            stack.step() !== "detected"
+          }
+        >
           <Button variant="secondary" icon="arrow-left" onClick={stack.back} disabled={busy()}>
             {language.t("stack.action.back")}
           </Button>
@@ -146,6 +186,9 @@ function Content() {
 
   return (
     <>
+      <Show when={stack.step() === "intro"}>
+        <IntroStep />
+      </Show>
       <Show when={stack.step() === "vertical"}>
         <VerticalStep />
       </Show>
@@ -154,6 +197,9 @@ function Content() {
       </Show>
       <Show when={stack.step() === "resources"}>
         <ResourceStep />
+      </Show>
+      <Show when={stack.step() === "detected"}>
+        <DetectedStep />
       </Show>
       <Show when={stack.step() === "review"}>
         <ReviewStep />
@@ -261,6 +307,12 @@ export function StackWizard() {
                       )}
                     </Show>
                     <StateConflicts />
+                    <Show when={stack.busy() === "detect"}>
+                      <div class="stack-progress" role="status" aria-live="polite">
+                        <Spinner />
+                        <span>{language.t("stack.detect.progress")}</span>
+                      </div>
+                    </Show>
                     <Show when={stack.busy() === "preview"}>
                       <div class="stack-progress" role="status" aria-live="polite">
                         <Spinner />

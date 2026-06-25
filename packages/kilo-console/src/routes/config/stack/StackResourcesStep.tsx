@@ -76,9 +76,7 @@ function ParameterField(props: { state: StackWizard; item: StackResourceItem; pa
           }}
         >
           <option value="">Select a value</option>
-          <For each={props.parameter.values}>
-            {(item) => <option value={option(item)}>{String(item)}</option>}
-          </For>
+          <For each={props.parameter.values}>{(item) => <option value={option(item)}>{String(item)}</option>}</For>
         </select>
         <Show when={props.parameter.description}>{(description) => <small>{description()}</small>}</Show>
         <Show when={issue()}>{(item) => <small class="stack-field-error">{item().message}</small>}</Show>

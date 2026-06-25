@@ -66,9 +66,7 @@ export function CategoryStep() {
       <For each={groups()}>
         {(group) => (
           <Show when={group.items.length > 0}>
-            <Show when={group.name}>
-              {(name) => <h3 class="stack-subcategory-title">{name()}</h3>}
-            </Show>
+            <Show when={group.name}>{(name) => <h3 class="stack-subcategory-title">{name()}</h3>}</Show>
             <div class="stack-technology-grid" role="group" aria-label={group.name || entry()?.category.name}>
               <For each={group.items}>
                 {(technology) => (

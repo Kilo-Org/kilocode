@@ -8,6 +8,8 @@ import type {
   StackBundle,
   StackCatalogResponse,
   StackCategory,
+  StackDetection,
+  StackDetectionResponse,
   StackDraft,
   StackMethod,
   StackParameter,
@@ -19,8 +21,8 @@ import type {
   StackTechnology,
 } from "../stack/types"
 
-export type StackPhase = "vertical" | "category" | "resources" | "review" | "result"
-export type StackBusy = "preview" | "apply"
+export type StackPhase = "intro" | "vertical" | "category" | "resources" | "review" | "result" | "detected"
+export type StackBusy = "preview" | "apply" | "detect"
 export type StackValidationIssue = { resource: string; parameter?: string; message: string }
 
 export type StackPlanGroups = {
@@ -34,6 +36,7 @@ type StackOps = {
   preview: (target: Query, draft: StackDraft, signal: AbortSignal) => Promise<StackPreviewResponse>
   apply: (target: Query, draft: StackDraft, hash: string, signal: AbortSignal) => Promise<StackApplyResponse>
   reload: (target: Query, signal: AbortSignal) => Promise<StackStateResponse>
+  detect: (target: Query, signal: AbortSignal) => Promise<StackDetectionResponse>
 }
 
 type Override = {
@@ -383,7 +386,8 @@ export function validateStackDraft(catalog: StackCatalogResponse, draft: StackDr
   )
   const issues: StackValidationIssue[] = []
   for (const item of resources.values()) {
-    if (item.availability !== "available" || item.resource.kind !== "mcp" || !stackResourceEnabled(draft, item)) continue
+    if (item.availability !== "available" || item.resource.kind !== "mcp" || !stackResourceEnabled(draft, item))
+      continue
     const method = stackResourceMethod(draft, item)
     if (!method) {
       issues.push({ resource: item.resource.ref, message: `${item.resource.name} requires an installation method.` })
@@ -466,6 +470,7 @@ export function createStackWizard(ops: StackOps) {
   const [failure, setFailure] = createSignal<StackApplyError>()
   const [refresh, setRefresh] = createSignal<"loading" | "complete" | "failed">()
   const [issues, setIssues] = createSignal<StackValidationIssue[]>([])
+  const [detections, setDetections] = createSignal<StackDetection[]>([])
   let revision = 0
   let request: AbortController | undefined
 
@@ -500,6 +505,7 @@ export function createStackWizard(ops: StackOps) {
     setFailure(undefined)
     setRefresh(undefined)
     setIssues([])
+    setDetections([])
   }
 
   function touch() {
@@ -520,7 +526,7 @@ export function createStackWizard(ops: StackOps) {
     setSaved(undefined)
     setDraft(emptyStackDraft())
     setVertical("")
-    setPhase("vertical")
+    setPhase("intro")
     setIndex(0)
     setSearchValue("")
     reset()
@@ -551,7 +557,7 @@ export function createStackWizard(ops: StackOps) {
       input.catalog.catalog.verticals.some((item) => item.id === id),
     )
     setVertical(configured ?? input.catalog.catalog.verticals[0]?.id ?? "")
-    setPhase("vertical")
+    setPhase(input.state.config ? "vertical" : "intro")
     setIndex(0)
     setSearchValue("")
     reset()
@@ -605,6 +611,11 @@ export function createStackWizard(ops: StackOps) {
 
   function back() {
     if (busy() === "apply") return
+    if (phase() === "detected") {
+      touch()
+      setPhase("intro")
+      return
+    }
     touch()
     if (phase() === "category" && index() > 0) {
       setIndex(index() - 1)
@@ -641,6 +652,14 @@ export function createStackWizard(ops: StackOps) {
     change(stackTechnologySelected(current, vertical(), id) ? pruneStackResources(item, current, next) : next)
   }
 
+  function toggleDetection(vertical: string, id: string) {
+    const item = catalog()
+    if (busy() === "apply" || !item) return
+    const current = draft()
+    const next = toggleStackTechnology(current, vertical, id)
+    change(stackTechnologySelected(current, vertical, id) ? pruneStackResources(item, current, next) : next)
+  }
+
   function enable(item: StackResourceItem, enabled: boolean) {
     if (busy() === "apply" || (item.availability !== "available" && enabled)) return
     change(setStackResource(draft(), item, enabled))
@@ -651,11 +670,7 @@ export function createStackWizard(ops: StackOps) {
     change(setStackMethod(draft(), item, id))
   }
 
-  function parameter(
-    item: StackResourceItem,
-    definition: StackParameter,
-    value: StackParameterValue | undefined,
-  ) {
+  function parameter(item: StackResourceItem, definition: StackParameter, value: StackParameterValue | undefined) {
     if (busy() === "apply" || item.availability !== "available") return
     change(setStackParameter(draft(), item, definition, value))
   }
@@ -768,6 +783,56 @@ export function createStackWizard(ops: StackOps) {
     }
   }
 
+  async function detect() {
+    const destination = target()
+    if (!destination || busy() === "apply") return undefined
+    stop()
+    const controller = new AbortController()
+    request = controller
+    const version = revision
+    const key = project()
+    setBusy("detect")
+    setError(undefined)
+    setFailure(undefined)
+    setRefresh(undefined)
+    try {
+      const next = await ops.detect(destination, controller.signal)
+      if (controller.signal.aborted || version !== revision || key !== project()) return undefined
+      setDetections(next.detections)
+      const merged = cloneStackDraft(draft())
+      for (const detection of next.detections) {
+        const existing = merged.verticals[detection.vertical]?.technologies ?? []
+        if (!existing.includes(detection.technology)) {
+          merged.verticals[detection.vertical] = { technologies: [...existing, detection.technology] }
+        }
+      }
+      change(merged)
+      setPhase("detected")
+      return next
+    } catch (err: unknown) {
+      if (controller.signal.aborted || version !== revision || key !== project() || aborted(err)) return undefined
+      setError(errMsg(err))
+      return undefined
+    } finally {
+      if (request === controller) {
+        request = undefined
+        setBusy(undefined)
+      }
+    }
+  }
+
+  function applyDetection() {
+    if (busy() === "apply") return
+    touch()
+    setPhase("resources")
+  }
+
+  function goManual() {
+    if (busy() === "apply") return
+    touch()
+    setPhase("vertical")
+  }
+
   function cancel() {
     if (busy() === "apply") return
     touch()
@@ -801,6 +866,7 @@ export function createStackWizard(ops: StackOps) {
     failure,
     refresh,
     issues,
+    detections,
     resources,
     ready,
     gaps,
@@ -814,11 +880,15 @@ export function createStackWizard(ops: StackOps) {
     goResources,
     back,
     toggle,
+    toggleDetection,
     enable,
     method,
     parameter,
     review,
     confirm,
+    detect,
+    applyDetection,
+    goManual,
     cancel,
   }
 }

@@ -16372,6 +16372,60 @@
         ]
       }
     },
+    "/kilocode/stack/detect": {
+      "get": {
+        "tags": ["stack"],
+        "operationId": "stack.detect",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detected project technologies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackDetectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Scan the project filesystem and return detected catalog technologies with evidence.",
+        "summary": "Detect Stack technologies",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.stack.detect({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/stack/preview": {
       "post": {
         "tags": ["stack"],
@@ -21088,7 +21142,7 @@
                       "type": "string"
                     }
                   },
-                  "required": ["marketplace_id", "version", "digest", "fingerprint"],
+                  "required": ["marketplace_id", "digest", "fingerprint"],
                   "additionalProperties": false
                 }
               }
@@ -24590,7 +24644,8 @@
                         },
                         "version": {
                           "type": "string",
-                          "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+                          "minLength": 1,
+                          "maxLength": 128
                         },
                         "source_revision": {
                           "type": "string",
@@ -24690,20 +24745,7 @@
                           "additionalProperties": false
                         }
                       },
-                      "required": [
-                        "id",
-                        "version",
-                        "source_revision",
-                        "name",
-                        "description",
-                        "publisher",
-                        "maturity",
-                        "support",
-                        "source_url",
-                        "installability",
-                        "tags",
-                        "kind"
-                      ],
+                      "required": ["id", "description", "installability", "kind"],
                       "additionalProperties": false
                     },
                     {
@@ -24715,7 +24757,8 @@
                         },
                         "version": {
                           "type": "string",
-                          "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+                          "minLength": 1,
+                          "maxLength": 128
                         },
                         "source_revision": {
                           "type": "string",
@@ -25056,21 +25099,7 @@
                           }
                         }
                       },
-                      "required": [
-                        "id",
-                        "version",
-                        "source_revision",
-                        "name",
-                        "description",
-                        "publisher",
-                        "maturity",
-                        "support",
-                        "source_url",
-                        "installability",
-                        "tags",
-                        "kind",
-                        "methods"
-                      ],
+                      "required": ["id", "description", "installability", "kind", "methods"],
                       "additionalProperties": false
                     }
                   ]
@@ -25184,7 +25213,7 @@
                       "type": "string"
                     }
                   },
-                  "required": ["marketplace_id", "version", "digest", "fingerprint"],
+                  "required": ["marketplace_id", "digest", "fingerprint"],
                   "additionalProperties": false
                 }
               }
@@ -25338,6 +25367,32 @@
           }
         },
         "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "StackDetectionResponse": {
+        "type": "object",
+        "properties": {
+          "detections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "technology": {
+                  "type": "string"
+                },
+                "vertical": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                }
+              },
+              "required": ["technology", "vertical", "evidence"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["detections"],
         "additionalProperties": false
       },
       "StackPreviewInput": {
@@ -25779,7 +25834,7 @@
                           "type": "string"
                         }
                       },
-                      "required": ["marketplace_id", "version", "digest", "fingerprint"],
+                      "required": ["marketplace_id", "digest", "fingerprint"],
                       "additionalProperties": false
                     }
                   }

@@ -28,6 +28,7 @@ import type {
   StackApplyResponse,
   StackCatalogError,
   StackCatalogResponse,
+  StackDetectionResponse,
   StackGetError,
   StackPreviewError,
   StackPreviewInput,
@@ -876,4 +877,9 @@ export async function applyStack(
   const sdk = client(input)
   const result = await sdk.stack.apply({ stackApplyInput: { draft, plan_hash: hash } }, { signal })
   return stackDemand("Apply Stack", result)
+}
+
+export async function detectStack(input: Query, signal?: AbortSignal): Promise<StackDetectionResponse> {
+  const result = await client(input).stack.detect(undefined, { signal })
+  return stackDemand("Detect Stack", result)
 }

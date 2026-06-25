@@ -2,12 +2,21 @@ import type {
   StackApplyError,
   StackApplyResponse,
   StackCatalogResponse,
+  StackDetectionResponse,
   StackPreviewInput,
   StackPreviewResponse,
   StackStateResponse,
 } from "@kilocode/sdk/v2/client"
 
-export type { StackApplyError, StackApplyResponse, StackCatalogResponse, StackPreviewResponse, StackStateResponse }
+export type {
+  StackApplyError,
+  StackApplyResponse,
+  StackCatalogResponse,
+  StackPreviewResponse,
+  StackStateResponse,
+}
+export type StackDetection = StackDetectionResponse["detections"][number]
+export type { StackDetectionResponse }
 
 export type StackDraft = StackPreviewInput["draft"]
 export type StackCatalog = StackCatalogResponse["catalog"]

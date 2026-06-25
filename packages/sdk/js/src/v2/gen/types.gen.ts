@@ -2746,6 +2746,14 @@ export type StackInvalidConfigError = {
   message: string
 }
 
+export type StackDetectionResponse = {
+  detections: Array<{
+    technology: string
+    vertical: string
+    evidence: string
+  }>
+}
+
 export type StackPreviewInput = {
   draft: {
     verticals: {
@@ -11728,6 +11736,34 @@ export type StackGetResponses = {
 }
 
 export type StackGetResponse = StackGetResponses[keyof StackGetResponses]
+
+export type StackDetectData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/stack/detect"
+}
+
+export type StackDetectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type StackDetectError = StackDetectErrors[keyof StackDetectErrors]
+
+export type StackDetectResponses = {
+  /**
+   * Detected project technologies
+   */
+  200: StackDetectionResponse
+}
+
+export type StackDetectResponse = StackDetectResponses[keyof StackDetectResponses]
 
 export type StackPreviewData = {
   body?: StackPreviewInput

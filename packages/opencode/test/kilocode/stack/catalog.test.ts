@@ -271,9 +271,7 @@ describe("Data Engineering catalog", () => {
     expect(resources.some((resource) => excluded.has(resource.ref))).toBeFalse()
     expect(expected.some((ref) => excluded.has(ref))).toBeFalse()
     expect(
-      data.technologies.some((technology) =>
-        technology.resources.some((association) => excluded.has(association.ref)),
-      ),
+      data.technologies.some((technology) => technology.resources.some((association) => excluded.has(association.ref))),
     ).toBeFalse()
   })
 

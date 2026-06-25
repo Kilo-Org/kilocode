@@ -225,7 +225,7 @@ const canRun = (scenario: RecordedScenario) =>
   shouldRecord
     ? scenario.canRecord()
     : HttpRecorder.hasCassetteSync(scenario.cassette, { directory: KILO_FIXTURES_DIR })
-  // kilocode_change end
+// kilocode_change end
 
 const recordError = (scenario: RecordedScenario) =>
   scenario.id === "openai-oauth"

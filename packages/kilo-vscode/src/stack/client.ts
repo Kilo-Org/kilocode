@@ -1,11 +1,19 @@
 import type { KiloConnectionService } from "../services/cli-backend"
-import type { StackApiError, StackApplyResult, StackDraft, StackLoadData, StackPlan } from "./types"
+import type {
+  StackApiError,
+  StackApplyResult,
+  StackDetectionResult,
+  StackDraft,
+  StackLoadData,
+  StackPlan,
+} from "./types"
 import { stackPreviewInput } from "./types"
 
 export interface StackClient {
   load(directory: string): Promise<StackLoadData>
   preview(directory: string, draft: StackDraft): Promise<StackPlan>
   apply(directory: string, draft: StackDraft, planHash: string): Promise<StackApplyResult>
+  detect(directory: string): Promise<StackDetectionResult>
 }
 
 export class StackClientError extends Error {
@@ -65,6 +73,14 @@ export class StackHttpClient implements StackClient {
     })
     if (result.error) throw failure(result.error, result.response.status, "Stack apply request failed")
     if (!result.data) throw new StackClientError("Stack apply returned an empty response")
+    return result.data
+  }
+
+  async detect(directory: string): Promise<StackDetectionResult> {
+    const client = await this.connection.getClientAsync(directory)
+    const result = await client.stack.detect({ directory })
+    if (result.error) throw failure(result.error, result.response.status, "Stack detect request failed")
+    if (!result.data) throw new StackClientError("Stack detect returned an empty response")
     return result.data
   }
 }

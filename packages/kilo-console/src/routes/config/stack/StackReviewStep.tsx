@@ -32,8 +32,7 @@ function technologyNames(state: StackWizard, item: StackPlanAction) {
 }
 
 function ActionCard(props: { state: StackWizard; item: StackPlanAction }) {
-  const resource = () =>
-    props.state.catalog()?.catalog.resources.find((item) => item.ref === props.item.resource)
+  const resource = () => props.state.catalog()?.catalog.resources.find((item) => item.ref === props.item.resource)
 
   return (
     <Card class="stack-action-card" padding={0}>
@@ -59,9 +58,7 @@ function ActionCard(props: { state: StackWizard; item: StackPlanAction }) {
         <p class="stack-action-tech">Used by {technologyNames(props.state, props.item).join(", ")}</p>
       </Show>
       <Show when={resource()?.kind === "mcp" && props.item.action === "install"}>
-        <p class="stack-action-followup">
-          Installed disabled; authenticate and enable this server from MCP settings.
-        </p>
+        <p class="stack-action-followup">Installed disabled; authenticate and enable this server from MCP settings.</p>
       </Show>
       <Show when={props.item.warnings.length}>
         <ul class="stack-resource-warnings">

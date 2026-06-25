@@ -83,6 +83,7 @@ const stack = Layer.mock(StackService.Service)({
       )
     return Effect.succeed(success)
   },
+  detect: () => Effect.succeed(Schema.decodeUnknownSync(Stack.DetectionResponse)({ detections: [] })),
 })
 const store = Layer.mock(InstanceStore.Service)({
   dispose: (ctx) =>
@@ -165,6 +166,12 @@ describe("Stack HttpApi contract", () => {
         statuses: ["200", "400", "401", "503"],
       },
       {
+        path: StackPaths.detect,
+        method: "get",
+        operation: "stack.detect",
+        statuses: ["200", "401"],
+      },
+      {
         path: StackPaths.preview,
         method: "post",
         operation: "stack.preview",
@@ -192,6 +199,7 @@ describe("Stack HttpApi contract", () => {
       expect.arrayContaining([
         "StackCatalogResponse",
         "StackStateResponse",
+        "StackDetectionResponse",
         "StackPreviewInput",
         "StackPreviewResponse",
         "StackApplyInput",

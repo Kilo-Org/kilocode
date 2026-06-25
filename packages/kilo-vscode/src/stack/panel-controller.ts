@@ -1,7 +1,7 @@
 import type { StackApplyFailure, StackDraft, StackExtensionMessage, StackLoadData, StackWebviewMessage } from "./types"
 import { StackClientError, type StackClient } from "./client"
 
-export type StackOperation = "load" | "preview" | "apply"
+export type StackOperation = "load" | "preview" | "apply" | "detect"
 
 type Post = (message: StackExtensionMessage) => void
 
@@ -95,6 +95,9 @@ export class StackPanelController {
       case "stackApply":
         await this.apply(event.draft, event.planHash)
         return
+      case "stackDetect":
+        await this.detect()
+        return
       case "stackCancel":
         this.close()
         return
@@ -120,6 +123,29 @@ export class StackPanelController {
       return
     }
     this.post({ type: "stackLoadResult", data: outcome.data })
+  }
+
+  private async detect(): Promise<void> {
+    const applying = this.applying
+    if (applying) await applying
+    const transitioning = this.transitioning
+    if (transitioning) await transitioning
+    const project = this.project
+    if (!project) {
+      if (!this.disposed) this.post({ type: "stackProjectRequired" })
+      return
+    }
+    const token = this.start()
+    const outcome = await this.client.detect(project).then(
+      (data) => ({ ok: true, data }) as const,
+      (error: unknown) => ({ ok: false, error }) as const,
+    )
+    if (!this.active(token)) return
+    if (!outcome.ok) {
+      this.fail("detect", outcome.error)
+      return
+    }
+    this.post({ type: "stackDetectResult", detections: outcome.data.detections })
   }
 
   private async preview(draft: StackDraft): Promise<void> {

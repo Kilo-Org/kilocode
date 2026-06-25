@@ -96,4 +96,3 @@ describe("Telemetry", () => {
     expect(typeof Telemetry.trackSuggestionAccepted).toBe("function")
   })
 })
-

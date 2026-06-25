@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js"
+import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { ConfigTag } from "../ConfigPage"
 import type { StackWizard } from "../state/stack"
@@ -69,6 +70,12 @@ export function StackVerticalStep(props: { state: StackWizard }) {
             </button>
           )}
         </For>
+      </div>
+
+      <div class="stack-redetect">
+        <Button variant="secondary" disabled={Boolean(props.state.busy())} onClick={() => void props.state.detect()}>
+          Re-detect technologies
+        </Button>
       </div>
 
       <p class="stack-revision mono">Catalog revision {props.state.catalog()?.catalog.revision}</p>

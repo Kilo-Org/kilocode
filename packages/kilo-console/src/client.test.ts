@@ -114,9 +114,7 @@ describe("Kilo Console SDK transport", () => {
       code: "apply_failed" as const,
       message: "Stack changes could not be applied.",
       rollback: true,
-      results: [
-        { resource: "skill:dbt", action: "install" as const, success: false, message: "Artifact move failed" },
-      ],
+      results: [{ resource: "skill:dbt", action: "install" as const, success: false, message: "Artifact move failed" }],
     }
     failed = { status: 500, body: detail }
     const query = { url: "http://kilo:secret@127.0.0.1:4097", dir: "/tmp/project", scope: "project" as const }

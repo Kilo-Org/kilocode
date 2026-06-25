@@ -62,6 +62,10 @@ export const stackHandlers = HttpApiBuilder.group(InstanceHttpApi, "stack", (han
       )
     })
 
+    const detect = Effect.fn("StackHttpApi.detect")(function* () {
+      return yield* stack.detect()
+    })
+
     const preview = Effect.fn("StackHttpApi.preview")(function* (ctx: { payload: typeof StackPreviewInput.Type }) {
       return yield* stack.preview(ctx.payload.draft).pipe(
         Effect.catchTags({
@@ -113,6 +117,11 @@ export const stackHandlers = HttpApiBuilder.group(InstanceHttpApi, "stack", (han
       return output
     })
 
-    return handlers.handle("catalog", catalog).handle("get", get).handle("preview", preview).handle("apply", apply)
+    return handlers
+      .handle("catalog", catalog)
+      .handle("get", get)
+      .handle("detect", detect)
+      .handle("preview", preview)
+      .handle("apply", apply)
   }),
 )

@@ -1,7 +1,9 @@
 import { Cause, Context, Effect, Exit, Layer, Ref, Schema } from "effect"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import type { Item, Manifest, ResolvedMcp, SkillItem } from "../marketplace/schema"
 import { Marketplace } from "../marketplace/service"
 import { builtin, expectedMarketplaceResources } from "./catalog"
+import { buildContext, detect as detectTechnologies } from "./catalog/detect"
 import { Planner } from "./planner"
 import { StackRuntime } from "./runtime"
 import { Stack } from "./schema"
@@ -55,6 +57,7 @@ export namespace StackService {
     readonly get: () => Effect.Effect<Stack.StateResponse, ReadError>
     readonly preview: (draft: Stack.Draft) => Effect.Effect<Stack.PreviewResponse, PreviewError>
     readonly apply: (draft: Stack.Draft, hash: Stack.Digest) => Effect.Effect<Stack.ApplyResponse, ApplyFailure>
+    readonly detect: () => Effect.Effect<Stack.DetectionResponse>
   }
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/Stack") {}
@@ -185,6 +188,7 @@ export namespace StackService {
       const marketplace = yield* Marketplace.Service
       const store = yield* StackStore.Service
       const runtime = yield* StackRuntime.Service
+      const fs = yield* AppFileSystem.Service
 
       const manifest = Effect.fnUntraced(function* () {
         return yield* marketplace
@@ -540,7 +544,14 @@ export namespace StackService {
           )
       })
 
-      return Service.of({ catalog, get, preview, apply })
+      const detect = Effect.fn("Stack.detect")(function* () {
+        yield* InstanceState.context
+        const dir = yield* InstanceState.directory
+        const ctx = yield* buildContext(dir, fs)
+        return { detections: detectTechnologies(ctx) }
+      })
+
+      return Service.of({ catalog, get, preview, apply, detect })
     }),
   )
 
@@ -548,5 +559,6 @@ export namespace StackService {
     Layer.provide(StackRuntime.defaultLayer),
     Layer.provide(StackStore.defaultLayer),
     Layer.provide(Marketplace.defaultLayer),
+    Layer.provide(AppFileSystem.defaultLayer),
   )
 }

@@ -74,6 +74,11 @@ export function VerticalStep() {
           )}
         </For>
       </div>
+      <div class="stack-redetect">
+        <Button variant="secondary" disabled={!stack.editable()} onClick={() => stack.detect()}>
+          {language.t("stack.action.redetect")}
+        </Button>
+      </div>
       <p class="stack-revision">
         {language.t("stack.vertical.revision", { revision: stack.data()?.catalog.catalog.revision ?? "" })}
       </p>

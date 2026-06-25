@@ -12,12 +12,15 @@ import type { ExtensionMessage } from "../types/messages"
 import type {
   StackApplyFailure,
   StackApplyResult,
+  StackCatalog,
+  StackDetection,
   StackDraft,
   StackLoadData,
   StackMcpMethod,
   StackParameter,
   StackParameterValue,
   StackPlan,
+  StackProjectState,
   StackResourceChoice,
 } from "../types/stack"
 import {
@@ -37,8 +40,8 @@ import {
   type StackValidationIssue,
 } from "./stack-state"
 
-export type StackStep = "vertical" | "category" | "resources" | "review" | "result"
-export type StackBusy = "load" | "preview" | "apply" | undefined
+export type StackStep = "intro" | "vertical" | "category" | "resources" | "review" | "result" | "detected"
+export type StackBusy = "load" | "preview" | "apply" | "detect" | undefined
 
 export interface StackFixture {
   project?: boolean
@@ -53,6 +56,7 @@ export interface StackFixture {
   stale?: boolean
   busy?: StackBusy
   issues?: StackValidationIssue[]
+  detections?: StackDetection[]
 }
 
 interface StackViewState {
@@ -77,12 +81,14 @@ interface StackContextValue {
   categories: ReturnType<typeof createMemo<ReturnType<typeof flattenCategories>>>
   category: Accessor<number>
   selected: Accessor<string[]>
+  detections: Accessor<StackDetection[]>
   ready: Accessor<boolean>
   gaps: Accessor<number>
   blocked: Accessor<boolean>
   chooseVertical: (id: string) => void
   goCategory: (index: number) => void
   toggleTechnology: (id: string, enabled: boolean) => void
+  toggleDetection: (vertical: string, id: string, enabled: boolean) => void
   setResourceEnabled: (choice: StackResourceChoice, enabled: boolean) => void
   setResourceMethod: (choice: StackResourceChoice, method: StackMcpMethod) => void
   setResourceParameter: (
@@ -95,6 +101,9 @@ interface StackContextValue {
   back: () => void
   preview: () => void
   apply: () => void
+  detect: () => void
+  applyDetection: () => void
+  goManual: () => void
   cancel: () => void
   reload: () => void
   openExternal: (url: string) => void
@@ -111,12 +120,32 @@ function initialIssues(fixture: StackFixture | undefined): StackValidationIssue[
   return fixture?.issues ?? []
 }
 
+function initialDetections(fixture: StackFixture | undefined): StackDetection[] {
+  return fixture?.detections ?? []
+}
+
 function initialFailure(fixture: StackFixture | undefined): StackApplyFailure | undefined {
   return fixture?.failure
 }
 
 function initialRefresh(fixture: StackFixture | undefined): string | undefined {
   return fixture?.refreshError
+}
+
+function initialStep(state: StackProjectState): StackStep {
+  return state.config ? "vertical" : "intro"
+}
+
+function mergeDetections(
+  catalog: StackCatalog | undefined,
+  current: StackDraft,
+  detections: StackDetection[],
+): StackDraft {
+  if (!catalog) return cloneDraft(current)
+  return detections.reduce(
+    (acc, detection) => setTechnology(catalog, acc, detection.vertical, detection.technology, true),
+    cloneDraft(current),
+  )
 }
 
 export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props) => {
@@ -139,6 +168,7 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
   const [failure, setFailure] = createSignal<StackApplyFailure | undefined>(initialFailure(fixture))
   const [verticalID, setVerticalID] = createSignal<string | undefined>(first?.id)
   const [category, setCategory] = createSignal(fixture?.category ?? 0)
+  const [detections, setDetections] = createSignal<StackDetection[]>(initialDetections(fixture))
 
   const categories = createMemo(() => {
     const catalog = data()?.catalog
@@ -173,6 +203,7 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
     setRefreshError(undefined)
     setStale(false)
     setIssues([])
+    setDetections([])
   }
 
   const save = (directory: string) => {
@@ -205,7 +236,7 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
         setDraft(emptyDraft())
         setVerticalID(undefined)
         setCategory(0)
-        setStep("vertical")
+        setStep("intro")
         setBusy(message.directory ? "load" : undefined)
         reset()
         return true
@@ -218,6 +249,14 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
       default:
         return false
     }
+  }
+
+  const onStackError = (message: Extract<ExtensionMessage, { type: "stackError" }>) => {
+    if (message.data) hydrate(message.data)
+    setBusy(undefined)
+    setError(message.message)
+    setRefreshError(message.refreshError)
+    if (message.stale) setStale(true)
   }
 
   const receive = (message: ExtensionMessage) => {
@@ -234,7 +273,7 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
       case "stackLoadResult":
         hydrate(message.data)
         setCategory(0)
-        setStep("vertical")
+        setStep(initialStep(message.data.state))
         setBusy(undefined)
         reset()
         return
@@ -248,6 +287,13 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
         setFailure(undefined)
         setStale(false)
         setIssues([])
+        return
+      case "stackDetectResult":
+        setDetections(message.detections)
+        setDraft((current) => mergeDetections(data()?.catalog, current, message.detections))
+        setStep("detected")
+        setBusy(undefined)
+        setError(undefined)
         return
       case "stackApplyResult": {
         const current = data()
@@ -275,11 +321,7 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
         setStale(false)
         return
       case "stackError":
-        if (message.data) hydrate(message.data)
-        setBusy(undefined)
-        setError(message.message)
-        setRefreshError(message.refreshError)
-        if (message.stale) setStale(true)
+        onStackError(message)
         return
     }
   }
@@ -325,6 +367,32 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
     change(setTechnology(catalog, draft(), vertical, id, enabled))
   }
 
+  const toggleDetection = (vertical: string, id: string, enabled: boolean) => {
+    if (!editable()) return
+    const catalog = data()?.catalog
+    if (!catalog) return
+    change(setTechnology(catalog, draft(), vertical, id, enabled))
+  }
+
+  const detect = () => {
+    if (!editable() || !project()) return
+    setBusy("detect")
+    setError(undefined)
+    setRefreshError(undefined)
+    vscode.postMessage({ type: "stackDetect" })
+  }
+
+  const applyDetection = () => {
+    if (!editable()) return
+    setPlan(undefined)
+    setStep("resources")
+  }
+
+  const goManual = () => {
+    if (!editable()) return
+    setStep("vertical")
+  }
+
   const enable = (choice: StackResourceChoice, enabled: boolean) => {
     if (!editable()) return
     change(setResourceEnabled(draft(), choice, enabled))
@@ -364,6 +432,10 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
 
   const back = () => {
     if (!editable()) return
+    if (step() === "detected") {
+      setStep("intro")
+      return
+    }
     if (step() === "category") {
       if (category() > 0) {
         setCategory((index) => index - 1)
@@ -440,12 +512,14 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
     categories,
     category,
     selected,
+    detections,
     ready,
     gaps,
     blocked,
     chooseVertical,
     goCategory,
     toggleTechnology,
+    toggleDetection,
     setResourceEnabled: enable,
     setResourceMethod: method,
     setResourceParameter: parameter,
@@ -454,6 +528,9 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
     back,
     preview,
     apply,
+    detect,
+    applyDetection,
+    goManual,
     cancel,
     reload,
     openExternal,

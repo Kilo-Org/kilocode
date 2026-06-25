@@ -48,10 +48,9 @@ globalThis.fetch = Object.assign((input: Parameters<typeof fetch>[0], init?: Par
   }
   if (url === release) {
     return Promise.resolve(
-      new Response(
-        JSON.stringify({ assets: [{ browser_download_url: artifact, size: bytes.byteLength, digest }] }),
-        { headers: { "content-type": "application/json" } },
-      ),
+      new Response(JSON.stringify({ assets: [{ browser_download_url: artifact, size: bytes.byteLength, digest }] }), {
+        headers: { "content-type": "application/json" },
+      }),
     )
   }
   if (url === artifact) {
@@ -227,6 +226,20 @@ export const kiloScenarios: Scenario[] = [
     check(typeof body.config_revision === "string", "Stack state should include config revision")
     check(body.catalog_revision === "2026-06-23.1", "Stack state should include catalog revision")
   }),
+  http.protected
+    .get("/kilocode/stack/detect", "stack.detect")
+    .seeded((ctx) => file(ctx, "package.json", JSON.stringify({ dependencies: { "snowflake-sdk": "^1.0.0" } })))
+    .json(200, (body) => {
+      object(body)
+      array(body.detections)
+      check(
+        body.detections.some((entry) => {
+          object(entry)
+          return entry.technology === "snowflake" && typeof entry.evidence === "string"
+        }),
+        "Stack detect should report snowflake from package.json with evidence",
+      )
+    }),
   http.protected
     .post("/kilocode/stack/preview", "stack.preview")
     .at((ctx) => ({ path: "/kilocode/stack/preview", headers: ctx.headers(), body: { draft } }))

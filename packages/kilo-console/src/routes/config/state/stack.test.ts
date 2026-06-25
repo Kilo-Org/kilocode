@@ -266,11 +266,17 @@ function deferred<T>() {
 
 type WizardOps = Parameters<typeof createStackWizard>[0]
 
-function wizard(ops: Omit<WizardOps, "reload"> & Partial<Pick<WizardOps, "reload">>) {
+function wizard(
+  ops: Omit<WizardOps, "reload" | "detect"> & Partial<Pick<WizardOps, "reload" | "detect">>,
+) {
   let dispose = () => {}
   const state = createRoot((cleanup) => {
     dispose = cleanup
-    return createStackWizard({ reload: async () => bundle().state, ...ops })
+    return createStackWizard({
+      reload: async () => bundle().state,
+      detect: async () => ({ detections: [] }),
+      ...ops,
+    })
   })
   return { state, dispose }
 }
@@ -781,7 +787,7 @@ describe("Stack wizard state", () => {
     expect(root.state.project()).toContain("/tmp/second")
     expect(stackTechnologySelected(root.state.draft(), "data", "snowflake")).toBe(true)
     expect(root.state.plan()).toBeUndefined()
-    expect(root.state.phase()).toBe("vertical")
+    expect(root.state.phase()).toBe("intro")
     root.dispose()
   })
 
@@ -839,5 +845,79 @@ describe("Stack wizard state", () => {
     expect(root.state.plan()?.plan_hash).toBe("sha256:plan-2")
     expect(previews).toBe(2)
     root.dispose()
+  })
+})
+
+describe("Stack wizard auto-detect", () => {
+  test("starts at the intro phase for an unconfigured project", () => {
+    const root = wizard({ preview: async () => preview(draft()), apply: async () => applied(draft()) })
+    load(root.state, bundle(emptyStackDraft()))
+    expect(root.state.phase()).toBe("intro")
+  })
+
+  test("starts at the vertical phase for a configured project", () => {
+    const root = wizard({ preview: async () => preview(draft()), apply: async () => applied(draft()) })
+    const configured: StackBundle = {
+      ...bundle(),
+      state: {
+        ...bundle().state,
+        config: {
+          version: 1,
+          catalog_revision: "2026-06-22.1",
+          verticals: { data: { technologies: ["dbt"] } },
+          resources: {},
+          managed: {},
+        },
+      },
+    }
+    load(root.state, configured)
+    expect(root.state.phase()).toBe("vertical")
+  })
+
+  test("manual choice keeps the empty draft and opens the vertical step", () => {
+    const root = wizard({ preview: async () => preview(draft()), apply: async () => applied(draft()) })
+    load(root.state, bundle(emptyStackDraft()))
+    root.state.goManual()
+    expect(root.state.phase()).toBe("vertical")
+    expect(root.state.draft().verticals.data?.technologies ?? []).toEqual([])
+  })
+
+  test("detect folds detections into the draft and moves to detected", async () => {
+    const root = wizard({
+      preview: async () => preview(draft()),
+      apply: async () => applied(draft()),
+      detect: async () => ({
+        detections: [
+          { technology: "dbt", vertical: "data", evidence: "Found dbt_project.yml." },
+          { technology: "snowflake", vertical: "data", evidence: "Found npm dependency `snowflake-sdk`." },
+        ],
+      }),
+    })
+    load(root.state, bundle(emptyStackDraft()))
+    await root.state.detect()
+    expect(root.state.phase()).toBe("detected")
+    expect(root.state.detections()).toHaveLength(2)
+    expect(stackTechnologySelected(root.state.draft(), "data", "dbt")).toBe(true)
+    expect(stackTechnologySelected(root.state.draft(), "data", "snowflake")).toBe(true)
+  })
+
+  test("deselecting a false positive on the detected step keeps the others and continues", async () => {
+    const root = wizard({
+      preview: async () => preview(draft()),
+      apply: async () => applied(draft()),
+      detect: async () => ({
+        detections: [
+          { technology: "dbt", vertical: "data", evidence: "Found dbt_project.yml." },
+          { technology: "snowflake", vertical: "data", evidence: "Found npm dependency `snowflake-sdk`." },
+        ],
+      }),
+    })
+    load(root.state, bundle(emptyStackDraft()))
+    await root.state.detect()
+    root.state.toggleDetection("data", "snowflake")
+    expect(stackTechnologySelected(root.state.draft(), "data", "snowflake")).toBe(false)
+    expect(stackTechnologySelected(root.state.draft(), "data", "dbt")).toBe(true)
+    root.state.applyDetection()
+    expect(root.state.phase()).toBe("resources")
   })
 })

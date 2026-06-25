@@ -15,6 +15,7 @@ export const StackPreviewInput = Stack.PreviewInput.annotate({ identifier: "Stac
 export const StackPreviewResponse = Stack.PreviewResponse.annotate({ identifier: "StackPreviewResponse" })
 export const StackApplyInput = Stack.ApplyInput.annotate({ identifier: "StackApplyInput" })
 export const StackApplyResponse = Stack.ApplyResponse.annotate({ identifier: "StackApplyResponse" })
+export const StackDetectionResponse = Stack.DetectionResponse.annotate({ identifier: "StackDetectionResponse" })
 
 export const StackApiMessages = {
   invalidConfig: "Project Stack configuration is invalid or unavailable.",
@@ -89,6 +90,7 @@ export const StackPaths = {
   get: root,
   preview: `${root}/preview`,
   apply: `${root}/apply`,
+  detect: `${root}/detect`,
 } as const
 
 export const StackApi = HttpApi.make("stack")
@@ -115,6 +117,16 @@ export const StackApi = HttpApi.make("stack")
             identifier: "stack.get",
             summary: "Get Stack state",
             description: "Get persisted Stack selections, managed resources, drift, and current revisions.",
+          }),
+        ),
+        HttpApiEndpoint.get("detect", StackPaths.detect, {
+          query: WorkspaceRoutingQuery,
+          success: described(StackDetectionResponse, "Detected project technologies"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "stack.detect",
+            summary: "Detect Stack technologies",
+            description: "Scan the project filesystem and return detected catalog technologies with evidence.",
           }),
         ),
         HttpApiEndpoint.post("preview", StackPaths.preview, {

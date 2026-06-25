@@ -2491,18 +2491,14 @@ const technologies = [
   {
     id: "prefect",
     name: "Prefect",
-    resources: [
-      Stack.ResourceRef.make("skill:prefect"),
-      Stack.ResourceRef.make("mcp:prefect-mcp-server"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:prefect"), Stack.ResourceRef.make("mcp:prefect-mcp-server")].map(assoc),
   },
   {
     id: "dbt",
     name: "dbt",
-    resources: [
-      Stack.ResourceRef.make("skill:dbt-analytics-engineering"),
-      Stack.ResourceRef.make("mcp:dbt"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:dbt-analytics-engineering"), Stack.ResourceRef.make("mcp:dbt")].map(
+      assoc,
+    ),
   },
   {
     id: "astronomer",
@@ -2536,10 +2532,9 @@ const technologies = [
   {
     id: "fivetran",
     name: "Fivetran",
-    resources: [
-      Stack.ResourceRef.make("skill:build-connector"),
-      Stack.ResourceRef.make("mcp:fivetran-mcp-server"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:build-connector"), Stack.ResourceRef.make("mcp:fivetran-mcp-server")].map(
+      assoc,
+    ),
   },
   {
     id: "airbyte",
@@ -2686,17 +2681,14 @@ const technologies = [
   {
     id: "gcp-storage",
     name: "GCP Storage",
-    resources: [
-      Stack.ResourceRef.make("skill:gcs-lifecycle-policy"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:gcs-lifecycle-policy")].map(assoc),
   },
   {
     id: "hdfs",
     name: "HDFS",
-    resources: [
-      Stack.ResourceRef.make("skill:hadoop"),
-      Stack.ResourceRef.make("skill:data-distributed-storage"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:hadoop"), Stack.ResourceRef.make("skill:data-distributed-storage")].map(
+      assoc,
+    ),
   },
   {
     id: "oracle-cloud-storage",
@@ -2711,9 +2703,7 @@ const technologies = [
   {
     id: "apache-parquet",
     name: "Apache Parquet",
-    resources: [].map(
-      assoc,
-    ),
+    resources: [].map(assoc),
   },
   {
     id: "databricks-delta",
@@ -2728,9 +2718,7 @@ const technologies = [
   {
     id: "apache-iceberg",
     name: "Apache Iceberg",
-    resources: [
-      Stack.ResourceRef.make("skill:oleander-iceberg-catalog"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:oleander-iceberg-catalog")].map(assoc),
   },
   {
     id: "apache-orc",
@@ -2740,9 +2728,7 @@ const technologies = [
   {
     id: "apache-avro",
     name: "Apache Avro",
-    resources: [
-      Stack.ResourceRef.make("skill:chdb-datastore"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:chdb-datastore")].map(assoc),
   },
   {
     id: "json",
@@ -2778,10 +2764,7 @@ const technologies = [
   {
     id: "xml",
     name: "XML",
-    resources: [
-      Stack.ResourceRef.make("skill:cheerio-parsing"),
-      Stack.ResourceRef.make("mcp:sylphlab-xml"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:cheerio-parsing"), Stack.ResourceRef.make("mcp:sylphlab-xml")].map(assoc),
   },
   {
     id: "microsoft-sql-server",
@@ -2814,9 +2797,7 @@ const technologies = [
   {
     id: "apache-hbase",
     name: "Apache HBase",
-    resources: [
-      Stack.ResourceRef.make("skill:hbase"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:hbase")].map(assoc),
   },
   {
     id: "postgresql",
@@ -2869,9 +2850,7 @@ const technologies = [
   {
     id: "ibm-db2",
     name: "IBM DB2",
-    resources: [
-      Stack.ResourceRef.make("skill:db2-rhel"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:db2-rhel")].map(assoc),
   },
   {
     id: "tableau",
@@ -3072,10 +3051,7 @@ const technologies = [
   {
     id: "gcp-identity",
     name: "GCP Identity",
-    resources: [
-      Stack.ResourceRef.make("skill:gcloud"),
-      Stack.ResourceRef.make("skill:gcp-iam"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:gcloud"), Stack.ResourceRef.make("skill:gcp-iam")].map(assoc),
   },
   {
     id: "okta",
@@ -3088,23 +3064,17 @@ const technologies = [
   {
     id: "cyberark",
     name: "CyberArk",
-    resources: [
-      Stack.ResourceRef.make("mcp:privilege-cloud-mcp"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("mcp:privilege-cloud-mcp")].map(assoc),
   },
   {
     id: "collibra",
     name: "Collibra",
-    resources: [
-      Stack.ResourceRef.make("skill:collibra-chip"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:collibra-chip")].map(assoc),
   },
   {
     id: "apache-atlas",
     name: "Apache Atlas",
-    resources: [
-      Stack.ResourceRef.make("mcp:gitmcp-apache-atlas"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("mcp:gitmcp-apache-atlas")].map(assoc),
   },
   {
     id: "azure-purview",
@@ -3164,9 +3134,7 @@ const technologies = [
   {
     id: "dremio",
     name: "Dremio",
-    resources: [
-      Stack.ResourceRef.make("mcp:dremio-mcp-lite"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("mcp:dremio-mcp-lite")].map(assoc),
   },
   {
     id: "prometheus",
@@ -3236,9 +3204,7 @@ const technologies = [
   {
     id: "gcp-secret-manager",
     name: "GCP Secret Manager",
-    resources: [
-      Stack.ResourceRef.make("skill:gcp-secret-manager"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:gcp-secret-manager")].map(assoc),
   },
   {
     id: "hashicorp-vault",
@@ -3277,17 +3243,14 @@ const technologies = [
   {
     id: "openmetadata",
     name: "OpenMetadata",
-    resources: [
-      Stack.ResourceRef.make("mcp:openmetadata-mcp"),
-      Stack.ResourceRef.make("mcp:openmetadata-us-all"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("mcp:openmetadata-mcp"), Stack.ResourceRef.make("mcp:openmetadata-us-all")].map(
+      assoc,
+    ),
   },
   {
     id: "soda-core-cl",
     name: "Soda Core/CL",
-    resources: [
-      Stack.ResourceRef.make("skill:soda-cli"),
-    ].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:soda-cli")].map(assoc),
   },
   {
     id: "azure-purview-dq",

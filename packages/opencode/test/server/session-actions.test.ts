@@ -56,9 +56,7 @@ describe("session action routes", () => {
         expect(next.metadata).toEqual({ source: "sdk", trace: { id: "def" }, tags: ["one"] })
 
         const fetched = yield* Effect.promise(() =>
-          Promise.resolve(
-            app.request(`/session/${session.id}`, { headers: { "x-kilo-directory": test.directory } }),
-          ),
+          Promise.resolve(app.request(`/session/${session.id}`, { headers: { "x-kilo-directory": test.directory } })),
         )
         expect(fetched.status).toBe(200)
         expect(((yield* Effect.promise(() => fetched.json())) as SessionNs.Info).metadata).toEqual(next.metadata)

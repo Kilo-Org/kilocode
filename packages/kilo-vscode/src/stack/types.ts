@@ -3,6 +3,7 @@ import type {
   StackApplyResponse as SdkStackApplyResponse,
   StackCatalogError as SdkStackCatalogFailure,
   StackCatalogResponse as SdkStackCatalogResponse,
+  StackDetectionResponse as SdkStackDetectionResponse,
   StackGetError as SdkStackGetFailure,
   StackPreviewError as SdkStackPreviewFailure,
   StackPreviewInput,
@@ -14,6 +15,8 @@ export type StackCatalog = SdkStackCatalogResponse
 export type StackProjectState = SdkStackStateResponse
 export type StackPlan = SdkStackPreviewResponse
 export type StackApplyResult = SdkStackApplyResponse
+export type StackDetection = SdkStackDetectionResponse["detections"][number]
+export type StackDetectionResult = SdkStackDetectionResponse
 export type StackApplyFailure = Extract<SdkStackApplyFailure, { code: "apply_failed" }>
 export type StackApiError = SdkStackCatalogFailure | SdkStackGetFailure | SdkStackPreviewFailure | SdkStackApplyFailure
 
@@ -91,12 +94,17 @@ export interface StackProjectRequiredMessage {
 
 export interface StackErrorMessage {
   type: "stackError"
-  operation: "load" | "preview" | "apply"
+  operation: "load" | "preview" | "apply" | "detect"
   message: string
   code?: string
   stale?: boolean
   data?: StackLoadData
   refreshError?: string
+}
+
+export interface StackDetectResultMessage {
+  type: "stackDetectResult"
+  detections: StackDetection[]
 }
 
 export type StackExtensionMessage =
@@ -105,6 +113,7 @@ export type StackExtensionMessage =
   | StackApplyResultMessage
   | StackApplyFailureMessage
   | StackProjectRequiredMessage
+  | StackDetectResultMessage
   | StackErrorMessage
 
 export interface StackLoadMessage {
@@ -126,6 +135,10 @@ export interface StackCancelMessage {
   type: "stackCancel"
 }
 
+export interface StackDetectMessage {
+  type: "stackDetect"
+}
+
 export interface StackRestoreProjectMessage {
   type: "stackRestoreProject"
   directory: string
@@ -136,4 +149,5 @@ export type StackWebviewMessage =
   | StackPreviewMessage
   | StackApplyMessage
   | StackCancelMessage
+  | StackDetectMessage
   | StackRestoreProjectMessage

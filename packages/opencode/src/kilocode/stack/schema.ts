@@ -158,6 +158,9 @@ export namespace Stack {
   const TransportTechnologyID = Schema.String.pipe(
     Schema.decodeTo(Schema.String.check(kebab), SchemaTransformation.passthrough()),
   )
+  const TransportVerticalID = Schema.String.pipe(
+    Schema.decodeTo(Schema.String.check(kebab), SchemaTransformation.passthrough()),
+  )
   const TransportResourceID = Schema.String.pipe(
     Schema.decodeTo(Schema.String.check(kebab), SchemaTransformation.passthrough()),
   )
@@ -277,6 +280,18 @@ export namespace Stack {
     expected_resources: Schema.Array(ResourceRef),
   })
   export type CatalogResponse = Schema.Schema.Type<typeof CatalogResponse>
+
+  export const Detection = Schema.Struct({
+    technology: TransportTechnologyID,
+    vertical: TransportVerticalID,
+    evidence: Schema.String,
+  })
+  export type Detection = Schema.Schema.Type<typeof Detection>
+
+  export const DetectionResponse = Schema.Struct({
+    detections: Schema.Array(Detection),
+  })
+  export type DetectionResponse = Schema.Schema.Type<typeof DetectionResponse>
 
   export const Drift = Schema.Literals(["none", "missing", "modified", "desired"])
   export type Drift = Schema.Schema.Type<typeof Drift>
