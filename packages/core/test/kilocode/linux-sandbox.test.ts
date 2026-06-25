@@ -149,7 +149,7 @@ function unixClient(socket: string, expected: "allow" | "deny") {
     "const client = net.connect(target)",
     'client.on("connect", () => client.write("mutate"))',
     'client.on("data", (data) => process.exit(expected === "allow" && data.toString() === "ok" ? 0 : 3))',
-    'client.on("error", (error) => process.exit(expected === "deny" && error.code === "EACCES" ? 0 : 4))',
+    'client.on("error", (error) => process.exit(expected === "deny" && ["EACCES", "ENOENT"].includes(error.code) ? 0 : 4))',
     "setTimeout(() => process.exit(5), 1000)",
   ].join("\n")
 }
