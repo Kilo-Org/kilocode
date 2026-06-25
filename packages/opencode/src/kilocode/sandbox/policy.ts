@@ -191,7 +191,8 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
     const cfg = yield* config.get()
     const override = overrides.get(key(current.directory, sessionID))
     const requested = override?.enabled ?? cfg.experimental?.sandbox ?? false
-    if (requested && !current.available) {
+    const supported = process.platform === "linux" || current.capabilities.filesystem
+    if (requested && supported && !current.available) {
       return yield* Effect.fail(PlatformError.systemError({
         _tag: "PermissionDenied",
         module: "Sandbox",
