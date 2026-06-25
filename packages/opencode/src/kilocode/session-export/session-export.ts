@@ -7,7 +7,20 @@ import type { Agent } from "@/agent/agent"
 // A real telemetry/export backend for Relay can be wired up later behind this
 // same surface without touching call sites.
 
-export const init = (_opts: unknown): void => {}
+type InitOpts = {
+  agentVersion: string
+  dbPath: string
+  endpoint?: string
+  surface?: string
+  anonId?: string
+  snapshotProvider?: unknown
+  workspaceKey?: string
+  syncSeq?: (sessionId: string) => number
+  subscribeAll: (cb: (event: unknown) => void) => () => void
+  createWorker?: (url: string | URL) => Worker
+}
+
+export const init = (_opts: InitOpts): void => {}
 
 export const beforeRequest = (..._args: unknown[]): void => {}
 
