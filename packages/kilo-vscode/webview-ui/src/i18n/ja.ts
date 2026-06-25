@@ -290,6 +290,19 @@ export const dict = {
     "サンドボックスが有効です。エージェントのシェルコマンドは、プロジェクトおよびKiloディレクトリに制限されています。",
   "prompt.action.sandbox.disabled":
     "サンドボックスが無効です。クリックしてエージェントのシェルコマンドの書き込みをプロジェクトおよびKiloディレクトリに制限します。",
+  "prompt.action.sandbox.status.enabled": "サンドボックス有効",
+  "prompt.action.sandbox.status.disabled": "サンドボックス無効",
+  "prompt.action.sandbox.filesystem": "ファイルシステム",
+  "prompt.action.sandbox.network": "ネットワーク",
+  "prompt.action.sandbox.filesystem.restricted": "制限あり",
+  "prompt.action.sandbox.network.blocked": "ブロック",
+  "prompt.action.sandbox.network.allowed": "許可",
+  "prompt.action.sandbox.unrestricted": "制限なし",
+  "prompt.action.sandbox.description.enabled": "書き込みはプロジェクトおよびKiloディレクトリ内に制限されます。",
+  "prompt.action.sandbox.description.disabled":
+    "クリックすると、ファイルシステムへの書き込みとネットワークアクセスを制限します。",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
   "speechToText.tooltip.stop": "音声キャプチャを停止",

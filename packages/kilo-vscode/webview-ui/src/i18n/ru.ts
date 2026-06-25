@@ -290,6 +290,18 @@ export const dict = {
   "prompt.action.sandbox.enabled": "Песочница включена. Команды оболочки агента ограничены каталогами проекта и Kilo.",
   "prompt.action.sandbox.disabled":
     "Песочница отключена. Нажмите, чтобы ограничить запись команд оболочки агента каталогами проекта и Kilo.",
+  "prompt.action.sandbox.status.enabled": "Песочница включена",
+  "prompt.action.sandbox.status.disabled": "Песочница отключена",
+  "prompt.action.sandbox.filesystem": "Файловая система",
+  "prompt.action.sandbox.network": "Сеть",
+  "prompt.action.sandbox.filesystem.restricted": "Ограничена",
+  "prompt.action.sandbox.network.blocked": "Заблокирована",
+  "prompt.action.sandbox.network.allowed": "Разрешена",
+  "prompt.action.sandbox.unrestricted": "Без ограничений",
+  "prompt.action.sandbox.description.enabled": "Запись разрешена только в каталогах проекта и Kilo.",
+  "prompt.action.sandbox.description.disabled": "Нажмите, чтобы ограничить запись в файловую систему и доступ к сети.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
   "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
   "speechToText.tooltip.stop": "Остановить захват звука",

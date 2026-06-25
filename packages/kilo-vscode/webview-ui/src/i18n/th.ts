@@ -291,6 +291,18 @@ export const dict = {
     "เปิดใช้งาน sandbox แล้ว คำสั่ง shell ของ agent ถูกจำกัดไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
   "prompt.action.sandbox.disabled":
     "ปิดใช้งาน sandbox อยู่ คลิกเพื่อจำกัดการเขียนคำสั่ง shell ของ agent ไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.status.enabled": "เปิด sandbox แล้ว",
+  "prompt.action.sandbox.status.disabled": "ปิด sandbox แล้ว",
+  "prompt.action.sandbox.filesystem": "ระบบไฟล์",
+  "prompt.action.sandbox.network": "เครือข่าย",
+  "prompt.action.sandbox.filesystem.restricted": "จำกัด",
+  "prompt.action.sandbox.network.blocked": "บล็อก",
+  "prompt.action.sandbox.network.allowed": "อนุญาต",
+  "prompt.action.sandbox.unrestricted": "ไม่จำกัด",
+  "prompt.action.sandbox.description.enabled": "เขียนได้เฉพาะในโฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.description.disabled": "คลิกเพื่อจำกัดการเขียนในระบบไฟล์และการเข้าถึงเครือข่าย",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
   "speechToText.tooltip.stop": "หยุดจับเสียง",

@@ -292,6 +292,18 @@ export const dict = {
     "샌드박스가 활성화되어 있습니다. 에이전트 셸 명령은 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
   "prompt.action.sandbox.disabled":
     "샌드박스가 비활성화되어 있습니다. 클릭하여 에이전트 셸 명령 쓰기를 프로젝트 및 Kilo 디렉터리로 제한합니다.",
+  "prompt.action.sandbox.status.enabled": "샌드박스 활성화됨",
+  "prompt.action.sandbox.status.disabled": "샌드박스 비활성화됨",
+  "prompt.action.sandbox.filesystem": "파일 시스템",
+  "prompt.action.sandbox.network": "네트워크",
+  "prompt.action.sandbox.filesystem.restricted": "제한됨",
+  "prompt.action.sandbox.network.blocked": "차단됨",
+  "prompt.action.sandbox.network.allowed": "허용됨",
+  "prompt.action.sandbox.unrestricted": "제한 없음",
+  "prompt.action.sandbox.description.enabled": "쓰기는 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.description.disabled": "클릭하면 파일 시스템 쓰기와 네트워크 액세스를 제한합니다.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
 
   "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
   "speechToText.tooltip.stop": "음성 캡처 중지",

@@ -293,6 +293,20 @@ export const dict = {
     "Sandbox ativado. Os comandos shell do agente estão limitados aos diretórios do projeto e do Kilo.",
   "prompt.action.sandbox.disabled":
     "Sandbox desativado. Clique para limitar as escritas dos comandos shell do agente aos diretórios do projeto e do Kilo.",
+  "prompt.action.sandbox.status.enabled": "Sandbox ativado",
+  "prompt.action.sandbox.status.disabled": "Sandbox desativado",
+  "prompt.action.sandbox.filesystem": "Sistema de arquivos",
+  "prompt.action.sandbox.network": "Rede",
+  "prompt.action.sandbox.filesystem.restricted": "Restrito",
+  "prompt.action.sandbox.network.blocked": "Bloqueada",
+  "prompt.action.sandbox.network.allowed": "Permitida",
+  "prompt.action.sandbox.unrestricted": "Sem restrições",
+  "prompt.action.sandbox.description.enabled":
+    "As operações de escrita são limitadas aos diretórios do projeto e do Kilo.",
+  "prompt.action.sandbox.description.disabled":
+    "Clique para restringir as operações de escrita no sistema de arquivos e o acesso à rede.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Clique para restringir as operações de escrita no sistema de arquivos. O acesso à rede continua permitido pelas configurações do sandbox.",
 
   "speechToText.tooltip.start": "Iniciar entrada de voz com o Kilo Gateway",
   "speechToText.tooltip.stop": "Parar captura",
