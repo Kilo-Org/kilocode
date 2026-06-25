@@ -16,7 +16,6 @@ import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
 import { Context, Effect, Layer, Schema, Stream } from "effect"
-import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
@@ -79,28 +78,12 @@ export namespace KiloSessions {
     clearInFlightCache(gitUrlKeyPrefix + Instance.worktree)
   }
 
-  async function authValid(token: string) {
-    const newTokenValidKey = tokenValidKeyTemplate + token
-
-    if (newTokenValidKey !== tokenValidKey) {
-      clearInFlightCache(tokenValidKey)
-
-      tokenValidKey = newTokenValidKey
-    }
-
-    return withInFlightCache(tokenValidKey, 15 * 60_000, async () => {
-      const response = await fetch(`${KILO_API_BASE}/api/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }).catch(() => undefined)
-
-      // Don't cache transient network failures; allow future calls to retry.
-      if (!response) return undefined
-
-      const valid = response.ok
-      return valid
-    })
+  async function authValid(_token: string) {
+    // Relay: upstream pinged ${KILO_API_BASE}/api/user every 15 min as a
+    // "token validity" check, generating Kilo-side telemetry even when the
+    // user wasn't actively using a Kilo model. With ingest pinned off, this
+    // request is dead weight anyway. Return false so getClient() exits early.
+    return false
   }
 
   async function kilocodeToken() {
@@ -157,7 +140,10 @@ export namespace KiloSessions {
       const valid = await authValid(token)
       if (!valid) return undefined
 
-      const base = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
+      // Relay: default URL removed. With ingestDisabled pinned true above,
+      // getClient is unreachable through normal flow, but if an env override
+      // is set explicitly the user knows what they're doing.
+      const base = process.env["KILO_SESSION_INGEST_URL"] ?? ""
       const baseHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -179,9 +165,14 @@ export namespace KiloSessions {
     })
   }
 
-  const shareDisabled = process.env["KILO_DISABLE_SHARE"] === "true" || process.env["KILO_DISABLE_SHARE"] === "1"
-  const ingestDisabled =
-    process.env["KILO_DISABLE_SESSION_INGEST"] === "true" || process.env["KILO_DISABLE_SESSION_INGEST"] === "1"
+  // Relay: force disable share and ingest to kilosessions.ai. The original
+  // env-based kill-switches are retained as no-op reads to keep the surface
+  // identical, but the constants are pinned to true so neither path can be
+  // re-enabled accidentally. See docs/specs/kilo-gateway-audit.md.
+  void process.env["KILO_DISABLE_SHARE"]
+  void process.env["KILO_DISABLE_SESSION_INGEST"]
+  const shareDisabled = true
+  const ingestDisabled = true
   const debugIngest =
     process.env["KILO_DEBUG_SESSION_INGEST"] === "true" || process.env["KILO_DEBUG_SESSION_INGEST"] === "1"
 
@@ -385,7 +376,7 @@ export namespace KiloSessions {
       }
       if (valid === undefined) throw new Error("Unable to enable remote: failed to verify Kilo credentials.")
 
-      const url = (process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai")
+      const url = (process.env["KILO_SESSION_INGEST_URL"] ?? "")
         .replace(/^https:\/\//, "wss://")
         .replace(/^http:\/\//, "ws://")
 
