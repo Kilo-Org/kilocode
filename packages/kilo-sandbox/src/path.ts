@@ -1,7 +1,7 @@
 import { lstatSync, readlinkSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
-import type { PathRule, Profile } from "./profile"
+import type { PathRule, Profile, SocketPolicy } from "./profile"
 
 function code(cause: unknown) {
   if (typeof cause !== "object" || cause === null || !("code" in cause)) return undefined
@@ -20,7 +20,7 @@ function resolve(input: string, seen = new Set<string>()) {
       return path.resolve(realpathSync.native(ancestor), ...suffix)
     } catch (cause) {
       const tag = code(cause)
-      if (tag !== "ENOENT" && tag !== "ENOTDIR") throw cause
+      if (tag !== "ENOENT" && tag !== "ENOTDIR" && tag !== "EOPNOTSUPP") throw cause
       try {
         if (lstatSync(ancestor).isSymbolicLink()) {
           const link = readlinkSync(ancestor)
@@ -64,6 +64,19 @@ function normalizeRule(rule: PathRule) {
   return Effect.map(canonicalize(rule.path), (target): PathRule => ({ path: target, kind: rule.kind }))
 }
 
+function normalizeSocket(policy: SocketPolicy): Effect.Effect<SocketPolicy, PlatformError.PlatformError> {
+  return Effect.map(Effect.forEach(policy.paths, normalizeRule), (paths) => ({
+    paths: [...new Map(paths.map((rule) => [rule.path, rule])).values()],
+    deny: [...new Set(policy.deny)],
+    coverage: [...new Set(policy.coverage)],
+  }))
+}
+
+function platformSocket(profile: Profile) {
+  if (process.platform === "linux" || !profile.socket) return profile.socket
+  return { ...profile.socket, policy: undefined }
+}
+
 export function normalize(profile: Profile): Effect.Effect<Profile, PlatformError.PlatformError> {
   return Effect.gen(function* () {
     const allowWrite = yield* Effect.forEach(profile.filesystem.allowWrite, normalizeRule)
@@ -71,9 +84,12 @@ export function normalize(profile: Profile): Effect.Effect<Profile, PlatformErro
     const temporaryDirectory = profile.filesystem.temporaryDirectory
       ? yield* canonicalize(profile.filesystem.temporaryDirectory)
       : undefined
+    const socket = platformSocket(profile)
+    const policy = socket?.policy ? yield* normalizeSocket(socket.policy) : undefined
 
     return {
       ...profile,
+      ...(socket ? { socket: { ...socket, ...(policy ? { policy } : {}) } } : {}),
       filesystem: {
         allowWrite,
         denyWrite,

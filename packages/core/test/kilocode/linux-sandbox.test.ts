@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { spawnSync } from "node:child_process"
 import { createSocket } from "node:dgram"
 import fs from "node:fs/promises"
+import { createConnection, createServer } from "node:net"
 import os from "node:os"
 import path from "node:path"
 import { Effect } from "effect"
@@ -30,6 +31,20 @@ function profile(
 
 function denied(base: Profile, rules: Profile["filesystem"]["denyWrite"]): Profile {
   return { ...base, filesystem: { ...base.filesystem, denyWrite: rules } }
+}
+
+function sockets(base: Profile, paths: ReadonlyArray<string>, deny: ReadonlyArray<string> = []): Profile {
+  return {
+    ...base,
+    socket: {
+      ipc: "deny",
+      policy: {
+        paths: paths.map((path) => ({ path, kind: "literal" })),
+        deny,
+        coverage: ["docker"],
+      },
+    },
+  }
 }
 
 function spawn(script: string, cwd: string, policy: Profile) {
@@ -85,6 +100,58 @@ function supportsIPv6() {
   } catch {
     return false
   }
+}
+
+async function broker(socket: string, canary: string) {
+  let accepted = 0
+  const server = createServer((client) => {
+    client.on("data", async (data) => {
+      if (data.toString() !== "mutate") return client.destroy()
+      accepted++
+      await fs.writeFile(canary, "mutated")
+      client.end("ok")
+    })
+  })
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(socket, () => {
+      server.off("error", reject)
+      resolve()
+    })
+  })
+  return { server, accepted: () => accepted }
+}
+
+function connect(socket: string) {
+  return new Promise<{ data?: string; code?: string }>((resolve) => {
+    const client = createConnection(socket)
+    client.once("connect", () => client.write("mutate"))
+    client.once("data", (data) => {
+      client.destroy()
+      resolve({ data: data.toString() })
+    })
+    client.once("error", (error: NodeJS.ErrnoException) => resolve({ code: error.code }))
+  })
+}
+
+function unixClient(socket: string, expected: "allow" | "deny") {
+  return [
+    'const fs = require("node:fs")',
+    'const net = require("node:net")',
+    `const target = ${JSON.stringify(socket)}`,
+    `const expected = ${JSON.stringify(expected)}`,
+    "try {",
+    "  const entry = fs.statSync(target)",
+    '  if (expected === "deny" && entry.isSocket()) process.exit(2)',
+    "} catch (error) {",
+    '  if (expected === "deny" && error.code === "ENOENT") process.exit(0)',
+    "}",
+    "const client = net.connect(target)",
+    'client.on("connect", () => client.write("mutate"))',
+    'client.on("data", (data) => process.exit(expected === "allow" && data.toString() === "ok" ? 0 : 3))',
+    'client.on("error", (error) => process.exit(expected === "deny" && error.code !== "ECONNREFUSED" ? 0 : 4))',
+    "setTimeout(() => process.exit(5), 1000)",
+  ].join("\n")
 }
 
 async function udp() {
@@ -152,6 +219,104 @@ linux("confines writes from spawned processes to the profile allowlist", async (
     expect(Number(await Effect.runPromise(spawn(script, root.project, profile([root.project]))))).toBe(0)
     expect(await fs.readFile(allowed, "utf8")).toBe("allowed")
     expect(await fs.readFile(sentinel, "utf8")).toBe("original")
+  } finally {
+    await fs.rm(root.root, { recursive: true, force: true })
+  }
+})
+
+linux("reproduces authority delegation without a socket policy and blocks it when masked", async () => {
+  const support = backendSupport()
+  expect(support.available, support.reason).toBe(true)
+  const root = await fixture()
+  const socket = path.join(root.outside, "authority.sock")
+  const canary = path.join(root.outside, "canary")
+  await fs.writeFile(canary, "original")
+  const service = await broker(socket, canary)
+
+  try {
+    expect(await connect(socket)).toEqual({ data: "ok" })
+    expect(await fs.readFile(canary, "utf8")).toBe("mutated")
+    await fs.writeFile(canary, "original")
+    expect(Number(await Effect.runPromise(spawn(unixClient(socket, "allow"), root.project, profile([root.project]))))).toBe(0)
+    expect(await fs.readFile(canary, "utf8")).toBe("mutated")
+    await fs.writeFile(canary, "original")
+    const policy = sockets(profile([root.project]), [socket])
+    expect(Number(await Effect.runPromise(spawn(unixClient(socket, "deny"), root.project, policy)))).toBe(0)
+    expect(await fs.readFile(canary, "utf8")).toBe("original")
+    expect(service.accepted()).toBe(2)
+  } finally {
+    service.server.close()
+    await fs.rm(root.root, { recursive: true, force: true })
+  }
+})
+
+linux("covers symlink aliases and scrubs advertised Unix endpoint variables", async () => {
+  const root = await fixture()
+  const socket = path.join(root.outside, "runtime.sock")
+  const alias = path.join(root.outside, "alias.sock")
+  const canary = path.join(root.outside, "canary")
+  await fs.writeFile(canary, "original")
+  const service = await broker(socket, canary)
+  await fs.symlink(socket, alias)
+  const policy = sockets(profile([root.project]), [alias], ["DOCKER_HOST", "CONTAINER_HOST", "SSH_AUTH_SOCK"])
+  const script = [
+    'if (process.env.DOCKER_HOST !== undefined) process.exit(2)',
+    'if (process.env.CONTAINER_HOST !== undefined) process.exit(3)',
+    'if (process.env.SSH_AUTH_SOCK !== undefined) process.exit(4)',
+    unixClient(alias, "deny"),
+  ].join("\n")
+  const effect = Effect.scoped(
+    run(
+      policy,
+      ChildProcessSpawner.ChildProcessSpawner.use((spawner) =>
+        spawner
+          .spawn(
+            ChildProcess.make(process.execPath, ["-e", script], {
+              cwd: root.project,
+              env: {
+                DOCKER_HOST: `unix://${alias}`,
+                CONTAINER_HOST: `unix://${alias}`,
+                SSH_AUTH_SOCK: alias,
+              },
+            }),
+          )
+          .pipe(Effect.flatMap((handle) => handle.exitCode)),
+      ),
+    ).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)),
+  )
+
+  try {
+    expect(Number(await Effect.runPromise(effect))).toBe(0)
+    expect(await fs.readFile(canary, "utf8")).toBe("original")
+    expect(service.accepted()).toBe(0)
+  } finally {
+    service.server.close()
+    await fs.rm(root.root, { recursive: true, force: true })
+  }
+})
+
+linux("keeps Unix sockets created inside the sandbox usable", async () => {
+  const root = await fixture()
+  const socket = path.join(root.project, "inside.sock")
+  const child = [
+    'const net = require("node:net")',
+    `const client = net.connect(${JSON.stringify(socket)})`,
+    'client.on("connect", () => client.write("inside"))',
+    'client.on("data", (data) => process.exit(data.toString() === "inside" ? 0 : 2))',
+    'client.on("error", () => process.exit(3))',
+  ].join("\n")
+  const script = [
+    'const child = require("node:child_process")',
+    'const net = require("node:net")',
+    `const server = net.createServer((client) => client.on("data", (data) => client.end(data)))`,
+    `server.listen(${JSON.stringify(socket)}, () => {`,
+    `  const proc = child.spawn(process.execPath, ["-e", ${JSON.stringify(child)}])`,
+    '  proc.on("exit", (code) => process.exit(code ?? 4))',
+    "})",
+  ].join("\n")
+
+  try {
+    expect(Number(await Effect.runPromise(spawn(script, root.project, sockets(profile([root.project]), []))))).toBe(0)
   } finally {
     await fs.rm(root.root, { recursive: true, force: true })
   }
@@ -705,6 +870,48 @@ linux("reports network namespace support separately and fails deny mode closed",
     'const profile = { filesystem: { allowWrite: [], denyWrite: [], denyNames: [] }, network: { mode: "deny", allowedHosts: [] }, environment: { deny: [], set: {} } }',
     'const effect = Effect.scoped(run(profile, ChildProcessSpawner.ChildProcessSpawner.use((spawner) => spawner.spawn(ChildProcess.make(process.execPath, ["-e", "process.exit(0)"])))).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)))',
     "try { await Effect.runPromise(effect); process.exit(4) } catch { process.exit(0) }",
+  ].join("\n")
+
+  try {
+    const result = spawnSync(process.execPath, ["-e", script], {
+      cwd: import.meta.dir,
+      env: { ...process.env, KILO_BWRAP_PATH: helper },
+      encoding: "utf8",
+    })
+    expect(result.status, result.stderr).toBe(0)
+  } finally {
+    await fs.rm(root.root, { recursive: true, force: true })
+  }
+})
+
+linux("reports socket-mask support separately and fails required masking closed", async () => {
+  const root = await fixture()
+  const source = process.env.KILO_BWRAP_PATH ?? "/usr/bin/bwrap"
+  const helper = path.join(root.outside, "bwrap-no-socket-mask")
+  await fs.writeFile(
+    helper,
+    [
+      "#!/bin/sh",
+      'previous=""',
+      'for arg in "$@"; do',
+      '  if [ "$previous" = "--ro-bind" ] && [ "$arg" = "/dev/null" ]; then echo "socket masks blocked" >&2; exit 42; fi',
+      '  previous="$arg"',
+      "done",
+      `exec ${JSON.stringify(source)} "$@"`,
+      "",
+    ].join("\n"),
+  )
+  await fs.chmod(helper, 0o755)
+  const script = [
+    'import { Effect } from "effect"',
+    'import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"',
+    'import { backendSupport, run } from "@kilocode/sandbox"',
+    'import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"',
+    `const profile = { filesystem: { allowWrite: [], denyWrite: [], denyNames: [] }, network: { mode: "allow", allowedHosts: [] }, environment: { deny: [], set: {} }, socket: { ipc: "deny", policy: { paths: [{ path: ${JSON.stringify(path.join(root.outside, "missing.sock"))}, kind: "literal" }], deny: [], coverage: ["docker"] } } }`,
+    "const support = backendSupport(profile)",
+    'if (support.available || support.capabilities.unixSockets || !support.reason?.includes("Unix-socket authority")) process.exit(2)',
+    'const effect = Effect.scoped(run(profile, ChildProcessSpawner.ChildProcessSpawner.use((spawner) => spawner.spawn(ChildProcess.make(process.execPath, ["-e", "process.exit(0)"])))).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)))',
+    "try { await Effect.runPromise(effect); process.exit(3) } catch { process.exit(0) }",
   ].join("\n")
 
   try {

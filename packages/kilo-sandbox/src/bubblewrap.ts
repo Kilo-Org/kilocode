@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { Backend, Launch, Support } from "./backend"
@@ -108,6 +109,20 @@ function protectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>) {
   return [...found].sort((a, b) => a.length - b.length)
 }
 
+function sockets(profile: Profile) {
+  const found = new Set<string>()
+  for (const rule of profile.socket?.policy?.paths ?? []) {
+    try {
+      const target = realpathSync.native(rule.path)
+      if (statSync(target).isSocket()) found.add(target)
+    } catch (cause) {
+      if (typeof cause === "object" && cause !== null && "code" in cause && cause.code === "ENOENT") continue
+      throw cause
+    }
+  }
+  return [...found].sort((a, b) => a.length - b.length)
+}
+
 export function generate(
   profile: Profile,
   launch: Launch,
@@ -132,6 +147,7 @@ export function generate(
 
   for (const rule of allow) args.push("--bind", rule.path, rule.path)
   for (const target of protectedPaths(profile, allow)) args.push("--ro-bind", target, target)
+  for (const target of sockets(profile)) args.push("--ro-bind", "/dev/null", target)
   args.push("--proc", "/proc")
   if (launch.cwd) args.push("--chdir", launch.cwd)
   args.push("--", ...command(launch))
@@ -164,14 +180,17 @@ function resolve(executable: string, expected?: string) {
   }
 }
 
-function probe(executable: string, network = false) {
+function probe(executable: string, capability: "filesystem" | "network" | "socket" = "filesystem") {
+  const root = capability === "socket" ? mkdtempSync(path.join(os.tmpdir(), "kilo-bwrap-socket-")) : undefined
+  const target = root ? path.join(root, "target") : undefined
+  if (target) writeFileSync(target, "probe")
   const result = spawnSync(
     executable,
     [
       "--unshare-user",
       "--disable-userns",
       "--unshare-pid",
-      ...(network ? ["--unshare-net"] : []),
+      ...(capability === "network" ? ["--unshare-net"] : []),
       "--die-with-parent",
       "--new-session",
       "--ro-bind",
@@ -179,6 +198,7 @@ function probe(executable: string, network = false) {
       "/",
       "--dev",
       "/dev",
+      ...(target ? ["--ro-bind", "/dev/null", target] : []),
       "--proc",
       "/proc",
       "--",
@@ -187,16 +207,36 @@ function probe(executable: string, network = false) {
     ],
     { encoding: "utf8", timeout: 5_000 },
   )
+  if (root) rmSync(root, { recursive: true, force: true })
   if (result.status === 0) return undefined
   const detail = result.error?.message ?? (result.stderr.trim() || `exited with status ${result.status}`)
-  const capability = network ? "Linux network sandbox" : "Linux sandbox"
-  return `${executable} could not create the ${capability}: ${detail}`
+  const name =
+    capability === "network"
+      ? "Linux network sandbox"
+      : capability === "socket"
+        ? "Linux Unix-socket authority sandbox"
+        : "Linux sandbox"
+  return `${executable} could not create the ${name}: ${detail}`
+}
+
+function supported(filesystem: boolean, network: boolean, socket: boolean, reason?: string, available = filesystem): Support {
+  return {
+    available,
+    ...(reason ? { reason } : {}),
+    capabilities: {
+      filesystem,
+      network,
+      unixSockets: socket,
+      unixSocketCoverage: socket ? "known" : "none",
+    },
+  }
 }
 
 interface Selection {
   readonly executable: string | undefined
   readonly support: Support
   network: Support | undefined
+  socket: Support | undefined
 }
 
 function select(): Selection {
@@ -210,17 +250,15 @@ function select(): Selection {
     const executable = resolve(candidate.executable, candidate.expected)
     if (!executable) continue
     const failure = probe(executable)
-    if (!failure) return { executable, support: { available: true } satisfies Support, network: undefined }
+    if (!failure) return { executable, support: supported(true, false, false), network: undefined, socket: undefined }
     failures.push(failure)
   }
 
   return {
     executable: undefined,
-    support: {
-      available: false,
-      reason: failures.at(-1) ?? "No usable Bubblewrap executable is available",
-    } satisfies Support,
+    support: supported(false, false, false, failures.at(-1) ?? "No usable Bubblewrap executable is available"),
     network: undefined,
+    socket: undefined,
   }
 }
 
@@ -233,19 +271,36 @@ function selection(): Selection {
       ? select()
       : {
           executable: undefined,
-          support: { available: false, reason: "Bubblewrap requires Linux" } satisfies Support,
+          support: supported(false, false, false, "Bubblewrap requires Linux"),
           network: undefined,
+          socket: undefined,
         }
   return selected
 }
 
-function support(network?: Profile["network"]): Support {
+function support(profile?: Profile): Support {
   const selected = selection()
-  if (!selected.support.available || network?.mode !== "deny" || !selected.executable) return selected.support
-  if (selected.network) return selected.network
-  const failure = probe(selected.executable, true)
-  selected.network = failure ? { available: false, reason: failure } : { available: true }
-  return selected.network
+  if (!selected.support.capabilities.filesystem || !selected.executable) return selected.support
+  const network = profile?.network.mode === "deny"
+  const socket = (profile?.socket?.policy?.coverage.length ?? 0) > 0
+  if (network && !selected.network) {
+    const failure = probe(selected.executable, "network")
+    selected.network = supported(true, !failure, false, failure)
+  }
+  if (socket && !selected.socket) {
+    const failure = probe(selected.executable, "socket")
+    selected.socket = supported(true, false, !failure, failure)
+  }
+  const reason = selected.network?.reason ?? selected.socket?.reason
+  const networkReady = !network || selected.network?.capabilities.network === true
+  const socketReady = !socket || selected.socket?.capabilities.unixSockets === true
+  return supported(
+    true,
+    network && networkReady,
+    socket && socketReady,
+    reason,
+    networkReady && socketReady,
+  )
 }
 
 function setup(cause: unknown, launch: Launch) {

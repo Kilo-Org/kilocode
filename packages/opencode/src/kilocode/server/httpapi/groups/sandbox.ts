@@ -12,11 +12,19 @@ import { ApiNotFoundError } from "@/server/routes/instance/httpapi/errors"
 
 const root = "/session/:sessionID/sandbox"
 
+const SandboxCapabilities = Schema.Struct({
+  filesystem: Schema.Boolean,
+  network: Schema.Boolean,
+  unixSockets: Schema.Boolean,
+  unixSocketCoverage: Schema.Union([Schema.Literal("known"), Schema.Literal("none")]),
+})
+
 export const SandboxStatus = Schema.Struct({
   directory: Schema.String,
   enabled: Schema.Boolean,
   available: Schema.Boolean,
   reason: Schema.optional(Schema.String),
+  capabilities: SandboxCapabilities,
   version: Schema.Int,
 })
 

@@ -71,11 +71,18 @@ export function generate(profile: Profile, launch: Launch): Launch {
   }
 }
 
-const available: Support = existsSync(executable)
-  ? { available: true }
-  : { available: false, reason: `${executable} is not available` }
+const supported = existsSync(executable)
 
 export const seatbelt: Backend = {
-  support: () => available,
+  support: (profile) => ({
+    available: supported,
+    ...(supported ? {} : { reason: `${executable} is not available` }),
+    capabilities: {
+      filesystem: supported,
+      network: supported && profile?.network.mode === "deny",
+      unixSockets: false,
+      unixSocketCoverage: "none",
+    },
+  }),
   prepare: (profile, launch) => Effect.succeed(generate(profile, launch)),
 }

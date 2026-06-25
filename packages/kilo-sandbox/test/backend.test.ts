@@ -34,6 +34,8 @@ const launch: Launch = {
   },
 }
 
+const linux = process.platform === "linux" ? test : test.skip
+
 describe("sandbox launch preparation", () => {
   test("generates a globally overriding overlapping deny policy with parameterized paths", () => {
     const result = generate(makeProfile(), launch)
@@ -102,6 +104,50 @@ describe("sandbox launch preparation", () => {
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  })
+
+  test("masks normalized Unix sockets after writable roots", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-socket-"))
+    const socket = path.join(root, "authority.sock")
+    const profile: Profile = {
+      ...makeProfile("allow"),
+      filesystem: { allowWrite: [{ path: root, kind: "subtree" }], denyWrite: [], denyNames: [] },
+      socket: {
+        ipc: "deny",
+        policy: { paths: [{ path: socket, kind: "literal" }], deny: ["SSH_AUTH_SOCK"], coverage: ["ssh"] },
+      },
+    }
+
+    try {
+      writeFileSync(socket, "not a socket")
+      const plain = generateBubblewrap(profile, { ...launch, cwd: root }, "/opt/kilo/bwrap")
+      expect(plain.args).not.toContain("/dev/null")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  linux("scrubs environment advertised by the normalized socket policy", async () => {
+    const profile: Profile = {
+      ...makeProfile("allow"),
+      socket: {
+        ipc: "deny",
+        policy: { paths: [], deny: ["SSH_AUTH_SOCK", "DOCKER_HOST"], coverage: ["ssh", "docker"] },
+      },
+    }
+    const result = await Effect.runPromise(
+      Effect.scoped(
+        run(
+          profile,
+          prepare({
+            ...launch,
+            environment: { ...launch.environment, SSH_AUTH_SOCK: "/tmp/agent.sock", DOCKER_HOST: "unix:///tmp/docker.sock" },
+          }),
+        ),
+      ),
+    )
+    expect(result.environment?.SSH_AUTH_SOCK).toBeUndefined()
+    expect(result.environment?.DOCKER_HOST).toBeUndefined()
   })
 
   test("isolates the Linux network namespace in deny mode", () => {

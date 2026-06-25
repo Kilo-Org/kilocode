@@ -200,6 +200,14 @@ export const kiloScenarios: Scenario[] = [
       object(body)
       check(typeof body.enabled === "boolean", "sandbox status should report enabled state")
       check(typeof body.available === "boolean", "sandbox status should report backend availability")
+      object(body.capabilities)
+      check(typeof body.capabilities.filesystem === "boolean", "sandbox status should report filesystem confinement")
+      check(typeof body.capabilities.network === "boolean", "sandbox status should report network isolation")
+      check(typeof body.capabilities.unixSockets === "boolean", "sandbox status should report Unix socket containment")
+      check(
+        body.capabilities.unixSocketCoverage === "known" || body.capabilities.unixSocketCoverage === "none",
+        "sandbox status should report Unix socket coverage",
+      )
       check(typeof body.version === "number", "sandbox status should report its revision")
     }),
   http.protected

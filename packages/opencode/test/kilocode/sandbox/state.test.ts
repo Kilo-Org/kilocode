@@ -21,6 +21,51 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
   return SandboxPolicy.executeTool(sessionID, tool, effect)
 }
 
+linux("fails requested sandbox execution closed when a required capability is unavailable", async () => {
+  const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-sandbox-fail-closed-"))
+  const helper = path.join(root, "bwrap-no-socket-mask")
+  await fs.writeFile(
+    helper,
+    [
+      "#!/bin/sh",
+      'previous=""',
+      'for arg in "$@"; do',
+      '  if [ "$previous" = "--ro-bind" ] && [ "$arg" = "/dev/null" ]; then exit 42; fi',
+      '  previous="$arg"',
+      "done",
+      "exit 0",
+      "",
+    ].join("\n"),
+  )
+  await fs.chmod(helper, 0o755)
+  const script = [
+    'import { Effect, Layer } from "effect"',
+    'import { Config } from "@/config/config"',
+    'import { InstanceRef } from "@/effect/instance-ref"',
+    'import * as Network from "@/kilocode/sandbox/network"',
+    'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
+    'import { SessionID } from "@/session/schema"',
+    "const directory = process.cwd()",
+    'const context = { directory, worktree: directory, project: { id: "sandbox-status", worktree: directory, vcs: "git", time: { created: 0, updated: 0 }, sandboxes: [] } }',
+    'const layer = Layer.mock(Config.Service, { get: () => Effect.succeed({ experimental: { sandbox: true, sandbox_restrict_network: false } }) })',
+    'const effect = SandboxPolicy.executeTool(SessionID.make("ses_fail_closed"), Network.builtin({ id: "read" }), Effect.succeed("escaped")).pipe(Effect.provide(layer), Effect.provideService(InstanceRef, context), Effect.exit)',
+    "const result = await Effect.runPromise(effect)",
+    'if (result._tag !== "Failure") process.exit(2)',
+  ].join("\n")
+
+  try {
+    const result = Bun.spawnSync([process.execPath, "-e", script], {
+      cwd: import.meta.dir,
+      env: { ...process.env, KILO_BWRAP_PATH: helper },
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    expect(result.exitCode, result.stderr.toString()).toBe(0)
+  } finally {
+    await fs.rm(root, { recursive: true, force: true })
+  }
+})
+
 linux("reports configured network namespace availability", async () => {
   const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-sandbox-status-"))
   const helper = path.join(root, "bwrap-no-network")
@@ -48,7 +93,10 @@ linux("reports configured network namespace availability", async () => {
     "const deny = await status(true)",
     "const allow = await status(false)",
     'if (deny.available || deny.enabled || !deny.reason?.includes("Linux network sandbox")) process.exit(2)',
-    "if (!allow.available || !allow.enabled) process.exit(3)",
+    "if (!deny.capabilities.filesystem || deny.capabilities.network) process.exit(3)",
+    "if (!allow.available || !allow.enabled) process.exit(4)",
+    "if (!allow.capabilities.filesystem || allow.capabilities.network) process.exit(5)",
+    'if (!["known", "none"].includes(allow.capabilities.unixSocketCoverage)) process.exit(6)',
   ].join("\n")
 
   try {

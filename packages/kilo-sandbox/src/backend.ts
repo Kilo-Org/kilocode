@@ -5,6 +5,7 @@ import { current } from "./context"
 import { assertProcessNetwork, networkEnvironment } from "./network"
 import type { Profile } from "./profile"
 import { seatbelt } from "./seatbelt"
+import { socketPolicy } from "./socket"
 
 export interface Launch {
   readonly command: string
@@ -14,13 +15,21 @@ export interface Launch {
   readonly shell?: boolean | string | undefined
 }
 
+export interface Capabilities {
+  readonly filesystem: boolean
+  readonly network: boolean
+  readonly unixSockets: boolean
+  readonly unixSocketCoverage: "known" | "none"
+}
+
 export interface Support {
   readonly available: boolean
   readonly reason?: string | undefined
+  readonly capabilities: Capabilities
 }
 
 export interface Backend {
-  readonly support: (network?: Profile["network"]) => Support
+  readonly support: (profile?: Profile) => Support
   readonly prepare: (
     profile: Profile,
     launch: Launch,
@@ -29,7 +38,11 @@ export interface Backend {
 
 function unavailable(reason: string): Backend {
   return {
-    support: () => ({ available: false, reason }),
+    support: () => ({
+      available: false,
+      reason,
+      capabilities: { filesystem: false, network: false, unixSockets: false, unixSocketCoverage: "none" },
+    }),
     prepare: (_profile, launch) => Effect.succeed(launch),
   }
 }
@@ -51,7 +64,7 @@ const backend = select()
 
 function environment(profile: Profile, launch: Launch) {
   const source = { ...launch.environment, ...profile.environment.set }
-  const denied = new Set(profile.environment.deny)
+  const denied = new Set([...profile.environment.deny, ...(profile.socket?.policy?.deny ?? [])])
   const entries = Object.entries(source).filter(
     (entry): entry is [string, string] => entry[1] !== undefined && !denied.has(entry[0]),
   )
@@ -81,11 +94,15 @@ function unsupported(command: string, method: string, support: Support) {
 
 export function confine(profile: Profile, launch: Launch) {
   return Effect.gen(function* () {
-    const next = { ...launch, environment: environment(profile, launch) }
-    yield* assertProcessNetwork(profile, launch.command)
-    const support = backend.support(profile.network)
+    const socket = profile.socket
+      ? { ...profile.socket, policy: yield* socketPolicy(profile, { ...launch.environment, ...profile.environment.set }) }
+      : undefined
+    const policy = socket ? { ...profile, socket } : profile
+    const next = { ...launch, environment: environment(policy, launch) }
+    yield* assertProcessNetwork(policy, launch.command)
+    const support = backend.support(policy)
     if (!support.available) return yield* Effect.fail(unsupported(launch.command, "confine", support))
-    return yield* backend.prepare(profile, next)
+    return yield* backend.prepare(policy, next)
   })
 }
 
@@ -114,6 +131,11 @@ export function prepareCommand(
   })
 }
 
-export function backendSupport(network?: Profile["network"]) {
-  return backend.support(network)
+export function backendSupport(input?: Profile | Profile["network"]) {
+  if (!input || "filesystem" in input) return backend.support(input)
+  return backend.support({
+    filesystem: { allowWrite: [], denyWrite: [], denyNames: [] },
+    network: input,
+    environment: { deny: [], set: {} },
+  })
 }

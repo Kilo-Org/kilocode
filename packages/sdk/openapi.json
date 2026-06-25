@@ -5713,6 +5713,9 @@
                     "required": ["id", "providerID"],
                     "additionalProperties": false
                   },
+                  "metadata": {
+                    "type": "object"
+                  },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
                   },
@@ -6039,6 +6042,9 @@
                 "properties": {
                   "title": {
                     "type": "string"
+                  },
+                  "metadata": {
+                    "type": "object"
                   },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
@@ -10708,11 +10714,14 @@
             }
           },
           "400": {
-            "description": "BadRequest | InvalidRequestError",
+            "description": "WorkspaceCreateError | BadRequest | InvalidRequestError",
             "content": {
               "application/json": {
                 "schema": {
                   "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkspaceCreateError"
+                    },
                     {
                       "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
                     },
@@ -15230,11 +15239,31 @@
                     "reason": {
                       "type": "string"
                     },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "filesystem": {
+                          "type": "boolean"
+                        },
+                        "network": {
+                          "type": "boolean"
+                        },
+                        "unixSockets": {
+                          "type": "boolean"
+                        },
+                        "unixSocketCoverage": {
+                          "type": "string",
+                          "enum": ["known", "none"]
+                        }
+                      },
+                      "required": ["filesystem", "network", "unixSockets", "unixSocketCoverage"],
+                      "additionalProperties": false
+                    },
                     "version": {
                       "type": "integer"
                     }
                   },
-                  "required": ["directory", "enabled", "available", "version"],
+                  "required": ["directory", "enabled", "available", "capabilities", "version"],
                   "additionalProperties": false,
                   "description": "Session sandbox status"
                 }
@@ -15323,11 +15352,31 @@
                     "reason": {
                       "type": "string"
                     },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "filesystem": {
+                          "type": "boolean"
+                        },
+                        "network": {
+                          "type": "boolean"
+                        },
+                        "unixSockets": {
+                          "type": "boolean"
+                        },
+                        "unixSocketCoverage": {
+                          "type": "string",
+                          "enum": ["known", "none"]
+                        }
+                      },
+                      "required": ["filesystem", "network", "unixSockets", "unixSocketCoverage"],
+                      "additionalProperties": false
+                    },
                     "version": {
                       "type": "integer"
                     }
                   },
-                  "required": ["directory", "enabled", "available", "version"],
+                  "required": ["directory", "enabled", "available", "capabilities", "version"],
                   "additionalProperties": false,
                   "description": "Updated session sandbox status"
                 }
@@ -16589,20 +16638,32 @@
             "required": true
           },
           {
-            "name": "directory",
             "in": "query",
+            "name": "directory",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
           },
           {
-            "name": "workspace",
             "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticket",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -16919,6 +16980,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventPluginAdded"
           },
           {
             "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -18058,7 +18122,7 @@
           },
           "pid": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "minimum": 0
           },
           "sessionID": {
             "anyOf": [
@@ -19347,6 +19411,9 @@
           "version": {
             "type": "string"
           },
+          "metadata": {
+            "type": "object"
+          },
           "time": {
             "type": "object",
             "properties": {
@@ -19705,6 +19772,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventPluginAdded"
               },
               {
                 "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -20380,7 +20450,20 @@
                     "enum": [false]
                   }
                 ],
-                "description": "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout."
+                "description": "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout."
+              },
+              "headerTimeout": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "boolean",
+                    "enum": [false]
+                  }
+                ],
+                "description": "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout."
               },
               "chunkTimeout": {
                 "type": "integer",
@@ -20529,7 +20612,6 @@
                       }
                     }
                   },
-                  "required": ["input", "output"],
                   "additionalProperties": false
                 },
                 "experimental": {
@@ -21220,16 +21302,20 @@
                 "type": "boolean"
               },
               "sandbox": {
-                "type": "boolean",
-                "description": "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access"
+                "type": "boolean"
               },
               "sandbox_restrict_network": {
-                "type": "boolean",
-                "description": "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)"
+                "type": "boolean"
               },
               "mcp_timeout": {
                 "type": "integer",
                 "exclusiveMinimum": 0
+              },
+              "policies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ConfigV2ExperimentalPolicy"
+                }
               }
             },
             "additionalProperties": false
@@ -21904,6 +21990,9 @@
           },
           "version": {
             "type": "string"
+          },
+          "metadata": {
+            "type": "object"
           },
           "time": {
             "type": "object",
@@ -23254,6 +23343,27 @@
         "required": ["id", "type", "name", "projectID", "timeUsed"],
         "additionalProperties": false
       },
+      "WorkspaceCreateError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["WorkspaceCreateError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "WorkspaceWarpError": {
         "type": "object",
         "properties": {
@@ -24338,6 +24448,16 @@
                       }
                     ]
                   },
+                  "metadata": {
+                    "anyOf": [
+                      {
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "time": {
                     "type": "object",
                     "properties": {
@@ -24561,7 +24681,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -24793,7 +24913,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -25822,11 +25942,31 @@
               "reason": {
                 "type": "string"
               },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "filesystem": {
+                    "type": "boolean"
+                  },
+                  "network": {
+                    "type": "boolean"
+                  },
+                  "unixSockets": {
+                    "type": "boolean"
+                  },
+                  "unixSocketCoverage": {
+                    "type": "string",
+                    "enum": ["known", "none"]
+                  }
+                },
+                "required": ["filesystem", "network", "unixSockets", "unixSocketCoverage"],
+                "additionalProperties": false
+              },
               "version": {
                 "type": "integer"
               }
             },
-            "required": ["sessionID", "directory", "enabled", "available", "version"],
+            "required": ["sessionID", "directory", "enabled", "available", "capabilities", "version"],
             "additionalProperties": false
           }
         },
@@ -27394,7 +27534,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -27657,7 +27797,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -28473,6 +28613,30 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventPluginAdded": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["plugin.added"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "ModelV2Info": {
         "type": "object",
         "properties": {
@@ -28990,6 +29154,27 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "PolicyEffect": {
+        "type": "string",
+        "enum": ["allow", "deny"]
+      },
+      "ConfigV2ExperimentalPolicy": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["provider.use"]
+          },
+          "effect": {
+            "$ref": "#/components/schemas/PolicyEffect"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": ["action", "effect", "resource"],
+        "additionalProperties": false
+      },
       "SessionInfo": {
         "type": "object",
         "properties": {
@@ -29027,7 +29212,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "cost": {
@@ -29155,7 +29340,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           }
         },
@@ -29534,7 +29719,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "content": {

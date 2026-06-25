@@ -3000,6 +3000,12 @@ export type EventSandboxStatusChanged = {
     enabled: boolean
     available: boolean
     reason?: string
+    capabilities: {
+      filesystem: boolean
+      network: boolean
+      unixSockets: boolean
+      unixSocketCoverage: "known" | "none"
+    }
     version: number
   }
 }
@@ -10769,6 +10775,12 @@ export type SandboxStatusResponses = {
     enabled: boolean
     available: boolean
     reason?: string
+    capabilities: {
+      filesystem: boolean
+      network: boolean
+      unixSockets: boolean
+      unixSocketCoverage: "known" | "none"
+    }
     version: number
   }
 }
@@ -10809,6 +10821,12 @@ export type SandboxToggleResponses = {
     enabled: boolean
     available: boolean
     reason?: string
+    capabilities: {
+      filesystem: boolean
+      network: boolean
+      unixSockets: boolean
+      unixSocketCoverage: "known" | "none"
+    }
     version: number
   }
 }

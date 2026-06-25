@@ -452,7 +452,14 @@ describe("mapSSEEventToWebviewMessage", () => {
   it("maps sandbox status changes to effective button state", () => {
     const event: EventSandboxStatusChanged = {
       type: "sandbox.status.changed",
-      properties: { sessionID: "sess-1", directory: "/tmp", enabled: true, available: true, version: 3 },
+      properties: {
+        sessionID: "sess-1",
+        directory: "/tmp",
+        enabled: true,
+        available: true,
+        capabilities: { filesystem: true, network: true, unixSockets: true, unixSocketCoverage: "known" },
+        version: 3,
+      },
     }
 
     expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
@@ -462,6 +469,7 @@ describe("mapSSEEventToWebviewMessage", () => {
       enabled: true,
       available: true,
       reason: undefined,
+      capabilities: { filesystem: true, network: true, unixSockets: true, unixSocketCoverage: "known" },
       version: 3,
     })
   })

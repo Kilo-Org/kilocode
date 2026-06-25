@@ -181,6 +181,21 @@ describe("sandbox policy", () => {
     expect(profile(ctx).filesystem.temporaryDirectory).toBe(Global.Path.tmp)
   })
 
+  test("derives socket masking and environment scrubbing from the effective policy", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.a, dirs.a, dirs)
+    const allow = profile(ctx, "allow").socket?.policy
+    const deny = profile(ctx, "deny").socket?.policy
+
+    expect(allow?.deny).toContain("DOCKER_HOST")
+    expect(allow?.deny).not.toContain("SSH_AUTH_SOCK")
+    expect(allow?.paths.map((rule) => rule.path)).toContain("/var/run/docker.sock")
+    expect(deny?.deny).toEqual(expect.arrayContaining(["DOCKER_HOST", "SSH_AUTH_SOCK", "DBUS_SESSION_BUS_ADDRESS"]))
+    expect(deny?.coverage).toContain("docker")
+    expect(deny?.coverage).toContain("ssh")
+  })
+
   test("uses deny-by-default and configurable network profiles", async () => {
     await using tmp = await fixture()
     const dirs = tmp.extra
