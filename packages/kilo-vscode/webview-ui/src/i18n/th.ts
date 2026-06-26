@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "ตรวจสอบอีกครั้ง",
+  "provider.anaconda.state.noServer_one":
+    "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ 1 โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
+  "provider.anaconda.state.noServer_other":
+    "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ {{count}} โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
   "command.category.suggested": "แนะนำ",
   "command.category.view": "มุมมอง",
   "command.category.project": "โปรเจกต์",

@@ -8,6 +8,12 @@ import type {
   AgentBuilderSaveErrors,
   AgentBuilderSaveResponses,
   AgentPartInput,
+  AnacondaDesktopOpenErrors,
+  AnacondaDesktopOpenResponses,
+  AnacondaDesktopStatusErrors,
+  AnacondaDesktopStatusResponses,
+  AnacondaDesktopSyncErrors,
+  AnacondaDesktopSyncResponses,
   AppAgentsErrors,
   AppAgentsResponses,
   AppLogErrors,
@@ -7574,6 +7580,113 @@ export class Kilocode extends HeyApiClient {
   }
 }
 
+export class AnacondaDesktop extends HeyApiClient {
+  /**
+   * Get Anaconda Desktop setup status
+   *
+   * Discover the locally installed Anaconda Desktop and its active inference server.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      AnacondaDesktopStatusResponses,
+      AnacondaDesktopStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/anaconda-desktop/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Open Anaconda Desktop
+   *
+   * Open the locally installed Anaconda Desktop application.
+   */
+  public open<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AnacondaDesktopOpenResponses, AnacondaDesktopOpenErrors, ThrowOnError>(
+      {
+        url: "/kilocode/anaconda-desktop/open",
+        ...options,
+        ...params,
+      },
+    )
+  }
+
+  /**
+   * Synchronize Anaconda Desktop provider
+   *
+   * Discover the active local inference server and replace Kilo provider authentication metadata.
+   */
+  public sync<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      acknowledgeToolLimitations?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "acknowledgeToolLimitations" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AnacondaDesktopSyncResponses, AnacondaDesktopSyncErrors, ThrowOnError>(
+      {
+        url: "/kilocode/anaconda-desktop/sync",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+}
+
 export class Network extends HeyApiClient {
   /**
    * List pending network waits
@@ -8219,6 +8332,11 @@ export class KiloClient extends HeyApiClient {
   private _kilocode?: Kilocode
   get kilocode(): Kilocode {
     return (this._kilocode ??= new Kilocode({ client: this.client }))
+  }
+
+  private _anacondaDesktop?: AnacondaDesktop
+  get anacondaDesktop(): AnacondaDesktop {
+    return (this._anacondaDesktop ??= new AnacondaDesktop({ client: this.client }))
   }
 
   private _network?: Network

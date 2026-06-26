@@ -2591,6 +2591,66 @@ export type NotebookFailure = {
   currentRevision?: string
 }
 
+export type AnacondaDesktopStatus =
+  | {
+      type: "unsupported-platform"
+      platform: string
+    }
+  | {
+      type: "not-installed"
+      downloadURL: string
+    }
+  | {
+      type: "not-running"
+    }
+  | {
+      type: "invalid-config"
+      reason: "missing" | "malformed" | "missing-key" | "invalid-port"
+    }
+  | {
+      type: "signed-out"
+    }
+  | {
+      type: "management-unauthorized"
+    }
+  | {
+      type: "management-unavailable"
+      reason: "timeout" | "unexpected-response"
+    }
+  | {
+      type: "no-downloaded-model"
+    }
+  | {
+      type: "no-running-server"
+      downloadedModels: number
+    }
+  | {
+      type: "inference-unhealthy"
+      serverID: string
+    }
+  | {
+      type: "ready"
+      serverID: string
+      serverName?: string
+      models: Array<{
+        id: string
+        name: string
+      }>
+      context: number
+      toolcall: "supported" | "unsupported" | "unknown"
+    }
+
+export type AnacondaDesktopConflictError = {
+  code: "unsupported-platform" | "not-installed" | "not-ready" | "acknowledgement-required"
+  message: string
+  status?: AnacondaDesktopStatus
+}
+
+export type AnacondaDesktopOperationError = {
+  operation: "open" | "sync"
+  message: string
+}
+
 export type KilocodeSessionImportResult = {
   ok: boolean
   id: string
@@ -10836,6 +10896,118 @@ export type KilocodeNotebookRejectResponses = {
 }
 
 export type KilocodeNotebookRejectResponse = KilocodeNotebookRejectResponses[keyof KilocodeNotebookRejectResponses]
+
+export type AnacondaDesktopStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/status"
+}
+
+export type AnacondaDesktopStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AnacondaDesktopStatusError = AnacondaDesktopStatusErrors[keyof AnacondaDesktopStatusErrors]
+
+export type AnacondaDesktopStatusResponses = {
+  /**
+   * Anaconda Desktop setup status
+   */
+  200: AnacondaDesktopStatus
+}
+
+export type AnacondaDesktopStatusResponse = AnacondaDesktopStatusResponses[keyof AnacondaDesktopStatusResponses]
+
+export type AnacondaDesktopOpenData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/open"
+}
+
+export type AnacondaDesktopOpenErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * AnacondaDesktopConflictError
+   */
+  409: AnacondaDesktopConflictError
+  /**
+   * AnacondaDesktopOperationError
+   */
+  500: AnacondaDesktopOperationError
+}
+
+export type AnacondaDesktopOpenError = AnacondaDesktopOpenErrors[keyof AnacondaDesktopOpenErrors]
+
+export type AnacondaDesktopOpenResponses = {
+  /**
+   * Anaconda Desktop opened
+   */
+  200: true
+}
+
+export type AnacondaDesktopOpenResponse = AnacondaDesktopOpenResponses[keyof AnacondaDesktopOpenResponses]
+
+export type AnacondaDesktopSyncData = {
+  body?: {
+    acknowledgeToolLimitations?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/sync"
+}
+
+export type AnacondaDesktopSyncErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * AnacondaDesktopConflictError
+   */
+  409: AnacondaDesktopConflictError
+  /**
+   * AnacondaDesktopOperationError
+   */
+  500: AnacondaDesktopOperationError
+}
+
+export type AnacondaDesktopSyncError = AnacondaDesktopSyncErrors[keyof AnacondaDesktopSyncErrors]
+
+export type AnacondaDesktopSyncResponses = {
+  /**
+   * Anaconda Desktop connection synchronized
+   */
+  200: {
+    type: "ready"
+    serverID: string
+    serverName?: string
+    models: Array<{
+      id: string
+      name: string
+    }>
+    context: number
+    toolcall: "supported" | "unsupported" | "unknown"
+  }
+}
+
+export type AnacondaDesktopSyncResponse = AnacondaDesktopSyncResponses[keyof AnacondaDesktopSyncResponses]
 
 export type NetworkListData = {
   body?: never

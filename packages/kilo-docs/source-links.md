@@ -193,6 +193,8 @@
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://vercel.link/ai-gateway-token>
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
+- <https://www.anaconda.com/products/desktop>
+  <!-- packages/opencode/src/kilocode/anaconda-desktop/domain.ts -->
 - <https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz>
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://www.googleapis.com/auth/cloud-platform>

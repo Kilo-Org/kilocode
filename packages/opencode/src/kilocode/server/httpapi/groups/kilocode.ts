@@ -7,6 +7,7 @@ import {
   WorkspaceRoutingQuery,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import { AnacondaDesktopApi } from "./anaconda-desktop"
 import {
   Failure as NotebookFailure,
   Request as NotebookRequest,
@@ -123,6 +124,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
       .middleware(WorkspaceRoutingMiddleware)
       .middleware(Authorization),
   )
+  .addHttpApi(AnacondaDesktopApi)
   .annotateMerge(
     OpenApi.annotations({
       title: "kilo HttpApi",

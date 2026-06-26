@@ -1,8 +1,14 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "다시 확인",
+  "provider.anaconda.state.noServer_one":
+    "다운로드된 텍스트 생성 모델 1개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.noServer_other":
+    "다운로드된 텍스트 생성 모델 {{count}}개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
   "command.category.suggested": "추천",
   "command.category.view": "보기",
   "command.category.project": "프로젝트",

@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Sprawdź ponownie",
+  "provider.anaconda.state.noServer_one":
+    "Dostępny jest 1 pobrany model generowania tekstu. W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
+  "provider.anaconda.state.noServer_other":
+    "Dostępne są pobrane modele generowania tekstu (łącznie: {{count}}). W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
   "command.category.suggested": "Sugerowane",
   "command.category.view": "Widok",
   "command.category.project": "Projekt",

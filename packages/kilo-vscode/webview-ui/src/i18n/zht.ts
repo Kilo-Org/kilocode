@@ -1,8 +1,14 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "再次檢查",
+  "provider.anaconda.state.noServer_one":
+    "有 1 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
+  "provider.anaconda.state.noServer_other":
+    "有 {{count}} 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
   "command.category.suggested": "建議",
   "command.category.view": "檢視",
   "command.category.project": "專案",

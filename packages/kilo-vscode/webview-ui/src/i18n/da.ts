@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Tjek igen",
+  "provider.anaconda.state.noServer_one":
+    "Der er 1 downloadet tekstgenereringsmodel tilgængelig. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
+  "provider.anaconda.state.noServer_other":
+    "Der er {{count}} downloadede tekstgenereringsmodeller tilgængelige. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
   "command.category.suggested": "Foreslået",
   "command.category.view": "Vis",
   "command.category.project": "Projekt",

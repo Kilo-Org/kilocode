@@ -1,7 +1,13 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Sjekk igjen",
+  "provider.anaconda.state.noServer_one":
+    "1 nedlastet tekstgenereringsmodell er tilgjengelig. Start en modellserver i Anaconda Desktop. Modeller med støtte for verktøykall anbefales på det sterkeste.",
+  "provider.anaconda.state.noServer_other":
+    "{{count}} nedlastede tekstgenereringsmodeller er tilgjengelige. Start en modellserver i Anaconda Desktop. Modeller med støtte for verktøykall anbefales på det sterkeste.",
   "command.category.suggested": "Foreslått",
   "command.category.view": "Visning",
   "command.category.project": "Prosjekt",

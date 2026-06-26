@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Tekrar kontrol et",
+  "provider.anaconda.state.noServer_one":
+    "İndirilmiş 1 metin üretme modeli kullanılabilir. Anaconda Desktop'ta bir model sunucusu başlatın. Araç çağırma desteği olan modeller önemle tavsiye edilir.",
+  "provider.anaconda.state.noServer_other":
+    "İndirilmiş {{count}} metin üretme modeli kullanılabilir. Anaconda Desktop'ta bir model sunucusu başlatın. Araç çağırma desteği olan modeller önemle tavsiye edilir.",
   "command.category.suggested": "Önerilen",
   "command.category.view": "Görünüm",
   "command.category.project": "Proje",

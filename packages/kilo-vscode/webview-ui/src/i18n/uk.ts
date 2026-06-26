@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Перевірити ще раз",
+  "provider.anaconda.state.noServer_one":
+    "Доступна 1 завантажена модель генерації тексту. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.noServer_other":
+    "Доступно завантажених моделей генерації тексту: {{count}}. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
   "command.category.suggested": "Запропоновані",
   "command.category.view": "Вигляд",
   "command.category.project": "Проєкт",

@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "تحقق مرة أخرى",
+  "provider.anaconda.state.noServer_one":
+    "يتوفر نموذج واحد مُنزّل لتوليد النصوص. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.noServer_other":
+    "تتوفر نماذج مُنزّلة لتوليد النصوص، وعددها {{count}}. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
   "command.category.suggested": "مقترح",
   "command.category.view": "عرض",
   "command.category.project": "مشروع",
