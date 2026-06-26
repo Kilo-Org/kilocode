@@ -344,6 +344,53 @@ linux("fails closed when an inaccessible authority socket is under a writable ro
   }
 })
 
+linux("starts safely when a deny carve-out protects an inaccessible authority socket", async () => {
+  const root = await fixture()
+  const hidden = path.join(root.project, "protected")
+  const socket = path.join(hidden, "authority.sock")
+  const canary = path.join(root.outside, "canary")
+  await fs.mkdir(hidden)
+  await fs.writeFile(canary, "original")
+  const service = await broker(socket, canary)
+  await fs.chmod(hidden, 0o400)
+  const script = [
+    'const fs = require("node:fs")',
+    'const net = require("node:net")',
+    "if (process.env.DOCKER_HOST !== undefined) process.exit(2)",
+    `try { fs.chmodSync(${JSON.stringify(hidden)}, 0o700); process.exit(3) } catch {}`,
+    `const client = net.connect(${JSON.stringify(socket)})`,
+    'client.on("connect", () => { client.write("mutate"); process.exit(4) })',
+    'client.on("error", (error) => process.exit(["EACCES", "ENOENT"].includes(error.code) ? 0 : 5))',
+  ].join("\n")
+  const base = denied(profile([root.project]), [{ path: hidden, kind: "subtree" }])
+  const policy = sockets(base, [])
+  const effect = Effect.scoped(
+    run(
+      policy,
+      ChildProcessSpawner.ChildProcessSpawner.use((spawner) =>
+        spawner
+          .spawn(
+            ChildProcess.make(process.execPath, ["-e", script], {
+              cwd: root.project,
+              env: { DOCKER_HOST: `unix://${socket}` },
+            }),
+          )
+          .pipe(Effect.flatMap((handle) => handle.exitCode)),
+      ),
+    ).pipe(Effect.provide(CrossSpawnSpawner.defaultLayer)),
+  )
+
+  try {
+    expect(Number(await Effect.runPromise(effect))).toBe(0)
+    expect(await fs.readFile(canary, "utf8")).toBe("original")
+    expect(service.accepted()).toBe(0)
+  } finally {
+    await fs.chmod(hidden, 0o700)
+    service.server.close()
+    await fs.rm(root.root, { recursive: true, force: true })
+  }
+})
+
 linux("keeps Unix sockets created inside the sandbox usable", async () => {
   const root = await fixture()
   const socket = path.join(root.project, "inside.sock")

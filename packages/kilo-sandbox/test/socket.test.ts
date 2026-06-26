@@ -122,6 +122,73 @@ describe("Unix socket policy", () => {
     }
   })
 
+  linux("omits inaccessible paths protected by denyWrite", async () => {
+    const blocked = path.join(canonical, "blocked-deny")
+    const socket = path.join(runtime, "blocked-deny", "docker.sock")
+    const input = {
+      ...profile(),
+      filesystem: {
+        allowWrite: [{ path: canonical, kind: "subtree" as const }],
+        denyWrite: [{ path: blocked, kind: "subtree" as const }],
+        denyNames: [],
+      },
+    }
+    await mkdir(blocked)
+    await chmod(blocked, 0o000)
+
+    try {
+      const result = await Effect.runPromise(socketPolicy(input, { DOCKER_HOST: `unix://${socket}` }))
+      expect(result.paths.map((rule) => rule.path)).not.toContain(socket)
+    } finally {
+      await chmod(blocked, 0o700)
+    }
+  })
+
+  linux("omits inaccessible paths protected by denyNames", async () => {
+    const name = "blocked-name"
+    const blocked = path.join(canonical, name)
+    const socket = path.join(runtime, name, "docker.sock")
+    const input = {
+      ...profile(),
+      filesystem: {
+        allowWrite: [{ path: canonical, kind: "subtree" as const }],
+        denyWrite: [],
+        denyNames: [name],
+      },
+    }
+    await mkdir(blocked)
+    await chmod(blocked, 0o000)
+
+    try {
+      const result = await Effect.runPromise(socketPolicy(input, { DOCKER_HOST: `unix://${socket}` }))
+      expect(result.paths.map((rule) => rule.path)).not.toContain(socket)
+    } finally {
+      await chmod(blocked, 0o700)
+    }
+  })
+
+  linux("does not treat a final socket deny as protection for its writable ancestor", async () => {
+    const blocked = path.join(canonical, "blocked-leaf")
+    const socket = path.join(runtime, "blocked-leaf", "docker.sock")
+    const input = {
+      ...profile(),
+      filesystem: {
+        allowWrite: [{ path: canonical, kind: "subtree" as const }],
+        denyWrite: [{ path: path.join(canonical, "blocked-leaf", "docker.sock"), kind: "literal" as const }],
+        denyNames: [],
+      },
+    }
+    await mkdir(blocked)
+    await chmod(blocked, 0o000)
+
+    try {
+      const exit = await Effect.runPromise(socketPolicy(input, { DOCKER_HOST: `unix://${socket}` }).pipe(Effect.exit))
+      expect(exit._tag).toBe("Failure")
+    } finally {
+      await chmod(blocked, 0o700)
+    }
+  })
+
   test("adds SSH, GPG, D-Bus, and Wayland only for restrictive IPC", () => {
     const ssh = path.join(runtime, "ssh.sock")
     const gpg = path.join(runtime, "gpg:agent.sock")

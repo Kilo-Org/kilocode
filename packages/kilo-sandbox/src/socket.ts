@@ -1,6 +1,6 @@
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
-import { canonicalize, canonicalizeAncestor, matches } from "./path"
+import { allowsWrite, canonicalize, canonicalizeAncestor } from "./path"
 import type { PathRule, Profile, SocketCoverage, SocketPolicy } from "./profile"
 
 type Environment = Readonly<Record<string, string | undefined>>
@@ -216,7 +216,7 @@ function canonical(profile: Profile, input: string) {
       (err) => err.reason._tag === "PermissionDenied",
       (err) =>
         Effect.flatMap(canonicalizeAncestor(input), (target) => {
-          if (profile.filesystem.allowWrite.some((rule) => matches(rule, target))) return Effect.fail(err)
+          if (allowsWrite(profile.filesystem, target)) return Effect.fail(err)
           return Effect.succeed(undefined)
         }),
     ),

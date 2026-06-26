@@ -1,14 +1,14 @@
 import { lstatSync, readlinkSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
-import type { PathRule, Profile, SocketPolicy } from "./profile"
+import type { FilesystemProfile, PathRule, Profile, SocketPolicy } from "./profile"
 
 function code(cause: unknown) {
   if (typeof cause !== "object" || cause === null || !("code" in cause)) return undefined
   return typeof cause.code === "string" ? cause.code : undefined
 }
 
-function resolve(input: string, seen = new Set<string>(), inaccessible = false) {
+function resolve(input: string, seen = new Set<string>(), inaccessible = false, nearest = false) {
   const target = path.resolve(input)
   if (seen.has(target)) throw Object.assign(new Error("Symlink cycle"), { code: "ELOOP" })
   seen.add(target)
@@ -17,7 +17,8 @@ function resolve(input: string, seen = new Set<string>(), inaccessible = false) 
 
   while (true) {
     try {
-      return path.resolve(realpathSync.native(ancestor), ...suffix)
+      const resolved = realpathSync.native(ancestor)
+      return nearest ? resolved : path.resolve(resolved, ...suffix)
     } catch (cause) {
       const tag = code(cause)
       const hidden = tag === "EACCES" || tag === "EPERM"
@@ -25,7 +26,7 @@ function resolve(input: string, seen = new Set<string>(), inaccessible = false) 
       try {
         if (lstatSync(ancestor).isSymbolicLink()) {
           const link = readlinkSync(ancestor)
-          return resolve(path.resolve(path.dirname(ancestor), link, ...suffix), seen, inaccessible)
+          return resolve(path.resolve(path.dirname(ancestor), link, ...suffix), seen, inaccessible, nearest)
         }
       } catch (error) {
         const reason = code(error)
@@ -60,7 +61,7 @@ export function canonicalize(input: string): Effect.Effect<string, PlatformError
 }
 
 export function canonicalizeAncestor(input: string): Effect.Effect<string, PlatformError.PlatformError> {
-  return attempt(input, "canonicalizeAncestor", () => resolve(input, new Set(), true))
+  return attempt(input, "canonicalizeAncestor", () => resolve(input, new Set(), true, true))
 }
 
 export function canonicalizeEntry(input: string): Effect.Effect<string, PlatformError.PlatformError> {
@@ -112,4 +113,14 @@ export function matches(rule: PathRule, target: string) {
   if (relative === "") return true
   if (rule.kind === "literal") return false
   return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
+}
+
+export function allowsWrite(profile: FilesystemProfile, target: string) {
+  const names = process.platform === "win32" ? profile.denyNames.map((name) => name.toLowerCase()) : profile.denyNames
+  const parts = target.split(/[\\/]/).map((part) => (process.platform === "win32" ? part.toLowerCase() : part))
+  return (
+    profile.allowWrite.some((rule) => matches(rule, target)) &&
+    !profile.denyWrite.some((rule) => matches(rule, target)) &&
+    !parts.some((part) => names.includes(part))
+  )
 }
