@@ -51,6 +51,8 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
 
   const json = (path: string) => spec.paths?.[path]?.get?.responses?.["200"]?.content?.["application/json"]
   const profile = json("/kilo/profile")?.schema?.properties
+  const pass = profile?.kiloPass?.properties
+  if (pass?.nextBillingAt) pass.nextBillingAt = nullable(pass.nextBillingAt)
   if (profile?.balance) profile.balance = nullable(profile.balance)
   if (profile?.kiloPass) profile.kiloPass = nullable(profile.kiloPass)
   if (profile?.currentOrgId) profile.currentOrgId = nullable(profile.currentOrgId)
