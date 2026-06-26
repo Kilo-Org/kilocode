@@ -21266,9 +21266,6 @@
           "enabled": {
             "type": "boolean"
           },
-          "configured": {
-            "type": "boolean"
-          },
           "amountCents": {
             "type": "number"
           },
@@ -21285,7 +21282,7 @@
             "type": "string"
           }
         },
-        "required": ["enabled", "configured", "amountCents", "thresholdCents"],
+        "required": ["enabled", "amountCents", "thresholdCents"],
         "additionalProperties": false
       },
       "ProviderUsageKiloBilling": {
