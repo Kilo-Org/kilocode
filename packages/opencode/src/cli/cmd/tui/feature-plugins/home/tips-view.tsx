@@ -135,7 +135,8 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
   }
   const tip = createMemo(() => {
     if (props.connected === false) return NO_MODELS_TIP
-    const tips = KILO_TIPS.flatMap((item) => { // kilocode_change
+    const tips = KILO_TIPS.flatMap((item) => {
+      // kilocode_change
       const value = typeof item === "string" ? item : item(shortcuts)
       return value ? [value] : []
     })

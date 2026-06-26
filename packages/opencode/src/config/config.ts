@@ -54,6 +54,7 @@ import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
+import { Stack } from "@/kilocode/stack/schema"
 import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
@@ -226,6 +227,9 @@ export const Info = Schema.Struct({
     description: "Automatically collapse reasoning blocks after the agent finishes writing them",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }),
+  stack: Schema.optional(Stack.Config).annotate({
+    description: "Project technology stack desired state and managed resource receipts",
+  }),
   console: Schema.optional(
     Schema.Struct({
       context_sidebar_width: Schema.optional(

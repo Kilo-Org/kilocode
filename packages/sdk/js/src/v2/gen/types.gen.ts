@@ -1489,6 +1489,32 @@ export type Config = {
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
   indexing?: IndexingConfig
+  stack?: {
+    version: 1
+    catalog_revision: string
+    verticals: {
+      [key: string]: {
+        technologies: Array<string>
+      }
+    }
+    resources: {
+      [key: string]: {
+        enabled: boolean
+        method?: string
+        parameters?: {
+          [key: string]: string | number | boolean
+        }
+      }
+    }
+    managed: {
+      [key: string]: {
+        marketplace_id: string
+        version?: string
+        digest: string
+        fingerprint: string
+      }
+    }
+  }
   console?: {
     /**
      * Width of the Kilo Console project context sidebar in pixels
@@ -2591,6 +2617,534 @@ export type KilocodeSessionImportResult = {
   ok: boolean
   id: string
   skipped?: boolean
+}
+
+export type Objects = {
+  id: string
+  name: string
+  technologies: Array<{
+    technology: string
+    note?: string
+  }>
+  categories: Array<Objects>
+}
+
+export type StackCatalogResponse = {
+  catalog: {
+    revision: string
+    verticals: Array<{
+      id: string
+      name: string
+      technologies: Array<{
+        id: string
+        name: string
+        resources: Array<{
+          ref: string
+          default: boolean
+          trust: "official" | "provider" | "community"
+          maturity: "stable" | "preview" | "beta" | "experimental" | "alpha" | "unsupported"
+          source: string
+          rationale: string
+          warnings: Array<string>
+          parameters?: Array<
+            | {
+                id: string
+                label: string
+                required: boolean
+                sensitive: false
+                description?: string
+                default?: string | number | boolean
+              }
+            | {
+                id: string
+                label: string
+                required: boolean
+                sensitive: true
+                env: string
+                description?: string
+              }
+          >
+        }>
+      }>
+      categories: Array<Objects>
+    }>
+    resources: Array<{
+      ref: string
+      id: string
+      kind: "skill" | "mcp"
+      name: string
+      trust: "official" | "provider" | "community"
+      maturity: "stable" | "preview" | "beta" | "experimental" | "alpha" | "unsupported"
+      source: string
+      warnings: Array<string>
+      parameters?: Array<
+        | {
+            id: string
+            label: string
+            required: boolean
+            sensitive: false
+            description?: string
+            default?: string | number | boolean
+          }
+        | {
+            id: string
+            label: string
+            required: boolean
+            sensitive: true
+            env: string
+            description?: string
+          }
+      >
+    }>
+  }
+  resources: Array<{
+    resource: {
+      ref: string
+      id: string
+      kind: "skill" | "mcp"
+      name: string
+      trust: "official" | "provider" | "community"
+      maturity: "stable" | "preview" | "beta" | "experimental" | "alpha" | "unsupported"
+      source: string
+      warnings: Array<string>
+      parameters?: Array<
+        | {
+            id: string
+            label: string
+            required: boolean
+            sensitive: false
+            description?: string
+            default?: string | number | boolean
+          }
+        | {
+            id: string
+            label: string
+            required: boolean
+            sensitive: true
+            env: string
+            description?: string
+          }
+      >
+    }
+    availability: "available" | "missing" | "blocked"
+    reason?: string
+    item?:
+      | {
+          id: string
+          version?: string
+          source_revision?: string
+          name?: string
+          description: string
+          publisher?: {
+            id: string
+            name: string
+            trust: "first-party" | "verified" | "community" | "unverified"
+            url?: string
+          }
+          maturity?: "stable" | "preview" | "experimental" | "unsupported"
+          support?: "kilo" | "publisher" | "community" | "unsupported"
+          source_url?: string
+          installability: {
+            installable: boolean
+            reason?: string
+          }
+          tags?: Array<string>
+          kind: "skill"
+          artifact?: {
+            url: string
+            digest: string
+            size: number
+            format: "tar.gz"
+          }
+        }
+      | {
+          id: string
+          version?: string
+          source_revision?: string
+          name?: string
+          description: string
+          publisher?: {
+            id: string
+            name: string
+            trust: "first-party" | "verified" | "community" | "unverified"
+            url?: string
+          }
+          maturity?: "stable" | "preview" | "experimental" | "unsupported"
+          support?: "kilo" | "publisher" | "community" | "unsupported"
+          source_url?: string
+          installability: {
+            installable: boolean
+            reason?: string
+          }
+          tags?: Array<string>
+          kind: "mcp"
+          methods: Array<{
+            id: string
+            name: string
+            template:
+              | {
+                  type: "local"
+                  command: Array<string>
+                  environment?: {
+                    [key: string]: unknown | (unknown & unknown)
+                  }
+                  enabled: false
+                  timeout?: number
+                }
+              | {
+                  type: "remote"
+                  url: string
+                  headers?: {
+                    [key: string]: string
+                  }
+                  oauth?:
+                    | {
+                        clientId?: string
+                        clientSecret?: string
+                        scope?: string
+                        callbackPort?: number
+                        redirectUri?: string
+                      }
+                    | false
+                  enabled: false
+                  timeout?: number
+                }
+            parameters: Array<{
+              id: string
+              name: string
+              description?: string
+              type: "string" | "path" | "url" | "integer" | "boolean"
+              required: boolean
+              sensitive: boolean
+              environment?: string
+              default?: string | number | boolean
+              allowed_values?: Array<string | number | boolean>
+            }>
+            prerequisites: Array<string>
+            platforms: Array<"darwin" | "linux" | "win32">
+            auth: {
+              mode: "none" | "environment" | "oauth"
+              environment?: Array<string>
+            }
+            warnings: {
+              writes: boolean
+              text?: string
+            }
+          }>
+        }
+  }>
+  expected_resources: Array<string>
+}
+
+export type StackMarketplaceUnavailableError = {
+  code: "marketplace_unavailable"
+  message: string
+}
+
+export type StackStateResponse = {
+  config?: {
+    version: 1
+    catalog_revision: string
+    verticals: {
+      [key: string]: {
+        technologies: Array<string>
+      }
+    }
+    resources: {
+      [key: string]: {
+        enabled: boolean
+        method?: string
+        parameters?: {
+          [key: string]: string | number | boolean
+        }
+      }
+    }
+    managed: {
+      [key: string]: {
+        marketplace_id: string
+        version?: string
+        digest: string
+        fingerprint: string
+      }
+    }
+  }
+  draft: {
+    verticals: {
+      [key: string]: {
+        technologies: Array<string>
+      }
+    }
+    resources: {
+      [key: string]: {
+        enabled: boolean
+        method?: string
+        parameters?: {
+          [key: string]: string | number | boolean
+        }
+      }
+    }
+  }
+  resources: Array<{
+    resource: string
+    enabled: boolean
+    managed: boolean
+    inherited: boolean
+    drift: "none" | "missing" | "modified" | "desired"
+  }>
+  conflicts: Array<{
+    code:
+      | "invalid_draft"
+      | "invalid_config"
+      | "stale_plan"
+      | "missing_marketplace_resource"
+      | "marketplace_unavailable"
+      | "apply_failed"
+    message: string
+    resource?: string
+    action?:
+      | "install"
+      | "remove"
+      | "keep"
+      | "already_available_unmanaged"
+      | "relinquish_modified"
+      | "missing"
+      | "blocked"
+  }>
+  config_revision: string
+  catalog_revision: string
+}
+
+export type StackInvalidConfigError = {
+  code: "invalid_config"
+  message: string
+}
+
+export type StackDetectionResponse = {
+  detections: Array<{
+    technology: string
+    vertical: string
+    evidence: string
+  }>
+}
+
+export type StackPreviewInput = {
+  draft: {
+    verticals: {
+      [key: string]: {
+        technologies: Array<string>
+      }
+    }
+    resources: {
+      [key: string]: {
+        enabled: boolean
+        method?: string
+        parameters?: {
+          [key: string]: string | number | boolean
+        }
+      }
+    }
+  }
+}
+
+export type StackPreviewResponse = {
+  draft: {
+    verticals: {
+      [key: string]: {
+        technologies: Array<string>
+      }
+    }
+    resources: {
+      [key: string]: {
+        enabled: boolean
+        method?: string
+        parameters?: {
+          [key: string]: string | number | boolean
+        }
+      }
+    }
+  }
+  actions: Array<{
+    action:
+      | "install"
+      | "remove"
+      | "keep"
+      | "already_available_unmanaged"
+      | "relinquish_modified"
+      | "missing"
+      | "blocked"
+    resource: string
+    technologies: Array<string>
+    reason: string
+    warnings: Array<string>
+    prerequisites: Array<string>
+  }>
+  conflicts: Array<{
+    code:
+      | "invalid_draft"
+      | "invalid_config"
+      | "stale_plan"
+      | "missing_marketplace_resource"
+      | "marketplace_unavailable"
+      | "apply_failed"
+    message: string
+    resource?: string
+    action?:
+      | "install"
+      | "remove"
+      | "keep"
+      | "already_available_unmanaged"
+      | "relinquish_modified"
+      | "missing"
+      | "blocked"
+  }>
+  warnings: Array<string>
+  prerequisites: Array<string>
+  config_revision: string
+  catalog_revision: string
+  plan_hash: string
+}
+
+export type StackInvalidDraftError = {
+  code: "invalid_draft"
+  message: string
+}
+
+export type StackApplyInput = {
+  draft: {
+    verticals: {
+      [key: string]: {
+        technologies: Array<string>
+      }
+    }
+    resources: {
+      [key: string]: {
+        enabled: boolean
+        method?: string
+        parameters?: {
+          [key: string]: string | number | boolean
+        }
+      }
+    }
+  }
+  plan_hash: string
+}
+
+export type StackApplyResponse = {
+  results: Array<{
+    resource: string
+    action:
+      | "install"
+      | "remove"
+      | "keep"
+      | "already_available_unmanaged"
+      | "relinquish_modified"
+      | "missing"
+      | "blocked"
+    success: boolean
+    message: string
+  }>
+  state: {
+    config?: {
+      version: 1
+      catalog_revision: string
+      verticals: {
+        [key: string]: {
+          technologies: Array<string>
+        }
+      }
+      resources: {
+        [key: string]: {
+          enabled: boolean
+          method?: string
+          parameters?: {
+            [key: string]: string | number | boolean
+          }
+        }
+      }
+      managed: {
+        [key: string]: {
+          marketplace_id: string
+          version?: string
+          digest: string
+          fingerprint: string
+        }
+      }
+    }
+    draft: {
+      verticals: {
+        [key: string]: {
+          technologies: Array<string>
+        }
+      }
+      resources: {
+        [key: string]: {
+          enabled: boolean
+          method?: string
+          parameters?: {
+            [key: string]: string | number | boolean
+          }
+        }
+      }
+    }
+    resources: Array<{
+      resource: string
+      enabled: boolean
+      managed: boolean
+      inherited: boolean
+      drift: "none" | "missing" | "modified" | "desired"
+    }>
+    conflicts: Array<{
+      code:
+        | "invalid_draft"
+        | "invalid_config"
+        | "stale_plan"
+        | "missing_marketplace_resource"
+        | "marketplace_unavailable"
+        | "apply_failed"
+      message: string
+      resource?: string
+      action?:
+        | "install"
+        | "remove"
+        | "keep"
+        | "already_available_unmanaged"
+        | "relinquish_modified"
+        | "missing"
+        | "blocked"
+    }>
+    config_revision: string
+    catalog_revision: string
+  }
+}
+
+export type StackStalePlanError = {
+  code: "stale_plan"
+  message: string
+}
+
+export type StackMissingResourceError = {
+  code: "missing_marketplace_resource"
+  message: string
+  resources: Array<string>
+}
+
+export type StackApplyError = {
+  code: "apply_failed"
+  message: string
+  rollback: boolean
+  results: Array<{
+    resource: string
+    action:
+      | "install"
+      | "remove"
+      | "keep"
+      | "already_available_unmanaged"
+      | "relinquish_modified"
+      | "missing"
+      | "blocked"
+    success: boolean
+    message: string
+  }>
 }
 
 export type EffectHttpApiErrorForbidden = {
@@ -11506,6 +12060,170 @@ export type SuggestionDismissResponses = {
 }
 
 export type SuggestionDismissResponse = SuggestionDismissResponses[keyof SuggestionDismissResponses]
+
+export type StackCatalogData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/stack/catalog"
+}
+
+export type StackCatalogErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * StackMarketplaceUnavailableError
+   */
+  503: StackMarketplaceUnavailableError
+}
+
+export type StackCatalogError = StackCatalogErrors[keyof StackCatalogErrors]
+
+export type StackCatalogResponses = {
+  /**
+   * Stack catalog and Marketplace availability
+   */
+  200: StackCatalogResponse
+}
+
+export type StackCatalogResponse2 = StackCatalogResponses[keyof StackCatalogResponses]
+
+export type StackGetData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/stack"
+}
+
+export type StackGetErrors = {
+  /**
+   * StackInvalidConfigError | InvalidRequestError
+   */
+  400: StackInvalidConfigError | InvalidRequestError
+  /**
+   * StackMarketplaceUnavailableError
+   */
+  503: StackMarketplaceUnavailableError
+}
+
+export type StackGetError = StackGetErrors[keyof StackGetErrors]
+
+export type StackGetResponses = {
+  /**
+   * Current project Stack state
+   */
+  200: StackStateResponse
+}
+
+export type StackGetResponse = StackGetResponses[keyof StackGetResponses]
+
+export type StackDetectData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/stack/detect"
+}
+
+export type StackDetectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type StackDetectError = StackDetectErrors[keyof StackDetectErrors]
+
+export type StackDetectResponses = {
+  /**
+   * Detected project technologies
+   */
+  200: StackDetectionResponse
+}
+
+export type StackDetectResponse = StackDetectResponses[keyof StackDetectResponses]
+
+export type StackPreviewData = {
+  body?: StackPreviewInput
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/stack/preview"
+}
+
+export type StackPreviewErrors = {
+  /**
+   * StackInvalidConfigError | StackInvalidDraftError | InvalidRequestError
+   */
+  400: StackInvalidConfigError | StackInvalidDraftError | InvalidRequestError
+}
+
+export type StackPreviewError = StackPreviewErrors[keyof StackPreviewErrors]
+
+export type StackPreviewResponses = {
+  /**
+   * Deterministic Stack review plan
+   */
+  200: StackPreviewResponse
+}
+
+export type StackPreviewResponse2 = StackPreviewResponses[keyof StackPreviewResponses]
+
+export type StackApplyData = {
+  body?: StackApplyInput
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/stack/apply"
+}
+
+export type StackApplyErrors = {
+  /**
+   * StackInvalidConfigError | StackInvalidDraftError | InvalidRequestError
+   */
+  400: StackInvalidConfigError | StackInvalidDraftError | InvalidRequestError
+  /**
+   * StackStalePlanError
+   */
+  409: StackStalePlanError
+  /**
+   * StackMissingResourceError
+   */
+  424: StackMissingResourceError
+  /**
+   * StackApplyError
+   */
+  500: StackApplyError
+  /**
+   * StackMarketplaceUnavailableError
+   */
+  503: StackMarketplaceUnavailableError
+}
+
+export type StackApplyError2 = StackApplyErrors[keyof StackApplyErrors]
+
+export type StackApplyResponses = {
+  /**
+   * Applied Stack results and refreshed state
+   */
+  200: StackApplyResponse
+}
+
+export type StackApplyResponse2 = StackApplyResponses[keyof StackApplyResponses]
 
 export type TelemetryCaptureData = {
   body?: {

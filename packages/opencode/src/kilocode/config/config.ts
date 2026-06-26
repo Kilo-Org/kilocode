@@ -430,7 +430,14 @@ export namespace KilocodeConfig {
       e.permission = cloned
     }
 
-    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Config.Info
+    const merged = mergeDeep(e, p) as Record<string, unknown>
+    const result = stripNulls(merged)
+    // Stack maps are required by the config schema but may legitimately be empty.
+    if (!isRecord(merged.stack) || !isRecord(result.stack)) return result as Config.Info
+    for (const key of ["verticals", "resources", "managed"]) {
+      if (isRecord(merged.stack[key]) && !isRecord(result.stack[key])) result.stack[key] = {}
+    }
+    return result as Config.Info
   }
 
   // ── Directory check helper ───────────────────────────────────────────

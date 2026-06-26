@@ -84,7 +84,9 @@ async function find() {
     if (run) return String(run.databaseId)
     await Bun.sleep(1000)
   }
-  throw new Error(`No ${workflow} run found for ${branch}. Merge PR ${pr} first, or pass --merge to merge it automatically.`)
+  throw new Error(
+    `No ${workflow} run found for ${branch}. Merge PR ${pr} first, or pass --merge to merge it automatically.`,
+  )
 }
 
 async function merged() {

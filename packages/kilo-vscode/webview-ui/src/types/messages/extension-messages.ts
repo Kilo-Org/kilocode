@@ -46,6 +46,8 @@ import type {
   MigrationStateMessage,
 } from "./migration"
 
+export type StackExtensionMessage = import("../stack").StackExtensionMessage
+
 // ============================================
 // Messages FROM extension TO webview
 // ============================================
@@ -307,6 +309,24 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  subtab?: string
+}
+
+export interface StackSummaryTechnology {
+  id: string
+  name: string
+}
+
+export interface StackSummaryLoadedMessage {
+  type: "stackSummaryLoaded"
+  technologies: StackSummaryTechnology[]
+  configured: boolean
+  projectDirectory?: string
+}
+
+export interface FeaturesUpdatedMessage {
+  type: "featuresUpdated"
+  features: FeatureFlags
 }
 
 export interface IndexingStatusLoadedMessage {
@@ -994,6 +1014,7 @@ export interface RemoteStatusMessage {
 }
 
 export type ExtensionMessage =
+  | StackExtensionMessage
   | ReadyMessage
   | FontSizeChangedMessage
   | GitStatusMessage
@@ -1027,6 +1048,8 @@ export type ExtensionMessage =
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
   | NavigateMessage
+  | StackSummaryLoadedMessage
+  | FeaturesUpdatedMessage
   | IndexingStatusLoadedMessage
   | IndexingSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage

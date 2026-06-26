@@ -1,4 +1,7 @@
+import { stackFallback } from "./en"
+
 export const dict = {
+  ...stackFallback,
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.line1": "Kilo Gateway 为您提供一组精选的可靠优化模型，专为编码代理设计。",
   "provider.connect.kiloGateway.line2": "只需一个 API 密钥，您就可以使用 Claude、GPT、Gemini、GLM 等模型。",

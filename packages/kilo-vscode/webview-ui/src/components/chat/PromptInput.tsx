@@ -19,6 +19,7 @@ import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { ModelSelector } from "../shared/ModelSelector"
+import StackPopover from "../shared/StackPopover"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
@@ -1201,6 +1202,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 </svg>
               </Button>
             </Tooltip>
+          </Show>
+          <Show when={features().project_stack}>
+            <StackPopover />
           </Show>
           <Tooltip
             value={

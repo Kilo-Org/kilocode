@@ -153,7 +153,8 @@ import {
 import type { StoredProviderKey } from "./provider-actions"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
-import { configFeatures } from "./features"
+import { configFeatures, withFeature, type Features } from "./features"
+import { StackHttpClient } from "./stack/client"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
@@ -396,6 +397,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedStats: unknown = null
   private cachedGitRepo = false
 
+  private _stackClient: StackHttpClient | null = null
+  private get stackClient(): StackHttpClient {
+    if (!this._stackClient) this._stackClient = new StackHttpClient(this.connectionService)
+    return this._stackClient
+  }
+  private cachedStackSummary: unknown = null
+  private projectStackEnabled = false
+  private projectStackConfigDisposable: vscode.Disposable | null = null
+
   private onBeforeMessage: ((msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>) | null = null
 
   private continueInWorktreeHandler:
@@ -417,7 +427,60 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.projectDirectory = opts.projectDirectory
     this.slimEditMetadata = opts.slimEditMetadata ?? true
 
+    this.projectStackEnabled = vscode.workspace
+      .getConfiguration("kilo-code.new.experimental")
+      .get<boolean>("projectStack", false)
+    this.projectStackConfigDisposable = vscode.workspace.onDidChangeConfiguration?.((e) => {
+      if (!e.affectsConfiguration("kilo-code.new.experimental.projectStack")) return
+      this.projectStackEnabled = vscode.workspace
+        .getConfiguration("kilo-code.new.experimental")
+        .get<boolean>("projectStack", false)
+      this.sendFeatures()
+      if (this.projectStackEnabled) void this.fetchAndSendStackSummary()
+    })
+
     TelemetryProxy.getInstance().setProvider(this)
+  }
+
+  /** Broadcast the current feature flags (including extension-managed ones). */
+  private sendFeatures(): void {
+    const base = configFeatures(this.cachedConfigMessage ? (this.cachedConfigMessage as { config?: Config }).config : null)
+    const features = withFeature(base, "project_stack", this.projectStackEnabled)
+    this.postMessage({ type: "featuresUpdated", features })
+  }
+
+  /** Fetch the stack summary for the current project and push it to the webview. */
+  private async fetchAndSendStackSummary(): Promise<void> {
+    if (!this.projectStackEnabled) return
+    const directory = this.getProjectDirectory()
+    if (!directory) {
+      this.cachedStackSummary = { type: "stackSummaryLoaded", technologies: [], configured: false, projectDirectory: undefined }
+      this.postMessage(this.cachedStackSummary as Record<string, unknown>)
+      return
+    }
+    try {
+      const { catalog, state } = await this.stackClient.load(directory)
+      const draftVerticals = (state.draft.verticals ?? {}) as Record<string, { technologies?: string[] }>
+      const configVerticals = (state.config?.verticals ?? {}) as Record<string, { technologies?: string[] }>
+      const techIds = new Set<string>()
+      for (const v of [...Object.values(draftVerticals), ...Object.values(configVerticals)]) {
+        for (const id of v.technologies ?? []) techIds.add(id)
+      }
+      const technologies = catalog.catalog.verticals.flatMap((v) =>
+        v.technologies.filter((t) => techIds.has(t.id)).map((t) => ({ id: t.id, name: t.name })),
+      )
+      const configured = technologies.length > 0
+      this.cachedStackSummary = { type: "stackSummaryLoaded", technologies, configured, projectDirectory: directory }
+      this.postMessage(this.cachedStackSummary as Record<string, unknown>)
+    } catch (e) {
+      console.error("[Kilo New] fetchAndSendStackSummary failed:", e)
+      this.cachedStackSummary = { type: "stackSummaryLoaded", technologies: [], configured: false, projectDirectory: directory }
+      this.postMessage(this.cachedStackSummary as Record<string, unknown>)
+    }
+  }
+
+  private mergeProjectStackFeature(features: Features): Features {
+    return withFeature(features, "project_stack", this.projectStackEnabled)
   }
 
   setRemoteService(service: RemoteStatusService): void {
@@ -478,6 +541,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.projectDirectory === directory) return
     this.projectDirectory = directory
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    if (this.projectStackEnabled) void this.fetchAndSendStackSummary()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -613,6 +677,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Re-send cached worktree stats and git status after webview reload.
       if (this.cachedStats) this.postMessage(this.cachedStats)
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
+
+      // Re-send cached stack summary so a webview refresh gets it immediately.
+      if (this.cachedStackSummary) this.postMessage(this.cachedStackSummary as Record<string, unknown>)
 
       // Seed session status map so the Settings panel knows about already-running sessions.
       // Must run after webview is ready (postMessage is a no-op before that).
@@ -985,8 +1052,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await handleRefreshProfile(this.authCtx)
           break
         case "openSettingsPanel":
-          vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
+          vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab, message.subtab)
           break
+        case "openStackBuilder":
+          vscode.commands.executeCommand("kilo-code.new.stackBuilderOpen", this.getProjectDirectory())
+          break
+        case "setProjectStackFeature": {
+          await vscode.workspace
+            .getConfiguration("kilo-code.new.experimental")
+            .update("projectStack", message.enabled, vscode.ConfigurationTarget.Global)
+          this.projectStackEnabled = message.enabled
+          this.sendFeatures()
+          if (message.enabled) void this.fetchAndSendStackSummary()
+          break
+        }
         case "openVSCodeSettings":
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
           break
@@ -1052,6 +1131,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestMcpStatus":
           this.fetchAndSendMcpStatus().catch((e) => console.error("[Kilo New] fetchAndSendMcpStatus failed:", e))
+          break
+        case "requestStackSummary":
+          this.fetchAndSendStackSummary().catch((e) => console.error("[Kilo New] fetchAndSendStackSummary failed:", e))
           break
         case "connectMcp": {
           const c1 = this.client
@@ -1524,6 +1606,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sendNotificationSettings()
       this.sendTimelineSetting()
       this.postMessage({ type: "extensionDataReady" })
+
+      if (this.projectStackEnabled) void this.fetchAndSendStackSummary()
 
       if (this.cachedGitRepo) this.startStatsPolling()
 
@@ -2229,7 +2313,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
-        features: configFeatures(config),
+        features: this.mergeProjectStackFeature(configFeatures(config)),
       }
       this.cachedConfigMessage = message
       this.postMessage(message)
@@ -2324,14 +2408,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
-        features: configFeatures(config),
+        features: this.mergeProjectStackFeature(configFeatures(config)),
       }
       this.postMessage({
         type: "configUpdated",
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
-        features: configFeatures(config),
+        features: this.mergeProjectStackFeature(configFeatures(config)),
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config after update:", error)
@@ -2624,14 +2708,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: merged,
         globalConfig: global,
         projectConfig: overlay?.project,
-        features: configFeatures(merged),
+        features: this.mergeProjectStackFeature(configFeatures(merged)),
       }
       this.postMessage({
         type: "configUpdated",
         config: merged,
         globalConfig: global,
         projectConfig: overlay?.project,
-        features: configFeatures(merged),
+        features: this.mergeProjectStackFeature(configFeatures(merged)),
       })
       await Promise.all([
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
@@ -2651,7 +2735,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "configUpdated",
         config: optimistic,
         globalConfig: this.cachedGlobalConfig ?? undefined,
-        features: features ?? configFeatures(optimistic as Config),
+        features: this.mergeProjectStackFeature(
+          (features as Features | undefined) ?? configFeatures(optimistic as Config),
+        ),
       })
     } finally {
       this.pending--
@@ -3806,6 +3892,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autocompleteConfigDisposable?.dispose()
     this.indexingConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
+    this.projectStackConfigDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
     this.streams.dispose()

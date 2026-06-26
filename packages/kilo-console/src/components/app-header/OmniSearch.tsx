@@ -10,7 +10,7 @@ import {
   type ProjectItem,
   type ProjectQuery,
 } from "../../client"
-import { configNav } from "../../routes/config/sections"
+import { configNavigation } from "../../routes/config/sections"
 import { clean, friendly } from "../../shared/utils"
 
 type Entry = {
@@ -65,7 +65,7 @@ function short(input: string) {
 function nav(input: URLSearchParams): Entry[] {
   const rows: Entry[] = [{ kind: "NAV", label: "Projects", href: link("/projects", input) }]
 
-  for (const item of configNav) {
+  for (const item of configNavigation("global")) {
     if ("items" in item) {
       for (const child of item.items) {
         const prefix = item.id === "general" ? "Global Settings" : `Global Settings · ${item.label}`

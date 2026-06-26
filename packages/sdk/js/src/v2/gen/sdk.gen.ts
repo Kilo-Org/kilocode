@@ -321,6 +321,18 @@ import type {
   SessionUpdateResponses,
   SessionViewedErrors,
   SessionViewedResponses,
+  StackApplyErrors,
+  StackApplyInput,
+  StackApplyResponses,
+  StackCatalogErrors,
+  StackCatalogResponses,
+  StackDetectErrors,
+  StackDetectResponses,
+  StackGetErrors,
+  StackGetResponses,
+  StackPreviewErrors,
+  StackPreviewInput,
+  StackPreviewResponses,
   SubtaskPartInput,
   SuggestionAcceptErrors,
   SuggestionAcceptResponses,
@@ -7929,6 +7941,172 @@ export class Suggestion extends HeyApiClient {
   }
 }
 
+export class Stack extends HeyApiClient {
+  /**
+   * Get Stack catalog
+   *
+   * Get the built-in Stack taxonomy joined with current Marketplace resource availability.
+   */
+  public catalog<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<StackCatalogResponses, StackCatalogErrors, ThrowOnError>({
+      url: "/kilocode/stack/catalog",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get Stack state
+   *
+   * Get persisted Stack selections, managed resources, drift, and current revisions.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<StackGetResponses, StackGetErrors, ThrowOnError>({
+      url: "/kilocode/stack",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Detect Stack technologies
+   *
+   * Scan the project filesystem and return detected catalog technologies with evidence.
+   */
+  public detect<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<StackDetectResponses, StackDetectErrors, ThrowOnError>({
+      url: "/kilocode/stack/detect",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Preview Stack changes
+   *
+   * Validate Stack selections and return a deterministic plan without writing project state.
+   */
+  public preview<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      stackPreviewInput?: StackPreviewInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "stackPreviewInput", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<StackPreviewResponses, StackPreviewErrors, ThrowOnError>({
+      url: "/kilocode/stack/preview",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Apply Stack changes
+   *
+   * Apply a matching reviewed Stack plan transactionally and return refreshed project state.
+   */
+  public apply<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      stackApplyInput?: StackApplyInput
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "stackApplyInput", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<StackApplyResponses, StackApplyErrors, ThrowOnError>({
+      url: "/kilocode/stack/apply",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Telemetry extends HeyApiClient {
   /**
    * Capture telemetry event
@@ -8207,6 +8385,11 @@ export class KiloClient extends HeyApiClient {
   private _suggestion?: Suggestion
   get suggestion(): Suggestion {
     return (this._suggestion ??= new Suggestion({ client: this.client }))
+  }
+
+  private _stack?: Stack
+  get stack(): Stack {
+    return (this._stack ??= new Stack({ client: this.client }))
   }
 
   private _telemetry?: Telemetry

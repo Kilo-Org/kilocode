@@ -8,6 +8,7 @@ import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
+import { StackPanelProvider } from "./StackPanelProvider"
 import { MarketplaceNotifier } from "./services/marketplace/notifier"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
@@ -270,7 +271,8 @@ export function activate(context: vscode.ExtensionContext) {
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
   settingsEditorProvider.setRemoteService(remoteService)
   const marketplacePanelProvider = new MarketplacePanelProvider(context.extensionUri, connectionService, context)
-  context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
+  const stackPanelProvider = new StackPanelProvider(context.extensionUri, connectionService)
+  context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider, stackPanelProvider)
 
   // Surface a discardable notification when a marketplace item matches the workspace.
   const marketplaceNotifier = new MarketplaceNotifier(connectionService, context, (item) =>
@@ -300,6 +302,15 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerWebviewPanelSerializer(MarketplacePanelProvider.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         marketplacePanelProvider.deserializePanel(panel)
+        return Promise.resolve()
+      },
+    }),
+  )
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(StackPanelProvider.viewType, {
+      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        stackPanelProvider.deserializePanel(panel)
         return Promise.resolve()
       },
     }),
@@ -369,6 +380,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string | null) => {
       marketplacePanelProvider.openPanel(directory)
     }),
+    vscode.commands.registerCommand("kilo-code.new.stackBuilderOpen", (directory?: string | null) => {
+      stackPanelProvider.openPanel(directory)
+    }),
     vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
       kiloClawProvider.openPanel()
     }),
@@ -392,8 +406,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
       settingsEditorProvider.openPanel("profile")
     }),
-    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string) => {
-      settingsEditorProvider.openPanel("settings", tab)
+    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string, subtab?: string) => {
+      settingsEditorProvider.openPanel("settings", tab, subtab)
     }),
     vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
       settingsEditorProvider.openPanel("settings", "indexing")

@@ -318,6 +318,7 @@ const ConfigWrapper: ParentComponent<{
 
       return {
         indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
+        project_stack: props.features?.project_stack ?? false,
         sandboxControls: props.features?.sandboxControls ?? false,
       }
     })

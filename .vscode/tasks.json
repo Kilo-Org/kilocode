@@ -20,7 +20,10 @@
     {
       "label": "VSCode - ESBuild",
       "type": "shell",
-      "command": "bun",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
       "args": ["run", "watch:esbuild"],
       "group": "build",
       "problemMatcher": "$esbuild-watch",
@@ -36,7 +39,10 @@
     {
       "label": "VSCode - TSC",
       "type": "shell",
-      "command": "bun",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
       "args": ["run", "watch:tsc"],
       "group": "build",
       "problemMatcher": "$tsc-watch",
@@ -52,7 +58,10 @@
     {
       "label": "VSCode - CLI Watch",
       "type": "shell",
-      "command": "bun",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
       "args": ["run", "watch:cli"],
       "group": "build",
       "isBackground": true,
@@ -68,7 +77,10 @@
     {
       "label": "VSCode - Install",
       "type": "shell",
-      "command": "bun",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
       "args": ["install", "--frozen-lockfile"],
       "group": "build",
       "presentation": {
@@ -82,7 +94,10 @@
     {
       "label": "VSCode - Compile",
       "type": "shell",
-      "command": "bun",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
       "args": ["run", "compile"],
       "group": "build",
       "presentation": {
@@ -97,7 +112,10 @@
     {
       "label": "VSCode - Tests",
       "type": "shell",
-      "command": "bun",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
       "args": ["run", "watch-tests"],
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
@@ -118,7 +136,11 @@
     {
       "label": "VSCode - DevSnapshot - Build",
       "type": "shell",
-      "command": "bun run snapshot:build",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
+      "args": ["run", "snapshot:build"],
       "group": "build",
       "presentation": {
         "echo": true,
@@ -136,7 +158,11 @@
     {
       "label": "VSCode - DevSnapshot - Install",
       "type": "shell",
-      "command": "bun run snapshot:install",
+      "command": "${workspaceFolder}/script/kilocode/vscode-bun.sh",
+      "windows": {
+        "command": "bun"
+      },
+      "args": ["run", "snapshot:install"],
       "group": "build",
       "presentation": {
         "echo": true,

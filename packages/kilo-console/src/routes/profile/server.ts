@@ -1,12 +1,5 @@
 import { createEffect, createMemo, createSignal } from "solid-js"
-import {
-  discover,
-  forgetCached,
-  loadCached,
-  resolveServer,
-  saveCached,
-  type ProjectQuery,
-} from "../../client"
+import { discover, forgetCached, loadCached, resolveServer, saveCached, type ProjectQuery } from "../../client"
 import { clean } from "../../shared/utils"
 
 const ports = new Set(["3017", "3018"])

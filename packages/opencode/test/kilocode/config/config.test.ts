@@ -242,6 +242,23 @@ describe("kilocode indexing config", () => {
   })
 })
 
+describe("config merge", () => {
+  test("preserves required empty stack maps", () => {
+    const stack = decode({
+      stack: {
+        version: 1,
+        catalog_revision: "2026-06-25.2",
+        verticals: {},
+        resources: {},
+        managed: {},
+      },
+    }).stack
+    const merged = KilocodeConfig.mergeConfig({}, { stack })
+
+    expect(merged.stack).toEqual(stack)
+  })
+})
+
 describe("custom provider model config", () => {
   test("persists and removes reasoning across a global config reload", async () => {
     await using globalTmp = await tmpdir()

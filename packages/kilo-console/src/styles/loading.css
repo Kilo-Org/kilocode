@@ -16,7 +16,7 @@
   position: relative;
 }
 
-.kilo-console .content > .console-loading-content {
+.kilo-console .content .console-loading-content {
   position: absolute;
   z-index: 10;
   inset: 0;

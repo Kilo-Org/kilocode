@@ -155,6 +155,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.projectStack.title")}
+          description={language.t("settings.experimental.projectStack.description")}
+        >
+          <Switch
+            checked={features().project_stack}
+            onChange={(checked) => vscode.postMessage({ type: "setProjectStackFeature", enabled: checked })}
+            hideLabel
+          >
+            {language.t("settings.experimental.projectStack.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}
           description={language.t("settings.experimental.nativeNotebookTools.description")}
         >

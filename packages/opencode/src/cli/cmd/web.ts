@@ -33,11 +33,7 @@ export const WebCommand = effectCmd({
     }
 
     if (opts.mdns) {
-      UI.println(
-        UI.Style.TEXT_INFO_BOLD + "  mDNS:    ",
-        UI.Style.TEXT_NORMAL,
-        `${opts.mdnsDomain}:${server.port}`,
-      )
+      UI.println(UI.Style.TEXT_INFO_BOLD + "  mDNS:    ", UI.Style.TEXT_NORMAL, `${opts.mdnsDomain}:${server.port}`)
     }
 
     open(urls.local).catch(() => {})

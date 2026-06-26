@@ -1,0 +1,15 @@
+<svg width="160" height="160" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>JSON logo</title>
+ <defs>
+  <linearGradient id="linearGradient8385">
+   <stop offset="0"/>
+   <stop stop-color="#fff" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient3002" x1="-553.27" x2="-666.12" y1="525.91" y2="413.05" gradientTransform="matrix(.99884 0 0 .9987 689.01 -388.84)" gradientUnits="userSpaceOnUse" xlink:href="#linearGradient8385"/>
+  <linearGradient id="linearGradient3005" x1="-666.12" x2="-553.27" y1="413.04" y2="525.91" gradientTransform="matrix(.99884 0 0 .9987 689.01 -388.84)" gradientUnits="userSpaceOnUse" xlink:href="#linearGradient8385"/>
+ </defs>
+ <g fill-rule="evenodd">
+  <path d="m79.865 119.1c35.398 48.255 70.04-13.469 69.989-50.587-0.0602-43.886-44.541-68.414-70.018-68.414-40.892 0-79.836 33.796-79.836 80.036 0 51.396 44.64 79.865 79.836 79.865-7.9645-1.1468-34.506-6.834-34.863-67.967-0.23987-41.347 13.488-57.866 34.805-50.599 0.47743 0.17707 23.514 9.2645 23.514 38.951 0 29.56-23.427 38.715-23.427 38.715z" color="#000000" fill="url(#linearGradient3005)"/>
+  <path d="m79.823 41.401c-23.39-8.0619-52.043 11.216-52.043 49.829 0 63.048 46.721 68.77 52.384 68.77 40.892 0 79.836-33.796 79.836-80.036 0-51.396-44.64-79.865-79.836-79.865 9.7481-1.35 52.541 10.55 52.541 69.037 0 38.141-31.953 58.905-52.735 50.033-0.47743-0.17707-23.514-9.2645-23.514-38.951 0-29.56 23.367-38.818 23.367-38.818z" color="#000000" fill="url(#linearGradient3002)"/>
+ </g>
+</svg>

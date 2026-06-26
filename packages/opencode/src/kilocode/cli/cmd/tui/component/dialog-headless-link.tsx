@@ -13,9 +13,7 @@ export function DialogHeadlessLink(props: DialogHeadlessLinkProps) {
   const { theme } = useTheme()
 
   useBindings(() => ({
-    bindings: [
-      { key: "return", desc: "Close dialog", group: "Dialog", cmd: () => dialog.clear() },
-    ],
+    bindings: [{ key: "return", desc: "Close dialog", group: "Dialog", cmd: () => dialog.clear() }],
   }))
 
   return (

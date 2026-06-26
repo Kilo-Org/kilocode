@@ -124,6 +124,12 @@
         "icon": "$(extensions)"
       },
       {
+        "command": "kilo-code.new.stackBuilderOpen",
+        "title": "Project Stack",
+        "category": "Kilo Code",
+        "icon": "$(layers)"
+      },
+      {
         "command": "kilo-code.new.historyButtonClicked",
         "title": "History",
         "category": "Kilo Code",
@@ -934,6 +940,11 @@
           "type": "boolean",
           "default": false,
           "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
+        },
+        "kilo-code.new.experimental.projectStack": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a Project Stack icon in the chat prompt area that summarizes your configured technologies, MCP servers, and skills."
         },
         "kilo-code.new.extraCaCerts": {
           "type": "string",

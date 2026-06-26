@@ -1,6 +1,9 @@
 // Kilo-specific translations and overrides
 // Keys here will override any matching keys from upstream translations
+import { stackFallback } from "./en"
+
 export const dict = {
+  ...stackFallback,
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.line1":
     "Kilo Gateway ti offre una selezione curata di modelli affidabili e ottimizzati per agenti di coding.",

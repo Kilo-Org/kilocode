@@ -150,5 +150,6 @@ export interface Config {
 
 export interface FeatureFlags {
   indexing: boolean
+  project_stack: boolean
   sandboxControls: boolean
 }

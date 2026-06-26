@@ -48,13 +48,27 @@ const builtin = (skill: SkillInfo) => skill.location === "builtin" || skill.loca
 // View states for the agents subtab
 type AgentView = "list" | "create" | "edit"
 
-const AgentBehaviourTab: Component = () => {
+interface AgentBehaviourTabProps {
+  initialSubtab?: string
+}
+
+const AgentBehaviourTab: Component<AgentBehaviourTabProps> = (props) => {
   const language = useLanguage()
   const { config, updateConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
-  const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("agents")
+  const validSubtabs = new Set<SubtabId>(subtabs.map((s) => s.id))
+  const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>(
+    props.initialSubtab && validSubtabs.has(props.initialSubtab as SubtabId)
+      ? (props.initialSubtab as SubtabId)
+      : "agents",
+  )
+  // Sync when the parent changes the subtab prop (e.g. via navigate message)
+  createEffect(() => {
+    const sub = props.initialSubtab
+    if (sub && validSubtabs.has(sub as SubtabId)) setActiveSubtab(sub as SubtabId)
+  })
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
