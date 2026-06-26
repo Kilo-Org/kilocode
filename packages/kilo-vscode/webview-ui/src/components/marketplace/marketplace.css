@@ -27,6 +27,11 @@
   flex: 1;
 }
 
+.marketplace-relevance-filter {
+  display: flex;
+  align-items: center;
+}
+
 /* Type and category filters */
 
 .marketplace-types,

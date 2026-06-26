@@ -294,6 +294,19 @@ export const dict = {
     "Sandbox is ingeschakeld. Shell-opdrachten van de agent zijn beperkt tot de project- en Kilo-mappen.",
   "prompt.action.sandbox.disabled":
     "Sandbox is uitgeschakeld. Klik om schrijfbewerkingen van shell-opdrachten van de agent te beperken tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.status.enabled": "Sandbox ingeschakeld",
+  "prompt.action.sandbox.status.disabled": "Sandbox uitgeschakeld",
+  "prompt.action.sandbox.filesystem": "Bestandssysteem",
+  "prompt.action.sandbox.network": "Netwerk",
+  "prompt.action.sandbox.filesystem.restricted": "Beperkt",
+  "prompt.action.sandbox.network.blocked": "Geblokkeerd",
+  "prompt.action.sandbox.network.allowed": "Toegestaan",
+  "prompt.action.sandbox.unrestricted": "Onbeperkt",
+  "prompt.action.sandbox.description.enabled": "Schrijfbewerkingen zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.description.disabled":
+    "Klik om schrijfbewerkingen in het bestandssysteem en netwerktoegang te beperken.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
@@ -1327,6 +1340,9 @@ export const dict = {
     "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
+  "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
+  "settings.experimental.nativeNotebookTools.description":
+    "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",

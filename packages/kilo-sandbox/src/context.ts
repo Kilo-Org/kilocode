@@ -22,6 +22,10 @@ export function run<A, E, R>(
   })
 }
 
+export function unrestricted<A, E, R>(effect: Effect.Effect<A, E, R>) {
+  return effect.pipe(Effect.provideService(CurrentProfile, undefined))
+}
+
 function denied(path: string, method: string) {
   return PlatformError.systemError({
     _tag: "PermissionDenied",
