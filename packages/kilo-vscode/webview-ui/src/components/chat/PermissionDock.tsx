@@ -251,7 +251,7 @@ export const PermissionDock: Component<{
                             </Tooltip>
                           </div>
                           <code data-slot="permission-rule" data-wrap={external() ? "" : undefined} title={text(rule)}>
-                            <Show when={external()} fallback={text(rule)}>
+                            <Show when={external() && rule !== "*"} fallback={text(rule)}>
                               <span data-slot="permission-rule-label">
                                 {language.t("ui.permission.toolLabel.externalDirectory")}{" "}
                               </span>

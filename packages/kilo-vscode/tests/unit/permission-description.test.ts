@@ -181,6 +181,7 @@ describe("describeRule", () => {
 
   test("preserves existing permission rule labels", () => {
     expect(describeRule("read", "*", t)).toBe("Read")
+    expect(describeRule("external_directory", "*", t)).toBe("Read External Directory")
     expect(describeRule("read", "src/app.ts", t)).toBe("Read src/app.ts")
   })
 })
