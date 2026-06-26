@@ -253,7 +253,6 @@ export function useSlashCommand(
       cmd.action()
       return
     }
-    if (cmd.enabled && !cmd.enabled()) return
     const commandText = `/${cmd.name} `
     const updatedText = commandText + trailingText
     textarea.value = updatedText
