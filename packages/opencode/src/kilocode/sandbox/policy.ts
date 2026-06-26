@@ -149,6 +149,12 @@ const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: Sessi
   )
 })
 
+export const configuredSupport = Effect.fn("SandboxPolicy.configuredSupport")(function* () {
+  const cfg = yield* (yield* Config.Service).get()
+  const mode = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
+  return backendSupport({ mode, allowedHosts: [] })
+})
+
 export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: SessionID) {
   const current = yield* snapshot(sessionID)
   const support = backendSupport({ mode: current.state.mode, allowedHosts: [] })

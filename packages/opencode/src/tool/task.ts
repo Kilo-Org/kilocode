@@ -179,6 +179,7 @@ export const TaskTool = Tool.define(
       }
       // kilocode_change end
       const platform = KiloSession.resolvePlatform(ctx.sessionID) // kilocode_change - preserve parent attribution across task creation/resume
+      // kilocode_change start - create a child session with inherited Kilo restrictions
       const nextSession =
         session ??
         (yield* sessions.create({
@@ -201,6 +202,7 @@ export const TaskTool = Tool.define(
           ),
           // kilocode_change end
         }))
+      // kilocode_change end
       // kilocode_change start - rebuild in-memory ancestry and inherit confinement after creation/resume
       KiloSession.register({ id: nextSession.id, parentID: ctx.sessionID, platform })
       yield* SandboxPolicy.inherit(ctx.sessionID, nextSession.id, fallback)

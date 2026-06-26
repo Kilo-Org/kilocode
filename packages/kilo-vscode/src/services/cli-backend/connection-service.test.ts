@@ -2,6 +2,24 @@ import { describe, expect, test } from "bun:test"
 import * as vscode from "vscode"
 import { KiloConnectionService } from "./connection-service"
 
+function state(value: boolean) {
+  return {
+    get: <T>() => value as T,
+    update: async () => undefined,
+  }
+}
+
+describe("KiloConnectionService sandbox preference", () => {
+  test("uses workspace state instead of extension-global state", () => {
+    const service = new KiloConnectionService({
+      workspaceState: state(false),
+      globalState: state(true),
+    } as any)
+
+    expect(service.sandboxPreference.resolve(true)).toBe(false)
+  })
+})
+
 describe("KiloConnectionService clients", () => {
   test("returns a connected client without a workspace folder", async () => {
     const service = new KiloConnectionService({} as any)

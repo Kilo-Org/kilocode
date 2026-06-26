@@ -268,6 +268,8 @@ import type {
   RemoteStatusResponses,
   SandboxStatusErrors,
   SandboxStatusResponses,
+  SandboxSupportErrors,
+  SandboxSupportResponses,
   SandboxToggleErrors,
   SandboxToggleResponses,
   SessionAbortErrors,
@@ -7762,6 +7764,36 @@ export class Remote extends HeyApiClient {
 
 export class Sandbox extends HeyApiClient {
   /**
+   * Get sandbox backend support
+   *
+   * Get sandbox backend availability without creating a session.
+   */
+  public support<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SandboxSupportResponses, SandboxSupportErrors, ThrowOnError>({
+      url: "/sandbox/support",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
    * Get session sandbox status
    *
    * Get the effective sandbox state for one session.
@@ -7796,7 +7828,7 @@ export class Sandbox extends HeyApiClient {
   /**
    * Toggle session sandbox
    *
-   * Toggle the ephemeral sandbox override for one session.
+   * Toggle and persist the sandbox state for one session.
    */
   public toggle<ThrowOnError extends boolean = false>(
     parameters: {

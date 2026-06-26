@@ -936,10 +936,23 @@ export interface RequestSandboxStatusMessage {
   sessionID: string
 }
 
+export interface RequestSandboxDefaultMessage {
+  type: "requestSandboxDefault"
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
+export interface SetSandboxDefaultMessage {
+  type: "setSandboxDefault"
+  enabled: boolean
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
 export interface ToggleSandboxMessage {
   type: "toggleSandbox"
-  sessionID?: string
-  draftID?: string
+  sessionID: string
   requestID: string
   agentManagerContext?: string
   contextDirectory?: string
@@ -1280,6 +1293,8 @@ export type WebviewMessage =
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage
+  | RequestSandboxDefaultMessage
+  | SetSandboxDefaultMessage
   | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage

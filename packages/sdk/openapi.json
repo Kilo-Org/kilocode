@@ -15468,6 +15468,71 @@
         ]
       }
     },
+    "/sandbox/support": {
+      "get": {
+        "tags": ["sandbox"],
+        "operationId": "sandbox.support",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sandbox backend support",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["available"],
+                  "additionalProperties": false,
+                  "description": "Sandbox backend support"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get sandbox backend availability without creating a session.",
+        "summary": "Get sandbox backend support",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sandbox.support({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/session/{sessionID}/sandbox": {
       "get": {
         "tags": ["sandbox"],
@@ -15644,7 +15709,7 @@
             }
           }
         },
-        "description": "Toggle the ephemeral sandbox override for one session.",
+        "description": "Toggle and persist the sandbox state for one session.",
         "summary": "Toggle session sandbox",
         "x-codeSamples": [
           {

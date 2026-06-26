@@ -11026,6 +11026,37 @@ export type RemoteStatusResponses = {
 
 export type RemoteStatusResponse = RemoteStatusResponses[keyof RemoteStatusResponses]
 
+export type SandboxSupportData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sandbox/support"
+}
+
+export type SandboxSupportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SandboxSupportError = SandboxSupportErrors[keyof SandboxSupportErrors]
+
+export type SandboxSupportResponses = {
+  /**
+   * Sandbox backend support
+   */
+  200: {
+    available: boolean
+    reason?: string
+  }
+}
+
+export type SandboxSupportResponse = SandboxSupportResponses[keyof SandboxSupportResponses]
+
 export type SandboxStatusData = {
   body?: never
   path: {
