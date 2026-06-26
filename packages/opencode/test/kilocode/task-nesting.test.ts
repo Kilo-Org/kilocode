@@ -17,7 +17,7 @@ import { Provider } from "../../src/provider/provider"
 import { Permission } from "../../src/permission"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
-import * as SandboxState from "../../src/kilocode/sandbox/state"
+import * as SandboxPolicy from "../../src/kilocode/sandbox/policy"
 import { Truncate } from "../../src/tool/truncate"
 import { ToolRegistry } from "../../src/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
@@ -153,45 +153,6 @@ describe("Kilo task nesting", () => {
         expect(seen?.sessionID).toBe(result.metadata.sessionId)
         expect(seen?.agent).toBe("explore")
       }),
-    ),
-  )
-
-  it.live("inherits the parent's explicit sandbox state", () =>
-    provideTmpdirInstance(
-      () =>
-        Effect.gen(function* () {
-          const sessions = yield* Session.Service
-          const { chat, assistant } = yield* seed()
-          yield* sessions.setMetadata({
-            sessionID: chat.id,
-            metadata: SandboxState.merge(chat.metadata, { enabled: false, version: 3 }),
-          })
-          const tool = yield* TaskTool
-          const def = yield* tool.init()
-
-          const result = yield* def.execute(
-            {
-              description: "inspect sandbox",
-              prompt: "check the child sandbox state",
-              subagent_type: "explore",
-            },
-            {
-              sessionID: chat.id,
-              messageID: assistant.id,
-              agent: "build",
-              abort: new AbortController().signal,
-              extra: { promptOps: stubOps() },
-              messages: [],
-              metadata: () => Effect.void,
-              ask: () => Effect.void,
-            },
-          )
-
-          const child = yield* sessions.get(result.metadata.sessionId)
-          expect(SandboxState.parse(child.metadata)).toEqual({ enabled: false, version: 0 })
-          expect((yield* (yield* Config.Service).get()).experimental?.sandbox).toBe(true)
-        }),
-      { config: { experimental: { sandbox: true } } },
     ),
   )
 
@@ -350,11 +311,16 @@ describe("Kilo task nesting", () => {
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const { chat, assistant } = yield* seed()
+        const support = yield* SandboxPolicy.status(chat.id)
         yield* sessions.setPermission({
           sessionID: chat.id,
           permission: [{ permission: "bash", pattern: "*", action: "deny" }],
         })
         const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+        if (support.available) {
+          yield* SandboxPolicy.toggle(child.id)
+          expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(false)
+        }
         const tool = yield* TaskTool
         const def = yield* tool.init()
 
@@ -380,6 +346,7 @@ describe("Kilo task nesting", () => {
 
         yield* exec()
         const first = yield* sessions.get(child.id)
+        if (support.available) expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
         const count = first.permission?.filter((rule) => rule.permission === "bash").length
         yield* exec()
 

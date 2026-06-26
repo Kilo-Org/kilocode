@@ -1,7 +1,6 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
-import * as SandboxState from "@/kilocode/sandbox/state"
 import { Session } from "@/session/session"
 import type { SessionID } from "@/session/schema"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
@@ -17,15 +16,7 @@ export const sandboxHandlers = HttpApiBuilder.group(InstanceHttpApi, "sandbox", 
         exists(ctx.params.sessionID).pipe(Effect.andThen(SandboxPolicy.status(ctx.params.sessionID))),
       )
       .handle("toggle", (ctx: { params: { sessionID: SessionID } }) =>
-        SandboxPolicy.toggleGuarded(ctx.params.sessionID, exists(ctx.params.sessionID), (value) =>
-          Effect.gen(function* () {
-            const info = yield* exists(ctx.params.sessionID)
-            yield* session.setMetadata({
-              sessionID: info.id,
-              metadata: SandboxState.merge(info.metadata, value),
-            })
-          }),
-        ),
+        SandboxPolicy.toggleGuarded(ctx.params.sessionID, exists(ctx.params.sessionID)),
       )
   }),
 )
