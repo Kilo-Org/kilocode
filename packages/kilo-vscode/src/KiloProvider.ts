@@ -9,6 +9,7 @@ import type {
   TextPartInput,
   FilePartInput,
   Config,
+  AgentRequirementResult,
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import { previewSound } from "./services/attention"
@@ -53,6 +54,14 @@ import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
 import { createMarketplaceRemover, removeAgent, removeMcp } from "./kilo-provider/remove-config-item"
+import {
+  applyVSCodeExtensionRequirements,
+  requirementDirectory,
+  requirementKey,
+  type AgentRequirementsInstallHandler,
+  type HostAgentRequirementResult,
+  type RequirementInstall,
+} from "./kilo-provider/agent-requirements"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
@@ -313,6 +322,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private providersGeneration = 0
   private sandboxRevision = 0
   private cachedAgentsMessage: unknown = null
+  private readonly requirementCache = new Map<string, HostAgentRequirementResult>()
+  private readonly requirementGeneration = new Map<string, number>()
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
   private cachedSkillsMessage: unknown = null
   /** Cached commandsLoaded payload so requestCommands can be served before client is ready */
@@ -365,6 +376,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeFavoritesChange: (() => void) | null = null
   private unsubscribeMigrationComplete: (() => void) | null = null // legacy-migration
   private unsubscribeClearPendingPrompts: (() => void) | null = null
+  private unsubscribeAgentRequirementsInvalidated: (() => void) | null = null
   private unsubscribeDirectoryProvider: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
@@ -373,6 +385,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
+  private extensionChangeDisposable: vscode.Disposable | null = null
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
   private readonly marketplaceRemove = createMarketplaceRemover()
 
@@ -396,6 +409,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     | null = null
 
   private createWorktreeHandler: ((baseBranch?: string, branchName?: string) => Promise<void>) | null = null
+  private installAgentRequirementsHandler: AgentRequirementsInstallHandler | null = null
 
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private remoteService: RemoteStatusService | null = null
@@ -411,6 +425,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.slimEditMetadata = opts.slimEditMetadata ?? true
 
     TelemetryProxy.getInstance().setProvider(this)
+    this.extensionChangeDisposable = vscode.extensions.onDidChange(() => this.clearAgentRequirements())
   }
 
   setRemoteService(service: RemoteStatusService): void {
@@ -470,6 +485,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public setProjectDirectory(directory: string | null): void {
     if (this.projectDirectory === directory) return
     this.projectDirectory = directory
+    this.clearAgentRequirements()
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
   }
 
@@ -794,6 +810,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.createWorktreeHandler = handler
   }
 
+  public setAgentRequirementsInstallHandler(handler: AgentRequirementsInstallHandler): void {
+    this.installAgentRequirementsHandler = handler
+  }
+
   public attachToWebview(
     webview: vscode.Webview,
     options?: { onBeforeMessage?: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null> },
@@ -1028,6 +1048,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestSkills":
           this.fetchAndSendSkills().catch((e) => console.error("[Kilo New] fetchAndSendSkills failed:", e))
+          break
+        case "requestAgentRequirements":
+          this.fetchAndSendAgentRequirements(
+            message.agent,
+            message.directory,
+            message.sessionID,
+            message.force === true,
+          ).catch((e) => console.error("[Kilo New] fetchAndSendAgentRequirements failed:", e))
+          break
+        case "installAgentRequirements":
+          this.installAgentRequirements(message.agent, message.directory, message.sessionID).catch((e) =>
+            console.error("[Kilo New] installAgentRequirements failed:", e),
+          )
           break
         case "requestCommands":
           this.fetchAndSendCommands().catch((e) => console.error("[Kilo New] fetchAndSendCommands failed:", e))
@@ -1361,6 +1394,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeProfileChange?.()
     this.unsubscribeFavoritesChange?.()
     this.unsubscribeClearPendingPrompts?.()
+    this.unsubscribeAgentRequirementsInvalidated?.()
     this.unsubscribeDirectoryProvider?.()
 
     try {
@@ -1464,10 +1498,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.postMessage({ type: "clearPendingPrompts" })
       })
 
-      // Register this provider's directories so drainPendingPrompts() covers all instances
-      this.unsubscribeDirectoryProvider = this.connectionService.registerDirectoryProvider(() => {
-        return [this.getWorkspaceDirectory(), ...this.sessionDirectories.values()]
+      // Refresh this webview when another provider changes shared skill discovery.
+      this.unsubscribeAgentRequirementsInvalidated = this.connectionService.onAgentRequirementsInvalidated(async () => {
+        this.cachedSkillsMessage = null
+        this.clearCommandsCache()
+        this.clearAgentRequirements()
+        await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
       })
+
+      // Register this provider's directories for shared cross-directory operations.
+      this.unsubscribeDirectoryProvider = this.connectionService.registerDirectoryProvider(() => this.directories())
 
       // Get current state and push to webview
       const serverInfo = this.connectionService.getServerInfo()
@@ -2061,6 +2101,169 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch agents:", error)
     }
+  }
+
+  // Accept checks only for active workspace, session, or worktree directories.
+  private requirementScope(requested: string, sessionID?: string): string | undefined {
+    return requirementDirectory({
+      requested,
+      session: sessionID,
+      root: this.getRootDirectory(),
+      sessions: this.sessionDirectories,
+      worktrees: this.opts.worktreeDirectories?.() ?? [],
+    })
+  }
+
+  private postRequirementError(
+    agent: string,
+    directory: string,
+    code: "scope_mismatch" | "request_failed",
+    error: unknown,
+  ) {
+    this.postMessage({
+      type: "agentRequirementsLoaded",
+      result: {
+        agent,
+        directory,
+        enabled: true,
+        state: "error",
+        skills: [],
+        vscode_extensions: [],
+        mcps: [],
+        error: { code, message: getErrorMessage(error) || "Failed to check agent requirements" },
+      },
+    })
+  }
+
+  private applyAgentRequirements(result: AgentRequirementResult, directory: string): HostAgentRequirementResult {
+    return applyVSCodeExtensionRequirements({
+      result: { ...result, directory },
+      installed: (id) => vscode.extensions.getExtension(id) !== undefined,
+    })
+  }
+
+  private clearAgentRequirements(): void {
+    this.requirementCache.clear()
+    for (const [key, generation] of this.requirementGeneration) {
+      this.requirementGeneration.set(key, generation + 1)
+    }
+    this.postMessage({ type: "agentRequirementsInvalidated" })
+  }
+
+  private directories(): string[] {
+    return [
+      this.getRootDirectory(),
+      ...this.sessionDirectories.values(),
+      ...(this.opts.worktreeDirectories?.() ?? []),
+    ].filter((dir, index, dirs) => dir.length > 0 && dirs.findIndex((value) => sameDirectory(value, dir)) === index)
+  }
+
+  private async fetchAndSendAgentRequirements(
+    agent: string,
+    requested: string,
+    sessionID?: string,
+    force = false,
+  ): Promise<void> {
+    const dir = this.requirementScope(requested, sessionID)
+    if (!dir) {
+      this.postRequirementError(agent, requested, "scope_mismatch", "The agent requirement scope is no longer active")
+      return
+    }
+
+    const key = requirementKey(agent, dir)
+    if (!force) {
+      const cached = this.requirementCache.get(key)
+      if (cached) {
+        this.postMessage({ type: "agentRequirementsLoaded", result: cached })
+        return
+      }
+    }
+    if (!this.client) return
+
+    // Ignore stale responses from earlier checks for the same scope.
+    const generation = (this.requirementGeneration.get(key) ?? 0) + 1
+    this.requirementGeneration.set(key, generation)
+    const response = await this.client.kilocode
+      .agentRequirements({ agent, directory: dir }, { throwOnError: true })
+      .then(
+        (result) => result.data,
+        (error) => {
+          if (this.requirementGeneration.get(key) === generation) {
+            this.postRequirementError(agent, dir, "request_failed", error)
+          }
+          return undefined
+        },
+      )
+    if (!response || this.requirementGeneration.get(key) !== generation) return
+    if (!this.requirementScope(dir, sessionID)) return
+
+    const scoped = this.applyAgentRequirements(response, dir)
+    this.requirementCache.set(key, scoped)
+    this.postMessage({ type: "agentRequirementsLoaded", result: scoped })
+  }
+
+  private async assertAgentRequirements(agent: string | undefined, directory: string): Promise<void> {
+    if (!agent || !this.client) return
+    const key = requirementKey(agent, directory)
+    const cached = this.requirementCache.get(key)
+    const scoped =
+      cached ??
+      (await this.client.kilocode
+        .agentRequirements({ agent, directory }, { throwOnError: true })
+        .then((result) => (result.data ? this.applyAgentRequirements(result.data, directory) : undefined)))
+    if (!scoped) return
+    this.requirementCache.set(key, scoped)
+    this.postMessage({ type: "agentRequirementsLoaded", result: scoped })
+    if (scoped.state !== "blocked" && scoped.state !== "error") return
+    throw new Error("Complete the required checks to use this agent first")
+  }
+
+  private async installAgentRequirements(agent: string, requested: string, sessionID?: string): Promise<void> {
+    const dir = this.requirementScope(requested, sessionID)
+    if (!dir || !this.client) {
+      this.postRequirementError(agent, requested, "scope_mismatch", "The agent requirement scope is no longer active")
+      return
+    }
+
+    const response = await this.client.kilocode
+      .agentRequirements({ agent, directory: dir }, { throwOnError: true })
+      .then(
+        (result) => result.data,
+        (error) => {
+          this.postRequirementError(agent, dir, "request_failed", error)
+          return undefined
+        },
+      )
+    if (!response) return
+    const scoped = this.applyAgentRequirements(response, dir)
+    if (scoped.state === "disabled" || scoped.state === "ready") {
+      this.postMessage({ type: "agentRequirementsLoaded", result: scoped })
+      return
+    }
+
+    const post = (installs: RequirementInstall[]) =>
+      this.postMessage({ type: "agentRequirementsInstallProgress", agent, directory: dir, installs })
+
+    if (!this.installAgentRequirementsHandler) {
+      post(
+        response.skills
+          .filter((skill) => skill.status !== "ready")
+          .map((skill) => ({
+            marketplace: skill.marketplace,
+            status: "failed",
+            code: "unavailable",
+          })),
+      )
+      return
+    }
+
+    // Forward trusted installation work to the extension-owned coordinator.
+    await this.installAgentRequirementsHandler({
+      result: { ...response, directory: dir },
+      directory: dir,
+      progress: post,
+    })
+    await this.fetchAndSendAgentRequirements(agent, dir, sessionID, true)
   }
 
   private async fetchAndSendSkills(): Promise<void> {
@@ -2661,6 +2864,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.client.config.overlay({ directory: dir, scope: "project" }, { throwOnError: true }),
       ])
       this.cachedGlobalConfig = global ?? null
+      this.clearAgentRequirements()
       this.cachedConfigMessage = {
         type: "configLoaded",
         config: merged,
@@ -2873,6 +3077,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const sid = resolved!.sid
       const dir = resolved!.dir
+      await this.assertAgentRequirements(agent, dir)
       const editorContext = await this.gatherEditorContext(dir)
 
       if (messageID) {
@@ -2962,6 +3167,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const sid = resolved!.sid
       const dir = resolved!.dir
+      await this.assertAgentRequirements(agent, dir)
       await this.checkpoints.get(sid)
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", () =>
         this.withRetry(
@@ -3269,6 +3475,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Re-fetch all server-side state after an auth change. */
   private async reloadAfterAuthChange(): Promise<void> {
+    this.clearAgentRequirements()
     await this.fetchAndSendConfig()
     await Promise.all([
       this.fetchAndSendProviders(),
@@ -3447,6 +3654,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Fetch and push the updated config + refresh agents and providers so the
     // Settings panel and mode/model pickers reflect the change.
     if (event.type === "global.config.updated") {
+      this.clearAgentRequirements()
       void Promise.all([this.fetchAndSendConfigUpdated(), this.fetchAndSendAgents(), this.fetchAndSendProviders()])
       return
     }
@@ -3840,14 +4048,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeFavoritesChange?.()
     this.unsubscribeMigrationComplete?.()
     this.unsubscribeClearPendingPrompts?.()
+    this.unsubscribeAgentRequirementsInvalidated?.()
     this.unsubscribeDirectoryProvider?.()
     this.viewStateDisposable?.dispose()
     this.visibilityDisposable?.dispose()
+    this.extensionChangeDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
     this.indexingConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
+    this.requirementCache.clear()
+    this.requirementGeneration.clear()
     this.visibleTaskStreams.clear()
     this.streams.dispose()
     this.isWebviewReady = false

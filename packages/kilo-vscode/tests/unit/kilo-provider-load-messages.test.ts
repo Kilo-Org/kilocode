@@ -156,6 +156,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
+    onAgentRequirementsInvalidated: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,

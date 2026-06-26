@@ -7,7 +7,7 @@ import { mapSSEEventToWebviewMessage } from "./kilo-provider-utils"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
 import type { KiloConnectionService } from "./services/cli-backend"
-import { MarketplaceService } from "./services/marketplace"
+import type { MarketplaceService } from "./services/marketplace"
 import {
   fetchMarketplaceData,
   installMarketplaceItem,
@@ -38,7 +38,6 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   private statuses = new Map<string, SessionStatus["type"]>()
   private disposables: vscode.Disposable[] = []
   private subscriptions: Array<() => void> = []
-  private readonly marketplace = new MarketplaceService()
   private readonly extensionVersion =
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
 
@@ -46,6 +45,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     private readonly extensionUri: vscode.Uri,
     private readonly connection: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
+    private readonly marketplace: MarketplaceService,
   ) {}
 
   private get marketplaceCtx(): MarketplaceActionContext {
@@ -86,7 +86,6 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   dispose(): void {
     this.panel?.dispose()
     this.cleanup()
-    this.marketplace.dispose()
   }
 
   private attach(panel: vscode.WebviewPanel, project: string | null): void {

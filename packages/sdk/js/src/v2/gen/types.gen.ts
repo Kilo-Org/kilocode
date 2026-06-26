@@ -445,6 +445,22 @@ export type ApiError = {
   }
 }
 
+export type AgentRequirementError = {
+  name: "AgentRequirementError"
+  data: {
+    message: string
+    agent: string
+    directory: string
+    state: "blocked" | "error"
+    skills: Array<{
+      name: string
+      marketplace: string
+      status: "ready" | "missing" | "error"
+      message?: string
+    }>
+  }
+}
+
 export type Todo = {
   /**
    * Brief description of the task
@@ -1274,6 +1290,14 @@ export type AgentConfig = {
   steps?: number
   maxSteps?: number
   permission?: PermissionConfig
+  requirements?: {
+    skills?: Array<string>
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
+    mcps?: Array<string>
+  }
   [key: string]:
     | unknown
     | string
@@ -1298,6 +1322,14 @@ export type AgentConfig = {
     | "info"
     | number
     | PermissionConfig
+    | {
+        skills?: Array<string>
+        vscode_extensions?: Array<{
+          name: string
+          id: string
+        }>
+        mcps?: Array<string>
+      }
     | undefined
 }
 
@@ -1607,6 +1639,7 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
+    agent_requirements?: boolean
     native_notebook_tools?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
@@ -1989,6 +2022,14 @@ export type Agent = {
   prompt?: string
   options: {
     [key: string]: unknown
+  }
+  requirements?: {
+    skills?: Array<string>
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
+    mcps?: Array<string>
   }
   steps?: number
 }
@@ -2486,6 +2527,28 @@ export type EffectHttpApiErrorUnauthorized = {
 
 export type EffectHttpApiErrorServiceUnavailable = {
   _tag: "ServiceUnavailable"
+}
+
+export type AgentRequirementResult = {
+  agent: string
+  directory: string
+  enabled: boolean
+  state: "disabled" | "ready" | "blocked" | "error"
+  skills: Array<{
+    name: string
+    marketplace: string
+    status: "ready" | "missing" | "error"
+    message?: string
+  }>
+  vscode_extensions: Array<{
+    name: string
+    id: string
+  }>
+  mcps: Array<string>
+  error?: {
+    code: "unknown_agent" | "malformed_declaration" | "discovery_failed"
+    message: string
+  }
 }
 
 export type NotebookOutput = {
@@ -3411,6 +3474,7 @@ export type EventSessionError = {
       | StructuredOutputError
       | ContextOverflowError
       | ApiError
+      | AgentRequirementError
   }
 }
 
@@ -10666,6 +10730,36 @@ export type KilocodeHeapSnapshotResponses = {
 }
 
 export type KilocodeHeapSnapshotResponse = KilocodeHeapSnapshotResponses[keyof KilocodeHeapSnapshotResponses]
+
+export type KilocodeAgentRequirementsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    agent: string
+  }
+  url: "/kilocode/agent/requirements"
+}
+
+export type KilocodeAgentRequirementsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeAgentRequirementsError = KilocodeAgentRequirementsErrors[keyof KilocodeAgentRequirementsErrors]
+
+export type KilocodeAgentRequirementsResponses = {
+  /**
+   * Agent requirement status
+   */
+  200: AgentRequirementResult
+}
+
+export type KilocodeAgentRequirementsResponse =
+  KilocodeAgentRequirementsResponses[keyof KilocodeAgentRequirementsResponses]
 
 export type KilocodeRemoveSkillData = {
   body?: {

@@ -131,6 +131,110 @@ export const ChatViewIdle: Story = {
   ),
 }
 
+const mixedRequirements = {
+  agent: "code",
+  directory: "/project",
+  enabled: true,
+  state: "blocked" as const,
+  skills: [
+    { name: "vscode-self-test", marketplace: "vscode-self-test", status: "missing" as const },
+    { name: "release-notes", marketplace: "release-notes", status: "ready" as const },
+  ],
+  vscode_extensions: [{ name: "Jupyter", id: "ms-toolsai.jupyter", status: "ready" as const }],
+  mcps: ["playwright"],
+}
+
+const requirementStory = (
+  requirements: Parameters<typeof StoryProviders>[0]["requirements"],
+  installs?: Parameters<typeof StoryProviders>[0]["requirementInstalls"],
+) => (
+  <StoryProviders
+    sessionID={SESSION_ID}
+    status="idle"
+    requirements={requirements}
+    requirementInstalls={installs}
+    noPadding
+  >
+    <div style={{ width: "100%", height: "600px", display: "flex", "flex-direction": "column" }}>
+      <ChatView promptBoxId="story:requirements" />
+    </div>
+  </StoryProviders>
+)
+
+export const AgentRequirementsChecking: Story = {
+  name: "Agent requirements — checking",
+  render: () => requirementStory("checking"),
+}
+
+export const AgentRequirementsMixed: Story = {
+  name: "Agent requirements — ready and missing skills",
+  render: () => requirementStory(mixedRequirements),
+}
+
+export const AgentRequirementsMixed200: Story = {
+  name: "Agent requirements — narrow ready and missing skills",
+  render: () => requirementStory(mixedRequirements),
+}
+
+export const AgentRequirementsInstalling: Story = {
+  name: "Agent requirements — installing all missing skills",
+  render: () =>
+    requirementStory(mixedRequirements, [{ marketplace: "vscode-self-test", status: "installing" as const }]),
+}
+
+export const AgentRequirementsPartialFailure: Story = {
+  name: "Agent requirements — partial installation failure",
+  render: () =>
+    requirementStory(
+      {
+        ...mixedRequirements,
+        skills: [
+          ...mixedRequirements.skills,
+          { name: "browser-check", marketplace: "browser-check", status: "missing" as const },
+        ],
+      },
+      [
+        { marketplace: "vscode-self-test", status: "succeeded" as const },
+        { marketplace: "browser-check", status: "failed" as const, error: "Marketplace skill not found" },
+      ],
+    ),
+}
+
+export const AgentRequirementsMalformed: Story = {
+  name: "Agent requirements — malformed declaration",
+  render: () =>
+    requirementStory({
+      agent: "code",
+      directory: "/project",
+      enabled: true,
+      state: "error",
+      skills: [],
+      vscode_extensions: [],
+      mcps: [],
+      error: { code: "malformed_declaration", message: "Duplicate skill name at requirements.skills[1].name" },
+    }),
+}
+
+export const AgentRequirementsMissingExtension: Story = {
+  name: "Agent requirements — missing VS Code extension",
+  render: () =>
+    requirementStory({
+      ...mixedRequirements,
+      skills: mixedRequirements.skills.map((skill) => ({ ...skill, status: "ready" as const })),
+      vscode_extensions: [{ name: "Jupyter", id: "ms-toolsai.jupyter", status: "missing" as const }],
+    }),
+}
+
+export const AgentRequirementsReady: Story = {
+  name: "Agent requirements — ready to go",
+  render: () =>
+    requirementStory({
+      ...mixedRequirements,
+      state: "ready",
+      skills: mixedRequirements.skills.map((skill) => ({ ...skill, status: "ready" as const })),
+    }),
+}
+
 /** ChatView with messages — shows the full-width "New task" button above the prompt */
 export const ChatViewWithMessages: Story = {
   name: "ChatView — with messages (shows New Task button)",

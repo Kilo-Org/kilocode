@@ -20,6 +20,7 @@ import { DisplayProvider } from "./context/display"
 import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
+import { AgentRequirementsProvider } from "./context/agent-requirements"
 import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
@@ -384,11 +385,13 @@ const App: Component = () => {
                                 <KiloEmbeddingModelsProvider>
                                   <NotificationsProvider>
                                     <SessionProvider>
-                                      <FeedbackProvider>
-                                        <DataBridge>
-                                          <AppContent />
-                                        </DataBridge>
-                                      </FeedbackProvider>
+                                      <AgentRequirementsProvider>
+                                        <FeedbackProvider>
+                                          <DataBridge>
+                                            <AppContent />
+                                          </DataBridge>
+                                        </FeedbackProvider>
+                                      </AgentRequirementsProvider>
                                     </SessionProvider>
                                   </NotificationsProvider>
                                 </KiloEmbeddingModelsProvider>

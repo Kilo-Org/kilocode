@@ -87,6 +87,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
+    onAgentRequirementsInvalidated: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),

@@ -15,6 +15,7 @@ type ProfileChangeListener = (data: unknown) => void
 type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
 type ClearPendingPromptsListener = () => void
+type AgentRequirementsInvalidationListener = () => void | Promise<void>
 type DirectoryProvider = () => string[]
 
 function isNotFound(err: unknown) {
@@ -69,6 +70,7 @@ export class KiloConnectionService {
   private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
+  private readonly agentRequirementsInvalidationListeners: Set<AgentRequirementsInvalidationListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
   private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
   private currentDirectory: string | undefined
@@ -431,16 +433,44 @@ export class KiloConnectionService {
     }
   }
 
+  /** Subscribe to notifications that cached agent requirement statuses must be refreshed. */
+  onAgentRequirementsInvalidated(listener: AgentRequirementsInvalidationListener): () => void {
+    this.agentRequirementsInvalidationListeners.add(listener)
+    return () => {
+      this.agentRequirementsInvalidationListeners.delete(listener)
+    }
+  }
+
   /**
    * Register a callback that returns workspace directories tracked by a
-   * KiloProvider (root + worktree dirs). Used by drainPendingPrompts() to
-   * cover all active Instance directories across every provider.
+   * KiloProvider (root + worktree dirs). Used by shared cross-directory operations.
    */
   registerDirectoryProvider(provider: DirectoryProvider): () => void {
     this.directoryProviders.add(provider)
     return () => {
       this.directoryProviders.delete(provider)
     }
+  }
+
+  /** Rebuild scoped skill discovery, then notify every connected webview. */
+  async invalidateAgentRequirements(): Promise<void> {
+    const client = this.client
+    if (!client) return
+
+    const dirs = new Set<string>()
+    for (const provider of this.directoryProviders) {
+      for (const dir of provider()) {
+        if (dir) dirs.add(dir)
+      }
+    }
+
+    await Promise.all(
+      [...dirs].map(async (dir) => {
+        const result = await client.instance.dispose({ directory: dir }).catch((error) => ({ error }))
+        if (result.error) console.error("[Kilo New] failed to invalidate agent requirement scope:", result.error)
+      }),
+    )
+    await Promise.all([...this.agentRequirementsInvalidationListeners].map((listener) => listener()))
   }
 
   private trackDirectory(dir: string): void {
@@ -594,6 +624,7 @@ export class KiloConnectionService {
     this.migrationCompleteListeners.clear()
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
+    this.agentRequirementsInvalidationListeners.clear()
     this.directoryProviders.clear()
     this.rootDirectory = undefined
     this.currentDirectory = undefined

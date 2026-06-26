@@ -61,6 +61,7 @@ function connection() {
     onStateChange: () => () => undefined,
     onNotificationDismissed: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
+    onAgentRequirementsInvalidated: () => () => undefined,
     onLanguageChanged: () => () => undefined,
     onProfileChanged: () => () => undefined,
     onMigrationComplete: () => () => undefined,

@@ -11,6 +11,11 @@ import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
+import { MarketplaceService } from "./services/marketplace"
+import {
+  createAgentRequirementsInstaller,
+  type AgentRequirementsInstallHandler,
+} from "./kilo-provider/agent-requirements"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
@@ -50,6 +55,14 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  // One Marketplace service shared by the Marketplace screen and required-skill installer.
+  const marketplace = new MarketplaceService()
+  const installRequirements = createAgentRequirementsInstaller({
+    connection: connectionService,
+    marketplace,
+    storage: context.globalStorageUri,
+  })
+  context.subscriptions.push(marketplace)
   const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
@@ -122,6 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  provider.setAgentRequirementsInstallHandler(installRequirements)
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -146,6 +160,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context, remoteService)
+  agentManagerHost.setAgentRequirementsInstallHandler(installRequirements)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
   agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
@@ -224,6 +239,7 @@ export function activate(context: vscode.ExtensionContext) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
           tabTitle: panelTitleHandler(panel),
         })
+        tabProvider.setAgentRequirementsInstallHandler(installRequirements)
         tabProvider.setRemoteService(remoteService)
         tabProvider.setAutoApproveController(autoApprove)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
@@ -268,7 +284,12 @@ export function activate(context: vscode.ExtensionContext) {
   // Create standalone editor providers (open in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
   settingsEditorProvider.setRemoteService(remoteService)
-  const marketplacePanelProvider = new MarketplacePanelProvider(context.extensionUri, connectionService, context)
+  const marketplacePanelProvider = new MarketplacePanelProvider(
+    context.extensionUri,
+    connectionService,
+    context,
+    marketplace,
+  )
   context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
 
   // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
@@ -417,6 +438,7 @@ export function activate(context: vscode.ExtensionContext) {
         diffVirtualProvider,
         remoteService,
         autoApprove,
+        installRequirements,
       )
     }),
     vscode.commands.registerCommand(
@@ -563,6 +585,7 @@ async function openKiloInNewTab(
   diffVirtualProvider: DiffVirtualProvider,
   remoteService: RemoteStatusService,
   autoApprove: ReturnType<typeof registerToggleAutoApprove>,
+  installRequirements: AgentRequirementsInstallHandler,
 ) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
@@ -587,6 +610,7 @@ async function openKiloInNewTab(
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
     tabTitle: panelTitleHandler(panel),
   })
+  tabProvider.setAgentRequirementsInstallHandler(installRequirements)
   tabProvider.setRemoteService(remoteService)
   tabProvider.setAutoApproveController(autoApprove)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>

@@ -28,6 +28,41 @@ export interface AgentInfo {
   permission?: PermissionRuleItem[]
 }
 
+export interface AgentRequirementSkill {
+  name: string
+  marketplace: string
+  status: "ready" | "missing" | "error"
+  message?: string
+}
+
+export interface AgentRequirementVSCodeExtension {
+  name: string
+  id: string
+  status: "ready" | "missing" | "error"
+  message?: string
+}
+
+export interface AgentRequirementResult {
+  agent: string
+  directory: string
+  enabled: boolean
+  state: "disabled" | "ready" | "blocked" | "error"
+  skills: AgentRequirementSkill[]
+  vscode_extensions: AgentRequirementVSCodeExtension[]
+  mcps: string[]
+  error?: {
+    code: "unknown_agent" | "malformed_declaration" | "discovery_failed" | "scope_mismatch" | "request_failed"
+    message: string
+  }
+}
+
+export interface AgentRequirementInstall {
+  marketplace: string
+  status: "installing" | "succeeded" | "failed"
+  code?: "skill_not_found" | "item_not_skill" | "installation_failed" | "unavailable" | "marketplace_unavailable"
+  error?: string
+}
+
 export interface AgentConfig {
   model?: string | null
   variant?: string | null
@@ -39,5 +74,13 @@ export interface AgentConfig {
   temperature?: number | null
   top_p?: number | null
   steps?: number | null
+  requirements?: {
+    skills?: string[]
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
+    mcps?: string[]
+  }
   permission?: PermissionConfig
 }

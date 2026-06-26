@@ -16,10 +16,12 @@ import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
 import type { RemoteStatusService } from "../services/RemoteStatusService"
+import type { AgentRequirementsInstallHandler } from "../kilo-provider/agent-requirements"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
+  private installRequirements: AgentRequirementsInstallHandler | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -34,6 +36,10 @@ export class VscodeHost implements Host {
 
   setAutoApproveController(ctrl: AutoApproveController): void {
     this.autoApprove = ctrl
+  }
+
+  setAgentRequirementsInstallHandler(handler: AgentRequirementsInstallHandler): void {
+    this.installRequirements = handler
   }
 
   openPanel(opts: {
@@ -100,6 +106,7 @@ export class VscodeHost implements Host {
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)
     }
+    if (this.installRequirements) provider.setAgentRequirementsInstallHandler(this.installRequirements)
     provider.setRemoteService(this.remoteService)
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: opts.onBeforeMessage,

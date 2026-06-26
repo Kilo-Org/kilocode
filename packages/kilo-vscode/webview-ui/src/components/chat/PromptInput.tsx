@@ -75,6 +75,7 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
 
 interface PromptInputProps {
   blocked?: () => boolean
+  blockedReason?: () => string | undefined
   /** When true, session is busy only because a suggestion is pending — treat as idle for input */
   suggesting?: () => boolean
   /** When true, session is busy only because a question is pending — treat as idle for input */
@@ -168,6 +169,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const history = usePromptHistory()
 
   const boxKey = () => props.boxId ?? "prompt:default"
+  const blockedHelpId = () => `${boxKey().replace(/[^a-zA-Z0-9_-]/g, "-")}-blocked-help`
   const rawKey = () =>
     sessionDraftKey(session.currentSessionID()) ??
     pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
@@ -441,6 +443,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  // Keep drafting available while blocked, but disable every send path.
   const canSend = () =>
     !isDisabled() &&
     !terminal.pending() &&
@@ -448,6 +451,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     !props.blocked?.() &&
     (speech.state() === "recording" || (hasInput() && !speech.active()))
   const sendLabel = () => {
+    const reason = props.blockedReason?.()
+    if (reason) return reason
     if (props.blocked?.()) return language.t("prompt.action.send.blocked")
     if (speech.state() === "recording") return language.t("prompt.action.send.recording")
     return language.t("prompt.action.send")
@@ -606,7 +611,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "triggerTask") {
-      if (isDisabled()) return
+      if (isDisabled() || props.blocked?.()) return
       const sel = session.selected(sid())
       session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
     }
@@ -824,7 +829,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
-  const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
+  const canEnhance = () => !isBusy() && !isDisabled() && !enhancing() && !props.blocked?.()
 
   const handleOpenIndexingSettings = () => {
     vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
@@ -898,6 +903,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handleSend = async () => {
+    if (props.blocked?.()) return
     const draft = text().trim()
 
     // Detect slash command (hoisted for both client and server command checks).
@@ -1193,10 +1199,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             }}
             onScroll={syncHighlightScroll}
             aria-disabled={isDisabled()}
+            aria-describedby={props.blockedReason?.() ? blockedHelpId() : undefined}
             rows={1}
           />
         </div>
       </div>
+      <Show when={props.blockedReason?.()} keyed>
+        {(reason) => (
+          <span id={blockedHelpId()} class="sr-only" role="status">
+            {reason}
+          </span>
+        )}
+      </Show>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
           <ModeSwitcher sessionID={sid} />
@@ -1319,6 +1333,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   size="small"
                   onClick={handleSendClick}
                   aria-disabled={!canSend()}
+                  aria-describedby={props.blockedReason?.() ? blockedHelpId() : undefined}
                   aria-label={sendLabel()}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

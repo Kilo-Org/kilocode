@@ -27,6 +27,7 @@ import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Reference } from "@/reference/reference" // kilocode_change
 import { ConfigReference } from "@/config/reference" // kilocode_change
+import * as AgentRequirements from "@/kilocode/agent-requirements" // kilocode_change
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -49,6 +50,7 @@ export const Info = Schema.Struct({
   variant: Schema.optional(Schema.String),
   prompt: Schema.optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Unknown),
+  requirements: Schema.optional(AgentRequirements.Requirements), // kilocode_change
   steps: Schema.optional(Schema.Finite),
 }).annotate({ identifier: "Agent" })
 export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>
@@ -64,6 +66,8 @@ export interface Interface {
   readonly list: () => Effect.Effect<Info[]>
   readonly defaultInfo: () => Effect.Effect<Info>
   readonly defaultAgent: () => Effect.Effect<string>
+  readonly requirementStatus: (agent: string) => Effect.Effect<AgentRequirements.Result> // kilocode_change
+  readonly guardRequirements: (agent: Info) => Effect.Effect<void> // kilocode_change
   readonly generate: (input: {
     description: string
     model?: { providerID: ProviderID; modelID: ModelID }
@@ -77,7 +81,7 @@ export interface Interface {
   >
 }
 
-type State = Omit<Interface, "generate"> & { version: string } // kilocode_change
+type State = Omit<Interface, "generate" | "requirementStatus" | "guardRequirements"> & { version: string } // kilocode_change
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Agent") {}
 
@@ -326,6 +330,7 @@ export const layer = Layer.effect(
           item.hidden = value.hidden ?? item.hidden
           item.name = value.name ?? item.name
           item.steps = value.steps ?? item.steps
+          item.requirements = value.requirements ?? item.requirements // kilocode_change
           item.options = mergeDeep(item.options, value.options ?? {})
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
           KiloAgent.processConfigItem(item) // kilocode_change - populate displayName from options
@@ -478,6 +483,28 @@ export const layer = Layer.effect(
       yield* InstanceState.invalidate(state)
       return yield* select(yield* InstanceState.get(state))
     })
+    // Evaluate endpoint checks and prompt guards in the active directory scope.
+    const requirementStatus = Effect.fn("Agent.requirementStatus")(function* (name: string) {
+      const ctx = yield* InstanceState.context
+      return yield* AgentRequirements.status({
+        name,
+        directory: ctx.directory,
+        config,
+        skills: skill,
+        agents: { get: (agent) => current((s) => s.get(agent)) },
+      })
+    })
+
+    const guardRequirements = Effect.fn("Agent.guardRequirements")(function* (agent: Info) {
+      const ctx = yield* InstanceState.context
+      yield* AgentRequirements.guard({
+        agent,
+        directory: ctx.directory,
+        config,
+        skills: skill,
+        agents: { get: (name) => current((s) => s.get(name)) },
+      })
+    })
     // kilocode_change end
 
     return Service.of({
@@ -493,6 +520,8 @@ export const layer = Layer.effect(
       defaultAgent: Effect.fn("Agent.defaultAgent")(function* () {
         return yield* current((s) => s.defaultAgent()) // kilocode_change
       }),
+      requirementStatus, // kilocode_change
+      guardRequirements, // kilocode_change
       generate: Effect.fn("Agent.generate")(function* (input: {
         description: string
         model?: { providerID: ProviderID; modelID: ModelID }

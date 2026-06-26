@@ -40,6 +40,14 @@ export interface AgentContent {
   description: string
   prompt: string
   options?: Record<string, unknown>
+  requirements?: {
+    skills?: string[]
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
+    mcps?: string[]
+  }
   permission?: Record<string, unknown>
 }
 

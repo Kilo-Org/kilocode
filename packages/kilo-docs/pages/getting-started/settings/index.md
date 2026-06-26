@@ -231,6 +231,7 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
 {
   "experimental": {
     "codebase_search": true,
+    "agent_requirements": true,
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,
@@ -238,8 +239,23 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
   }
 }
 ```
+`experimental.agent_requirements` makes VS Code verify an agent's declared requirements before prompts run. Skill values use Marketplace skill IDs and can be installed globally from the chat. VS Code extension values use extension IDs; install any missing extension and retry.
+
+```json
+{
+  "agent": {
+    "reviewer": {
+      "requirements": {
+        "skills": ["data-investigation"],
+        "vscode_extensions": ["ms-toolsai.jupyter"]
+      }
+    }
+  }
+}
+```
 
 Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+
 
 {% /tab %}
 {% tab label="CLI" %}
