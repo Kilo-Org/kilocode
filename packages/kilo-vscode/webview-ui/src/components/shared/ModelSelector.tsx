@@ -188,7 +188,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
     function onMove(e: MouseEvent) {
       if (!body) return
-      const delta = startY - e.clientY
+      const delta = e.clientY - startY
       // Subtract fixed chrome (search wrapper + splitter) so the list always
       // retains at least 80px, rather than the preview consuming that space.
       const chrome = (searchWrapperRef?.offsetHeight ?? 0) + (splitterRef?.offsetHeight ?? 0)

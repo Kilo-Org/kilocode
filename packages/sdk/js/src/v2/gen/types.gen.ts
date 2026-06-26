@@ -1709,6 +1709,9 @@ export type Model = {
     overallScore: number
     avgAttemptCostUsd: number
   }
+  autoRouting?: {
+    models: Array<string>
+  }
   ai_sdk_provider?: "alibaba" | "anthropic" | "mistral" | "openai" | "openai-compatible" | "openrouter"
 }
 
