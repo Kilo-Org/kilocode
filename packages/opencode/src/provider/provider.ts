@@ -39,6 +39,8 @@ import {
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
   buildTimeoutSignal,
+  STREAM_IDLE_TIMEOUT_MS,
+  streamTimeout,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
@@ -1677,7 +1679,12 @@ export const layer = Layer.effect(
         if (existing) return existing
 
         const customFetch = options["fetch"]
-        const chunkTimeout = options["chunkTimeout"]
+        // kilocode_change start - prevent indefinitely stalled response streams
+        const chunkTimeout = streamTimeout({
+          options,
+          defaultMs: STREAM_IDLE_TIMEOUT_MS,
+        })
+        // kilocode_change end
         const headerTimeout = options["headerTimeout"]
         delete options["chunkTimeout"]
         delete options["headerTimeout"]
@@ -1725,7 +1732,7 @@ export const layer = Layer.effect(
               timeout: false,
             }).finally(() => headerTimeoutCtl?.clear())
             timeout.clear()
-            if (!chunkAbortCtl) return res
+            if (chunkTimeout === undefined || !chunkAbortCtl) return res
             return wrapSSE(res, chunkTimeout, chunkAbortCtl)
           } catch (err) {
             timeout.clear()

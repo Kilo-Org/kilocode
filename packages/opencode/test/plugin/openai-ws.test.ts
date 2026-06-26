@@ -210,7 +210,7 @@ describe("plugin.openai.ws-pool", () => {
     fetch.close()
   })
 
-  test("prunes HTTP fallback after its idle timeout", async () => {
+  test("keeps HTTP fallback active after its idle timeout", async () => { // kilocode_change - port upstream #30586
     let websocketAttempts = 0
     await using server = await createRejectingWebSocketServer(() => websocketAttempts++)
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
@@ -226,7 +226,7 @@ describe("plugin.openai.ws-pool", () => {
     const second = await fetch(server.url, streamRequest())
 
     expect(await second.text()).toBe("http")
-    expect(websocketAttempts).toBe(2)
+    expect(websocketAttempts).toBe(1) // kilocode_change - port upstream #30586
     expect(server.httpRequests).toHaveLength(2)
     fetch.close()
   })
@@ -392,28 +392,37 @@ describe("plugin.openai.ws-pool", () => {
     fetch.close()
   })
 
+  // kilocode_change start - port upstream #33387
   test("retries failed websocket streams before using HTTP fallback", async () => {
+    const attempts: Array<(socket: WebSocket) => void> = []
     await using server = await createWebSocketServer((socket) => {
       socket.once("message", () => {
         socket.send(JSON.stringify({ type: "response.output_text.delta", delta: "started" }))
+        attempts.shift()?.(socket)
       })
     })
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
       url: server.url,
-      idleTimeout: 20,
       streamRetries: 1,
     })
 
+    const firstAttempt = new Promise<WebSocket>((resolve) => attempts.push(resolve))
     const first = await fetch(server.url, streamRequest())
-    expect((await readTextError(first.text())).message).toContain("idle timeout waiting for websocket")
+    const firstSocket = await firstAttempt
+    firstSocket.terminate()
+    expect((await readTextError(first.text())).message).toContain("WebSocket closed before response.completed")
+    const secondAttempt = new Promise<WebSocket>((resolve) => attempts.push(resolve))
     const second = await fetch(server.url, streamRequest())
-    expect((await readTextError(second.text())).message).toContain("idle timeout waiting for websocket")
+    const secondSocket = await secondAttempt
+    secondSocket.terminate()
+    expect((await readTextError(second.text())).message).toContain("WebSocket closed before response.completed")
     const third = await fetch(server.url, streamRequest())
 
     expect(await third.text()).toBe("http")
     expect(server.httpRequests).toHaveLength(1)
     fetch.close()
   })
+  // kilocode_change end
 
   test("resets websocket stream failures after a completed response", async () => {
     let connections = 0

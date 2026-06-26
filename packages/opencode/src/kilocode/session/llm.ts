@@ -3,6 +3,7 @@ import * as Stream from "effect/Stream"
 import type { LLMEvent } from "@opencode-ai/llm"
 import type { Logger } from "@opencode-ai/core/util/log"
 import type { Provider } from "@/provider/provider"
+import { streamTimeout } from "@/kilocode/provider/provider"
 import { KiloSessionOverflow } from "./overflow"
 
 const SAFETY = 2048
@@ -17,17 +18,10 @@ export namespace KiloLLM {
     )
   }
 
-  export function timeout(input: {
-    options: Record<string, unknown>
-    fallback?: Record<string, unknown>
-    log?: Pick<Logger, "debug">
-  }): { timeout?: { chunkMs: number } } {
-    const value =
-      typeof input.options["chunkTimeout"] === "number"
-        ? input.options["chunkTimeout"]
-        : typeof input.fallback?.["chunkTimeout"] === "number"
-          ? input.fallback["chunkTimeout"]
-          : undefined
+  export function timeout(input: { options: Record<string, unknown>; log?: Pick<Logger, "debug"> }): {
+    timeout?: { chunkMs: number }
+  } {
+    const value = streamTimeout(input)
     if (!value) return {}
     input.log?.debug("chunk idle timeout configured", { chunkTimeout: value })
     return { timeout: { chunkMs: value } }

@@ -17,6 +17,15 @@ import { mapValues, omit, pickBy } from "remeda"
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
 
+/** Default maximum idle time between streamed response chunks. */
+export const STREAM_IDLE_TIMEOUT_MS = 120_000 // 2 minutes
+
+export function streamTimeout(input: { options: Record<string, unknown>; defaultMs?: number }): number | undefined {
+  const value = typeof input.options["chunkTimeout"] === "number" ? input.options["chunkTimeout"] : input.defaultMs
+  if (value === undefined || value <= 0) return
+  return value
+}
+
 // ---------------------------------------------------------------------------
 // Bundled providers
 // ---------------------------------------------------------------------------
