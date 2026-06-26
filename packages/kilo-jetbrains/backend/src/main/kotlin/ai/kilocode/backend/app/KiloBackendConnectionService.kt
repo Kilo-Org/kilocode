@@ -267,15 +267,13 @@ class KiloConnectionService(
 
         override fun onFailure(src: EventSource, t: Throwable?, response: Response?) {
             if (source.get() !== src) return
-            val detail = when {
-                t != null -> t.stackTraceToString()
-                response != null -> response.body?.string()
-                else -> null
-            }?.trim()?.ifEmpty { null }
+            val raw = response?.body?.string()?.trim()?.ifEmpty { null }
+            val body = raw?.let { ChatLogSummary.body(it) }
+            val detail = t?.stackTraceToString() ?: body
             if (t != null) {
-                log.warn("SSE: failure (${t.message}) — scheduling reconnect")
+                log.warn("SSE: failure (${t.message}) code=${response?.code} body=${body ?: "none"} — scheduling reconnect", t)
             } else {
-                log.warn("SSE: failure (HTTP ${response?.code}) — scheduling reconnect")
+                log.warn("SSE: failure (HTTP ${response?.code}) body=${body ?: "none"} — scheduling reconnect")
             }
             setState(ConnectionState.Error(t?.message ?: "SSE connection failed (HTTP ${response?.code})", detail))
             scheduleReconnect()

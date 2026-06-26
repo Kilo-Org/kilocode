@@ -42,6 +42,27 @@ export const dict = {
   "marketplace.install.scope": "Область",
   "marketplace.install.scope.project": "Проєкт",
   "marketplace.install.scope.global": "Глобально",
+  "marketplace.install.scope.project.description":
+    "Лише цей проєкт. Встановлені файли можна додати до системи контролю версій і надати команді.",
+  "marketplace.install.scope.global.description":
+    "Усі проєкти на цьому комп'ютері. Зберігається у вашій користувацькій конфігурації.",
+  "marketplace.install.destination": "Місце встановлення",
+  "marketplace.install.about.mcp":
+    "MCP-сервер надає Kilo додаткові інструменти для роботи із зовнішніми сервісами або локальними програмами.",
+  "marketplace.install.about.agent":
+    "Агент додає багаторазову роль із власними інструкціями та дозволами.",
+  "marketplace.install.about.skill":
+    "Навичка додає інструкції та ресурси для певних завдань, які Kilo може завантажити за потреби.",
+  "marketplace.install.mcp.warning":
+    "MCP-сервери можуть виконувати локальні команди або підключатися до зовнішніх сервісів. Kilo запитає дозвіл перед використанням їхніх інструментів, якщо ваші дозволи не дають змоги робити це автоматично.",
+  "marketplace.install.project.warning":
+    "Файли проєкту можуть бути додані до системи контролю версій. Не зберігайте тут секрети, якщо конфігурація не посилається на змінну середовища.",
+  "marketplace.install.learnMore": "Дізнайтеся, як працює встановлення з Marketplace",
+  "marketplace.install.learnMcp": "Докладніше про MCP",
+  "marketplace.install.installedAt": "Встановлено в {{path}}",
+  "marketplace.intro":
+    "Встановлюйте багаторазових агентів, навички та інструменти MCP для одного або всіх проєктів.",
+  "marketplace.intro.learnMore": "Про Marketplace",
   "marketplace.install.prerequisites": "Передумови",
   "marketplace.install.installing": "Встановлення...",
   "marketplace.install.cancel": "Скасувати",

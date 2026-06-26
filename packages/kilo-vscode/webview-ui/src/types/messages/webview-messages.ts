@@ -466,6 +466,10 @@ export interface ResetAllSettingsRequest {
   type: "resetAllSettings"
 }
 
+export interface ResetReadNotificationsRequest {
+  type: "resetReadNotifications"
+}
+
 export interface SettingsTabChangedMessage {
   type: "settingsTabChanged"
   tab: string
@@ -681,6 +685,9 @@ export interface CreateMultiVersionRequest {
   // Overrides `versions`, `providerID`, and `modelID`.
   variant?: string
   modelAllocations?: ModelAllocation[]
+  // When set, start each created worktree session with the sandbox override
+  // reconciled to this state. Only sent when sandbox controls are available.
+  sandbox?: boolean
 }
 
 // Persist tab order for a context (worktree ID or "local")
@@ -1202,6 +1209,7 @@ export type WebviewMessage =
   | RequestNotificationSettingsMessage
   | TestNotificationMessage
   | ResetAllSettingsRequest
+  | ResetReadNotificationsRequest
   | SettingsTabChangedMessage
   | SyncSessionRequest
   | CreateWorktreeSessionRequest

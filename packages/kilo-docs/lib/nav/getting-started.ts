@@ -40,6 +40,7 @@ export const GettingStartedNav: NavSection[] = [
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
       { href: "/getting-started/rate-limits-and-costs", children: "Cost Efficiency & Model Selection" },
+      { href: "/getting-started/cost-controls-and-usage-safeguards", children: "Cost Controls and Usage Safeguards" },
     ],
   },
   {

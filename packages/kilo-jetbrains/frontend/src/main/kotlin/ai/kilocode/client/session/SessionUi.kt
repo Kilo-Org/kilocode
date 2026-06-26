@@ -642,7 +642,10 @@ class SessionUi(
         spec.name,
         KiloBundle.message(spec.descriptionKey),
         spec.hints,
-        action,
+        {
+            Telemetry.send("Slash Command Used", mapOf("slashCommandType" to "client", "command" to spec.name))
+            action()
+        },
     )
 
     private fun mentionActions(): List<MentionAction> = MentionAction.ALL.map(::bind)

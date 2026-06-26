@@ -123,10 +123,15 @@
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
 - <https://kilo.ai/docs/ai-providers#custom-provider>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
+- <https://kilo.ai/docs/automate/mcp/what-is-mcp>
+  <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://kilo.ai/docs/customize/custom-subagents>
   <!-- packages/opencode/src/config/config.ts -->
+- <https://kilo.ai/docs/customize/marketplace>
+  <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
+  <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
 - <https://kilo.ai/docs/customize/workflows>
   <!-- packages/opencode/src/config/config.ts -->
 - <https://kilo.ai/gateway>

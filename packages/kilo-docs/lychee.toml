@@ -50,6 +50,8 @@ exclude = [
   '^https?://api\.apertis\.ai/v1/?$',
   # Redirects to authenticated Google Cloud console
   '^https?://console\.cloud\.google\.com',
+  # Linear intermittently returns 503 to CI link checks.
+  '^https?://linear\.app/?$',
   # Consistently times out in CI
   '^https?://opncd\.ai',
   '^https?://zod\.dev/v4/changelog',

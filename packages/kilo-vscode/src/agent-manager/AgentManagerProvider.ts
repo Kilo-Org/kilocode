@@ -40,6 +40,7 @@ import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
+import { ensureSandbox } from "./sandbox-bootstrap"
 import { Semaphore } from "./semaphore"
 import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
@@ -856,6 +857,28 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
+  /** Remove a worktree whose session could not be safely initialized. */
+  private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
+    this.getStateManager()?.removeWorktree(id)
+    this.pushState()
+
+    if (sessionId) {
+      try {
+        await this.connectionService
+          .getClient()
+          .session.delete({ sessionID: sessionId, directory: dir }, { throwOnError: true })
+      } catch (err) {
+        this.log(`Failed to delete session ${sessionId} after worktree setup failed:`, err)
+      }
+    }
+
+    try {
+      await this.getWorktreeManager()?.removeWorktree(dir, branch)
+    } catch (err) {
+      this.log(`Failed to remove worktree ${id} after setup failed:`, err)
+    }
+  }
+
   /** Send worktreeSetup.ready + sessionMeta + pushState after worktree creation. */
   private notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
@@ -1295,6 +1318,31 @@ export class AgentManagerProvider implements Disposable {
 
       const state = this.getStateManager()!
       state.addSession(session.id, wt.worktree.id)
+
+      // Sandbox must match the user's choice before this session is exposed or
+      // receives its initial prompt. A failed reconciliation aborts this version.
+      if (msg.sandbox !== undefined) {
+        try {
+          await ensureSandbox(this.connectionService.getClient(), session.id, wt.result.path, msg.sandbox)
+        } catch (error) {
+          const err = getErrorMessage(error)
+          this.log(`Failed to configure sandbox for ${session.id}: ${err}`)
+          this.postToWebview({
+            type: "agentManager.worktreeSetup",
+            status: "error",
+            message: `Failed to configure sandbox: ${err}`,
+            worktreeId: wt.worktree.id,
+          })
+          this.host.capture("Agent Manager Session Error", {
+            source: PLATFORM,
+            error: err,
+            context: "configureSandbox",
+          })
+          await this.discardWorktree(wt.worktree.id, wt.result.path, wt.result.branch, session.id)
+          continue
+        }
+      }
+
       this.registerWorktreeSession(session.id, wt.result.path)
       this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)
 

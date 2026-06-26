@@ -10114,6 +10114,12 @@ export type KiloProfileResponses = {
     balance: {
       balance: number
     } | null
+    kiloPass: {
+      currentPeriodBaseCreditsUsd: number
+      currentPeriodUsageUsd: number
+      currentPeriodBonusCreditsUsd: number
+      nextBillingAt?: string | null
+    } | null
     currentOrgId: string | null
   }
 }

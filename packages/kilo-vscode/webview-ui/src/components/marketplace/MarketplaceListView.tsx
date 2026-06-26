@@ -12,6 +12,7 @@ import type {
   MarketplaceRelevanceMetadata,
 } from "../../types/marketplace"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import { filterItems, hasRelevantItems, retain } from "./utils"
 import { ItemCard } from "./ItemCard"
 import { MarketplaceContribute } from "./MarketplaceContribute"
@@ -36,6 +37,7 @@ interface Props {
 
 export const MarketplaceListView = (props: Props) => {
   const { t } = useLanguage()
+  const vscode = useVSCode()
   const [search, setSearch] = createSignal("")
   const [status, setStatus] = createSignal<StatusOption>({ value: "all", label: t("marketplace.filter.all") })
   const [types, setTypes] = createSignal<MarketplaceItem["type"][]>([])
@@ -109,6 +111,18 @@ export const MarketplaceListView = (props: Props) => {
 
   return (
     <div class="marketplace-list">
+      <div class="marketplace-intro">
+        <span>{t("marketplace.intro")}</span>
+        <button
+          type="button"
+          class="link"
+          onClick={() =>
+            vscode.postMessage({ type: "openExternal", url: "https://kilo.ai/docs/customize/marketplace" })
+          }
+        >
+          {t("marketplace.intro.learnMore")}
+        </button>
+      </div>
       <div class="marketplace-filters">
         <div class="marketplace-search-field">
           <TextField placeholder={props.searchPlaceholder} value={search()} onChange={setSearch} />
