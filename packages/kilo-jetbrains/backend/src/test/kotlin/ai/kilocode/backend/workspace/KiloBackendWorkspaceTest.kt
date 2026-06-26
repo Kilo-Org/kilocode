@@ -42,12 +42,14 @@ class KiloBackendWorkspaceTest {
     private val apps = mutableListOf<KiloBackendAppService>()
 
     @AfterTest
-    fun tearDown() = runBlocking {
-        apps.forEach { it.dispose() }
-        apps.clear()
-        scope.cancel()
-        mock.close()
-        withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
+    fun tearDown() {
+        runBlocking {
+            apps.forEach { it.dispose() }
+            apps.clear()
+            scope.cancel()
+            mock.close()
+            withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
+        }
     }
 
     private fun setup(): KiloBackendAppService =
