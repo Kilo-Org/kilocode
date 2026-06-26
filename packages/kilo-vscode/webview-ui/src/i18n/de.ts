@@ -1581,7 +1581,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
   "settings.display.terminalCommand.title": "Terminalbefehlsblöcke",
-  "settings.display.terminalCommand.description": "Wähle aus, ob Terminalbefehlsblöcke anfangs erweitert oder eingeklappt sind.",
+  "settings.display.terminalCommand.description":
+    "Wähle aus, ob Terminalbefehlsblöcke anfangs erweitert oder eingeklappt sind.",
   "settings.display.terminalCommand.expanded": "Erweitert",
   "settings.display.terminalCommand.collapsed": "Eingeklappt",
   "settings.display.codeEdit.title": "Blöcke für Codebearbeitungen",

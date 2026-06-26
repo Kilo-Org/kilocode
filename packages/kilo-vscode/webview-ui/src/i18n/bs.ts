@@ -1558,7 +1558,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
   "settings.display.terminalCommand.title": "Blokovi terminalskih naredbi",
-  "settings.display.terminalCommand.description": "Odaberite hoće li blokovi terminalskih naredbi u početku biti prošireni ili sažeti.",
+  "settings.display.terminalCommand.description":
+    "Odaberite hoće li blokovi terminalskih naredbi u početku biti prošireni ili sažeti.",
   "settings.display.terminalCommand.expanded": "Prošireno",
   "settings.display.terminalCommand.collapsed": "Sažeto",
   "settings.display.codeEdit.title": "Blokovi izmjena koda",

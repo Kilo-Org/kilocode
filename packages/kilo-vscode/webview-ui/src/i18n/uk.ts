@@ -1509,7 +1509,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
   "settings.display.terminalCommand.title": "Блоки команд термінала",
-  "settings.display.terminalCommand.description": "Виберіть, чи мають блоки команд термінала спочатку бути розгорнутими або згорнутими.",
+  "settings.display.terminalCommand.description":
+    "Виберіть, чи мають блоки команд термінала спочатку бути розгорнутими або згорнутими.",
   "settings.display.terminalCommand.expanded": "Розгорнуті",
   "settings.display.terminalCommand.collapsed": "Згорнуті",
   "settings.display.codeEdit.title": "Блоки редагування коду",
@@ -1672,7 +1673,8 @@ export const dict = {
   "settings.agentBehaviour.createMode.cancel": "Скасувати",
   "settings.agentBehaviour.createMode.description": "Опис",
   "settings.agentBehaviour.createMode.description.help": "Короткий опис того, що робить цей режим.",
-  "settings.agentBehaviour.createMode.description.placeholder": "наприклад, Перевіряє якість коду та дотримання найкращих практик",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "наприклад, Перевіряє якість коду та дотримання найкращих практик",
   "settings.agentBehaviour.createMode.name": "Назва",
   "settings.agentBehaviour.createMode.name.description":
     "Унікальний ідентифікатор режиму. Використовуйте лише малі літери, цифри та дефіси.",

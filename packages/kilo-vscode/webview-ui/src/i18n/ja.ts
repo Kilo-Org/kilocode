@@ -1544,7 +1544,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
   "settings.display.terminalCommand.title": "ターミナルコマンドブロック",
-  "settings.display.terminalCommand.description": "ターミナルコマンドブロックを最初から展開するか折りたたむかを選択します。",
+  "settings.display.terminalCommand.description":
+    "ターミナルコマンドブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.terminalCommand.expanded": "展開",
   "settings.display.terminalCommand.collapsed": "折りたたみ",
   "settings.display.codeEdit.title": "コード編集ブロック",

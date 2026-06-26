@@ -1566,7 +1566,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Recolhe os blocos de raciocínio depois que o agente termina de escrevê-los. Deixe desativado para manter o raciocínio expandido, a menos que você o recolha manualmente.",
   "settings.display.terminalCommand.title": "Blocos de comandos do terminal",
-  "settings.display.terminalCommand.description": "Escolha se os blocos de comandos do terminal começam expandidos ou recolhidos.",
+  "settings.display.terminalCommand.description":
+    "Escolha se os blocos de comandos do terminal começam expandidos ou recolhidos.",
   "settings.display.terminalCommand.expanded": "Expandidos",
   "settings.display.terminalCommand.collapsed": "Recolhidos",
   "settings.display.codeEdit.title": "Blocos de edição de código",

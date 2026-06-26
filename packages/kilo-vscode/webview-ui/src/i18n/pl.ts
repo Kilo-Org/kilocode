@@ -1556,7 +1556,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
   "settings.display.terminalCommand.title": "Bloki poleceń terminala",
-  "settings.display.terminalCommand.description": "Wybierz, czy bloki poleceń terminala mają być początkowo rozwinięte, czy zwinięte.",
+  "settings.display.terminalCommand.description":
+    "Wybierz, czy bloki poleceń terminala mają być początkowo rozwinięte, czy zwinięte.",
   "settings.display.terminalCommand.expanded": "Rozwinięte",
   "settings.display.terminalCommand.collapsed": "Zwinięte",
   "settings.display.codeEdit.title": "Bloki edycji kodu",

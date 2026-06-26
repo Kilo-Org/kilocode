@@ -1512,7 +1512,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
   "settings.display.terminalCommand.title": "Terminal komut blokları",
-  "settings.display.terminalCommand.description": "Terminal komut bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.terminalCommand.description":
+    "Terminal komut bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.terminalCommand.expanded": "Genişletilmiş",
   "settings.display.terminalCommand.collapsed": "Daraltılmış",
   "settings.display.codeEdit.title": "Kod Düzenleme Blokları",
@@ -1676,7 +1677,8 @@ export const dict = {
   "settings.agentBehaviour.createMode.cancel": "İptal",
   "settings.agentBehaviour.createMode.description": "Açıklama",
   "settings.agentBehaviour.createMode.description.help": "Bu modun ne yaptığının kısa açıklaması.",
-  "settings.agentBehaviour.createMode.description.placeholder": "ör. Kodu kalite ve en iyi uygulamalar açısından inceler",
+  "settings.agentBehaviour.createMode.description.placeholder":
+    "ör. Kodu kalite ve en iyi uygulamalar açısından inceler",
   "settings.agentBehaviour.createMode.name": "Ad",
   "settings.agentBehaviour.createMode.name.description":
     "Mod için benzersiz tanımlayıcı. Yalnızca küçük harf, rakam ve tire kullanın.",

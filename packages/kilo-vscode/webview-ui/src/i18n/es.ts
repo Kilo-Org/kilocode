@@ -935,7 +935,8 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Razonamiento dividido (necesario, por ejemplo, para MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label":
+    "Razonamiento dividido (necesario, por ejemplo, para MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -1573,7 +1574,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",
   "settings.display.terminalCommand.title": "Bloques de comandos de terminal",
-  "settings.display.terminalCommand.description": "Elige si los bloques de comandos de terminal comienzan expandidos o contraídos.",
+  "settings.display.terminalCommand.description":
+    "Elige si los bloques de comandos de terminal comienzan expandidos o contraídos.",
   "settings.display.terminalCommand.expanded": "Expandidos",
   "settings.display.terminalCommand.collapsed": "Contraídos",
   "settings.display.codeEdit.title": "Bloques de edición de código",

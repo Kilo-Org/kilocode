@@ -1548,7 +1548,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
   "settings.display.terminalCommand.title": "Terminalkommandoblokke",
-  "settings.display.terminalCommand.description": "Vælg, om terminalkommandoblokke skal starte udvidet eller sammenfoldet.",
+  "settings.display.terminalCommand.description":
+    "Vælg, om terminalkommandoblokke skal starte udvidet eller sammenfoldet.",
   "settings.display.terminalCommand.expanded": "Udvidet",
   "settings.display.terminalCommand.collapsed": "Sammenfoldet",
   "settings.display.codeEdit.title": "Koderedigeringsblokke",

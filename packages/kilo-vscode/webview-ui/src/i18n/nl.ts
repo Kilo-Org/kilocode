@@ -1524,7 +1524,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
   "settings.display.terminalCommand.title": "Terminalopdrachtblokken",
-  "settings.display.terminalCommand.description": "Kies of terminalopdrachtblokken aanvankelijk uitgevouwen of samengevouwen zijn.",
+  "settings.display.terminalCommand.description":
+    "Kies of terminalopdrachtblokken aanvankelijk uitgevouwen of samengevouwen zijn.",
   "settings.display.terminalCommand.expanded": "Uitgevouwen",
   "settings.display.terminalCommand.collapsed": "Samengevouwen",
   "settings.display.codeEdit.title": "Blokken met codebewerkingen",

@@ -1555,7 +1555,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
   "settings.display.terminalCommand.title": "Блоки команд терминала",
-  "settings.display.terminalCommand.description": "Выберите, должны ли блоки команд терминала изначально быть развернуты или свернуты.",
+  "settings.display.terminalCommand.description":
+    "Выберите, должны ли блоки команд терминала изначально быть развернуты или свернуты.",
   "settings.display.terminalCommand.expanded": "Развернуты",
   "settings.display.terminalCommand.collapsed": "Свернуты",
   "settings.display.codeEdit.title": "Блоки изменений кода",

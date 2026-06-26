@@ -1593,7 +1593,8 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.description":
     "Réduit les blocs de raisonnement une fois que l'agent a fini de les écrire. Laissez désactivé pour garder le raisonnement développé, sauf si vous le réduisez manuellement.",
   "settings.display.terminalCommand.title": "Blocs de commandes du terminal",
-  "settings.display.terminalCommand.description": "Choisissez si les blocs de commandes du terminal sont développés ou réduits au départ.",
+  "settings.display.terminalCommand.description":
+    "Choisissez si les blocs de commandes du terminal sont développés ou réduits au départ.",
   "settings.display.terminalCommand.expanded": "Développés",
   "settings.display.terminalCommand.collapsed": "Réduits",
   "settings.display.codeEdit.title": "Blocs de modification du code",
