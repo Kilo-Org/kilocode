@@ -1,5 +1,19 @@
 # kilo-code
 
+## 7.3.54
+
+## 7.3.53
+
+### Patch Changes
+
+- [#11533](https://github.com/Kilo-Org/kilocode/pull/11533) [`15f42d4`](https://github.com/Kilo-Org/kilocode/commit/15f42d4bec51bbb127636738275f36fdc07e7b33) - Restore bounded text-file reads and keep zero-limit pagination and Unicode truncation from producing unusable tool output.
+
+- Updated dependencies [[`6c55c28`](https://github.com/Kilo-Org/kilocode/commit/6c55c28ec345a6d90d2d7a4e345abf962f208e29)]:
+  - @kilocode/kilo-gateway@7.3.53
+  - @kilocode/kilo-indexing@7.3.53
+  - @kilocode/kilo-ui@7.3.53
+  - @opencode-ai/ui@7.3.53
+
 ## 7.3.52
 
 ### Patch Changes

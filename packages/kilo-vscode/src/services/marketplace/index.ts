@@ -3,10 +3,12 @@ import { MarketplaceApiClient } from "./api"
 import { MarketplacePaths } from "./paths"
 import { InstallationDetector, type CliSkill } from "./detection"
 import { MarketplaceInstaller } from "./installer"
+import { detectMarketplaceRelevance } from "./relevance"
 import type {
   MarketplaceItem,
   InstallMarketplaceItemOptions,
   MarketplaceDataResponse,
+  MarketplaceRelevanceMetadata,
   InstallResult,
   RemoveResult,
 } from "./types"
@@ -16,6 +18,7 @@ export class MarketplaceService {
   private paths: MarketplacePaths
   private detector: InstallationDetector
   private installer: MarketplaceInstaller
+  private scans = new Map<string, Promise<MarketplaceRelevanceMetadata>>()
 
   constructor() {
     this.paths = new MarketplacePaths()
@@ -24,14 +27,28 @@ export class MarketplaceService {
     this.installer = new MarketplaceInstaller(this.paths)
   }
 
-  async fetchData(workspace?: string, skills?: CliSkill[]): Promise<MarketplaceDataResponse> {
-    const [fetched, metadata] = await Promise.all([this.api.fetchAll(), this.detector.detect(workspace, skills)])
+  async fetchData(workspace: string | undefined, skills: CliSkill[] | undefined, roots: readonly vscode.Uri[]) {
+    const fetched = this.api.fetchAll()
+    const metadata = this.detector.detect(workspace, skills)
+    const relevance = fetched.then((result) => this.relevance(result.items, roots))
+    const [items, installed, matches] = await Promise.all([fetched, metadata, relevance])
 
     return {
-      marketplaceItems: fetched.items,
-      marketplaceInstalledMetadata: metadata,
-      errors: fetched.errors.length > 0 ? fetched.errors : undefined,
+      marketplaceItems: items.items,
+      marketplaceInstalledMetadata: installed,
+      marketplaceRelevance: matches,
+      errors: items.errors.length > 0 ? items.errors : undefined,
     }
+  }
+
+  private relevance(items: MarketplaceItem[], roots: readonly vscode.Uri[]): Promise<MarketplaceRelevanceMetadata> {
+    const key = `${roots.map((root) => root.toString()).join(",")}:${items.map((item) => `${item.type}:${item.id}`).join(",")}`
+    const current = this.scans.get(key)
+    if (current) return current
+
+    const scan = detectMarketplaceRelevance(items, roots).finally(() => this.scans.delete(key))
+    this.scans.set(key, scan)
+    return scan
   }
 
   async install(
@@ -59,6 +76,7 @@ export class MarketplaceService {
   }
 
   dispose(): void {
+    this.scans.clear()
     this.api.dispose()
   }
 }

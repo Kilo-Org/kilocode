@@ -286,6 +286,24 @@ export const dict = {
   "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
+  "prompt.action.sandbox.enable": "Aktivér sandbox",
+  "prompt.action.sandbox.disable": "Deaktivér sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox er aktiveret. Shell-kommandoer for agenten er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox er deaktiveret. Klik for at begrænse skrivning af shell-kommandoer for agenten til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.status.enabled": "Sandbox aktiveret",
+  "prompt.action.sandbox.status.disabled": "Sandbox deaktiveret",
+  "prompt.action.sandbox.filesystem": "Filsystem",
+  "prompt.action.sandbox.network": "Netværk",
+  "prompt.action.sandbox.filesystem.restricted": "Begrænset",
+  "prompt.action.sandbox.network.blocked": "Blokeret",
+  "prompt.action.sandbox.network.allowed": "Tilladt",
+  "prompt.action.sandbox.unrestricted": "Ubegrænset",
+  "prompt.action.sandbox.description.enabled": "Skrivning er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.description.disabled": "Klik for at begrænse skriveadgang til filsystemet og netværksadgang.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
   "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
   "speechToText.tooltip.stop": "Stop lydoptagelse",
@@ -806,6 +824,9 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
+  "settings.indexing.showButton.title": "Vis knappen, når indeksering er slået fra",
+  "settings.indexing.showButton.description":
+    "Vis indekseringsknappen under promptfeltet, mens indeksering er slået fra. Hvis knappen er skjult, skal du åbne Indstillinger > Indeksering for at slå indeksering til.",
   "settings.indexing.globalEnable.title": "Aktivér globalt",
   "settings.indexing.globalEnable.description": "Aktivér indeksering for alle arbejdsområder.",
   "settings.indexing.projectEnable.title": "Aktivér for dette projekt",
@@ -1226,6 +1247,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dette nulstiller kun VS Code-udvidelsesspecifikke indstillinger til deres standardværdier. Indstillinger der deles med CLI, såsom tilstande og regler for automatisk godkendelse, er gemt i CLI-konfigurationen og vil ikke blive nulstillet.",
   "settings.aboutKiloCode.resetSettings.button": "Nulstil alle indstillinger",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Overførsel af indstillinger",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksportér eller importér dine indstillinger for at overføre dem mellem VS Code-instanser.",
@@ -1317,8 +1339,15 @@ export const dict = {
     "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
+  "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
+  "settings.experimental.nativeNotebookTools.description":
+    "Aktivér eksperimentelle værktøjer til at læse, redigere og køre VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
+  "settings.sandboxing.title": "Sandboxing",
+  "settings.sandboxing.network.title": "Begræns netværksadgang",
+  "settings.sandboxing.network.description":
+    "Bloker udgående netværksadgang fra kommandoer, der stammer fra modellen, og HTTP-værktøjer. Lokale MCP-servere og plugin-hooks er ikke underlagt denne begrænsning. Inferenstrafik til udbydere og modeller er fortsat tilgængelig.",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -1450,6 +1479,9 @@ export const dict = {
     "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":
     "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",

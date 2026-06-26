@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, on, Show } from "solid-js"
+import { Component, createSignal, createEffect, createMemo, on, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -23,6 +23,8 @@ import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import IndexingTab from "./IndexingTab"
+import SandboxingTab from "./SandboxingTab"
+import * as Sandboxing from "./sandboxing"
 import { useServer } from "../../context/server"
 import type { MigrationSource } from "../../types/messages"
 
@@ -37,10 +39,11 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
+  const { config, loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
+  const sandboxing = createMemo(() => Sandboxing.visible(features(), config()))
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -106,6 +109,11 @@ const Settings: Component<SettingsProps> = (props) => {
   createEffect(() => {
     if (features().indexing || active() !== "indexing") return
     onTabChange("providers")
+  })
+
+  createEffect(() => {
+    if (loading() || sandboxing() || active() !== "sandboxing") return
+    onTabChange("experimental")
   })
 
   const onTabChange = (tab: string) => {
@@ -202,6 +210,12 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
           </Tabs.Trigger>
+          <Show when={sandboxing()}>
+            <Tabs.Trigger value="sandboxing" aria-label={language.t("settings.sandboxing.title")}>
+              <Icon name="shield" />
+              <span class="label">{language.t("settings.sandboxing.title")}</span>
+            </Tabs.Trigger>
+          </Show>
           <Tabs.Trigger value="language" aria-label={language.t("settings.language.title")}>
             <Icon name="speech-bubble" />
             <span class="label">{language.t("settings.language.title")}</span>
@@ -267,6 +281,12 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />
         </Tabs.Content>
+        <Show when={sandboxing()}>
+          <Tabs.Content value="sandboxing">
+            <h3>{language.t("settings.sandboxing.title")}</h3>
+            <SandboxingTab />
+          </Tabs.Content>
+        </Show>
         <Tabs.Content value="language">
           <h3>{language.t("settings.language.title")}</h3>
           <LanguageTab />

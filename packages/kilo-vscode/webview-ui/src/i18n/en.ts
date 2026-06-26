@@ -293,6 +293,24 @@ export const dict = {
   "prompt.stack.gear.stack": "Open Project Stack builder",
   "prompt.stack.gear.mcp": "Open MCP server settings",
   "prompt.stack.gear.skills": "Open skills settings",
+  "prompt.action.sandbox.enable": "Enable sandbox",
+  "prompt.action.sandbox.disable": "Disable sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox is enabled. Agent shell commands are confined to the project and Kilo directories.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox is disabled. Click to confine agent shell command writes to the project and Kilo directories.",
+  "prompt.action.sandbox.status.enabled": "Sandbox enabled",
+  "prompt.action.sandbox.status.disabled": "Sandbox disabled",
+  "prompt.action.sandbox.filesystem": "Filesystem",
+  "prompt.action.sandbox.network": "Network",
+  "prompt.action.sandbox.filesystem.restricted": "Restricted",
+  "prompt.action.sandbox.network.blocked": "Blocked",
+  "prompt.action.sandbox.network.allowed": "Allowed",
+  "prompt.action.sandbox.unrestricted": "Unrestricted",
+  "prompt.action.sandbox.description.enabled": "Writes are limited to the project and Kilo directories.",
+  "prompt.action.sandbox.description.disabled": "Click to restrict filesystem writes and network access.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -1091,6 +1109,9 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
   "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
+  "settings.indexing.showButton.title": "Show button when indexing is off",
+  "settings.indexing.showButton.description":
+    "Show the indexing button below the prompt while indexing is off. If hidden, open Settings > Indexing to enable indexing.",
   "settings.indexing.globalEnable.title": "Enable globally",
   "settings.indexing.globalEnable.description": "Enable indexing for every workspace.",
   "settings.indexing.projectEnable.title": "Enable for this project",
@@ -1216,6 +1237,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "This resets only VS Code extension-specific settings to their default values. Settings shared with the CLI, such as modes and auto-approve rules, are stored in the CLI configuration and will not be reset.",
   "settings.aboutKiloCode.resetSettings.button": "Reset All Settings",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Settings Transfer",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Export or import your settings to transfer them between VS Code instances.",
@@ -1313,8 +1335,18 @@ export const dict = {
     "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
   "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
+  "settings.experimental.nativeNotebookTools.description":
+    "Enable experimental tools for reading, editing, and executing VS Code notebooks",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Run agent shell commands inside an OS-level sandbox that restricts writes to the project and Kilo state directories",
+  "settings.sandboxing.title": "Sandboxing",
+  "settings.sandboxing.network.title": "Restrict Network Access",
+  "settings.sandboxing.network.description":
+    "Block outbound network access from model-originated commands and HTTP tools. Local MCP servers and plugin hooks run outside this restriction. Provider and model inference traffic remains available.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",

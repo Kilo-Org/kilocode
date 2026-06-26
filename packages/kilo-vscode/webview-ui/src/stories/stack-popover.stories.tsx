@@ -16,7 +16,7 @@ import { StackSummaryContext, type StackSummaryValue } from "../context/stack-su
 import StackPopover from "../components/shared/StackPopover"
 import type { Config, FeatureFlags } from "../types/messages"
 
-const features: FeatureFlags = { indexing: false, project_stack: true }
+const features: FeatureFlags = { indexing: false, project_stack: true, sandboxControls: false }
 
 const StackStoryProviders: ParentComponent<{ stackSummary: StackSummaryValue; config?: Partial<Config> }> = (props) => {
   const cfg = createSignal<Config>({ mcp: {}, ...props.config })

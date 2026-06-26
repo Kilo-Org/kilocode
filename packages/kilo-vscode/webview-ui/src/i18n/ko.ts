@@ -286,6 +286,24 @@ export const dict = {
   "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
+  "prompt.action.sandbox.enable": "샌드박스 활성화",
+  "prompt.action.sandbox.disable": "샌드박스 비활성화",
+  "prompt.action.sandbox.enabled":
+    "샌드박스가 활성화되어 있습니다. 에이전트 셸 명령은 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.disabled":
+    "샌드박스가 비활성화되어 있습니다. 클릭하여 에이전트 셸 명령 쓰기를 프로젝트 및 Kilo 디렉터리로 제한합니다.",
+  "prompt.action.sandbox.status.enabled": "샌드박스 활성화됨",
+  "prompt.action.sandbox.status.disabled": "샌드박스 비활성화됨",
+  "prompt.action.sandbox.filesystem": "파일 시스템",
+  "prompt.action.sandbox.network": "네트워크",
+  "prompt.action.sandbox.filesystem.restricted": "제한됨",
+  "prompt.action.sandbox.network.blocked": "차단됨",
+  "prompt.action.sandbox.network.allowed": "허용됨",
+  "prompt.action.sandbox.unrestricted": "제한 없음",
+  "prompt.action.sandbox.description.enabled": "쓰기는 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.description.disabled": "클릭하면 파일 시스템 쓰기와 네트워크 액세스를 제한합니다.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
 
   "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
   "speechToText.tooltip.stop": "음성 캡처 중지",
@@ -1122,6 +1140,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",
   "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
+  "settings.indexing.showButton.title": "인덱싱이 꺼져 있을 때 버튼 표시",
+  "settings.indexing.showButton.description":
+    "인덱싱이 꺼져 있는 동안 프롬프트 아래에 인덱싱 버튼을 표시합니다. 버튼이 숨겨져 있는 경우 설정 > 인덱싱을 열어 인덱싱을 활성화하세요.",
   "settings.indexing.enable.title": "인덱싱 활성화",
   "settings.indexing.globalEnable.title": "전역으로 활성화",
   "settings.indexing.globalEnable.description": "모든 작업 영역에 대해 인덱싱을 활성화합니다.",
@@ -1216,6 +1237,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "이 기능은 VS Code 확장 프로그램 전용 설정만 기본값으로 초기화합니다. 모드 및 자동 승인 규칙과 같이 CLI와 공유되는 설정은 CLI 구성에 저장되며 초기화되지 않습니다.",
   "settings.aboutKiloCode.resetSettings.button": "모든 설정 초기화",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "설정 이전",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code 인스턴스 간에 설정을 전송하려면 내보내기 또는 가져오기하세요.",
@@ -1305,8 +1327,15 @@ export const dict = {
     "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
   "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
+  "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
+  "settings.experimental.nativeNotebookTools.description":
+    "VS Code 노트북을 읽고, 편집하고, 실행하는 실험적 도구를 활성화합니다",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
+  "settings.sandboxing.title": "샌드박스",
+  "settings.sandboxing.network.title": "네트워크 액세스 제한",
+  "settings.sandboxing.network.description":
+    "모델이 실행한 명령과 HTTP 도구의 아웃바운드 네트워크 액세스를 차단합니다. 로컬 MCP 서버와 플러그인 훅에는 이 제한이 적용되지 않습니다. 공급자 및 모델 추론 트래픽은 계속 사용할 수 있습니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1436,6 +1465,9 @@ export const dict = {
     "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
+  "settings.experimental.sandbox.title": "샌드박스",
+  "settings.experimental.sandbox.description":
+    "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
 
   "settings.autoApprove.description":
     "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",

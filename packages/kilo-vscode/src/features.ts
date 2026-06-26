@@ -9,6 +9,7 @@ type ConfigLike = {
 export type Features = {
   indexing: boolean
   project_stack: boolean
+  sandboxControls: boolean
 }
 
 export function configFeatures(config?: ConfigLike | null): Features {
@@ -18,6 +19,7 @@ export function configFeatures(config?: ConfigLike | null): Features {
   return {
     indexing: hasIndexingPlugin(config?.plugin ?? []),
     project_stack: false,
+    sandboxControls: process.platform !== "win32",
   }
 }
 

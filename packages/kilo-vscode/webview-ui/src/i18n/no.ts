@@ -290,6 +290,25 @@ export const dict = {
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
+  "prompt.action.sandbox.enable": "Aktiver sandbox",
+  "prompt.action.sandbox.disable": "Deaktiver sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox er aktivert. Shell-kommandoer for agenten er begrenset til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox er deaktivert. Klikk for å begrense skriving av shell-kommandoer for agenten til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.status.enabled": "Sandbox aktivert",
+  "prompt.action.sandbox.status.disabled": "Sandbox deaktivert",
+  "prompt.action.sandbox.filesystem": "Filsystem",
+  "prompt.action.sandbox.network": "Nettverk",
+  "prompt.action.sandbox.filesystem.restricted": "Begrenset",
+  "prompt.action.sandbox.network.blocked": "Blokkert",
+  "prompt.action.sandbox.network.allowed": "Tillatt",
+  "prompt.action.sandbox.unrestricted": "Ubegrenset",
+  "prompt.action.sandbox.description.enabled": "Skrivetilgang er begrenset til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.description.disabled":
+    "Klikk for å begrense skrivetilgang til filsystemet og nettverkstilgang.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klikk for å begrense skrivetilgang til filsystemet. Nettverkstilgang er fortsatt tillatt av sandbox-innstillingene dine.",
 
   "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
   "speechToText.tooltip.stop": "Stopp lydfangst",
@@ -1191,6 +1210,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dette tilbakestiller kun VS Code-utvidelsesspecifikke innstillinger til standardverdiene. Innstillinger som deles med CLI, som modi og regler for automatisk godkjenning, lagres i CLI-konfigurasjonen og vil ikke tilbakestilles.",
   "settings.aboutKiloCode.resetSettings.button": "Tilbakestill alle innstillinger",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Overføring av innstillinger",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksporter eller importer innstillingene dine for å overføre dem mellom VS Code-instanser.",
@@ -1282,8 +1302,15 @@ export const dict = {
     "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Tale-til-tekst-modell",
   "settings.models.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
+  "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
+  "settings.experimental.nativeNotebookTools.description":
+    "Aktiver eksperimentelle verktøy for å lese, redigere og kjøre VS Code-notatbøker",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
+  "settings.sandboxing.title": "Kjøring i sandkasse",
+  "settings.sandboxing.network.title": "Begrens nettverkstilgang",
+  "settings.sandboxing.network.description":
+    "Blokker utgående nettverkstilgang fra kommandoer generert av modellen og HTTP-verktøy. Lokale MCP-servere og programtilleggskroker kjører utenfor denne begrensningen. Trafikk for leverandør- og modellinferens forblir tilgjengelig.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1298,6 +1325,9 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
+  "settings.indexing.showButton.title": "Vis knappen når indeksering er slått av",
+  "settings.indexing.showButton.description":
+    "Vis indekseringsknappen under ledeteksten mens indeksering er slått av. Hvis knappen er skjult, åpner du Innstillinger > Indeksering for å aktivere indeksering.",
   "settings.indexing.globalEnable.title": "Aktiver globalt",
   "settings.indexing.globalEnable.description": "Aktiver indeksering for hvert arbeidsområde.",
   "settings.indexing.projectEnable.title": "Aktiver for dette prosjektet",
@@ -1449,6 +1479,9 @@ export const dict = {
     "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
 
   "settings.autoApprove.description":
     "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. doom_loop og external_directory har Spør som standard.",

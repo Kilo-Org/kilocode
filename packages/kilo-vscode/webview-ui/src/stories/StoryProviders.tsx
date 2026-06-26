@@ -41,6 +41,7 @@ import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { resolveTemplate } from "../context/language-utils"
 import type {
   Config,
+  FeatureFlags,
   KilocodeNotification,
   PermissionRequest,
   ProviderAuthState,
@@ -280,6 +281,7 @@ interface StoryProvidersProps {
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
   config?: Config
+  features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
   onConfigChange?: (config: Config) => void
@@ -295,6 +297,7 @@ interface StoryProvidersProps {
 /** Wraps children with either a mock ConfigContext (when config prop is given) or the real ConfigProvider. */
 const ConfigWrapper: ParentComponent<{
   config?: Config
+  features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
   onConfigChange?: (config: Config) => void
@@ -314,8 +317,9 @@ const ConfigWrapper: ParentComponent<{
       }
 
       return {
-        indexing: hasIndexingPlugin(config.plugin ?? []),
-        project_stack: false,
+        indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
+        project_stack: props.features?.project_stack ?? false,
+        sandboxControls: props.features?.sandboxControls ?? false,
       }
     })
 
@@ -389,6 +393,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
         <FeedbackProvider>
           <ConfigWrapper
             config={props.config}
+            features={props.features}
             globalConfig={props.globalConfig}
             projectConfig={props.projectConfig}
             onConfigChange={props.onConfigChange}

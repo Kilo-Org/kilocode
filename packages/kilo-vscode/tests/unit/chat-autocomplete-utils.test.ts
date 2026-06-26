@@ -3,6 +3,7 @@ import {
   finalizeChatSuggestion,
   buildChatPrefix,
 } from "../../src/services/autocomplete/chat-autocomplete/chat-autocomplete-utils"
+import { getChatAutocompleteModel } from "../../src/services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 
 describe("finalizeChatSuggestion", () => {
   it("returns empty string for empty input", () => {
@@ -96,5 +97,16 @@ describe("buildChatPrefix", () => {
     const result = buildChatPrefix("hi", [])
     expect(result).not.toContain("Code visible in editor")
     expect(result).toContain("hi")
+  })
+})
+
+describe("getChatAutocompleteModel", () => {
+  it("uses the matching FIM model for Next Edit settings", () => {
+    expect(getChatAutocompleteModel("kilo", "inception/mercury-next-edit").id).toBe("kilo/inception/mercury-edit-2")
+    expect(getChatAutocompleteModel("inception", "mercury-next-edit").id).toBe("inception/mercury-edit-2")
+  })
+
+  it("keeps FIM settings unchanged", () => {
+    expect(getChatAutocompleteModel("kilo", "mistralai/codestral-2508").id).toBe("kilo/mistralai/codestral-2508")
   })
 })

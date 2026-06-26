@@ -9,6 +9,7 @@ import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
 import { StackPanelProvider } from "./StackPanelProvider"
+import { MarketplaceNotifier } from "./services/marketplace/notifier"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
@@ -24,6 +25,7 @@ import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
+import { createNotebookBridge } from "./services/notebook"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -50,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
-  const attention = new AttentionService(connectionService)
+  const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
@@ -103,9 +105,6 @@ export function activate(context: vscode.ExtensionContext) {
       telemetry.setEnabled(enabled)
     }),
   )
-
-  // Prewarm the CLI backend early so autocomplete is ready before first editor use.
-  ensureBackendForAutocomplete(connectionService)
 
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     void markWorkspace(folder.uri.fsPath, (msg) => console.warn(`[Kilo New] ${msg}`))
@@ -182,6 +181,13 @@ export function activate(context: vscode.ExtensionContext) {
       return [...dirs]
     },
   )
+  const attention = new AttentionService(connectionService, {
+    approve: (event, directory) => autoApprove.approve(event, directory),
+  })
+
+  // Prewarm only after all global event consumers are ready.
+  ensureBackendForAutocomplete(connectionService)
+
   provider.setAutoApproveController(autoApprove)
   agentManagerHost.setAutoApproveController(autoApprove)
 
@@ -267,6 +273,13 @@ export function activate(context: vscode.ExtensionContext) {
   const marketplacePanelProvider = new MarketplacePanelProvider(context.extensionUri, connectionService, context)
   const stackPanelProvider = new StackPanelProvider(context.extensionUri, connectionService)
   context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider, stackPanelProvider)
+
+  // Surface a discardable notification when a marketplace item matches the workspace.
+  const marketplaceNotifier = new MarketplaceNotifier(connectionService, context, (item) =>
+    marketplacePanelProvider.openInstall(item),
+  )
+  context.subscriptions.push(marketplaceNotifier)
+  marketplaceNotifier.start()
 
   // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
   const subAgentViewerProvider = new SubAgentViewerProvider(context.extensionUri, connectionService, context)
@@ -552,6 +565,7 @@ export function activate(context: vscode.ExtensionContext) {
       attention.dispose()
       browserAutomationService.dispose()
       provider.dispose()
+      notebookBridge.dispose()
       connectionService.dispose()
     },
   })

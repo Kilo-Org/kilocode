@@ -62,6 +62,18 @@ Pay special attention to:
 
 When in doubt, add a finding. A human will verify it. Compiling code is not proof the chain is intact.
 
+## CONFIG_REGRESSION.md
+
+Check whether this PR introduces or re-introduces fallback logic for `opencode` config files, or accidentally breaks code that now correctly expects only `.kilo`-based configuration.
+
+Kilo removed fallback support for `opencode` config directories. Look for:
+
+- Any new or restored code that reads from `opencode` config paths.
+- Upstream additions to config discovery, loading, or path resolution that add `opencode` fallback candidates we stripped.
+- Changes that break `.kilo`-only config lookup by removing or reordering it in a multi-path search.
+
+When in doubt, add a finding. A human should verify config path changes manually.
+
 ## TESTS.md
 
 Check whether this PR removed any Kilo-specific tests.

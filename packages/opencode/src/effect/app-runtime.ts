@@ -60,6 +60,7 @@ import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { StackService } from "@/kilocode/stack/service" // kilocode_change
+import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 
 const CoreLayer = Layer.mergeAll(
   Npm.defaultLayer,
@@ -86,6 +87,7 @@ const CoreLayer = Layer.mergeAll(
 
 const SessionLayer = Layer.mergeAll(
   Question.defaultLayer,
+  Notebook.defaultLayer, // kilocode_change
   Permission.defaultLayer,
   Todo.defaultLayer,
   Session.defaultLayer,
@@ -121,7 +123,7 @@ const FeatureLayer = Layer.mergeAll(
   ShareNext.defaultLayer,
   SessionShare.defaultLayer,
   SyncEvent.defaultLayer,
-  EventV2Bridge.defaultLayer,
+  EventV2Bridge.defaultLayer, // kilocode_change
   DataMigration.defaultLayer,
   StackService.defaultLayer, // kilocode_change
 )

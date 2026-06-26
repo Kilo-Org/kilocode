@@ -2,7 +2,7 @@ import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sd
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { SessionMode } from "../../context/worktree-mode"
-import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
+import type { MarketplaceItem, MarketplaceInstalledMetadata, MarketplaceRelevanceMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
 import type {
@@ -334,6 +334,13 @@ export interface IndexingStatusLoadedMessage {
   status: IndexingStatus
 }
 
+export interface IndexingSettingsLoadedMessage {
+  type: "indexingSettingsLoaded"
+  settings: {
+    showButtonWhenDisabled: boolean
+  }
+}
+
 export interface KiloEmbeddingModelsLoadedMessage {
   type: "kiloEmbeddingModelsLoaded"
   catalog: KiloEmbeddingModelCatalog
@@ -657,6 +664,27 @@ export interface AutoApproveStateMessage {
   active: boolean
 }
 
+export interface SandboxStatusMessage {
+  type: "sandboxStatus"
+  sessionID: string
+  enabled: boolean
+  available: boolean
+  reason?: string
+  version: number
+  directory: string
+  revision: number
+  requestID?: string
+}
+
+export interface SandboxStatusErrorMessage {
+  type: "sandboxStatusError"
+  sessionID: string
+  directory: string
+  message: string
+  revision: number
+  requestID?: string
+}
+
 // Multi-version creation progress (extension → webview)
 export interface AgentManagerMultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
@@ -901,6 +929,7 @@ export interface MarketplaceDataMessage {
   type: "marketplaceData"
   marketplaceItems: MarketplaceItem[]
   marketplaceInstalledMetadata: MarketplaceInstalledMetadata
+  marketplaceRelevance: MarketplaceRelevanceMetadata
   errors?: string[]
   showAgentMigrationBanner?: boolean
 }
@@ -910,6 +939,11 @@ export interface MarketplaceInstallResultMessage {
   success: boolean
   slug: string
   error?: string
+}
+
+export interface OpenInstallModalMessage {
+  type: "openInstallModal"
+  mpItem: MarketplaceItem
 }
 
 export interface MarketplaceRemoveResultMessage {
@@ -1017,6 +1051,7 @@ export type ExtensionMessage =
   | StackSummaryLoadedMessage
   | FeaturesUpdatedMessage
   | IndexingStatusLoadedMessage
+  | IndexingSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
@@ -1060,6 +1095,8 @@ export type ExtensionMessage =
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage
+  | SandboxStatusMessage
+  | SandboxStatusErrorMessage
   | AgentManagerMultiVersionProgressMessage
   | AgentManagerSetSessionModelMessage
   | AgentManagerSendInitialMessage
@@ -1112,6 +1149,7 @@ export type ExtensionMessage =
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
+  | OpenInstallModalMessage
   | ProviderOAuthReadyMessage
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage

@@ -1,5 +1,25 @@
 import { describe, expect, test } from "bun:test"
+import * as vscode from "vscode"
 import { KiloConnectionService } from "./connection-service"
+
+describe("KiloConnectionService clients", () => {
+  test("returns a connected client without a workspace folder", async () => {
+    const service = new KiloConnectionService({} as any)
+    const client = {}
+    const workspace = vscode.workspace as { workspaceFolders?: readonly vscode.WorkspaceFolder[] }
+    const folders = workspace.workspaceFolders
+
+    ;(service as any).client = client
+    ;(service as any).state = "connected"
+    workspace.workspaceFolders = undefined
+
+    try {
+      expect(await service.getClientAsync()).toBe(client)
+    } finally {
+      workspace.workspaceFolders = folders
+    }
+  })
+})
 
 describe("KiloConnectionService viewed sessions", () => {
   test("keeps Agent Manager sessions when sidebar focus changes during a flush", async () => {

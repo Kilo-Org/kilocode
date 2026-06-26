@@ -207,8 +207,8 @@ test("settings and mode editing expose distinct model field purposes", async ({ 
   const speech = page.getByRole("button", { name: "Speech to Text Model: Chirp 3" })
   await expect(speech).toBeEnabled()
   await speech.click()
-  await page.getByRole("option", { name: "GPT-4o Mini Transcribe (OpenAI)" }).click()
-  await expect(page.getByRole("button", { name: "Speech to Text Model: GPT-4o Mini Transcribe" })).toBeVisible()
+  await page.getByRole("option", { name: "Parakeet TDT 0.6B v3 (NVIDIA)" }).click()
+  await expect(page.getByRole("button", { name: "Speech to Text Model: Parakeet TDT 0.6B v3" })).toBeVisible()
 
   await load(page, "settings--mode-edit-export")
   await expect(page.getByRole("button", { name: /Model Override:/ })).toHaveAccessibleDescription(

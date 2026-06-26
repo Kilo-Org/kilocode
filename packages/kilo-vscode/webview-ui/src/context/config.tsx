@@ -58,7 +58,11 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
-  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false, project_stack: false })
+  const [features, setFeatures] = createSignal<FeatureFlags>({
+    indexing: false,
+    project_stack: false,
+    sandboxControls: false,
+  })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
@@ -93,6 +97,12 @@ export const ConfigProvider: ParentComponent = (props) => {
         "autocomplete.enableChatAutocomplete": message.settings.enableChatAutocomplete,
         "autocomplete.provider": message.settings.provider,
         "autocomplete.model": message.settings.model,
+      })
+      return
+    }
+    if (message.type === "indexingSettingsLoaded") {
+      mergeSettings({
+        "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled,
       })
       return
     }
@@ -181,6 +191,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const requestInitialData = () => {
     vscode.postMessage({ type: "requestConfig" })
     vscode.postMessage({ type: "requestAutocompleteSettings" })
+    vscode.postMessage({ type: "requestIndexingSettings" })
   }
 
   // Request config immediately; if the extension's httpClient is not yet ready,
