@@ -241,20 +241,24 @@ export function useSlashCommand(
     setText: (text: string) => void,
     onSelect?: () => void,
   ) => {
+    const cursor = textarea.selectionStart ?? 0
+    const trailingText = textarea.value.substring(cursor)
+
     if (cmd.action) {
       if (cmd.enabled && !cmd.enabled()) return
-      textarea.value = ""
-      setText("")
+      textarea.value = trailingText
+      setText(trailingText)
       close()
       onSelect?.()
       cmd.action()
       return
     }
-    const text = `/${cmd.name} `
-    textarea.value = text
-    setText(text)
-    const pos = text.length
-    textarea.setSelectionRange(pos, pos)
+    if (cmd.enabled && !cmd.enabled()) return
+    const commandText = `/${cmd.name} `
+    const updatedText = commandText + trailingText
+    textarea.value = updatedText
+    setText(updatedText)
+    textarea.setSelectionRange(commandText.length, commandText.length)
     textarea.focus()
     close()
     onSelect?.()
