@@ -7,9 +7,27 @@ on:
       - closed
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Merged JetBrains release PR number"
+        required: true
+        type: string
+      mode:
+        description: "Recovery mode"
+        required: true
+        type: choice
+        options:
+          - full-publish
+          - github-release-only
+      confirm_marketplace_not_accepted:
+        description: "Required for full-publish retries; confirms Marketplace did not accept this version"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
-  group: publish-jetbrains-pr-${{ github.event.pull_request.number }}
+  group: publish-jetbrains-pr-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
   cancel-in-progress: false
 
 permissions:
@@ -23,20 +41,80 @@ jobs:
   publish:
     if: >-
       github.repository == 'Kilo-Org/kilocode' &&
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
-      contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.pull_request.merged == true &&
+          startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
+          contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        )
+      )
     runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
+      - name: Resolve release PR context
+        id: context
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            data=$(gh pr view "$INPUT_PR" --repo "$GITHUB_REPOSITORY" --json number,mergeCommit,headRefName,headRepository,labels,mergedAt,state)
+            DATA="$data" node <<'NODE' >> "$GITHUB_OUTPUT"
+          const data = JSON.parse(process.env.DATA)
+          const labels = new Set(data.labels.map((item) => item.name))
+          if (data.state !== "MERGED" || !data.mergedAt) throw new Error("JetBrains release PR must be merged")
+          if (data.headRepository.nameWithOwner !== process.env.GITHUB_REPOSITORY) throw new Error("JetBrains release PR must come from this repository")
+          if (!data.headRefName.startsWith("jetbrains/release/")) throw new Error(`Unexpected release branch: ${data.headRefName}`)
+          if (!labels.has("jetbrains-release")) throw new Error("PR is missing jetbrains-release label")
+          if (!data.mergeCommit?.oid) throw new Error("PR has no merge commit")
+          console.log(`number=${data.number}`)
+          console.log(`merge=${data.mergeCommit.oid}`)
+          console.log(`branch=${data.headRefName}`)
+          NODE
+            exit 0
+          fi
+
+          LABELS="$PR_LABELS" node <<'NODE' >> "$GITHUB_OUTPUT"
+          const labels = new Set(JSON.parse(process.env.LABELS).map((item) => item.name))
+          if (process.env.PR_MERGED !== "true") throw new Error("JetBrains release PR must be merged")
+          if (process.env.PR_REPO !== process.env.GITHUB_REPOSITORY) throw new Error("JetBrains release PR must come from this repository")
+          if (!process.env.PR_BRANCH.startsWith("jetbrains/release/")) throw new Error(`Unexpected release branch: ${process.env.PR_BRANCH}`)
+          if (!labels.has("jetbrains-release")) throw new Error("PR is missing jetbrains-release label")
+          if (!process.env.PR_MERGE) throw new Error("PR has no merge commit")
+          console.log(`number=${process.env.PR_NUMBER}`)
+          console.log(`merge=${process.env.PR_MERGE}`)
+          console.log(`branch=${process.env.PR_BRANCH}`)
+          NODE
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PR: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_MERGE: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_LABELS: ${{ toJson(github.event.pull_request.labels) }}
+
+      - name: Validate recovery mode
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [[ "$MODE" == "full-publish" && "$CONFIRMED" != "true" ]]; then
+            echo "full-publish recovery requires confirm_marketplace_not_accepted=true." >&2
+            exit 1
+          fi
+        env:
+          MODE: ${{ inputs.mode }}
+          CONFIRMED: ${{ inputs.confirm_marketplace_not_accepted }}
+
       - name: Checkout merged release PR
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ steps.context.outputs.merge }}
 
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
+        with:
+          install-flags: --frozen-lockfile
 
       - name: Validate release PR and tag
         id: release
@@ -44,7 +122,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ steps.context.outputs.number }}
 
       - name: Save reviewed release metadata
         run: |
@@ -69,9 +147,8 @@ jobs:
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
-
-      - name: Install dependencies
-        run: bun install
+        with:
+          install-flags: --frozen-lockfile
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -90,7 +167,11 @@ jobs:
       - name: Validate publishing secrets
         run: |
           missing=0
-          for name in JETBRAINS_MARKETPLACE_TOKEN JETBRAINS_CERTIFICATE_CHAIN JETBRAINS_PRIVATE_KEY JETBRAINS_PRIVATE_KEY_PASSWORD; do
+          names=(JETBRAINS_CERTIFICATE_CHAIN JETBRAINS_PRIVATE_KEY JETBRAINS_PRIVATE_KEY_PASSWORD)
+          if [[ "$MODE" != "github-release-only" ]]; then
+            names+=(JETBRAINS_MARKETPLACE_TOKEN)
+          fi
+          for name in "${names[@]}"; do
             if [[ -z "${!name}" ]]; then
               echo "Missing required secret: $name" >&2
               missing=1
@@ -102,6 +183,7 @@ jobs:
           JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+          MODE: ${{ inputs.mode }}
 
       - name: Prepare CLI resources
         working-directory: packages/kilo-jetbrains
@@ -131,12 +213,24 @@ jobs:
           VERSION: ${{ steps.release.outputs.version }}
 
       - name: Publish to JetBrains Marketplace
+        if: github.event_name != 'workflow_dispatch' || inputs.mode != 'github-release-only'
         working-directory: packages/kilo-jetbrains
         run: ./gradlew publishPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
         env:
           VERSION: ${{ steps.release.outputs.version }}
           CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
           JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Sign plugin archive
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'github-release-only'
+        working-directory: packages/kilo-jetbrains
+        run: ./gradlew signPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
           JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
