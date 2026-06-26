@@ -439,6 +439,8 @@ interface CreateMultiVersionIn {
   baseBranch?: string
   branchName?: string
   modelAllocations?: Array<{ providerID: string; modelID: string; count: number }>
+  /** When set, reconcile each created session's sandbox override to this state. */
+  sandbox?: boolean
 }
 
 interface RenameWorktreeIn {

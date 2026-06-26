@@ -20,6 +20,7 @@ import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
@@ -81,49 +82,6 @@ interface PromptInputProps {
   questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
-}
-
-export const SandboxTooltipContent: Component<{ enabled: boolean; network: boolean }> = (props) => {
-  const language = useLanguage()
-
-  return (
-    <div class="prompt-sandbox-tooltip">
-      <div class="prompt-sandbox-tooltip-title">
-        {language.t(props.enabled ? "prompt.action.sandbox.status.enabled" : "prompt.action.sandbox.status.disabled")}
-      </div>
-      <div class="prompt-sandbox-tooltip-row">
-        <Icon name="folder" size="small" />
-        <span>{language.t("prompt.action.sandbox.filesystem")}</span>
-        <span class="prompt-sandbox-tooltip-state">
-          {language.t(
-            props.enabled ? "prompt.action.sandbox.filesystem.restricted" : "prompt.action.sandbox.unrestricted",
-          )}
-        </span>
-      </div>
-      <div class="prompt-sandbox-tooltip-row">
-        <Icon name="globe" size="small" />
-        <span>{language.t("prompt.action.sandbox.network")}</span>
-        <span class="prompt-sandbox-tooltip-state">
-          {language.t(
-            props.enabled && props.network
-              ? "prompt.action.sandbox.network.blocked"
-              : props.enabled
-                ? "prompt.action.sandbox.network.allowed"
-                : "prompt.action.sandbox.unrestricted",
-          )}
-        </span>
-      </div>
-      <div class="prompt-sandbox-tooltip-description">
-        {language.t(
-          props.enabled
-            ? "prompt.action.sandbox.description.enabled"
-            : props.network
-              ? "prompt.action.sandbox.description.disabled"
-              : "prompt.action.sandbox.description.disabledNetworkAllowed",
-        )}
-      </div>
-    </div>
-  )
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
@@ -1268,33 +1226,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Button>
           </Tooltip>
           <Show when={sandboxVisible()}>
-            <Tooltip
-              value={
-                sandbox()?.available === false ? (
-                  (sandbox()?.reason ?? language.t("common.requestFailed"))
-                ) : (
-                  <SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />
-                )
-              }
-              contentClass="prompt-sandbox-tooltip-content"
-              placement="top"
-            >
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={toggleSandbox}
-                disabled={sandboxDisabled()}
-                aria-label={
-                  sandboxEnabled()
-                    ? language.t("prompt.action.sandbox.disable")
-                    : language.t("prompt.action.sandbox.enable")
-                }
-                aria-pressed={sandboxEnabled()}
-                class={`prompt-status-button ${sandboxEnabled() ? "prompt-status-button--active" : ""}`}
-              >
-                <Icon name="lock" size="small" />
-              </Button>
-            </Tooltip>
+            <SandboxButtonBase
+              enabled={sandboxEnabled()}
+              available={sandbox()?.available}
+              reason={sandbox()?.reason}
+              disabled={sandboxDisabled()}
+              tooltip={<SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />}
+              tooltipClass="prompt-sandbox-tooltip-content"
+              onToggle={toggleSandbox}
+            />
           </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
