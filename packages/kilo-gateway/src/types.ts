@@ -33,6 +33,13 @@ export interface KilocodeBalance {
   balance: number
 }
 
+export interface KiloPassState {
+  currentPeriodBaseCreditsUsd: number
+  currentPeriodUsageUsd: number
+  currentPeriodBonusCreditsUsd: number
+  nextBillingAt?: string | null
+}
+
 export interface PollOptions<T> {
   interval: number
   maxAttempts: number
