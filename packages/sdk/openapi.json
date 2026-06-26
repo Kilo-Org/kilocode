@@ -13079,14 +13079,7 @@
                               "type": "number"
                             },
                             "nextBillingAt": {
-                              "anyOf": [
-                                {
-                                  "type": "string"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -15049,6 +15042,189 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.reject({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/session/{sessionID}/model-usage": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.sessionModelUsage",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model usage for a session tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "steps": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "cost": {
+                          "type": "number"
+                        },
+                        "tokens": {
+                          "type": "object",
+                          "properties": {
+                            "input": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "output": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reasoning": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "cache": {
+                              "type": "object",
+                              "properties": {
+                                "read": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "write": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": ["read", "write"],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": ["input", "output", "reasoning", "cache"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["steps", "cost", "tokens"],
+                      "additionalProperties": false
+                    },
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "providerID": {
+                            "type": "string"
+                          },
+                          "modelID": {
+                            "type": "string"
+                          },
+                          "steps": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cost": {
+                            "type": "number"
+                          },
+                          "tokens": {
+                            "type": "object",
+                            "properties": {
+                              "input": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "output": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "reasoning": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "cache": {
+                                "type": "object",
+                                "properties": {
+                                  "read": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "write": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": ["read", "write"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": ["input", "output", "reasoning", "cache"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["providerID", "modelID", "steps", "cost", "tokens"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["totals", "models"],
+                  "additionalProperties": false,
+                  "description": "Model usage for a session tree"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get token usage and direct cost by model for the complete top-level session tree.",
+        "summary": "Get session model usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.sessionModelUsage({\n  ...\n})"
           }
         ]
       }
