@@ -193,7 +193,7 @@ export const dict = {
     "Forhåndsvisning av bildet er ikke tilgjengelig for dette øyeblikksbildet av økten.",
   "agentManager.review.endOfLongDiff": "Du nådde slutten!",
 
-  "agentManager.import.pullRequest": "Fletteforespørsel",
+  "agentManager.import.pullRequest": "Pull-forespørsel",
   "agentManager.import.pastePrUrl": "Lim inn PR URL...",
   "agentManager.import.open": "Åpne",
   "agentManager.import.branches": "Grener",

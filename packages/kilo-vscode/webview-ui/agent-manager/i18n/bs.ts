@@ -193,7 +193,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Pregled slike nije dostupan za ovaj snimak sesije.",
   "agentManager.review.endOfLongDiff": "Došli ste do kraja!",
 
-  "agentManager.import.pullRequest": "Zahtjev za spajanje",
+  "agentManager.import.pullRequest": "Pull zahtjev",
   "agentManager.import.pastePrUrl": "Zalijepite PR URL...",
   "agentManager.import.open": "Otvori",
   "agentManager.import.branches": "Branchevi",

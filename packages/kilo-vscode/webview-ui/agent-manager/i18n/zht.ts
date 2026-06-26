@@ -187,7 +187,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "此工作階段快照無法預覽圖片。",
   "agentManager.review.endOfLongDiff": "你已經到最後了！",
 
-  "agentManager.import.pullRequest": "合併請求",
+  "agentManager.import.pullRequest": "提取請求",
   "agentManager.import.pastePrUrl": "貼上 PR URL...",
   "agentManager.import.open": "開啟",
   "agentManager.import.branches": "分支",

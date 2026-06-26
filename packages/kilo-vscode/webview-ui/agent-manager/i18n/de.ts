@@ -194,7 +194,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Für diesen Sitzungssnapshot ist keine Bildvorschau verfügbar.",
   "agentManager.review.endOfLongDiff": "Du hast das Ende erreicht!",
 
-  "agentManager.import.pullRequest": "Zusammenführungsanfrage",
+  "agentManager.import.pullRequest": "Pull-Request",
   "agentManager.import.pastePrUrl": "PR-URL einfügen...",
   "agentManager.import.open": "Öffnen",
   "agentManager.import.branches": "Zweige",
