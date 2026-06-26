@@ -207,12 +207,19 @@ export function DialogSessionList() {
       const isDeleting = toDelete() === x.id
       const status = sync.data.session_status?.[x.id]
       const isWorking = status?.type === "busy" || status?.type === "retry"
+      // kilocode_change start - show attention indicator for sessions needing user input (#11466)
+      const hasPermissions =
+        (sync.data.permission[x.id]?.length ?? 0) > 0 ||
+        sync.data.session.some((child) => child.parentID === x.id && (sync.data.permission[child.id]?.length ?? 0) > 0)
       const slot = slotByID.get(x.id)
-      const gutter = isWorking
-        ? () => <Spinner />
-        : slot !== undefined
-          ? () => <text fg={theme.accent}>{slot}</text>
-          : undefined
+      const gutter = hasPermissions
+        ? () => <text fg={theme.warning}>!</text>
+        : isWorking
+          ? () => <Spinner />
+          : slot !== undefined
+            ? () => <text fg={theme.accent}>{slot}</text>
+            : undefined
+      // kilocode_change end
       return {
         title: isDeleting ? `Press ${deleteHint()} again to confirm` : x.title,
         description: all && x.worktreeName ? `(${x.worktreeName})` : undefined, // kilocode_change - worktree label

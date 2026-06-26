@@ -36,15 +36,23 @@ async function launch(url: string) {
   })
 }
 
+// kilocode_change start - default to foreground so Ctrl+C stops the daemon (#11466)
 const OpenCommand = cmd({
   command: "$0",
   describe: "open the local Kilo Console",
   builder: (yargs) =>
-    withNetworkOptions(yargs).option("foreground", {
-      alias: "f",
-      describe: "keep the command active until interrupted",
-      type: "boolean",
-    }),
+    withNetworkOptions(yargs)
+      .option("background", {
+        alias: "b",
+        describe: "open browser and exit immediately without keeping the daemon attached",
+        type: "boolean",
+      })
+      .option("foreground", {
+        alias: "f",
+        describe: "deprecated: console now runs in the foreground by default",
+        type: "boolean",
+        hidden: true,
+      }),
   handler: async (args) => {
     const run = async (signal?: AbortSignal) => {
       const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
@@ -71,7 +79,9 @@ const OpenCommand = cmd({
       if (consoleNetwork) console.log(`  Network: ${consoleNetwork}`)
       return state
     }
-    if (!args.foreground) {
+    // Default to foreground so the process stays attached and Ctrl+C stops the daemon.
+    // Use --background to restore the old detach-and-exit behavior.
+    if (args.background) {
       await run()
       return
     }
@@ -82,6 +92,7 @@ const OpenCommand = cmd({
     })
   },
 })
+// kilocode_change end
 
 export const KiloConsoleCommand = cmd({
   command: "console",
