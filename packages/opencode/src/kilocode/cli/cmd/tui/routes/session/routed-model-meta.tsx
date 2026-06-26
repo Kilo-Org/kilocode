@@ -57,7 +57,9 @@ export namespace RoutedModelMeta {
   }
 
   function footer(parts: Part[]) {
-    return parts.filter((part): part is StepFinishPart => part.type === "step-finish").at(-1)
+    return parts
+      .filter((part): part is StepFinishPart => part.type === "step-finish")
+      .at(-1)
   }
 
   export function info(list: Providers, parts: Part[], details: boolean, message: Message): Info {
@@ -87,6 +89,10 @@ export namespace RoutedModelMeta {
     const info = useContext(Context)
     const text = createMemo(() => (props.id ? info().labels.get(props.id) : undefined))
 
-    return <Show when={text()}>{(value) => <Badge text={value()} />}</Show>
+    return (
+      <Show when={text()}>
+        {(value) => <Badge text={value()} />}
+      </Show>
+    )
   }
 }
