@@ -31,12 +31,15 @@ export namespace RoutedModelMeta {
     return part.type === "step-start" || part.type === "step-finish" || eligible(part, details)
   }
 
-  export function label(list: Providers, model: StepFinishPart["model"]) {
-    if (!model) return undefined
+  export function name(list: Providers, model: NonNullable<StepFinishPart["model"]>) {
     const id = KiloRoutedModel.display(model.modelID)
     const name = Model.name(list, model.providerID, model.modelID)
-    const text = name === model.modelID && id !== model.modelID ? Model.name(list, model.providerID, id) : name
-    return KiloRoutedModel.displayName(text)
+    return name === model.modelID && id !== model.modelID ? Model.name(list, model.providerID, id) : name
+  }
+
+  export function label(list: Providers, model: StepFinishPart["model"]) {
+    if (!model) return undefined
+    return KiloRoutedModel.displayName(name(list, model))
   }
 
   function routed(model: StepFinishPart["model"], message: Message) {
@@ -54,9 +57,7 @@ export namespace RoutedModelMeta {
   }
 
   function footer(parts: Part[]) {
-    return parts
-      .filter((part): part is StepFinishPart => part.type === "step-finish")
-      .at(-1)
+    return parts.filter((part): part is StepFinishPart => part.type === "step-finish").at(-1)
   }
 
   export function info(list: Providers, parts: Part[], details: boolean, message: Message): Info {
@@ -86,10 +87,6 @@ export namespace RoutedModelMeta {
     const info = useContext(Context)
     const text = createMemo(() => (props.id ? info().labels.get(props.id) : undefined))
 
-    return (
-      <Show when={text()}>
-        {(value) => <Badge text={value()} />}
-      </Show>
-    )
+    return <Show when={text()}>{(value) => <Badge text={value()} />}</Show>
   }
 }

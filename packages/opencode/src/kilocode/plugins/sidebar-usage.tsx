@@ -2,6 +2,7 @@ import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/
 import { createMemo, createResource, For, onCleanup, onMount, Show } from "solid-js"
 import { useLocal } from "@tui/context/local"
 import * as Model from "@tui/util/model"
+import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { fmtAttemptCost, fmtScore } from "@/kilocode/components/model-info-panel-utils"
 import {
   failed,
@@ -124,7 +125,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                           {(model) => (
                             <box>
                               <text fg={theme().text} wrapMode="char">
-                                <b>{Model.name(providers(), model.providerID, model.modelID)}</b>
+                                <b>{RoutedModelMeta.name(providers(), model)}</b>
                               </text>
                               <text fg={theme().textMuted} wrapMode="word">
                                 Steps {formatCount(model.steps)} | Cost {formatCost(model.cost)}
