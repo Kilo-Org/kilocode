@@ -158,23 +158,26 @@ export function normalize(native: Native): UsageSnapshot {
     windows(item.limit_name ?? item.metered_feature ?? "Additional quota", item.rate_limit ?? undefined, fetchedAt),
   )
   const quota = [...general, ...additional]
-  const spend: UsageWindow[] =
-    native.spend_control || native.credits?.overage_limit_reached
-      ? [
-          {
-            id: "spend-control",
-            label: "Spend control",
-            resource: "Purchased credits",
-            kind: "spend_control",
-            unit: "credits",
-            orientation: "amount",
-            ...(native.spend_control?.individual_limit !== undefined && native.spend_control.individual_limit !== null
-              ? { limit: native.spend_control.individual_limit }
-              : {}),
-            state: native.spend_control?.reached || native.credits?.overage_limit_reached ? "exhausted" : "active",
-          },
-        ]
-      : []
+  const spendReported =
+    native.spend_control?.reached === true ||
+    (native.spend_control?.individual_limit !== undefined && native.spend_control.individual_limit !== null) ||
+    native.credits?.overage_limit_reached === true
+  const spend: UsageWindow[] = spendReported
+    ? [
+        {
+          id: "spend-control",
+          label: "Spend control",
+          resource: "Purchased credits",
+          kind: "spend_control",
+          unit: "credits",
+          orientation: "amount",
+          ...(native.spend_control?.individual_limit !== undefined && native.spend_control.individual_limit !== null
+            ? { limit: native.spend_control.individual_limit }
+            : {}),
+          state: native.spend_control?.reached || native.credits?.overage_limit_reached ? "exhausted" : "active",
+        },
+      ]
+    : []
   const plan = native.plan_type ? (plans[native.plan_type] ?? `ChatGPT ${native.plan_type}`) : "ChatGPT Codex"
   return {
     id: "codex-chatgpt",

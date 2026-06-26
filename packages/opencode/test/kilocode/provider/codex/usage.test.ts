@@ -113,6 +113,23 @@ describe("Codex native normalization", () => {
     expect(item.windows.map((window) => window.resource)).toEqual(["Codex", "valid"])
   })
 
+  test("omits an empty spend-control object reported by Team accounts", () => {
+    const item = normalize(
+      decode({
+        plan_type: "team",
+        rate_limit: null,
+        additional_rate_limits: null,
+        credits: null,
+        spend_control: { reached: false, individual_limit: null },
+      }),
+    )
+
+    expect(item.planLabel).toBe("ChatGPT Team")
+    expect(item.windows).toEqual([])
+    expect(item.credits).toEqual([])
+    expect(item.availabilityState).toBe("unknown")
+  })
+
   test("uses reset_after_seconds as fallback and preserves overage exhaustion", () => {
     const before = Date.now()
     const item = normalize(
