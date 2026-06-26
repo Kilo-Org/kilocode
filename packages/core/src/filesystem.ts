@@ -1,5 +1,5 @@
 import { NodeFileSystem } from "@effect/platform-node"
-import { assertWrite, decorateFileSystem } from "@kilocode/sandbox" // kilocode_change
+import { decorateFileSystem, ensureDirectory } from "@kilocode/sandbox" // kilocode_change
 import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep } from "path" // kilocode_change - harden containment checks
 import { realpathSync } from "fs"
 import * as NFS from "fs/promises"
@@ -8,28 +8,6 @@ import { Context, Effect, FileSystem, Layer, Schema } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Glob } from "./util/glob"
 import { serviceUse } from "./effect/service-use"
-
-// kilocode_change start - Windows-resilient mkdir -p.
-// fs.mkdir(dir, { recursive: true }) should be idempotent, but on Windows
-// with NTFS reparse points (OneDrive), directory junctions, or WSL-served
-// paths, libuv can still throw EEXIST. This wrapper catches that specific
-// error so callers get the promised directory-exists semantics.
-//
-//   https://github.com/Kilo-Org/kilocode/issues/9618
-//   https://github.com/Kilo-Org/kilocode/issues/9755
-function isEexist(err: unknown): boolean {
-  return typeof err === "object" && err !== null && "code" in err && (err as NodeJS.ErrnoException).code === "EEXIST"
-}
-
-async function mkdirSafe(dir: string): Promise<void> {
-  try {
-    await NFS.mkdir(dir, { recursive: true })
-  } catch (err: unknown) {
-    if (isEexist(err)) return
-    throw err
-  }
-}
-// kilocode_change end
 
 export namespace AppFileSystem {
   export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()("FileSystemError", {
@@ -117,13 +95,7 @@ export namespace AppFileSystem {
       })
 
       const ensureDir = Effect.fn("FileSystem.ensureDir")(function* (path: string) {
-        // kilocode_change start - enforce the active sandbox and tolerate Windows EEXIST
-        yield* assertWrite(path)
-        yield* Effect.tryPromise({
-          try: () => mkdirSafe(path),
-          catch: (cause) => new FileSystemError({ method: "ensureDir", cause }),
-        })
-        // kilocode_change end
+        yield* ensureDirectory(fs, path) // kilocode_change - mutate through the sandbox-confined filesystem
       })
 
       const writeWithDirs = Effect.fn("FileSystem.writeWithDirs")(function* (
@@ -138,13 +110,7 @@ export namespace AppFileSystem {
             (e) => e.reason._tag === "NotFound",
             () =>
               Effect.gen(function* () {
-                // kilocode_change start - enforce the active sandbox and tolerate Windows EEXIST
-                yield* assertWrite(dirname(path))
-                yield* Effect.tryPromise({
-                  try: () => mkdirSafe(dirname(path)),
-                  catch: (cause) => new FileSystemError({ method: "writeWithDirs:mkdir", cause }),
-                })
-                // kilocode_change end
+                yield* ensureDirectory(fs, dirname(path)) // kilocode_change - sandbox-confined mkdir
                 yield* write
               }),
           ),

@@ -204,6 +204,9 @@ describe("kilocode tool registry indexing", () => {
       manager: def("agent_manager"),
       process: def("background_process"),
       image: def("generate_image"),
+      notebookRead: def("notebook_read"),
+      notebookEdit: def("notebook_edit"),
+      notebookExecute: def("notebook_execute"),
     }
 
     try {
@@ -226,6 +229,20 @@ describe("kilocode tool registry indexing", () => {
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
         ["codebase_search", "semantic_search", "recall", "background_process", "agent_manager"],
       )
+      expect(
+        KiloToolRegistry.extra(tools, {
+          experimental: { codebase_search: true, native_notebook_tools: true },
+        }).map((tool) => tool.id),
+      ).toEqual([
+        "codebase_search",
+        "semantic_search",
+        "recall",
+        "background_process",
+        "agent_manager",
+        "notebook_read",
+        "notebook_edit",
+        "notebook_execute",
+      ])
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
         "recall",
         "background_process",

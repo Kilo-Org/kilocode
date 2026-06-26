@@ -1076,6 +1076,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Ripristina solo le impostazioni specifiche dell'estensione VS Code ai valori predefiniti. Le impostazioni condivise con la CLI, come modalità e regole di approvazione automatica, sono salvate nella configurazione CLI e non verranno ripristinate.",
   "settings.aboutKiloCode.resetSettings.button": "Ripristina tutte le impostazioni",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Trasferimento impostazioni",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Esporta o importa le impostazioni per trasferirle tra istanze VS Code.",
@@ -1165,6 +1166,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.description": "Image Generation Model",
   "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
 
+  "settings.experimental.nativeNotebookTools.title": "Strumenti nativi per notebook",
+  "settings.experimental.nativeNotebookTools.description":
+    "Abilita strumenti sperimentali per leggere, modificare ed eseguire i notebook di VS Code",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
   "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
   "settings.sandboxing.title": "Sandbox",
@@ -1216,6 +1220,19 @@ export const dict = {
     "Sandbox abilitata. I comandi shell dell'agente sono limitati alle directory del progetto e di Kilo.",
   "prompt.action.sandbox.disabled":
     "Sandbox disabilitata. Fai clic per limitare le scritture dei comandi shell dell'agente alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.status.enabled": "Sandbox abilitata",
+  "prompt.action.sandbox.status.disabled": "Sandbox disabilitata",
+  "prompt.action.sandbox.filesystem": "File system",
+  "prompt.action.sandbox.network": "Rete",
+  "prompt.action.sandbox.filesystem.restricted": "Limitato",
+  "prompt.action.sandbox.network.blocked": "Bloccata",
+  "prompt.action.sandbox.network.allowed": "Consentita",
+  "prompt.action.sandbox.unrestricted": "Senza restrizioni",
+  "prompt.action.sandbox.description.enabled": "Le scritture sono limitate alle directory del progetto e di Kilo.",
+  "prompt.action.sandbox.description.disabled":
+    "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
   "settings.experimental.sandbox.title": "Sandbox",
   "settings.experimental.sandbox.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",

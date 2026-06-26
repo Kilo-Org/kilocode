@@ -565,6 +565,32 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseChatEvent - session error preserves nested named error details`() {
+            val data = globalEvent("""
+                "type": "session.error",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "error": {
+                        "name": "UnknownError",
+                        "data": {
+                            "message": "Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'",
+                            "ref": "err_123"
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("session.error", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.Error)
+            assertEquals("ses_1", result.sessionID)
+            assertEquals("UnknownError", result.error?.type)
+            assertEquals("Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'", result.error?.message)
+            assertEquals(listOf("message", "ref"), result.error?.dataKeys)
+            assertEquals("err_123", result.error?.ref)
+        }
+
+        @Test
         fun `parseChatEvent - message removed`() {
             val data = globalEvent("""
                 "type": "message.removed",

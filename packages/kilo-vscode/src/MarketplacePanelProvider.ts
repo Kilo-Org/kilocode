@@ -33,6 +33,8 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined
   private project: string | null = null
   private ready = false
+  private generation = 0
+  private refresh: ReturnType<typeof setTimeout> | undefined
   private statuses = new Map<string, SessionStatus["type"]>()
   private disposables: vscode.Disposable[] = []
   private subscriptions: Array<() => void> = []
@@ -60,6 +62,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     if (this.panel) {
       this.setProjectDirectory(project)
       this.panel.reveal(vscode.ViewColumn.One)
+      this.scheduleRefresh()
       return
     }
 
@@ -105,6 +108,10 @@ export class MarketplacePanelProvider implements vscode.Disposable {
       panel.webview.onDidReceiveMessage((msg) => void this.handle(msg as MarketplaceMessage)),
       panel.onDidDispose(() => this.cleanup()),
       watchFontSizeConfig((msg) => this.post(msg)),
+      vscode.extensions.onDidChange(() => this.scheduleRefresh()),
+      vscode.workspace.onDidCreateFiles(() => this.scheduleRefresh()),
+      vscode.workspace.onDidDeleteFiles(() => this.scheduleRefresh()),
+      vscode.workspace.onDidRenameFiles(() => this.scheduleRefresh()),
     )
     this.subscriptions.push(
       this.connection.onStateChange((state, err) => {
@@ -123,12 +130,15 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   }
 
   private cleanup(): void {
+    if (this.refresh) clearTimeout(this.refresh)
+    this.refresh = undefined
     for (const disposable of this.disposables) disposable.dispose()
     for (const unsubscribe of this.subscriptions) unsubscribe()
     this.disposables = []
     this.subscriptions = []
     this.panel = undefined
     this.ready = false
+    this.generation++
     this.statuses.clear()
   }
 
@@ -198,19 +208,32 @@ export class MarketplacePanelProvider implements vscode.Disposable {
     }
   }
 
+  private scheduleRefresh(): void {
+    if (!this.ready) return
+    if (this.refresh) clearTimeout(this.refresh)
+    this.refresh = setTimeout(() => {
+      this.refresh = undefined
+      void this.fetchData()
+    }, 250)
+  }
+
   private async fetchData(): Promise<void> {
+    const generation = ++this.generation
     try {
       const project = this.project ?? undefined
-      const data = await fetchMarketplaceData(this.marketplaceCtx, project, this.directory())
+      const data = await fetchMarketplaceData(this.marketplaceCtx, project, this.directory(), this.relevanceRoots())
+      if (generation !== this.generation) return
       const dismissed = this.context.globalState.get<boolean>("kilo.agentMigrationBannerDismissed") ?? false
       this.post({ type: "marketplaceData", ...data, showAgentMigrationBanner: !dismissed })
     } catch (err) {
+      if (generation !== this.generation) return
       const error = err instanceof Error ? err.message : String(err)
       console.warn("[Kilo New] Marketplace data fetch failed:", err)
       this.post({
         type: "marketplaceData",
         marketplaceItems: [],
         marketplaceInstalledMetadata: { project: {}, global: {} },
+        marketplaceRelevance: {},
         errors: [error],
       })
     }
@@ -247,6 +270,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
 
   private setProjectDirectory(project: string | null): void {
     if (this.project === project) return
+    this.generation++
     this.project = project
     this.post({ type: "workspaceDirectoryChanged", directory: project ?? "" })
   }
@@ -262,6 +286,12 @@ export class MarketplacePanelProvider implements vscode.Disposable {
 
   private directory(): string {
     return this.project ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir()
+  }
+
+  private relevanceRoots(): vscode.Uri[] {
+    if (!this.project) return vscode.workspace.workspaceFolders?.map((folder) => folder.uri) ?? []
+    const folder = vscode.workspace.workspaceFolders?.find((item) => item.uri.fsPath === this.project)
+    return [folder?.uri ?? vscode.Uri.file(this.project)]
   }
 
   private openExternal(raw: unknown): void {

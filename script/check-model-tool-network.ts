@@ -112,14 +112,14 @@ const structure = [
   ...(!registry.includes("ToolNetwork.builtin(result)")
     ? ["  tool/registry.ts must distinguish built-in tools from untrusted custom tools"]
     : []),
-  ...(!session.includes("SandboxPolicy.executeTool(item,")
-    ? ["  session/tools.ts must route built-in and custom tools through executeTool"]
+  ...(!/SandboxPolicy\.executeTool\(\s*ctx\.sessionID,\s*item,/.test(session)
+    ? ["  session/tools.ts must route built-in and custom tools through session-aware executeTool"]
     : []),
   ...(!mcp.includes("SandboxNetwork.remote(tool)")
     ? ["  mcp/index.ts must classify remote MCP delegated authority"]
     : []),
-  ...(!session.includes("SandboxPolicy.executeMcp(")
-    ? ["  session/tools.ts must route MCP delegated authority through executeMcp"]
+  ...(!/SandboxPolicy\.executeMcp\(\s*ctx\.sessionID,\s*item,/.test(session)
+    ? ["  session/tools.ts must route MCP delegated authority through session-aware executeMcp"]
     : []),
 ]
 

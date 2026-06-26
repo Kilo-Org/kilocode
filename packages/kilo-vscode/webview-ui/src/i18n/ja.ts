@@ -290,6 +290,19 @@ export const dict = {
     "サンドボックスが有効です。エージェントのシェルコマンドは、プロジェクトおよびKiloディレクトリに制限されています。",
   "prompt.action.sandbox.disabled":
     "サンドボックスが無効です。クリックしてエージェントのシェルコマンドの書き込みをプロジェクトおよびKiloディレクトリに制限します。",
+  "prompt.action.sandbox.status.enabled": "サンドボックス有効",
+  "prompt.action.sandbox.status.disabled": "サンドボックス無効",
+  "prompt.action.sandbox.filesystem": "ファイルシステム",
+  "prompt.action.sandbox.network": "ネットワーク",
+  "prompt.action.sandbox.filesystem.restricted": "制限あり",
+  "prompt.action.sandbox.network.blocked": "ブロック",
+  "prompt.action.sandbox.network.allowed": "許可",
+  "prompt.action.sandbox.unrestricted": "制限なし",
+  "prompt.action.sandbox.description.enabled": "書き込みはプロジェクトおよびKiloディレクトリ内に制限されます。",
+  "prompt.action.sandbox.description.disabled":
+    "クリックすると、ファイルシステムへの書き込みとネットワークアクセスを制限します。",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
@@ -1229,6 +1242,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "これはVS Code拡張機能固有の設定のみをデフォルト値にリセットします。モードや自動承認ルールなど、CLIと共有される設定はCLI設定ファイルに保存されており、リセットされません。",
   "settings.aboutKiloCode.resetSettings.button": "すべての設定をリセット",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "設定の移行",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code インスタンス間で設定を転送するには、エクスポートまたはインポートしてください。",
@@ -1326,6 +1340,9 @@ export const dict = {
     "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインしてください。現在、Speech to Text は Kilo Gateway でのみサポートされています。",
   "settings.models.speechToTextModel.title": "音声認識モデル",
   "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
+  "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
+  "settings.experimental.nativeNotebookTools.description":
+    "VS Codeノートブックの読み取り、編集、実行を行う実験的なツールを有効にします",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.sandboxing.title": "サンドボックス化",

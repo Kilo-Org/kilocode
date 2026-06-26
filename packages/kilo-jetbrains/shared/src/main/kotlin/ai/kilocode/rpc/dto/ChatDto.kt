@@ -41,6 +41,8 @@ data class MessageErrorDto(
     val message: String? = null,
     val statusCode: Int? = null,
     val responseBody: String? = null,
+    val dataKeys: List<String> = emptyList(),
+    val ref: String? = null,
 )
 
 @Serializable

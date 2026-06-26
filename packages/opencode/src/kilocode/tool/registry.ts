@@ -4,9 +4,11 @@ import { RecallTool } from "../../tool/recall"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { GenerateImageTool } from "./generate-image"
+import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
+import { Notebook } from "@/kilocode/notebook/service"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "@/agent/agent"
 import * as Truncate from "@/tool/truncate"
@@ -32,21 +34,36 @@ export namespace KiloToolRegistry {
 
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
-  export function infos() {
+  export function infos(notebook?: Notebook.Interface) {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
       const image = yield* GenerateImageTool
-      return { codebase, recall, manager, process, image }
+      if (!notebook) return { codebase, recall, manager, process, image }
+      const tools = yield* Effect.all({
+        notebookRead: NotebookReadTool,
+        notebookEdit: NotebookEditTool,
+        notebookExecute: NotebookExecuteTool,
+      }).pipe(Effect.provideService(Notebook.Service, notebook))
+      return { codebase, recall, manager, process, image, ...tools }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
   export function build(
-    tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info; process: Tool.Info; image: Tool.Info },
+    tools: {
+      codebase: Tool.Info
+      recall: Tool.Info
+      manager: Tool.Info
+      process: Tool.Info
+      image: Tool.Info
+      notebookRead?: Tool.Info
+      notebookEdit?: Tool.Info
+      notebookExecute?: Tool.Info
+    },
     deps: Deps,
     loaders: Loaders = {},
   ) {
@@ -58,8 +75,16 @@ export namespace KiloToolRegistry {
         process: Tool.init(tools.process),
         image: Tool.init(tools.image),
       })
+      const notebooks =
+        tools.notebookRead && tools.notebookEdit && tools.notebookExecute
+          ? yield* Effect.all({
+              notebookRead: Tool.init(tools.notebookRead),
+              notebookEdit: Tool.init(tools.notebookEdit),
+              notebookExecute: Tool.init(tools.notebookExecute),
+            })
+          : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, semantic }
+      return { ...base, ...notebooks, semantic }
     })
   }
 
@@ -109,8 +134,11 @@ export namespace KiloToolRegistry {
       manager: Tool.Def
       process: Tool.Def
       image: Tool.Def
+      notebookRead?: Tool.Def
+      notebookEdit?: Tool.Def
+      notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean } },
+    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean; native_notebook_tools?: boolean } },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
@@ -119,6 +147,13 @@ export namespace KiloToolRegistry {
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "vscode" &&
+      cfg.experimental?.native_notebook_tools === true &&
+      tools.notebookRead &&
+      tools.notebookEdit &&
+      tools.notebookExecute
+        ? [tools.notebookRead, tools.notebookEdit, tools.notebookExecute]
+        : []),
     ]
   }
 

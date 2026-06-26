@@ -42,6 +42,27 @@ export const dict = {
   "marketplace.install.scope": "Bereich",
   "marketplace.install.scope.project": "Projekt",
   "marketplace.install.scope.global": "Global",
+  "marketplace.install.scope.project.description":
+    "Nur dieses Projekt. Die installierten Dateien können versioniert und mit Ihrem Team geteilt werden.",
+  "marketplace.install.scope.global.description":
+    "Alle Projekte auf diesem Computer. Wird in Ihrer Benutzerkonfiguration gespeichert.",
+  "marketplace.install.destination": "Installationsziel",
+  "marketplace.install.about.mcp":
+    "Ein MCP-Server stellt Kilo zusätzliche Werkzeuge für die Arbeit mit externen Diensten oder lokalen Programmen bereit.",
+  "marketplace.install.about.agent":
+    "Ein Agent fügt eine wiederverwendbare Rolle mit eigenen Anweisungen und Berechtigungen hinzu.",
+  "marketplace.install.about.skill":
+    "Ein Skill fügt aufgabenspezifische Anweisungen und Ressourcen hinzu, die Kilo bei Bedarf laden kann.",
+  "marketplace.install.mcp.warning":
+    "MCP-Server können lokale Befehle ausführen oder eine Verbindung zu externen Diensten herstellen. Kilo fragt vor der Verwendung ihrer Werkzeuge um Erlaubnis, sofern Ihre Berechtigungen dies nicht automatisch erlauben.",
+  "marketplace.install.project.warning":
+    "Projektdateien können in die Versionsverwaltung aufgenommen werden. Speichern Sie hier keine Geheimnisse, es sei denn, die Konfiguration verweist auf eine Umgebungsvariable.",
+  "marketplace.install.learnMore": "Erfahren Sie, wie Installationen aus dem Marketplace funktionieren",
+  "marketplace.install.learnMcp": "Mehr über MCP erfahren",
+  "marketplace.install.installedAt": "Installiert unter {{path}}",
+  "marketplace.intro":
+    "Installieren Sie wiederverwendbare Agenten, Skills und MCP-Werkzeuge für ein Projekt oder für alle Projekte.",
+  "marketplace.intro.learnMore": "Über den Marketplace",
   "marketplace.install.prerequisites": "Voraussetzungen",
   "marketplace.install.installing": "Wird installiert...",
   "marketplace.install.cancel": "Abbrechen",
@@ -59,7 +80,9 @@ export const dict = {
   "marketplace.search": "Suchen...",
   "marketplace.filter.all": "Alle Elemente",
   "marketplace.filter.notInstalled": "Nicht installiert",
+  "marketplace.filter.relevant": "Relevant für meinen Arbeitsbereich",
   "marketplace.empty": "Keine Elemente gefunden",
+  "marketplace.empty.relevant": "Keine relevanten Marketplace-Elemente für diesen Arbeitsbereich gefunden.",
   "marketplace.badge.mcpServer": "MCP-Server",
   "marketplace.badge.mode": "Modus",
   "marketplace.card.by": "von {{author}}",

@@ -1,4 +1,5 @@
 import { describe, it, expect, spyOn } from "bun:test"
+import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -61,20 +62,31 @@ function createClient(options?: {
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
   abortFailures?: string[]
+  createDeferred?: Deferred<{ data: unknown }>
+  sandboxDeferred?: Deferred<{ data: unknown }>
+  sandboxStarted?: Deferred<void>
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
   const aborted: { sessionID: string; directory?: string }[] = []
   const prompted: Array<Record<string, unknown>> = []
   const reverted: Array<Record<string, unknown>> = []
+  const created: Array<Record<string, unknown>> = []
+  const sandboxed: Array<Record<string, unknown>> = []
   return {
     calls,
     stopped,
     aborted,
     prompted,
     reverted,
+    created,
+    sandboxed,
     session: {
       list: async () => ({ data: [] }),
+      create: async (params: Record<string, unknown>) => {
+        created.push(params)
+        return options?.createDeferred?.promise ?? { data: mkSession() }
+      },
       get: async (params: { sessionID: string; directory?: string }) => {
         if (options?.sessionGet) return options.sessionGet(params)
         return { data: options?.sessionData ?? null }
@@ -102,6 +114,17 @@ function createClient(options?: {
       delete: async () => {
         if (options?.deleteDeferred) return options.deleteDeferred.promise
         return { data: {} }
+      },
+    },
+    sandbox: {
+      toggle: async (params: Record<string, unknown>) => {
+        sandboxed.push(params)
+        options?.sandboxStarted?.resolve(undefined)
+        return (
+          options?.sandboxDeferred?.promise ?? {
+            data: { directory: "/repo", enabled: true, available: true, version: 1 },
+          }
+        )
       },
     },
     backgroundProcess: {
@@ -163,7 +186,8 @@ type ProviderInternals = {
   handleEvent: (event: unknown, directory?: string) => void
   handleAbort: (sid?: string) => Promise<void>
   handleRevertSession: (sid: string, messageID: string) => Promise<void>
-  handleSendMessage: (text: string, messageID?: string, sessionID?: string) => Promise<void>
+  handleSendMessage: (text: string, messageID?: string, sessionID?: string, draftID?: string) => Promise<void>
+  handleToggleSandbox: (input: { sessionID?: string; draftID?: string; requestID: string }) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -243,6 +267,167 @@ describe("KiloProvider.handleAbort", () => {
     expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "busy" })
     expect(error).toHaveBeenCalledTimes(1)
     error.mockRestore()
+  })
+})
+
+describe("KiloProvider sandbox status", () => {
+  it("ignores events from another directory for the same session", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    internal.sessionDirectories.set("s1", "/repo")
+    internal.trackedSessionIds.add("s1")
+
+    internal.handleEvent({
+      type: "sandbox.status.changed",
+      properties: { sessionID: "s1", directory: "/other", enabled: true, available: true, version: 1 },
+    })
+    expect(sent.some((message) => (message as { type?: string }).type === "sandboxStatus")).toBe(false)
+
+    internal.handleEvent({
+      type: "sandbox.status.changed",
+      properties: { sessionID: "s1", directory: "/repo", enabled: true, available: true, version: 1 },
+    })
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sandboxStatus", sessionID: "s1", directory: "/repo" }))
+  })
+})
+
+describe("KiloProvider sandbox toggle", () => {
+  it("creates a session before toggling from the empty composer", async () => {
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+
+    await internal.handleToggleSandbox({ draftID: "draft-1", requestID: "sandbox-1" })
+
+    expect(client.created).toEqual([expect.objectContaining({ directory: "/repo" })])
+    expect(client.sandboxed).toEqual([{ sessionID: "s1", directory: "/repo" }])
+    expect(sent.findIndex((message) => (message as { type?: string }).type === "sessionCreated")).toBeLessThan(
+      sent.findIndex((message) => (message as { type?: string }).type === "sandboxStatus"),
+    )
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "sandboxStatus",
+        sessionID: "s1",
+        requestID: "sandbox-1",
+        enabled: true,
+      }),
+    )
+    expect(notice).toHaveBeenCalledTimes(1)
+    expect(notice).toHaveBeenCalledWith("Sandbox enabled")
+    notice.mockRestore()
+  })
+
+  it("reports the disabled state in a native notification", async () => {
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+    const sandbox = defer<{ data: unknown }>()
+    const client = createClient({ sandboxDeferred: sandbox })
+    const { internal } = makeProvider(client)
+    internal.currentSession = mkSession()
+
+    const toggle = internal.handleToggleSandbox({ sessionID: "s1", requestID: "sandbox-1" })
+    sandbox.resolve({ data: { directory: "/repo", enabled: false, available: true, version: 2 } })
+    await toggle
+
+    expect(notice).toHaveBeenCalledTimes(1)
+    expect(notice).toHaveBeenCalledWith("Sandbox disabled")
+    notice.mockRestore()
+  })
+
+  it("shares session creation and finishes the toggle before a prompt", async () => {
+    const create = defer<{ data: unknown }>()
+    const sandbox = defer<{ data: unknown }>()
+    const started = defer<void>()
+    const client = createClient({ createDeferred: create, sandboxDeferred: sandbox, sandboxStarted: started })
+    const { internal } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    const toggle = internal.handleToggleSandbox({ draftID: "draft-1", requestID: "sandbox-1" })
+    await Promise.resolve()
+    const send = internal.handleSendMessage("hello", "message-1", undefined, "draft-1")
+    await Promise.resolve()
+
+    expect(client.created).toHaveLength(1)
+    expect(client.prompted).toHaveLength(0)
+
+    create.resolve({ data: mkSession() })
+    await started.promise
+    expect(client.sandboxed).toHaveLength(1)
+    expect(client.prompted).toHaveLength(0)
+
+    sandbox.resolve({ data: { directory: "/repo", enabled: true, available: true, version: 1 } })
+    await Promise.all([toggle, send])
+    expect(client.created).toHaveLength(1)
+    expect(client.prompted).toHaveLength(1)
+  })
+
+  it("does not send a queued prompt when the sandbox toggle fails", async () => {
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+    const sandbox = defer<{ data: unknown }>()
+    const started = defer<void>()
+    const client = createClient({ sandboxDeferred: sandbox, sandboxStarted: started })
+    const { internal, sent } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    const toggle = internal.handleToggleSandbox({ draftID: "draft-1", requestID: "sandbox-1" })
+    await started.promise
+    const send = internal.handleSendMessage("hello", "message-1", undefined, "draft-1")
+    sandbox.reject(new Error("toggle failed"))
+    await Promise.all([toggle, send])
+
+    expect(client.prompted).toHaveLength(0)
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sandboxStatusError", requestID: "sandbox-1" }))
+    expect(sent).toContainEqual(
+      expect.objectContaining({ type: "sendMessageFailed", sessionID: "s1", messageID: "message-1" }),
+    )
+    expect(notice).not.toHaveBeenCalled()
+    notice.mockRestore()
+    log.mockRestore()
+  })
+
+  it("does not send a queued prompt when the sandbox backend is unavailable", async () => {
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+    const sandbox = defer<{ data: unknown }>()
+    const started = defer<void>()
+    const client = createClient({ sandboxDeferred: sandbox, sandboxStarted: started })
+    const { internal, sent } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    const toggle = internal.handleToggleSandbox({ draftID: "draft-1", requestID: "sandbox-1" })
+    await started.promise
+    const send = internal.handleSendMessage("hello", "message-1", undefined, "draft-1")
+    sandbox.resolve({
+      data: { directory: "/repo", enabled: false, available: false, reason: "unsupported", version: 0 },
+    })
+    await Promise.all([toggle, send])
+
+    expect(client.prompted).toHaveLength(0)
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sandboxStatusError", message: "unsupported" }))
+    expect(sent).toContainEqual(
+      expect.objectContaining({ type: "sendMessageFailed", sessionID: "s1", messageID: "message-1" }),
+    )
+    expect(notice).not.toHaveBeenCalled()
+    notice.mockRestore()
+    log.mockRestore()
+  })
+
+  it("keeps prompts queued after the draft is promoted", async () => {
+    const sandbox = defer<{ data: unknown }>()
+    const started = defer<void>()
+    const client = createClient({ sandboxDeferred: sandbox, sandboxStarted: started })
+    const { internal } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    const toggle = internal.handleToggleSandbox({ draftID: "draft-1", requestID: "sandbox-1" })
+    await started.promise
+    const send = internal.handleSendMessage("hello", "message-1", "s1", "draft-1")
+    await Promise.resolve()
+    expect(client.prompted).toHaveLength(0)
+
+    sandbox.resolve({ data: { directory: "/repo", enabled: true, available: true, version: 1 } })
+    await Promise.all([toggle, send])
+    expect(client.prompted).toHaveLength(1)
   })
 })
 

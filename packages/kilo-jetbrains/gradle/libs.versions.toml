@@ -1,6 +1,6 @@
 [versions]
 intellij-platform = "2026.1"
-intellij-gradle-plugin = "2.16.0"
+intellij-gradle-plugin = "2.16.1-20260623.221413-11"
 intellij-rpc-plugin = "2.3.20-RC2-0.1"
 kotlin-jvm-plugin = "2.3.20"
 kotlin-serialization-plugin = "2.3.20"
