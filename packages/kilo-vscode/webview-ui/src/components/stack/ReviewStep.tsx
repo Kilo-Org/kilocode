@@ -18,8 +18,10 @@ function group(status: StackPlanStatus): Group {
 function ActionCard(props: { action: StackPlanAction }) {
   const stack = useStack()
   const language = useLanguage()
-  const resource = () =>
-    stack.data()?.catalog.resources.find((summary) => summary.resource.ref === props.action.resource)?.resource
+  const summary = () =>
+    stack.data()?.catalog.resources.find((item) => item.resource.ref === props.action.resource)
+  const resource = () => summary()?.resource
+  const description = () => summary()?.item?.description
   const tone = () => {
     const current = group(props.action.action)
     if (current === "blocked") return "error" as const
@@ -50,13 +52,14 @@ function ActionCard(props: { action: StackPlanAction }) {
           <Show when={resource()?.maturity}>{(maturity) => <Tag>{maturity()}</Tag>}</Show>
         </div>
       </div>
-      <CardDescription>{props.action.reason}</CardDescription>
+      <Show when={description()}>
+        {(item) => <CardDescription>{item()}</CardDescription>}
+      </Show>
       <Show when={technologies().length > 0}>
         <p class="stack-action-tech">
           {language.t("stack.review.usedBy", { technologies: technologies().join(", ") })}
         </p>
       </Show>
-      <For each={props.action.warnings}>{(item) => <p class="stack-warning-line">{item}</p>}</For>
       <Show when={resource()?.kind === "mcp" && props.action.action === "install"}>
         <p class="stack-auth-line">{language.t("stack.resource.mcpFollowUp")}</p>
       </Show>
@@ -102,13 +105,6 @@ export function ReviewStep() {
         </h2>
         <p>{language.t("stack.review.description")}</p>
       </div>
-      <Card class="stack-draft-review">
-        <CardTitle icon="checklist">{language.t("stack.review.draft")}</CardTitle>
-        <CardDescription>{language.t("stack.review.draftDescription")}</CardDescription>
-        <pre tabIndex={0}>
-          <code>{JSON.stringify(stack.plan()?.draft ?? {}, null, 2)}</code>
-        </pre>
-      </Card>
       <Show when={stack.stale()}>
         <Card variant="warning" class="stack-stale" role="alert">
           <CardTitle variant="warning">{language.t("stack.stale.title")}</CardTitle>

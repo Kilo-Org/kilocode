@@ -168,11 +168,6 @@
         "icon": "$(extensions)"
       },
       {
-        "command": "kilo-code.new.sidebarTitle.stackBuilderOpen",
-        "title": "Project Stack",
-        "icon": "$(layers)"
-      },
-      {
         "command": "kilo-code.new.sidebarTitle.historyButtonClicked",
         "title": "History",
         "icon": "$(history)"
@@ -468,10 +463,6 @@
           "when": "false"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.stackBuilderOpen",
-          "when": "false"
-        },
-        {
           "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
           "when": "false"
         },
@@ -507,18 +498,13 @@
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.stackBuilderOpen",
+          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
           "group": "navigation@5",
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.sidebarTitle.profileButtonClicked",
-          "group": "navigation@6",
-          "when": "view == kilo-code.SidebarProvider"
-        },
-        {
           "command": "kilo-code.new.sidebarTitle.settingsButtonClicked",
-          "group": "navigation@7",
+          "group": "navigation@6",
           "when": "view == kilo-code.SidebarProvider"
         }
       ],
@@ -948,6 +934,11 @@
           "type": "boolean",
           "default": false,
           "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
+        },
+        "kilo-code.new.experimental.projectStack": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a Project Stack icon in the chat prompt area that summarizes your configured technologies, MCP servers, and skills."
         },
         "kilo-code.new.extraCaCerts": {
           "type": "string",

@@ -496,6 +496,35 @@ describe("Stack wizard state", () => {
     expect(pruneStackResources(catalog, completed, deselected).resources).toEqual({})
   })
 
+  test("preserves resource and parameter identities while editing resource settings", () => {
+    const root = wizard({
+      preview: async (_target, input) => preview(input),
+      apply: async (_target, input) => applied(input),
+    })
+    load(root.state)
+    const groups = root.state.resources()
+    const group = groups[0]
+    const item = group.mcps[0]
+
+    root.state.enable(item, true)
+    expect(root.state.resources()).toBe(groups)
+    expect(root.state.resources()[0]).toBe(group)
+    expect(root.state.resources()[0].mcps[0]).toBe(item)
+
+    root.state.method(item, "local-uvx")
+    const parameters = stackResourceParameters(root.state.draft(), item)
+    expect(root.state.resources()).toBe(groups)
+
+    root.state.parameter(item, parameters[0], ".")
+    expect(root.state.resources()).toBe(groups)
+    expect(stackResourceParameters(root.state.draft(), item)).toBe(parameters)
+    expect(stackResourceParameters(root.state.draft(), item)[0]).toBe(parameters[0])
+
+    root.state.toggle("snowflake")
+    expect(root.state.resources()).not.toBe(groups)
+    root.dispose()
+  })
+
   test("clears old parameters when the Marketplace method changes", () => {
     const item = stackResourceGroups(catalog, draft())[0].mcps[0]
     const enabled = setStackResource(draft(), item, true)

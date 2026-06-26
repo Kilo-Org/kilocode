@@ -149,7 +149,7 @@ export const dict = {
   "stack.resources.kicker": "Resource configuration",
   "stack.resources.title": "Choose Skills and MCP servers",
   "stack.resources.description":
-    "Review curated defaults, select optional resources, and set only non-sensitive parameters. MCP servers are installed disabled until you authenticate and enable them.",
+    "Review curated defaults, select optional resources, and set only non-sensitive parameters. Selected MCP servers are enabled automatically after installation.",
   "stack.resources.emptyTitle": "No technologies selected",
   "stack.resources.emptyDescription":
     "Continue to review if you want to remove unchanged resources previously managed by Stack Builder.",
@@ -183,7 +183,7 @@ export const dict = {
   "stack.resource.platform.linux": "Linux",
   "stack.resource.platform.win32": "Windows",
   "stack.resource.mcpFollowUp":
-    "MCP entries are installed disabled. Authenticate and enable them later in MCP settings.",
+    "Selected MCP entries are enabled automatically. Complete any required authentication after installation.",
   "stack.resource.source": "View source",
   "stack.validation.title": "Required resource settings",
   "stack.validation.description":

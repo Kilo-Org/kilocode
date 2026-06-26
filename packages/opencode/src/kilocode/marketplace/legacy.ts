@@ -4,7 +4,7 @@ import { parse as parseYaml } from "yaml"
 import { MarketplaceManifestError } from "./errors"
 import { decodeManifest } from "./manifest"
 import { validateMcpMethod } from "./mcp"
-import { Manifest, type Item, type McpItem, type McpMethod } from "./schema"
+import { Manifest, type Item, McpItem, McpMethod, SkillItem } from "./schema"
 
 const decoder = new TextDecoder("utf-8", { fatal: true })
 const placeholder = /\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}/g
@@ -329,6 +329,51 @@ function quarantine(item: McpItem): Effect.Effect<McpItem> {
   })
 }
 
+// Strip structurally-invalid MCP methods from a raw item so a single malformed
+// method (for example an environment name with a hyphen, or an empty env value)
+// cannot fail the strict manifest decode. Mirrors the post-decode quarantine,
+// but runs before the manifest is validated so one bad resource never forces a
+// stale-cache fallback for the entire Marketplace.
+function sanitizeMcp(item: Record<string, unknown>): Record<string, unknown> {
+  const methods = Array.isArray(item.methods) ? item.methods.filter(record) : []
+  const kept: unknown[] = []
+  for (const method of methods) {
+    try {
+      Schema.decodeUnknownSync(McpMethod)(method, { onExcessProperty: "error" })
+      kept.push(method)
+    } catch {
+      // drop a method whose template or parameter shape fails the schema
+    }
+  }
+  if (kept.length === methods.length) return item
+  return {
+    ...item,
+    methods: kept,
+    installability: kept.length
+      ? { installable: true }
+      : { installable: false, reason: "Marketplace MCP has no supported installation methods." },
+  }
+}
+
+// Decode each raw item against its own schema and keep only the ones that pass
+// (MCPs first have invalid methods stripped), so the manifest decode always
+// receives a clean item array instead of failing on the first malformed entry.
+function sanitize(items: ReadonlyArray<unknown>): ReadonlyArray<Record<string, unknown>> {
+  const out: Record<string, unknown>[] = []
+  for (const entry of items) {
+    if (!record(entry)) continue
+    const candidate = entry.kind === "mcp" ? sanitizeMcp(entry) : entry
+    const schema = candidate.kind === "mcp" ? McpItem : SkillItem
+    try {
+      Schema.decodeUnknownSync(schema)(candidate, { onExcessProperty: "error" })
+      out.push(candidate)
+    } catch {
+      // drop an item that still fails its schema after method stripping
+    }
+  }
+  return out
+}
+
 export namespace LegacyMarketplace {
   export const releases = Effect.fn("Marketplace.Legacy.releases")(function* (bytes: Uint8Array) {
     return yield* Effect.try({
@@ -369,8 +414,9 @@ export namespace LegacyMarketplace {
       catch: (error) =>
         error instanceof MarketplaceManifestError ? error : new MarketplaceManifestError({ reason: "invalid_schema" }),
     })
+    const safe = sanitize(raw)
     const manifest = yield* Schema.decodeUnknownEffect(Manifest)(
-      { version: 1, revision: fingerprint(raw), items: raw },
+      { version: 1, revision: fingerprint(safe), items: safe },
       { onExcessProperty: "error" },
     ).pipe(Effect.mapError(() => new MarketplaceManifestError({ reason: "invalid_schema" })))
     const items: Item[] = []

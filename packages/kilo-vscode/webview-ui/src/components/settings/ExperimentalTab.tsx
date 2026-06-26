@@ -21,7 +21,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, updateConfig, features } = useConfig()
   const language = useLanguage()
   const vscode = useVSCode()
   const [active, setActive] = createSignal(false)
@@ -151,6 +151,19 @@ const ExperimentalTab: Component = () => {
             hideLabel
           >
             {language.t("settings.experimental.codebaseSearch.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.projectStack.title")}
+          description={language.t("settings.experimental.projectStack.description")}
+        >
+          <Switch
+            checked={features().project_stack}
+            onChange={(checked) => vscode.postMessage({ type: "setProjectStackFeature", enabled: checked })}
+            hideLabel
+          >
+            {language.t("settings.experimental.projectStack.title")}
           </Switch>
         </SettingsRow>
 

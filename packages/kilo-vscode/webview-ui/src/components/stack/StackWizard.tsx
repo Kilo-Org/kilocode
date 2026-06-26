@@ -16,14 +16,22 @@ import { VerticalStep } from "./VerticalStep"
 function Rail() {
   const stack = useStack()
   const language = useLanguage()
+  const done = () => stack.step() === "result"
 
   return (
     <aside class="stack-rail" aria-label={language.t("stack.navigation.label")}>
       <div class="stack-rail-section">
         <span class="stack-rail-index">01</span>
-        <span class="stack-rail-label" data-active={stack.step() === "vertical" || undefined}>
+        <button
+          class="stack-rail-label"
+          data-active={stack.step() === "vertical" || undefined}
+          type="button"
+          aria-current={stack.step() === "vertical" ? "step" : undefined}
+          onClick={() => stack.goVertical()}
+          disabled={done() || !stack.editable()}
+        >
           {language.t("stack.navigation.vertical")}
-        </span>
+        </button>
       </div>
       <div class="stack-rail-section stack-category-nav">
         <div class="stack-rail-heading">
@@ -59,17 +67,31 @@ function Rail() {
       </div>
       <div class="stack-rail-section">
         <span class="stack-rail-index">03</span>
-        <span class="stack-rail-label" data-active={stack.step() === "resources" || undefined}>
+        <button
+          class="stack-rail-label"
+          data-active={stack.step() === "resources" || undefined}
+          type="button"
+          aria-current={stack.step() === "resources" ? "step" : undefined}
+          onClick={() => stack.goResources()}
+          disabled={done() || !stack.editable()}
+        >
           {language.t("stack.navigation.resources")}
-        </span>
+        </button>
       </div>
       <div class="stack-rail-section">
         <span class="stack-rail-index">04</span>
-        <span class="stack-rail-label" data-active={stack.step() === "review" || undefined}>
+        <button
+          class="stack-rail-label"
+          data-active={stack.step() === "review" || undefined}
+          type="button"
+          aria-current={stack.step() === "review" ? "step" : undefined}
+          onClick={() => stack.preview()}
+          disabled={done() || !stack.editable()}
+        >
           {language.t("stack.navigation.review")}
-        </span>
+        </button>
       </div>
-      <Show when={stack.step() === "result"}>
+      <Show when={done()}>
         <div class="stack-rail-section">
           <span class="stack-rail-index">05</span>
           <span class="stack-rail-label" data-active>
@@ -87,7 +109,7 @@ function Footer() {
   const busy = () => !!stack.busy()
 
   return (
-    <footer class="stack-footer" aria-busy={busy()}>
+    <footer class="stack-footer" data-step={stack.step()} aria-busy={busy()}>
       <Button variant="ghost" onClick={stack.cancel} disabled={busy()}>
         {language.t(stack.step() === "result" ? "stack.action.close" : "stack.action.cancel")}
       </Button>

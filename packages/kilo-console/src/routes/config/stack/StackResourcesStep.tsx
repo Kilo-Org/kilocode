@@ -129,7 +129,6 @@ function ResourceCard(props: { state: StackWizard; item: StackResourceItem }) {
   const selected = () => stackSelectedMethod(props.state.draft(), props.item)
   const parameters = () => stackResourceParameters(props.state.draft(), props.item)
   const error = () => props.state.issues().find((item) => item.resource === props.item.resource.ref && !item.parameter)
-  const warnings = () => [...new Set([...props.item.resource.warnings, ...props.item.association.warnings])]
 
   return (
     <Card class="stack-resource-card" classList={{ selected: enabled() }} padding={0}>
@@ -137,10 +136,10 @@ function ResourceCard(props: { state: StackWizard; item: StackResourceItem }) {
         <Checkbox
           checked={enabled()}
           onChange={(checked) => props.state.enable(props.item, checked)}
-          description={props.item.association.rationale}
           disabled={(!available() && !enabled()) || props.state.busy() === "apply"}
         >
-          {props.item.resource.name}
+          <span>{props.item.resource.name}</span>
+          <code class="stack-resource-id">{props.item.resource.id}</code>
         </Checkbox>
         <div class="stack-resource-tags">
           <ConfigTag tone={props.item.availability === "available" ? "success" : "warning"}>
@@ -151,8 +150,9 @@ function ResourceCard(props: { state: StackWizard; item: StackResourceItem }) {
         </div>
       </div>
 
-      <p class="stack-resource-rationale">Recommended because {props.item.association.rationale}</p>
-      <Show when={props.item.reason}>{(reason) => <p class="stack-resource-rationale">{reason()}</p>}</Show>
+      <Show when={props.item.item?.description}>
+        {(description) => <p class="stack-resource-description">{description()}</p>}
+      </Show>
 
       <Show when={enabled() && props.item.resource.kind === "mcp"}>
         <div class="stack-mcp-config">
@@ -224,15 +224,9 @@ function ResourceCard(props: { state: StackWizard; item: StackResourceItem }) {
             </div>
           </Show>
           <p class="stack-mcp-note">
-            MCP entries are installed disabled. Authenticate and enable them later in MCP settings.
+            Selected MCP entries are enabled automatically. Complete any required authentication after installation.
           </p>
         </div>
-      </Show>
-
-      <Show when={warnings().length}>
-        <ul class="stack-resource-warnings">
-          <For each={warnings()}>{(item) => <li>{item}</li>}</For>
-        </ul>
       </Show>
 
       <a class="stack-source" href={props.item.association.source} target="_blank" rel="noreferrer">

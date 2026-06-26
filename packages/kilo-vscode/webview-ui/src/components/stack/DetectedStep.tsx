@@ -1,9 +1,9 @@
 import { For, Show, createMemo } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
-import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { useLanguage } from "../../context/language"
 import { useStack } from "../../context/stack"
+import { TechnologyIcon } from "./TechnologyIcon"
 
 export function DetectedStep() {
   const stack = useStack()
@@ -59,21 +59,34 @@ export function DetectedStep() {
               <h3 class="stack-subcategory-title">{group.name}</h3>
               <div class="stack-technology-grid" role="group" aria-label={group.name}>
                 <For each={group.items}>
-                  {(item) => (
-                    <Card
-                      class="stack-technology-card"
-                      data-active={selected().has(item.technology) || undefined}
-                    >
-                      <Checkbox
-                        checked={selected().has(item.technology)}
-                        onChange={(checked) => stack.toggleDetection(group.vertical, item.technology, checked)}
-                        description={item.evidence}
-                        disabled={!stack.editable()}
+                  {(item) => {
+                    const checked = () => selected().has(item.technology)
+                    const toggle = () => stack.toggleDetection(group.vertical, item.technology, !checked())
+                    return (
+                      <Card
+                        class="stack-technology-card"
+                        data-active={checked() || undefined}
+                        role="checkbox"
+                        aria-checked={checked()}
+                        tabIndex={stack.editable() ? 0 : undefined}
+                        onClick={() => stack.editable() && toggle()}
+                        onKeyDown={(e) => {
+                          if (!stack.editable()) return
+                          if (e.key === " " || e.key === "Enter") {
+                            e.preventDefault()
+                            toggle()
+                          }
+                        }}
                       >
-                        {names().get(item.technology) ?? item.technology}
-                      </Checkbox>
-                    </Card>
-                  )}
+                        <TechnologyIcon id={item.technology} />
+                        <span class="stack-technology-copy">
+                          <strong>{names().get(item.technology) ?? item.technology}</strong>
+                          <small>{item.evidence}</small>
+                        </span>
+                        <span class="stack-check" aria-hidden="true" />
+                      </Card>
+                    )
+                  }}
                 </For>
               </div>
             </div>

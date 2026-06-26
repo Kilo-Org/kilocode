@@ -81,13 +81,9 @@
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://docs.inceptionlabs.ai/capabilities/next-edit>
   <!-- packages/opencode/src/kilocode/server/httpapi/groups/kilo-gateway.ts -->
-- <https://docs.maia.ai/docs/api-reference/mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://docs.mistral.ai/studio-api/conversations/reasoning>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://docs.oracle.com/en-us/iaas/database-tools/doc/working-database-tools-mcp-server.html>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://docs.oracle.com/en/database/oracle/sql-developer-command-line/26.1/sqcug/using-oracle-sqlcl-mcp-server.html>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
@@ -99,8 +95,6 @@
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
-- <https://github.com/aaearon/mcp-privilege-cloud>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/Action-Co/skills/blob/main/skills/tableau/query-tableau-data/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/addxai/enterprise-harness-engineering/blob/main/skills/prometheus/SKILL.md>
@@ -108,8 +102,6 @@
 - <https://github.com/affaan-m/ECC/blob/main/skills/mysql-patterns/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/affaan-m/ECC/blob/main/skills/pytorch-patterns/SKILL.md>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/aidancorrell/spark-sql-mcp-server>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/Aidas-dev/k8s-agent-skills/blob/main/skills/vault-api/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
@@ -124,8 +116,6 @@
 - <https://github.com/alirezarezvani/claude-skills/blob/main/engineering/skills/secrets-vault-manager/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/alphaonedev/openclaw-graph/blob/main/skills/cloud-gcp/gcp-iam/SKILL.md>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/andezdev/tokenlite-mysql-mcp>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/apache/beam/blob/master/.agent/skills/beam-concepts/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
@@ -171,8 +161,6 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/awslabs/mcp/tree/main/src/s3-tables-mcp-server>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/axls23/pytorch-mcp_server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/utils/overflow.ts>
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://github.com/BagelHole/DevOps-Security-Agent-Skills/blob/main/security/secrets/gcp-secret-manager/SKILL.md>
@@ -180,8 +168,6 @@
 - <https://github.com/bepuca/azureml-scaffolding/tree/main/azureml-scaffolding>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/BigDataBoutique/skills/blob/main/flink-best-practices/SKILL.md>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/bintocher/qlik-sense-mcp>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/bytebase/dbhub>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
@@ -199,8 +185,6 @@
   <!-- packages/opencode/src/tool/edit.ts -->
 - <https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-26-25.ts>
   <!-- packages/opencode/src/tool/edit.ts -->
-- <https://github.com/cloudbring/newrelic-mcp>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/cloudera/NiFi-MCP-Server>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/collibra/chip/blob/main/SKILLS.md>
@@ -251,18 +235,12 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/devsaikan/powerbi-mcp-skill/blob/main/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/Docat0209/mcp-graphql>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/elastic/agent-skills/blob/main/skills/elasticsearch/elasticsearch-esql/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/elastic/agent-skills/blob/main/skills/elasticsearch/elasticsearch-file-ingest/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/elixir-lsp/elixir-ls/archive/refs/heads/master.zip>
   <!-- packages/opencode/src/lsp/server.ts -->
-- <https://github.com/erikhoward/adls-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/fabdendev/dagster-mcp>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/fivetran/connector_sdk_tools/blob/main/canonical/skills/build-connector/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/fivetran/fivetran-mcp>
@@ -295,11 +273,7 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/grafana/skills/blob/main/skills/grafana-core/dashboarding/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/guillaume-galp/dremio-mcp-lite>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/hashicorp/vault-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/isaacwasserman/mcp-snowflake-server>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/itechmeat/llm-code/tree/master/skills/fastapi>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
@@ -345,11 +319,7 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/MaartenKesters/powerbi-mcp-documentation/blob/main/powerbi-mcp-documentation/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/MarioDeFelipe/sap-bdc-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/martinholovsky/claude-skills-generator/tree/main/skills/fastapi>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/martoc/mcp-spark-documentation>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/membranehq/agent-skills/blob/main/skills/integrate-anything/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
@@ -409,10 +379,6 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/mongodb/agent-skills/blob/main/skills/mongodb-schema-design/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/MukundaKatta/mcp-stack/tree/main/packages/csv-tools-mcp>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/ncejda-g2/snowflake_mcp_server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/neondatabase/agent-skills/blob/main/skills/neon-postgres/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/neondatabase/mcp-server-neon>
@@ -437,8 +403,6 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/oven-sh/bun/issues/16682>
   <!-- packages/opencode/src/provider/provider.ts -->
-- <https://github.com/pab1it0/prometheus-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/personamanagmentlayer/pcl/blob/main/stdlib/data/snowflake-expert/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/planetscale/database-skills/blob/main/skills/mysql/SKILL.md>
@@ -461,10 +425,6 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/Rob--W/proxy-from-env>
   <!-- packages/opencode/src/util/proxy-env.ts -->
-- <https://github.com/rog0x/mcp-json-tools>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/scardoso-lu/purview-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/sfc-gh-dflippo/snowflake-dbt-demo/blob/main/.claude/skills/dbt-testing/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/sickn33/antigravity-awesome-skills/blob/main/skills/data-quality-frameworks/SKILL.md>
@@ -493,17 +453,7 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/thebushidocollective/han/blob/main/plugins/specialized/tensorflow/skills/tensorflow-model-deployment/SKILL.md>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/tjhop/prometheus-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/tuannvm/mcp-trino>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/upstash/context7>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/us-all/airflow-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/us-all/dbt-mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://github.com/us-all/mlflow-mcp-server>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://github.com/us-all/openmetadata-mcp-server>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
@@ -529,8 +479,6 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://gitlab.com>
   <!-- packages/opencode/src/provider/provider.ts -->
-- <https://gitmcp.io/apache/atlas>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://grafana.com/docs/grafana-cloud/machine-learning/assistant/configure/cloud-mcp/>
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://help.qlik.com/en-US/cloud-services/Subsystems/Hub/Content/Sense_Hub/QlikMCP/Qlik-MCP-server.htm>
@@ -596,8 +544,6 @@
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opncd.ai>
   <!-- packages/opencode/src/share/share-next.ts -->
-- <https://pypi.org/project/awslabs.kinesis-mcp-server/>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://reddit.com/r/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://search.parallel.ai/mcp>
@@ -656,18 +602,10 @@
   <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz>
   <!-- packages/opencode/src/lsp/server.ts -->
-- <https://www.elastic.co/docs/explore-analyze/ai-features/agent-builder/mcp-server>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://www.googleapis.com/auth/cloud-platform>
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://www.morphllm.com/>
   <!-- packages/opencode/src/tool/warpgrep.ts -->
-- <https://www.npmjs.com/package/@infoinlet/mcp-mongodb>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://www.npmjs.com/package/@mcp-consultant-tools/azure-data-factory>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
-- <https://www.npmjs.com/package/@sylphlab/mcp-xml>
-  <!-- packages/opencode/src/kilocode/stack/catalog/data.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628#section-3.5>
   <!-- packages/opencode/src/plugin/github-copilot/copilot.ts -->
 - <https://x.com>

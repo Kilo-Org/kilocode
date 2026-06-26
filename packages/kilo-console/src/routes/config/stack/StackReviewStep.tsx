@@ -32,7 +32,9 @@ function technologyNames(state: StackWizard, item: StackPlanAction) {
 }
 
 function ActionCard(props: { state: StackWizard; item: StackPlanAction }) {
+  const summary = () => props.state.catalog()?.resources.find((item) => item.resource.ref === props.item.resource)
   const resource = () => props.state.catalog()?.catalog.resources.find((item) => item.ref === props.item.resource)
+  const description = () => summary()?.item?.description
 
   return (
     <Card class="stack-action-card" padding={0}>
@@ -53,22 +55,14 @@ function ActionCard(props: { state: StackWizard; item: StackPlanAction }) {
           </Show>
         </div>
       </div>
-      <p>{props.item.reason}</p>
+      <Show when={description()}>{(item) => <p class="stack-resource-description">{item()}</p>}</Show>
       <Show when={props.item.technologies.length}>
         <p class="stack-action-tech">Used by {technologyNames(props.state, props.item).join(", ")}</p>
       </Show>
       <Show when={resource()?.kind === "mcp" && props.item.action === "install"}>
-        <p class="stack-action-followup">Installed disabled; authenticate and enable this server from MCP settings.</p>
-      </Show>
-      <Show when={props.item.warnings.length}>
-        <ul class="stack-resource-warnings">
-          <For each={props.item.warnings}>{(warning) => <li>{warning}</li>}</For>
-        </ul>
-      </Show>
-      <Show when={props.item.prerequisites.length}>
-        <ul class="stack-resource-warnings">
-          <For each={props.item.prerequisites}>{(item) => <li>{item}</li>}</For>
-        </ul>
+        <p class="stack-action-followup">
+          Enabled automatically; complete any required authentication after installation.
+        </p>
       </Show>
       <Show when={resource()?.source}>
         {(source) => (

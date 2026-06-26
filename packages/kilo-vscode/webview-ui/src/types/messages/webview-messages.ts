@@ -176,6 +176,7 @@ export interface CompactRequest {
 export interface OpenSettingsPanelRequest {
   type: "openSettingsPanel"
   tab?: string
+  subtab?: string
 }
 
 export interface OpenVSCodeSettingsRequest {
@@ -267,6 +268,19 @@ export interface RemoveMcpMessage {
 
 export interface RequestMcpStatusMessage {
   type: "requestMcpStatus"
+}
+
+export interface RequestStackSummaryMessage {
+  type: "requestStackSummary"
+}
+
+export interface SetProjectStackFeatureMessage {
+  type: "setProjectStackFeature"
+  enabled: boolean
+}
+
+export interface OpenStackBuilderMessage {
+  type: "openStackBuilder"
 }
 
 export interface ConnectMcpMessage {
@@ -1136,6 +1150,9 @@ export type WebviewMessage =
   | RemoveModeMessage
   | RemoveMcpMessage
   | RequestMcpStatusMessage
+  | RequestStackSummaryMessage
+  | SetProjectStackFeatureMessage
+  | OpenStackBuilderMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
   | AuthenticateMcpMessage

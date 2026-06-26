@@ -51,6 +51,12 @@ describe("standalone Stack Builder architecture", () => {
     expect(controller).toContain("token.request === this.request")
   })
 
+  it("forwards every webview stack action to the controller", () => {
+    for (const type of ["stackLoad", "stackCancel", "stackDetect", "stackPreview", "stackApply"]) {
+      expect(panel).toContain(`case "${type}"`)
+    }
+  })
+
   it("preserves loaded drafts and applies only the exact reviewed draft", () => {
     expect(context).toContain("cloneDraft(next.state.draft)")
     expect(context).toContain("cloneDraft(message.plan.draft)")

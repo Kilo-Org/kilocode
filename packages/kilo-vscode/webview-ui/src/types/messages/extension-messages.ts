@@ -309,6 +309,24 @@ export interface NavigateMessage {
   type: "navigate"
   view: "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
   tab?: string
+  subtab?: string
+}
+
+export interface StackSummaryTechnology {
+  id: string
+  name: string
+}
+
+export interface StackSummaryLoadedMessage {
+  type: "stackSummaryLoaded"
+  technologies: StackSummaryTechnology[]
+  configured: boolean
+  projectDirectory?: string
+}
+
+export interface FeaturesUpdatedMessage {
+  type: "featuresUpdated"
+  features: FeatureFlags
 }
 
 export interface IndexingStatusLoadedMessage {
@@ -996,6 +1014,8 @@ export type ExtensionMessage =
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
   | NavigateMessage
+  | StackSummaryLoadedMessage
+  | FeaturesUpdatedMessage
   | IndexingStatusLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ProvidersLoadedMessage

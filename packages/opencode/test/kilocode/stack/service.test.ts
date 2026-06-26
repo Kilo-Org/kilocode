@@ -5,6 +5,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { applyEdits, modify } from "jsonc-parser"
 import { Marketplace } from "@/kilocode/marketplace"
 import { StackRuntime } from "@/kilocode/stack/runtime"
 import { Stack } from "@/kilocode/stack/schema"
@@ -132,11 +133,11 @@ function layer(cache: string, value: HttpClient.HttpClient) {
   return StackService.layer.pipe(Layer.provide(market))
 }
 
-function selected() {
+function selected(root = ".") {
   return Schema.decodeUnknownSync(Stack.Draft)({
     verticals: { data: { technologies: ["dbt"] } },
     resources: {
-      [mcpRef]: { enabled: true, method: "local", parameters: { project_dir: "." } },
+      [mcpRef]: { enabled: true, method: "local", parameters: { project_dir: root } },
     },
   })
 }
@@ -163,9 +164,16 @@ function destination(dir: string) {
   return path.join(dir, ".kilo", "skills", skill)
 }
 
+function toggle(source: string, enabled: boolean) {
+  const edits = modify(source, ["mcp", "dbt", "enabled"], enabled, {
+    formattingOptions: { insertSpaces: true, tabSize: 2 },
+  })
+  return applyEdits(source, edits)
+}
+
 describe("Stack orchestration service", () => {
   it.instance(
-    "applies a Skill and disabled MCP with exact receipts and refreshed state",
+    "applies a Skill and enabled MCP with exact receipts and refreshed state",
     () =>
       Effect.gen(function* () {
         const fs = yield* AppFileSystem.Service
@@ -195,9 +203,10 @@ describe("Stack orchestration service", () => {
             type: "local",
             command: ["dbt-mcp", "--project-dir", "."],
             environment: { DBT_TOKEN: "{env:DBT_TOKEN}" },
-            enabled: false,
+            enabled: true,
           })
           expect(current.raw).not.toContain("secret")
+          expect(current.stack?.resources[mcpRef]?.enabled).toBe(true)
           expect(current.stack?.managed[skillRef]).toMatchObject({ marketplace_id: skill, version: "1.0.0" })
           expect(current.stack?.managed[mcpRef]).toMatchObject({ marketplace_id: "dbt", version: "2.0.0" })
           expect(response.state.resources.find((entry) => entry.resource === skillRef)).toMatchObject({
@@ -375,6 +384,38 @@ describe("Stack orchestration service", () => {
   )
 
   it.instance(
+    "preserves explicit MCP disablement during managed reconfiguration",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* AppFileSystem.Service
+        const test = yield* TestInstance
+        const cache = yield* fs.makeTempDirectoryScoped()
+        const bytes = skillArchive(skill)
+
+        yield* Effect.gen(function* () {
+          const service = yield* StackService.Service
+          yield* apply(service, selected())
+          const config = yield* fs.readFileString(target(test.directory))
+          yield* fs.writeFileString(target(test.directory), toggle(config, false))
+
+          const changed = selected("warehouse")
+          const plan = yield* service.preview(changed)
+          expect(plan.actions.find((action) => action.resource === mcpRef)?.action).toBe("install")
+          yield* service.apply(plan.draft, plan.plan_hash)
+        }).pipe(Effect.provide(layer(cache, client(bytes))))
+
+        const current = yield* StackStore.Service.use((store) => store.read())
+        expect(current.mcp.dbt).toMatchObject({
+          command: ["dbt-mcp", "--project-dir", "warehouse"],
+          enabled: false,
+        })
+        expect(current.stack?.resources[mcpRef]?.enabled).toBe(true)
+        expect(current.stack?.managed[mcpRef]).toBeDefined()
+      }),
+    { git: true },
+  )
+
+  it.instance(
     "preserves modified managed resources and relinquishes their receipts",
     () =>
       Effect.gen(function* () {
@@ -389,11 +430,11 @@ describe("Stack orchestration service", () => {
           const file = path.join(destination(test.directory), "SKILL.md")
           yield* fs.writeFileString(file, `${yield* fs.readFileString(file)}\nUser change.\n`)
           const config = yield* fs.readFileString(target(test.directory))
-          const enabled = config.replace('"enabled": false', '"enabled": true')
-          yield* fs.writeFileString(target(test.directory), enabled)
+          const disabled = toggle(config, false)
+          yield* fs.writeFileString(target(test.directory), disabled)
           const kept = yield* service.preview(selected())
           expect(kept.actions.find((action) => action.resource === mcpRef)?.action).toBe("keep")
-          yield* fs.writeFileString(target(test.directory), enabled.replace('"dbt-mcp"', '"custom-dbt-mcp"'))
+          yield* fs.writeFileString(target(test.directory), disabled.replace('"dbt-mcp"', '"custom-dbt-mcp"'))
 
           const plan = yield* service.preview(empty())
           expect(Object.fromEntries(plan.actions.map((action) => [action.resource, action.action]))).toMatchObject({

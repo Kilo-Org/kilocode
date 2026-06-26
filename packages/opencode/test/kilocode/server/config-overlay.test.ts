@@ -91,6 +91,26 @@ describe("config overlay routes", () => {
     expect(Object.hasOwn(patched, "prototype")).toBe(false)
   })
 
+  test.serial("returns stack configs with empty resource maps", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    const stack = {
+      version: 1 as const,
+      catalog_revision: "2026-06-25.2",
+      verticals: { data: { technologies: ["dbt"] } },
+      resources: {},
+      managed: {},
+    }
+    await config(project.path, { stack })
+
+    const body = await json<Overlay & { project: Config.Info }>(
+      await req(project.path, "/config/overlay?scope=project"),
+    )
+
+    expect(body.project.stack).toEqual(stack)
+  })
+
   test.serial("marks global values inherited in project scope", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()

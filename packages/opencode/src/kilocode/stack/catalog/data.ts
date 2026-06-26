@@ -1,23 +1,11 @@
 import { Schema } from "effect"
 import { Stack } from "../schema"
 
-export const revision = Stack.Revision.make("2026-06-23.1")
+export const revision = Stack.Revision.make("2026-06-25.2")
 
-const mutable = "Discovery source is mutable; Marketplace installation must pin an immutable revision and digest."
 const audit = "Audit this community resource before installation."
-const consent = "Disabled by default; authenticate separately, use least privilege, and require consent for writes."
 
 const raw = [
-  {
-    ref: "mcp:adls2-mcp",
-    id: "adls2-mcp",
-    kind: "mcp",
-    name: "ADLS2 MCP",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/erikhoward/adls-mcp-server",
-    warnings: [consent, audit],
-  },
   {
     ref: "mcp:agent-platform-mcp",
     id: "agent-platform-mcp",
@@ -26,7 +14,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/use-agent-platform-mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:airbyte-agent-mcp",
@@ -36,7 +24,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://mcp.airbyte.ai/mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:airbyte-knowledge-mcp",
@@ -46,17 +34,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://airbyte.mcp.kapa.ai",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:airflow-us-all",
-    id: "airflow-us-all",
-    kind: "mcp",
-    name: "@us-all/airflow-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/us-all/airflow-mcp-server",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:amazon-keyspaces-mcp",
@@ -66,7 +44,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/awslabs/mcp/tree/main/src/amazon-keyspaces-mcp-server",
-    warnings: [consent, mutable],
+    warnings: [],
   },
   {
     ref: "mcp:astronomer-docs-mcp",
@@ -76,7 +54,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://www.astronomer.io/docs/_mcp/server",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:aws",
@@ -86,7 +64,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://docs.aws.amazon.com/agent-toolkit/latest/userguide/getting-started-aws-mcp-server.html",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:aws-api-mcp",
@@ -96,7 +74,7 @@ const raw = [
     trust: "official",
     maturity: "experimental",
     source: "https://github.com/awslabs/mcp/tree/main/src/aws-api-mcp-server",
-    warnings: [consent, "This resource is experimental and may change or lack production support.", mutable],
+    warnings: ["This resource is experimental and may change or lack production support."],
   },
   {
     ref: "mcp:aws-data-processing",
@@ -106,7 +84,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://awslabs.github.io/mcp/servers/aws-dataprocessing-mcp-server",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:aws-redshift-mcp",
@@ -116,7 +94,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/awslabs/mcp/tree/main/src/redshift-mcp-server",
-    warnings: [consent, mutable],
+    warnings: [],
   },
   {
     ref: "mcp:aws-serverless-mcp",
@@ -126,17 +104,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/awslabs/mcp/tree/main/src/aws-serverless-mcp-server",
-    warnings: [consent, mutable],
-  },
-  {
-    ref: "mcp:awslabs-kinesis-mcp-server",
-    id: "awslabs-kinesis-mcp-server",
-    kind: "mcp",
-    name: "awslabs.kinesis-mcp-server",
-    trust: "official",
-    maturity: "experimental",
-    source: "https://pypi.org/project/awslabs.kinesis-mcp-server/",
-    warnings: [consent, "This resource is experimental and may change or lack production support."],
+    warnings: [],
   },
   {
     ref: "mcp:azure",
@@ -146,17 +114,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/microsoft/mcp/tree/main/servers/Azure.Mcp.Server",
-    warnings: [consent, mutable],
-  },
-  {
-    ref: "mcp:azure-data-factory-consultant",
-    id: "azure-data-factory-consultant",
-    kind: "mcp",
-    name: "@mcp-consultant-tools/azure-data-factory",
-    trust: "community",
-    maturity: "stable",
-    source: "https://www.npmjs.com/package/@mcp-consultant-tools/azure-data-factory",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:bigquery-mcp",
@@ -166,7 +124,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://docs.cloud.google.com/bigquery/docs/use-bigquery-mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:confluent",
@@ -176,7 +134,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/confluentinc/mcp-confluent",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:context7",
@@ -186,27 +144,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/upstash/context7",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:csv-tools-mcp",
-    id: "csv-tools-mcp",
-    kind: "mcp",
-    name: "csv-tools-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/MukundaKatta/mcp-stack/tree/main/packages/csv-tools-mcp",
-    warnings: [consent, audit, mutable],
-  },
-  {
-    ref: "mcp:dagster-mcp",
-    id: "dagster-mcp",
-    kind: "mcp",
-    name: "dagster-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/fabdendev/dagster-mcp",
-    warnings: [consent, audit],
+    warnings: [audit],
   },
   {
     ref: "mcp:data-lineage-mcp",
@@ -216,7 +154,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://docs.cloud.google.com/dataplex/docs/use-lineage-mcp",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:databricks-sql",
@@ -226,7 +164,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:datadog-mcp-datadoghq",
@@ -236,7 +174,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://www.datadoghq.com/product/ai/mcp-server/",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:datahub-mcp",
@@ -246,7 +184,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://docs.datahub.com/docs/features/feature-guides/mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:datarobot-global-mcp",
@@ -257,7 +195,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://docs.datarobot.com/en/docs/agentic-ai/agentic-mcp/agentic-mcp-clients.html#using-the-datarobot-global-mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:dbhub",
@@ -267,7 +205,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/bytebase/dbhub",
-    warnings: [consent, audit],
+    warnings: [audit],
   },
   {
     ref: "mcp:dbt",
@@ -277,37 +215,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/dbt-labs/dbt-mcp",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:dbt-us-all",
-    id: "dbt-us-all",
-    kind: "mcp",
-    name: "@us-all/dbt-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/us-all/dbt-mcp-server",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:dremio-mcp-lite",
-    id: "dremio-mcp-lite",
-    kind: "mcp",
-    name: "dremio-mcp-lite",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/guillaume-galp/dremio-mcp-lite",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:elastic-agent-builder-mcp",
-    id: "elastic-agent-builder-mcp",
-    kind: "mcp",
-    name: "Elastic Agent Builder MCP",
-    trust: "official",
-    maturity: "stable",
-    source: "https://www.elastic.co/docs/explore-analyze/ai-features/agent-builder/mcp-server",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:fivetran-mcp-server",
@@ -317,7 +225,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/fivetran/fivetran-mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:gcp-pubsub",
@@ -327,27 +235,17 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://docs.cloud.google.com/pubsub/docs/use-pubsub-mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
-    ref: "mcp:github-mcp",
-    id: "github-mcp",
+    ref: "mcp:github",
+    id: "github",
     kind: "mcp",
     name: "GitHub MCP",
     trust: "official",
     maturity: "stable",
     source: "https://github.com/github/github-mcp-server",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:gitmcp-apache-atlas",
-    id: "gitmcp-apache-atlas",
-    kind: "mcp",
-    name: "GitMCP apache/atlas",
-    trust: "community",
-    maturity: "stable",
-    source: "https://gitmcp.io/apache/atlas",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:grafana-cloud-mcp",
@@ -357,27 +255,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://grafana.com/docs/grafana-cloud/machine-learning/assistant/configure/cloud-mcp/",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
-  },
-  {
-    ref: "mcp:graphql-to-mcp",
-    id: "graphql-to-mcp",
-    kind: "mcp",
-    name: "graphql-to-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/Docat0209/mcp-graphql",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:infoinlet-mongodb",
-    id: "infoinlet-mongodb",
-    kind: "mcp",
-    name: "@infoinlet/mcp-mongodb",
-    trust: "community",
-    maturity: "stable",
-    source: "https://www.npmjs.com/package/@infoinlet/mcp-mongodb",
-    warnings: [consent, audit],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:jupyter-mcp",
@@ -387,7 +265,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/datalayer/jupyter-mcp-server",
-    warnings: [consent, audit],
+    warnings: [audit],
   },
   {
     ref: "mcp:knowledge-catalog-mcp",
@@ -397,7 +275,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://docs.cloud.google.com/dataplex/docs/use-remote-mcp",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:looker-toolbox",
@@ -407,17 +285,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://mcp-toolbox.dev/documentation/connect-to/ides/looker_mcp/",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:matillion",
-    id: "matillion",
-    kind: "mcp",
-    name: "@matillion/mcp-server",
-    trust: "official",
-    maturity: "stable",
-    source: "https://docs.maia.ai/docs/api-reference/mcp-server",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:mcp-grafana",
@@ -427,27 +295,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/grafana/mcp-grafana",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:mcp-json-tools",
-    id: "mcp-json-tools",
-    kind: "mcp",
-    name: "mcp-json-tools",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/rog0x/mcp-json-tools",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:mcp-snowflake-server",
-    id: "mcp-snowflake-server",
-    kind: "mcp",
-    name: "mcp-snowflake-server",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/isaacwasserman/mcp-snowflake-server",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:membrane-cloud-mcp",
@@ -457,7 +305,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://docs.getmembrane.com/docs/ways-to-use-membrane/mcp",
-    warnings: [consent, audit],
+    warnings: [audit],
   },
   {
     ref: "mcp:microsoft-data-api-builder",
@@ -467,7 +315,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://learn.microsoft.com/en-us/azure/data-api-builder/mcp/overview",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:microsoft-learn",
@@ -477,7 +325,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/mcp",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:mlflow-mcp",
@@ -487,17 +335,7 @@ const raw = [
     trust: "official",
     maturity: "experimental",
     source: "https://github.com/mlflow/mlflow/tree/master/mlflow/mcp",
-    warnings: [consent, "This resource is experimental and may change or lack production support.", mutable],
-  },
-  {
-    ref: "mcp:mlflow-us-all",
-    id: "mlflow-us-all",
-    kind: "mcp",
-    name: "@us-all/mlflow-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/us-all/mlflow-mcp-server",
-    warnings: [consent, audit],
+    warnings: ["This resource is experimental and may change or lack production support."],
   },
   {
     ref: "mcp:mongodb-mcp-server",
@@ -507,17 +345,17 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/mongodb-js/mongodb-mcp-server",
-    warnings: [consent],
+    warnings: [],
   },
   {
-    ref: "mcp:neon-mcp",
-    id: "neon-mcp",
+    ref: "mcp:neon",
+    id: "neon",
     kind: "mcp",
     name: "Neon MCP",
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/neondatabase/mcp-server-neon",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:new-relic-ai-mcp",
@@ -527,17 +365,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://github.com/newrelic/mcp-server",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
-  },
-  {
-    ref: "mcp:newrelic-mcp",
-    id: "newrelic-mcp",
-    kind: "mcp",
-    name: "newrelic-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/cloudbring/newrelic-mcp",
-    warnings: [consent, audit],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:nifi-mcp-server",
@@ -547,7 +375,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/cloudera/NiFi-MCP-Server",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:oci-api-mcp",
@@ -557,7 +385,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/oracle/mcp/tree/main/src/oci-api-mcp-server",
-    warnings: [consent, mutable],
+    warnings: [],
   },
   {
     ref: "mcp:oci-cloud-mcp",
@@ -567,7 +395,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/oracle/mcp/tree/main/src/oci-cloud-mcp-server",
-    warnings: [consent, mutable],
+    warnings: [],
   },
   {
     ref: "mcp:oci-database-tools-mcp",
@@ -577,7 +405,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://docs.oracle.com/en-us/iaas/database-tools/doc/working-database-tools-mcp-server.html",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:okta-mcp-server",
@@ -587,7 +415,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/okta/okta-mcp-server",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:openapi-mcp",
@@ -597,7 +425,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/ivo-toby/mcp-openapi-server",
-    warnings: [consent, audit],
+    warnings: [audit],
   },
   {
     ref: "mcp:openmetadata-mcp",
@@ -607,7 +435,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/open-metadata/OpenMetadata/tree/main/openmetadata-mcp",
-    warnings: [consent, mutable],
+    warnings: [],
   },
   {
     ref: "mcp:openmetadata-us-all",
@@ -617,18 +445,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/us-all/openmetadata-mcp-server",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:oracle-sqlcl-mcp",
-    id: "oracle-sqlcl-mcp",
-    kind: "mcp",
-    name: "Oracle SQLcl MCP",
-    trust: "official",
-    maturity: "stable",
-    source:
-      "https://docs.oracle.com/en/database/oracle/sql-developer-command-line/26.1/sqcug/using-oracle-sqlcl-mcp-server.html",
-    warnings: [consent],
+    warnings: [audit],
   },
   {
     ref: "mcp:postgres-mcp-pro",
@@ -638,7 +455,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/crystaldba/postgres-mcp",
-    warnings: [consent, audit],
+    warnings: [audit],
   },
   {
     ref: "mcp:power-bi-modeling",
@@ -648,7 +465,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://github.com/microsoft/powerbi-modeling-mcp",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:power-bi-remote",
@@ -658,7 +475,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://learn.microsoft.com/en-us/power-bi/developer/mcp/remote-mcp-server-get-started",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:prefect-mcp-server",
@@ -668,57 +485,7 @@ const raw = [
     trust: "official",
     maturity: "experimental",
     source: "https://github.com/PrefectHQ/prefect-mcp-server",
-    warnings: [consent, "This resource is experimental and may change or lack production support."],
-  },
-  {
-    ref: "mcp:privilege-cloud-mcp",
-    id: "privilege-cloud-mcp",
-    kind: "mcp",
-    name: "Privilege Cloud MCP",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/aaearon/mcp-privilege-cloud",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:prometheus-pab1it0",
-    id: "prometheus-pab1it0",
-    kind: "mcp",
-    name: "pab1it0/prometheus-mcp-server",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/pab1it0/prometheus-mcp-server",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:prometheus-tjhop",
-    id: "prometheus-tjhop",
-    kind: "mcp",
-    name: "tjhop/prometheus-mcp-server",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/tjhop/prometheus-mcp-server",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:purview-unified-catalog-mcp",
-    id: "purview-unified-catalog-mcp",
-    kind: "mcp",
-    name: "Purview Unified Catalog MCP",
-    trust: "community",
-    maturity: "alpha",
-    source: "https://github.com/scardoso-lu/purview-mcp-server",
-    warnings: [consent, audit, "This resource is alpha and may change or lack production support."],
-  },
-  {
-    ref: "mcp:pytorch-mcp-server",
-    id: "pytorch-mcp-server",
-    kind: "mcp",
-    name: "pytorch-mcp_server",
-    trust: "community",
-    maturity: "alpha",
-    source: "https://github.com/axls23/pytorch-mcp_server",
-    warnings: [consent, audit, "This resource is alpha and may change or lack production support."],
+    warnings: ["This resource is experimental and may change or lack production support."],
   },
   {
     ref: "mcp:qlik-mcp",
@@ -728,17 +495,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://help.qlik.com/en-US/cloud-services/Subsystems/Hub/Content/Sense_Hub/QlikMCP/Qlik-MCP-server.htm",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:qlik-sense-mcp",
-    id: "qlik-sense-mcp",
-    kind: "mcp",
-    name: "qlik-sense-mcp",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/bintocher/qlik-sense-mcp",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:redis-cloud-mcp",
@@ -748,7 +505,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/redis/mcp-redis-cloud",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:redis-mcp",
@@ -758,7 +515,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/redis/mcp-redis",
-    warnings: [consent],
+    warnings: [],
   },
   {
     ref: "mcp:s3-tables-mcp",
@@ -768,7 +525,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/awslabs/mcp/tree/main/src/s3-tables-mcp-server",
-    warnings: [consent, mutable],
+    warnings: [],
   },
   {
     ref: "mcp:sagemaker-spark-troubleshooting-mcp",
@@ -778,17 +535,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://awslabs.github.io/mcp/servers/sagemaker-unified-studio-spark-troubleshooting-mcp-server",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:sap-bdc-mcp-server",
-    id: "sap-bdc-mcp-server",
-    kind: "mcp",
-    name: "sap-bdc-mcp-server",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/MarioDeFelipe/sap-bdc-mcp-server",
-    warnings: [consent, audit],
+    warnings: [audit],
   },
   {
     ref: "mcp:snowflake-managed",
@@ -798,27 +545,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents-mcp",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:snowflake-mcp-server",
-    id: "snowflake-mcp-server",
-    kind: "mcp",
-    name: "snowflake_mcp_server",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/ncejda-g2/snowflake_mcp_server",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:spark-documentation",
-    id: "spark-documentation",
-    kind: "mcp",
-    name: "Spark Documentation MCP",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/martoc/mcp-spark-documentation",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:spark-history",
@@ -828,17 +555,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/kubeflow/mcp-apache-spark-history-server",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:spark-sql-mcp",
-    id: "spark-sql-mcp",
-    kind: "mcp",
-    name: "Spark SQL MCP",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/aidancorrell/spark-sql-mcp-server",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:splunk-mcp-server",
@@ -848,17 +565,7 @@ const raw = [
     trust: "official",
     maturity: "beta",
     source: "https://splunkbase.splunk.com/app/7931",
-    warnings: [consent, "This resource is beta and may change or lack production support."],
-  },
-  {
-    ref: "mcp:sylphlab-xml",
-    id: "sylphlab-xml",
-    kind: "mcp",
-    name: "@sylphlab/mcp-xml",
-    trust: "community",
-    maturity: "stable",
-    source: "https://www.npmjs.com/package/@sylphlab/mcp-xml",
-    warnings: [consent, audit],
+    warnings: ["This resource is beta and may change or lack production support."],
   },
   {
     ref: "mcp:tableau-mcp",
@@ -868,27 +575,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/tableau/tableau-mcp",
-    warnings: [consent],
-  },
-  {
-    ref: "mcp:tokenlite-mysql-mcp",
-    id: "tokenlite-mysql-mcp",
-    kind: "mcp",
-    name: "TokenLite MySQL MCP",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/andezdev/tokenlite-mysql-mcp",
-    warnings: [consent, audit],
-  },
-  {
-    ref: "mcp:trino-mcp",
-    id: "trino-mcp",
-    kind: "mcp",
-    name: "Trino MCP",
-    trust: "community",
-    maturity: "stable",
-    source: "https://github.com/tuannvm/mcp-trino",
-    warnings: [consent, audit],
+    warnings: [],
   },
   {
     ref: "mcp:unity-catalog-functions",
@@ -898,7 +585,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp",
-    warnings: [consent, "This resource is preview and may change or lack production support."],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "mcp:vault-mcp",
@@ -908,7 +595,7 @@ const raw = [
     trust: "official",
     maturity: "beta",
     source: "https://github.com/hashicorp/vault-mcp-server",
-    warnings: [consent, "This resource is beta and may change or lack production support."],
+    warnings: ["This resource is beta and may change or lack production support."],
   },
   {
     ref: "mcp:vault-radar-mcp",
@@ -918,7 +605,7 @@ const raw = [
     trust: "official",
     maturity: "beta",
     source: "https://hub.docker.com/r/hashicorp/vault-radar-mcp-server",
-    warnings: [consent, "This resource is beta and may change or lack production support."],
+    warnings: ["This resource is beta and may change or lack production support."],
   },
   {
     ref: "skill:adbc",
@@ -928,7 +615,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/columnar-tech/skills/tree/main/skills/adbc",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:adf-master",
@@ -939,7 +626,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/JosiahSiegel/claude-plugin-marketplace/blob/main/plugins/adf-master/skills/adf-master/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:aidp-object-storage",
@@ -950,7 +637,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/oracle-samples/oracle-aidp-samples/blob/main/ai/claude-code-plugins/oracle-ai-data-platform-workbench-spark-connectors/skills/aidp-object-storage/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:airbyte-agent",
@@ -960,7 +647,7 @@ const raw = [
     trust: "official",
     maturity: "beta",
     source: "https://github.com/airbytehq/airbyte-agent-cli/blob/main/skills/airbyte-agent/SKILL.md",
-    warnings: ["This resource is beta and may change or lack production support.", mutable],
+    warnings: ["This resource is beta and may change or lack production support."],
   },
   {
     ref: "skill:airflow",
@@ -970,7 +657,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/astronomer/agents/blob/main/skills/airflow/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:aoti-debug",
@@ -980,7 +667,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/pytorch/pytorch/blob/main/.claude/skills/aoti-debug/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:apache-arrow",
@@ -990,7 +677,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/TerminalSkills/skills/tree/main/skills/apache-arrow",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:apache-hudi-lakehouse",
@@ -1000,7 +687,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/vaquarkhan/data-engineering-agent-skills/tree/main/skills/apache-hudi-lakehouse",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:apollo-graphql",
@@ -1010,7 +697,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/Mindrally/skills/blob/main/apollo-graphql/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:authoring-dags",
@@ -1020,7 +707,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/astronomer/agents/blob/main/skills/authoring-dags/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:aws-cognito-admin",
@@ -1030,7 +717,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/monahand1023/claude-code-skills/tree/main/aws-cognito-admin",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:aws-messaging-and-streaming",
@@ -1041,7 +728,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/aws/agent-toolkit-for-aws/blob/main/plugins/aws-core/skills/aws-messaging-and-streaming/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:aws-sdk-python-usage",
@@ -1051,7 +738,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/aws/agent-toolkit-for-aws/blob/main/skills/core-skills/aws-sdk-python-usage/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-compliance",
@@ -1061,7 +748,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/microsoft/azure-skills/blob/main/skills/azure-compliance/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-data-factory",
@@ -1071,7 +758,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/Agent-Skills/blob/main/skills/azure-data-factory/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-data-share",
@@ -1081,7 +768,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/Agent-Skills/blob/main/skills/azure-data-share/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-databricks",
@@ -1091,7 +778,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/Agent-Skills/blob/main/skills/azure-databricks/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-event-hubs",
@@ -1101,7 +788,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/Agent-Skills/blob/main/skills/azure-event-hubs/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-eventhub-py",
@@ -1112,7 +799,7 @@ const raw = [
     maturity: "experimental",
     source:
       "https://github.com/microsoft/skills/blob/main/.github/plugins/azure-sdk-python/skills/azure-eventhub-py/SKILL.md",
-    warnings: ["This resource is experimental and may change or lack production support.", mutable],
+    warnings: ["This resource is experimental and may change or lack production support."],
   },
   {
     ref: "skill:azure-key-vault",
@@ -1122,7 +809,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/vinayaklatthe/microsoft-security-skills/blob/main/skills/azure-key-vault/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:azure-machine-learning",
@@ -1132,7 +819,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/Agent-Skills/blob/main/skills/azure-machine-learning/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-rbac",
@@ -1142,7 +829,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/microsoft/azure-skills/blob/main/skills/azure-rbac/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-storage",
@@ -1152,7 +839,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/microsoft/azure-skills/blob/main/skills/azure-storage/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azure-synapse-analytics",
@@ -1162,7 +849,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/Agent-Skills/tree/main/skills/azure-synapse-analytics",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:azureml-scaffolding",
@@ -1172,7 +859,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/bepuca/azureml-scaffolding/tree/main/azureml-scaffolding",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:beam-concepts",
@@ -1182,7 +869,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/apache/beam/blob/master/.agent/skills/beam-concepts/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:bigquery-ai-ml",
@@ -1192,7 +879,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/google/skills/blob/main/skills/cloud/bigquery-ai-ml/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:bigquery-basics",
@@ -1202,7 +889,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/google/skills/blob/main/skills/cloud/bigquery-basics/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:bootstrapping-agent",
@@ -1212,7 +899,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/airbytehq/airbyte-agent-sdk/blob/main/.codex/skills/bootstrapping-agent/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:build-connector",
@@ -1222,7 +909,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/fivetran/connector_sdk_tools/blob/main/canonical/skills/build-connector/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:cassandra",
@@ -1232,7 +919,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/TerminalSkills/skills/blob/main/skills/cassandra/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:cdc-streaming-pipeline",
@@ -1242,7 +929,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/jaingxyz/aws-data-skills/blob/main/skills/cdc-streaming-pipeline/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:chdb-datastore",
@@ -1252,7 +939,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/ClickHouse/agent-skills/blob/main/skills/chdb-datastore/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:cheerio-parsing",
@@ -1262,7 +949,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/Mindrally/skills/tree/main/cheerio-parsing",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:cognito",
@@ -1272,7 +959,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/itsmostafa/aws-agent-skills/tree/main/skills/cognito",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:collibra-chip",
@@ -1282,7 +969,7 @@ const raw = [
     trust: "official",
     maturity: "unsupported",
     source: "https://github.com/collibra/chip/blob/main/SKILLS.md",
-    warnings: ["This resource is unsupported and may change or lack production support.", mutable],
+    warnings: ["This resource is unsupported and may change or lack production support."],
   },
   {
     ref: "skill:connecting-to-data-source",
@@ -1293,7 +980,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/aws/agent-toolkit-for-aws/blob/main/plugins/aws-data-analytics/skills/connecting-to-data-source/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:cortex-code",
@@ -1303,7 +990,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/snowflake-labs/subagent-cortex-code/blob/main/skills/cortex-code/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:creating-data-lake-table",
@@ -1314,7 +1001,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/aws/agent-toolkit-for-aws/tree/main/skills/specialized-skills/storage-skills/creating-data-lake-table",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:creating-secrets-using-best-practices",
@@ -1325,7 +1012,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/aws/agent-toolkit-for-aws/blob/main/skills/specialized-skills/security-and-identity-skills/creating-secrets-using-best-practices/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:csv-query",
@@ -1335,7 +1022,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/dathere/qsv/tree/master/.claude/skills/skills/csv-query",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:csv-wrangling",
@@ -1345,7 +1032,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/dathere/qsv/tree/master/.claude/skills/skills/csv-wrangling",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:dagster",
@@ -1355,7 +1042,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/TerminalSkills/skills/tree/main/skills/dagster",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:dagster-expert",
@@ -1365,7 +1052,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/dagster-io/skills/tree/master/skills/dagster-expert/skills/dagster-expert",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:dashboarding",
@@ -1375,7 +1062,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/grafana/skills/blob/main/skills/grafana-core/dashboarding/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:data-catalog-and-discovery",
@@ -1386,7 +1073,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/vaquarkhan/data-engineering-agent-skills/blob/main/skills/data-catalog-and-discovery/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:data-distributed-storage",
@@ -1396,7 +1083,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/j4flmao/agent-skills/tree/main/skills/data/distributed-storage",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:data-quality-frameworks-sickn33",
@@ -1406,7 +1093,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/sickn33/antigravity-awesome-skills/blob/main/skills/data-quality-frameworks/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:database-observability",
@@ -1416,7 +1103,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/grafana/skills/blob/main/skills/grafana-cloud/database-observability/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:database-redshift",
@@ -1436,7 +1123,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/databricks/databricks-agent-skills/blob/main/skills/databricks-core/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:databricks-dbsql",
@@ -1446,7 +1133,7 @@ const raw = [
     trust: "provider",
     maturity: "unsupported",
     source: "https://github.com/databricks-solutions/ai-dev-kit/blob/main/databricks-skills/databricks-dbsql/SKILL.md",
-    warnings: ["This resource is unsupported and may change or lack production support.", mutable],
+    warnings: ["This resource is unsupported and may change or lack production support."],
   },
   {
     ref: "skill:databricks-jobs",
@@ -1456,7 +1143,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/databricks/databricks-agent-skills/blob/main/skills/databricks-jobs/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:databricks-model-serving",
@@ -1466,7 +1153,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/databricks/databricks-agent-skills/blob/main/skills/databricks-model-serving/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:databricks-pipelines",
@@ -1476,7 +1163,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/databricks/databricks-agent-skills/blob/main/skills/databricks-pipelines/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:databricks-spark-structured-streaming",
@@ -1487,7 +1174,7 @@ const raw = [
     maturity: "experimental",
     source:
       "https://github.com/databricks/databricks-agent-skills/blob/main/experimental/databricks-spark-structured-streaming/SKILL.md",
-    warnings: ["This resource is experimental and may change or lack production support.", mutable],
+    warnings: ["This resource is experimental and may change or lack production support."],
   },
   {
     ref: "skill:databricks-unity-catalog",
@@ -1498,7 +1185,7 @@ const raw = [
     maturity: "unsupported",
     source:
       "https://github.com/databricks-solutions/ai-dev-kit/blob/main/databricks-skills/databricks-unity-catalog/SKILL.md",
-    warnings: ["This resource is unsupported and may change or lack production support.", mutable],
+    warnings: ["This resource is unsupported and may change or lack production support."],
   },
   {
     ref: "skill:dataplex-and-bigquery-governance",
@@ -1509,7 +1196,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/vaquarkhan/data-engineering-agent-skills/blob/main/skills/dataplex-and-bigquery-governance/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:datarobot-data-preparation",
@@ -1520,7 +1207,7 @@ const raw = [
     maturity: "unsupported",
     source:
       "https://github.com/datarobot-oss/datarobot-agent-skills/blob/main/skills/datarobot-data-preparation/SKILL.md",
-    warnings: ["This resource is unsupported and may change or lack production support.", mutable],
+    warnings: ["This resource is unsupported and may change or lack production support."],
   },
   {
     ref: "skill:datarobot-feature-engineering",
@@ -1531,7 +1218,7 @@ const raw = [
     maturity: "unsupported",
     source:
       "https://github.com/datarobot-oss/datarobot-agent-skills/blob/main/skills/datarobot-feature-engineering/SKILL.md",
-    warnings: ["This resource is unsupported and may change or lack production support.", mutable],
+    warnings: ["This resource is unsupported and may change or lack production support."],
   },
   {
     ref: "skill:dataset-evaluation",
@@ -1542,7 +1229,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/awslabs/agent-plugins/blob/main/plugins/sagemaker-ai/skills/dataset-evaluation/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:dataset-transformation",
@@ -1553,7 +1240,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/awslabs/agent-plugins/blob/main/plugins/sagemaker-ai/skills/dataset-transformation/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:db2-rhel",
@@ -1563,7 +1250,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/joogy06/agent-foundry/blob/main/skills/db2-rhel/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:dbt-analytics-engineering",
@@ -1574,7 +1261,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/dbt-labs/dbt-agent-skills/blob/main/skills/dbt/skills/using-dbt-for-analytics-engineering/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:dbt-testing",
@@ -1584,7 +1271,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/sfc-gh-dflippo/snowflake-dbt-demo/blob/main/.claude/skills/dbt-testing/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:dd-logs",
@@ -1594,7 +1281,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/datadog-labs/agent-skills/blob/main/dd-logs/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:dd-pup",
@@ -1604,7 +1291,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/datadog-labs/agent-skills/blob/main/dd-pup/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:delta-sharing",
@@ -1615,7 +1302,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/vivekgana/databricks-platform-marketplace/blob/main/plugins/databricks-engineering/skills/delta-sharing/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:deploying-airflow",
@@ -1625,7 +1312,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/astronomer/agents/tree/main/skills/deploying-airflow",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:dynamic-tables-tutorial",
@@ -1635,7 +1322,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/Snowflake-Labs/sfguides/tree/main/dynamic-tables-tutorial",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:elasticsearch-esql",
@@ -1645,7 +1332,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://github.com/elastic/agent-skills/blob/main/skills/elasticsearch/elasticsearch-esql/SKILL.md",
-    warnings: ["This resource is preview and may change or lack production support.", mutable],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "skill:elasticsearch-file-ingest",
@@ -1655,7 +1342,7 @@ const raw = [
     trust: "official",
     maturity: "preview",
     source: "https://github.com/elastic/agent-skills/blob/main/skills/elasticsearch/elasticsearch-file-ingest/SKILL.md",
-    warnings: ["This resource is preview and may change or lack production support.", mutable],
+    warnings: ["This resource is preview and may change or lack production support."],
   },
   {
     ref: "skill:entra-agent-id",
@@ -1665,7 +1352,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/microsoft/azure-skills/blob/main/skills/entra-agent-id/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:entra-app-registration",
@@ -1675,7 +1362,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/microsoft/azure-skills/blob/main/skills/entra-app-registration/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:etl-integration-nifi",
@@ -1685,7 +1372,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/chrishuffman5/domain-expert/tree/main/skills/etl/integration/nifi",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:exploring-data-catalog",
@@ -1696,7 +1383,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/aws/agent-toolkit-for-aws/blob/main/plugins/aws-data-analytics/skills/exploring-data-catalog/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:fastapi-itechmeat",
@@ -1706,7 +1393,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/itechmeat/llm-code/tree/master/skills/fastapi",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:fastapi-martinholovsky",
@@ -1716,7 +1403,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/martinholovsky/claude-skills-generator/tree/main/skills/fastapi",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:flink",
@@ -1726,7 +1413,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/gordonmurray/data-engineering-skills/blob/main/flink/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:flink-best-practices",
@@ -1736,7 +1423,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/BigDataBoutique/skills/blob/main/flink-best-practices/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:gcloud",
@@ -1746,7 +1433,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/google/skills/blob/main/skills/cloud/gcloud/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:gcp-event-driven-architecture-review",
@@ -1757,7 +1444,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/Raishin/vanguard-frontier-agentic/blob/HEAD/skills/gcp/gcp-event-driven-architecture-review/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:gcp-iam",
@@ -1767,7 +1454,7 @@ const raw = [
     trust: "community",
     maturity: "alpha",
     source: "https://github.com/alphaonedev/openclaw-graph/blob/main/skills/cloud-gcp/gcp-iam/SKILL.md",
-    warnings: [audit, "This resource is alpha and may change or lack production support.", mutable],
+    warnings: [audit, "This resource is alpha and may change or lack production support."],
   },
   {
     ref: "skill:gcp-secret-manager",
@@ -1778,7 +1465,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/BagelHole/DevOps-Security-Agent-Skills/blob/main/security/secrets/gcp-secret-manager/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:gcs-lifecycle-policy",
@@ -1789,7 +1476,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/jeremylongshore/claude-code-plugins-plus-skills/blob/main/skills/14-gcp-skills/gcs-lifecycle-policy/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:gemini-api",
@@ -1799,7 +1486,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/google/skills/blob/main/skills/cloud/gemini-api/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:glue-diagnostics",
@@ -1809,7 +1496,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/aws-samples/sample-ai-agent-skills/blob/main/glue-troubleshooting/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:graphql",
@@ -1819,7 +1506,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/Mindrally/skills/blob/main/graphql/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:hadoop",
@@ -1829,7 +1516,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/clawic/skills/tree/main/skills/hadoop",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:hbase",
@@ -1851,7 +1538,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/aws/agent-toolkit-for-aws/blob/main/plugins/aws-data-analytics/skills/ingesting-into-data-lake/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:integrate-anything",
@@ -1861,7 +1548,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/membranehq/agent-skills/blob/main/skills/integrate-anything/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:io-connectors",
@@ -1871,7 +1558,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/apache/beam/blob/master/.agent/skills/io-connectors/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:jq-json-processing",
@@ -1891,7 +1578,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/confluentinc/agent-skills/blob/main/skills/kafka-schema-registry/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:kafka-streams-programming",
@@ -1901,7 +1588,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/confluentinc/agent-skills/blob/main/skills/kafka-streams-programming/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:knowledge-catalog-discovery",
@@ -1912,7 +1599,7 @@ const raw = [
     maturity: "beta",
     source:
       "https://github.com/gemini-cli-extensions/knowledge-catalog/blob/main/skills/knowledge-catalog-discovery/SKILL.md",
-    warnings: ["This resource is beta and may change or lack production support.", mutable],
+    warnings: ["This resource is beta and may change or lack production support."],
   },
   {
     ref: "skill:lookml-model",
@@ -1922,7 +1609,7 @@ const raw = [
     trust: "official",
     maturity: "unsupported",
     source: "https://github.com/looker-open-source/looker-skills/blob/main/skills/lookml-model/SKILL.md",
-    warnings: ["This resource is unsupported and may change or lack production support.", mutable],
+    warnings: ["This resource is unsupported and may change or lack production support."],
   },
   {
     ref: "skill:lookml-tests",
@@ -1932,7 +1619,7 @@ const raw = [
     trust: "official",
     maturity: "unsupported",
     source: "https://github.com/looker-open-source/looker-skills/blob/main/skills/lookml-tests/SKILL.md",
-    warnings: ["This resource is unsupported and may change or lack production support.", mutable],
+    warnings: ["This resource is unsupported and may change or lack production support."],
   },
   {
     ref: "skill:microsoft-code-reference",
@@ -1942,7 +1629,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/mcp/blob/main/skills/microsoft-code-reference/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:microsoft-docs",
@@ -1952,7 +1639,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/MicrosoftDocs/mcp/blob/main/skills/microsoft-docs/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:mlflow-onboarding",
@@ -1962,7 +1649,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/mlflow/skills/blob/main/mlflow-onboarding/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:mongodb-query-optimizer",
@@ -1972,7 +1659,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/mongodb/agent-skills/blob/main/skills/mongodb-query-optimizer/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:mongodb-schema-design",
@@ -1982,7 +1669,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/mongodb/agent-skills/blob/main/skills/mongodb-schema-design/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:mysql",
@@ -1992,7 +1679,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/planetscale/database-skills/blob/main/skills/mysql/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:mysql-patterns",
@@ -2002,7 +1689,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/affaan-m/ECC/blob/main/skills/mysql-patterns/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:neon-postgres",
@@ -2012,7 +1699,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/neondatabase/agent-skills/blob/main/skills/neon-postgres/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:newrelic-cli-skills",
@@ -2022,7 +1709,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/vince-winkintel/newrelic-cli-skills/blob/main/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:nifi-flow-layout",
@@ -2032,7 +1719,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/AlekseiSeleznev/nifi-mcp-universal/tree/main/skills/nifi-flow-layout",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:okta-identity-integration-patterns",
@@ -2043,7 +1730,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/vaquarkhan/Fullstack-development-agent-skills/blob/main/skills/okta-identity-integration-patterns/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:oleander-iceberg-catalog",
@@ -2063,7 +1750,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/oracle/skills/blob/main/db/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:oraclecloud-data-handling",
@@ -2074,7 +1761,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/jeremylongshore/claude-code-plugins-plus-skills/blob/main/plugins/saas-packs/oraclecloud-pack/skills/oraclecloud-data-handling/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:oracledb",
@@ -2084,7 +1771,7 @@ const raw = [
     trust: "provider",
     maturity: "beta",
     source: "https://github.com/gemini-cli-extensions/oracledb/blob/main/skills/oracledb/SKILL.md",
-    warnings: ["This resource is beta and may change or lack production support.", mutable],
+    warnings: ["This resource is beta and may change or lack production support."],
   },
   {
     ref: "skill:powerbi-documentation",
@@ -2094,7 +1781,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/MaartenKesters/powerbi-mcp-documentation/blob/main/powerbi-mcp-documentation/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:powerbi-mcp",
@@ -2104,7 +1791,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/devsaikan/powerbi-mcp-skill/blob/main/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:prefect",
@@ -2114,7 +1801,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/TerminalSkills/skills/tree/main/skills/prefect",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:prometheus-addxai",
@@ -2124,7 +1811,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/addxai/enterprise-harness-engineering/blob/main/skills/prometheus/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:purview-data-catalog",
@@ -2134,7 +1821,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/vinayaklatthe/microsoft-security-skills/blob/main/skills/purview-data-catalog/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:purview-data-map",
@@ -2144,7 +1831,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/vinayaklatthe/microsoft-security-skills/blob/main/skills/purview-data-map/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:pytorch-patterns",
@@ -2154,7 +1841,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/affaan-m/ECC/blob/main/skills/pytorch-patterns/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:qlik-load-script",
@@ -2164,7 +1851,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/Pupfish-LLC/qlik-toolkit/blob/main/skills/qlik-load-script/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:query-tableau-data",
@@ -2174,7 +1861,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/Action-Co/skills/blob/main/skills/tableau/query-tableau-data/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:redis-core",
@@ -2184,7 +1871,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/redis/agent-skills/blob/main/skills/redis-core/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:redis-observability",
@@ -2194,7 +1881,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/redis/agent-skills/blob/main/skills/redis-observability/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:redshift",
@@ -2234,7 +1921,7 @@ const raw = [
     trust: "official",
     maturity: "stable",
     source: "https://github.com/mlflow/skills/blob/main/searching-mlflow-docs/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:secrets-vault-manager",
@@ -2245,7 +1932,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/alirezarezvani/claude-skills/blob/main/engineering/skills/secrets-vault-manager/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:securing-s3-buckets",
@@ -2256,7 +1943,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/aws/agent-toolkit-for-aws/tree/main/skills/specialized-skills/storage-skills/securing-s3-buckets",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:senior-data-engineer",
@@ -2267,7 +1954,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/alirezarezvani/claude-skills/blob/main/engineering-team/skills/senior-data-engineer/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:snowflake-expert",
@@ -2277,7 +1964,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/personamanagmentlayer/pcl/blob/main/stdlib/data/snowflake-expert/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:snowpipe-bcdr",
@@ -2287,7 +1974,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/Snowflake-Labs/coco-skills/tree/main/skills/snowpipe-bcdr",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:soda-cli",
@@ -2297,7 +1984,7 @@ const raw = [
     trust: "official",
     maturity: "beta",
     source: "https://github.com/sodadata/soda-cli/blob/main/skills/soda-cli/SKILL.md",
-    warnings: ["This resource is beta and may change or lack production support.", mutable],
+    warnings: ["This resource is beta and may change or lack production support."],
   },
   {
     ref: "skill:spark-engineer",
@@ -2307,7 +1994,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/Jeffallan/claude-skills/blob/main/skills/spark-engineer/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:splunk-ingest-processor-setup",
@@ -2318,7 +2005,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/chambear2809/splunk-cisco-skills/blob/main/skills/splunk-ingest-processor-setup/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:splunk-spl2-pipeline-kit",
@@ -2328,7 +2015,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/chambear2809/splunk-cisco-skills/blob/main/skills/splunk-spl2-pipeline-kit/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:sql-server-table-reconciliation",
@@ -2338,7 +2025,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/github/awesome-copilot/tree/main/skills/sql-server-table-reconciliation",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:supabase-postgres-best-practices",
@@ -2348,7 +2035,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/supabase/agent-skills/blob/main/skills/supabase-postgres-best-practices/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:tableau-dashboard-creator",
@@ -2359,7 +2046,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/laviDrori0702/tableau-dashboard-creator-skill/blob/main/skill/tableau-dashboard-creator/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:tensorflow-data-pipelines",
@@ -2370,7 +2057,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/thebushidocollective/han/blob/main/plugins/specialized/tensorflow/skills/tensorflow-data-pipelines/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:tensorflow-model-deployment",
@@ -2381,7 +2068,7 @@ const raw = [
     maturity: "stable",
     source:
       "https://github.com/thebushidocollective/han/blob/main/plugins/specialized/tensorflow/skills/tensorflow-model-deployment/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
   {
     ref: "skill:troubleshoot-cassandra",
@@ -2391,7 +2078,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/netdata/skills/blob/master/skills/troubleshoot-cassandra/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:udf-benchmark",
@@ -2401,7 +2088,7 @@ const raw = [
     trust: "provider",
     maturity: "stable",
     source: "https://github.com/NVIDIA/cudf-spark/blob/main/skills/udf-benchmark/SKILL.md",
-    warnings: [mutable],
+    warnings: [],
   },
   {
     ref: "skill:validating-json-data",
@@ -2421,7 +2108,7 @@ const raw = [
     trust: "community",
     maturity: "stable",
     source: "https://github.com/Aidas-dev/k8s-agent-skills/blob/main/skills/vault-api/SKILL.md",
-    warnings: [audit, mutable],
+    warnings: [audit],
   },
 ] as const
 
@@ -2434,7 +2121,8 @@ const index = new Map(resources.map((item) => [item.ref, item]))
 function assoc(ref: Stack.ResourceRef): Stack.Association {
   const item = index.get(ref)
   if (!item) throw new Error(`Unknown stack resource: ${ref}`)
-  const enabled = item.kind === "skill" && item.trust === "official" && item.maturity === "stable"
+  const enabled =
+    item.kind === "mcp" || (item.kind === "skill" && item.trust === "official" && item.maturity === "stable")
   return {
     ref: item.ref,
     default: enabled,
@@ -2442,10 +2130,10 @@ function assoc(ref: Stack.ResourceRef): Stack.Association {
     maturity: item.maturity,
     source: item.source,
     rationale: enabled
-      ? "Stable first-party Skill recommended by the Data Engineering catalog."
-      : item.kind === "mcp"
-        ? "Optional MCP candidate requiring separate installation and enablement consent."
-        : "Optional Skill candidate requiring explicit review and selection.",
+      ? item.kind === "mcp"
+        ? "MCP server enabled by default; complete authentication after installation."
+        : "Stable first-party Skill recommended by the Data Engineering catalog."
+      : "Optional Skill candidate requiring explicit review and selection.",
     warnings: item.warnings,
     parameters: item.parameters,
   }
@@ -2458,7 +2146,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:airflow"),
       Stack.ResourceRef.make("skill:authoring-dags"),
-      Stack.ResourceRef.make("mcp:airflow-us-all"),
     ].map(assoc),
   },
   {
@@ -2467,7 +2154,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:dagster-expert"),
       Stack.ResourceRef.make("skill:dagster"),
-      Stack.ResourceRef.make("mcp:dagster-mcp"),
     ].map(assoc),
   },
   {
@@ -2476,7 +2162,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:azure-data-factory"),
       Stack.ResourceRef.make("skill:adf-master"),
-      Stack.ResourceRef.make("mcp:azure-data-factory-consultant"),
     ].map(assoc),
   },
   {
@@ -2516,7 +2201,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:spark-engineer"),
       Stack.ResourceRef.make("skill:udf-benchmark"),
       Stack.ResourceRef.make("mcp:spark-history"),
-      Stack.ResourceRef.make("mcp:spark-sql-mcp"),
     ].map(assoc),
   },
   { id: "stitch", name: "Stitch", resources: [].map(assoc) },
@@ -2546,7 +2230,7 @@ const technologies = [
       Stack.ResourceRef.make("mcp:airbyte-knowledge-mcp"),
     ].map(assoc),
   },
-  { id: "matillion", name: "Matillion", resources: [Stack.ResourceRef.make("mcp:matillion")].map(assoc) },
+  { id: "matillion", name: "Matillion", resources: [].map(assoc) },
   {
     id: "azure-event-hub",
     name: "Azure Event Hub",
@@ -2563,7 +2247,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:aws-messaging-and-streaming"),
       Stack.ResourceRef.make("skill:cdc-streaming-pipeline"),
-      Stack.ResourceRef.make("mcp:awslabs-kinesis-mcp-server"),
       Stack.ResourceRef.make("mcp:aws-serverless-mcp"),
     ].map(assoc),
   },
@@ -2582,7 +2265,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:databricks-spark-structured-streaming"),
       Stack.ResourceRef.make("skill:databricks-pipelines"),
       Stack.ResourceRef.make("mcp:spark-history"),
-      Stack.ResourceRef.make("mcp:spark-documentation"),
     ].map(assoc),
   },
   {
@@ -2629,7 +2311,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:dynamic-tables-tutorial"),
       Stack.ResourceRef.make("skill:snowpipe-bcdr"),
       Stack.ResourceRef.make("mcp:snowflake-managed"),
-      Stack.ResourceRef.make("mcp:mcp-snowflake-server"),
     ].map(assoc),
   },
   {
@@ -2665,7 +2346,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:azure-storage"),
       Stack.ResourceRef.make("skill:azure-rbac"),
       Stack.ResourceRef.make("mcp:azure"),
-      Stack.ResourceRef.make("mcp:adls2-mcp"),
     ].map(assoc),
   },
   {
@@ -2723,7 +2403,7 @@ const technologies = [
   {
     id: "apache-orc",
     name: "Apache ORC",
-    resources: [Stack.ResourceRef.make("mcp:spark-sql-mcp"), Stack.ResourceRef.make("mcp:trino-mcp")].map(assoc),
+    resources: [].map(assoc),
   },
   {
     id: "apache-avro",
@@ -2736,7 +2416,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:jq-json-processing"),
       Stack.ResourceRef.make("skill:validating-json-data"),
-      Stack.ResourceRef.make("mcp:mcp-json-tools"),
     ].map(assoc),
   },
   {
@@ -2758,13 +2437,12 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:csv-wrangling"),
       Stack.ResourceRef.make("skill:csv-query"),
-      Stack.ResourceRef.make("mcp:csv-tools-mcp"),
     ].map(assoc),
   },
   {
     id: "xml",
     name: "XML",
-    resources: [Stack.ResourceRef.make("skill:cheerio-parsing"), Stack.ResourceRef.make("mcp:sylphlab-xml")].map(assoc),
+    resources: [Stack.ResourceRef.make("skill:cheerio-parsing")].map(assoc),
   },
   {
     id: "microsoft-sql-server",
@@ -2781,7 +2459,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:mysql"),
       Stack.ResourceRef.make("skill:mysql-patterns"),
-      Stack.ResourceRef.make("mcp:tokenlite-mysql-mcp"),
     ].map(assoc),
   },
   {
@@ -2790,7 +2467,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:oracle-database"),
       Stack.ResourceRef.make("skill:oracledb"),
-      Stack.ResourceRef.make("mcp:oracle-sqlcl-mcp"),
       Stack.ResourceRef.make("mcp:oci-database-tools-mcp"),
     ].map(assoc),
   },
@@ -2805,7 +2481,7 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:supabase-postgres-best-practices"),
       Stack.ResourceRef.make("skill:neon-postgres"),
-      Stack.ResourceRef.make("mcp:neon-mcp"),
+      Stack.ResourceRef.make("mcp:neon"),
       Stack.ResourceRef.make("mcp:postgres-mcp-pro"),
     ].map(assoc),
   },
@@ -2825,7 +2501,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:mongodb-schema-design"),
       Stack.ResourceRef.make("skill:mongodb-query-optimizer"),
       Stack.ResourceRef.make("mcp:mongodb-mcp-server"),
-      Stack.ResourceRef.make("mcp:infoinlet-mongodb"),
     ].map(assoc),
   },
   {
@@ -2834,7 +2509,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:elasticsearch-file-ingest"),
       Stack.ResourceRef.make("skill:elasticsearch-esql"),
-      Stack.ResourceRef.make("mcp:elastic-agent-builder-mcp"),
     ].map(assoc),
   },
   {
@@ -2877,7 +2551,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:qlik-load-script"),
       Stack.ResourceRef.make("mcp:qlik-mcp"),
-      Stack.ResourceRef.make("mcp:qlik-sense-mcp"),
     ].map(assoc),
   },
   {
@@ -2895,7 +2568,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:graphql"),
       Stack.ResourceRef.make("skill:apollo-graphql"),
-      Stack.ResourceRef.make("mcp:graphql-to-mcp"),
     ].map(assoc),
   },
   {
@@ -2932,7 +2604,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:delta-sharing"),
       Stack.ResourceRef.make("skill:azure-databricks"),
-      Stack.ResourceRef.make("mcp:sap-bdc-mcp-server"),
     ].map(assoc),
   },
   {
@@ -2942,7 +2613,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:snowflake-expert"),
       Stack.ResourceRef.make("skill:cortex-code"),
       Stack.ResourceRef.make("mcp:snowflake-managed"),
-      Stack.ResourceRef.make("mcp:snowflake-mcp-server"),
     ].map(assoc),
   },
   {
@@ -2990,7 +2660,7 @@ const technologies = [
       Stack.ResourceRef.make("skill:tensorflow-data-pipelines"),
       Stack.ResourceRef.make("skill:tensorflow-model-deployment"),
       Stack.ResourceRef.make("mcp:context7"),
-      Stack.ResourceRef.make("mcp:github-mcp"),
+      Stack.ResourceRef.make("mcp:github"),
     ].map(assoc),
   },
   {
@@ -3000,7 +2670,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:pytorch-patterns"),
       Stack.ResourceRef.make("skill:aoti-debug"),
       Stack.ResourceRef.make("mcp:context7"),
-      Stack.ResourceRef.make("mcp:pytorch-mcp-server"),
     ].map(assoc),
   },
   { id: "h2o-ai", name: "H2O.ai", resources: [Stack.ResourceRef.make("mcp:jupyter-mcp")].map(assoc) },
@@ -3011,7 +2680,6 @@ const technologies = [
       Stack.ResourceRef.make("skill:mlflow-onboarding"),
       Stack.ResourceRef.make("skill:searching-mlflow-docs"),
       Stack.ResourceRef.make("mcp:mlflow-mcp"),
-      Stack.ResourceRef.make("mcp:mlflow-us-all"),
     ].map(assoc),
   },
   {
@@ -3064,7 +2732,7 @@ const technologies = [
   {
     id: "cyberark",
     name: "CyberArk",
-    resources: [Stack.ResourceRef.make("mcp:privilege-cloud-mcp")].map(assoc),
+    resources: [].map(assoc),
   },
   {
     id: "collibra",
@@ -3074,7 +2742,7 @@ const technologies = [
   {
     id: "apache-atlas",
     name: "Apache Atlas",
-    resources: [Stack.ResourceRef.make("mcp:gitmcp-apache-atlas")].map(assoc),
+    resources: [].map(assoc),
   },
   {
     id: "azure-purview",
@@ -3134,15 +2802,13 @@ const technologies = [
   {
     id: "dremio",
     name: "Dremio",
-    resources: [Stack.ResourceRef.make("mcp:dremio-mcp-lite")].map(assoc),
+    resources: [].map(assoc),
   },
   {
     id: "prometheus",
     name: "Prometheus",
     resources: [
       Stack.ResourceRef.make("skill:prometheus-addxai"),
-      Stack.ResourceRef.make("mcp:prometheus-pab1it0"),
-      Stack.ResourceRef.make("mcp:prometheus-tjhop"),
     ].map(assoc),
   },
   {
@@ -3170,7 +2836,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:newrelic-cli-skills"),
       Stack.ResourceRef.make("mcp:new-relic-ai-mcp"),
-      Stack.ResourceRef.make("mcp:newrelic-mcp"),
     ].map(assoc),
   },
   {
@@ -3228,7 +2893,7 @@ const technologies = [
       Stack.ResourceRef.make("skill:data-quality-frameworks-sickn33"),
       Stack.ResourceRef.make("skill:senior-data-engineer"),
       Stack.ResourceRef.make("mcp:context7"),
-      Stack.ResourceRef.make("mcp:github-mcp"),
+      Stack.ResourceRef.make("mcp:github"),
     ].map(assoc),
   },
   {
@@ -3237,7 +2902,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:dbt-testing"),
       Stack.ResourceRef.make("mcp:dbt"),
-      Stack.ResourceRef.make("mcp:dbt-us-all"),
     ].map(assoc),
   },
   {
@@ -3258,7 +2922,6 @@ const technologies = [
     resources: [
       Stack.ResourceRef.make("skill:purview-data-catalog"),
       Stack.ResourceRef.make("skill:purview-data-map"),
-      Stack.ResourceRef.make("mcp:purview-unified-catalog-mcp"),
     ].map(assoc),
   },
   {

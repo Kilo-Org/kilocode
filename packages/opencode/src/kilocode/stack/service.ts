@@ -9,6 +9,7 @@ import { StackRuntime } from "./runtime"
 import { Stack } from "./schema"
 import { StackStore } from "./store"
 import { InstanceState } from "@/effect/instance-state"
+import { isRecord } from "@/util/record"
 
 export namespace StackService {
   export class InvalidConfigError extends Schema.TaggedErrorClass<InvalidConfigError>()("StackInvalidConfigError", {
@@ -398,7 +399,11 @@ export namespace StackService {
               if (action.action === "install" && item.kind === "mcp") {
                 const value = resolved.get(action.resource)
                 if (!value) return yield* new InvalidDraftError({ message: INVALID_DRAFT })
-                patch[item.id] = value
+                const prior = current.mcp[item.id]
+                // Activate confirmed fresh installs, but preserve a user's explicit disablement during managed updates.
+                const enabled =
+                  current.stack?.managed[action.resource] && isRecord(prior) ? prior.enabled !== false : true
+                patch[item.id] = { ...value, enabled }
               }
             }
 

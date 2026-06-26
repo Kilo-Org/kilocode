@@ -145,7 +145,7 @@ export const dict = {
   "stack.resources.kicker": "Configuración de recursos",
   "stack.resources.title": "Elige Skills y servidores MCP",
   "stack.resources.description":
-    "Revisa los valores predeterminados seleccionados, elige recursos opcionales y configura solo parámetros no sensibles. Los servidores MCP se instalan desactivados hasta que los autentiques y habilites.",
+    "Revisa los valores predeterminados seleccionados, elige recursos opcionales y configura solo parámetros no sensibles. Los servidores MCP seleccionados se habilitan automáticamente después de la instalación.",
   "stack.resources.emptyTitle": "No hay tecnologías seleccionadas",
   "stack.resources.emptyDescription":
     "Continúa a la revisión si quieres eliminar recursos sin cambios gestionados anteriormente por el Constructor de stack.",
@@ -164,7 +164,7 @@ export const dict = {
     "Configura este secreto fuera del Constructor de stack. Solo se guarda la referencia a la variable de entorno.",
   "stack.resource.secretReference": "Referencia de entorno proporcionada por Marketplace",
   "stack.resource.mcpFollowUp":
-    "Las entradas MCP se instalan desactivadas. Autentícalas y habilítalas después en la configuración de MCP.",
+    "Las entradas MCP seleccionadas se habilitan automáticamente. Completa la autenticación necesaria después de la instalación.",
   "stack.resource.source": "Ver fuente",
   "stack.validation.title": "Configuración de recursos obligatoria",
   "stack.validation.description": "Completa los parámetros no sensibles obligatorios antes de revisar este plan.",

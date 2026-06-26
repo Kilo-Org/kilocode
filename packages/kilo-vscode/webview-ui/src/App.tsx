@@ -20,6 +20,7 @@ import { DisplayProvider } from "./context/display"
 import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
+import { StackSummaryProvider } from "./context/stack-summary"
 import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
@@ -198,6 +199,7 @@ export const MermaidDownloadBridge: Component = () => {
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
   const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
+  const [settingsSubtab, setSettingsSubtab] = createSignal<string | undefined>()
   // legacy-migration: state-driven flag independent of currentView to avoid
   // race conditions with SettingsEditorProvider's navigate messages.
   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
@@ -261,6 +263,8 @@ const AppContent: Component = () => {
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
+        if (message.subtab) setSettingsSubtab(message.subtab)
+        else setSettingsSubtab(undefined)
         setCurrentView(message.view as ViewType)
         vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
       }
@@ -339,6 +343,7 @@ const AppContent: Component = () => {
             <Match when={currentView() === "settings"}>
               <Settings
                 tab={settingsTab()}
+                subtab={settingsSubtab()}
                 onTabChange={setSettingsTab}
                 onMigrationClick={(source) => {
                   setMigrationSource(source)
@@ -384,11 +389,13 @@ const App: Component = () => {
                                 <KiloEmbeddingModelsProvider>
                                   <NotificationsProvider>
                                     <SessionProvider>
-                                      <FeedbackProvider>
-                                        <DataBridge>
-                                          <AppContent />
-                                        </DataBridge>
-                                      </FeedbackProvider>
+                                      <StackSummaryProvider>
+                                        <FeedbackProvider>
+                                          <DataBridge>
+                                            <AppContent />
+                                          </DataBridge>
+                                        </FeedbackProvider>
+                                      </StackSummaryProvider>
                                     </SessionProvider>
                                   </NotificationsProvider>
                                 </KiloEmbeddingModelsProvider>

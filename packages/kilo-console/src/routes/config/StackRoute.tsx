@@ -183,9 +183,6 @@ export function StackRoute() {
           <Show when={state.phase() === "result" && state.result()}>
             {(result) => (
                   <section class="stack-step stack-result" aria-labelledby="stack-result-title">
-                    <div class="stack-result-mark" aria-hidden="true">
-                      OK
-                    </div>
                     <div class="stack-step-heading">
                       <p class="eyebrow">Transaction complete</p>
                       <h2 id="stack-result-title" data-stack-focus tabIndex={-1}>
@@ -218,7 +215,7 @@ export function StackRoute() {
               </Show>
             </div>
 
-            <footer class="stack-footer">
+            <footer class="stack-footer" classList={{ result: state.phase() === "result" }}>
               <Show when={state.phase() !== "result"}>
                 <Button variant="ghost" disabled={Boolean(state.busy())} onClick={cancel}>
                   Cancel

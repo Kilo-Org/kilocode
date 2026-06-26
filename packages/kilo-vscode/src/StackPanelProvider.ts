@@ -210,6 +210,7 @@ export class StackPanelProvider implements vscode.Disposable {
         return
       case "stackLoad":
       case "stackCancel":
+      case "stackDetect":
         await this.controller?.handle(msg as StackWebviewMessage)
         return
       case "stackPreview":

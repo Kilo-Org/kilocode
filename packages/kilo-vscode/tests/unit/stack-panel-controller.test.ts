@@ -4,6 +4,7 @@ import { StackClientError, type StackClient } from "../../src/stack/client"
 import { StackPanelController } from "../../src/stack/panel-controller"
 import type {
   StackApplyResult,
+  StackDetectionResult,
   StackDraft,
   StackExtensionMessage,
   StackLoadData,
@@ -46,6 +47,10 @@ const result: StackApplyResult = {
   state: data.state,
 }
 
+const detection: StackDetectionResult = {
+  detections: [{ technology: "dbt", vertical: "data", evidence: "Found npm dependency `dbt-core`." }],
+}
+
 class RecordingClient implements StackClient {
   calls: string[] = []
   applyError: Error | undefined
@@ -64,6 +69,11 @@ class RecordingClient implements StackClient {
     this.calls.push(`apply:${directory}:${value.resources["skill:dbt"]?.enabled}:${hash}`)
     if (this.applyError) throw this.applyError
     return result
+  }
+
+  async detect(directory: string) {
+    this.calls.push(`detect:${directory}`)
+    return detection
   }
 }
 
@@ -106,6 +116,13 @@ describe("Stack panel controller", () => {
     await value.controller.handle({ type: "stackPreview", draft })
     expect(value.client.calls).toEqual(["preview:/project:dbt"])
     expect(value.messages).toEqual([{ type: "stackPreviewResult", plan }])
+  })
+
+  it("forwards detect results to the webview", async () => {
+    const value = setup("/project")
+    await value.controller.handle({ type: "stackDetect" })
+    expect(value.client.calls).toEqual(["detect:/project"])
+    expect(value.messages).toEqual([{ type: "stackDetectResult", detections: detection.detections }])
   })
 
   it("reports a stale apply after reconciling core state", async () => {

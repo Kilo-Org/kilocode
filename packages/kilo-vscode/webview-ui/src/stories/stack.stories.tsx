@@ -242,7 +242,7 @@ const plan: StackPlan = {
       action: "blocked",
     },
   ],
-  warnings: ["MCP servers are installed disabled until enabled in MCP settings."],
+  warnings: [],
   prerequisites: ["Set environment variable AIRFLOW_API_TOKEN."],
 }
 

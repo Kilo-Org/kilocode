@@ -515,10 +515,7 @@ describe("Stack planner Marketplace validation", () => {
     const plan = Planner.plan(input(value))
     expect(actions(plan)).toEqual({ [refs.mcp]: "install" })
     expect(plan.prerequisites).toEqual(["Install example-mcp.", "Set environment variable API_TOKEN."])
-    expect(plan.warnings).toEqual([
-      "Can update Example data.",
-      "MCP resources are installed disabled until enabled in MCP settings.",
-    ])
+    expect(plan.warnings).toEqual(["Can update Example data."])
   })
 
   test("blocks desired installs when Marketplace is unavailable", () => {

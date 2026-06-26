@@ -27,6 +27,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
   private providers = new Map<PanelView, KiloProvider>()
   private tabs = new Map<PanelView, string>()
+  private subtabs = new Map<PanelView, string>()
   private remoteService: RemoteStatusService | null = null
 
   constructor(
@@ -53,19 +54,19 @@ export class SettingsEditorProvider implements vscode.Disposable {
     return view
   }
 
-  openPanel(view: PanelView, tab?: string): void {
+  openPanel(view: PanelView, tab?: string, subtab?: string): void {
     if (tab) this.tabs.set(view, tab)
+    if (subtab) this.subtabs.set(view, subtab)
 
     const projectDirectory = this.getProjectDirectory()
     const existing = this.panels.get(view)
     if (existing) {
       this.providers.get(view)?.setProjectDirectory(projectDirectory)
-      if (tab) {
-        const provider = this.providers.get(view)
-        provider?.postMessage({ type: "navigate", view, tab })
-      }
+      const nav: Record<string, unknown> = { type: "navigate", view }
+      if (tab) nav.tab = tab
+      if (subtab) nav.subtab = subtab
       existing.reveal(vscode.ViewColumn.One)
-      this.providers.get(view)?.postMessage({ type: "navigate", view, ...(tab ? { tab } : {}) })
+      this.providers.get(view)?.postMessage(nav)
       return
     }
 
@@ -122,7 +123,10 @@ export class SettingsEditorProvider implements vscode.Disposable {
       if (msg.type === "webviewReady") {
         // Small delay to let KiloProvider's own webviewReady handler finish first
         setTimeout(() => {
-          provider.postMessage({ type: "navigate", view, tab: this.tabs.get(view) })
+          const nav: Record<string, unknown> = { type: "navigate", view, tab: this.tabs.get(view) }
+          const sub = this.subtabs.get(view)
+          if (sub) nav.subtab = sub
+          provider.postMessage(nav)
         }, 50)
       }
     })
@@ -147,6 +151,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
       this.panels.delete(view)
       this.providers.delete(view)
       this.tabs.delete(view)
+      this.subtabs.delete(view)
     })
   }
 
@@ -165,5 +170,6 @@ export class SettingsEditorProvider implements vscode.Disposable {
     this.panels.clear()
     this.providers.clear()
     this.tabs.clear()
+    this.subtabs.clear()
   }
 }

@@ -56,7 +56,8 @@
                 };
                 nativeBuildInputs = [
                   pkgs.unzip
-                ] ++ pkgs.lib.optional pkgs.stdenv.isLinux pkgs.autoPatchelfHook;
+                ]
+                ++ pkgs.lib.optional pkgs.stdenv.isLinux pkgs.autoPatchelfHook;
                 buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.stdenv.cc.cc.lib ];
                 dontConfigure = true;
                 dontBuild = true;
@@ -226,6 +227,8 @@
                 ripgrep
                 jetbrains.jdk
                 jdk21
+                zig
+                zig-zlint
                 kilo-dev
                 kilo-install-bin
                 kilo-bin

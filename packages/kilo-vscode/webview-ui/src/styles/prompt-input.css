@@ -584,6 +584,35 @@
   box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
 }
 
+/* Project Stack prompt icon — gray dot by default, accent when stack/MCP/skills present */
+.prompt-stack-button {
+  position: relative;
+}
+
+.prompt-stack-button--active {
+  color: var(--vscode-textLink, #3794ff);
+
+  [data-slot="icon-svg"] {
+    color: currentColor !important;
+  }
+}
+
+.prompt-stack-button::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--vscode-descriptionForeground, #8b949e);
+  box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
+}
+
+.prompt-stack-button--active::after {
+  background: var(--vscode-textLink, #3794ff);
+}
+
 .prompt-speech-button {
   position: relative;
 }

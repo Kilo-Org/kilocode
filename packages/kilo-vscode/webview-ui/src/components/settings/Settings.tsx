@@ -28,6 +28,7 @@ import type { MigrationSource } from "../../types/messages"
 
 export interface SettingsProps {
   tab?: string
+  subtab?: string
   onTabChange?: (tab: string) => void
   onMigrationClick?: (source: MigrationSource) => void // legacy-migration
 }
@@ -221,7 +222,7 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="agentBehaviour">
           <h3>{language.t("settings.agentBehaviour.title")}</h3>
-          <AgentBehaviourTab />
+          <AgentBehaviourTab initialSubtab={props.subtab} />
         </Tabs.Content>
         <Tabs.Content value="autoApprove">
           <h3>{language.t("settings.autoApprove.title")}</h3>

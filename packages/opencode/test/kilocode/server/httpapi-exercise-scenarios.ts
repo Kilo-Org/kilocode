@@ -224,7 +224,7 @@ export const kiloScenarios: Scenario[] = [
     object(body.draft)
     array(body.resources)
     check(typeof body.config_revision === "string", "Stack state should include config revision")
-    check(body.catalog_revision === "2026-06-23.1", "Stack state should include catalog revision")
+    check(body.catalog_revision === "2026-06-25.2", "Stack state should include catalog revision")
   }),
   http.protected
     .get("/kilocode/stack/detect", "stack.detect")

@@ -350,9 +350,6 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.marketplaceButtonClicked", () => {
       track("marketplace", "kilo-code.new.marketplaceButtonClicked")
     }),
-    vscode.commands.registerCommand("kilo-code.new.sidebarTitle.stackBuilderOpen", () => {
-      track("stack_builder", "kilo-code.new.stackBuilderOpen")
-    }),
     vscode.commands.registerCommand("kilo-code.new.sidebarTitle.profileButtonClicked", () => {
       track("profile", "kilo-code.new.profileButtonClicked")
     }),
@@ -396,8 +393,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {
       settingsEditorProvider.openPanel("profile")
     }),
-    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string) => {
-      settingsEditorProvider.openPanel("settings", tab)
+    vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string, subtab?: string) => {
+      settingsEditorProvider.openPanel("settings", tab, subtab)
     }),
     vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
       settingsEditorProvider.openPanel("settings", "indexing")

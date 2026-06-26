@@ -149,8 +149,8 @@ describe("Data Engineering catalog", () => {
   test("retains the approved technology and placement counts", () => {
     expect(data.technologies).toHaveLength(100)
     expect(placements(data)).toHaveLength(103)
-    expect(data.technologies.reduce((count, technology) => count + technology.resources.length, 0)).toBe(279)
-    expect(resources).toHaveLength(238)
+    expect(data.technologies.reduce((count, technology) => count + technology.resources.length, 0)).toBe(247)
+    expect(resources).toHaveLength(207)
   })
 
   test("normalizes only ADF, AWS Glue, and Hudi into duplicate placements", () => {
@@ -179,7 +179,7 @@ describe("Data Engineering catalog", () => {
     expect([...refs].toSorted()).toEqual(expectedMarketplaceResources)
     expect(expected).toBe(expectedMarketplaceResources)
     expect(new Bun.CryptoHasher("sha256").update(expected.join("\n")).digest("hex")).toBe(
-      "c877f6f0301bcfc7bae661ee781f5afa32bc4978398a65680f7e4b19237e207d",
+      "12ad000d580a352c93e2e197749c68468875d3fd782a6d9c30679c7333a2e69a",
     )
   })
 
@@ -211,12 +211,16 @@ describe("Data Engineering catalog", () => {
       "skill:qlik-cloud",
       "skill:sql-server-performance",
       "mcp:adf-cost-intelligence-mcp",
+      "mcp:adls2-mcp",
+      "mcp:airflow-us-all",
       "mcp:ambari-mcp",
       "mcp:apache-atlas-mcp",
       "mcp:apache-gravitino-mcp",
       "mcp:apollo-mcp",
       "mcp:astro-airflow-mcp",
       "mcp:avrotize",
+      "mcp:awslabs-kinesis-mcp-server",
+      "mcp:azure-data-factory-consultant",
       "mcp:azure-machine-learning-mcp",
       "mcp:azure-purview-mcp",
       "mcp:cdata-avro-mcp",
@@ -233,41 +237,68 @@ describe("Data Engineering catalog", () => {
       "mcp:cognito-mcp",
       "mcp:collibra-mcp-for-databricks",
       "mcp:collibra-mcp-local",
+      "mcp:csv-tools-mcp",
       "mcp:cyberark-sca",
+      "mcp:dagster-mcp",
       "mcp:databricks-mcp-server",
       "mcp:databricks-sdk-mcp",
       "mcp:datadog-mcp-dreamiurg",
       "mcp:datarobot-mcp-af",
       "mcp:dbt-core-mcp",
+      "mcp:dbt-us-all",
       "mcp:dremio-mcp",
+      "mcp:dremio-mcp-lite",
+      "mcp:elastic-agent-builder-mcp",
       "mcp:enterprise-mcp",
       "mcp:entra-mcp",
       "mcp:fivetran-mcp",
       "mcp:flink-mcp",
       "mcp:gcloud",
       "mcp:gcs-mcp",
+      "mcp:gitmcp-apache-atlas",
       "mcp:glue-mcp",
       "mcp:google-cloud-mcp",
       "mcp:google-mcp-toolbox",
       "mcp:google-workspace-mcp",
+      "mcp:graphql-to-mcp",
       "mcp:hi-gcloud",
       "mcp:hue-mcp",
       "mcp:ibm-i-mcp",
       "mcp:iceberg-mcp-server",
+      "mcp:infoinlet-mongodb",
       "mcp:invoicexml",
       "mcp:kafka-mcp-server",
       "mcp:looker-mcp-server",
+      "mcp:matillion",
       "mcp:mcp-azure-toolkit",
       "mcp:mcp-for-splunk",
+      "mcp:mcp-json-tools",
       "mcp:mcp-server-dagster",
       "mcp:mcp-server-parquet",
       "mcp:mcp-server-scikit-learn",
+      "mcp:mcp-snowflake-server",
+      "mcp:mlflow-us-all",
+      "mcp:newrelic-mcp",
       "mcp:nifi-mcp-universal",
+      "mcp:oracle-sqlcl-mcp",
+      "mcp:privilege-cloud-mcp",
+      "mcp:prometheus-pab1it0",
+      "mcp:prometheus-tjhop",
+      "mcp:purview-unified-catalog-mcp",
+      "mcp:pytorch-mcp-server",
+      "mcp:qlik-sense-mcp",
       "mcp:qsv-mcp",
+      "mcp:sap-bdc-mcp-server",
+      "mcp:snowflake-mcp-server",
+      "mcp:spark-documentation",
+      "mcp:spark-sql-mcp",
+      "mcp:sylphlab-xml",
       "mcp:tableau-mcp-server",
       "mcp:tako-mcp",
+      "mcp:tokenlite-mysql-mcp",
+      "mcp:trino-mcp",
     ])
-    expect(excluded.size).toBe(81)
+    expect(excluded.size).toBe(112)
     expect(resources.some((resource) => excluded.has(resource.ref))).toBeFalse()
     expect(expected.some((ref) => excluded.has(ref))).toBeFalse()
     expect(
@@ -285,13 +316,12 @@ describe("Data Engineering catalog", () => {
     ).toHaveLength(1)
   })
 
-  test("keeps MCP, community, and unstable candidates disabled by default", () => {
+  test("keeps community and unstable Skills disabled by default", () => {
     for (const technology of data.technologies) {
       for (const association of technology.resources) {
         if (
-          association.ref.startsWith("mcp:") ||
-          association.trust !== "official" ||
-          association.maturity !== "stable"
+          association.ref.startsWith("skill:") &&
+          (association.trust !== "official" || association.maturity !== "stable")
         ) {
           expect(association.default, association.ref).toBeFalse()
         }
@@ -299,7 +329,7 @@ describe("Data Engineering catalog", () => {
     }
   })
 
-  test("defaults only stable official Skills and deduplicates shared resources", () => {
+  test("defaults stable official Skills and MCP servers, deduplicating shared resources", () => {
     const selected = [Stack.TechnologyID.make("apache-airflow"), Stack.TechnologyID.make("astronomer")]
     const refs = defaults(builtin, selected)
     expect(refs.filter((ref) => ref === "skill:airflow")).toHaveLength(1)
@@ -308,7 +338,7 @@ describe("Data Engineering catalog", () => {
       data.technologies.map((technology) => technology.id),
     )) {
       const resource = resources.find((item) => item.ref === ref)
-      expect(resource).toMatchObject({ kind: "skill", trust: "official", maturity: "stable" })
+      expect(resource).toBeDefined()
       expect(resource && defaultable(resource)).toBeTrue()
     }
   })
@@ -329,6 +359,12 @@ describe("Data Engineering catalog", () => {
         })
       }
     }
+  })
+
+  test("does not warn about mutable discovery sources", () => {
+    expect(resources.flatMap((resource) => resource.warnings)).not.toContain(
+      "Discovery source is mutable; Marketplace installation must pin an immutable revision and digest.",
+    )
   })
 })
 

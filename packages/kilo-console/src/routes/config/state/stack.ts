@@ -150,8 +150,13 @@ function normalize(parameters: readonly CatalogParameter[]): StackParameter[] {
   }))
 }
 
+// Keep definitions stable so Solid does not remount focused parameter fields on draft edits.
+const cache = new WeakMap<StackMethod, StackParameter[]>()
+
 function methodParameters(method: StackMethod): StackParameter[] {
-  return method.parameters.map((item) => ({
+  const cached = cache.get(method)
+  if (cached) return cached
+  const parameters = method.parameters.map((item) => ({
     id: item.id,
     label: item.name,
     ...(item.description ? { description: item.description } : {}),
@@ -162,6 +167,8 @@ function methodParameters(method: StackMethod): StackParameter[] {
     ...(item.default !== undefined ? { default: item.default } : {}),
     ...(item.allowed_values ? { values: [...item.allowed_values] } : {}),
   }))
+  cache.set(method, parameters)
+  return parameters
 }
 
 function definitions(item: StackResourceItem, id: string) {
@@ -290,6 +297,10 @@ export function stackParameterValue(draft: StackDraft, item: StackResourceItem, 
 
 function selected(draft: StackDraft) {
   return new Set(Object.keys(draft.verticals).flatMap((id) => selection(draft, id)))
+}
+
+function signature(draft: StackDraft) {
+  return JSON.stringify([...selected(draft)].toSorted())
 }
 
 function fallback(association: StackAssociation, resource: StackResourceItem["resource"]) {
@@ -455,6 +466,7 @@ export function createStackWizard(ops: StackOps) {
   const [catalog, setCatalog] = createSignal<StackCatalogResponse>()
   const [saved, setSaved] = createSignal<StackStateResponse>()
   const [draft, setDraft] = createSignal(emptyStackDraft())
+  const [resources, setResources] = createSignal<ReturnType<typeof stackResourceGroups>>([])
   const [target, setTarget] = createSignal<Query>()
   const [project, setProject] = createSignal("")
   const [vertical, setVertical] = createSignal("")
@@ -477,10 +489,6 @@ export function createStackWizard(ops: StackOps) {
   const currentVertical = createMemo(() => catalog()?.catalog.verticals.find((item) => item.id === vertical()))
   const categories = createMemo(() => stackCategoryGroups(currentVertical()?.categories ?? []))
   const category = createMemo(() => categories()[index()])
-  const resources = createMemo(() => {
-    const item = catalog()
-    return item ? stackResourceGroups(item, draft()) : []
-  })
   const ready = () => {
     const item = catalog()
     return item ? stackCatalogReady(item) : false
@@ -519,12 +527,21 @@ export function createStackWizard(ops: StackOps) {
     setIssues([])
   }
 
+  function update(next: StackDraft, force = false) {
+    const changed = force || signature(draft()) !== signature(next)
+    setDraft(next)
+    if (!changed) return
+    const item = catalog()
+    setResources(item ? stackResourceGroups(item, next) : [])
+  }
+
   function clear() {
     revision += 1
     stop()
     setCatalog(undefined)
     setSaved(undefined)
     setDraft(emptyStackDraft())
+    setResources([])
     setVertical("")
     setPhase("intro")
     setIndex(0)
@@ -542,7 +559,7 @@ export function createStackWizard(ops: StackOps) {
 
   function change(next: StackDraft) {
     touch()
-    setDraft(next)
+    update(next)
   }
 
   function hydrate(input: StackBundle, next: Query) {
@@ -552,7 +569,7 @@ export function createStackWizard(ops: StackOps) {
     setTarget(next)
     setCatalog(input.catalog)
     setSaved(input.state)
-    setDraft(cloneStackDraft(input.state.draft))
+    update(cloneStackDraft(input.state.draft), true)
     const configured = Object.keys(input.state.draft.verticals).find((id) =>
       input.catalog.catalog.verticals.some((item) => item.id === id),
     )
@@ -698,7 +715,7 @@ export function createStackWizard(ops: StackOps) {
     try {
       const next = await ops.preview(destination, input, controller.signal)
       if (controller.signal.aborted || version !== revision || key !== project()) return undefined
-      setDraft(cloneStackDraft(next.draft))
+      update(cloneStackDraft(next.draft))
       setPlan(next)
       setConflict(false)
       setPhase("review")
@@ -739,7 +756,7 @@ export function createStackWizard(ops: StackOps) {
       const next = await ops.apply(destination, cloneStackDraft(current.draft), current.plan_hash, controller.signal)
       if (controller.signal.aborted || version !== revision || key !== project()) return undefined
       setSaved(next.state)
-      setDraft(cloneStackDraft(next.state.draft))
+      update(cloneStackDraft(next.state.draft))
       setResult(next)
       setHash(current.plan_hash)
       setConflict(false)
@@ -760,7 +777,7 @@ export function createStackWizard(ops: StackOps) {
         (next) => {
           if (controller.signal.aborted || version !== revision || key !== project()) return
           setSaved(next)
-          setDraft(cloneStackDraft(next.draft))
+          update(cloneStackDraft(next.draft))
           const item = catalog()
           const configured = Object.keys(next.draft.verticals).find((id) =>
             item?.catalog.verticals.some((vertical) => vertical.id === id),
@@ -837,7 +854,7 @@ export function createStackWizard(ops: StackOps) {
     if (busy() === "apply") return
     touch()
     const item = saved()
-    if (item) setDraft(cloneStackDraft(item.draft))
+    if (item) update(cloneStackDraft(item.draft))
     setPhase("vertical")
     setIndex(0)
     setSearchValue("")

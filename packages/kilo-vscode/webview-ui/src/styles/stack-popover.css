@@ -1,0 +1,111 @@
+/**
+ * Stack popover styles
+ * Popup summarizing the user's configured stack (technologies),
+ * MCP servers, and skills, opened from the prompt-area Stack icon.
+ */
+
+.stack-popover {
+  --stack-popover-border: var(--border-weak-base, var(--vscode-panel-border, transparent));
+  --stack-popover-muted: var(--vscode-descriptionForeground, #8b949e);
+}
+
+.stack-popover-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: height 0.2s ease;
+}
+
+.stack-popover-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 4px 0;
+}
+
+.stack-popover-section {
+  padding: 4px 8px;
+}
+
+.stack-popover-section + .stack-popover-section {
+  border-top: 1px solid var(--stack-popover-border);
+  margin-top: 2px;
+  padding-top: 8px;
+}
+
+.stack-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0 6px;
+}
+
+.stack-popover-header-label {
+  font-size: var(--kilo-font-size-11, 11px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--stack-popover-muted);
+}
+
+.stack-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stack-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: var(--kilo-font-size-13, 13px);
+  min-height: 28px;
+}
+
+.stack-popover-item--mcp {
+  justify-content: flex-start;
+}
+
+.stack-popover-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stack-popover-empty {
+  padding: 8px 6px;
+  font-size: var(--kilo-font-size-12, 12px);
+  color: var(--stack-popover-muted);
+}
+
+/* MCP server status dot */
+.stack-popover-mcp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.stack-popover-mcp-dot--connected {
+  background: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.stack-popover-mcp-dot--failed {
+  background: var(--vscode-testing-iconFailed, #f14c4c);
+}
+
+.stack-popover-mcp-dot--needs_auth {
+  background: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.stack-popover-mcp-dot--disabled,
+.stack-popover-mcp-dot--disconnected,
+.stack-popover-mcp-dot--connecting,
+.stack-popover-mcp-dot--needs_client_registration {
+  background: var(--vscode-descriptionForeground, #8b949e);
+}

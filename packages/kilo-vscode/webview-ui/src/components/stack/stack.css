@@ -92,6 +92,26 @@
   font-weight: 500;
 }
 
+button.stack-rail-label {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.stack-rail-label:hover:not(:disabled) {
+  color: var(--text-strong, var(--vscode-foreground));
+}
+
+button.stack-rail-label:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 .stack-rail-label[data-active],
 .stack-rail-section:has(.stack-category-nav-item[data-active]) .stack-rail-heading,
 .stack-category-nav-item[data-active] {
@@ -270,14 +290,78 @@
 }
 
 .stack-technology-card[data-component="card"] {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
   min-height: 90px;
-  justify-content: center;
   padding: 14px;
+  cursor: pointer;
 }
 
-.stack-technology-card [data-component="checkbox"] {
-  --checkbox-align: flex-start;
-  --checkbox-offset: 2px;
+.stack-technology-card:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+
+.stack-technology-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stack-technology-copy strong {
+  color: var(--text-base, var(--vscode-foreground));
+  font-size: var(--kilo-font-size-13);
+  font-weight: 500;
+}
+
+.stack-technology-copy small {
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.45;
+}
+
+.stack-check {
+  display: grid;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset-base);
+}
+
+.stack-technology-card[data-active] .stack-check {
+  border-color: var(--border-focus);
+  background: var(--border-focus);
+}
+
+.stack-technology-card[data-active] .stack-check::after {
+  width: 0.42rem;
+  height: 0.2rem;
+  border-bottom: 1.5px solid var(--vscode-editor-background, #fff);
+  border-left: 1.5px solid var(--vscode-editor-background, #fff);
+  content: "";
+  transform: translateY(-0.06rem) rotate(-45deg);
+}
+
+.stack-technology-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--border-weaker-base);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset-base);
+}
+
+.stack-technology-icon img {
+  width: 1.6rem;
+  height: 1.6rem;
+  object-fit: contain;
 }
 
 .stack-inline-empty[data-component="card"] {
@@ -420,6 +504,14 @@
   font-size: var(--kilo-font-size-10);
 }
 
+.stack-resource-id {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--kilo-font-size-10);
+}
+
 .stack-secret-reference {
   display: flex;
   align-items: center;
@@ -457,26 +549,6 @@
 
 .stack-review-notice p {
   margin: 4px 0 0;
-}
-
-.stack-draft-review {
-  margin-bottom: 12px;
-}
-
-.stack-draft-review pre {
-  max-height: 240px;
-  margin: 10px 0 0;
-  overflow: auto;
-  padding: 10px 12px;
-  border: 1px solid var(--border-weaker-base);
-  border-radius: var(--radius-md);
-  background: var(--surface-inset-base);
-  color: var(--text-base, var(--vscode-foreground));
-  font-family: var(--vscode-editor-font-family);
-  font-size: var(--kilo-font-size-11);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .stack-plan-hash {
@@ -527,6 +599,10 @@
   padding: 10px 20px;
   border-top: 1px solid var(--border-weaker-base);
   background: color-mix(in srgb, var(--surface-inset-base) 92%, transparent);
+}
+
+.stack-footer[data-step="result"] {
+  justify-content: flex-end;
 }
 
 .stack-footer-primary,

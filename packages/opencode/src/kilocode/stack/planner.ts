@@ -271,7 +271,6 @@ export namespace Planner {
     for (const name of method.auth.environment ?? []) base.prerequisites.push(`Set environment variable ${name}.`)
     base.prerequisites.push(...method.prerequisites)
     if (method.auth.mode === "oauth") base.prerequisites.push("Complete OAuth authentication after installation.")
-    base.warnings.push("MCP resources are installed disabled until enabled in MCP settings.")
     if (method.warnings.writes) base.warnings.push(method.warnings.text ?? "This MCP can perform write operations.")
 
     const template = method.template

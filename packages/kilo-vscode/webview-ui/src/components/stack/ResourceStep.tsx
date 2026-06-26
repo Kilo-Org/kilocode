@@ -231,7 +231,6 @@ function ResourceCard(props: { technology: string; choice: StackResourceChoice }
   const enabled = () => stack.resourceEnabled(props.choice)
   const available = () => props.choice.availability === "available"
   const method = () => resourceMethod(stack.draft(), props.choice)
-  const warnings = () => [...new Set([...props.choice.resource.warnings, ...props.choice.association.warnings])]
 
   return (
     <Card class="stack-resource-card" data-active={enabled() || undefined}>
@@ -240,10 +239,10 @@ function ResourceCard(props: { technology: string; choice: StackResourceChoice }
           id={fieldID(props.technology, props.choice.resource.ref, "enabled")}
           checked={enabled()}
           onChange={(checked) => stack.setResourceEnabled(props.choice, checked)}
-          description={props.choice.association.rationale}
           disabled={!stack.editable() || (!available() && !enabled())}
         >
-          {props.choice.resource.name}
+          <span>{props.choice.resource.name}</span>
+          <code class="stack-resource-id">{props.choice.resource.id}</code>
         </Checkbox>
         <div class="stack-resource-tags">
           <Tag>
@@ -257,8 +256,9 @@ function ResourceCard(props: { technology: string; choice: StackResourceChoice }
           <Tag>{props.choice.association.maturity}</Tag>
         </div>
       </div>
-      <CardDescription>{props.choice.association.rationale}</CardDescription>
-      <Show when={props.choice.reason}>{(reason) => <p class="stack-warning-line">{reason()}</p>}</Show>
+      <Show when={props.choice.item?.description}>
+        {(description) => <CardDescription>{description()}</CardDescription>}
+      </Show>
       <Show when={enabled() && props.choice.resource.kind === "mcp"}>
         <div class="stack-resource-config">
           <MethodField technology={props.technology} choice={props.choice} />
@@ -277,7 +277,6 @@ function ResourceCard(props: { technology: string; choice: StackResourceChoice }
           <p class="stack-auth-line">{language.t("stack.resource.mcpFollowUp")}</p>
         </div>
       </Show>
-      <For each={warnings()}>{(warning) => <p class="stack-warning-line">{warning}</p>}</For>
       <Button
         class="stack-source-link"
         variant="ghost"

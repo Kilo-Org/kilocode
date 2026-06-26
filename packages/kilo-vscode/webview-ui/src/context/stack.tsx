@@ -86,6 +86,8 @@ interface StackContextValue {
   gaps: Accessor<number>
   blocked: Accessor<boolean>
   chooseVertical: (id: string) => void
+  goVertical: () => void
+  goResources: () => void
   goCategory: (index: number) => void
   toggleTechnology: (id: string, enabled: boolean) => void
   toggleDetection: (vertical: string, id: string, enabled: boolean) => void
@@ -359,6 +361,18 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
     setStep("category")
   }
 
+  const goVertical = () => {
+    if (!editable()) return
+    setStep("vertical")
+  }
+
+  const goResources = () => {
+    if (!editable()) return
+    setPlan(undefined)
+    setStale(false)
+    setStep("resources")
+  }
+
   const toggleTechnology = (id: string, enabled: boolean) => {
     if (!editable()) return
     const catalog = data()?.catalog
@@ -517,6 +531,8 @@ export const StackProvider: ParentComponent<{ fixture?: StackFixture }> = (props
     gaps,
     blocked,
     chooseVertical,
+    goVertical,
+    goResources,
     goCategory,
     toggleTechnology,
     toggleDetection,

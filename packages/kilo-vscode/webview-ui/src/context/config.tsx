@@ -58,7 +58,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
-  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false })
+  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false, project_stack: false })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
@@ -163,6 +163,10 @@ export const ConfigProvider: ParentComponent = (props) => {
       // and keep the draft + isDirty so the user can correct and retry.
       setSaving(false)
       setSaveError({ message: message.message, details: message.details })
+      return
+    }
+    if (message.type === "featuresUpdated") {
+      setFeatures(message.features)
       return
     }
   })

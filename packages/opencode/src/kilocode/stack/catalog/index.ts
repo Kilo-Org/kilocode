@@ -56,7 +56,7 @@ export function resourcesByRef(source: Stack.Catalog): Map<Stack.ResourceRef, St
 }
 
 export function defaultable(resource: Stack.Resource): boolean {
-  return resource.kind === "skill" && resource.trust === "official" && resource.maturity === "stable"
+  return resource.kind === "mcp" || (resource.kind === "skill" && resource.trust === "official" && resource.maturity === "stable")
 }
 
 export function defaults(source: Stack.Catalog, ids: Iterable<Stack.TechnologyID>): Stack.ResourceRef[] {
@@ -161,7 +161,7 @@ export function validate(source: Stack.Catalog, manifest: ReadonlyArray<Stack.Re
           issues.push({
             code: "unsafe_default",
             path: target,
-            message: `Only stable first-party Skills may be enabled by default.`,
+            message: `Only stable first-party Skills and MCP servers may be enabled by default.`,
           })
         }
       }

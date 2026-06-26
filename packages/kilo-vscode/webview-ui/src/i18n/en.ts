@@ -283,6 +283,16 @@ export const dict = {
   "prompt.action.autoApprove.disable": "Disable auto-approve",
   "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
   "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
+  "prompt.stack.title": "Project stack",
+  "prompt.stack.section.stack": "Stack",
+  "prompt.stack.section.mcp": "MCP",
+  "prompt.stack.section.skills": "Skills",
+  "prompt.stack.notConfigured": "No stack configured. Click the gear to set up your project stack.",
+  "prompt.stack.noMcps": "No MCP servers configured.",
+  "prompt.stack.noSkills": "No skills configured.",
+  "prompt.stack.gear.stack": "Open Project Stack builder",
+  "prompt.stack.gear.mcp": "Open MCP server settings",
+  "prompt.stack.gear.skills": "Open skills settings",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -1293,6 +1303,9 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.projectStack.title": "Project Stack",
+  "settings.experimental.projectStack.description":
+    "Show a Project Stack icon in the chat prompt that summarizes your configured technologies, MCP servers, and skills.",
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
