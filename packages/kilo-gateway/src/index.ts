@@ -32,6 +32,7 @@ export {
   getKiloBalance,
   getKiloDefaultModel,
   promptOrganizationSelection,
+  resolveCurrentOrganizationId,
 } from "./api/profile.js"
 export { fetchKiloModels, type KiloModelsResult } from "./api/models.js"
 export {
