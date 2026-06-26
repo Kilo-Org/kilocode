@@ -3,6 +3,7 @@ import path from "node:path"
 import { Effect, PlatformError, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Flock } from "@opencode-ai/core/util/flock"
 import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
@@ -31,7 +32,19 @@ function locked<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
       locks.set(sessionID, entry)
       return entry
     }),
-    (entry) => entry.semaphore.withPermits(1)(effect),
+    (entry) =>
+      entry.semaphore.withPermits(1)(
+        Effect.scoped(
+          Effect.gen(function* () {
+            yield* Flock.effect(`sandbox:${sessionID}`, {
+              dir: path.join(SandboxStore.root, "locks"),
+              timeoutMs: 30_000,
+              staleMs: 60_000,
+            }).pipe(Effect.orDie)
+            return yield* effect
+          }),
+        ),
+      ),
     (entry) =>
       Effect.sync(() => {
         entry.refs--
@@ -113,24 +126,29 @@ export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] =
   }
 }
 
-const read = Effect.fn("SandboxPolicy.read")(function* (directory: string, sessionID: SessionID) {
-  const current = yield* Effect.promise(() => SandboxStore.current(sessionID))
+const read = Effect.fn("SandboxPolicy.read")((sessionID: SessionID) =>
+  Effect.promise(() => SandboxStore.current(sessionID)),
+)
+
+const load = Effect.fn("SandboxPolicy.load")(function* (directory: string, sessionID: SessionID) {
+  const current = yield* read(sessionID)
   if (current) return current
   const seed = yield* State.read(sessionID)
   return yield* Effect.promise(() => SandboxStore.read(directory, sessionID, seed))
 })
 
-const capture = Effect.fn("SandboxPolicy.capture")(function* (sessionID: SessionID, seed?: State.Value) {
+const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: SessionID) {
   const directory = yield* InstanceState.directory
-  const current = yield* read(directory, sessionID)
+  const current = yield* read(sessionID)
   if (current) return { directory, state: current }
 
   return yield* locked(
     sessionID,
     Effect.gen(function* () {
-      const existing = yield* read(directory, sessionID)
+      const existing = yield* load(directory, sessionID)
       if (existing) return { directory, state: existing }
       const cfg = yield* (yield* Config.Service).get()
+      const seed = yield* State.read(sessionID)
       const next = secure({
         enabled: seed?.enabled ?? cfg.experimental?.sandbox ?? false,
         mode: cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny",
@@ -140,13 +158,6 @@ const capture = Effect.fn("SandboxPolicy.capture")(function* (sessionID: Session
       return { directory, state: next }
     }),
   )
-})
-
-const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: SessionID) {
-  const directory = yield* InstanceState.directory
-  const current = yield* read(directory, sessionID)
-  if (current) return { directory, state: current }
-  return yield* capture(sessionID, yield* State.read(sessionID))
 })
 
 export const configuredSupport = Effect.fn("SandboxPolicy.configuredSupport")(function* () {
@@ -174,7 +185,7 @@ function change<E, R>(sessionID: SessionID, guard: Effect.Effect<unknown, E, R>)
       sessionID,
       Effect.gen(function* () {
         yield* guard
-        const stored = yield* read(directory, sessionID)
+        const stored = yield* load(directory, sessionID)
         const seed = stored ? undefined : yield* State.read(sessionID)
         const cfg = stored ? undefined : yield* (yield* Config.Service).get()
         const current =
@@ -215,7 +226,7 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
   yield* locked(
     parentID,
     Effect.gen(function* () {
-      const stored = yield* read(directory, parentID)
+      const stored = yield* load(directory, parentID)
       const parent = stored ?? (fallback && secure({ ...fallback, version: 0 }))
       if (!parent) return
       if (!stored) {
@@ -225,7 +236,7 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
       yield* locked(
         sessionID,
         Effect.gen(function* () {
-          const child = yield* read(directory, sessionID)
+          const child = yield* load(directory, sessionID)
           const next: Snapshot = child
             ? {
                 enabled: parent.enabled || child.enabled,

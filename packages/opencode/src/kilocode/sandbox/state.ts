@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { Effect } from "effect"
 import type { SessionID } from "@/session/schema"
 import { SessionTable } from "@/session/session.sql"
@@ -48,36 +48,34 @@ export const read = Effect.fn("SandboxState.read")((sessionID: SessionID) =>
   ),
 )
 
+const path = '$."kilocode.sandbox"'
+
 export const write = Effect.fn("SandboxState.write")((sessionID: SessionID, value: Value) =>
   Effect.sync(() =>
-    Database.use((db) => {
-      const row = db
-        .select({ metadata: SessionTable.metadata })
-        .from(SessionTable)
+    Database.use((db) =>
+      db
+        .update(SessionTable)
+        .set({
+          metadata: sql`json_set(coalesce(${SessionTable.metadata}, json('{}')), ${path}, json(${JSON.stringify(value)}))`,
+          time_updated: Date.now(),
+        })
         .where(eq(SessionTable.id, sessionID))
-        .get()
-      if (!row) return
-      db.update(SessionTable)
-        .set({ metadata: merge(row.metadata, value), time_updated: Date.now() })
-        .where(eq(SessionTable.id, sessionID))
-        .run()
-    }),
+        .run(),
+    ),
   ),
 )
 
 export const clear = Effect.fn("SandboxState.clear")((sessionID: SessionID) =>
   Effect.sync(() =>
-    Database.use((db) => {
-      const row = db
-        .select({ metadata: SessionTable.metadata })
-        .from(SessionTable)
+    Database.use((db) =>
+      db
+        .update(SessionTable)
+        .set({
+          metadata: sql`json_remove(${SessionTable.metadata}, ${path})`,
+          time_updated: Date.now(),
+        })
         .where(eq(SessionTable.id, sessionID))
-        .get()
-      if (!row) return
-      db.update(SessionTable)
-        .set({ metadata: remove(row.metadata), time_updated: Date.now() })
-        .where(eq(SessionTable.id, sessionID))
-        .run()
-    }),
+        .run(),
+    ),
   ),
 )

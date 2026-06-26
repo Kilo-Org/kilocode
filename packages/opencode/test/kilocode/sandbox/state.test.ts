@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -12,6 +12,7 @@ import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import * as Network from "@/kilocode/sandbox/network"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
+import * as SandboxState from "@/kilocode/sandbox/state"
 import { SandboxStore } from "@/kilocode/sandbox/store"
 import { SessionID } from "@/session/schema"
 import { TestInstance } from "../../fixture/fixture"
@@ -129,6 +130,134 @@ test("migrates directory snapshots into one conservative session snapshot", asyn
     expect(await fs.readdir(folder)).toEqual(["snapshot.json"])
   } finally {
     await SandboxStore.dispose(id)
+  }
+})
+
+posix("serializes policy toggles across backend processes", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-sandbox-process-toggle-"))
+  const directory = path.join(root, "project")
+  const start = path.join(root, "start")
+  const id = SessionID.make(`ses_sandbox_process_toggle_${randomUUID()}`)
+  const worker = path.join(import.meta.dir, "fixture", "policy-toggle-worker.ts")
+  const count = 4
+  const total = count * 4
+  const helper = path.join(root, "bwrap")
+  await fs.mkdir(directory)
+  if (process.platform === "linux") {
+    await fs.writeFile(helper, "#!/bin/sh\nexit 0\n")
+    await fs.chmod(helper, 0o755)
+  }
+  await SandboxStore.write(directory, id, { enabled: true, mode: "deny", version: 0 })
+
+  const procs = Array.from({ length: count }, (_, index) => {
+    const ready = path.join(root, `ready-${index}`)
+    const input = { sessionID: id, directory, ready, start, count: 4 }
+    return {
+      ready,
+      proc: Bun.spawn([process.execPath, "--conditions=browser", worker, JSON.stringify(input)], {
+        cwd: path.join(import.meta.dir, "../../.."),
+        env: {
+          ...process.env,
+          KILO_SERVER_PASSWORD: "sandbox-test",
+          ...(process.platform === "linux" ? { KILO_BWRAP_PATH: helper } : {}),
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+        windowsHide: true,
+      }),
+    }
+  })
+
+  const wait = async (file: string) => {
+    const timeout = Date.now() + 10_000
+    while (Date.now() < timeout) {
+      if (await Bun.file(file).exists()) return
+      await Bun.sleep(10)
+    }
+    throw new Error(`Timed out waiting for ${file}`)
+  }
+
+  try {
+    await Promise.all(procs.map((item) => wait(item.ready)))
+    await fs.writeFile(start, "go")
+    await Promise.all(
+      procs.map(async (item) => {
+        const [code, stderr] = await Promise.all([item.proc.exited, new Response(item.proc.stderr).text()])
+        expect(code, stderr).toBe(0)
+      }),
+    )
+    expect(await SandboxStore.current(id)).toEqual({ enabled: true, mode: "deny", version: total })
+  } finally {
+    for (const item of procs) item.proc.kill()
+    await SandboxStore.dispose(id)
+    await fs.rm(root, { recursive: true, force: true })
+  }
+})
+
+test("preserves concurrent unrelated metadata updates across processes", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-sandbox-metadata-process-"))
+  const db = path.join(root, "kilo.db")
+  const start = path.join(root, "start")
+  const read = path.join(root, "sandbox-read")
+  const done = path.join(root, "other-done")
+  const worker = path.join(import.meta.dir, "fixture", "metadata-worker.ts")
+  const id = `ses_sandbox_metadata_process_${randomUUID()}`
+  const env = { ...process.env, KILO_DB: db }
+  const run = (mode: string) =>
+    Bun.spawnSync([process.execPath, "--conditions=browser", worker, JSON.stringify({ mode, sessionID: id })], {
+      cwd: path.join(import.meta.dir, "../../.."),
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+      windowsHide: true,
+    })
+  const setup = run("setup")
+  expect(setup.exitCode, setup.stderr.toString()).toBe(0)
+
+  const count = 200
+  const spawn = (mode: "sandbox" | "other") => {
+    const ready = path.join(root, mode)
+    return {
+      ready,
+      proc: Bun.spawn(
+        [
+          process.execPath,
+          "--conditions=browser",
+          worker,
+          JSON.stringify({ mode, sessionID: id, ready, start, count, read, done }),
+        ],
+        { cwd: path.join(import.meta.dir, "../../.."), env, stdout: "pipe", stderr: "pipe", windowsHide: true },
+      ),
+    }
+  }
+  const procs = [spawn("sandbox"), spawn("other")]
+  const wait = async (file: string) => {
+    const timeout = Date.now() + 10_000
+    while (Date.now() < timeout) {
+      if (await Bun.file(file).exists()) return
+      await Bun.sleep(10)
+    }
+    throw new Error(`Timed out waiting for ${file}`)
+  }
+
+  try {
+    await Promise.all(procs.map((item) => wait(item.ready)))
+    await fs.writeFile(start, "go")
+    await Promise.all(
+      procs.map(async (item) => {
+        const [code, stderr] = await Promise.all([item.proc.exited, new Response(item.proc.stderr).text()])
+        expect(code, stderr).toBe(0)
+      }),
+    )
+
+    const result = run("read")
+    expect(result.exitCode, result.stderr.toString()).toBe(0)
+    const metadata = JSON.parse(result.stdout.toString().trim().split("\n").at(-1)!) as Record<string, unknown>
+    expect(SandboxState.parse(metadata)).toEqual({ enabled: false, version: count - 1 })
+    expect(Object.keys(metadata.other as object)).toHaveLength(count)
+  } finally {
+    for (const item of procs) item.proc.kill()
+    await fs.rm(root, { recursive: true, force: true })
   }
 })
 

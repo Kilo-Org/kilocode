@@ -161,4 +161,32 @@ describe("sandbox session state", () => {
       }),
     ),
   )
+
+  it.live("updates only the sandbox metadata property", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const dir = yield* tmpdirScoped({ git: true })
+      const info = yield* provideInstance(dir)(
+        sessions.create({
+          title: "sandbox-metadata-property",
+          metadata: { other: { revision: 7 }, [SandboxState.key]: { enabled: true, version: 0 } },
+        }),
+      )
+
+      yield* SandboxState.write(info.id, { enabled: false, version: 3 })
+      expect((yield* sessions.get(info.id)).metadata).toEqual({
+        other: { revision: 7 },
+        [SandboxState.key]: { enabled: false, version: 3 },
+      })
+
+      yield* SandboxState.clear(info.id)
+      expect((yield* sessions.get(info.id)).metadata).toEqual({ other: { revision: 7 } })
+
+      const blank = yield* provideInstance(dir)(sessions.create({ title: "sandbox-empty-metadata" }))
+      yield* SandboxState.clear(blank.id)
+      expect((yield* sessions.get(blank.id)).metadata).toBeUndefined()
+      yield* sessions.remove(info.id)
+      yield* sessions.remove(blank.id)
+    }),
+  )
 })
