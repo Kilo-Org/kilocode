@@ -221,6 +221,7 @@ class MockCliServer : AutoCloseable {
         if (!closed.compareAndSet(false, true)) return
         shutdownServer()
         executor.shutdownNow()
+        check(executor.awaitTermination(5, TimeUnit.SECONDS)) { "Mock CLI executor did not terminate" }
     }
 
     private fun shutdownServer() {
