@@ -594,13 +594,17 @@ export const layer = Layer.effect(
       return yield* loadConfig(text, { path: filepath }, env)
     })
 
-    let globalStamp = "" // kilocode_change
+    // kilocode_change start - track the on-disk global config content so edits made by other
+    // Kilo processes are detected. `globalStamp` is the change-detection baseline owned solely by
+    // refreshGlobal; loadGlobal must not write it, otherwise a reload could silently absorb an
+    // external edit that landed between invalidation and the reload, and the next refresh would
+    // miss the change. Seeded eagerly below so the first refresh can detect a change.
+    let globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
+    // kilocode_change end
 
     const loadGlobal = Effect.fnUntraced(function* (env?: Record<string, string>) {
-      // kilocode_change start
+      // kilocode_change
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission())
-      globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
-      // kilocode_change end
       let result: Info = {}
       // Seed the default global config with the schema for editor completion, but avoid writing when the user
       // explicitly routes config through env-provided paths or content.
@@ -636,7 +640,6 @@ export const layer = Layer.effect(
         )
       }
 
-      globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config) // kilocode_change
       return result
     })
 
@@ -650,10 +653,12 @@ export const layer = Layer.effect(
       Duration.infinity,
     )
 
-    // kilocode_change start - detect global config edits made by other Kilo processes
+    // kilocode_change start - detect global config edits made by other Kilo processes.
+    // refreshGlobal is the sole owner of globalStamp: it advances the baseline only when the
+    // on-disk content actually differs, then invalidates the cache so the next read reloads.
     const refreshGlobal = Effect.fnUntraced(function* () {
       const stamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
-      if (!globalStamp || stamp === globalStamp) return false
+      if (stamp === globalStamp) return false
       globalStamp = stamp
       yield* invalidateGlobal
       return true
