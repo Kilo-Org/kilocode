@@ -33,6 +33,7 @@ export {
   getKiloDefaultModel,
   promptOrganizationSelection,
 } from "./api/profile.js"
+export { fetchKiloPassState } from "./api/kilo-pass.js"
 export {
   fetchKiloModels,
   type KiloModelsResult,
@@ -100,6 +101,7 @@ export type {
   Organization,
   KilocodeProfile,
   KilocodeBalance,
+  KiloPassState,
   PollOptions,
   PollResult,
   // Provider types

@@ -108,9 +108,17 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     balance: z.number(),
   })
 
+  const KiloPassState = z.object({
+    currentPeriodBaseCreditsUsd: z.number(),
+    currentPeriodUsageUsd: z.number(),
+    currentPeriodBonusCreditsUsd: z.number(),
+    nextBillingAt: z.string().nullable().optional(),
+  })
+
   const ProfileWithBalance = z.object({
     profile: Profile,
     balance: Balance.nullable(),
+    kiloPass: KiloPassState.nullable(),
     currentOrgId: z.string().nullable(),
   })
 
