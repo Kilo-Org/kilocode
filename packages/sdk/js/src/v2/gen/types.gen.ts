@@ -10182,7 +10182,7 @@ export type KiloProfileResponses = {
       currentPeriodBaseCreditsUsd: number
       currentPeriodUsageUsd: number
       currentPeriodBonusCreditsUsd: number
-      nextBillingAt?: string
+      nextBillingAt?: string | null
     } | null
     currentOrgId: string | null
   }

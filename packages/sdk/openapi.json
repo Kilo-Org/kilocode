@@ -13079,7 +13079,14 @@
                               "type": "number"
                             },
                             "nextBillingAt": {
-                              "type": "string"
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
