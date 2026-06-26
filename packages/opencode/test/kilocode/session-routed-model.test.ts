@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import type { Part, Provider, StepFinishPart } from "@kilocode/sdk/v2"
+import type { Part, StepFinishPart } from "@kilocode/sdk/v2"
 import { RoutedModelMeta } from "../../src/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { KiloRoutedModel } from "../../src/kilocode/session/routed-model"
 import { ModelID, ProviderID } from "../../src/provider/schema"
@@ -101,50 +101,6 @@ describe("session routed model", () => {
     )
     expect(KiloRoutedModel.displayName("moonshotai/kimi-k2.7-code")).toBe("kimi-k2.7-code")
     expect(KiloRoutedModel.displayName("o3")).toBe("o3")
-  })
-
-  test("resolves dated routed ids to the formal catalog name", () => {
-    const model = {
-      id: "moonshotai/kimi-k2.7-code",
-      providerID: "kilo",
-      api: { id: "moonshotai/kimi-k2.7-code", url: "https://api.kilo.ai", npm: "@kilocode/kilo-gateway" },
-      name: "MoonshotAI: Kimi K2.7 Code",
-      capabilities: {
-        temperature: true,
-        reasoning: true,
-        attachment: false,
-        toolcall: true,
-        input: { text: true, audio: false, image: false, video: false, pdf: false },
-        output: { text: true, audio: false, image: false, video: false, pdf: false },
-        interleaved: false,
-      },
-      cost: { input: 1, output: 1, cache: { read: 0, write: 0 } },
-      limit: { context: 1, output: 1 },
-      status: "active",
-      options: {},
-      headers: {},
-      release_date: "2026-06-26",
-    } satisfies Provider["models"][string]
-    const providers = new Map([
-      [
-        "kilo",
-        {
-          id: "kilo",
-          name: "Kilo Gateway",
-          source: "api",
-          env: [],
-          options: {},
-          models: { [model.id]: model },
-        } satisfies Provider,
-      ],
-    ])
-
-    expect(
-      RoutedModelMeta.name(providers, {
-        providerID: "kilo",
-        modelID: "moonshotai/kimi-k2.7-code-20260612",
-      }),
-    ).toBe("MoonshotAI: Kimi K2.7 Code")
   })
 
   test("shows compact labels only for Kilo auto selections", () => {

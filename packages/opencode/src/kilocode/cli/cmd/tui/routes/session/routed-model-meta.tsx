@@ -31,15 +31,12 @@ export namespace RoutedModelMeta {
     return part.type === "step-start" || part.type === "step-finish" || eligible(part, details)
   }
 
-  export function name(list: Providers, model: NonNullable<StepFinishPart["model"]>) {
-    const id = KiloRoutedModel.display(model.modelID)
-    const name = Model.name(list, model.providerID, model.modelID)
-    return name === model.modelID && id !== model.modelID ? Model.name(list, model.providerID, id) : name
-  }
-
   export function label(list: Providers, model: StepFinishPart["model"]) {
     if (!model) return undefined
-    return KiloRoutedModel.displayName(name(list, model))
+    const id = KiloRoutedModel.display(model.modelID)
+    const name = Model.name(list, model.providerID, model.modelID)
+    const text = name === model.modelID && id !== model.modelID ? Model.name(list, model.providerID, id) : name
+    return KiloRoutedModel.displayName(text)
   }
 
   function routed(model: StepFinishPart["model"], message: Message) {

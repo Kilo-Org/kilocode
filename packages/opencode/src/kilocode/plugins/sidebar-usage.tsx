@@ -125,7 +125,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                           {(model) => (
                             <box>
                               <text fg={theme().text} wrapMode="char">
-                                <b>{RoutedModelMeta.name(providers(), model)}</b>
+                                <b>{RoutedModelMeta.label(providers(), model)}</b>
                               </text>
                               <text fg={theme().textMuted} wrapMode="word">
                                 Steps {formatCount(model.steps)} | Cost {formatCost(model.cost)}
