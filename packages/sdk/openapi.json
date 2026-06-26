@@ -13064,6 +13064,43 @@
                         }
                       ]
                     },
+                    "kiloPass": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "currentPeriodBaseCreditsUsd": {
+                              "type": "number"
+                            },
+                            "currentPeriodUsageUsd": {
+                              "type": "number"
+                            },
+                            "currentPeriodBonusCreditsUsd": {
+                              "type": "number"
+                            },
+                            "nextBillingAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "currentPeriodBaseCreditsUsd",
+                            "currentPeriodUsageUsd",
+                            "currentPeriodBonusCreditsUsd"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "currentOrgId": {
                       "anyOf": [
                         {
@@ -13075,7 +13112,7 @@
                       ]
                     }
                   },
-                  "required": ["profile", "balance", "currentOrgId"],
+                  "required": ["profile", "balance", "kiloPass", "currentOrgId"],
                   "additionalProperties": false,
                   "description": "Profile data"
                 }
