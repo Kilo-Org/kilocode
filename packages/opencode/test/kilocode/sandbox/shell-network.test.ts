@@ -90,12 +90,15 @@ const execute = Effect.fn("ShellNetworkTest.execute")(function* (
   return yield* runSandbox(profile(root, mode), shell.execute({ command: `/usr/bin/nc -v 127.0.0.1 ${port}` }, ctx))
 })
 
-const executeConfigured = Effect.fn("ShellNetworkTest.executeConfigured")(function* (port: number) {
+const executeConfigured = Effect.fn("ShellNetworkTest.executeConfigured")(function* (
+  port: number,
+  sessionID = ctx.sessionID,
+) {
   const info = yield* ShellTool
   const shell = yield* info.init()
   const tool = Network.builtin({ id: "bash" })
   return yield* SandboxPolicy.executeTool(
-    ctx.sessionID,
+    sessionID,
     tool,
     shell.execute({ command: `/usr/bin/nc -v 127.0.0.1 ${port}` }, ctx),
   )
@@ -132,7 +135,7 @@ describe("model shell network integration", () => {
   )
 
   test.skipIf(process.platform !== "darwin" && process.platform !== "linux")(
-    "applies the network restriction setting to spawned shell commands",
+    "keeps spawned shell network denied without authenticated server control",
     async () => {
       const effect = Effect.gen(function* () {
         const root = yield* tmpdirScoped()
@@ -145,17 +148,17 @@ describe("model shell network integration", () => {
           }),
         )
 
-        const allow = yield* executeConfigured(allowed.listener.port).pipe(
+        const allow = yield* executeConfigured(allowed.listener.port, SessionID.make("ses_sandbox_network_allow")).pipe(
           provideInstance(root),
           Effect.provide(configured(false)),
         )
-        const deny = yield* executeConfigured(denied.listener.port).pipe(
+        const deny = yield* executeConfigured(denied.listener.port, SessionID.make("ses_sandbox_network_deny")).pipe(
           provideInstance(root),
           Effect.provide(configured(true)),
         )
-        expect(allow.output).toContain("model-shell-network-ok")
-        expect(allow.metadata.exit).toBe(0)
-        expect(allowed.accepted()).toBe(1)
+        expect(allow.output).not.toContain("model-shell-network-ok")
+        expect(allow.metadata.exit).not.toBe(0)
+        expect(allowed.accepted()).toBe(0)
         expect(deny.output).not.toContain("model-shell-network-ok")
         expect(deny.metadata.exit).not.toBe(0)
         expect(denied.accepted()).toBe(0)

@@ -689,6 +689,9 @@ export interface CreateMultiVersionRequest {
   // Overrides `versions`, `providerID`, and `modelID`.
   variant?: string
   modelAllocations?: ModelAllocation[]
+  // When set, start each created worktree session with the sandbox override
+  // reconciled to this state. Only sent when sandbox controls are available.
+  sandbox?: boolean
 }
 
 // Persist tab order for a context (worktree ID or "local")
@@ -937,10 +940,23 @@ export interface RequestSandboxStatusMessage {
   sessionID: string
 }
 
+export interface RequestSandboxDefaultMessage {
+  type: "requestSandboxDefault"
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
+export interface SetSandboxDefaultMessage {
+  type: "setSandboxDefault"
+  enabled: boolean
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
 export interface ToggleSandboxMessage {
   type: "toggleSandbox"
-  sessionID?: string
-  draftID?: string
+  sessionID: string
   requestID: string
   agentManagerContext?: string
   contextDirectory?: string
@@ -1281,6 +1297,8 @@ export type WebviewMessage =
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage
+  | RequestSandboxDefaultMessage
+  | SetSandboxDefaultMessage
   | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage

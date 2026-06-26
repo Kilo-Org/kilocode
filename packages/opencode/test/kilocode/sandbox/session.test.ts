@@ -6,6 +6,7 @@ import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
+import { SandboxStore } from "@/kilocode/sandbox/store"
 import { Session } from "@/session/session"
 import { Storage } from "@/storage/storage"
 import { SyncEvent } from "@/sync"
@@ -28,7 +29,24 @@ const it = testEffect(
 )
 
 describe("sandbox session cleanup", () => {
-  it.live("clears every directory override when removing outside instance context", () =>
+  it.live("forks inherit the source session snapshot", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const dir = yield* tmpdirScoped({ git: true, config: { experimental: { sandbox: true } } })
+      const source = yield* provideInstance(dir)(sessions.create({ title: "sandbox-source" }))
+      const status = yield* provideInstance(dir)(SandboxPolicy.status(source.id))
+      if (!status.available) return
+
+      const fork = yield* provideInstance(dir)(sessions.fork({ sessionID: source.id }))
+      expect((yield* provideInstance(dir)(SandboxPolicy.status(fork.id))).enabled).toBe(true)
+
+      yield* provideInstance(dir)(SandboxPolicy.toggle(source.id))
+      expect((yield* provideInstance(dir)(SandboxPolicy.status(source.id))).enabled).toBe(false)
+      expect((yield* provideInstance(dir)(SandboxPolicy.status(fork.id))).enabled).toBe(true)
+    }),
+  )
+
+  it.live("clears every directory snapshot when removing outside instance context", () =>
     Effect.gen(function* () {
       const session = yield* Session.Service
       const dir = yield* tmpdirScoped({ git: true })
@@ -42,11 +60,11 @@ describe("sandbox session cleanup", () => {
 
       yield* provideInstance(dir)(SandboxPolicy.toggle(info.id))
       yield* provideInstance(worktree)(SandboxPolicy.toggle(info.id))
-      expect((yield* provideInstance(dir)(SandboxPolicy.status(info.id))).enabled).toBe(true)
-      expect((yield* provideInstance(worktree)(SandboxPolicy.status(info.id))).enabled).toBe(true)
+      expect((yield* Effect.promise(() => SandboxStore.read(dir, info.id)))?.enabled).toBe(false)
+      expect((yield* Effect.promise(() => SandboxStore.read(worktree, info.id)))?.enabled).toBe(false)
       yield* session.remove(info.id)
-      expect((yield* provideInstance(dir)(SandboxPolicy.status(info.id))).enabled).toBe(false)
-      expect((yield* provideInstance(worktree)(SandboxPolicy.status(info.id))).enabled).toBe(false)
+      expect(yield* Effect.promise(() => SandboxStore.read(dir, info.id))).toBeUndefined()
+      expect(yield* Effect.promise(() => SandboxStore.read(worktree, info.id))).toBeUndefined()
     }),
   )
 })

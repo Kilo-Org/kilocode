@@ -57,7 +57,7 @@ export interface NotebookEditResult {
   requestPath: string
   revision: string
   index: number
-  action: "insert" | "replace" | "delete"
+  action: "insert" | "replace" | "delete" | "create"
   cell?: NotebookCell
 }
 
@@ -82,6 +82,7 @@ export type NotebookEdit =
   | ({ action: "insert" } & NotebookCellInput)
   | ({ action: "replace" } & NotebookCellInput)
   | { action: "delete" }
+  | { action: "create" }
 
 export interface NotebookReadRequest {
   path: string
@@ -92,7 +93,7 @@ export interface NotebookReadRequest {
 export interface NotebookEditRequest {
   path: string
   directory: string
-  expectedRevision: string
+  expectedRevision?: string
   index: number
   edit: NotebookEdit
 }
@@ -113,6 +114,7 @@ export interface NotebookAccess {
 export interface NotebookAdapterDeps {
   documents(): readonly vscode.NotebookDocument[]
   open(uri: vscode.Uri): Promise<vscode.NotebookDocument>
+  write(uri: vscode.Uri, content: Uint8Array): Promise<void>
   apply(edit: vscode.WorkspaceEdit): Promise<boolean>
   execute(command: string, ...args: unknown[]): Promise<unknown>
   change(listener: (event: vscode.NotebookDocumentChangeEvent) => void): vscode.Disposable
