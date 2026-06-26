@@ -44,7 +44,6 @@ const AutoTopUpStateSchema = z.object({
   enabled: z.boolean(),
   amountCents: z.number().int().nonnegative(),
   thresholdCents: z.number().int().nonnegative(),
-  configured: z.boolean(),
   paymentMethod: z
     .object({
       type: z.string(),

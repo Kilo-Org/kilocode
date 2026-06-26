@@ -214,7 +214,6 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
           enabled: true,
           amountCents: 5000,
           thresholdCents: 500,
-          configured: true,
           paymentMethod: {
             type: "card",
             brand: "visa",

@@ -113,7 +113,6 @@ const usage: ProviderUsageData = {
     manageUrl: "https://app.kilo.ai/subscriptions",
     autoTopUp: {
       enabled: true,
-      configured: true,
       amountCents: 5000,
       thresholdCents: 500,
       paymentType: "card",

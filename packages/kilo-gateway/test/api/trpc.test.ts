@@ -73,7 +73,6 @@ describe("Cloud tRPC client", () => {
           enabled: true,
           amountCents: 5000,
           thresholdCents: 500,
-          configured: true,
           paymentMethod: {
             type: "card",
             brand: "visa",
@@ -91,7 +90,6 @@ describe("Cloud tRPC client", () => {
       enabled: true,
       amountCents: 5000,
       thresholdCents: 500,
-      configured: true,
       paymentMethod: { type: "card", brand: "visa", last4: "4242" },
     })
 

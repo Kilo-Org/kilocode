@@ -2278,7 +2278,6 @@ export type ProviderUsageSnapshot = {
 
 export type ProviderUsageAutoTopUp = {
   enabled: boolean
-  configured: boolean
   amountCents: number
   thresholdCents: number
   paymentType?: string
