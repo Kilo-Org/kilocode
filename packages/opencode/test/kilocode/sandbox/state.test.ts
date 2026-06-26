@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -11,6 +12,7 @@ import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import * as Network from "@/kilocode/sandbox/network"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
+import { SandboxStore } from "@/kilocode/sandbox/store"
 import { SessionID } from "@/session/schema"
 import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
@@ -103,6 +105,33 @@ posix("canonicalizes a symlinked policy state root", async () => {
   }
 })
 
+test("migrates directory snapshots into one conservative session snapshot", async () => {
+  const id = SessionID.make("ses_sandbox_directory_migration")
+  const hash = (value: string) => createHash("sha256").update(value).digest("hex")
+  const folder = path.join(SandboxStore.root, hash(id))
+  await SandboxStore.dispose(id)
+  await fs.mkdir(folder, { recursive: true })
+  await fs.writeFile(
+    path.join(folder, hash("/project/first") + ".json"),
+    JSON.stringify({ enabled: false, mode: "allow", version: 7 }),
+  )
+  await fs.writeFile(
+    path.join(folder, hash("/project/second") + ".json"),
+    JSON.stringify({ enabled: false, mode: "deny", version: 2 }),
+  )
+
+  try {
+    expect(await SandboxStore.read("/project/third", id, { enabled: true, version: 9 })).toEqual({
+      enabled: true,
+      mode: "deny",
+      version: 9,
+    })
+    expect(await fs.readdir(folder)).toEqual(["snapshot.json"])
+  } finally {
+    await SandboxStore.dispose(id)
+  }
+})
+
 linux("reports configured network namespace availability", async () => {
   const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-sandbox-status-"))
   const helper = path.join(root, "bwrap-no-network")
@@ -119,18 +148,25 @@ linux("reports configured network namespace availability", async () => {
   )
   await fs.chmod(helper, 0o755)
   const script = [
-    'import { Effect, Layer } from "effect"',
+    'import { Effect, Exit, Layer } from "effect"',
+    'import { Bus } from "@/bus"',
     'import { Config } from "@/config/config"',
     'import { InstanceRef } from "@/effect/instance-ref"',
+    'import * as Network from "@/kilocode/sandbox/network"',
     'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
     'import { SessionID } from "@/session/schema"',
     "const directory = process.cwd()",
     'const context = { directory, worktree: directory, project: { id: "sandbox-status", worktree: directory, vcs: "git", time: { created: 0, updated: 0 }, sandboxes: [] } }',
-    "const status = (restrict) => SandboxPolicy.status(SessionID.make(`ses_sandbox_status_${restrict}`)).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ experimental: { sandbox: true, sandbox_restrict_network: restrict } }) })), Effect.provideService(InstanceRef, context), Effect.runPromise)",
-    "const deny = await status(true)",
-    "const allow = await status(false)",
+    "const provide = (effect, restrict) => effect.pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ experimental: { sandbox: true, sandbox_restrict_network: restrict } }) })), Effect.provide(Bus.layer), Effect.provideService(InstanceRef, context), Effect.runPromise)",
+    "const denyID = SessionID.make('ses_sandbox_status_true')",
+    "const deny = await provide(SandboxPolicy.status(denyID), true)",
+    "const allow = await provide(SandboxPolicy.status(SessionID.make('ses_sandbox_status_false')), false)",
+    "const blocked = await provide(SandboxPolicy.executeTool(denyID, Network.builtin({ id: 'read' }), Effect.succeed('unsafe')).pipe(Effect.exit), true)",
+    "const toggled = await provide(SandboxPolicy.toggle(denyID), true)",
     'if (deny.available || deny.enabled || !deny.reason?.includes("Linux network sandbox")) process.exit(2)',
     "if (!allow.available || !allow.enabled) process.exit(3)",
+    "if (Exit.isSuccess(blocked)) process.exit(4)",
+    "if (toggled.enabled || toggled.version !== 1) process.exit(5)",
   ].join("\n")
 
   try {
@@ -256,6 +292,18 @@ it.instance("isolates concurrent session overrides and clears them", () =>
     yield* SandboxPolicy.retire(first, (yield* TestInstance).directory, Effect.void)
     expect((yield* SandboxPolicy.status(first)).enabled).toBe(true)
     expect((yield* SandboxPolicy.status(second)).enabled).toBe(true)
+  }),
+)
+
+it.instance("refreshes policy written by another backend", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const id = SessionID.make("ses_sandbox_external_update")
+    yield* Effect.addFinalizer(() => Effect.promise(() => SandboxStore.dispose(id)))
+    yield* SandboxPolicy.status(id)
+    yield* Effect.promise(() => SandboxStore.write(test.directory, id, { enabled: false, mode: "deny", version: 8 }))
+
+    expect(yield* SandboxPolicy.status(id)).toMatchObject({ enabled: false, version: 8 })
   }),
 )
 

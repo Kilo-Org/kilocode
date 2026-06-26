@@ -18,7 +18,7 @@ When enabled, the agent's shell commands and file-write tools run confined to a 
 - Your **project directory** (and its worktree, when running in a linked git worktree)
 - Kilo **state directories**: data, cache, config, state, tmp, bin, log, and repos
 
-Everything else is denied at the OS level. File **reads are not confined** — the agent can still read anywhere it has permission to. The `.git` directory is always denied for writes, regardless of location.
+Everything else is denied at the OS level. File **reads are not confined**; the agent can still read anywhere it has permission to. File-write tools reject `.git` path components, and shell commands cannot modify protected `.git` paths discovered when the sandbox starts.
 
 When network restriction is on (the default), outbound network access is blocked for:
 
@@ -52,12 +52,12 @@ You can also enable it from the VS Code Settings webview: gear icon ({% codicon 
 
 ## Toggle per session
 
-Enabling `experimental.sandbox` sets the default for new sessions, but the setting is ephemeral per session and can be flipped without editing config:
+Enabling `experimental.sandbox` sets the initial default for new sessions. Each session keeps its own sandbox choice, which can be flipped without editing config:
 
 - **VS Code**: a sandbox toggle appears in the prompt input when `experimental.sandbox` is on (not available for cloud sessions). The tooltip shows whether filesystem writes and network are restricted.
 - **CLI / TUI**: run the `/sandbox` slash command or the **Toggle sandbox** palette command. A `◆ Sandbox on` indicator appears next to the prompt when active.
 
-Toggling is in-memory and scoped to the current session, so it does not persist across restarts. If the OS sandbox backend is unavailable on your platform, the toggle reports the reason and confinement stays off.
+The selected state persists with the session across tabs and backend restarts. VS Code also remembers the last selected state as the default for newly created sessions. If a supported macOS or Linux backend becomes unavailable while a session requests sandboxing, model tools fail closed instead of running without confinement.
 
 ## Platform support
 
@@ -71,6 +71,7 @@ Toggling is in-memory and scoped to the current session, so it does not persist 
 
 - **Windows is not supported.**
 - Local MCP servers and plugin hooks are **not** covered by the network restriction.
-- File **reads** are not confined — only writes and shell command effects are.
+- File **reads** are not confined; only writes and shell command effects are.
+- On Linux, shell protection for `.git` applies to paths present when each command starts. File-write tools also reject newly created `.git` paths.
 - Writable file handles are unavailable while the sandbox is active; writes are performed through a sandboxed worker, so some tools that open files for writing may behave differently.
 - The sandbox is additive to the permission system, not a replacement. Permission rules still apply first.

@@ -64,8 +64,9 @@ restricted.live("keeps network restriction enabled by default when the sandbox i
       Effect.exit,
     )
     if (!backendSupport().available) {
-      expect(Exit.isSuccess(exit)).toBe(true)
-      expect(target.requests()).toBe(1)
+      const supported = process.platform === "darwin" || process.platform === "linux"
+      expect(Exit.isFailure(exit)).toBe(supported)
+      expect(target.requests()).toBe(supported ? 0 : 1)
       return
     }
     expect(Exit.isFailure(exit)).toBe(true)
@@ -85,7 +86,8 @@ open.live("keeps network denied without authenticated server control", () => {
       Effect.exit,
     )
     if (!backendSupport().available) {
-      expect(Exit.isSuccess(exit)).toBe(true)
+      const supported = process.platform === "darwin" || process.platform === "linux"
+      expect(Exit.isFailure(exit)).toBe(supported)
       return
     }
     expect(status.enabled).toBe(true)

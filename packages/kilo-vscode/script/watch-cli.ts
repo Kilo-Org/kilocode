@@ -9,7 +9,7 @@
 import { watch, chmodSync } from "node:fs"
 import { join, relative } from "node:path"
 import { $ } from "bun"
-import { copySandboxResources, copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import { copyCliResources } from "../src/services/cli-backend/cli-resources"
 
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
@@ -58,8 +58,7 @@ async function rebuild() {
 
     await $`mkdir -p ${targetBinDir}`
     await $`cp ${source} ${targetBinPath}`
-    await copyTreeSitterResources(source, targetBinPath)
-    await copySandboxResources(source, targetBinPath)
+    await copyCliResources(source, targetBinPath)
     chmodSync(targetBinPath, 0o755)
 
     const elapsed = ((performance.now() - start) / 1000).toFixed(1)

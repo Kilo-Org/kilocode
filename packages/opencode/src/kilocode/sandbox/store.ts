@@ -24,8 +24,8 @@ export namespace SandboxStore {
     return path.join(root, hash(sessionID))
   }
 
-  function file(directory: string, sessionID: SessionID) {
-    return path.join(dir(sessionID), hash(directory) + ".json")
+  function file(sessionID: SessionID) {
+    return path.join(dir(sessionID), "snapshot.json")
   }
 
   function valid(value: unknown): value is Snapshot {
@@ -39,8 +39,7 @@ export namespace SandboxStore {
     )
   }
 
-  export async function read(directory: string, sessionID: SessionID) {
-    const target = file(directory, sessionID)
+  async function load(target: string) {
     const text = await fs.readFile(target, "utf8").catch((err: NodeJS.ErrnoException) => {
       if (err.code === "ENOENT") return undefined
       throw err
@@ -51,9 +50,9 @@ export namespace SandboxStore {
     return value
   }
 
-  export async function write(directory: string, sessionID: SessionID, snapshot: Snapshot) {
+  async function save(sessionID: SessionID, snapshot: Snapshot) {
     const folder = dir(sessionID)
-    const target = file(directory, sessionID)
+    const target = file(sessionID)
     const temp = path.join(folder, `.${randomUUID()}.tmp`)
     await fs.mkdir(folder, { recursive: true, mode: 0o700 })
     await fs.writeFile(temp, JSON.stringify(snapshot), { encoding: "utf8", flag: "wx", mode: 0o600 })
@@ -63,12 +62,53 @@ export namespace SandboxStore {
     })
   }
 
-  export async function remove(directory: string, sessionID: SessionID) {
-    await fs.rm(file(directory, sessionID), { force: true })
-    await fs.rmdir(dir(sessionID)).catch((err: NodeJS.ErrnoException) => {
-      if (err.code === "ENOENT" || err.code === "ENOTEMPTY") return
+  export async function current(sessionID: SessionID) {
+    return load(file(sessionID))
+  }
+
+  export async function read(_directory: string, sessionID: SessionID, seed?: Pick<Snapshot, "enabled" | "version">) {
+    const snapshot = await current(sessionID)
+    if (snapshot) return snapshot
+
+    const folder = dir(sessionID)
+    const entries = await fs.readdir(folder, { withFileTypes: true }).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return []
       throw err
     })
+    const targets = entries
+      .filter((entry) => entry.isFile() && /^[a-f0-9]{64}\.json$/.test(entry.name))
+      .map((entry) => path.join(folder, entry.name))
+    const legacy = (await Promise.all(targets.map(load))).filter((item): item is Snapshot => item !== undefined)
+    if (legacy.length === 0) return
+
+    const initial = legacy[0]
+    if (!initial) return
+    const migrated = legacy.slice(1).reduce<Snapshot>(
+      (state, item) => ({
+        enabled: state.enabled || item.enabled,
+        mode: state.mode === "deny" || item.mode === "deny" ? "deny" : "allow",
+        version: Math.max(state.version, item.version),
+      }),
+      initial,
+    )
+    const stored = seed
+      ? {
+          ...migrated,
+          enabled: migrated.enabled || seed.enabled,
+          version: Math.max(migrated.version, seed.version),
+        }
+      : migrated
+    await save(sessionID, stored)
+    await Promise.all(targets.map((target) => fs.rm(target, { force: true })))
+    return stored
+  }
+
+  export async function write(_directory: string, sessionID: SessionID, snapshot: Snapshot) {
+    await save(sessionID, snapshot)
+  }
+
+  export async function remove(_directory: string, sessionID: SessionID) {
+    await dispose(sessionID)
   }
 
   export async function dispose(sessionID: SessionID) {

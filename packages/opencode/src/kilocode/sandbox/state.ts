@@ -16,7 +16,7 @@ export function parse(metadata: Record<string, unknown> | null | undefined): Val
   if (!value || typeof value !== "object" || Array.isArray(value)) return
   const enabled = Reflect.get(value, "enabled")
   const version = Reflect.get(value, "version")
-  if (typeof enabled !== "boolean" || !Number.isInteger(version) || (version as number) < 0) return
+  if (typeof enabled !== "boolean" || !Number.isSafeInteger(version) || (version as number) < 0) return
   return { enabled, version: version as number }
 }
 
