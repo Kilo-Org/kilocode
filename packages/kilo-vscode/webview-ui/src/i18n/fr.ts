@@ -129,13 +129,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Entrez votre clé API {{provider}} pour connecter votre compte et utiliser les modèles {{provider}} dans Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Connectez-vous à votre serveur {{provider}} local. Laissez la clé API vide si le serveur n’en exige pas (valeur par défaut pour localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Connectez-vous à Atomic Chat sur votre machine (adresse par défaut : http://127.0.0.1:1337). Aucune clé API n’est requise pour le serveur local — démarrez Atomic Chat, chargez un modèle, puis connectez-vous.",
   "provider.connect.apiKey.label": "Clé API {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "Clé API {{provider}} (facultative)",
   "provider.connect.apiKey.placeholder": "Clé API",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Laisser vide pour le serveur local",
   "provider.connect.apiKey.required": "La clé API est requise",
   "provider.connect.prompt.required": "{{field}} est requis",
   "provider.connect.azure.endpointType.label": "Sélectionner la configuration du point de terminaison Azure",
@@ -942,7 +942,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Raisonnement séparé (requis par ex. pour MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -959,7 +959,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Effort de sortie (par ex. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1272,7 +1272,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Ceci réinitialise uniquement les paramètres spécifiques à l'extension VS Code à leurs valeurs par défaut. Les paramètres partagés avec le CLI, tels que les modes et les règles d'approbation automatique, sont stockés dans la configuration du CLI et ne seront pas réinitialisés.",
   "settings.aboutKiloCode.resetSettings.button": "Réinitialiser tous les paramètres",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Réinitialiser les notifications lues",
   "settings.aboutKiloCode.settingsTransfer.title": "Transfert des paramètres",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exportez ou importez vos paramètres pour les transférer entre instances VS Code.",
@@ -1574,7 +1574,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Motifs d'ignorance de l'observateur",
   "settings.context.watcherPatterns.description": "Motifs glob pour les fichiers que l'observateur doit ignorer",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Message de commit",
   "settings.commitMessage.override.title": "Utiliser un prompt personnalisé",
   "settings.commitMessage.override.description":
     "Remplacer le prompt par défaut pour le commit message. Lorsque cette option est activée, votre prompt personnalisé remplace entièrement le prompt intégré pour les conventional commits.",
@@ -1592,10 +1592,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Réduire automatiquement le raisonnement",
   "settings.display.reasoningAutoCollapse.description":
     "Réduit les blocs de raisonnement une fois que l'agent a fini de les écrire. Laissez désactivé pour garder le raisonnement développé, sauf si vous le réduisez manuellement.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blocs de commandes du terminal",
+  "settings.display.terminalCommand.description": "Choisissez si les blocs de commandes du terminal sont développés ou réduits au départ.",
+  "settings.display.terminalCommand.expanded": "Développés",
+  "settings.display.terminalCommand.collapsed": "Réduits",
   "settings.display.codeEdit.title": "Blocs de modification du code",
   "settings.display.codeEdit.description":
     "Choisissez si les blocs de modification du code et de différences sont initialement développés ou réduits.",

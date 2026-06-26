@@ -132,13 +132,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "{{provider}} API 키를 입력하여 계정을 연결하고 Kilo에서 {{provider}} 모델을 사용하세요.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "로컬 {{provider}} 서버에 연결합니다. 서버에 API 키가 필요하지 않으면 비워 두세요(localhost의 기본값).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "컴퓨터의 Atomic Chat에 연결합니다(기본값 http://127.0.0.1:1337). 로컬 서버에는 API 키가 필요하지 않습니다. Atomic Chat을 시작하고 모델을 불러온 다음 연결하세요.",
   "provider.connect.apiKey.label": "{{provider}} API 키",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}} API 키(선택 사항)",
   "provider.connect.apiKey.placeholder": "API 키",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "로컬 서버의 경우 비워 두세요",
   "provider.connect.apiKey.required": "API 키가 필요합니다",
   "provider.connect.prompt.required": "{{field}} 항목은 필수입니다",
   "provider.connect.azure.endpointType.label": "Azure 엔드포인트 구성 선택",
@@ -881,7 +881,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "추론 분리(예: MiniMax에 필요)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -897,7 +897,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "출력 노력 수준(예: Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1237,7 +1237,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "이 기능은 VS Code 확장 프로그램 전용 설정만 기본값으로 초기화합니다. 모드 및 자동 승인 규칙과 같이 CLI와 공유되는 설정은 CLI 구성에 저장되며 초기화되지 않습니다.",
   "settings.aboutKiloCode.resetSettings.button": "모든 설정 초기화",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "읽은 알림 재설정",
   "settings.aboutKiloCode.settingsTransfer.title": "설정 이전",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code 인스턴스 간에 설정을 전송하려면 내보내기 또는 가져오기하세요.",
@@ -1510,7 +1510,7 @@ export const dict = {
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",
   "settings.context.watcherPatterns.description": "감시자가 무시해야 할 파일의 글로브 패턴",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "커밋 메시지",
   "settings.commitMessage.override.title": "사용자 지정 prompt 사용",
   "settings.commitMessage.override.description":
     "기본 commit message의 prompt를 재정의합니다. 활성화되면 사용자 지정 prompt가 기본 제공되는 conventional commits의 prompt를 완전히 대체합니다.",
@@ -1527,10 +1527,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
   "settings.display.reasoningAutoCollapse.description":
     "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "터미널 명령 블록",
+  "settings.display.terminalCommand.description": "터미널 명령 블록을 처음에 펼칠지 접을지 선택합니다.",
+  "settings.display.terminalCommand.expanded": "펼침",
+  "settings.display.terminalCommand.collapsed": "접힘",
   "settings.display.codeEdit.title": "코드 편집 블록",
   "settings.display.codeEdit.description": "코드 편집 블록과 차이점 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.codeEdit.expanded": "펼침",

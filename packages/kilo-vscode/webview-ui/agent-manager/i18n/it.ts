@@ -34,7 +34,7 @@ export const dict = {
   "agentManager.section.moveDown": "Sposta giù",
   "agentManager.section.count": "{{count}}",
 
-  "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.branch": "RAMO",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessioni",
   "agentManager.hoverCard.files": "File",
@@ -200,7 +200,7 @@ export const dict = {
     "L'anteprima dell'immagine non è disponibile per questa istantanea della sessione.",
   "agentManager.review.endOfLongDiff": "Sei arrivato alla fine!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Richiesta di pull",
   "agentManager.import.pastePrUrl": "Incolla URL PR...",
   "agentManager.import.open": "Apri",
   "agentManager.import.branches": "Branch",

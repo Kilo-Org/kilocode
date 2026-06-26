@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "{{provider}}のAPIキーを入力してアカウントを接続し、Kiloで{{provider}}モデルを使用します。",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "ローカルの {{provider}} サーバーに接続します。サーバーで API キーが不要な場合は空欄にしてください（localhost ではこれがデフォルトです）。",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "マシン上の Atomic Chat に接続します（デフォルトは http://127.0.0.1:1337）。ローカルサーバーに API キーは不要です。Atomic Chat を起動してモデルを読み込み、接続してください。",
   "provider.connect.apiKey.label": "{{provider}} APIキー",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}} API キー（任意）",
   "provider.connect.apiKey.placeholder": "APIキー",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "ローカルサーバーの場合は空欄",
   "provider.connect.apiKey.required": "APIキーが必要です",
   "provider.connect.prompt.required": "{{field}}は必須です",
   "provider.connect.azure.endpointType.label": "Azure エンドポイント構成の選択",
@@ -923,7 +923,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "推論を分割（MiniMax などで必須）",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -939,7 +939,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "出力エフォート（Anthropic など）",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1242,7 +1242,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "これはVS Code拡張機能固有の設定のみをデフォルト値にリセットします。モードや自動承認ルールなど、CLIと共有される設定はCLI設定ファイルに保存されており、リセットされません。",
   "settings.aboutKiloCode.resetSettings.button": "すべての設定をリセット",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "既読通知をリセット",
   "settings.aboutKiloCode.settingsTransfer.title": "設定の移行",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code インスタンス間で設定を転送するには、エクスポートまたはインポートしてください。",
@@ -1526,7 +1526,7 @@ export const dict = {
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",
   "settings.context.watcherPatterns.description": "ウォッチャーが無視すべきファイルのglobパターン",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "コミットメッセージ",
   "settings.commitMessage.override.title": "カスタム prompt を使用",
   "settings.commitMessage.override.description":
     "デフォルトの commit message の prompt を上書きします。有効にすると、カスタム prompt が組み込みの conventional commits の prompt を完全に置き換えます。",
@@ -1543,10 +1543,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
   "settings.display.reasoningAutoCollapse.description":
     "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "ターミナルコマンドブロック",
+  "settings.display.terminalCommand.description": "ターミナルコマンドブロックを最初から展開するか折りたたむかを選択します。",
+  "settings.display.terminalCommand.expanded": "展開",
+  "settings.display.terminalCommand.collapsed": "折りたたみ",
   "settings.display.codeEdit.title": "コード編集ブロック",
   "settings.display.codeEdit.description":
     "コード編集ブロックと差分ブロックを最初から展開するか折りたたむかを選択します。",

@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "{{provider}} hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Yerel {{provider}} sunucunuza bağlanın. Sunucu gerektirmiyorsa API anahtarını boş bırakın (localhost için varsayılan).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Makinenizdeki Atomic Chat’e bağlanın (varsayılan http://127.0.0.1:1337). Yerel sunucu için API anahtarı gerekmez — Atomic Chat’i başlatın, bir model yükleyin ve ardından bağlanın.",
   "provider.connect.apiKey.label": "{{provider}} API anahtarı",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}} API anahtarı (isteğe bağlı)",
   "provider.connect.apiKey.placeholder": "API anahtarı",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Yerel sunucu için boş bırakın",
   "provider.connect.apiKey.required": "API anahtarı gerekli",
   "provider.connect.prompt.required": "{{field}} zorunludur",
   "provider.connect.azure.endpointType.label": "Azure uç nokta yapılandırmasını seçin",
@@ -881,7 +881,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Akıl yürütmeyi ayır (ör. MiniMax için gerekli)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -898,7 +898,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Çıktı eforu (ör. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1238,7 +1238,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Bu, yalnızca VS Code uzantısına özgü ayarları varsayılan değerlerine sıfırlar. Modlar ve otomatik onay kuralları gibi CLI ile paylaşılan ayarlar, CLI yapılandırmasında depolanır ve sıfırlanmaz.",
   "settings.aboutKiloCode.resetSettings.button": "Tüm Ayarları Sıfırla",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Okunan bildirimleri sıfırla",
   "settings.aboutKiloCode.settingsTransfer.title": "Ayar Aktarımı",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Ayarlarınızı VS Code örnekleri arasında aktarmak için dışa veya içe aktarın.",
@@ -1494,7 +1494,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",
   "settings.context.watcherPatterns.description": "İzleyicinin yok sayması gereken dosyalar için glob kalıpları",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Commit mesajı",
   "settings.commitMessage.override.title": "Özel prompt Kullan",
   "settings.commitMessage.override.description":
     "Varsayılan commit message için olan prompt değerini geçersiz kıl. Etkinleştirildiğinde, özel prompt değeriniz yerleşik conventional commits için olan prompt değerini tamamen değiştirir.",
@@ -1511,10 +1511,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminal komut blokları",
+  "settings.display.terminalCommand.description": "Terminal komut bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
+  "settings.display.terminalCommand.expanded": "Genişletilmiş",
+  "settings.display.terminalCommand.collapsed": "Daraltılmış",
   "settings.display.codeEdit.title": "Kod Düzenleme Blokları",
   "settings.display.codeEdit.description":
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
@@ -1670,18 +1670,17 @@ export const dict = {
   "settings.indexing.kiloModel.description": "Desteklenen bir Kilo-hosted embeddings modeli seçin.",
   "settings.indexing.kiloSignIn.title": "Kilo oturumu açmak gerekiyor",
   "settings.indexing.kiloSignIn.description": "Hosted embeddings kullanmak için Kilo'da oturum açın.",
-  // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Hesap değiştiriliyor…",
   "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
   "settings.agentBehaviour.createMode.button": "Oluştur",
   "settings.agentBehaviour.createMode.cancel": "İptal",
   "settings.agentBehaviour.createMode.description": "Açıklama",
   "settings.agentBehaviour.createMode.description.help": "Bu modun ne yaptığının kısa açıklaması.",
-  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.description.placeholder": "ör. Kodu kalite ve en iyi uygulamalar açısından inceler",
   "settings.agentBehaviour.createMode.name": "Ad",
   "settings.agentBehaviour.createMode.name.description":
     "Mod için benzersiz tanımlayıcı. Yalnızca küçük harf, rakam ve tire kullanın.",
-  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.name.placeholder": "ör. reviewer",
   "settings.agentBehaviour.createMode.nameInvalid":
     "Ad küçük harfle başlamalı ve yalnızca küçük harf, rakam ve tire içermelidir",
   "settings.agentBehaviour.createMode.nameRequired": "Ad gereklidir",
@@ -1689,7 +1688,7 @@ export const dict = {
   "settings.agentBehaviour.createMode.prompt": "Sistem İstemi",
   "settings.agentBehaviour.createMode.prompt.help": "Bu modu kullanırken yapay zeka ajanı için talimatlar.",
   "settings.agentBehaviour.createMode.prompt.placeholder":
-    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+    "ör. Bir kod inceleyicisisin. Kod kalitesine, en iyi uygulamalara ve olası hatalara odaklan.",
   "settings.agentBehaviour.editMode": "Modu Düzenle",
   "settings.agentBehaviour.editMode.back": "Listeye dön",
   "settings.agentBehaviour.editMode.description": "Açıklama",
@@ -1725,12 +1724,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "Otomatik",
+  "diffViewer.baseBranch.default": "Varsayılan",
+  "diffViewer.baseBranch.remote": "Uzak",
+  "diffViewer.baseBranch.search": "Dalları ara",
+  "diffViewer.baseBranch.empty": "Eşleşen dal yok",
+  "diffViewer.baseBranch.loading": "Dallar yükleniyor…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan hazır:",
 }

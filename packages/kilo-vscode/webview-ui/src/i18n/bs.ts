@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Unesi svoj {{provider}} API ključ da povežeš račun i koristiš {{provider}} modele u Kilo-u.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Povežite se s lokalnim {{provider}} serverom. Ostavite API ključ prazan ako ga server ne zahtijeva (zadano za localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Povežite se s Atomic Chatom na svom računaru (zadano http://127.0.0.1:1337). Za lokalni server nije potreban API ključ — pokrenite Atomic Chat, učitajte model, zatim se povežite.",
   "provider.connect.apiKey.label": "{{provider}} API ključ",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}} API ključ (opcionalno)",
   "provider.connect.apiKey.placeholder": "API ključ",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Ostavite prazno za lokalni server",
   "provider.connect.apiKey.required": "API ključ je obavezan",
   "provider.connect.prompt.required": "{{field}} je obavezno",
   "provider.connect.azure.endpointType.label": "Odaberite konfiguraciju krajnje tačke za Azure",
@@ -933,7 +933,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Odvojeno rezonovanje (potrebno npr. za MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -950,7 +950,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Napor izlaza (npr. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1253,7 +1253,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Ovo resetuje samo postavke specifične za VS Code ekstenziju na njihove zadane vrijednosti. Postavke koje se dijele s CLI-jem, kao što su načini rada i pravila automatskog odobravanja, pohranjene su u CLI konfiguraciji i neće biti resetovane.",
   "settings.aboutKiloCode.resetSettings.button": "Resetuj sve postavke",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Ponovo postavi obavijesti o pročitanom",
   "settings.aboutKiloCode.settingsTransfer.title": "Prijenos postavki",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Izvezite ili uvezite postavke za prijenos između VS Code instanci.",
@@ -1540,7 +1540,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",
   "settings.context.watcherPatterns.description": "Glob uzorci za datoteke koje promatrač treba ignorirati",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Poruka commita",
   "settings.commitMessage.override.title": "Koristi prilagođeni prompt",
   "settings.commitMessage.override.description":
     "Nadjačaj podrazumijevani prompt za commit message. Kada je omogućeno, vaš prilagođeni prompt u potpunosti zamjenjuje ugrađeni prompt za conventional commits.",
@@ -1557,10 +1557,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
   "settings.display.reasoningAutoCollapse.description":
     "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Blokovi terminalskih naredbi",
+  "settings.display.terminalCommand.description": "Odaberite hoće li blokovi terminalskih naredbi u početku biti prošireni ili sažeti.",
+  "settings.display.terminalCommand.expanded": "Prošireno",
+  "settings.display.terminalCommand.collapsed": "Sažeto",
   "settings.display.codeEdit.title": "Blokovi izmjena koda",
   "settings.display.codeEdit.description":
     "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
@@ -1712,12 +1712,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "Automatski",
+  "diffViewer.baseBranch.default": "Zadano",
+  "diffViewer.baseBranch.remote": "Udaljena",
+  "diffViewer.baseBranch.search": "Pretraži grane",
+  "diffViewer.baseBranch.empty": "Nema odgovarajućih grana",
+  "diffViewer.baseBranch.loading": "Učitavanje grana…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan je spreman:",
 }

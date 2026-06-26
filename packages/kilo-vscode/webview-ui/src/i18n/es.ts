@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Introduce tu clave API de {{provider}} para conectar tu cuenta y usar modelos de {{provider}} en Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Conéctate a tu servidor {{provider}} local. Deja vacía la clave de API si el servidor no requiere ninguna (opción predeterminada para localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Conéctate a Atomic Chat en tu equipo (valor predeterminado: http://127.0.0.1:1337). El servidor local no requiere una clave de API: inicia Atomic Chat, carga un modelo y conéctate.",
   "provider.connect.apiKey.label": "Clave API de {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "Clave de API de {{provider}} (opcional)",
   "provider.connect.apiKey.placeholder": "Clave API",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Dejar vacío para el servidor local",
   "provider.connect.apiKey.required": "La clave API es obligatoria",
   "provider.connect.prompt.required": "{{field}} es obligatorio",
   "provider.connect.azure.endpointType.label": "Seleccionar configuración de endpoint de Azure",
@@ -935,7 +935,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Razonamiento dividido (necesario, por ejemplo, para MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -952,7 +952,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Esfuerzo de salida (p. ej., Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1057,7 +1057,7 @@ export const dict = {
   "settings.permissions.tool.todoread.description": "Leer la lista de tareas",
   "settings.permissions.tool.todowrite.title": "Escribir Todo",
   "settings.permissions.tool.todowrite.description": "Actualizar la lista de tareas",
-  "settings.permissions.tool.webfetch.title": "Web Fetch",
+  "settings.permissions.tool.webfetch.title": "Obtención web",
   "settings.permissions.tool.webfetch.description": "Obtener contenido de una URL",
   "settings.permissions.tool.websearch.title": "Búsqueda Web",
   "settings.permissions.tool.websearch.description": "Buscar en la web",
@@ -1259,7 +1259,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Esto restablece únicamente las configuraciones específicas de la extensión VS Code a sus valores predeterminados. Las configuraciones compartidas con el CLI, como los modos y las reglas de aprobación automática, se almacenan en la configuración del CLI y no serán restablecidas.",
   "settings.aboutKiloCode.resetSettings.button": "Restablecer toda la configuración",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Restablecer notificaciones leídas",
   "settings.aboutKiloCode.settingsTransfer.title": "Transferencia de ajustes",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exporta o importa tus ajustes para transferirlos entre instancias de VS Code.",
@@ -1554,7 +1554,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Patrones de ignorar del observador",
   "settings.context.watcherPatterns.description": "Patrones glob para archivos que el observador debe ignorar",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Mensaje de commit",
   "settings.commitMessage.override.title": "Usar prompt personalizado",
   "settings.commitMessage.override.description":
     "Sobrescribir el prompt por defecto para el commit message. Cuando está habilitado, tu prompt personalizado reemplaza completamente el prompt integrado para conventional commits.",
@@ -1572,10 +1572,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Contraer razonamiento automáticamente",
   "settings.display.reasoningAutoCollapse.description":
     "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Bloques de comandos de terminal",
+  "settings.display.terminalCommand.description": "Elige si los bloques de comandos de terminal comienzan expandidos o contraídos.",
+  "settings.display.terminalCommand.expanded": "Expandidos",
+  "settings.display.terminalCommand.collapsed": "Contraídos",
   "settings.display.codeEdit.title": "Bloques de edición de código",
   "settings.display.codeEdit.description":
     "Elige si los bloques de edición de código y de diferencias aparecen inicialmente expandidos o contraídos.",

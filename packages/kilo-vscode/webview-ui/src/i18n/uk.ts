@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Введіть свій API-ключ {{provider}}, щоб підключити акаунт {{provider}} і використовувати моделі {{provider}} в Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Підключіться до локального сервера {{provider}}. Залиште ключ API порожнім, якщо сервер його не вимагає (типово для localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Підключіться до Atomic Chat на своєму комп’ютері (типово http://127.0.0.1:1337). Для локального сервера ключ API не потрібен — запустіть Atomic Chat, завантажте модель та підключіться.",
   "provider.connect.apiKey.label": "API-ключ {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "Ключ API {{provider}} (необов’язково)",
   "provider.connect.apiKey.placeholder": "API-ключ",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Залиште порожнім для локального сервера",
   "provider.connect.apiKey.required": "API-ключ обов'язковий",
   "provider.connect.prompt.required": "{{field}} є обов'язковим",
   "provider.connect.azure.endpointType.label": "Виберіть конфігурацію кінцевої точки Azure",
@@ -881,7 +881,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Розділене міркування (потрібне, наприклад, для MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -898,7 +898,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Зусилля виведення (наприклад, Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1234,7 +1234,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Це скине лише налаштування, специфічні для розширення VS Code, до стандартних значень. Налаштування, що зберігаються в конфігурації CLI (такі як режими та правила автоматичного схвалення), не будуть скинуті.",
   "settings.aboutKiloCode.resetSettings.button": "Скинути всі налаштування",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Скинути прочитані сповіщення",
   "settings.aboutKiloCode.settingsTransfer.title": "Перенесення налаштувань",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Експортуйте або імпортуйте налаштування для перенесення між екземплярами VS Code.",
@@ -1491,7 +1491,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
   "settings.context.watcherPatterns.description": "Glob-шаблони для файлів, які спостерігач має ігнорувати",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Повідомлення коміту",
   "settings.commitMessage.override.title": "Використовувати власний prompt",
   "settings.commitMessage.override.description":
     "Перевизначити prompt за замовчуванням для commit message. Якщо ввімкнено, ваш власний prompt повністю замінює вбудований prompt для conventional commits.",
@@ -1508,10 +1508,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
   "settings.display.reasoningAutoCollapse.description":
     "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Блоки команд термінала",
+  "settings.display.terminalCommand.description": "Виберіть, чи мають блоки команд термінала спочатку бути розгорнутими або згорнутими.",
+  "settings.display.terminalCommand.expanded": "Розгорнуті",
+  "settings.display.terminalCommand.collapsed": "Згорнуті",
   "settings.display.codeEdit.title": "Блоки редагування коду",
   "settings.display.codeEdit.description":
     "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
@@ -1666,18 +1666,17 @@ export const dict = {
   "settings.indexing.kiloModel.description": "Виберіть підтримувану модель Kilo-hosted embeddings.",
   "settings.indexing.kiloSignIn.title": "Потрібен вхід у Kilo",
   "settings.indexing.kiloSignIn.description": "Увійдіть у Kilo, щоб використовувати hosted embeddings.",
-  // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Перемикання акаунту…",
   "settings.agentBehaviour.createMode": "Створити новий режим",
   "settings.agentBehaviour.createMode.button": "Створити",
   "settings.agentBehaviour.createMode.cancel": "Скасувати",
   "settings.agentBehaviour.createMode.description": "Опис",
   "settings.agentBehaviour.createMode.description.help": "Короткий опис того, що робить цей режим.",
-  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.description.placeholder": "наприклад, Перевіряє якість коду та дотримання найкращих практик",
   "settings.agentBehaviour.createMode.name": "Назва",
   "settings.agentBehaviour.createMode.name.description":
     "Унікальний ідентифікатор режиму. Використовуйте лише малі літери, цифри та дефіси.",
-  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.name.placeholder": "наприклад, reviewer",
   "settings.agentBehaviour.createMode.nameInvalid":
     "Назва повинна починатися з малої літери і містити лише малі літери, цифри та дефіси",
   "settings.agentBehaviour.createMode.nameRequired": "Назва обов'язкова",
@@ -1685,7 +1684,7 @@ export const dict = {
   "settings.agentBehaviour.createMode.prompt": "Системний запит",
   "settings.agentBehaviour.createMode.prompt.help": "Інструкції для агента ШІ при використанні цього режиму.",
   "settings.agentBehaviour.createMode.prompt.placeholder":
-    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+    "наприклад, Ви перевіряєте код. Зосередьтеся на якості коду, найкращих практиках і потенційних помилках.",
   "settings.agentBehaviour.editMode": "Редагувати режим",
   "settings.agentBehaviour.editMode.back": "Назад до списку",
   "settings.agentBehaviour.editMode.description": "Опис",
@@ -1722,12 +1721,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "Автоматично",
+  "diffViewer.baseBranch.default": "Типова",
+  "diffViewer.baseBranch.remote": "Віддалена",
+  "diffViewer.baseBranch.search": "Пошук гілок",
+  "diffViewer.baseBranch.empty": "Відповідних гілок не знайдено",
+  "diffViewer.baseBranch.loading": "Завантаження гілок…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "План готовий:",
 }

@@ -201,7 +201,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Попередній перегляд зображення недоступний для цього знімка сеансу.",
   "agentManager.review.endOfLongDiff": "Ви дійшли до кінця!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Запит на злиття",
   "agentManager.import.pastePrUrl": "Вставте URL PR...",
   "agentManager.import.open": "Відкрити",
   "agentManager.import.branches": "Гілки",

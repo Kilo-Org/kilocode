@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "اتصل بخادم {{provider}} المحلي. اترك مفتاح API فارغًا إذا كان الخادم لا يتطلبه (وهو الإعداد الافتراضي لـ localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "اتصل بـ Atomic Chat على جهازك (العنوان الافتراضي http://127.0.0.1:1337). لا يتطلب الخادم المحلي مفتاح API — شغّل Atomic Chat وحمّل نموذجًا، ثم اتصل.",
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "مفتاح API لـ {{provider}} (اختياري)",
   "provider.connect.apiKey.placeholder": "مفتاح API",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "اتركه فارغًا للخادم المحلي",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
   "provider.connect.prompt.required": "{{field}} مطلوب",
   "provider.connect.azure.endpointType.label": "حدد تكوين نقطة نهاية Azure",
@@ -875,7 +875,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "فصل الاستدلال (مطلوب مثلًا لـ MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -891,7 +891,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "جهد الإخراج (مثل Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1227,7 +1227,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "يؤدي هذا إلى إعادة تعيين الإعدادات الخاصة بامتداد VS Code فقط إلى قيمها الافتراضية. الإعدادات المشتركة مع CLI، مثل الأوضاع وقواعد الموافقة التلقائية، مخزّنة في تكوين CLI ولن تتأثر.",
   "settings.aboutKiloCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "إعادة تعيين الإشعارات المقروءة",
   "settings.aboutKiloCode.settingsTransfer.title": "نقل الإعدادات",
   "settings.aboutKiloCode.settingsTransfer.description": "تصدير أو استيراد إعداداتك لنقلها بين نُسخ VS Code.",
   "settings.aboutKiloCode.exportSettings": "تصدير",
@@ -1500,7 +1500,7 @@ export const dict = {
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
   "settings.context.watcherPatterns.description": "أنماط glob للملفات التي يجب على المراقب تجاهلها",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "رسالة الالتزام",
   "settings.commitMessage.override.title": "استخدام prompt مخصص",
   "settings.commitMessage.override.description":
     "تجاوز prompt الـ commit message الافتراضي. عند التفعيل، سيستبدل الـ prompt المخصص الخاص بك الـ prompt المدمج لـ conventional commits بالكامل.",
@@ -1517,10 +1517,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
   "settings.display.reasoningAutoCollapse.description":
     "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "كتل أوامر الطرفية",
+  "settings.display.terminalCommand.description": "اختر ما إذا كانت كتل أوامر الطرفية تبدأ موسعة أم مطوية.",
+  "settings.display.terminalCommand.expanded": "موسعة",
+  "settings.display.terminalCommand.collapsed": "مطوية",
   "settings.display.codeEdit.title": "كتل تعديلات التعليمات البرمجية",
   "settings.display.codeEdit.description":
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",

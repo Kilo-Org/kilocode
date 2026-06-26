@@ -132,13 +132,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 Kilo 中使用 {{provider}} 模型。",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "連線至本機 {{provider}} 伺服器。如果伺服器不需要 API 金鑰，請留空（localhost 預設不需要）。",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "連線至本機上的 Atomic Chat（預設為 http://127.0.0.1:1337）。本機伺服器不需要 API 金鑰——請啟動 Atomic Chat、載入模型，然後連線。",
   "provider.connect.apiKey.label": "{{provider}} API 金鑰",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}} API 金鑰（選填）",
   "provider.connect.apiKey.placeholder": "API 金鑰",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "本機伺服器請留空",
   "provider.connect.apiKey.required": "API 金鑰為必填",
   "provider.connect.prompt.required": "{{field}} 為必填項",
   "provider.connect.azure.endpointType.label": "選擇 Azure 端點設定",
@@ -865,7 +865,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "拆分推理（例如 MiniMax 要求啟用）",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -881,7 +881,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "輸出力度（例如 Anthropic）",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1180,7 +1180,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "此操作僅將 VS Code 擴充功能專屬設定重置為預設值。與 CLI 共享的設定（例如模式和自動核准規則）儲存在 CLI 設定中，不會被重置。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有設定",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "重設已讀通知",
   "settings.aboutKiloCode.settingsTransfer.title": "設定轉移",
   "settings.aboutKiloCode.settingsTransfer.description": "匯出或匯入設定，以便在 VS Code 實例之間轉移。",
   "settings.aboutKiloCode.exportSettings": "匯出",
@@ -1436,7 +1436,7 @@ export const dict = {
   "settings.context.watcherPatterns": "檔案監視器忽略模式",
   "settings.context.watcherPatterns.description": "監視器應忽略的檔案的 glob 模式",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "提交訊息",
   "settings.commitMessage.override.title": "使用自訂 prompt",
   "settings.commitMessage.override.description":
     "覆寫預設的 commit message 的 prompt。啟用後，您的自訂 prompt 將完全取代內建的 conventional commits 的 prompt。",
@@ -1453,10 +1453,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "自動收合推理",
   "settings.display.reasoningAutoCollapse.description":
     "在代理寫完推理後收合推理區塊。保持關閉可讓推理保持展開，除非你手動收合它。",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "終端機命令區塊",
+  "settings.display.terminalCommand.description": "選擇終端機命令區塊一開始要展開還是摺疊。",
+  "settings.display.terminalCommand.expanded": "展開",
+  "settings.display.terminalCommand.collapsed": "摺疊",
   "settings.display.codeEdit.title": "程式碼編輯區塊",
   "settings.display.codeEdit.description": "選擇程式碼編輯區塊與差異區塊的初始狀態：展開或收合。",
   "settings.display.codeEdit.expanded": "展開",

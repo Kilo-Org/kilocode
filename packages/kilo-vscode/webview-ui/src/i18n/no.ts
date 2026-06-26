@@ -131,13 +131,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Skriv inn din {{provider}} API-nøkkel for å koble til kontoen din og bruke {{provider}}-modeller i Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Koble til den lokale {{provider}}-serveren. La API-nøkkelen stå tom hvis serveren ikke krever en (standard for localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Koble til Atomic Chat på maskinen din (standard http://127.0.0.1:1337). Den lokale serveren krever ingen API-nøkkel — start Atomic Chat, last inn en modell, og koble deretter til.",
   "provider.connect.apiKey.label": "{{provider}} API-nøkkel",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}}-API-nøkkel (valgfri)",
   "provider.connect.apiKey.placeholder": "API-nøkkel",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "La stå tomt for lokal server",
   "provider.connect.apiKey.required": "API-nøkkel er påkrevd",
   "provider.connect.prompt.required": "{{field}} er påkrevd",
   "provider.connect.azure.endpointType.label": "Velg Azure-endepunktskonfigurasjon",
@@ -891,7 +891,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Del opp resonnering (kreves f.eks. for MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -908,7 +908,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Utdata-/innsatsnivå (f.eks. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1210,7 +1210,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dette tilbakestiller kun VS Code-utvidelsesspecifikke innstillinger til standardverdiene. Innstillinger som deles med CLI, som modi og regler for automatisk godkjenning, lagres i CLI-konfigurasjonen og vil ikke tilbakestilles.",
   "settings.aboutKiloCode.resetSettings.button": "Tilbakestill alle innstillinger",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Tilbakestill leste varsler",
   "settings.aboutKiloCode.settingsTransfer.title": "Overføring av innstillinger",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksporter eller importer innstillingene dine for å overføre dem mellom VS Code-instanser.",
@@ -1529,7 +1529,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",
   "settings.context.watcherPatterns.description": "Glob-mønstre for filer som vakten skal ignorere",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Commit-melding",
   "settings.commitMessage.override.title": "Bruk egendefinert prompt",
   "settings.commitMessage.override.description":
     "Overstyr standard prompt for commit message. Når aktivert, erstatter din egendefinerte prompt fullstendig den innebygde prompten for conventional commits.",
@@ -1546,10 +1546,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalkommandoblokker",
+  "settings.display.terminalCommand.description": "Velg om terminalkommandoblokker skal starte utvidet eller skjult.",
+  "settings.display.terminalCommand.expanded": "Utvidet",
+  "settings.display.terminalCommand.collapsed": "Sammenfoldet",
   "settings.display.codeEdit.title": "Blokker for kodeendringer",
   "settings.display.codeEdit.description":
     "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
@@ -1697,12 +1697,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "Automatisk",
+  "diffViewer.baseBranch.default": "Standard",
+  "diffViewer.baseBranch.remote": "Ekstern",
+  "diffViewer.baseBranch.search": "Søk etter branches",
+  "diffViewer.baseBranch.empty": "Ingen samsvarende branches",
+  "diffViewer.baseBranch.loading": "Laster branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
 } satisfies Partial<Record<Keys, string>>

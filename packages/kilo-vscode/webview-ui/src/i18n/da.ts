@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Indtast din {{provider}} API-nøgle for at forbinde din konto og bruge {{provider}} modeller i Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Opret forbindelse til din lokale {{provider}}-server. Lad API-nøglen være tom, hvis serveren ikke kræver en (standard for localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Opret forbindelse til Atomic Chat på din computer (standard http://127.0.0.1:1337). Den lokale server kræver ingen API-nøgle — start Atomic Chat, indlæs en model, og opret derefter forbindelse.",
   "provider.connect.apiKey.label": "{{provider}} API-nøgle",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}}-API-nøgle (valgfri)",
   "provider.connect.apiKey.placeholder": "API-nøgle",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Lad feltet være tomt for en lokal server",
   "provider.connect.apiKey.required": "API-nøgle er påkrævet",
   "provider.connect.prompt.required": "{{field}} er påkrævet",
   "provider.connect.azure.endpointType.label": "Vælg Azure-slutpunktskonfiguration",
@@ -926,7 +926,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Opdel ræsonnement (kræves f.eks. til MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -943,7 +943,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Outputindsats (f.eks. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1247,7 +1247,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dette nulstiller kun VS Code-udvidelsesspecifikke indstillinger til deres standardværdier. Indstillinger der deles med CLI, såsom tilstande og regler for automatisk godkendelse, er gemt i CLI-konfigurationen og vil ikke blive nulstillet.",
   "settings.aboutKiloCode.resetSettings.button": "Nulstil alle indstillinger",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Nulstil læste notifikationer",
   "settings.aboutKiloCode.settingsTransfer.title": "Overførsel af indstillinger",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksportér eller importér dine indstillinger for at overføre dem mellem VS Code-instanser.",
@@ -1530,7 +1530,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",
   "settings.context.watcherPatterns.description": "Glob-mønstre for filer, som vagten skal ignorere",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Commitbesked",
   "settings.commitMessage.override.title": "Brug brugerdefineret prompt",
   "settings.commitMessage.override.description":
     "Tilsidesæt standard prompt for commit message. Når dette er aktiveret, erstatter din brugerdefinerede prompt fuldstændigt den indbyggede prompt for conventional commits.",
@@ -1547,10 +1547,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalkommandoblokke",
+  "settings.display.terminalCommand.description": "Vælg, om terminalkommandoblokke skal starte udvidet eller sammenfoldet.",
+  "settings.display.terminalCommand.expanded": "Udvidet",
+  "settings.display.terminalCommand.collapsed": "Sammenfoldet",
   "settings.display.codeEdit.title": "Koderedigeringsblokke",
   "settings.display.codeEdit.description":
     "Vælg, om blokke, der viser koderedigeringer og forskelle, starter foldet ud eller sammen.",
@@ -1703,12 +1703,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "Automatisk",
+  "diffViewer.baseBranch.default": "Standard",
+  "diffViewer.baseBranch.remote": "Fjern",
+  "diffViewer.baseBranch.search": "Søg efter branches",
+  "diffViewer.baseBranch.empty": "Ingen matchende branches",
+  "diffViewer.baseBranch.loading": "Indlæser branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
 }

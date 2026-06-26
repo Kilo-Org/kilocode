@@ -132,13 +132,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Geben Sie Ihren {{provider}} API-Schlüssel ein, um Ihr Konto zu verbinden und {{provider}} Modelle in Kilo zu nutzen.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Stelle eine Verbindung zu deinem lokalen {{provider}}-Server her. Lass den API-Schlüssel leer, wenn der Server keinen benötigt (Standard für localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Stelle eine Verbindung zu Atomic Chat auf deinem Computer her (Standard: http://127.0.0.1:1337). Für den lokalen Server ist kein API-Schlüssel erforderlich — starte Atomic Chat, lade ein Modell und stelle dann die Verbindung her.",
   "provider.connect.apiKey.label": "{{provider}} API-Schlüssel",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}}-API-Schlüssel (optional)",
   "provider.connect.apiKey.placeholder": "API-Schlüssel",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Für lokalen Server leer lassen",
   "provider.connect.apiKey.required": "API-Schlüssel ist erforderlich",
   "provider.connect.prompt.required": "{{field}} ist erforderlich",
   "provider.connect.azure.endpointType.label": "Azure-Endpunktkonfiguration auswählen",
@@ -941,7 +941,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Schlussfolgerung aufteilen (z. B. für MiniMax erforderlich)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -958,7 +958,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Ausgabeaufwand (z. B. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1033,7 +1033,7 @@ export const dict = {
 
   "settings.permissions.title": "Berechtigungen",
   "settings.permissions.description": "Steuern Sie, welche Tools der Server standardmäßig verwenden darf.",
-  "settings.permissions.section.tools": "Tools",
+  "settings.permissions.section.tools": "Werkzeuge",
   "settings.permissions.toast.updateFailed.title": "Berechtigungen konnten nicht aktualisiert werden",
 
   "settings.permissions.action.allow": "Erlauben",
@@ -1089,7 +1089,7 @@ export const dict = {
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Nur dieses Repository",
   "session.cloud.import": "Aus der Cloud importieren",
-  "feedback.button": "Feedback & Support",
+  "feedback.button": "Feedback und Support",
   "feedback.dialog.message": "Wir würden uns freuen, Ihr Feedback zu hören oder Ihnen bei Problemen zu helfen.",
   "feedback.dialog.github": "Ein Problem auf GitHub melden",
   "feedback.dialog.discord": "Unserer Discord-Community beitreten",
@@ -1257,7 +1257,7 @@ export const dict = {
   "settings.aboutKiloCode.versionInfo": "Versionsinformationen",
   "settings.aboutKiloCode.version.label": "Version:",
   "settings.aboutKiloCode.extensionName": "Kilo Code Erweiterung",
-  "settings.aboutKiloCode.community": "Community & Support",
+  "settings.aboutKiloCode.community": "Community und Support",
   "settings.aboutKiloCode.feedback.prefix": "Bei Fragen oder Feedback können Sie ein Issue eröffnen auf",
   "settings.aboutKiloCode.feedback.or": "oder",
   "settings.aboutKiloCode.support.prefix":
@@ -1266,7 +1266,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dies setzt nur VS Code-erweiterungsspezifische Einstellungen auf ihre Standardwerte zurück. Einstellungen, die mit der CLI geteilt werden, wie Modi und Regeln für die automatische Genehmigung, werden in der CLI-Konfiguration gespeichert und nicht zurückgesetzt.",
   "settings.aboutKiloCode.resetSettings.button": "Alle Einstellungen zurücksetzen",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Gelesene Benachrichtigungen zurücksetzen",
   "settings.aboutKiloCode.settingsTransfer.title": "Einstellungen übertragen",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exportieren oder importieren Sie Ihre Einstellungen, um sie zwischen VS Code-Instanzen zu übertragen.",
@@ -1290,7 +1290,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-Server",
   "settings.agentBehaviour.subtab.rules": "Regeln",
-  "settings.agentBehaviour.subtab.workflows": "Workflows",
+  "settings.agentBehaviour.subtab.workflows": "Arbeitsabläufe",
   "settings.agentBehaviour.subtab.skills": "Fähigkeiten",
 
   "settings.browser.description":
@@ -1563,7 +1563,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",
   "settings.context.watcherPatterns.description": "Glob-Muster für Dateien, die der Watcher ignorieren soll",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Commit-Nachricht",
   "settings.commitMessage.override.title": "Benutzerdefinierten prompt verwenden",
   "settings.commitMessage.override.description":
     "Den Standard-prompt für die commit message überschreiben. Wenn diese Option aktiviert ist, ersetzt Ihr benutzerdefinierter prompt den integrierten prompt für conventional commits vollständig.",
@@ -1580,10 +1580,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalbefehlsblöcke",
+  "settings.display.terminalCommand.description": "Wähle aus, ob Terminalbefehlsblöcke anfangs erweitert oder eingeklappt sind.",
+  "settings.display.terminalCommand.expanded": "Erweitert",
+  "settings.display.terminalCommand.collapsed": "Eingeklappt",
   "settings.display.codeEdit.title": "Blöcke für Codebearbeitungen",
   "settings.display.codeEdit.description":
     "Wählen Sie, ob Blöcke mit Codebearbeitungen und Unterschieden anfangs aus- oder eingeklappt sind.",

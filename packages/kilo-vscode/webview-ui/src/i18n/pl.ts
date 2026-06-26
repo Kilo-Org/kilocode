@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Wprowadź swój klucz API {{provider}}, aby połączyć konto i używać modeli {{provider}} w Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Połącz się z lokalnym serwerem {{provider}}. Pozostaw klucz API pusty, jeśli serwer go nie wymaga (domyślnie dla localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Połącz się z Atomic Chat na swoim komputerze (domyślnie http://127.0.0.1:1337). Lokalny serwer nie wymaga klucza API — uruchom Atomic Chat, załaduj model, a następnie nawiąż połączenie.",
   "provider.connect.apiKey.label": "Klucz API {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "Klucz API {{provider}} (opcjonalny)",
   "provider.connect.apiKey.placeholder": "Klucz API",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Pozostaw puste dla lokalnego serwera",
   "provider.connect.apiKey.required": "Klucz API jest wymagany",
   "provider.connect.prompt.required": "{{field}} jest wymagane",
   "provider.connect.azure.endpointType.label": "Wybierz konfigurację punktu końcowego Azure",
@@ -889,7 +889,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Podzielone rozumowanie (wymagane np. dla MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -906,7 +906,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Nakład na odpowiedź (np. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1210,7 +1210,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "To resetuje tylko ustawienia specyficzne dla rozszerzenia VS Code do ich domyślnych wartości. Ustawienia współdzielone z CLI, takie jak tryby i reguły automatycznego zatwierdzania, są przechowywane w konfiguracji CLI i nie zostaną zresetowane.",
   "settings.aboutKiloCode.resetSettings.button": "Resetuj wszystkie ustawienia",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Zresetuj przeczytane powiadomienia",
   "settings.aboutKiloCode.settingsTransfer.title": "Przenoszenie ustawień",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksportuj lub importuj ustawienia, aby przenosić je między instancjami VS Code.",
@@ -1538,7 +1538,7 @@ export const dict = {
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",
   "settings.context.watcherPatterns.description": "Wzorce glob dla plików do ignorowania",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Komunikat commita",
   "settings.commitMessage.override.title": "Użyj niestandardowego prompt",
   "settings.commitMessage.override.description":
     "Zastąp domyślny prompt dla commit message. Po włączeniu, Twój niestandardowy prompt całkowicie zastępuje wbudowany prompt dla conventional commits.",
@@ -1555,10 +1555,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
   "settings.display.reasoningAutoCollapse.description":
     "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Bloki poleceń terminala",
+  "settings.display.terminalCommand.description": "Wybierz, czy bloki poleceń terminala mają być początkowo rozwinięte, czy zwinięte.",
+  "settings.display.terminalCommand.expanded": "Rozwinięte",
+  "settings.display.terminalCommand.collapsed": "Zwinięte",
   "settings.display.codeEdit.title": "Bloki edycji kodu",
   "settings.display.codeEdit.description":
     "Wybierz, czy bloki edycji kodu i podglądy różnic mają być początkowo rozwinięte czy zwinięte.",
@@ -1709,12 +1709,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "Automatycznie",
+  "diffViewer.baseBranch.default": "Domyślna",
+  "diffViewer.baseBranch.remote": "Zdalna",
+  "diffViewer.baseBranch.search": "Szukaj gałęzi",
+  "diffViewer.baseBranch.empty": "Brak pasujących gałęzi",
+  "diffViewer.baseBranch.loading": "Ładowanie gałęzi…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan jest gotowy:",
 }

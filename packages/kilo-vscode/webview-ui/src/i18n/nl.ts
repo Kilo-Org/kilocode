@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "Voer uw {{provider}} API-sleutel in om uw account te verbinden en {{provider}} modellen te gebruiken in Kilo.",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "Maak verbinding met je lokale {{provider}}-server. Laat de API-sleutel leeg als de server er geen vereist (standaard voor localhost).",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "Maak verbinding met Atomic Chat op je computer (standaard http://127.0.0.1:1337). Voor de lokale server is geen API-sleutel nodig — start Atomic Chat, laad een model en maak vervolgens verbinding.",
   "provider.connect.apiKey.label": "{{provider}} API-sleutel",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "{{provider}}-API-sleutel (optioneel)",
   "provider.connect.apiKey.placeholder": "API-sleutel",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "Leeg laten voor lokale server",
   "provider.connect.apiKey.required": "API-sleutel is vereist",
   "provider.connect.prompt.required": "{{field}} is verplicht",
   "provider.connect.azure.endpointType.label": "Selecteer Azure-eindpuntconfiguratie",
@@ -630,7 +630,7 @@ export const dict = {
     "{{files}} bestanden gewijzigd · +{{additions}} -{{deletions}}. Open de wijzigingenweergave.",
   "sidebar.session.agentManager.tooltip":
     "Open Agent Manager voor een compleet overzicht van parallelle sessies en worktrees, zodat je langlopende taken op één plek kunt coördineren.",
-  "sidebar.session.openAgentManager": "Open Agent Manager",
+  "sidebar.session.openAgentManager": "Agent Manager openen",
   "sidebar.session.progress.capturing": "Wijzigingen vastleggen...",
   "sidebar.session.progress.creating": "Worktree aanmaken...",
   "sidebar.session.progress.setup": "Setup uitvoeren...",
@@ -639,9 +639,9 @@ export const dict = {
   "sidebar.session.progress.failed": "Kan niet doorgaan in worktree",
   "session.header.search.placeholder": "Zoek in {{project}}",
   "session.header.searchFiles": "Bestanden zoeken",
-  "session.header.openIn": "Open in",
-  "session.header.open.action": "Open {{app}}",
-  "session.header.open.ariaLabel": "Open in {{app}}",
+  "session.header.openIn": "Openen in",
+  "session.header.open.action": "{{app}} openen",
+  "session.header.open.ariaLabel": "Openen in {{app}}",
   "session.header.open.menu": "Open opties",
   "session.header.open.copyPath": "Pad kopiëren",
 
@@ -686,7 +686,7 @@ export const dict = {
   "common.moreOptions": "Meer opties",
   "common.learnMore": "Meer informatie",
   "common.rename": "Hernoemen",
-  "common.reset": "Reset",
+  "common.reset": "Resetten",
   "common.archive": "Archiveren",
   "common.delete": "Verwijderen",
   "common.close": "Sluiten",
@@ -727,7 +727,7 @@ export const dict = {
   "settings.general.row.font.title": "Lettertype",
   "settings.general.row.font.description": "Pas het mono-lettertype aan dat wordt gebruikt in codeblokken",
 
-  "settings.general.row.releaseNotes.title": "Release notes",
+  "settings.general.row.releaseNotes.title": "Releaseopmerkingen",
   "settings.general.row.releaseNotes.description": "Toon 'Wat is nieuw' pop-ups na updates",
 
   "settings.updates.row.startup.title": "Controleer op updates bij opstarten",
@@ -883,7 +883,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "Redenering splitsen (vereist voor bijv. MiniMax)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -900,7 +900,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "Uitvoerinspanning (bijv. Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1102,7 +1102,7 @@ export const dict = {
   "deviceAuth.title": "Meld je aan bij Kilo Code",
   "deviceAuth.step1": "Stap 1: Open deze URL",
   "deviceAuth.action.copyUrl": "Kopieer URL",
-  "deviceAuth.action.openBrowser": "Open Browser",
+  "deviceAuth.action.openBrowser": "Browser openen",
   "deviceAuth.qrCode.alt": "QR Code",
   "deviceAuth.step2": "Stap 2: Voer deze code in",
   "deviceAuth.action.clickToCopy": "Klik om te kopiëren",
@@ -1241,7 +1241,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dit reset alleen VS Code-extensiespecifieke instellingen naar hun standaardwaarden. Instellingen die gedeeld worden met de CLI, zoals modi en regels voor automatisch goedkeuren, worden opgeslagen in de CLI-configuratie en worden niet gereset.",
   "settings.aboutKiloCode.resetSettings.button": "Alle instellingen resetten",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Gelezen meldingen resetten",
   "settings.aboutKiloCode.settingsTransfer.title": "Instellingen overdragen",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exporteer of importeer uw instellingen om ze tussen VS Code-instanties over te dragen.",
@@ -1329,7 +1329,7 @@ export const dict = {
   "settings.experimental.formatter.description": "Schakel de automatische code formatter in",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
-  "settings.experimental.batch.title": "Batch Tool",
+  "settings.experimental.batch.title": "Batchtool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
@@ -1351,7 +1351,7 @@ export const dict = {
   "settings.sandboxing.network.title": "Netwerktoegang beperken",
   "settings.sandboxing.network.description":
     "Blokkeer uitgaande netwerktoegang voor door het model geïnitieerde opdrachten en HTTP-tools. Lokale MCP-servers en plugin-hooks vallen buiten deze beperking. Netwerkverkeer voor providers en modelinferentie blijft beschikbaar.",
-  "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
+  "settings.experimental.mcpTimeout.title": "MCP-time-out (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
   "settings.experimental.remote.description":
@@ -1506,7 +1506,7 @@ export const dict = {
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
   "settings.context.watcherPatterns.description": "Glob-patronen voor bestanden die de watcher moet negeren",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "Commitbericht",
   "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",
   "settings.commitMessage.override.description":
     "Overschrijf de standaard prompt voor de commit message. Indien ingeschakeld, vervangt uw aangepaste prompt de ingebouwde prompt voor conventional commits volledig.",
@@ -1523,10 +1523,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "Terminalopdrachtblokken",
+  "settings.display.terminalCommand.description": "Kies of terminalopdrachtblokken aanvankelijk uitgevouwen of samengevouwen zijn.",
+  "settings.display.terminalCommand.expanded": "Uitgevouwen",
+  "settings.display.terminalCommand.collapsed": "Samengevouwen",
   "settings.display.codeEdit.title": "Blokken met codebewerkingen",
   "settings.display.codeEdit.description":
     "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
@@ -1683,17 +1683,16 @@ export const dict = {
   "settings.indexing.kiloModel.description": "Kies een ondersteund Kilo-hosted embeddings model.",
   "settings.indexing.kiloSignIn.title": "Kilo-aanmelding vereist",
   "settings.indexing.kiloSignIn.description": "Log in op Kilo om hosted embeddings te gebruiken.",
-  // Missing translations - English fallbacks until translated
   "settings.agentBehaviour.createMode": "Nieuwe modus aanmaken",
   "settings.agentBehaviour.createMode.button": "Aanmaken",
   "settings.agentBehaviour.createMode.cancel": "Annuleren",
   "settings.agentBehaviour.createMode.description": "Beschrijving",
   "settings.agentBehaviour.createMode.description.help": "Korte beschrijving van wat deze modus doet.",
-  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.description.placeholder": "bijv. Beoordeelt code op kwaliteit en best practices",
   "settings.agentBehaviour.createMode.name": "Naam",
   "settings.agentBehaviour.createMode.name.description":
     "Unieke identifier voor de modus. Gebruik alleen kleine letters, cijfers en koppeltekens.",
-  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.name.placeholder": "bijv. reviewer",
   "settings.agentBehaviour.createMode.nameInvalid":
     "Naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en koppeltekens bevatten",
   "settings.agentBehaviour.createMode.nameRequired": "Naam is verplicht",
@@ -1701,7 +1700,7 @@ export const dict = {
   "settings.agentBehaviour.createMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.createMode.prompt.help": "Instructies voor de AI-agent bij gebruik van deze modus.",
   "settings.agentBehaviour.createMode.prompt.placeholder":
-    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+    "bijv. Je bent een codebeoordelaar. Richt je op codekwaliteit, best practices en mogelijke bugs.",
   "settings.agentBehaviour.editMode": "Modus bewerken",
   "settings.agentBehaviour.editMode.back": "Terug naar lijst",
   "settings.agentBehaviour.editMode.description": "Beschrijving",
@@ -1737,12 +1736,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "Automatisch",
+  "diffViewer.baseBranch.default": "Standaard",
+  "diffViewer.baseBranch.remote": "Extern",
+  "diffViewer.baseBranch.search": "Branches zoeken",
+  "diffViewer.baseBranch.empty": "Geen overeenkomende branches",
+  "diffViewer.baseBranch.loading": "Branches laden…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan is klaar:",
 }

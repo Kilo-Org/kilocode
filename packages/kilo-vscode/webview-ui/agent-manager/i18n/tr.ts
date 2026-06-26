@@ -200,7 +200,7 @@ export const dict = {
   "agentManager.review.imageUnavailable": "Bu oturum anlık görüntüsü için görsel önizlemesi kullanılamıyor.",
   "agentManager.review.endOfLongDiff": "Sonuna geldiniz!",
 
-  "agentManager.import.pullRequest": "Pull Request",
+  "agentManager.import.pullRequest": "Çekme isteği",
   "agentManager.import.pastePrUrl": "PR URL'sini yapıştırın...",
   "agentManager.import.open": "Aç",
   "agentManager.import.branches": "Dallar",

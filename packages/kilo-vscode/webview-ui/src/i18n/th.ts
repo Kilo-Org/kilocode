@@ -128,13 +128,13 @@ export const dict = {
   "provider.connect.apiKey.description":
     "ป้อนคีย์ API ของ {{provider}} เพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
   "provider.connect.apiKey.description.local":
-    "Connect to your local {{provider}} server. Leave the API key empty if the server does not require one (default for localhost).",
+    "เชื่อมต่อกับเซิร์ฟเวอร์ {{provider}} ในเครื่อง ปล่อยคีย์ API ว่างไว้หากเซิร์ฟเวอร์ไม่ต้องใช้ (ค่าเริ่มต้นสำหรับ localhost)",
   "provider.connect.atomicChat.description":
-    "Connect to Atomic Chat on your machine (default http://127.0.0.1:1337). No API key is required for the local server — start Atomic Chat, load a model, then connect.",
+    "เชื่อมต่อกับ Atomic Chat บนเครื่องของคุณ (ค่าเริ่มต้น http://127.0.0.1:1337) เซิร์ฟเวอร์ในเครื่องไม่ต้องใช้คีย์ API — เริ่ม Atomic Chat โหลดโมเดล แล้วจึงเชื่อมต่อ",
   "provider.connect.apiKey.label": "คีย์ API ของ {{provider}}",
-  "provider.connect.apiKey.label.optional": "{{provider}} API key (optional)",
+  "provider.connect.apiKey.label.optional": "คีย์ API ของ {{provider}} (ไม่บังคับ)",
   "provider.connect.apiKey.placeholder": "คีย์ API",
-  "provider.connect.apiKey.placeholder.optional": "Leave empty for local server",
+  "provider.connect.apiKey.placeholder.optional": "ปล่อยว่างสำหรับเซิร์ฟเวอร์ในเครื่อง",
   "provider.connect.apiKey.required": "ต้องใช้คีย์ API",
   "provider.connect.prompt.required": "จำเป็นต้องระบุ {{field}}",
   "provider.connect.azure.endpointType.label": "เลือกการกำหนดค่าปลายทางของ Azure",
@@ -917,7 +917,7 @@ export const dict = {
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
   "provider.custom.models.variants.thinking.adaptive": "adaptive",
-  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.label": "แยกการให้เหตุผล (จำเป็นสำหรับ MiniMax เป็นต้น)",
   "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
   "provider.custom.models.variants.splitReasoning.true": "true",
   "provider.custom.models.variants.splitReasoning.false": "false",
@@ -934,7 +934,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
-  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.label": "ระดับความพยายามของเอาต์พุต (เช่น Anthropic)",
   "provider.custom.models.variants.outputEffort.placeholder": "effort",
   "provider.custom.models.variants.outputEffort.low": "low",
   "provider.custom.models.variants.outputEffort.medium": "medium",
@@ -1234,7 +1234,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "การดำเนินการนี้จะรีเซ็ตเฉพาะการตั้งค่าเฉพาะของส่วนขยาย VS Code กลับเป็นค่าเริ่มต้นเท่านั้น การตั้งค่าที่ใช้ร่วมกับ CLI เช่น โหมดและกฎการอนุมัติอัตโนมัติ จะถูกเก็บไว้ในการกำหนดค่า CLI และจะไม่ถูกรีเซ็ต",
   "settings.aboutKiloCode.resetSettings.button": "รีเซ็ตการตั้งค่าทั้งหมด",
-  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "รีเซ็ตการแจ้งเตือนที่อ่านแล้ว",
   "settings.aboutKiloCode.settingsTransfer.title": "ถ่ายโอนการตั้งค่า",
   "settings.aboutKiloCode.settingsTransfer.description":
     "ส่งออกหรือนำเข้าการตั้งค่าเพื่อถ่ายโอนระหว่างอินสแตนซ์ VS Code",
@@ -1508,7 +1508,7 @@ export const dict = {
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",
   "settings.context.watcherPatterns.description": "รูปแบบ glob สำหรับไฟล์ที่ตัวเฝ้าดูควรละเว้น",
 
-  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.title": "ข้อความคอมมิต",
   "settings.commitMessage.override.title": "ใช้ prompt แบบกำหนดเอง",
   "settings.commitMessage.override.description":
     "แทนที่ prompt เริ่มต้นของ commit message เมื่อเปิดใช้งาน prompt แบบกำหนดเองของคุณจะแทนที่ prompt เริ่มต้นของ conventional commits ทั้งหมด",
@@ -1525,10 +1525,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
   "settings.display.reasoningAutoCollapse.description":
     "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
-  "settings.display.terminalCommand.title": "Terminal Command Blocks",
-  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
-  "settings.display.terminalCommand.expanded": "Expanded",
-  "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.terminalCommand.title": "บล็อกคำสั่งเทอร์มินัล",
+  "settings.display.terminalCommand.description": "เลือกว่าจะให้บล็อกคำสั่งเทอร์มินัลเริ่มต้นแบบขยายหรือยุบ",
+  "settings.display.terminalCommand.expanded": "ขยาย",
+  "settings.display.terminalCommand.collapsed": "ยุบ",
   "settings.display.codeEdit.title": "บล็อกการแก้ไขโค้ด",
   "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.codeEdit.expanded": "ขยาย",
@@ -1678,12 +1678,12 @@ export const dict = {
   "diffViewer.notice.snapshotsDisabled":
     "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
 
-  "diffViewer.baseBranch.auto": "Default",
-  "diffViewer.baseBranch.default": "Default",
-  "diffViewer.baseBranch.remote": "Remote",
-  "diffViewer.baseBranch.search": "Search branches",
-  "diffViewer.baseBranch.empty": "No matching branches",
-  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.auto": "อัตโนมัติ",
+  "diffViewer.baseBranch.default": "ค่าเริ่มต้น",
+  "diffViewer.baseBranch.remote": "รีโมต",
+  "diffViewer.baseBranch.search": "ค้นหาแบรนช์",
+  "diffViewer.baseBranch.empty": "ไม่พบแบรนช์ที่ตรงกัน",
+  "diffViewer.baseBranch.loading": "กำลังโหลดแบรนช์…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "แผนพร้อมแล้ว:",
 }
