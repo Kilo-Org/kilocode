@@ -194,7 +194,7 @@ export const dict = {
     "La vista previa de la imagen no está disponible para esta instantánea de la sesión.",
   "agentManager.review.endOfLongDiff": "¡Llegaste al final!",
 
-  "agentManager.import.pullRequest": "Solicitud de incorporación",
+  "agentManager.import.pullRequest": "Pull request",
   "agentManager.import.pastePrUrl": "Pegar URL del PR...",
   "agentManager.import.open": "Abrir",
   "agentManager.import.branches": "Ramas",
