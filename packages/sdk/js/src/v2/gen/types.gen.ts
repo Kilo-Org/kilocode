@@ -212,7 +212,7 @@ export type NotebookEditRequest = {
   /**
    * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
    */
-  expectedRevision: string
+  expectedRevision?: string
   /**
    * Zero-based cell index
    */
@@ -232,6 +232,9 @@ export type NotebookEditRequest = {
       }
     | {
         action: "delete"
+      }
+    | {
+        action: "create"
       }
 }
 
@@ -2541,7 +2544,7 @@ export type NotebookEditResult = {
    * Zero-based cell index
    */
   index: number
-  action: "insert" | "replace" | "delete"
+  action: "insert" | "replace" | "delete" | "create"
   cell?: NotebookCell
 }
 
@@ -2566,6 +2569,7 @@ export type NotebookResult = NotebookReadResult | NotebookEditResult | NotebookE
 
 export type NotebookFailure = {
   code:
+    | "already_exists"
     | "cancelled"
     | "closed"
     | "disconnected"
@@ -11055,6 +11059,37 @@ export type RemoteStatusResponses = {
 }
 
 export type RemoteStatusResponse = RemoteStatusResponses[keyof RemoteStatusResponses]
+
+export type SandboxSupportData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sandbox/support"
+}
+
+export type SandboxSupportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SandboxSupportError = SandboxSupportErrors[keyof SandboxSupportErrors]
+
+export type SandboxSupportResponses = {
+  /**
+   * Sandbox backend support
+   */
+  200: {
+    available: boolean
+    reason?: string
+  }
+}
+
+export type SandboxSupportResponse = SandboxSupportResponses[keyof SandboxSupportResponses]
 
 export type SandboxStatusData = {
   body?: never

@@ -566,6 +566,7 @@ export const layer: Layer.Layer<
       metadata?: typeof Metadata.Type
       permission?: Permission.Ruleset
       platform?: string // kilocode_change - per-session platform override for telemetry attribution
+      sourceID?: SessionID // kilocode_change - inherited sandbox policy source
     }) {
       const ctx = yield* InstanceState.context
       const result: Info = {
@@ -591,8 +592,10 @@ export const layer: Layer.Layer<
       }
       log.info("created", result)
 
-      // kilocode_change start - register attribution before session.created subscribers run
+      // kilocode_change start - initialize inherited state before session.created subscribers run
       KiloSession.register({ id: result.id, parentID: result.parentID, platform: input.platform })
+      const source = input.sourceID ?? result.parentID
+      if (source) yield* SandboxPolicy.inherit(source, result.id)
       // kilocode_change end
 
       yield* sync.run(Event.Created, { sessionID: result.id, info: result })
@@ -772,6 +775,7 @@ export const layer: Layer.Layer<
         workspaceID: original.workspaceID,
         title,
         metadata: structuredClone(original.metadata),
+        sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
       })
       const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()

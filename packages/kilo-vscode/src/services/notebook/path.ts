@@ -84,3 +84,53 @@ export async function resolveNotebookPath(
   }
   return { target, relative: path.relative(root, target).split(path.sep).join("/") }
 }
+
+// Resolve a path for a notebook that does not exist yet. The file itself is not
+// realpathed (it must not exist); instead the parent directory is realpathed and
+// must be contained in the request root and pass access checks.
+export async function resolveNotebookCreatePath(
+  directory: string,
+  input: string,
+  access: NotebookAccess,
+  deps: NotebookPathDeps = defaults,
+): Promise<NotebookPath> {
+  if (!input || input.length > 4_096 || input.includes("\0")) {
+    throw invalid(input, "the path is empty, too long, or malformed")
+  }
+  if (WINDOWS_ABSOLUTE.test(input) && !path.win32.isAbsolute(directory)) {
+    throw invalid(input, "the absolute path uses a different platform format")
+  }
+  if (!input.toLowerCase().endsWith(".ipynb")) {
+    throw invalid(input, "only .ipynb notebooks can be created")
+  }
+
+  const base = path.resolve(directory)
+  const root = await deps.realpath(base)
+  const candidate = path.resolve(base, input)
+  if (!path.isAbsolute(input) && !contained(base, candidate)) {
+    throw invalid(input, "it is outside the request directory")
+  }
+
+  const parent = await deps.realpath(path.dirname(candidate)).catch((error: unknown) => {
+    const detail = error instanceof Error ? error.message : String(error)
+    throw new NotebookError("not_found", `Cannot resolve the parent directory of ${JSON.stringify(input)}: ${detail}`, {
+      path: input,
+    })
+  })
+  if (!contained(root, parent)) {
+    throw invalid(input, "its parent directory resolves outside the request directory")
+  }
+
+  const target = path.join(parent, path.basename(candidate))
+  const existing = await deps.realpath(target).then(
+    () => true,
+    () => false,
+  )
+  if (existing) {
+    throw new NotebookError("already_exists", `Notebook ${JSON.stringify(input)} already exists`, { path: input })
+  }
+  if (!(await access.validateAccess(target))) {
+    throw invalid(input, "it is excluded by workspace access or ignore rules")
+  }
+  return { target, relative: path.relative(root, target).split(path.sep).join("/") }
+}

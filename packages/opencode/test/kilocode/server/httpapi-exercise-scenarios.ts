@@ -189,6 +189,10 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "missing network reject should remain a no-op success")),
+  http.protected.get("/sandbox/support", "sandbox.support").json(200, (body) => {
+    object(body)
+    check(typeof body.available === "boolean", "sandbox support should report backend availability")
+  }),
   http.protected
     .get("/session/{sessionID}/sandbox", "sandbox.status")
     .seeded((ctx) => ctx.session({ title: "Sandbox status" }))
