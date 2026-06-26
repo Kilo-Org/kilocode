@@ -3,6 +3,12 @@ export type SandboxState = {
   enabled: boolean
   available: boolean
   reason?: string
+  capabilities: {
+    filesystem: boolean
+    network: boolean
+    unixSockets: boolean
+    unixSocketCoverage: "known-paths-at-launch" | "none"
+  }
   version: number
   directory: string
   revision: number

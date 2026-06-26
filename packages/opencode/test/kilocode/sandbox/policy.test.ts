@@ -181,6 +181,15 @@ describe("sandbox policy", () => {
     expect(profile(ctx).filesystem.temporaryDirectory).toBe(Global.Path.tmp)
   })
 
+  test("ties host IPC denial to the effective network policy", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.a, dirs.a, dirs)
+
+    expect(profile(ctx, "allow").socket).toEqual({ ipc: "allow" })
+    expect(profile(ctx, "deny").socket).toEqual({ ipc: "deny" })
+  })
+
   test("uses deny-by-default and configurable network profiles", async () => {
     await using tmp = await fixture()
     const dirs = tmp.extra

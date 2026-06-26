@@ -22,8 +22,22 @@ export interface EnvironmentProfile {
   readonly set: Readonly<Record<string, string>>
 }
 
+export type SocketCoverage = "docker" | "podman" | "containerd" | "cri" | "ssh" | "gpg" | "dbus" | "wayland"
+
+export interface SocketPolicy {
+  readonly paths: ReadonlyArray<PathRule>
+  readonly deny: ReadonlyArray<string>
+  readonly coverage: ReadonlyArray<SocketCoverage>
+}
+
+export interface SocketProfile {
+  readonly ipc: "allow" | "deny"
+  readonly policy?: SocketPolicy | undefined
+}
+
 export interface Profile {
   readonly filesystem: FilesystemProfile
   readonly network: NetworkProfile
   readonly environment: EnvironmentProfile
+  readonly socket?: SocketProfile | undefined
 }

@@ -1,14 +1,14 @@
 import { lstatSync, readlinkSync, realpathSync } from "node:fs"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
-import type { PathRule, Profile } from "./profile"
+import type { FilesystemProfile, PathRule, Profile, SocketPolicy } from "./profile"
 
 function code(cause: unknown) {
   if (typeof cause !== "object" || cause === null || !("code" in cause)) return undefined
   return typeof cause.code === "string" ? cause.code : undefined
 }
 
-function resolve(input: string, seen = new Set<string>()) {
+function resolve(input: string, seen = new Set<string>(), inaccessible = false, nearest = false) {
   const target = path.resolve(input)
   if (seen.has(target)) throw Object.assign(new Error("Symlink cycle"), { code: "ELOOP" })
   seen.add(target)
@@ -17,17 +17,21 @@ function resolve(input: string, seen = new Set<string>()) {
 
   while (true) {
     try {
-      return path.resolve(realpathSync.native(ancestor), ...suffix)
+      const resolved = realpathSync.native(ancestor)
+      return nearest ? resolved : path.resolve(resolved, ...suffix)
     } catch (cause) {
       const tag = code(cause)
-      if (tag !== "ENOENT" && tag !== "ENOTDIR") throw cause
+      const hidden = tag === "EACCES" || tag === "EPERM"
+      if (tag !== "ENOENT" && tag !== "ENOTDIR" && tag !== "EOPNOTSUPP" && !(inaccessible && hidden)) throw cause
       try {
         if (lstatSync(ancestor).isSymbolicLink()) {
           const link = readlinkSync(ancestor)
-          return resolve(path.resolve(path.dirname(ancestor), link, ...suffix), seen)
+          return resolve(path.resolve(path.dirname(ancestor), link, ...suffix), seen, inaccessible, nearest)
         }
       } catch (error) {
-        if (code(error) !== "ENOENT" && code(error) !== "ENOTDIR") throw error
+        const reason = code(error)
+        const denied = reason === "EACCES" || reason === "EPERM"
+        if (reason !== "ENOENT" && reason !== "ENOTDIR" && !(inaccessible && denied)) throw error
       }
       const parent = path.dirname(ancestor)
       if (parent === ancestor) throw cause
@@ -56,12 +60,29 @@ export function canonicalize(input: string): Effect.Effect<string, PlatformError
   return attempt(input, "canonicalize", () => resolve(input))
 }
 
+export function canonicalizeAncestor(input: string): Effect.Effect<string, PlatformError.PlatformError> {
+  return attempt(input, "canonicalizeAncestor", () => resolve(input, new Set(), true, true))
+}
+
 export function canonicalizeEntry(input: string): Effect.Effect<string, PlatformError.PlatformError> {
   return attempt(input, "canonicalizeEntry", () => path.join(resolve(path.dirname(input)), path.basename(input)))
 }
 
 function normalizeRule(rule: PathRule) {
   return Effect.map(canonicalize(rule.path), (target): PathRule => ({ path: target, kind: rule.kind }))
+}
+
+function normalizeSocket(policy: SocketPolicy): Effect.Effect<SocketPolicy, PlatformError.PlatformError> {
+  return Effect.map(Effect.forEach(policy.paths, normalizeRule), (paths) => ({
+    paths: [...new Map(paths.map((rule) => [rule.path, rule])).values()],
+    deny: [...new Set(policy.deny)],
+    coverage: [...new Set(policy.coverage)],
+  }))
+}
+
+function platformSocket(profile: Profile) {
+  if (process.platform === "linux" || !profile.socket) return profile.socket
+  return { ...profile.socket, policy: undefined }
 }
 
 export function normalize(profile: Profile): Effect.Effect<Profile, PlatformError.PlatformError> {
@@ -71,9 +92,12 @@ export function normalize(profile: Profile): Effect.Effect<Profile, PlatformErro
     const temporaryDirectory = profile.filesystem.temporaryDirectory
       ? yield* canonicalize(profile.filesystem.temporaryDirectory)
       : undefined
+    const socket = platformSocket(profile)
+    const policy = socket?.policy ? yield* normalizeSocket(socket.policy) : undefined
 
     return {
       ...profile,
+      ...(socket ? { socket: { ...socket, ...(policy ? { policy } : {}) } } : {}),
       filesystem: {
         allowWrite,
         denyWrite,
@@ -89,4 +113,14 @@ export function matches(rule: PathRule, target: string) {
   if (relative === "") return true
   if (rule.kind === "literal") return false
   return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
+}
+
+export function allowsWrite(profile: FilesystemProfile, target: string) {
+  const names = process.platform === "win32" ? profile.denyNames.map((name) => name.toLowerCase()) : profile.denyNames
+  const parts = target.split(/[\\/]/).map((part) => (process.platform === "win32" ? part.toLowerCase() : part))
+  return (
+    profile.allowWrite.some((rule) => matches(rule, target)) &&
+    !profile.denyWrite.some((rule) => matches(rule, target)) &&
+    !parts.some((part) => names.includes(part))
+  )
 }

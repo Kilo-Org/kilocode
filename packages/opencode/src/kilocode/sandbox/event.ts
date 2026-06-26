@@ -10,6 +10,12 @@ export const Changed = BusEvent.define(
     enabled: Schema.Boolean,
     available: Schema.Boolean,
     reason: Schema.optional(Schema.String),
+    capabilities: Schema.Struct({
+      filesystem: Schema.Boolean,
+      network: Schema.Boolean,
+      unixSockets: Schema.Boolean,
+      unixSocketCoverage: Schema.Union([Schema.Literal("known-paths-at-launch"), Schema.Literal("none")]),
+    }),
     version: Schema.Int,
   }),
 )

@@ -15482,11 +15482,31 @@
                     "reason": {
                       "type": "string"
                     },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "filesystem": {
+                          "type": "boolean"
+                        },
+                        "network": {
+                          "type": "boolean"
+                        },
+                        "unixSockets": {
+                          "type": "boolean"
+                        },
+                        "unixSocketCoverage": {
+                          "type": "string",
+                          "enum": ["known-paths-at-launch", "none"]
+                        }
+                      },
+                      "required": ["filesystem", "network", "unixSockets", "unixSocketCoverage"],
+                      "additionalProperties": false
+                    },
                     "version": {
                       "type": "integer"
                     }
                   },
-                  "required": ["directory", "enabled", "available", "version"],
+                  "required": ["directory", "enabled", "available", "capabilities", "version"],
                   "additionalProperties": false,
                   "description": "Session sandbox status"
                 }
@@ -15575,11 +15595,31 @@
                     "reason": {
                       "type": "string"
                     },
+                    "capabilities": {
+                      "type": "object",
+                      "properties": {
+                        "filesystem": {
+                          "type": "boolean"
+                        },
+                        "network": {
+                          "type": "boolean"
+                        },
+                        "unixSockets": {
+                          "type": "boolean"
+                        },
+                        "unixSocketCoverage": {
+                          "type": "string",
+                          "enum": ["known-paths-at-launch", "none"]
+                        }
+                      },
+                      "required": ["filesystem", "network", "unixSockets", "unixSocketCoverage"],
+                      "additionalProperties": false
+                    },
                     "version": {
                       "type": "integer"
                     }
                   },
-                  "required": ["directory", "enabled", "available", "version"],
+                  "required": ["directory", "enabled", "available", "capabilities", "version"],
                   "additionalProperties": false,
                   "description": "Updated session sandbox status"
                 }
@@ -26604,11 +26644,31 @@
               "reason": {
                 "type": "string"
               },
+              "capabilities": {
+                "type": "object",
+                "properties": {
+                  "filesystem": {
+                    "type": "boolean"
+                  },
+                  "network": {
+                    "type": "boolean"
+                  },
+                  "unixSockets": {
+                    "type": "boolean"
+                  },
+                  "unixSocketCoverage": {
+                    "type": "string",
+                    "enum": ["known-paths-at-launch", "none"]
+                  }
+                },
+                "required": ["filesystem", "network", "unixSockets", "unixSocketCoverage"],
+                "additionalProperties": false
+              },
               "version": {
                 "type": "integer"
               }
             },
-            "required": ["sessionID", "directory", "enabled", "available", "version"],
+            "required": ["sessionID", "directory", "enabled", "available", "capabilities", "version"],
             "additionalProperties": false
           }
         },

@@ -1,5 +1,5 @@
 import { Context, Effect, PlatformError } from "effect"
-import { canonicalize, canonicalizeEntry, matches, normalize } from "./path"
+import { allowsWrite, canonicalize, canonicalizeEntry, normalize } from "./path"
 import type { Profile } from "./profile"
 
 export const CurrentProfile = Context.Reference<Profile | undefined>("@kilocode/sandbox/CurrentProfile", {
@@ -45,20 +45,7 @@ function assertTarget(
     const profile = yield* current
     if (!profile) return
     const target = yield* resolve(path)
-    const names =
-      process.platform === "win32"
-        ? profile.filesystem.denyNames.map((name) => name.toLowerCase())
-        : profile.filesystem.denyNames
-    const parts = target.split(/[\\/]/).map((part) => (process.platform === "win32" ? part.toLowerCase() : part))
-    if (
-      profile.filesystem.denyWrite.some((rule) => matches(rule, target)) ||
-      parts.some((part) => names.includes(part))
-    ) {
-      yield* Effect.fail(denied(path, method))
-    }
-    if (!profile.filesystem.allowWrite.some((rule) => matches(rule, target))) {
-      yield* Effect.fail(denied(path, method))
-    }
+    if (!allowsWrite(profile.filesystem, target)) yield* Effect.fail(denied(path, method))
   })
 }
 

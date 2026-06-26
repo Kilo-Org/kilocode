@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from "node:fs"
 import path from "node:path"
-import { Effect, Semaphore } from "effect"
+import { Effect, PlatformError, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
@@ -105,22 +105,25 @@ export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] =
         TEMP: Global.Path.tmp,
       },
     },
+    socket: { ipc: mode === "allow" ? "allow" : "deny" },
   }
 }
 
 export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: SessionID) {
   const config = yield* Config.Service
   const cfg = yield* config.get()
-  const directory = yield* InstanceState.directory
+  const ctx = yield* InstanceState.context
+  const directory = ctx.directory
   const override = overrides.get(key(directory, sessionID))
   const enabled = override?.enabled ?? cfg.experimental?.sandbox ?? false
   const mode = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
-  const support = backendSupport({ mode, allowedHosts: [] })
+  const support = backendSupport(profile(ctx, mode))
   return {
     directory,
     enabled: enabled && support.available,
     available: support.available,
     reason: support.reason,
+    capabilities: support.capabilities,
     version: override?.version ?? 0,
   }
 })
@@ -183,9 +186,22 @@ export function dispose<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, 
 
 function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
   return Effect.gen(function* () {
-    if (!(yield* status(sessionID)).enabled) return yield* unrestricted(effect)
+    const current = yield* status(sessionID)
     const config = yield* Config.Service
     const cfg = yield* config.get()
+    const override = overrides.get(key(current.directory, sessionID))
+    const requested = override?.enabled ?? cfg.experimental?.sandbox ?? false
+    const supported = process.platform === "linux" || current.capabilities.filesystem
+    if (requested && supported && !current.available) {
+      return yield* Effect.fail(PlatformError.systemError({
+        _tag: "PermissionDenied",
+        module: "Sandbox",
+        method: "execute",
+        pathOrDescriptor: current.directory,
+        description: current.reason ?? "The sandbox is unavailable",
+      }))
+    }
+    if (!current.enabled) return yield* unrestricted(effect)
     const mode = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
     return yield* runSandbox(profile(yield* InstanceState.context, mode), effect)
   })

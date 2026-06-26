@@ -548,6 +548,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           enabled: same ? current.enabled : false,
           available: false,
           reason: message.message,
+          capabilities: same
+            ? current.capabilities
+            : { filesystem: false, network: false, unixSockets: false, unixSocketCoverage: "none" },
           version: same ? current.version : 0,
           revision: message.revision,
         })

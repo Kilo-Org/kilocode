@@ -525,6 +525,12 @@ export type WebviewMessage =
       enabled: boolean
       available: boolean
       reason?: string
+      capabilities: {
+        filesystem: boolean
+        network: boolean
+        unixSockets: boolean
+        unixSocketCoverage: "known-paths-at-launch" | "none"
+      }
       version: number
     }
   | null
@@ -699,6 +705,7 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
         enabled: event.properties.enabled,
         available: event.properties.available,
         reason: event.properties.reason,
+        capabilities: event.properties.capabilities,
         version: event.properties.version,
       }
     case "indexing.status":
