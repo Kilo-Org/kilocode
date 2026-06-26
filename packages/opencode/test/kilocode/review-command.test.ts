@@ -122,11 +122,12 @@ describe("review command", () => {
     const text = cmd.template as string
     expect(text).toContain("Permitted tracks")
     expect(text).toContain("deploy safety")
-    expect(text).toContain("duplication")
+    expect(text).toContain("clean code")
     expect(text).toContain("dead code")
     expect(text).toContain("Always out of scope")
     expect(text).toContain("code style")
     expect(text).toContain("generic refactors with no bug or product risk")
+    expect(text).toContain("unnecessary complexity")
   })
 
   test("applies adaptive parallel review tracks", () => {
@@ -142,6 +143,7 @@ describe("review command", () => {
     expect(text).toContain("security")
     expect(text).toContain("performance")
     expect(text).toContain("business logic")
+    expect(text).toContain("clean code")
     expect(text).toContain("noticeably larger than comparable ones")
     expect(text).toContain("NO_FINDINGS")
   })
