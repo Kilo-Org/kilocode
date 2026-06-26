@@ -3,7 +3,7 @@ import type { NetworkOptions } from "@/cli/network"
 import { errorMessage } from "@/util/error"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { validateSession } from "@/cli/cmd/tui/validate-session"
-import { importCloudSession } from "@/kilocode/cloud-session"
+import { importCloudSession, localSessionID } from "@/kilocode/cloud-session"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { createKiloClient } from "@kilocode/sdk/v2"
 
@@ -55,7 +55,7 @@ export namespace KiloTuiThreadDaemon {
     try {
       await validateSession({
         url: daemon.url,
-        sessionID: input.args.session,
+        sessionID: localSessionID(input.args),
         directory: input.cwd,
         headers: daemon.headers,
       })
