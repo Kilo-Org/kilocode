@@ -17684,11 +17684,22 @@
                 },
                 "required": ["action"],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["create"]
+                  }
+                },
+                "required": ["action"],
+                "additionalProperties": false
               }
             ]
           }
         },
-        "required": ["id", "sessionID", "path", "operation", "expectedRevision", "index", "edit"],
+        "required": ["id", "sessionID", "path", "operation", "index", "edit"],
         "additionalProperties": false
       },
       "NotebookExecuteRequest": {
@@ -24555,7 +24566,7 @@
           },
           "action": {
             "type": "string",
-            "enum": ["insert", "replace", "delete"]
+            "enum": ["insert", "replace", "delete", "create"]
           },
           "cell": {
             "$ref": "#/components/schemas/NotebookCell"
@@ -24629,6 +24640,7 @@
           "code": {
             "type": "string",
             "enum": [
+              "already_exists",
               "cancelled",
               "closed",
               "disconnected",

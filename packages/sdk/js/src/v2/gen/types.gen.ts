@@ -212,7 +212,7 @@ export type NotebookEditRequest = {
   /**
    * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
    */
-  expectedRevision: string
+  expectedRevision?: string
   /**
    * Zero-based cell index
    */
@@ -232,6 +232,9 @@ export type NotebookEditRequest = {
       }
     | {
         action: "delete"
+      }
+    | {
+        action: "create"
       }
 }
 
@@ -2539,7 +2542,7 @@ export type NotebookEditResult = {
    * Zero-based cell index
    */
   index: number
-  action: "insert" | "replace" | "delete"
+  action: "insert" | "replace" | "delete" | "create"
   cell?: NotebookCell
 }
 
@@ -2564,6 +2567,7 @@ export type NotebookResult = NotebookReadResult | NotebookEditResult | NotebookE
 
 export type NotebookFailure = {
   code:
+    | "already_exists"
     | "cancelled"
     | "closed"
     | "disconnected"
