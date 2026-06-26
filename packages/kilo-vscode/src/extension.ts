@@ -23,6 +23,7 @@ import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
+import { createNotebookBridge } from "./services/notebook"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -49,6 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
@@ -541,6 +543,7 @@ export function activate(context: vscode.ExtensionContext) {
       attention.dispose()
       browserAutomationService.dispose()
       provider.dispose()
+      notebookBridge.dispose()
       connectionService.dispose()
     },
   })

@@ -2597,6 +2597,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         ...data,
         requestID: input.requestID,
       })
+      vscode.window.showInformationMessage(data.enabled ? "Sandbox enabled" : "Sandbox disabled")
     } catch (error) {
       if (this.connectionState === "connected" && this.connectionGeneration === generation && this.client === client) {
         this.postSandboxError(resolved.sid, error, revision, input.requestID)

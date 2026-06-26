@@ -14,6 +14,8 @@ export type Event =
   | EventTuiSessionSelect
   | EventSandboxStatusChanged
   | EventKilocodeAgentManagerStart
+  | EventKilocodeNotebookRequested
+  | EventKilocodeNotebookCancelled
   | EventIndexingStatus
   | EventIndexingWarning
   | EventServerInstanceDisposed
@@ -191,6 +193,64 @@ export type EventTuiSessionSelect = {
     sessionID: string
   }
 }
+
+export type NotebookRequestId = string
+
+export type NotebookReadRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "read"
+  includeOutputs: boolean
+}
+
+export type NotebookEditRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "edit"
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  expectedRevision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  edit:
+    | {
+        action: "insert"
+        kind: "code" | "markdown"
+        language?: string
+        source: string
+      }
+    | {
+        action: "replace"
+        kind: "code" | "markdown"
+        language?: string
+        source: string
+      }
+    | {
+        action: "delete"
+      }
+}
+
+export type NotebookExecuteRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "execute"
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  expectedRevision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+}
+
+export type NotebookRequest = NotebookReadRequest | NotebookEditRequest | NotebookExecuteRequest
 
 export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
 
@@ -933,6 +993,8 @@ export type GlobalEvent = {
     | EventTuiSessionSelect
     | EventSandboxStatusChanged
     | EventKilocodeAgentManagerStart
+    | EventKilocodeNotebookRequested
+    | EventKilocodeNotebookCancelled
     | EventIndexingStatus
     | EventIndexingWarning
     | EventServerInstanceDisposed
@@ -1183,6 +1245,9 @@ export type PermissionConfig =
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
       agent_manager?: PermissionRuleConfig
+      notebook_read?: PermissionRuleConfig
+      notebook_edit?: PermissionRuleConfig
+      notebook_execute?: PermissionRuleConfig
       [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
 
@@ -1542,6 +1607,7 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
+    native_notebook_tools?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
     primary_tools?: Array<string>
@@ -2422,6 +2488,105 @@ export type EffectHttpApiErrorServiceUnavailable = {
   _tag: "ServiceUnavailable"
 }
 
+export type NotebookOutput = {
+  mime: string
+  text?: string
+  name?: string
+  message?: string
+  stack?: string
+  omitted?: boolean
+  truncated?: boolean
+}
+
+export type NotebookCell = {
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  kind: "code" | "markdown"
+  language: string
+  source: string
+  execution?: {
+    order?: number
+    success?: boolean
+    started?: number
+    ended?: number
+  }
+  outputs?: Array<NotebookOutput>
+}
+
+export type NotebookReadResult = {
+  operation: "read"
+  path: string
+  requestPath: string
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  revision: string
+  cells: Array<NotebookCell>
+  truncated?: boolean
+}
+
+export type NotebookEditResult = {
+  operation: "edit"
+  path: string
+  requestPath: string
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  revision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  action: "insert" | "replace" | "delete"
+  cell?: NotebookCell
+}
+
+export type NotebookExecuteResult = {
+  operation: "execute"
+  path: string
+  requestPath: string
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  revision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  status: "success" | "error"
+  outputs: Array<NotebookOutput>
+  truncated?: boolean
+}
+
+export type NotebookResult = NotebookReadResult | NotebookEditResult | NotebookExecuteResult
+
+export type NotebookFailure = {
+  code:
+    | "cancelled"
+    | "closed"
+    | "disconnected"
+    | "execution_failed"
+    | "invalid_cell"
+    | "invalid_path"
+    | "no_kernel"
+    | "not_found"
+    | "stale_revision"
+    | "timeout"
+    | "unsupported"
+  message: string
+  path?: string
+  /**
+   * Zero-based cell index
+   */
+  index?: number
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  currentRevision?: string
+}
+
 export type KilocodeSessionImportResult = {
   ok: boolean
   id: string
@@ -3017,6 +3182,22 @@ export type EventKilocodeAgentManagerStart = {
       name?: string
       branchName?: string
     }>
+  }
+}
+
+export type EventKilocodeNotebookRequested = {
+  id: string
+  type: "kilocode.notebook.requested"
+  properties: NotebookRequest
+}
+
+export type EventKilocodeNotebookCancelled = {
+  id: string
+  type: "kilocode.notebook.cancelled"
+  properties: {
+    requestID: NotebookRequestId
+    sessionID: string
+    reason: "cancelled" | "disposed" | "timeout"
   }
 }
 
@@ -10545,6 +10726,106 @@ export type KilocodeRemoveAgentResponses = {
 }
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
+
+export type KilocodeNotebookListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notebook"
+}
+
+export type KilocodeNotebookListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeNotebookListError = KilocodeNotebookListErrors[keyof KilocodeNotebookListErrors]
+
+export type KilocodeNotebookListResponses = {
+  /**
+   * Pending notebook host requests
+   */
+  200: Array<NotebookRequest>
+}
+
+export type KilocodeNotebookListResponse = KilocodeNotebookListResponses[keyof KilocodeNotebookListResponses]
+
+export type KilocodeNotebookReplyData = {
+  body?: {
+    result: NotebookResult
+  }
+  path: {
+    requestID: NotebookRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notebook/{requestID}/reply"
+}
+
+export type KilocodeNotebookReplyErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeNotebookReplyError = KilocodeNotebookReplyErrors[keyof KilocodeNotebookReplyErrors]
+
+export type KilocodeNotebookReplyResponses = {
+  /**
+   * Notebook reply accepted
+   */
+  200: boolean
+}
+
+export type KilocodeNotebookReplyResponse = KilocodeNotebookReplyResponses[keyof KilocodeNotebookReplyResponses]
+
+export type KilocodeNotebookRejectData = {
+  body?: {
+    error: NotebookFailure
+  }
+  path: {
+    requestID: NotebookRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notebook/{requestID}/reject"
+}
+
+export type KilocodeNotebookRejectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeNotebookRejectError = KilocodeNotebookRejectErrors[keyof KilocodeNotebookRejectErrors]
+
+export type KilocodeNotebookRejectResponses = {
+  /**
+   * Notebook rejection accepted
+   */
+  200: boolean
+}
+
+export type KilocodeNotebookRejectResponse = KilocodeNotebookRejectResponses[keyof KilocodeNotebookRejectResponses]
 
 export type NetworkListData = {
   body?: never

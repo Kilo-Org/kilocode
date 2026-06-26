@@ -292,6 +292,18 @@ export const dict = {
   "prompt.action.sandbox.enabled": "Пісочницю увімкнено. Команди оболонки агента обмежені каталогами проєкту та Kilo.",
   "prompt.action.sandbox.disabled":
     "Пісочницю вимкнено. Натисніть, щоб обмежити запис команд оболонки агента каталогами проєкту та Kilo.",
+  "prompt.action.sandbox.status.enabled": "Пісочницю увімкнено",
+  "prompt.action.sandbox.status.disabled": "Пісочницю вимкнено",
+  "prompt.action.sandbox.filesystem": "Файлова система",
+  "prompt.action.sandbox.network": "Мережа",
+  "prompt.action.sandbox.filesystem.restricted": "Обмежено",
+  "prompt.action.sandbox.network.blocked": "Заблоковано",
+  "prompt.action.sandbox.network.allowed": "Дозволено",
+  "prompt.action.sandbox.unrestricted": "Без обмежень",
+  "prompt.action.sandbox.description.enabled": "Запис дозволено лише в каталогах проєкту та Kilo.",
+  "prompt.action.sandbox.description.disabled": "Натисніть, щоб обмежити запис у файлову систему та доступ до мережі.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
@@ -1318,6 +1330,9 @@ export const dict = {
     "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Модель мовлення в текст",
   "settings.models.speechToTextModel.description": "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
+  "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
+  "settings.experimental.nativeNotebookTools.description":
+    "Увімкнути експериментальні інструменти для читання, редагування та виконання блокнотів VS Code",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.sandboxing.title": "Пісочниця",

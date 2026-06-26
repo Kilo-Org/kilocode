@@ -294,6 +294,19 @@ export const dict = {
     "Sandbox activado. Los comandos de shell del agente están limitados a los directorios del proyecto y de Kilo.",
   "prompt.action.sandbox.disabled":
     "Sandbox desactivado. Haz clic para limitar las escrituras de los comandos de shell del agente a los directorios del proyecto y de Kilo.",
+  "prompt.action.sandbox.status.enabled": "Sandbox activado",
+  "prompt.action.sandbox.status.disabled": "Sandbox desactivado",
+  "prompt.action.sandbox.filesystem": "Sistema de archivos",
+  "prompt.action.sandbox.network": "Red",
+  "prompt.action.sandbox.filesystem.restricted": "Restringido",
+  "prompt.action.sandbox.network.blocked": "Bloqueada",
+  "prompt.action.sandbox.network.allowed": "Permitida",
+  "prompt.action.sandbox.unrestricted": "Sin restricciones",
+  "prompt.action.sandbox.description.enabled": "Las escrituras se limitan a los directorios del proyecto y de Kilo.",
+  "prompt.action.sandbox.description.disabled":
+    "Haz clic para restringir las escrituras en el sistema de archivos y el acceso a la red.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Haz clic para restringir las escrituras en el sistema de archivos. El acceso a la red seguirá permitido según la configuración de tu sandbox.",
 
   "speechToText.tooltip.start": "Iniciar entrada de voz con Kilo Gateway",
   "speechToText.tooltip.stop": "Detener captura",
@@ -1342,6 +1355,9 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Modelo de voz a texto",
   "settings.models.speechToTextModel.description":
     "Elige el modelo de transcripción de Kilo Gateway para la entrada de voz.",
+  "settings.experimental.nativeNotebookTools.title": "Herramientas nativas de notebook",
+  "settings.experimental.nativeNotebookTools.description":
+    "Habilitar herramientas experimentales para leer, editar y ejecutar notebooks de VS Code",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.sandboxing.title": "Sandbox",

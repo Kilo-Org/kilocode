@@ -5713,6 +5713,9 @@
                     "required": ["id", "providerID"],
                     "additionalProperties": false
                   },
+                  "metadata": {
+                    "type": "object"
+                  },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
                   },
@@ -6039,6 +6042,9 @@
                 "properties": {
                   "title": {
                     "type": "string"
+                  },
+                  "metadata": {
+                    "type": "object"
                   },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
@@ -10708,11 +10714,14 @@
             }
           },
           "400": {
-            "description": "BadRequest | InvalidRequestError",
+            "description": "WorkspaceCreateError | BadRequest | InvalidRequestError",
             "content": {
               "application/json": {
                 "schema": {
                   "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkspaceCreateError"
+                    },
                     {
                       "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
                     },
@@ -14764,6 +14773,249 @@
         ]
       }
     },
+    "/kilocode/notebook": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.notebook.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending notebook host requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotebookRequest"
+                  },
+                  "description": "Pending notebook host requests"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List pending native notebook requests for the routed workspace.",
+        "summary": "List pending notebook requests",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/notebook/{requestID}/reply": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.notebook.reply",
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/NotebookRequestID"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notebook reply accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Notebook reply accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Complete a pending native notebook request with a structured result.",
+        "summary": "Reply to a notebook request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "result": {
+                    "$ref": "#/components/schemas/NotebookResult"
+                  }
+                },
+                "required": ["result"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.reply({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/notebook/{requestID}/reject": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.notebook.reject",
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/NotebookRequestID"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notebook rejection accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Notebook rejection accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Complete a pending native notebook request with a structured host error.",
+        "summary": "Reject a notebook request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "$ref": "#/components/schemas/NotebookFailure"
+                  }
+                },
+                "required": ["error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.reject({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/network": {
       "get": {
         "tags": ["network"],
@@ -16589,20 +16841,32 @@
             "required": true
           },
           {
-            "name": "directory",
             "in": "query",
+            "name": "directory",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
           },
           {
-            "name": "workspace",
             "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticket",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -16679,6 +16943,12 @@
           },
           {
             "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeNotebookCancelled"
           },
           {
             "$ref": "#/components/schemas/EventIndexingStatus"
@@ -16919,6 +17189,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventPluginAdded"
           },
           {
             "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -17256,6 +17529,177 @@
         },
         "required": ["id", "type", "properties"],
         "additionalProperties": false
+      },
+      "NotebookRequestID": {
+        "type": "string"
+      },
+      "NotebookReadRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/NotebookRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["read"]
+          },
+          "includeOutputs": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "sessionID", "path", "operation", "includeOutputs"],
+        "additionalProperties": false
+      },
+      "NotebookEditRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/NotebookRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["edit"]
+          },
+          "expectedRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "edit": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["insert"]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": ["code", "markdown"]
+                  },
+                  "language": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 200000
+                  }
+                },
+                "required": ["action", "kind", "source"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["replace"]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": ["code", "markdown"]
+                  },
+                  "language": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 200000
+                  }
+                },
+                "required": ["action", "kind", "source"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["delete"]
+                  }
+                },
+                "required": ["action"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": ["id", "sessionID", "path", "operation", "expectedRevision", "index", "edit"],
+        "additionalProperties": false
+      },
+      "NotebookExecuteRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/NotebookRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["execute"]
+          },
+          "expectedRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          }
+        },
+        "required": ["id", "sessionID", "path", "operation", "expectedRevision", "index"],
+        "additionalProperties": false
+      },
+      "NotebookRequest": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NotebookReadRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookEditRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookExecuteRequest"
+          }
+        ]
       },
       "IndexingStatusState": {
         "type": "string",
@@ -18058,7 +18502,7 @@
           },
           "pid": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "minimum": 0
           },
           "sessionID": {
             "anyOf": [
@@ -19347,6 +19791,9 @@
           "version": {
             "type": "string"
           },
+          "metadata": {
+            "type": "object"
+          },
           "time": {
             "type": "object",
             "properties": {
@@ -19465,6 +19912,12 @@
               },
               {
                 "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeNotebookCancelled"
               },
               {
                 "$ref": "#/components/schemas/EventIndexingStatus"
@@ -19705,6 +20158,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventPluginAdded"
               },
               {
                 "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -20246,6 +20702,15 @@
               },
               "agent_manager": {
                 "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
+              "notebook_read": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
+              "notebook_edit": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
+              "notebook_execute": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
               }
             },
             "additionalProperties": {
@@ -20380,7 +20845,20 @@
                     "enum": [false]
                   }
                 ],
-                "description": "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout."
+                "description": "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout."
+              },
+              "headerTimeout": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "boolean",
+                    "enum": [false]
+                  }
+                ],
+                "description": "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout."
               },
               "chunkTimeout": {
                 "type": "integer",
@@ -20529,7 +21007,6 @@
                       }
                     }
                   },
-                  "required": ["input", "output"],
                   "additionalProperties": false
                 },
                 "experimental": {
@@ -21204,6 +21681,9 @@
               "codebase_search": {
                 "type": "boolean"
               },
+              "native_notebook_tools": {
+                "type": "boolean"
+              },
               "speech_to_text_model": {
                 "type": "string"
               },
@@ -21220,16 +21700,20 @@
                 "type": "boolean"
               },
               "sandbox": {
-                "type": "boolean",
-                "description": "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access"
+                "type": "boolean"
               },
               "sandbox_restrict_network": {
-                "type": "boolean",
-                "description": "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)"
+                "type": "boolean"
               },
               "mcp_timeout": {
                 "type": "integer",
                 "exclusiveMinimum": 0
+              },
+              "policies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ConfigV2ExperimentalPolicy"
+                }
               }
             },
             "additionalProperties": false
@@ -21904,6 +22388,9 @@
           },
           "version": {
             "type": "string"
+          },
+          "metadata": {
+            "type": "object"
           },
           "time": {
             "type": "object",
@@ -23254,6 +23741,27 @@
         "required": ["id", "type", "name", "projectID", "timeUsed"],
         "additionalProperties": false
       },
+      "WorkspaceCreateError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["WorkspaceCreateError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "WorkspaceWarpError": {
         "type": "object",
         "properties": {
@@ -23858,6 +24366,270 @@
         "required": ["_tag"],
         "additionalProperties": false
       },
+      "NotebookOutput": {
+        "type": "object",
+        "properties": {
+          "mime": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "stack": {
+            "type": "string",
+            "maxLength": 50000
+          },
+          "omitted": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["mime"],
+        "additionalProperties": false
+      },
+      "NotebookCell": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["code", "markdown"]
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200000
+          },
+          "execution": {
+            "type": "object",
+            "properties": {
+              "order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "success": {
+                "type": "boolean"
+              },
+              "started": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ended": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotebookOutput"
+            },
+            "maxItems": 100
+          }
+        },
+        "required": ["index", "kind", "language", "source"],
+        "additionalProperties": false
+      },
+      "NotebookReadResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["read"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "requestPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotebookCell"
+            },
+            "maxItems": 2000
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["operation", "path", "requestPath", "revision", "cells"],
+        "additionalProperties": false
+      },
+      "NotebookEditResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["edit"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "requestPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["insert", "replace", "delete"]
+          },
+          "cell": {
+            "$ref": "#/components/schemas/NotebookCell"
+          }
+        },
+        "required": ["operation", "path", "requestPath", "revision", "index", "action"],
+        "additionalProperties": false
+      },
+      "NotebookExecuteResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["execute"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "requestPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "error"]
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotebookOutput"
+            },
+            "maxItems": 100
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["operation", "path", "requestPath", "revision", "index", "status", "outputs"],
+        "additionalProperties": false
+      },
+      "NotebookResult": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NotebookReadResult"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookEditResult"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookExecuteResult"
+          }
+        ]
+      },
+      "NotebookFailure": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "cancelled",
+              "closed",
+              "disconnected",
+              "execution_failed",
+              "invalid_cell",
+              "invalid_path",
+              "no_kernel",
+              "not_found",
+              "stale_revision",
+              "timeout",
+              "unsupported"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "currentRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
       "KilocodeSessionImportResult": {
         "type": "object",
         "properties": {
@@ -24338,6 +25110,16 @@
                       }
                     ]
                   },
+                  "metadata": {
+                    "anyOf": [
+                      {
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "time": {
                     "type": "object",
                     "properties": {
@@ -24561,7 +25343,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -24793,7 +25575,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -25882,6 +26664,55 @@
               }
             },
             "required": ["requestID", "sessionID", "mode", "tasks"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventKilocodeNotebookRequested": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.notebook.requested"]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/NotebookRequest"
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventKilocodeNotebookCancelled": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.notebook.cancelled"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "requestID": {
+                "$ref": "#/components/schemas/NotebookRequestID"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["cancelled", "disposed", "timeout"]
+              }
+            },
+            "required": ["requestID", "sessionID", "reason"],
             "additionalProperties": false
           }
         },
@@ -27394,7 +28225,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -27657,7 +28488,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -28473,6 +29304,30 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventPluginAdded": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["plugin.added"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "ModelV2Info": {
         "type": "object",
         "properties": {
@@ -28990,6 +29845,27 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "PolicyEffect": {
+        "type": "string",
+        "enum": ["allow", "deny"]
+      },
+      "ConfigV2ExperimentalPolicy": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["provider.use"]
+          },
+          "effect": {
+            "$ref": "#/components/schemas/PolicyEffect"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": ["action", "effect", "resource"],
+        "additionalProperties": false
+      },
       "SessionInfo": {
         "type": "object",
         "properties": {
@@ -29027,7 +29903,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "cost": {
@@ -29155,7 +30031,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           }
         },
@@ -29534,7 +30410,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "content": {

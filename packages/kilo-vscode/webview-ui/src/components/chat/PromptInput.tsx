@@ -48,7 +48,13 @@ import {
 } from "./prompt-input-utils"
 import type { ExtensionMessage, ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
-import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
+import {
+  createdDraftKey,
+  movePromptDraft,
+  pendingDraftKey,
+  scopeDraftKey,
+  sessionDraftKey,
+} from "../../utils/prompt-drafts"
 import { ReviewComments } from "./ReviewComments"
 import { partReview, reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
@@ -77,6 +83,49 @@ interface PromptInputProps {
   pendingSessionID?: string
 }
 
+export const SandboxTooltipContent: Component<{ enabled: boolean; network: boolean }> = (props) => {
+  const language = useLanguage()
+
+  return (
+    <div class="prompt-sandbox-tooltip">
+      <div class="prompt-sandbox-tooltip-title">
+        {language.t(props.enabled ? "prompt.action.sandbox.status.enabled" : "prompt.action.sandbox.status.disabled")}
+      </div>
+      <div class="prompt-sandbox-tooltip-row">
+        <Icon name="folder" size="small" />
+        <span>{language.t("prompt.action.sandbox.filesystem")}</span>
+        <span class="prompt-sandbox-tooltip-state">
+          {language.t(
+            props.enabled ? "prompt.action.sandbox.filesystem.restricted" : "prompt.action.sandbox.unrestricted",
+          )}
+        </span>
+      </div>
+      <div class="prompt-sandbox-tooltip-row">
+        <Icon name="globe" size="small" />
+        <span>{language.t("prompt.action.sandbox.network")}</span>
+        <span class="prompt-sandbox-tooltip-state">
+          {language.t(
+            props.enabled && props.network
+              ? "prompt.action.sandbox.network.blocked"
+              : props.enabled
+                ? "prompt.action.sandbox.network.allowed"
+                : "prompt.action.sandbox.unrestricted",
+          )}
+        </span>
+      </div>
+      <div class="prompt-sandbox-tooltip-description">
+        {language.t(
+          props.enabled
+            ? "prompt.action.sandbox.description.enabled"
+            : props.network
+              ? "prompt.action.sandbox.description.disabled"
+              : "prompt.action.sandbox.description.disabledNetworkAllowed",
+        )}
+      </div>
+    </div>
+  )
+}
+
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
@@ -96,9 +145,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
   const git = useGitChangesContext(vscode, ctx, hasGit)
-  const slash = useSlashCommand(vscode, () =>
-    session.variantList(sid()).length > 0 ? new Set() : new Set(["variant"]),
-  )
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -156,14 +202,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const sandboxVisible = () => {
     const id = session.currentSessionID()
-    return features().sandboxControls && !id?.startsWith("cloud:")
+    return features().sandboxControls && config().experimental?.sandbox === true && !id?.startsWith("cloud:")
   }
   const sandbox = () => {
     const state = sandboxState()
     return state?.sessionID === sandboxID() ? state : undefined
   }
   const sandboxEnabled = () => sandbox()?.enabled ?? (!sandboxID() && config().experimental?.sandbox === true)
+  const sandboxNetworkEnabled = () => config().experimental?.sandbox_restrict_network !== false
   const sandboxReady = () => !sandboxID() || sandbox() !== undefined
+  const sandboxDisabled = () =>
+    !server.isConnected() || !sandboxReady() || sandbox()?.available === false || sandboxRequest() !== undefined
   const requestSandbox = () => {
     const sessionID = sandboxID()
     if (!sessionID || server.connectionState() !== "connected") return
@@ -171,9 +220,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const toggleSandbox = () => {
     const sessionID = sandboxID()
-    const state = sandbox()
-    if ((sessionID && !state) || state?.available === false || sandboxRequest() || !server.isConnected()) return
+    if (!sandboxVisible() || sandboxDisabled()) return
     const requestID = crypto.randomUUID()
+    if (!sessionID) saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
     setSandboxRequest(requestID)
     setSandboxTarget(sessionID ?? null)
     vscode.postMessage({
@@ -184,6 +233,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       agentManagerContext: ctx(),
     })
   }
+  const slash = useSlashCommand(
+    vscode,
+    { action: toggleSandbox, enabled: () => sandboxVisible() && !sandboxDisabled() },
+    () => {
+      const hidden = new Set<string>()
+      if (session.variantList(sid()).length === 0) hidden.add("variant")
+      if (!sandboxVisible()) hidden.add("sandbox")
+      return hidden
+    },
+  )
   const clearSandboxRequest = () => {
     setSandboxRequest(undefined)
     setSandboxTarget(undefined)
@@ -464,19 +523,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       sandboxAttempts = 0
       if (sandboxRetry) clearTimeout(sandboxRetry)
       sandboxRetry = undefined
-      if (matching) {
-        if (!state.available) {
-          showToast({
-            variant: "error",
-            title: language.t("common.requestFailed"),
-            description: state.reason,
-          })
-          return true
-        }
+      if (matching && !state.available) {
         showToast({
-          variant: "success",
-          title: language.t("settings.experimental.sandbox.title"),
-          description: language.t(state.enabled ? "prompt.action.sandbox.enabled" : "prompt.action.sandbox.disabled"),
+          variant: "error",
+          title: language.t("common.requestFailed"),
+          description: state.reason,
         })
       }
       return true
@@ -564,19 +615,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       restoreFailed(message as SendMessageFailedMessage)
     }
 
-    if (message.type === "sessionCreated" && message.draftID) {
-      const target = scopeDraftKey(boxKey(), pendingDraftKey(message.draftID) ?? "new")
-      const next = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id) ?? "new")
-      const draft = drafts.get(target)
-      const pending = reviewDrafts.get(target)
-      const imgs = imageDrafts.get(target)
-      if (draft !== undefined) drafts.set(next, draft)
-      if (pending) reviewDrafts.set(next, pending)
-      if (imgs) imageDrafts.set(next, imgs)
-      drafts.delete(target)
-      reviewDrafts.delete(target)
-      imageDrafts.delete(target)
-      if (!session.currentSessionID() && (props.pendingSessionID ?? session.draftSessionID()) === message.draftID) {
+    if (message.type === "sessionCreated") {
+      const raw = createdDraftKey(message.draftID, sandboxRequest() !== undefined && sandboxTarget() === null)
+      if (raw) {
+        const source = scopeDraftKey(boxKey(), raw)
+        const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
+        if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())
+        movePromptDraft({ text: drafts, comments: reviewDrafts, images: imageDrafts }, source, target)
+      }
+      if (
+        message.draftID &&
+        !session.currentSessionID() &&
+        (props.pendingSessionID ?? session.draftSessionID()) === message.draftID
+      ) {
         session.setDraftSessionID(message.session.id)
       }
     }
@@ -860,6 +911,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     // Client-side slash command — runs locally without a backend round-trip
     if (matched?.action) {
+      if (matched.enabled && !matched.enabled()) return
       setText("")
       clearReviewComments()
       imageAttach.clear()
@@ -1218,24 +1270,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <Show when={sandboxVisible()}>
             <Tooltip
               value={
-                sandbox()?.available === false
-                  ? (sandbox()?.reason ?? language.t("common.requestFailed"))
-                  : sandboxEnabled()
-                    ? language.t("prompt.action.sandbox.enabled")
-                    : language.t("prompt.action.sandbox.disabled")
+                sandbox()?.available === false ? (
+                  (sandbox()?.reason ?? language.t("common.requestFailed"))
+                ) : (
+                  <SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />
+                )
               }
+              contentClass="prompt-sandbox-tooltip-content"
               placement="top"
             >
               <Button
                 variant="ghost"
                 size="small"
                 onClick={toggleSandbox}
-                disabled={
-                  !server.isConnected() ||
-                  !sandboxReady() ||
-                  sandbox()?.available === false ||
-                  sandboxRequest() !== undefined
-                }
+                disabled={sandboxDisabled()}
                 aria-label={
                   sandboxEnabled()
                     ? language.t("prompt.action.sandbox.disable")

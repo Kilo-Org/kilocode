@@ -75,7 +75,7 @@ describe("sandbox launch preparation", () => {
     expect(args.args.slice(-4)).toEqual(["--", "/bin/sh", "-c", "printf '%s' 'hello world'"])
   })
 
-  test("layers Linux writable roots before protected git metadata without changing the network namespace", () => {
+  test("keeps the host network namespace in Linux allow mode", () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-policy-"))
     const git = path.join(root, ".git")
     mkdirSync(git)
@@ -98,6 +98,28 @@ describe("sandbox launch preparation", () => {
       expect(protectedPath).toBeGreaterThan(writable)
       expect(result.args.slice(protectedPath, protectedPath + 3)).toEqual(["--ro-bind", git, git])
       expect(result.args).not.toContain("--unshare-net")
+      expect(result.args.slice(-3)).toEqual(["--", "/bin/echo", "hello"])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("isolates the Linux network namespace in deny mode", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-network-"))
+    const input = makeProfile("deny")
+    const profile: Profile = {
+      ...input,
+      filesystem: {
+        allowWrite: [{ path: root, kind: "subtree" }],
+        denyWrite: [],
+        denyNames: [],
+      },
+    }
+
+    try {
+      const result = generateBubblewrap(profile, { ...launch, cwd: root }, "/opt/kilo/bwrap")
+      expect(result.args).toContain("--unshare-net")
+      expect(result.args.indexOf("--unshare-net")).toBeGreaterThan(result.args.indexOf("--unshare-pid"))
       expect(result.args.slice(-3)).toEqual(["--", "/bin/echo", "hello"])
     } finally {
       rmSync(root, { recursive: true, force: true })
@@ -234,8 +256,10 @@ describe("sandbox launch preparation", () => {
   })
 
   test("reports backend support with a reason when unavailable", () => {
-    const support = backendSupport()
-    expect(typeof support.available).toBe("boolean")
-    if (!support.available) expect(support.reason?.length).toBeGreaterThan(0)
+    for (const network of [undefined, makeProfile("deny").network]) {
+      const support = backendSupport(network)
+      expect(typeof support.available).toBe("boolean")
+      if (!support.available) expect(support.reason?.length).toBeGreaterThan(0)
+    }
   })
 })

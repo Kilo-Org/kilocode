@@ -120,6 +120,7 @@ export function generate(
     "--unshare-user",
     "--disable-userns",
     "--unshare-pid",
+    ...(profile.network.mode === "deny" ? ["--unshare-net"] : []),
     "--die-with-parent",
     "--new-session",
     "--ro-bind",
@@ -163,13 +164,14 @@ function resolve(executable: string, expected?: string) {
   }
 }
 
-function probe(executable: string) {
+function probe(executable: string, network = false) {
   const result = spawnSync(
     executable,
     [
       "--unshare-user",
       "--disable-userns",
       "--unshare-pid",
+      ...(network ? ["--unshare-net"] : []),
       "--die-with-parent",
       "--new-session",
       "--ro-bind",
@@ -187,10 +189,17 @@ function probe(executable: string) {
   )
   if (result.status === 0) return undefined
   const detail = result.error?.message ?? (result.stderr.trim() || `exited with status ${result.status}`)
-  return `${executable} could not create the Linux sandbox: ${detail}`
+  const capability = network ? "Linux network sandbox" : "Linux sandbox"
+  return `${executable} could not create the ${capability}: ${detail}`
 }
 
-function select() {
+interface Selection {
+  readonly executable: string | undefined
+  readonly support: Support
+  network: Support | undefined
+}
+
+function select(): Selection {
   const override = process.env.KILO_BWRAP_PATH
   const candidates = override
     ? [{ executable: override }]
@@ -201,7 +210,7 @@ function select() {
     const executable = resolve(candidate.executable, candidate.expected)
     if (!executable) continue
     const failure = probe(executable)
-    if (!failure) return { executable, support: { available: true } satisfies Support }
+    if (!failure) return { executable, support: { available: true } satisfies Support, network: undefined }
     failures.push(failure)
   }
 
@@ -211,10 +220,9 @@ function select() {
       available: false,
       reason: failures.at(-1) ?? "No usable Bubblewrap executable is available",
     } satisfies Support,
+    network: undefined,
   }
 }
-
-type Selection = ReturnType<typeof select>
 
 let selected: Selection | undefined
 
@@ -223,8 +231,21 @@ function selection(): Selection {
   selected =
     process.platform === "linux"
       ? select()
-      : { executable: undefined, support: { available: false, reason: "Bubblewrap requires Linux" } satisfies Support }
+      : {
+          executable: undefined,
+          support: { available: false, reason: "Bubblewrap requires Linux" } satisfies Support,
+          network: undefined,
+        }
   return selected
+}
+
+function support(network?: Profile["network"]): Support {
+  const selected = selection()
+  if (!selected.support.available || network?.mode !== "deny" || !selected.executable) return selected.support
+  if (selected.network) return selected.network
+  const failure = probe(selected.executable, true)
+  selected.network = failure ? { available: false, reason: failure } : { available: true }
+  return selected.network
 }
 
 function setup(cause: unknown, launch: Launch) {
@@ -239,7 +260,7 @@ function setup(cause: unknown, launch: Launch) {
 }
 
 export const bubblewrap: Backend = {
-  support: () => selection().support,
+  support,
   prepare: (profile, launch) =>
     Effect.try({
       try: () => {

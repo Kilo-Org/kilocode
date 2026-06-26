@@ -114,7 +114,8 @@ export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: Se
   const directory = yield* InstanceState.directory
   const override = overrides.get(key(directory, sessionID))
   const enabled = override?.enabled ?? cfg.experimental?.sandbox ?? false
-  const support = backendSupport()
+  const mode = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
+  const support = backendSupport({ mode, allowedHosts: [] })
   return {
     directory,
     enabled: enabled && support.available,

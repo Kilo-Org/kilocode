@@ -289,6 +289,18 @@ export const dict = {
     "Sandbox is enabled. Agent shell commands are confined to the project and Kilo directories.",
   "prompt.action.sandbox.disabled":
     "Sandbox is disabled. Click to confine agent shell command writes to the project and Kilo directories.",
+  "prompt.action.sandbox.status.enabled": "Sandbox enabled",
+  "prompt.action.sandbox.status.disabled": "Sandbox disabled",
+  "prompt.action.sandbox.filesystem": "Filesystem",
+  "prompt.action.sandbox.network": "Network",
+  "prompt.action.sandbox.filesystem.restricted": "Restricted",
+  "prompt.action.sandbox.network.blocked": "Blocked",
+  "prompt.action.sandbox.network.allowed": "Allowed",
+  "prompt.action.sandbox.unrestricted": "Unrestricted",
+  "prompt.action.sandbox.description.enabled": "Writes are limited to the project and Kilo directories.",
+  "prompt.action.sandbox.description.disabled": "Click to restrict filesystem writes and network access.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -1309,6 +1321,9 @@ export const dict = {
     "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
   "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
+  "settings.experimental.nativeNotebookTools.description":
+    "Enable experimental tools for reading, editing, and executing VS Code notebooks",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.sandbox.title": "Sandbox",

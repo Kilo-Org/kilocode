@@ -20,7 +20,7 @@ export interface Support {
 }
 
 export interface Backend {
-  readonly support: () => Support
+  readonly support: (network?: Profile["network"]) => Support
   readonly prepare: (
     profile: Profile,
     launch: Launch,
@@ -83,7 +83,7 @@ export function confine(profile: Profile, launch: Launch) {
   return Effect.gen(function* () {
     const next = { ...launch, environment: environment(profile, launch) }
     yield* assertProcessNetwork(profile, launch.command)
-    const support = backend.support()
+    const support = backend.support(profile.network)
     if (!support.available) return yield* Effect.fail(unsupported(launch.command, "confine", support))
     return yield* backend.prepare(profile, next)
   })
@@ -114,6 +114,6 @@ export function prepareCommand(
   })
 }
 
-export function backendSupport() {
-  return backend.support()
+export function backendSupport(network?: Profile["network"]) {
+  return backend.support(network)
 }

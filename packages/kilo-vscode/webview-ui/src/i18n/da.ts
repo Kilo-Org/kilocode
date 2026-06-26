@@ -292,6 +292,18 @@ export const dict = {
     "Sandbox er aktiveret. Shell-kommandoer for agenten er begrænset til projekt- og Kilo-mapperne.",
   "prompt.action.sandbox.disabled":
     "Sandbox er deaktiveret. Klik for at begrænse skrivning af shell-kommandoer for agenten til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.status.enabled": "Sandbox aktiveret",
+  "prompt.action.sandbox.status.disabled": "Sandbox deaktiveret",
+  "prompt.action.sandbox.filesystem": "Filsystem",
+  "prompt.action.sandbox.network": "Netværk",
+  "prompt.action.sandbox.filesystem.restricted": "Begrænset",
+  "prompt.action.sandbox.network.blocked": "Blokeret",
+  "prompt.action.sandbox.network.allowed": "Tilladt",
+  "prompt.action.sandbox.unrestricted": "Ubegrænset",
+  "prompt.action.sandbox.description.enabled": "Skrivning er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.description.disabled": "Klik for at begrænse skriveadgang til filsystemet og netværksadgang.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
   "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
   "speechToText.tooltip.stop": "Stop lydoptagelse",
@@ -1326,6 +1338,9 @@ export const dict = {
     "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
+  "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
+  "settings.experimental.nativeNotebookTools.description":
+    "Aktivér eksperimentelle værktøjer til at læse, redigere og køre VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
   "settings.sandboxing.title": "Sandboxing",
