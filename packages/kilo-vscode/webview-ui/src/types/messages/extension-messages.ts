@@ -921,6 +921,11 @@ export interface MarketplaceInstallResultMessage {
   error?: string
 }
 
+export interface OpenInstallModalMessage {
+  type: "openInstallModal"
+  mpItem: MarketplaceItem
+}
+
 export interface MarketplaceRemoveResultMessage {
   type: "marketplaceRemoveResult"
   success: boolean
@@ -1121,6 +1126,7 @@ export type ExtensionMessage =
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
+  | OpenInstallModalMessage
   | ProviderOAuthReadyMessage
   | ProviderConnectedMessage
   | ProviderDisconnectedMessage

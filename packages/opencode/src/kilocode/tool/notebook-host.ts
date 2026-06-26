@@ -58,7 +58,7 @@ export const NotebookReadTool = Tool.define<
     const notebook = yield* Notebook.Service
     return {
       description:
-        "Read a live, possibly unsaved VS Code notebook using a request-directory-relative path or a safe absolute path inside that directory. Returns an opaque content revision for edits; outputs are omitted unless include_outputs is true.",
+        "Read a live, possibly unsaved VS Code notebook using a request-directory-relative path or a safe absolute path inside that directory. Returns an opaque content revision for edits; outputs are omitted unless include_outputs is true. Use notebook_edit to create a notebook or change its cells, and notebook_execute to run a cell and generate its outputs.",
       parameters: ReadParams,
       execute: (params, ctx) =>
         Effect.gen(function* () {
@@ -91,10 +91,15 @@ export const NotebookReadTool = Tool.define<
 
 const EditParams = Schema.Struct({
   path: Path,
-  expected_revision: Revision,
-  index: Index,
-  action: Schema.Literals(["insert", "replace", "delete"]).annotate({
-    description: "insert and replace require kind and source; delete ignores cell fields",
+  expected_revision: Schema.optional(Revision).annotate({
+    description: "Required for insert, replace, and delete. Omit for create, which has no prior revision.",
+  }),
+  index: Schema.optional(Index).annotate({
+    description: "Zero-based cell index. Required for insert, replace, and delete. Ignored for create.",
+  }),
+  action: Schema.Literals(["insert", "replace", "delete", "create"]).annotate({
+    description:
+      "insert and replace require kind and source; delete ignores cell fields; create makes a new empty .ipynb at path and ignores cell fields, index, and expected_revision",
   }),
   kind: Schema.optional(Schema.Literals(["code", "markdown"])).annotate({
     description: "Cell kind. Required for insert and replace.",
@@ -105,12 +110,27 @@ const EditParams = Schema.Struct({
 type EditInput = Schema.Schema.Type<typeof EditParams>
 
 function cellEdit(params: EditInput) {
-  if (params.action === "delete") return Effect.succeed({ action: params.action } as const)
-  if (params.kind === undefined || params.source === undefined)
+  if (params.action === "create") return Effect.succeed({ action: params.action } as const)
+  if (params.action === "delete") {
+    if (params.expected_revision === undefined || params.index === undefined)
+      return Effect.die(
+        new Tool.InvalidArgumentsError({
+          tool: "notebook_edit",
+          detail: `the "delete" action requires both "expected_revision" and "index"`,
+        }),
+      )
+    return Effect.succeed({ action: params.action } as const)
+  }
+  if (
+    params.kind === undefined ||
+    params.source === undefined ||
+    params.expected_revision === undefined ||
+    params.index === undefined
+  )
     return Effect.die(
       new Tool.InvalidArgumentsError({
         tool: "notebook_edit",
-        detail: `the "${params.action}" action requires both "kind" and "source"`,
+        detail: `the "${params.action}" action requires "kind", "source", "expected_revision", and "index"`,
       }),
     )
   return Effect.succeed({
@@ -132,11 +152,12 @@ export const NotebookEditTool = Tool.define<
     const notebook = yield* Notebook.Service
     return {
       description:
-        "Insert, replace, or delete one cell in a live VS Code notebook. Paths may be request-directory-relative or safe absolute paths. Pass the latest opaque revision from notebook_read or the previous successful edit unchanged. A stale_revision error requires a fresh read; never blindly retry an index-based edit. Leaves the document dirty.",
+        "Insert, replace, delete, or create cells in a live VS Code notebook. To build a notebook from scratch, do not hand-write a .ipynb file: call this tool with action create, then insert cells one at a time, then run them with notebook_execute. Cell outputs are produced only by notebook_execute; never author outputs yourself. insert/replace/delete operate on one cell and require expected_revision and index. create makes a new empty .ipynb at path (the parent directory must exist) and returns its initial revision so you can then insert cells. Paths may be request-directory-relative or safe absolute paths. Pass the latest opaque revision from notebook_read or the previous successful edit unchanged. A stale_revision error requires a fresh read; never blindly retry an index-based edit. Leaves the document dirty.",
       parameters: EditParams,
       execute: (params, ctx) =>
         Effect.gen(function* () {
           const edit = yield* cellEdit(params)
+          const index = params.action === "create" ? 0 : params.index!
           yield* ctx.ask({
             permission: "notebook_edit",
             patterns: [params.path],
@@ -144,7 +165,7 @@ export const NotebookEditTool = Tool.define<
             metadata: {
               path: params.path,
               action: params.action,
-              index: params.index,
+              index,
               expectedRevision: params.expected_revision,
             },
           })
@@ -153,8 +174,8 @@ export const NotebookEditTool = Tool.define<
               operation: "edit",
               sessionID: ctx.sessionID,
               path: params.path,
-              expectedRevision: params.expected_revision,
-              index: params.index,
+              ...(params.expected_revision !== undefined ? { expectedRevision: params.expected_revision } : {}),
+              index,
               edit,
             }),
             ctx.abort,
@@ -162,7 +183,10 @@ export const NotebookEditTool = Tool.define<
           if (result.operation !== "edit")
             return yield* Effect.die(new Error("Notebook host returned the wrong result type"))
           return {
-            title: `${result.action} notebook cell ${result.index}`,
+            title:
+              result.action === "create"
+                ? `created notebook ${result.path}`
+                : `${result.action} notebook cell ${result.index}`,
             output: render(result),
             metadata: { path: result.path, revision: result.revision, index: result.index },
           }

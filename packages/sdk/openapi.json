@@ -13064,6 +13064,43 @@
                         }
                       ]
                     },
+                    "kiloPass": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "currentPeriodBaseCreditsUsd": {
+                              "type": "number"
+                            },
+                            "currentPeriodUsageUsd": {
+                              "type": "number"
+                            },
+                            "currentPeriodBonusCreditsUsd": {
+                              "type": "number"
+                            },
+                            "nextBillingAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "currentPeriodBaseCreditsUsd",
+                            "currentPeriodUsageUsd",
+                            "currentPeriodBonusCreditsUsd"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "currentOrgId": {
                       "anyOf": [
                         {
@@ -13075,7 +13112,7 @@
                       ]
                     }
                   },
-                  "required": ["profile", "balance", "currentOrgId"],
+                  "required": ["profile", "balance", "kiloPass", "currentOrgId"],
                   "additionalProperties": false,
                   "description": "Profile data"
                 }
@@ -17647,11 +17684,22 @@
                 },
                 "required": ["action"],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["create"]
+                  }
+                },
+                "required": ["action"],
+                "additionalProperties": false
               }
             ]
           }
         },
-        "required": ["id", "sessionID", "path", "operation", "expectedRevision", "index", "edit"],
+        "required": ["id", "sessionID", "path", "operation", "index", "edit"],
         "additionalProperties": false
       },
       "NotebookExecuteRequest": {
@@ -24518,7 +24566,7 @@
           },
           "action": {
             "type": "string",
-            "enum": ["insert", "replace", "delete"]
+            "enum": ["insert", "replace", "delete", "create"]
           },
           "cell": {
             "$ref": "#/components/schemas/NotebookCell"
@@ -24592,6 +24640,7 @@
           "code": {
             "type": "string",
             "enum": [
+              "already_exists",
               "cancelled",
               "closed",
               "disconnected",

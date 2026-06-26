@@ -16,6 +16,7 @@ import {
   clearModesCache,
   fetchBalance,
   fetchKilocodeNotifications,
+  fetchKiloPassState,
   fetchOrganizationModes,
   fetchProfile,
   resolveCurrentOrganizationId,
@@ -88,8 +89,15 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         yield* store.disposeAll().pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       }
 
-      const balance = yield* Effect.promise(() => fetchBalance(info.access, currentOrgId ?? undefined))
-      return { profile, balance, currentOrgId }
+      const [balance, kiloPass] = yield* Effect.tryPromise({
+        try: () =>
+          Promise.all([
+            fetchBalance(info.access, currentOrgId ?? undefined),
+            fetchKiloPassState(info.access),
+          ]),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+      return { profile, balance, kiloPass, currentOrgId }
     })
 
     const authStatus = Effect.fn("KiloGatewayHttpApi.authStatus")(function* () {

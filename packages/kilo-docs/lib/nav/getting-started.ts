@@ -36,6 +36,7 @@ export const GettingStartedNav: NavSection[] = [
             children: "System Notifications",
             platform: "legacy",
           },
+          { href: "/getting-started/settings/sandboxing", children: "Sandboxing" },
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
