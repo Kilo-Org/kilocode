@@ -151,15 +151,19 @@ Rules for the dead code track (apply only when this track is active):
 1. Determine the scope using the rules above.
 2. Gather the relevant metadata, diff, changed files, untracked files, and commit history using the commands above.
 3. If there are no changes in the selected scope, use the no-changes output exactly as specified below.
-4. Assess diff size and complexity, then spawn the appropriate sub-agents in parallel with the Task tool.
+4. Assess diff size and complexity, then spawn the appropriate research tasks in parallel with the Task tool.
+
+   When calling the Task tool, `subagent_type` MUST be a real non-primary agent type from the Task tool's available-agent list. Use `general` by default. Use `explore` only for pure codebase search/context gathering when it is available. Never use `code`, `debug`, `orchestrator`, or review-track names such as `security`, `performance`, `business logic`, `deploy safety`, `duplication`, or `dead code` as `subagent_type`; those are primary modes or review labels, not Task subagents.
+
+   Put the selected review track in the Task `description` and `prompt`, for example `description: "review security risks"`, `subagent_type: "general"`, and a prompt that says the assigned track is security.
 
    Count changed lines (additions + deletions) from the diff output and the number of distinct files changed. Use these thresholds:
 
-   **Small** (< 100 changed lines AND ≤ 3 files): spawn 1-2 sub-agents. Choose the 1-2 tracks most relevant to the nature of the change. Default priority order if unclear: security → business logic → deploy safety → performance → duplication → dead code.
+   **Small** (< 100 changed lines AND ≤ 3 files): spawn 1-2 research tasks. Choose the 1-2 tracks most relevant to the nature of the change. Default priority order if unclear: security → business logic → deploy safety → performance → duplication → dead code.
 
-   **Medium** (100–300 changed lines OR 4–10 files): spawn 3-4 sub-agents. Always include security and business logic, then add the next most relevant tracks for the change type.
+   **Medium** (100–300 changed lines OR 4–10 files): spawn 3-4 research tasks. Always include security and business logic, then add the next most relevant tracks for the change type.
 
-   **Large or complex** (> 300 changed lines OR > 10 files OR changes span multiple architectural boundaries such as API + database + auth): spawn all six sub-agents:
+   **Large or complex** (> 300 changed lines OR > 10 files OR changes span multiple architectural boundaries such as API + database + auth): spawn one research task for each of the six review tracks:
    - security
    - performance
    - business logic
@@ -167,11 +171,11 @@ Rules for the dead code track (apply only when this track is active):
    - duplication
    - dead code
 
-   When the complexity signals are mixed (e.g., few files but security-sensitive code, or many files of pure test additions), adjust up or down by one tier using your judgment. Err toward fewer sub-agents for additive-only or test-only changes.
+   When the complexity signals are mixed (e.g., few files but security-sensitive code, or many files of pure test additions), adjust up or down by one tier using your judgment. Err toward fewer research tasks for additive-only or test-only changes.
 
-5. Each sub-agent is research only. No sub-agent may edit files or produce the final user-facing review.
-6. Give each sub-agent the selected diff scope and its track. Also give it the current branch, base ref, and merge base for branch review; the commit for commit review; or pull request metadata for pull request review.
-7. Tell each sub-agent to return only high-confidence findings. Use this exact shape for each finding:
+5. Each research task is advisory only. No Task subagent may edit files or produce the final user-facing review.
+6. Give each research task the selected diff scope and its track. Also give it the current branch, base ref, and merge base for branch review; the commit for commit review; or pull request metadata for pull request review.
+7. Tell each research task to return only high-confidence findings. Use this exact shape for each finding:
    - `path`
    - `line` (changed line in the reviewed diff only)
    - `confidence` (`high` only)
@@ -179,7 +183,7 @@ Rules for the dead code track (apply only when this track is active):
    - `finding` (short, clear, and specific)
    - `suggestion` (one concise fix direction when useful)
    If the track has no solid issue, it must return `NO_FINDINGS`.
-8. Main agent reviews every finding from every sub-agent.
+8. Main agent reviews every finding from every research task.
 9. Drop any finding that is:
    - low confidence
    - style-only

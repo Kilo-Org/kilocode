@@ -131,10 +131,14 @@ describe("review command", () => {
 
   test("applies adaptive parallel review tracks", () => {
     const text = cmd.template as string
-    expect(text).toContain("spawn the appropriate sub-agents in parallel")
-    expect(text).toContain("spawn 1-2 sub-agents")
-    expect(text).toContain("spawn 3-4 sub-agents")
-    expect(text).toContain("spawn all six sub-agents")
+    expect(text).toContain("spawn the appropriate research tasks in parallel")
+    expect(text).toContain("spawn 1-2 research tasks")
+    expect(text).toContain("spawn 3-4 research tasks")
+    expect(text).toContain("spawn one research task for each of the six review tracks")
+    expect(text).toContain("`subagent_type` MUST be a real non-primary agent type")
+    expect(text).toContain('Use `general` by default')
+    expect(text).toContain("Never use `code`, `debug`, `orchestrator`, or review-track names")
+    expect(text).toContain('subagent_type: "general"')
     expect(text).toContain("security")
     expect(text).toContain("performance")
     expect(text).toContain("business logic")

@@ -5,11 +5,13 @@ import REVIEW from "./review.txt"
 const legacy: Record<string, { description: string; message: string }> = {
   "local-review": {
     description: "deprecated; use /review branch",
-    message: "/local-review is deprecated. Use /review branch instead.",
+    message:
+      "/local-review is deprecated. Use `/review branch-name` instead. `/review` also supports reviewing individual commits, for example `/review commit-sha`.",
   },
   "local-review-uncommitted": {
     description: "deprecated; use /review uncommitted",
-    message: "/local-review-uncommitted is deprecated. Use /review uncommitted instead.",
+    message:
+      "/local-review-uncommitted is deprecated. Use `/review uncommitted` instead. `/review` also supports reviewing individual commits, for example `/review commit-sha`.",
   },
 }
 
