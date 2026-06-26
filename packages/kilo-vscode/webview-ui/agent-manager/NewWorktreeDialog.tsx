@@ -3,7 +3,13 @@
 /** @jsxImportSource solid-js */
 
 import { type Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
-import type { AgentManagerBranchesMessage, AgentManagerImportResultMessage, BranchInfo } from "../src/types/messages"
+import type {
+  AgentManagerBranchesMessage,
+  AgentManagerImportResultMessage,
+  BranchInfo,
+  EnhancePromptResultMessage,
+  EnhancePromptErrorMessage,
+} from "../src/types/messages"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -33,6 +39,7 @@ import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImage
 import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { convertToMentionPath } from "../src/utils/path-mentions"
 import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
 
@@ -95,6 +102,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
   const [starting, setStarting] = createSignal(false)
+  const [enhancing, setEnhancing] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
   const [baseBranch, setBaseBranch] = createSignal<string | null>(null)
@@ -105,6 +113,13 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const speech = useSpeechToText(vscode, server, { t })
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())
+  let prior: string | null = null
+  let request: string | undefined
+  const cancel = () => {
+    prior = null
+    request = undefined
+    setEnhancing(false)
+  }
 
   // Variant list for the currently selected model
   const variants = createMemo(() => {
@@ -155,6 +170,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     const inserted = resolved.map((p) => `@${p}`).join(" ")
     const result = before + inserted + " " + after
     ref.value = result
+    cancel()
     setPrompt(result)
     persistPrompt(result)
     const pos = cursor + inserted.length + 1
@@ -261,6 +277,19 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     }
   }
 
+  const undo = (e: KeyboardEvent) => {
+    if (e.key !== "z" || (!e.metaKey && !e.ctrlKey) || e.shiftKey || prior === null) return
+    e.preventDefault()
+    const restored = prior
+    cancel()
+    setPrompt(restored)
+    persistPrompt(restored)
+    if (!textareaRef) return
+    textareaRef.value = restored
+    adjustHeight()
+    textareaRef.focus()
+  }
+
   const adjustHeight = () => {
     if (!textareaRef) return
     textareaRef.style.height = "auto"
@@ -274,6 +303,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     const end = ref?.selectionEnd ?? start
     const result = insertSpacedText(current, value, start, end)
 
+    cancel()
     setPrompt(result.text)
     persistPrompt(result.text)
     if (!ref) return
@@ -285,6 +315,29 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   const startSpeech = () => {
     speech.start({ model: speechModel(), insert: insertSpeechText })
+  }
+
+  const canEnhance = () => !starting() && !enhancing() && !speech.active() && server.isConnected()
+
+  const handleEnhance = () => {
+    if (!canEnhance()) return
+    const draft = prompt().trim()
+    if (!draft) {
+      const description = t("prompt.action.enhanceDescription")
+      setPrompt(description)
+      persistPrompt(description)
+      if (textareaRef) {
+        textareaRef.value = description
+        adjustHeight()
+        textareaRef.focus()
+      }
+      return
+    }
+    prior = prompt()
+    const id = `enhance-newworktree-${crypto.randomUUID()}`
+    request = id
+    setEnhancing(true)
+    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: id })
   }
 
   // --- Import tab state ---
@@ -314,9 +367,30 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
         showToast({ variant: "error", title: t("agentManager.import.failed"), description })
       }
     }
+    if (msg.type === "enhancePromptResult") {
+      const ev = msg as EnhancePromptResultMessage
+      if (ev.requestId === request) {
+        request = undefined
+        setPrompt(ev.text)
+        persistPrompt(ev.text)
+        setEnhancing(false)
+        if (textareaRef) {
+          textareaRef.value = ev.text
+          adjustHeight()
+          textareaRef.focus()
+        }
+      }
+    }
+    if (msg.type === "enhancePromptError") {
+      const ev = msg as EnhancePromptErrorMessage
+      if (ev.requestId === request) cancel()
+    }
   })
 
-  onCleanup(() => importUnsub())
+  onCleanup(() => {
+    request = undefined
+    importUnsub()
+  })
 
   const handlePRSubmit = () => {
     const url = prUrl().trim()
@@ -413,10 +487,12 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     value={prompt()}
                     onInput={(e) => {
                       const val = e.currentTarget.value
+                      cancel()
                       setPrompt(val)
                       persistPrompt(val)
                       adjustHeight()
                     }}
+                    onKeyDown={undo}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     rows={3}
                   />
@@ -460,6 +536,17 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   </Show>
                 </div>
                 <div class="prompt-input-hint-actions">
+                  <Tooltip value={t("prompt.action.enhance")} placement="top">
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={handleEnhance}
+                      disabled={!canEnhance()}
+                      aria-label={t("prompt.action.enhance")}
+                    >
+                      <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
+                    </Button>
+                  </Tooltip>
                   <Show when={canUseSpeech()}>
                     <SpeechToTextButton speech={speech} disabled={starting()} start={startSpeech} label={t} />
                   </Show>
