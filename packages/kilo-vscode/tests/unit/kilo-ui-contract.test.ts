@@ -316,7 +316,7 @@ describe("AssistantMessage visible row contract (source)", () => {
   })
 
   it("uses the plan exit card only when plan metadata is renderable", () => {
-    expect(src).toContain("if (!planExitInfo(part)) return")
+    expect(src).toMatch(/if \(!planExitInfo\(part\(\)\)\) return/)
   })
 })
 
