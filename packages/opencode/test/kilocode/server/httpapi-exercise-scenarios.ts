@@ -451,4 +451,31 @@ export const kiloScenarios: Scenario[] = [
     .post("/telemetry/setEnabled", "telemetry.setEnabled")
     .at((ctx) => ({ path: "/telemetry/setEnabled", headers: ctx.headers(), body: { enabled: true } }))
     .json(200, (body) => check(body === true, "telemetry enabled update should return true")),
+  http.protected
+    .post("/session/{sessionID}/summary", "session.summary")
+    .withLlm()
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const session = yield* ctx.session({ title: "Summary session" })
+        yield* ctx.message(session.id, { text: "summarize this work" })
+        yield* ctx.llmText("## Brief Goal\n- Test the summary route.")
+        return session
+      }),
+    )
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/summary", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+      body: { providerID: "test", modelID: "test-model" },
+    }))
+    .status(
+      200,
+      (ctx, result) =>
+        Effect.gen(function* () {
+          check(result.text.includes("Brief Goal"), "summary should return the LLM markdown text")
+          const messages = yield* ctx.messages(ctx.state.id)
+          check(messages.length === 1, "summary must not persist a new session message")
+          yield* ctx.llmWait(1)
+        }),
+      "status",
+    ),
 ]
