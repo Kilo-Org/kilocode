@@ -2,6 +2,8 @@ import { expect, mock, beforeEach } from "bun:test"
 import { Cause, Effect, Exit } from "effect"
 import type { MCP as MCPNS } from "../../src/mcp/index"
 import { testEffect } from "../lib/effect"
+import * as SandboxNetwork from "../../src/kilocode/sandbox/network" // kilocode_change
+import { run as runSandbox, type Profile } from "@kilocode/sandbox" // kilocode_change
 
 // --- Mock infrastructure ---
 
@@ -183,10 +185,76 @@ const { McpOAuthCallback } = await import("../../src/mcp/oauth-callback")
 
 const it = testEffect(MCP.defaultLayer)
 
+// kilocode_change start
+function sandboxProfile(): Profile {
+  return {
+    filesystem: { allowWrite: [], denyWrite: [], denyNames: [] },
+    network: { mode: "deny", allowedHosts: [] },
+    environment: { deny: [], set: {} },
+  }
+}
+// kilocode_change end
+
 function statusName(status: Record<string, MCPNS.Status> | MCPNS.Status, server: string) {
   if ("status" in status) return status.status
   return status[server]?.status
 }
+
+// kilocode_change start
+it.instance(
+  "classifies production remote MCP tools while leaving local MCP tools available",
+  () =>
+    MCP.Service.use((mcp: MCPNS.Interface) =>
+      Effect.gen(function* () {
+        lastCreatedClientName = "local-server"
+        getOrCreateClientState("local-server")
+        yield* mcp.add("local-server", { type: "local", command: ["node", "fake.js"] })
+
+        lastCreatedClientName = "remote-server"
+        getOrCreateClientState("remote-server")
+        yield* mcp.add("remote-server", {
+          type: "remote",
+          url: "http://localhost:9999/mcp",
+          oauth: false,
+        })
+
+        const tools = yield* mcp.tools()
+        const local = Object.entries(tools).find(([key]) => key.startsWith("local") && key.endsWith("_test_tool"))?.[1]
+        const remote = Object.entries(tools).find(
+          ([key]) => key.startsWith("remote") && key.endsWith("_test_tool"),
+        )?.[1]
+        if (!local || !remote) return yield* Effect.die(new Error("expected MCP tools are missing"))
+
+        let localCalled = false
+        let remoteCalled = false
+        const localExit = yield* runSandbox(
+          sandboxProfile(),
+          SandboxNetwork.mcp(
+            local,
+            Effect.sync(() => {
+              localCalled = true
+            }),
+          ),
+        ).pipe(Effect.exit)
+        const remoteExit = yield* runSandbox(
+          sandboxProfile(),
+          SandboxNetwork.mcp(
+            remote,
+            Effect.sync(() => {
+              remoteCalled = true
+            }),
+          ),
+        ).pipe(Effect.exit)
+
+        expect(Exit.isSuccess(localExit)).toBe(true)
+        expect(localCalled).toBe(true)
+        expect(Exit.isFailure(remoteExit)).toBe(true)
+        expect(remoteCalled).toBe(false)
+      }),
+    ),
+  { config: { mcp: {} } },
+)
+// kilocode_change end
 
 // ========================================================================
 // Test: tools() are cached after connect

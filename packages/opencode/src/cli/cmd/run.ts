@@ -23,7 +23,7 @@ import { ServerAuth } from "@/server/auth"
 import { buildRunMessage } from "@/kilocode/cli/cmd/run-message" // kilocode_change
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
-import { createKiloClient, type KiloClient, type ToolPart } from "@kilocode/sdk/v2"
+import { createKiloClient, type KiloClient, type Session, type ToolPart } from "@kilocode/sdk/v2"
 import { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -33,7 +33,7 @@ import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.
 import { event as normalizeEvent } from "./run/event"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
-import { KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
+import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
 
 const runtimeTask = import("./run/runtime")
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
@@ -76,6 +76,7 @@ type SessionInfo = {
   id: string
   title?: string
   directory?: string
+  model?: Session["model"]
 }
 
 function inline(info: Inline) {
@@ -371,14 +372,19 @@ export const RunCommand = effectCmd({
         }
       }
 
-      const piped = process.stdin.isTTY ? undefined : await Bun.stdin.text()
-      message = resolveRunInput(message, piped) ?? ""
-      const initialInput = resolveRunInput(rawMessage, piped)
-
-      if (message.trim().length === 0 && !args.command && !args.interactive) {
+      // kilocode_change start - defer stdin until endpoint-backed commands are classified
+      const input = { initial: undefined as string | undefined, loaded: false }
+      async function loadInput() {
+        if (input.loaded) return
+        const piped = process.stdin.isTTY ? undefined : await Bun.stdin.text()
+        message = resolveRunInput(message, piped) ?? ""
+        input.initial = resolveRunInput(rawMessage, piped)
+        input.loaded = true
+        if (message.trim().length > 0 || args.command || args.interactive) return
         UI.error("You must provide a message or a command")
         process.exit(1)
       }
+      // kilocode_change end
 
       if (args.fork && !args.continue && !args.session) {
         UI.error("--fork requires --continue or --session")
@@ -448,6 +454,7 @@ export const RunCommand = effectCmd({
             id: current.data.id,
             title: current.data.title,
             directory: current.data.directory,
+            model: current.data.model,
           }
         }
         // kilocode_change end
@@ -477,6 +484,7 @@ export const RunCommand = effectCmd({
               id,
               title: forked.data?.title ?? current.data.title,
               directory: forked.data?.directory ?? current.data.directory,
+              model: forked.data?.model ?? current.data.model,
             }
           }
 
@@ -484,6 +492,7 @@ export const RunCommand = effectCmd({
             id: current.data.id,
             title: current.data.title,
             directory: current.data.directory,
+            model: current.data.model,
           }
         }
 
@@ -502,6 +511,7 @@ export const RunCommand = effectCmd({
             id,
             title: forked.data?.title ?? base.title,
             directory: forked.data?.directory ?? base.directory,
+            model: forked.data?.model ?? base.model,
           }
         }
 
@@ -510,6 +520,7 @@ export const RunCommand = effectCmd({
             id: base.id,
             title: base.title,
             directory: base.directory,
+            model: base.model,
           }
         }
 
@@ -527,6 +538,7 @@ export const RunCommand = effectCmd({
           id,
           title: result.data?.title ?? name,
           directory: result.data?.directory,
+          model: result.data?.model,
         }
       }
 
@@ -666,6 +678,15 @@ export const RunCommand = effectCmd({
       }
 
       async function execute(sdk: KiloClient) {
+        // kilocode_change start - preserve custom command precedence and avoid reading stdin for built-ins
+        const deferred = Boolean(args.attach && args.session && !directory)
+        const initial = deferred ? undefined : await KiloRun.resolveBuiltin(sdk, args.command, directory)
+        if (!deferred) {
+          KiloRun.validateBuiltin({ command: initial, continue: args.continue, session: args.session })
+          if (!initial) await loadInput()
+        }
+        // kilocode_change end
+
         const sess = await session(sdk)
         if (!sess?.id) {
           UI.error("Session not found")
@@ -866,6 +887,13 @@ export const RunCommand = effectCmd({
         }
         const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)
         const client = args.attach ? attachSDK(cwd) : sdk
+        // kilocode_change start - classify deferred attach commands in the session directory
+        const builtin = deferred ? await KiloRun.resolveBuiltin(client, args.command, cwd) : initial
+        if (deferred) {
+          KiloRun.validateBuiltin({ command: builtin, continue: args.continue, session: args.session })
+          if (!builtin) await loadInput()
+        }
+        // kilocode_change end
 
         // Validate agent if specified
         const agent = await pickAgent(client)
@@ -878,6 +906,17 @@ export const RunCommand = effectCmd({
             console.error(e)
             process.exit(1)
           })
+
+          // kilocode_change start - handle built-in session commands
+          if (builtin) {
+            const result = await KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd)
+            if (result.error) {
+              if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
+              process.exitCode = 1
+            }
+            return
+          }
+          // kilocode_change end
 
           if (args.command) {
             const result = await client.session.command({
@@ -925,7 +964,7 @@ export const RunCommand = effectCmd({
             model,
             variant: args.variant,
             files,
-            initialInput,
+            initialInput: input.initial,
             createSession: createFreshSession,
             thinking,
             demo: args.demo,
@@ -937,6 +976,7 @@ export const RunCommand = effectCmd({
       }
 
       if (args.interactive && !args.attach && !args.session && !args.continue) {
+        await loadInput() // kilocode_change - interactive local mode still consumes its initial input
         const model = pick(args.model)
         const { runInteractiveLocalMode } = await runtimeTask
         const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -959,7 +999,7 @@ export const RunCommand = effectCmd({
             replay,
             replayLimit: args["replay-limit"],
             files,
-            initialInput,
+            initialInput: input.initial,
             thinking,
             demo: args.demo,
           })

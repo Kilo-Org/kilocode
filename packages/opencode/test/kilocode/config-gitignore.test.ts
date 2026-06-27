@@ -16,6 +16,7 @@ import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Npm } from "@opencode-ai/core/npm"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { provideTestInstance } from "../fixture/fixture"
@@ -48,6 +49,7 @@ const unexpectedHttp = HttpClient.make((request) =>
 )
 
 const testLayer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),

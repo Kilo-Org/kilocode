@@ -40,6 +40,7 @@
 .kilo-console .models-filter-field input,
 .kilo-console .models-select summary,
 .kilo-console .models-favorite-filter,
+.kilo-console .models-privacy-filter,
 .kilo-console .models-capability-toggle {
   height: 2rem;
   min-height: 2rem;
@@ -156,6 +157,7 @@
 }
 
 .kilo-console .models-favorite-filter,
+.kilo-console .models-privacy-filter,
 .kilo-console .models-capability-toggle {
   display: inline-flex;
   gap: 0.375rem;
@@ -172,8 +174,10 @@
 }
 
 .kilo-console .models-favorite-filter:hover,
+.kilo-console .models-privacy-filter:hover,
 .kilo-console .models-capability-toggle:hover,
 .kilo-console .models-favorite-filter.selected,
+.kilo-console .models-privacy-filter.selected,
 .kilo-console .models-capability-toggle.selected {
   border-color: var(--primary);
   background: color-mix(in oklab, var(--primary) 10%, transparent);
@@ -202,6 +206,7 @@
 }
 
 .kilo-console .models-context-filter > span,
+.kilo-console .models-privacy-filter-group > span,
 .kilo-console .models-capabilities-filter > span {
   flex: 0 0 auto;
   color: var(--muted-foreground);
@@ -258,6 +263,7 @@
   text-align: right;
 }
 
+.kilo-console .models-privacy-filter-group,
 .kilo-console .models-capabilities-filter {
   flex: 0 0 auto;
   display: flex;
@@ -270,6 +276,10 @@
   gap: 0.375rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.kilo-console .models-capabilities-list button {
+  text-transform: capitalize;
 }
 
 .kilo-console .explore-models {

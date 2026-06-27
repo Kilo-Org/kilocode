@@ -8,7 +8,7 @@ if (process.platform === "win32" && !("type" in process)) {
 // kilocode_change end
 
 import { dynamicTool, type Tool, jsonSchema, type JSONSchema7 } from "ai"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
@@ -40,6 +40,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
 
 const log = Log.create({ service: "mcp" })
 const DEFAULT_TIMEOUT = 30_000
@@ -257,6 +258,7 @@ interface AuthResult {
 // --- Effect Service ---
 
 interface State {
+  config: Record<string, ConfigMCP.Info>
   status: Record<string, Status>
   clients: Record<string, MCPClient>
   defs: Record<string, MCPToolDef[]>
@@ -549,6 +551,7 @@ export const layer = Layer.effect(
         const bridge = yield* EffectBridge.make()
         const config = cfg.mcp ?? {}
         const s: State = {
+          config: {},
           status: {},
           clients: {},
           defs: {},
@@ -643,6 +646,10 @@ export const layer = Layer.effect(
         result[key] = s.status[key] ?? { status: "disabled" }
       }
 
+      for (const key of Object.keys(s.config)) {
+        result[key] = s.status[key] ?? { status: "disabled" }
+      }
+
       return result
     })
 
@@ -666,8 +673,9 @@ export const layer = Layer.effect(
     })
 
     const add = Effect.fn("MCP.add")(function* (name: string, mcp: ConfigMCP.Info) {
-      yield* createAndStore(name, mcp)
       const s = yield* InstanceState.get(state)
+      s.config[name] = mcp
+      yield* createAndStore(name, mcp)
       return { status: s.status }
     })
 
@@ -701,7 +709,7 @@ export const layer = Layer.effect(
         ([clientName, client]) =>
           Effect.gen(function* () {
             const mcpConfig = config[clientName]
-            const entry = mcpConfig && isMcpConfigured(mcpConfig) ? mcpConfig : undefined
+            const entry = mcpConfig && isMcpConfigured(mcpConfig) ? mcpConfig : s.config[clientName]
 
             const listed = s.defs[clientName]
             if (!listed) {
@@ -711,7 +719,11 @@ export const layer = Layer.effect(
 
             const timeout = entry?.timeout ?? defaultTimeout
             for (const mcpTool of listed) {
-              result[sanitize(clientName) + "_" + sanitize(mcpTool.name)] = convertMcpTool(mcpTool, client, timeout)
+              // kilocode_change start
+              const tool = convertMcpTool(mcpTool, client, timeout)
+              result[sanitize(clientName) + "_" + sanitize(mcpTool.name)] =
+                entry?.type === "remote" ? SandboxNetwork.remote(tool) : tool
+              // kilocode_change end
             }
           }),
         { concurrency: "unbounded" },
@@ -780,6 +792,9 @@ export const layer = Layer.effect(
     })
 
     const getMcpConfig = Effect.fnUntraced(function* (mcpName: string) {
+      const s = yield* InstanceState.get(state)
+      if (s.config[mcpName]) return s.config[mcpName]
+
       const cfg = yield* cfgSvc.get()
       const mcpConfig = cfg.mcp?.[mcpName]
       if (!mcpConfig || !isMcpConfigured(mcpConfig)) return undefined
@@ -1018,7 +1033,7 @@ export type AuthStatus = "authenticated" | "expired" | "not_authenticated"
 // --- Per-service runtime ---
 
 export const defaultLayer = layer.pipe(
-  Layer.provide(McpAuth.layer),
+  Layer.provide(McpAuth.defaultLayer),
   Layer.provide(Bus.layer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(CrossSpawnSpawner.defaultLayer),

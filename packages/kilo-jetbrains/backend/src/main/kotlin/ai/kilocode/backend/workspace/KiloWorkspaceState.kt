@@ -59,6 +59,7 @@ data class ModelInfo(
     val recommendedIndex: Double?,
     val variants: List<String>,
     val limit: ModelLimitInfo?,
+    val mayTrainOnYourPrompts: Boolean = false,
 )
 
 data class ModelLimitInfo(

@@ -42,6 +42,24 @@ export const dict = {
   "marketplace.install.scope": "النطاق",
   "marketplace.install.scope.project": "المشروع",
   "marketplace.install.scope.global": "عالمي",
+  "marketplace.install.scope.project.description":
+    "هذا المشروع فقط. يمكن إضافة الملفات المثبتة إلى نظام التحكم في الإصدارات ومشاركتها مع فريقك.",
+  "marketplace.install.scope.global.description":
+    "جميع المشاريع على هذا الجهاز. تُحفظ في إعدادات المستخدم الخاصة بك.",
+  "marketplace.install.destination": "وجهة التثبيت",
+  "marketplace.install.about.mcp":
+    "يمنح خادم MCP منصة Kilo أدوات إضافية للعمل مع الخدمات الخارجية أو البرامج المحلية.",
+  "marketplace.install.about.agent": "يضيف الوكيل دورًا قابلاً لإعادة الاستخدام بتعليماته وأذوناته الخاصة.",
+  "marketplace.install.about.skill": "تضيف المهارة تعليمات وموارد خاصة بمهام معينة يمكن لـ Kilo تحميلها عند الحاجة.",
+  "marketplace.install.mcp.warning":
+    "يمكن لخوادم MCP تشغيل أوامر محلية أو الاتصال بخدمات خارجية. ستطلب Kilo الإذن قبل استخدام أدواتها ما لم تسمح أذوناتك بذلك تلقائيًا.",
+  "marketplace.install.project.warning":
+    "قد تُضاف ملفات المشروع إلى نظام التحكم في الإصدارات. لا تخزّن الأسرار هنا إلا إذا كان الإعداد يشير إلى متغير بيئة.",
+  "marketplace.install.learnMore": "تعرّف على كيفية عمل عمليات التثبيت من Marketplace",
+  "marketplace.install.learnMcp": "معرفة المزيد عن MCP",
+  "marketplace.install.installedAt": "تم التثبيت في {{path}}",
+  "marketplace.intro": "ثبّت وكلاء ومهارات وأدوات MCP قابلة لإعادة الاستخدام لمشروع واحد أو لجميع المشاريع.",
+  "marketplace.intro.learnMore": "حول Marketplace",
   "marketplace.install.prerequisites": "المتطلبات الأساسية",
   "marketplace.install.installing": "جاري التثبيت...",
   "marketplace.install.cancel": "إلغاء",
@@ -59,7 +77,9 @@ export const dict = {
   "marketplace.search": "بحث...",
   "marketplace.filter.all": "جميع العناصر",
   "marketplace.filter.notInstalled": "غير مثبت",
+  "marketplace.filter.relevant": "ذات صلة بمساحة العمل الخاصة بي",
   "marketplace.empty": "لم يتم العثور على عناصر",
+  "marketplace.empty.relevant": "لم يتم العثور على عناصر سوق ذات صلة بمساحة العمل هذه.",
   "marketplace.badge.mcpServer": "خادم MCP",
   "marketplace.badge.mode": "وضع",
   "marketplace.card.by": "بواسطة {{author}}",

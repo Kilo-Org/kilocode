@@ -16,6 +16,7 @@ data class ModelDto(
     val recommendedIndex: Double? = null,
     val variants: List<String> = emptyList(),
     val limit: ModelLimitDto? = null,
+    val mayTrainOnYourPrompts: Boolean = false,
 )
 
 @Serializable

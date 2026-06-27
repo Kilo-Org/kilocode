@@ -135,6 +135,7 @@ export function createDialogProviderOptions() {
           gutter: failedGutter ?? (connected && onboarded() ? () => <text fg={theme.success}>✓</text> : undefined), // kilocode_change
           async onSelect() {
             if (consoleManaged) return
+            if (KiloProvider.selectProvider({ providerID, replace: dialog.replace, model: DialogModel })) return // kilocode_change
 
             const methods = sync.data.provider_auth[providerID] ?? [
               {
@@ -277,6 +278,13 @@ function AutoMethod(props: AutoMethodProps) {
       method: props.index,
     })
     if (result.error) {
+      toast.show({
+        variant: "error",
+        message:
+          "name" in result.error && result.error.name === "ProviderAuthOauthCallbackFailed"
+            ? "OAuth authorization failed. Try /connect again."
+            : JSON.stringify(result.error),
+      })
       dialog.clear()
       return
     }

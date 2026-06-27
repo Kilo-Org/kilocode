@@ -5,6 +5,7 @@ import { Discovery } from "../../src/skill/discovery"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { Git } from "../../src/git" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Global } from "@opencode-ai/core/global"
@@ -17,6 +18,7 @@ const node = CrossSpawnSpawner.defaultLayer
 
 const skills = (disableExternalSkills: boolean, disableClaudeCodeSkills: boolean) =>
   Skill.layer.pipe(
+    Layer.provide(Git.defaultLayer), // kilocode_change
     Layer.provide(Discovery.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Bus.layer),

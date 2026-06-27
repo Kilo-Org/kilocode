@@ -183,6 +183,7 @@ internal class ModelsSettingsUi(
                         model.free,
                         model.byok,
                         model.variants,
+                        mayTrainOnYourPrompts = model.mayTrainOnYourPrompts,
                     )
                     if (!includeSmall && ModelText.small(item)) return@mapNotNull null
                     item

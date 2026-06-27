@@ -648,6 +648,43 @@ describe("plan_exit detection", () => {
       expect(text).not.toContain("No plan file exists yet")
     }))
 
+  test("native plan reminder creates the default plan directory", () =>
+    withInstance(async () => {
+      const session = await sessions.create({})
+      const dir = path.dirname(Session.plan(session, Instance.current))
+      await expect(fs.stat(dir).then(() => true, () => false)).resolves.toBe(false)
+
+      const id = MessageID.ascending()
+      const user: MessageV2.WithParts = {
+        info: {
+          id,
+          role: "user",
+          sessionID: session.id,
+          time: { created: Date.now() },
+          agent: "plan",
+          model,
+        },
+        parts: [
+          {
+            id: PartID.ascending(),
+            messageID: id,
+            sessionID: session.id,
+            type: "text",
+            text: "Create a plan.",
+          },
+        ],
+      }
+
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "plan", options: {} },
+        session,
+        userMessage: user,
+        messages: [user],
+      })
+
+      await expect(fs.stat(dir).then((stat) => stat.isDirectory())).resolves.toBe(true)
+    }))
+
   test("native plan reminder prefers project plan path instructions over fallback", () =>
     withInstance(async () => {
       const session = await sessions.create({})

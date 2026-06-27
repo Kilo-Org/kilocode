@@ -1,8 +1,14 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "再次检查",
+  "provider.anaconda.state.noServer_one":
+    "有 1 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
+  "provider.anaconda.state.noServer_other":
+    "有 {{count}} 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
   "command.category.suggested": "建议",
   "command.category.view": "视图",
   "command.category.project": "项目",
@@ -174,6 +180,7 @@ export const dict = {
   "model.tag.free": "免费",
   "model.tag.dataCollected": "数据可能会用于训练",
   "model.tag.latest": "最新",
+  "model.group.auto": "自动模型",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
   "model.group.collapse": "折叠 {{group}}",
@@ -202,6 +209,7 @@ export const dict = {
   "model.preview.label.average": "预估平均成本",
   "model.preview.label.context": "上下文",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "模型选择",
   "model.preview.label.completion": "完成率",
   "model.preview.label.costAttempt": "成本 / 次尝试",
   "model.preview.value.notSupported": "不支持",
@@ -284,6 +292,22 @@ export const dict = {
   "prompt.action.resetModel": "重置模型为默认值",
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
+  "prompt.action.sandbox.enable": "启用沙盒",
+  "prompt.action.sandbox.disable": "禁用沙盒",
+  "prompt.action.sandbox.enabled": "沙盒已启用。代理 shell 命令被限制在项目和 Kilo 目录内。",
+  "prompt.action.sandbox.disabled": "沙盒已禁用。点击以将代理 shell 命令的写入限制在项目和 Kilo 目录内。",
+  "prompt.action.sandbox.status.enabled": "沙盒已启用",
+  "prompt.action.sandbox.status.disabled": "沙盒已禁用",
+  "prompt.action.sandbox.filesystem": "文件系统",
+  "prompt.action.sandbox.network": "网络",
+  "prompt.action.sandbox.filesystem.restricted": "受限",
+  "prompt.action.sandbox.network.blocked": "已阻止",
+  "prompt.action.sandbox.network.allowed": "允许",
+  "prompt.action.sandbox.unrestricted": "不受限",
+  "prompt.action.sandbox.description.enabled": "写入仅限项目和 Kilo 目录。",
+  "prompt.action.sandbox.description.disabled": "点击以限制文件系统写入和网络访问。",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
   "speechToText.tooltip.stop": "停止捕获音频",
@@ -772,6 +796,9 @@ export const dict = {
   "settings.indexing.title": "索引",
   "settings.indexing.enable.title": "启用索引",
   "settings.indexing.enable.description": "打开或关闭语义代码库索引。",
+  "settings.indexing.showButton.title": "索引关闭时显示按钮",
+  "settings.indexing.showButton.description":
+    "索引关闭时，在提示词下方显示索引按钮。如果该按钮已隐藏，请打开“设置 > 索引”以启用索引。",
   "settings.indexing.globalEnable.title": "全局启用",
   "settings.indexing.globalEnable.description": "为每个工作区启用索引。",
   "settings.indexing.projectEnable.title": "为此项目启用",
@@ -838,16 +865,16 @@ export const dict = {
   "settings.providers.tag.customProvider": "自定义提供商",
   "settings.providers.connected.environmentDescription": "从您的环境变量连接",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登录",
-  "settings.providers.custom.description": "通过基础 URL 添加 OpenAI 兼容的提供商。",
+  "settings.providers.custom.description": "通过基础 URL 添加自定义提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的默认模型和推理工作量。留空以继承调用代理的模型。",
   "settings.models.hidePromptTraining.title": "隐藏使用提示词训练的模型",
   "settings.models.hidePromptTraining.description": "隐藏提供商可能会使用您的提示词进行训练的 Kilo Gateway 模型。",
   "settings.providers.modeModels": "按模式选择模型",
-  "settings.providers.custom.note": "通过 Base URL 添加 OpenAI 兼容提供商。",
+  "settings.providers.custom.note": "通过 Base URL 添加自定义提供商。",
   "settings.providers.modeModels.description": "为特定模式覆盖默认模型。如果未设置，将使用全局默认模型。",
   "provider.custom.title": "自定义提供商",
-  "provider.custom.description.prefix": "配置 OpenAI 兼容的提供商。请参阅",
+  "provider.custom.description.prefix": "配置自定义提供商。请参阅",
   "provider.custom.description.link": "提供商配置文档",
   "provider.custom.description.suffix": "。",
   "provider.custom.field.providerID.label": "提供商 ID",
@@ -1197,6 +1224,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "此操作仅将 VS Code 扩展专属设置重置为默认值。与 CLI 共享的设置（如模式和自动审批规则）存储在 CLI 配置中，不会被重置。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有设置",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "设置迁移",
   "settings.aboutKiloCode.settingsTransfer.description": "导出或导入设置，以便在 VS Code 实例之间传输。",
   "settings.aboutKiloCode.exportSettings": "导出",
@@ -1281,8 +1309,14 @@ export const dict = {
     "启用并登录 Kilo 提供商以使用 Speech to Text。Speech to Text 目前仅支持通过 Kilo Gateway 使用。",
   "settings.models.speechToTextModel.title": "语音转文本模型",
   "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
+  "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
+  "settings.experimental.nativeNotebookTools.description": "启用用于读取、编辑和执行 VS Code 笔记本的实验性工具",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
+  "settings.sandboxing.title": "沙盒",
+  "settings.sandboxing.network.title": "限制网络访问",
+  "settings.sandboxing.network.description":
+    "阻止模型发起的命令和 HTTP 工具进行出站网络访问。本地 MCP 服务器和插件钩子不受此限制。提供商和模型推理流量仍然可用。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1403,6 +1437,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
+  "settings.experimental.sandbox.title": "沙盒",
+  "settings.experimental.sandbox.description":
+    "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
   "settings.autoApprove.description":
     "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",

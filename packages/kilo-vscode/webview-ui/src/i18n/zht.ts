@@ -1,8 +1,14 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "再次檢查",
+  "provider.anaconda.state.noServer_one":
+    "有 1 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
+  "provider.anaconda.state.noServer_other":
+    "有 {{count}} 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
   "command.category.suggested": "建議",
   "command.category.view": "檢視",
   "command.category.project": "專案",
@@ -174,6 +180,7 @@ export const dict = {
   "model.tag.free": "免費",
   "model.tag.dataCollected": "資料可能會用於訓練",
   "model.tag.latest": "最新",
+  "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
   "model.group.collapse": "折疊 {{group}}",
@@ -202,6 +209,7 @@ export const dict = {
   "model.preview.label.average": "預估平均成本",
   "model.preview.label.context": "上下文",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "模型選擇",
   "model.preview.label.completion": "完成率",
   "model.preview.label.costAttempt": "成本 / 次嘗試",
   "model.preview.value.notSupported": "不支援",
@@ -283,6 +291,21 @@ export const dict = {
   "prompt.action.resetModel": "重置模型為預設值",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
+  "prompt.action.sandbox.enable": "啟用沙盒",
+  "prompt.action.sandbox.disable": "停用沙盒",
+  "prompt.action.sandbox.enabled": "沙盒已啟用。代理 shell 指令被限制在專案和 Kilo 目錄內。",
+  "prompt.action.sandbox.disabled": "沙盒已停用。點擊以將代理 shell 指令的寫入限制在專案和 Kilo 目錄內。",
+  "prompt.action.sandbox.status.enabled": "沙盒已啟用",
+  "prompt.action.sandbox.status.disabled": "沙盒已停用",
+  "prompt.action.sandbox.filesystem": "檔案系統",
+  "prompt.action.sandbox.network": "網路",
+  "prompt.action.sandbox.filesystem.restricted": "受限制",
+  "prompt.action.sandbox.network.blocked": "已封鎖",
+  "prompt.action.sandbox.network.allowed": "允許",
+  "prompt.action.sandbox.unrestricted": "不受限制",
+  "prompt.action.sandbox.description.enabled": "寫入僅限於專案和 Kilo 目錄。",
+  "prompt.action.sandbox.description.disabled": "點擊以限制檔案系統寫入和網路存取。",
+  "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
   "speechToText.tooltip.stop": "停止擷取音訊",
@@ -806,16 +829,16 @@ export const dict = {
   "settings.providers.tag.customProvider": "自訂提供商",
   "settings.providers.connected.environmentDescription": "從您的環境變數連線",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登入",
-  "settings.providers.custom.description": "透過基礎 URL 新增 OpenAI 相容的提供商。",
+  "settings.providers.custom.description": "透過基礎 URL 新增自訂提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的預設模型和推理工作量。留空以繼承呼叫代理的模型。",
   "settings.models.hidePromptTraining.title": "隱藏使用提示詞訓練的模型",
   "settings.models.hidePromptTraining.description": "隱藏供應商可能會使用您的提示詞進行訓練的 Kilo Gateway 模型。",
   "settings.providers.modeModels": "按模式選擇模型",
-  "settings.providers.custom.note": "透過 Base URL 新增 OpenAI 相容供應商。",
+  "settings.providers.custom.note": "透過 Base URL 新增自訂供應商。",
   "settings.providers.modeModels.description": "為特定模式覆寫預設模型。如果未設定，將使用全域預設模型。",
   "provider.custom.title": "自訂提供商",
-  "provider.custom.description.prefix": "設定 OpenAI 相容的提供商。請參閱",
+  "provider.custom.description.prefix": "設定自訂提供商。請參閱",
   "provider.custom.description.link": "提供商設定文件",
   "provider.custom.description.suffix": "。",
   "provider.custom.field.providerID.label": "提供商 ID",
@@ -1165,6 +1188,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "此操作僅將 VS Code 擴充功能專屬設定重置為預設值。與 CLI 共享的設定（例如模式和自動核准規則）儲存在 CLI 設定中，不會被重置。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有設定",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "設定轉移",
   "settings.aboutKiloCode.settingsTransfer.description": "匯出或匯入設定，以便在 VS Code 實例之間轉移。",
   "settings.aboutKiloCode.exportSettings": "匯出",
@@ -1249,8 +1273,14 @@ export const dict = {
     "啟用並登入 Kilo 供應商以使用 Speech to Text。Speech to Text 目前僅支援透過 Kilo Gateway 使用。",
   "settings.models.speechToTextModel.title": "語音轉文字模型",
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
+  "settings.experimental.nativeNotebookTools.title": "原生筆記本工具",
+  "settings.experimental.nativeNotebookTools.description": "啟用用於讀取、編輯和執行 VS Code 筆記本的實驗性工具",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
+  "settings.sandboxing.title": "沙盒",
+  "settings.sandboxing.network.title": "限制網路存取",
+  "settings.sandboxing.network.description":
+    "封鎖模型發起的命令和 HTTP 工具的對外網路存取。本機 MCP 伺服器和外掛程式鉤子不受此限制。供應商與模型推論流量仍然可用。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1373,6 +1403,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
+  "settings.experimental.sandbox.title": "沙盒",
+  "settings.experimental.sandbox.description":
+    "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
   "settings.autoApprove.description":
     "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",
@@ -1456,6 +1489,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "向量維度",
   "settings.indexing.enable.description": "開啟或關閉語意程式碼庫索引。",
+  "settings.indexing.showButton.title": "索引關閉時顯示按鈕",
+  "settings.indexing.showButton.description":
+    "索引關閉時，在提示詞下方顯示索引按鈕。如果該按鈕已隱藏，請開啟「設定 > 索引」以啟用索引。",
   "settings.indexing.enable.title": "啟用索引",
   "settings.indexing.globalEnable.title": "全域啟用",
   "settings.indexing.globalEnable.description": "為每個工作區啟用索引。",

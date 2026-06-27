@@ -5,11 +5,20 @@ import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
-import { freeDataLabel, hasByok, isDataCollectedModel, sanitizeName } from "./model-selector-utils"
+import {
+  autoChoices,
+  autoSummary,
+  freeDataLabel,
+  hasByok,
+  isAuto,
+  isDataCollectedModel,
+  sanitizeName,
+} from "./model-selector-utils"
 import { avgPrice, fmtAttemptCost, fmtCachedPrice, fmtPrice, fmtTerminalBenchScore } from "./model-preview-utils"
 
 interface Props {
   model: EnrichedModel | null
+  models?: readonly EnrichedModel[]
 }
 
 function fmtContext(n: number): string {
@@ -49,6 +58,9 @@ export const ModelPreview: Component<Props> = (props) => {
           const avg = () => (cost() ? avgPrice(cost()!) : undefined)
           const freeLabel = () => language.t("model.tag.free")
           const dataLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
+          const autoLabel = () => autoSummary(model())
+          const choices = () => autoChoices(model(), props.models ?? [])
+          const choicesLabel = () => language.t("model.preview.group.autoEfficientChoices")
           const ctx = () => model().limit?.context ?? model().contextLength
           const caps = () => model().capabilities
           const inputs = () => caps()?.input
@@ -91,8 +103,15 @@ export const ModelPreview: Component<Props> = (props) => {
                       })()}
                     </Show>
                   </div>
-                  <Show when={model().isFree || hasByok(model()) || isDataCollectedModel(model())}>
+                  <Show when={isAuto(model()) || model().isFree || hasByok(model()) || isDataCollectedModel(model())}>
                     <span class="model-preview-free-data">
+                      <Show when={isAuto(model())}>
+                        <Tooltip value={autoLabel()} placement="top">
+                          <span class="model-preview-auto-icon" aria-label={autoLabel()}>
+                            <Icon name="branch" size="small" />
+                          </span>
+                        </Tooltip>
+                      </Show>
                       <Show when={model().isFree && !hasByok(model())}>
                         <span class="model-preview-badge model-preview-badge--free">{freeLabel()}</span>
                       </Show>
@@ -179,6 +198,22 @@ export const ModelPreview: Component<Props> = (props) => {
               <Show when={model().options?.description}>
                 <div class="model-preview-description">
                   <Markdown text={model().options!.description!} />
+                </div>
+              </Show>
+
+              <Show when={choices().length > 0}>
+                <div class="model-preview-group">
+                  <span class="model-preview-group-title">{choicesLabel()}</span>
+                  <div class="model-preview-candidates" aria-label={choicesLabel()}>
+                    <For each={choices()}>
+                      {(item) => (
+                        <span class="model-preview-candidate" title={item.id}>
+                          <span class="model-preview-candidate-name">{item.name}</span>
+                          <span class="model-preview-candidate-id">{item.id}</span>
+                        </span>
+                      )}
+                    </For>
+                  </div>
                 </div>
               </Show>
             </>

@@ -7,6 +7,13 @@ import {
   type MarketplaceRemoveContext,
 } from "../../src/services/marketplace/actions"
 import type { McpMarketplaceItem } from "../../src/services/marketplace/types"
+import {
+  filterItems,
+  hasRelevantItems,
+  installedScopes,
+  retain,
+} from "../../webview-ui/src/components/marketplace/utils"
+import type { MarketplaceItem } from "../../webview-ui/src/types/marketplace"
 
 const project = "/repo"
 const storage = vscode.Uri.file("/storage")
@@ -18,6 +25,7 @@ const item: McpMarketplaceItem = {
   type: "mcp",
   name: "Memory",
   description: "",
+  category: "development",
   url: "",
   content: "",
 }
@@ -60,6 +68,81 @@ function connection() {
 afterEach(() => {
   fs.readFile = original.readFile
   fs.writeFile = original.writeFile
+})
+
+describe("Marketplace installation metadata", () => {
+  it("tracks colliding IDs independently by item type", () => {
+    const metadata = {
+      project: {
+        "mcp:dbt": { type: "mcp" },
+        "skill:dbt": { type: "skill" },
+      },
+      global: {},
+    }
+
+    expect(installedScopes("dbt", "mcp", metadata)).toEqual(["project"])
+    expect(installedScopes("dbt", "skill", metadata)).toEqual(["project"])
+    expect(installedScopes("dbt", "agent", metadata)).toEqual([])
+  })
+
+  it("removes filters that are no longer available", () => {
+    expect(retain(["agent", "mcp"], ["mcp", "skill"])).toEqual(["mcp"])
+  })
+
+  it("filters the mixed list by search, category, and status", () => {
+    const items: MarketplaceItem[] = [
+      {
+        type: "agent",
+        id: "reviewer",
+        name: "Code Reviewer",
+        description: "Reviews code",
+        category: "development",
+        content: { mode: "all", description: "Reviews code", prompt: "Review" },
+      },
+      {
+        type: "mcp",
+        id: "warehouse",
+        name: "Warehouse",
+        description: "Queries data",
+        category: "web-automation",
+        url: "https://example.com",
+        content: "{}",
+      },
+      {
+        type: "skill",
+        id: "campaign-writer",
+        name: "Campaign Writer",
+        displayName: "Campaign Writer",
+        description: "Writes campaigns",
+        category: "business",
+        displayCategory: "Business",
+        githubUrl: "https://example.com",
+        content: "https://example.com/skill.tar.gz",
+      },
+    ]
+    const metadata = { project: { "mcp:warehouse": { type: "mcp" } }, global: {} }
+
+    expect(filterItems(items, metadata, "reviewer", "all", [], []).map((item) => item.id)).toEqual(["reviewer"])
+    expect(filterItems(items, metadata, "web automation", "all", [], []).map((item) => item.id)).toEqual(["warehouse"])
+    expect(
+      filterItems(items, metadata, "servidor mcp", "all", [], [], { mcp: "Servidor MCP" }).map((item) => item.id),
+    ).toEqual(["warehouse"])
+    expect(filterItems(items, metadata, "", "all", ["business"], []).map((item) => item.id)).toEqual([
+      "campaign-writer",
+    ])
+    expect(filterItems(items, metadata, "", "installed", [], []).map((item) => item.id)).toEqual(["warehouse"])
+    expect(filterItems(items, metadata, "", "all", [], ["mcp"]).map((item) => item.id)).toEqual(["warehouse"])
+    expect(
+      filterItems(items, metadata, "", "all", [], [], {}, true, {
+        "agent:reviewer": { filename: ["*.review.ts"] },
+        "mcp:warehouse": { vscodeExtension: ["data.warehouse"] },
+      }).map((item) => item.id),
+    ).toEqual(["reviewer", "warehouse"])
+    const relevance = { "agent:reviewer": { filename: ["*.review.ts"] } }
+    expect(filterItems(items, metadata, "warehouse", "all", [], [], {}, true, relevance)).toEqual([])
+    expect(hasRelevantItems(items, relevance)).toBe(true)
+    expect(hasRelevantItems(items, {})).toBe(false)
+  })
 })
 
 describe("Marketplace legacy MCP cleanup", () => {
