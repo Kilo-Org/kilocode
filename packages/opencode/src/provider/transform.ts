@@ -1,5 +1,5 @@
 import type { ModelMessage, ToolResultPart } from "ai"
-import { mergeDeep, unique } from "remeda"
+import { mergeDeep, mapValues, unique } from "remeda"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import type * as Provider from "./provider"
 import type * as ModelsDev from "@opencode-ai/core/models-dev"
@@ -648,6 +648,14 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     model.variants &&
     Object.keys(model.variants).length > 0
   ) {
+    if (model.api.npm === "@ai-sdk/openai-compatible") {
+      return mapValues(model.variants, (v) => {
+        if (v?.reasoning?.effort === "none") {
+          return { ...v, reasoning: { enabled: false } }
+        }
+        return v
+      })
+    }
     return model.variants
   }
   // kilocode_change end
