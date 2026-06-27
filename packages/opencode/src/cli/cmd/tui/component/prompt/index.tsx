@@ -60,7 +60,10 @@ import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "@tui/context/args"
 // kilocode_change start
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
+import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
+import { TuiSlash } from "@/kilocode/cli/cmd/tui/slash"
+import { isAllowEverything } from "@/kilocode/cli/cmd/tui/app"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
@@ -204,6 +207,17 @@ export function Prompt(props: PromptProps) {
   const [warpNotice, setWarpNotice] = createSignal<string>()
   const [cursorVersion, setCursorVersion] = createSignal(0)
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
+  const yolo = createMemo(() => TuiAutoApprove.show(props.sessionID)) // kilocode_change
+  const yoloGlobal = createMemo(() => isAllowEverything(sync.data.config.permission)) // kilocode_change
+  // kilocode_change start - resolve auto-approve mode for the indicator (session vs global)
+  const yoloKind = createMemo<"none" | "session" | "global">(() => {
+    const session = yolo()
+    const global = yoloGlobal()
+    if (!session && !global) return "none"
+    if (global) return "global" // global wins the badge when both are on
+    return "session"
+  })
+  // kilocode_change end
   const hasRightContent = createMemo(() => Boolean(props.right))
 
   function selectWorkspace(selection: WorkspaceSelection | undefined) {
@@ -1112,6 +1126,16 @@ export function Prompt(props: PromptProps) {
     }
 
     const variant = local.model.variant.current()
+    // kilocode_change start - dispatch local palette slash commands such as /yolo (works from home and inside a session)
+    if (TuiSlash.dispatch(keymap, store.prompt.input, sync.data.command)) {
+      history.append({ ...store.prompt, mode: store.mode })
+      setStore("prompt", { input: "", parts: [] })
+      input.extmarks.clear()
+      setStore("extmarkToPartIndex", new Map())
+      input.clear()
+      return true
+    }
+    // kilocode_change end
     let sessionID = props.sessionID
     if (sessionID == null) {
       const workspace = workspaceSelection()
@@ -1141,9 +1165,10 @@ export function Prompt(props: PromptProps) {
         })
 
         return true
-      }
+      } // kilocode_change
 
-      sessionID = res.data.id
+      sessionID = res.data.id // kilocode_change
+      if ((args.autoApprove || TuiAutoApprove.next()) && !args.sessionID && !args.continue) TuiAutoApprove.boot(sessionID) // kilocode_change
     }
 
     const messageID = MessageID.ascending()
@@ -1648,6 +1673,19 @@ export function Prompt(props: PromptProps) {
                               </span>
                             </text>
                           </Show>
+                          {/* kilocode_change start - show active session auto-approve indicator */}
+                          <Show when={yoloKind() !== "none"}>
+                            <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                            <text>
+                              <span style={{ fg: fadeColor(theme.warning, modelMetaAlpha()), bold: true }}>auto-approve</span>
+                            </text>
+                            <Show when={yoloKind() === "global"}>
+                              <text>
+                                <span style={{ fg: fadeColor(theme.warning, modelMetaAlpha()), bold: true }}>(g)</span>
+                              </text>
+                            </Show>
+                          </Show>
+                          {/* kilocode_change end */}
                         </box>
                       </Show>
                     </>
