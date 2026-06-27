@@ -65,10 +65,11 @@ function checkVariant(v: VariantEntry, seen: Set<string>, t: Translator) {
 
 function checkModel(m: ModelEntry, seenModels: Set<string>, t: Translator) {
   const id = m.id.trim()
+  const key = id.toLowerCase()
   let idErr: string | undefined
   if (!id) idErr = t("provider.custom.error.required")
-  else if (seenModels.has(id)) idErr = t("provider.custom.error.duplicate")
-  else seenModels.add(id)
+  else if (seenModels.has(key)) idErr = t("provider.custom.error.duplicate")
+  else seenModels.add(key)
 
   const nameErr = !m.name.trim() ? t("provider.custom.error.required") : undefined
   const seen = new Set<string>()

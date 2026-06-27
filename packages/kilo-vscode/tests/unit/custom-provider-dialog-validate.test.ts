@@ -164,6 +164,18 @@ describe("validateCustomProvider – variant name validation", () => {
     expect(saved.variants).toBeUndefined()
   })
 
+  it("treats model IDs differing only in case as duplicates", () => {
+    const form = base()
+    form.models = [
+      { id: "qwen2.5-coder:14b", name: "Qwen", reasoning: false, variants: [] },
+      { id: "QWEN2.5-CODER:14B", name: "Qwen Upper", reasoning: false, variants: [] },
+    ]
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeUndefined()
+    expect(out.errors.models[0].id).toBeUndefined()
+    expect(out.errors.models[1].id).toBe("provider.custom.error.duplicate")
+  })
+
   it("persists named variants in the saved config when reasoning is enabled", () => {
     const form = base()
     form.models[0].reasoning = true
