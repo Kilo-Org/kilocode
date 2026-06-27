@@ -7,7 +7,7 @@
  * Call registerExpandedTaskTool() once at app startup to activate.
  */
 
-import { Component, createEffect, createMemo, createSignal, Index, Show, onCleanup } from "solid-js"
+import { Component, createEffect, createMemo, createSignal, Index, Show, on, onCleanup } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
 import { BasicTool, initialOpen } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -86,6 +86,24 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const autoScroll = createAutoScroll({
     working: running,
   })
+  let view: HTMLDivElement | undefined
+  let body: HTMLDivElement | undefined
+  const viewport = (el: HTMLDivElement) => {
+    view = el
+    autoScroll.scrollRef(running() ? el : undefined)
+    if (!running()) el.scrollTop = 0
+  }
+  const content = (el: HTMLDivElement) => {
+    body = el
+    autoScroll.contentRef(running() ? el : undefined)
+  }
+
+  createEffect(
+    on(running, (active) => {
+      autoScroll.scrollRef(active ? view : undefined)
+      autoScroll.contentRef(active ? body : undefined)
+    }),
+  )
 
   const openInTab = (e: MouseEvent) => {
     e.stopPropagation()
@@ -133,8 +151,8 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         defer
         onOpenChange={setOpen}
       >
-        <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
-          <div ref={autoScroll.contentRef} data-component="task-tools">
+        <div ref={viewport} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
+          <div ref={content} data-component="task-tools">
             <Show when={running() && childToolCount() === 0}>
               <div data-slot="task-tool-item" data-state="starting">
                 <span data-slot="task-tool-title">{language.t("session.messages.taskStarting")}</span>
