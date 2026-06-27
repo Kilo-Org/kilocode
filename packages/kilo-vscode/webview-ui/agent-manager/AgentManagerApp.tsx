@@ -81,6 +81,7 @@ import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-model
 import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
 import { SessionProvider, useSession } from "../src/context/session"
+import { isRootSession } from "../src/context/session-utils"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
@@ -95,6 +96,7 @@ import {
   restoreLocalSessions,
   reconcileLocalSessions,
   filterUnassignedSessions,
+  admitCreatedSession,
   LOCAL,
 } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
@@ -233,6 +235,10 @@ const AgentManagerContent: Component = () => {
   /** Remove a session ID from the local tab (no-op if absent). */
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
+  const canOpenSession = (sid: string) => {
+    const info = session.sessions().find((item) => item.id === sid)
+    return !info || isRootSession(info)
+  }
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
   const sidebar = createSidebarCollapse(vscode)
@@ -633,19 +639,32 @@ const AgentManagerContent: Component = () => {
     }
   }
 
-  // Invalidate local session IDs if they no longer exist (preserve pending tabs)
+  // Invalidate missing local sessions and remove leaked subagents (preserve pending tabs)
   createEffect(() => {
     if (!worktreesLoaded()) return
     const all = session.sessions()
     if (all.length === 0) return // sessions not loaded yet
-    const next = reconcileLocalSessions(
-      localSessionIDs(),
-      all.map((s) => s.id),
-      managedSessions(),
-      isPending,
-    )
+    const next = reconcileLocalSessions(localSessionIDs(), all, managedSessions(), isPending)
     if (!next) return
     for (const id of next.forget) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
+    if (next.forget.length > 0) {
+      const forgotten = new Set(next.forget)
+      const current = session.currentSessionID()
+      if (current && forgotten.has(current)) {
+        const sel = selection()
+        const candidates = new Set(
+          sel === LOCAL
+            ? next.ids
+            : managedSessions()
+                .filter((item) => item.worktreeId === sel && !forgotten.has(item.id))
+                .map((item) => item.id),
+        )
+        const fallback = all.find((item) => candidates.has(item.id) && isRootSession(item))
+        if (fallback) session.selectSession(fallback.id)
+        else session.clearCurrentSession()
+      }
+      setManagedSessions((prev) => prev.filter((item) => !forgotten.has(item.id)))
+    }
     setLocalSessionIDs(next.ids)
   })
   // Drop in-memory review state for worktrees that no longer exist.
@@ -696,7 +715,7 @@ const AgentManagerContent: Component = () => {
     const now = new Date().toISOString()
     for (const id of ids) {
       const real = lookup.get(id)
-      if (real) {
+      if (real && isRootSession(real)) {
         result.push(real)
       } else if (isPending(id)) {
         result.push({ id, title: t("agentManager.session.newSession"), createdAt: now, updatedAt: now })
@@ -715,7 +734,7 @@ const AgentManagerContent: Component = () => {
     return applyTabOrder(
       session
         .sessions()
-        .filter((s) => ids.has(s.id))
+        .filter((s) => isRootSession(s) && ids.has(s.id))
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
       worktreeTabOrder()[worktreeId],
     )
@@ -948,10 +967,11 @@ const AgentManagerContent: Component = () => {
     // session.sessions() hasn't been populated yet for this worktree.
     const rich = sessionsForWorktree(worktreeId)
     const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
+    const unresolved = sessionsLoaded() ? [] : managed
     const target = remembered
-      ? (rich.find((s) => s.id === remembered) ?? managed.find((ms) => ms.id === remembered))
+      ? (rich.find((s) => s.id === remembered) ?? unresolved.find((ms) => ms.id === remembered))
       : undefined
-    const fallback = target ?? rich[0] ?? managed[0]
+    const fallback = target ?? rich[0] ?? unresolved[0]
     if (fallback) session.selectSession(fallback.id)
     else session.setCurrentSessionID(undefined)
     setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
@@ -959,7 +979,7 @@ const AgentManagerContent: Component = () => {
 
   const addSessionToCurrentWorktree = (sid: string) => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return false
+    if (!sel || sel === LOCAL || !canOpenSession(sid)) return false
     const current = managedSessions().find((entry) => entry.id === sid)
     if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
     saveTabMemory()
@@ -1143,9 +1163,9 @@ const AgentManagerContent: Component = () => {
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
       const created = msg as SessionCreatedMessage
-      const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
-      if (!pending && localSessionIDs().includes(created.session.id)) return
-      if (worktreeSessionIds().has(created.session.id)) return
+      const admission = admitCreatedSession(created.session, created.draftID, localSessionIDs(), worktreeSessionIds())
+      if (!admission) return
+      const pending = admission.pending
 
       const active = activePendingId()
       const focus = !pending || (selection() === LOCAL && pending === active)
@@ -1892,6 +1912,7 @@ const AgentManagerContent: Component = () => {
   }
 
   const openLocally = (sid: string) => {
+    if (!canOpenSession(sid)) return
     saveTabMemory()
     expandSidebar()
     const pending = activePendingId()

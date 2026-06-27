@@ -35,6 +35,7 @@ export interface SessionProvider {
   setSessionDirectory(id: string, directory: string): void
   clearSessionDirectory(id: string): void
   getSessionDirectories(): ReadonlyMap<string, string>
+  getSessionInfo?(id: string): Promise<Session | undefined>
   trackSession(id: string): void
   refreshSessions(): void
   registerSession(session: Session): void

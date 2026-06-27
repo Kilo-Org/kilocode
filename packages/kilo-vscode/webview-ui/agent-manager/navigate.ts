@@ -22,8 +22,21 @@ export function filterUnassignedSessions<T extends SessionLike>(
   local: Set<string>,
 ): T[] {
   return [...sessions]
-    .filter((s) => isRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
+    .filter((s) => s.parentID === null && !worktree.has(s.id) && !local.has(s.id))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
+export function admitCreatedSession(
+  session: Pick<SessionLike, "id" | "parentID">,
+  draft: string | undefined,
+  local: string[],
+  worktree: Set<string>,
+): { pending: string | undefined } | undefined {
+  if (session.parentID !== null) return
+  const pending = draft && local.includes(draft) ? draft : undefined
+  if (!pending && local.includes(session.id)) return
+  if (worktree.has(session.id)) return
+  return { pending }
 }
 
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
@@ -158,31 +171,32 @@ export function remoteSessions(
 
 export function reconcileLocalSessions(
   current: string[],
-  loaded: string[],
+  loaded: Pick<SessionLike, "id" | "parentID">[],
   managed: { id: string; worktreeId: string | null }[],
   isPending: (id: string) => boolean,
 ): { ids: string[]; forget: string[] } | undefined {
-  const seen = new Set(loaded)
+  const seen = new Set(loaded.filter(isRootSession).map((s) => s.id))
+  const children = new Set(loaded.filter((s) => !isRootSession(s)).map((s) => s.id))
   const local = new Set(managed.filter((s) => !s.worktreeId).map((s) => s.id))
   const worktree = new Set(managed.filter((s) => s.worktreeId).map((s) => s.id))
   const ids: string[] = []
-  const forget: string[] = []
+  const forget = new Set(managed.filter((s) => children.has(s.id)).map((s) => s.id))
 
   for (const id of current) {
     if (isPending(id)) {
       ids.push(id)
       continue
     }
-    if (worktree.has(id)) continue
+    if (children.has(id) || worktree.has(id)) continue
     if (seen.has(id) || local.has(id)) {
       ids.push(id)
       continue
     }
-    forget.push(id)
+    forget.add(id)
   }
 
-  if (ids.length === current.length && forget.length === 0) return undefined
-  return { ids, forget }
+  if (ids.length === current.length && forget.size === 0) return undefined
+  return { ids, forget: [...forget] }
 }
 
 /**

@@ -294,12 +294,10 @@ export class AgentManagerProvider implements Disposable {
     }
 
     for (const wt of state.getWorktrees()) {
-      for (const s of state.getSessions(wt.id)) {
-        this.panel?.sessions.setSessionDirectory(s.id, wt.path)
-        this.panel?.sessions.trackSession(s.id)
-      }
+      for (const s of state.getSessions(wt.id)) this.panel?.sessions.setSessionDirectory(s.id, wt.path)
     }
-    for (const s of state.getSessions()) if (!s.worktreeId) this.panel?.sessions.trackSession(s.id)
+    await this.pruneSubagents(state)
+    for (const s of state.getSessions()) this.panel?.sessions.trackSession(s.id)
     this.pushState()
 
     // Refresh sessions so worktree sessions appear in the list
@@ -312,6 +310,21 @@ export class AgentManagerProvider implements Disposable {
     // are registered with their directory overrides so the recovery queries the
     // correct CLI backend Instances.
     this.panel?.sessions.recoverPendingPrompts()
+  }
+
+  private async pruneSubagents(state: WorktreeStateManager): Promise<void> {
+    const sessions = this.panel?.sessions
+    const get = sessions?.getSessionInfo
+    if (!sessions || !get) return
+    const managed = state.getSessions()
+    const infos = await Promise.all(managed.map(async (item) => ({ item, info: await get(item.id) })))
+    for (const result of infos) {
+      const parent = result.info?.parentID
+      if (parent === undefined || parent === null) continue
+      state.removeSession(result.item.id)
+      sessions.clearSessionDirectory(result.item.id)
+      this.log(`Removed subagent session ${result.item.id} from managed state`)
+    }
   }
 
   private async ensureGitExclude(manager: WorktreeManager): Promise<void> {
