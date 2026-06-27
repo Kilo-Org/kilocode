@@ -53,6 +53,14 @@ Before using App Builder:
 
 ---
 
+## Start From a Template
+
+When you do not want to begin from a blank prompt, choose one of the available templates in App Builder. Templates give you a starter project that you can customize through chat after it opens.
+
+Template options may change over time, so use the in-app gallery as the source of truth for the current list.
+
+---
+
 ## How App Builder Works
 
 - When you describe your application:
