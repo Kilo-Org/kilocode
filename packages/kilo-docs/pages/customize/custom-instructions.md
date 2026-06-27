@@ -42,19 +42,19 @@ Place any of these files at your project root to provide project-wide instructio
 For instructions that apply across all your projects, place an `AGENTS.md` file in your global config directory:
 
 - **Kilo:** `~/.config/kilo/AGENTS.md`
-- **Claude-compatible:** `~/.claude/CLAUDE.md`
+- **Claude-compatible:** `~/.claude/CLAUDE.md` and `~/.claude/rules/**/*.md` when Claude Code Compatibility is enabled
 
 Project-level instructions are loaded before global instructions and apply to every session.
 
 ### Per-Directory Instructions
 
-You can place `AGENTS.md` files in any subdirectory of your project. These are loaded dynamically — when the agent's Read tool accesses a file in that directory, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags.
+You can place `AGENTS.md` files in any subdirectory of your project. These are loaded dynamically — when the agent's Read tool accesses a file in that directory, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags. Local Markdown instruction files can also use `paths` frontmatter to load only when the Read tool opens matching worktree-relative files.
 
 This is useful for providing context-specific guidance for different parts of a monorepo or project. The subdirectory file does not need to duplicate root-level instructions; it supplements them for tasks within that directory.
 
 ## Additional Instruction Sources
 
-The `instructions` key in `kilo.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. You can manage these in **Settings → Agent Behaviour → Rules** subtab.
+The `instructions` key in `kilo.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. Local Markdown files can use `paths` frontmatter for path-scoped lazy loading; URL sources always load at session startup. You can manage these in **Settings → Agent Behaviour → Rules** subtab.
 
 ```yaml
 # Examples of instruction sources
@@ -119,19 +119,19 @@ Place any of these files at your project root to provide project-wide instructio
 For instructions that apply across all your projects, place an `AGENTS.md` file in your global config directory:
 
 - **Kilo:** `~/.config/kilo/AGENTS.md`
-- **Claude-compatible:** `~/.claude/CLAUDE.md`
+- **Claude-compatible:** `~/.claude/CLAUDE.md` and `~/.claude/rules/**/*.md` when Claude Code Compatibility is enabled
 
 Project-level instructions are loaded before global instructions and apply to every session.
 
 ### Per-Directory Instructions
 
-You can place `AGENTS.md` files in any subdirectory of your project. These are loaded dynamically — when the agent's Read tool accesses a file in that directory, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags.
+You can place `AGENTS.md` files in any subdirectory of your project. These are loaded dynamically — when the agent's Read tool accesses a file in that directory, the corresponding `AGENTS.md` is discovered and its contents are injected into the conversation as `<system-reminder>` tags. Local Markdown instruction files can also use `paths` frontmatter to load only when the Read tool opens matching worktree-relative files.
 
 This is useful for providing context-specific guidance for different parts of a monorepo or project. The subdirectory file does not need to duplicate root-level instructions; it supplements them for tasks within that directory.
 
 ## Additional Instruction Sources
 
-The `instructions` key in `kilo.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. Configure these in your `kilo.jsonc`:
+The `instructions` key in `kilo.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. Local Markdown files can use `paths` frontmatter for path-scoped lazy loading; URL sources always load at session startup. Configure these in your `kilo.jsonc`:
 
 ```jsonc
 // kilo.jsonc
