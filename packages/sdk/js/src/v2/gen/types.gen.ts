@@ -10900,6 +10900,70 @@ export type KilocodeNotebookRejectResponses = {
 
 export type KilocodeNotebookRejectResponse = KilocodeNotebookRejectResponses[keyof KilocodeNotebookRejectResponses]
 
+export type KilocodeSessionModelUsageData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/model-usage"
+}
+
+export type KilocodeSessionModelUsageErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeSessionModelUsageError = KilocodeSessionModelUsageErrors[keyof KilocodeSessionModelUsageErrors]
+
+export type KilocodeSessionModelUsageResponses = {
+  /**
+   * Model usage for a session tree
+   */
+  200: {
+    totals: {
+      steps: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+    }
+    models: Array<{
+      providerID: string
+      modelID: string
+      steps: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+    }>
+  }
+}
+
+export type KilocodeSessionModelUsageResponse =
+  KilocodeSessionModelUsageResponses[keyof KilocodeSessionModelUsageResponses]
+
 export type AnacondaDesktopStatusData = {
   body?: never
   path?: never
