@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Перевірити ще раз",
+  "provider.anaconda.state.noServer_one":
+    "Доступна 1 завантажена модель генерації тексту. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.noServer_other":
+    "Доступно завантажених моделей генерації тексту: {{count}}. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
   "command.category.suggested": "Запропоновані",
   "command.category.view": "Вигляд",
   "command.category.project": "Проєкт",
@@ -175,6 +183,7 @@ export const dict = {
   "model.tag.free": "Безкоштовно",
   "model.tag.dataCollected": "Дані можуть використовуватися для навчання",
   "model.tag.latest": "Остання",
+  "model.group.auto": "Автоматичні моделі",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
   "model.group.collapse": "Згорнути {{group}}",
@@ -202,6 +211,7 @@ export const dict = {
   "model.preview.label.average": "Орієнт. сер. вартість",
   "model.preview.label.context": "Контекст",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Варіанти моделей",
   "model.preview.label.completion": "Виконання",
   "model.preview.label.costAttempt": "Вартість / спроба",
   "model.preview.value.notSupported": "Не підтримується",

@@ -39,7 +39,9 @@ import {
   isFree,
   isDataCollectedModel,
   hasByok,
+  isAuto,
   freeDataLabel,
+  autoSummary,
   buildTriggerLabel,
   sanitizeName,
 } from "./model-selector-utils"
@@ -52,6 +54,7 @@ import { searchMatch } from "../../utils/search-match"
 
 const CLEAR_KEY = "clear"
 const FAVORITES_KEY = "favorites"
+const AUTO_KEY = "auto"
 const RECOMMENDED_KEY = "recommended"
 
 function modelKey(providerID: string, modelID: string) {
@@ -148,7 +151,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   }
 
   const [open, setOpen] = createSignal(false)
-  const [expanded, setExpanded] = createSignal(false)
+  const [expanded, setExpanded] = createSignal(true)
   const [search, setSearch] = createSignal("")
   const [debouncedSearch, setDebouncedSearch] = createSignal("")
   const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)
@@ -185,7 +188,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
     function onMove(e: MouseEvent) {
       if (!body) return
-      const delta = startY - e.clientY
+      const delta = e.clientY - startY
       // Subtract fixed chrome (search wrapper + splitter) so the list always
       // retains at least 80px, rather than the preview consuming that space.
       const chrome = (searchWrapperRef?.offsetHeight ?? 0) + (splitterRef?.offsetHeight ?? 0)
@@ -260,10 +263,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const groups = createMemo<ModelGroup[]>(() => {
+    const autos: EnrichedModel[] = []
     const recommended: EnrichedModel[] = []
     const map = new Map<string, EnrichedModel[]>()
 
     for (const m of filtered()) {
+      if (isAuto(m)) {
+        autos.push(m)
+        continue
+      }
       if (m.recommendedIndex !== undefined) {
         recommended.push(m)
         continue
@@ -273,6 +281,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       map.set(m.providerID, list)
     }
 
+    autos.sort(
+      (a, b) => (a.recommendedIndex ?? Infinity) - (b.recommendedIndex ?? Infinity) || a.name.localeCompare(b.name),
+    )
     recommended.sort((a, b) => (a.recommendedIndex ?? Infinity) - (b.recommendedIndex ?? Infinity))
 
     const result: ModelGroup[] = []
@@ -286,6 +297,18 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
         rows: favorites.map((m) => ({
           key: rowKey("favorite", m.providerID, m.id),
           kind: "favorite",
+          model: m,
+        })),
+      })
+    }
+
+    if (autos.length > 0) {
+      result.push({
+        key: AUTO_KEY,
+        label: language.t("model.group.auto"),
+        rows: autos.map((m) => ({
+          key: rowKey("model", m.providerID, m.id),
+          kind: "model",
           model: m,
         })),
       })
@@ -675,6 +698,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const describedBy = () => (props.description ? descriptionID : undefined)
   const freeLabel = () => language.t("model.tag.free")
   const dataLabel = () => freeDataLabel(language.t("model.tag.free"), language.t("model.tag.dataCollected"))
+  const autoLabel = (model: EnrichedModel) => autoSummary(model)
   const activeCollectsData = () => {
     const model = activeModel()
     if (!model) return false
@@ -917,7 +941,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                       }}
                                       onMouseEnter={() => {
                                         if (pointer()) setSelectedKey(row.key)
-                                        schedulePreview(row.key)
                                       }}
                                     >
                                       <div class="model-selector-item-left">
@@ -937,6 +960,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                             )
                                           })()}
                                         </span>
+                                        <Show when={isAuto(model)}>
+                                          <Tooltip value={autoLabel(model)} placement="top">
+                                            <span class="model-selector-auto-icon" aria-label={autoLabel(model)}>
+                                              <Icon name="branch" size="small" />
+                                            </span>
+                                          </Tooltip>
+                                        </Show>
                                         <Show when={isFree(model) || hasByok(model) || isDataCollectedModel(model)}>
                                           <span class="model-selector-free-data">
                                             <Show when={isFree(model) && !hasByok(model)}>
@@ -1011,7 +1041,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                 style={expanded() ? { height: `${previewHeight()}px` } : {}}
               >
                 <Show when={expanded()}>
-                  <ModelPreview model={previewModel() ?? activeModel() ?? null} />
+                  <ModelPreview model={previewModel() ?? activeModel() ?? null} models={visibleModels()} />
                 </Show>
               </div>
             </div>
