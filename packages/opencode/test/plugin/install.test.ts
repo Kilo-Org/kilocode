@@ -122,8 +122,8 @@ describe("plugin.install.task", () => {
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
 
-    const server = await read(path.join(tmp.path, ".opencode", "opencode.jsonc"))
-    const tui = await read(path.join(tmp.path, ".opencode", "tui.jsonc"))
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))
+    const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc"))
     expect(server.plugin).toEqual(["acme@1.2.3"])
     expect(tui.plugin).toEqual(["acme@1.2.3"])
   })
@@ -144,8 +144,8 @@ describe("plugin.install.task", () => {
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
 
-    const server = await read(path.join(tmp.path, ".opencode", "opencode.jsonc"))
-    const tui = await read(path.join(tmp.path, ".opencode", "tui.jsonc"))
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))
+    const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc"))
     expect(server.plugin).toEqual([["acme@1.2.3", { custom: true, other: false }]])
     expect(tui.plugin).toEqual([["acme@1.2.3", { compact: true }]])
   })
@@ -257,7 +257,7 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
-    const server = await read(path.join(tmp.path, ".opencode", "opencode.jsonc"))
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))
     expect(server.plugin).toEqual(["acme@1.2.3"])
   })
 
@@ -366,8 +366,8 @@ describe("plugin.install.task", () => {
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
 
-    expect(await Filesystem.exists(path.join(global, "opencode.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(global, "kilo.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
   })
 
   test("writes local scope under directory when vcs is not git", async () => {
@@ -386,8 +386,8 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctxDir(directory, worktree))
     expect(ok).toBe(true)
-    expect(await Filesystem.exists(path.join(directory, ".opencode", "opencode.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(worktree, ".opencode", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(directory, ".kilo", "kilo.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(worktree, ".kilo", "kilo.jsonc"))).toBe(false)
   })
 
   test("writes local scope under directory when worktree is root slash", async () => {
@@ -404,7 +404,7 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctxRoot(directory))
     expect(ok).toBe(true)
-    expect(await Filesystem.exists(path.join(directory, ".opencode", "opencode.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(directory, ".kilo", "kilo.jsonc"))).toBe(true)
   })
 
   test("writes tui local scope under directory when worktree is root slash", async () => {
@@ -421,7 +421,7 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctxRoot(directory))
     expect(ok).toBe(true)
-    expect(await Filesystem.exists(path.join(directory, ".opencode", "tui.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(directory, ".kilo", "tui.jsonc"))).toBe(true)
   })
 
   test("writes only tui config for tui-only plugins", async () => {
@@ -436,8 +436,8 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "tui.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "tui.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
   })
 
   test("writes tui config for oc-themes-only packages", async () => {
@@ -454,10 +454,10 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "tui.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "tui.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
 
-    const tui = await read(path.join(tmp.path, ".opencode", "tui.jsonc"))
+    const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc"))
     expect(tui.plugin).toEqual(["acme@1.2.3"])
   })
 
@@ -473,8 +473,8 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "tui.jsonc"))).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "tui.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
   })
 
   test("force replaces version in both server and tui configs", async () => {
@@ -534,8 +534,8 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "tui.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "tui.jsonc"))).toBe(false)
   })
 
   test("returns false when manifest cannot be read", async () => {
@@ -551,7 +551,7 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
   })
 
   test("returns false when install fails", async () => {
@@ -565,6 +565,67 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
+  })
+
+  test("prefers .kilo/ dir over .opencode/ when both exist", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const kiloCfg = path.join(tmp.path, ".kilo")
+    const opencodeCfg = path.join(tmp.path, ".opencode")
+    await fs.mkdir(kiloCfg, { recursive: true })
+    await fs.mkdir(opencodeCfg, { recursive: true })
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    const ok = await run(ctx(tmp.path))
+    expect(ok).toBe(true)
+    expect(await Filesystem.exists(path.join(kiloCfg, "kilo.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(opencodeCfg, "kilo.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(opencodeCfg, "opencode.jsonc"))).toBe(false)
+  })
+
+  test("falls back to .opencode/ dir when .kilo/ does not exist", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const opencodeCfg = path.join(tmp.path, ".opencode")
+    await fs.mkdir(opencodeCfg, { recursive: true })
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    const ok = await run(ctx(tmp.path))
+    expect(ok).toBe(true)
+    expect(await Filesystem.exists(path.join(opencodeCfg, "kilo.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
+  })
+
+  test("falls back to opencode.json when it exists in chosen dir", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const opencodeCfg = path.join(tmp.path, ".opencode")
+    const existing = path.join(opencodeCfg, "opencode.json")
+    await fs.mkdir(opencodeCfg, { recursive: true })
+    await Bun.write(existing, JSON.stringify({ plugin: ["seed@1.0.0"] }, null, 2))
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    const ok = await run(ctx(tmp.path))
+    expect(ok).toBe(true)
+    // writes to existing opencode.json, not kilo.jsonc
+    const json = await read(existing)
+    expect(json.plugin).toEqual(["seed@1.0.0", "acme@1.2.3"])
+    expect(await Filesystem.exists(path.join(opencodeCfg, "kilo.jsonc"))).toBe(false)
   })
 })

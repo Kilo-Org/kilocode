@@ -86,11 +86,22 @@ kilo plugin my-plugin --global
 kilo plugin my-plugin --force
 ```
 
-The command resolves the package, reads its `package.json` for plugin entrypoints, and writes the entry into the appropriate config file (currently `.opencode/opencode.jsonc` / `.opencode/tui.jsonc` for local installs, or `~/.config/kilo/opencode.jsonc` / `~/.config/kilo/tui.jsonc` for `--global`) while preserving JSONC comments.
+The command resolves the package, reads its `package.json` for plugin entrypoints, and writes the entry into the appropriate config file while preserving JSONC comments. The written file is chosen with this priority:
+
+1. If `kilo.json(c)` or `tui.json(c)` exists in the target directory, write there.
+2. If `opencode.json(c)` or `tui.json(c)` exists in the target directory, write there (backward compatibility).
+3. Otherwise create `kilo.jsonc` (or `tui.jsonc`) as a new file.
+
+For the **target directory**:
+
+| Scope | Directory |
+|---|---|
+| Local (git worktree) | `.kilo/` if it exists, else `.opencode/` if it exists, else creates `.kilo/` |
+| `--global` | `~/.config/kilo/` |
 
 ### How plugins are installed
 
-- **npm plugins** are installed automatically at startup using Bun. Packages and their dependencies are cached under `packages/` in the current CLI XDG cache directory (`~/.cache/opencode/packages/` by default, or `$XDG_CACHE_HOME/opencode/packages/` when `XDG_CACHE_HOME` is set).
+- **npm plugins** are installed automatically at startup using Bun. Packages and their dependencies are cached under `packages/` in the current CLI XDG cache directory (`~/.cache/kilo/packages/` by default, or `$XDG_CACHE_HOME/kilo/packages/` when `XDG_CACHE_HOME` is set).
 - **Pinned npm versions** like `my-plugin@1.2.3` install that exact version and do not check for newer registry versions. Bare package names resolve to `latest` and can refresh when the cached copy becomes stale.
 - **Install scripts are disabled** for npm plugins. Kilo installs packages with lifecycle scripts such as `install` and `postinstall` blocked.
 - **Local plugins** are loaded directly from the plugin directory. If your plugin imports external packages, add a `package.json` to your config directory (see [Dependencies](#dependencies)) — Kilo runs `bun install` on startup so imports resolve.
@@ -581,7 +592,7 @@ Host slots include `home_prompt_right`, `session_prompt`, `session_prompt_right`
 - **Package installed but not active in one runtime** — make sure the package exposes the matching entrypoint. Server plugins need `exports["./server"]` or `main`; TUI plugins need `exports["./tui"]` or valid `oc-themes`. Packages that only support the other runtime are skipped with a warning instead of causing a fatal load error.
 
 - **Local plugin can't find an npm import** — add a `package.json` in the config directory so `bun install` picks up the dependency (see [Dependencies](#dependencies)).
-- **Plugin loads in dev but not in CI** — verify `KILO_PURE` is not set, and that npm-installed plugins are cached under `packages/` in the current CLI XDG cache directory (`~/.cache/opencode/packages/` by default, or `$XDG_CACHE_HOME/opencode/packages/` when `XDG_CACHE_HOME` is set). Run with `--log-level DEBUG` to see install output.
+- **Plugin loads in dev but not in CI** — verify `KILO_PURE` is not set, and that npm-installed plugins are cached under `packages/` in the current CLI XDG cache directory (`~/.cache/kilo/packages/` by default, or `$XDG_CACHE_HOME/kilo/packages/` when `XDG_CACHE_HOME` is set). Run with `--log-level DEBUG` to see install output.
 - **Reset the plugin cache** — delete the plugin package folder under the CLI's `packages/` cache directory (or the `node_modules` cache under your config directory) and restart Kilo.
 
 ---
