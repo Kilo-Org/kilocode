@@ -116,7 +116,6 @@ function window(
   row: ModelRemains,
   kind: "interval" | "weekly",
   fetchedAt: string,
-  plan: string | undefined,
 ): { value: UsageWindow; confidence: "high" | "medium" | "low" } | undefined {
   const weekly = kind === "weekly"
   const percent = weekly ? row.current_weekly_remaining_percent : row.current_interval_remaining_percent
@@ -140,10 +139,9 @@ function window(
   }
 
   if (status === 3) {
-    const state = row.model_name === "video" && plan === "minimax-token-plan-plus" ? "not_in_plan" : "unknown"
     return {
-      value: { ...base, unit: "unknown", orientation: "amount", state },
-      confidence: state === "not_in_plan" ? "high" : "low",
+      value: { ...base, unit: "unknown", orientation: "amount", state: "not_in_plan" },
+      confidence: "high",
     }
   }
 
@@ -210,7 +208,7 @@ export function normalize(
 ): UsageSnapshot {
   const rows = native.model_remains.flatMap((row) =>
     (["interval", "weekly"] as const).flatMap((kind) => {
-      const value = window(row, kind, input.fetchedAt, input.planID)
+      const value = window(row, kind, input.fetchedAt)
       return value ? [value] : []
     }),
   )
