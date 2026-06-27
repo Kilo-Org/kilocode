@@ -32,9 +32,9 @@ Depending on your setup, you can also use:
 ## Creating an Instance
 
 1. Navigate to your [Kilo profile](https://app.kilo.ai/profile)
-2. Click **Claw** in the left navigation
+2. Click **KiloClaw** in the left navigation
 
-{% image src="/docs/img/kiloclaw/profile-claw-nav.png" alt="Profile page showing Claw navigation" width="400" caption="Claw navigation in profile sidebar" /%}
+{% image src="/docs/img/kiloclaw/profile-kiloclaw-nav.png" alt="Profile page showing KiloClaw navigation" width="400" caption="KiloClaw navigation in profile sidebar" /%}
 
 3. Click **Create Instance**
 4. Your instance will use **Kilo Auto Balanced** as the default model. You can optionally select a different model from the dropdown — see all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
