@@ -6,10 +6,11 @@ import * as Log from "@opencode-ai/core/util/log"
 import { setTimeout as sleep } from "node:timers/promises"
 import { CopilotModels } from "./models"
 import { MessageV2 } from "@/session/message-v2"
+import { ServerAuth } from "@/server/auth" // kilocode_change
 
 const log = Log.create({ service: "plugin.copilot" })
 
-const CLIENT_ID = "Ov23li8tweQw6odWQebz"
+const CLIENT_ID = "Ov23li5v4CagFoQACXl2" // kilocode_change
 // Add a small safety buffer when polling to avoid hitting the server
 // slightly too early due to clock skew / timer drift.
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000 // 3 seconds
@@ -162,10 +163,20 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
             delete headers["x-api-key"]
             delete headers["authorization"]
 
-            return fetch(request, {
+            // kilocode_change start - clear stored token on 401 so the user is prompted to re-auth
+            const res = await fetch(request, {
               ...init,
               headers,
             })
+
+            if (res.status === 401) {
+              fetch(new URL(`/auth/github-copilot`, input.serverUrl), { method: "DELETE", headers: ServerAuth.headers() }).catch((err) => {
+                log.error("failed to clear copilot auth on 401", { err })
+              })
+            }
+
+            return res
+            // kilocode_change end
           },
         }
       },
