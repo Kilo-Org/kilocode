@@ -17,15 +17,6 @@ sidebar_label: ZenMux
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2. **Select Provider:** Choose "ZenMux" from the "API Provider" dropdown.
-3. **Enter API Key:** Paste your ZenMux API key into the "ZenMux API Key" field.
-4. **Select Model:** Choose your desired model from the "Model" dropdown.
-5. **(Optional) Custom Base URL:** If you need to use a custom base URL for the ZenMux API, check "Use custom base URL" and enter the URL. Leave this blank for most users.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add ZenMux and enter your API key.

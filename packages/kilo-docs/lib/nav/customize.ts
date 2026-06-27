@@ -52,11 +52,6 @@ export const CustomizeNav: NavSection[] = [
         href: "/customize/context/kilocodeignore",
         children: ".kilocodeignore",
       },
-      {
-        href: "/customize/context/large-projects",
-        children: "Large Projects",
-        platform: "legacy",
-      },
     ],
   },
 ]

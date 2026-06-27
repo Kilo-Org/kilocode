@@ -53,7 +53,6 @@ Customize and extend Kilo Code's capabilities:
 
 - [**Local Models**](/docs/automate/extending/local-models) — Run local AI models
 - [**Shell Integration**](/docs/automate/extending/shell-integration) — Shell command integration
-- [**Auto-Launch**](/docs/automate/extending/auto-launch) — Automatic agent startup
 
 ## Common Automation Patterns
 

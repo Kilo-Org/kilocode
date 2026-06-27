@@ -30,15 +30,6 @@ Kilo Code supports running models locally using LM Studio. LM Studio provides a 
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "LM Studio" from the "API Provider" dropdown.
-3.  **Enter Model ID:** Enter the _file name_ of the model you loaded in LM Studio (e.g., `codellama-7b.Q4_0.gguf`). You can find this in the LM Studio "Local Server" tab.
-4.  **(Optional) Base URL:** By default, Kilo Code will connect to LM Studio at `http://localhost:1234`. If you've configured LM Studio to use a different address or port, enter the full URL here.
-5.  **(Optional) Timeout:** By default, API requests time out after 10 minutes. Local models can be slow, if you hit this timeout you can consider increasing it here: VS Code Extensions panel > Kilo Code gear menu > Settings > API Request Timeout.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add LM Studio. No API key is needed since LM Studio runs locally. You can configure the base URL if LM Studio is running on a different host or port.

@@ -134,13 +134,6 @@ Two slash commands are available for local code reviews:
 - **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Select 'Review' from the mode dropdown after making local changes, and click 'Send' for AI-powered feedback and suggestions.
-
-{% image src="/docs/img/code-reviewer/review-mode.png" alt="VS Code interface showing Review option in mode dropdown" width="800" caption="Review Mode" /%}
-
-{% /tab %}
 {% /tabs %}
 
 ## How Code Reviews Work

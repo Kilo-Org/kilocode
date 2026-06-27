@@ -29,12 +29,3 @@ Now, **subagent support is built into agents that have full tool access** (Code,
 4. When done, the subagent returns a summary to the parent agent, which continues its work.
 
 Agents can launch multiple subagent sessions concurrently for parallel work.
-
-{% callout type="info" title="VSCode (Legacy)" collapsed=true %}
-In the legacy extension, orchestrator mode uses two dedicated tools:
-
-1. [`new_task`](/docs/automate/tools/new-task) — Creates a subtask with context passed via the `message` parameter and a mode specified via `mode` (e.g., `code`, `architect`, `debug`).
-2. [`attempt_completion`](/docs/automate/tools/attempt-completion) — Signals subtask completion and passes a summary back to the parent via the `result` parameter.
-
-{% youtube url="https://www.youtube.com/watch?v=20MmJNeOODo" caption="Orchestrator Mode in the legacy extension" /%}
-{% /callout %}

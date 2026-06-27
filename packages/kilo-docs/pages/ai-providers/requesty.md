@@ -18,14 +18,6 @@ Kilo Code supports accessing models through the [Requesty](https://www.requesty.
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "Requesty" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your Requesty API key into the "Requesty API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Requesty and enter your API key.

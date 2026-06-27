@@ -5,10 +5,7 @@ description: "Using Kilo Code in Visual Studio Code"
 
 # Kilo Code for VS Code
 
-Kilo Code is available as two VS Code extensions: the **VSCode (Legacy)** extension and the current **VSCode** version built on Kilo's shared agent runtime.
-
-{% tabs %}
-{% tab label="VSCode" %}
+The Kilo Code VS Code extension uses the shared Kilo agent runtime while integrating chat, agents, and automation into the editor.
 
 ## Installation
 
@@ -63,26 +60,3 @@ Example user or workspace settings:
   "kilo-code.new.extraCaCerts": "/absolute/path/to/corporate-ca.pem"
 }
 ```
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-## Installation
-
-{% partial file="install-vscode.md" /%}
-
-## Key Features
-
-- **Sidebar chat** — AI-powered chat panel in the VS Code activity bar
-- **[Autocomplete](/docs/code-with-ai/features/autocomplete)** — Inline code completions as you type
-- **[Code Actions](/docs/code-with-ai/features/code-actions)** — Explain, fix, and improve code from the editor context menu
-- **[Agents](/docs/code-with-ai/agents/using-agents)** — Code, Ask, Architect, Debug, Orchestrator, and Review modes
-- **[Custom Modes](/docs/customize/custom-modes)** — Define custom modes with `.kilocodemodes` YAML files
-- **[MCP](/docs/automate/mcp/overview)** — Connect to MCP servers for extended capabilities
-- **[Agent Manager](/docs/automate/agent-manager)** — Multi-session orchestration with git worktree isolation
-- **[Git Commit Generation](/docs/code-with-ai/features/git-commit-generation)** — AI-powered commit messages from the Source Control panel
-- **[Context Mentions](/docs/code-with-ai/agents/context-mentions)** — Reference files, URLs, diagnostics, and git changes with `@`
-- **[Checkpoints](/docs/code-with-ai/features/checkpoints)** — Git-based snapshots for undo/redo
-
-{% /tab %}
-{% /tabs %}

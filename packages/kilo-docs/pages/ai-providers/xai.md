@@ -34,16 +34,6 @@ SuperGrok and X Premium subscription access works with Kilo Code's core function
 ### Setup with SuperGrok / X Premium
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Open Kilo Code settings (click the gear icon {% codicon name="gear" /%} in the Kilo Code panel).
-2. In **API Provider**, select **xAI**.
-3. Click **Sign in with xAI (SuperGrok / X Premium)**.
-4. Complete the authorization flow in your browser.
-5. Back in Kilo Code settings, select your desired Grok model.
-6. Save.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab. Click **Show more providers**, then search for or select **xAI**. Choose the **xAI Grok OAuth (SuperGrok / X Premium)** sign-in option and complete the OAuth flow in your browser.
@@ -99,14 +89,6 @@ If you prefer pay-as-you-go access or do not have a SuperGrok or X Premium subsc
 ### Configuration with API Key
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "xAI" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your xAI API key into the "xAI API Key" field.
-4.  **Select Model:** Choose your desired Grok model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab. Click **Show more providers**, then search for or select **xAI** and enter your API key.

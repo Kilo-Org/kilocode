@@ -44,7 +44,6 @@ Run models on your own hardware for privacy and offline use:
 Route requests through unified APIs with additional features:
 
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
-- **[Glama](/docs/ai-providers/glama)** - Enterprise AI gateway
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 
@@ -63,10 +62,6 @@ Route requests through unified APIs with additional features:
 - **Reliability** - Backup options when a provider has outages
 - **Models** - Access exclusive or specialized models
 - **Regional** - Better latency in certain locations
-
-{% callout type="note" %}
-In the **VSCode (Legacy)** version, API keys use VS Code's Secret Storage. In the current **VSCode & CLI** version, keys are set via environment variables or referenced in `kilo.json` config files. See individual provider pages for setup instructions for each platform.
-{% /callout %}
 
 ## Disabling Built-in Providers
 

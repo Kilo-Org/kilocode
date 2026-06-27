@@ -23,29 +23,6 @@ Use Kilo Code's native `azure` provider instead. If your Azure deployment name d
 ## General Configuration
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-The key to using an OpenAI-compatible provider is to configure two main settings:
-
-1.  **Base URL:** This is the API endpoint for the provider. It will _not_ be `https://api.openai.com/v1` (that's for the official OpenAI API). For Azure OpenAI GPT-5, do not enter your Azure endpoint here. Configure the native `azure` provider instead.
-2.  **API Key:** This is the secret key you obtain from the provider.
-3.  **Model ID:** This is the model name of the specific model.
-
-You'll find these settings in the Kilo Code settings panel (click the {% codicon name="gear" /%} icon):
-
-- **API Provider:** Select "OpenAI Compatible".
-- **Base URL:** Enter the base URL provided by your chosen provider. **This is crucial.**
-- **API Key:** Enter your API key.
-- **Model:** Choose a model.
-- **Model Configuration:** This lets you customize advanced configuration for the model
-  - Max Output Tokens
-  - Context Window
-  - Image Support
-  - Computer Use
-  - Input Price
-  - Output Price
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 1. Open **Settings** (gear icon) and go to the **Providers** tab.
