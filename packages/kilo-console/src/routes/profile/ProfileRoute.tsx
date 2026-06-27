@@ -1,6 +1,7 @@
 import { A, useLocation, useNavigate } from "@solidjs/router"
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
+import { Icon } from "@kilocode/kilo-web-ui/icon"
 import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js"
 import { LoadingScreen } from "../../components/LoadingScreen"
 import { loadKiloProfile, logoutKilo, setKiloOrganization, type KiloProfileData, type ProjectQuery } from "../../client"
@@ -137,11 +138,13 @@ export function ProfileRoute() {
             <A class="config-top-option active" href={overview()} aria-current="page">
               <span>Overview</span>
             </A>
-            <a class="config-top-option" href={usageUrl()} target="_blank" rel="noreferrer">
+            <a class="config-top-option config-top-option-external" href={usageUrl()} target="_blank" rel="noreferrer">
               <span>Usage</span>
+              <Icon name="square-arrow-top-right" size="small" />
             </a>
-            <a class="config-top-option" href={creditsUrl()} target="_blank" rel="noreferrer">
+            <a class="config-top-option config-top-option-external" href={creditsUrl()} target="_blank" rel="noreferrer">
               <span>Buy Credits</span>
+              <Icon name="square-arrow-top-right" size="small" />
             </a>
           </nav>
         </aside>
@@ -169,6 +172,7 @@ export function ProfileRoute() {
                   rel="noreferrer"
                 >
                   Open Dashboard
+                  <Icon name="square-arrow-top-right" size="small" />
                 </a>
               </div>
             </header>

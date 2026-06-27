@@ -60,6 +60,10 @@
   text-decoration: none;
 }
 
+.kilo-console .profile-primary-link[data-component="button"][data-variant="primary"] [data-slot="icon-svg"] {
+  color: var(--primary-foreground);
+}
+
 .kilo-console .profile-connect-card {
   display: grid;
   min-height: 18rem;
