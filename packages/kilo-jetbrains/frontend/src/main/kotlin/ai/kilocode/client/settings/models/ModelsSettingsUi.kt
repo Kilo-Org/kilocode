@@ -283,7 +283,8 @@ internal class ModelsSettingsContent(
             picker.picker.onFavoriteToggle = { app.toggleModelFavorite(it.provider, it.id) }
         }
 
-        val rows = section(KiloBundle.message("settings.models.displayName"))
+        val rows = SettingsRows()
+        next(rows)
         rows.row(SettingsRow(
             KiloBundle.message("settings.models.defaultModel.title"),
             KiloBundle.message("settings.models.defaultModel.description"),

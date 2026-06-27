@@ -2,8 +2,12 @@ package ai.kilocode.client.settings.providers
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.model.ModelSearch
+import ai.kilocode.client.settings.base.SettingsBadge
+import ai.kilocode.client.settings.base.SettingsListCell
+import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.rpc.dto.ProviderSettingsDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
+import javax.swing.Icon
 
 internal enum class ProviderListAction {
     CONNECT,
@@ -14,14 +18,38 @@ internal enum class ProviderListAction {
 
 internal data class ProviderListRow(
     val provider: ProviderSettingsProviderDto,
-    val section: String,
+    override val section: String,
     val actions: List<ProviderListAction>,
     val connected: Boolean = false,
-    val disabled: Boolean = false,
-) {
-    val key: String get() = provider.id
+    override val disabled: Boolean = false,
+) : SettingsListItem {
+    override val key: String get() = provider.id
+    override val title: String get() = provider.name
+    override val description: String get() = providerDescription(provider)
+    override val icon: Icon? get() = providerIcon(provider)
+    override val badges: List<SettingsBadge>
+        get() = when (provider.source) {
+            "env" -> listOf(SettingsBadge(KiloBundle.message("settings.providers.badge.env")))
+            else -> emptyList()
+        }
+    override val cells: List<SettingsListCell>
+        get() = actions.map { action ->
+            SettingsListCell(
+                action.name,
+                providerListActionText(action),
+                enabled(action),
+                alwaysVisible = action == ProviderListAction.DISCONNECT && connected,
+            )
+        }
 
     fun enabled(action: ProviderListAction) = !disabled && (action != ProviderListAction.DISCONNECT || provider.source != "env")
+}
+
+internal fun providerListActionText(action: ProviderListAction) = when (action) {
+    ProviderListAction.CONNECT -> KiloBundle.message("settings.providers.connect")
+    ProviderListAction.OAUTH -> KiloBundle.message("settings.providers.oauth")
+    ProviderListAction.DISCONNECT -> KiloBundle.message("settings.providers.disconnect")
+    ProviderListAction.ENABLE -> KiloBundle.message("settings.providers.enable")
 }
 
 internal fun providerListRows(state: ProviderSettingsDto, query: String, disabledRows: Boolean = false): List<ProviderListRow> {

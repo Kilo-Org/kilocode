@@ -180,8 +180,7 @@ internal class SessionAccountOverlay(
             if (balanceText != next || balance.icon == null) {
                 balance.icon = FilledBadgeIcon(
                     next,
-                    UiStyle.Colors.badgeBg(),
-                    UiStyle.Colors.badgeFg(),
+                    UiStyle.Badge.Secondary,
                 )
                 layout = true
             }

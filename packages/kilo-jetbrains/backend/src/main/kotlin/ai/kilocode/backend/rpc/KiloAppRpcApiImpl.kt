@@ -24,14 +24,18 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.LoadProgressDto
+import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.PermissionConfigDto
+import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
+import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.flow.Flow
@@ -178,6 +182,10 @@ private fun config(c: Config) = ConfigDto(
     smallModel = c.smallModel,
     subagentModel = c.subagentModel,
     subagentVariant = c.subagentVariant,
+    defaultAgent = c.defaultAgent,
+    instructions = c.instructions.orEmpty(),
+    skills = skills(c.skills),
+    mcp = mcp(c.mcp),
     agent = agents(c.agent),
 )
 
@@ -202,4 +210,65 @@ private fun agents(cfg: ConfigAgent?): Map<String, AgentConfigDto> {
 private fun agent(cfg: AgentConfig) = AgentConfigDto(
     model = cfg.model,
     variant = cfg.variant,
+    prompt = cfg.prompt,
+    description = cfg.description,
+    mode = cfg.mode?.value,
+    hidden = cfg.hidden,
+    disable = cfg.disable,
+    temperature = cfg.temperature,
+    top_p = cfg.topP,
+    steps = cfg.steps,
+    permission = permission(cfg.permission),
 )
+
+private fun skills(cfg: Any?): SkillsConfigDto? {
+    if (cfg == null) return null
+    return SkillsConfigDto(
+        paths = stringList(prop(cfg, "paths")),
+        urls = stringList(prop(cfg, "urls")),
+    )
+}
+
+private fun mcp(cfg: Any?): Map<String, McpConfigDto> {
+    val map = cfg as? Map<*, *> ?: return emptyMap()
+    return map.mapNotNull { (name, item) ->
+        if (name !is String || item == null) return@mapNotNull null
+        name to McpConfigDto(
+            type = prop(item, "type") as? String,
+            command = stringList(prop(item, "command")).takeIf { it.isNotEmpty() },
+            url = prop(item, "url") as? String,
+            environment = stringMap(prop(item, "environment")).takeIf { it.isNotEmpty() },
+        )
+    }.toMap()
+}
+
+private fun permission(cfg: Any?): PermissionConfigDto? {
+    val map = cfg as? Map<*, *> ?: return null
+    return map.mapNotNull { (tool, rule) ->
+        if (tool !is String) return@mapNotNull null
+        val value = when (rule) {
+            null -> PermissionRuleDto.Level(null)
+            is String -> PermissionRuleDto.Level(rule)
+            is Map<*, *> -> PermissionRuleDto.Patterns(rule.mapNotNull { (pattern, level) ->
+                if (pattern !is String) return@mapNotNull null
+                pattern to (level as? String)
+            }.toMap())
+            else -> null
+        }
+        value?.let { tool to it }
+    }.toMap().takeIf { it.isNotEmpty() }
+}
+
+private fun prop(obj: Any, name: String): Any? {
+    val suffix = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    val getter = obj.javaClass.methods.firstOrNull { it.parameterCount == 0 && it.name == "get$suffix" }
+        ?: obj.javaClass.methods.firstOrNull { it.parameterCount == 0 && it.name == name }
+    return getter?.invoke(obj)
+}
+
+private fun stringList(value: Any?): List<String> = (value as? List<*>)?.filterIsInstance<String>().orEmpty()
+
+private fun stringMap(value: Any?): Map<String, String> = (value as? Map<*, *>)
+    ?.mapNotNull { (key, item) -> if (key is String && item is String) key to item else null }
+    ?.toMap()
+    .orEmpty()

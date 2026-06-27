@@ -66,6 +66,28 @@ class SettingsRow(
     }
 }
 
+class SettingsStackedRow(
+    title: String,
+    description: String? = null,
+    value: JComponent,
+) : JPanel(BorderLayout()) {
+    private val titleLabel = JBLabel(title).apply { font = UiStyle.Fonts.bold() }
+    private val descriptionLabel = JBLabel(descriptionHtml(description)).apply {
+        font = UiStyle.Fonts.hint()
+        foreground = UIUtil.getContextHelpForeground()
+        setAllowAutoWrapping(true)
+        isVisible = description != null
+    }
+
+    init {
+        border = JBUI.Borders.empty(UiStyle.Gap.pad(), 0, UiStyle.Gap.pad(), 0)
+        add(Stack.vertical(UiStyle.Gap.sm())
+            .next(titleLabel)
+            .next(descriptionLabel)
+            .next(value), BorderLayout.CENTER)
+    }
+}
+
 private fun descriptionHtml(description: String?): String {
     val text = description ?: return ""
     return XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(text))
@@ -75,6 +97,11 @@ class SettingsRows : Stack(StackAxis.VERTICAL) {
     private val keyed = linkedMapOf<String, SettingsRow>()
 
     fun row(child: SettingsRow): SettingsRows {
+        next(child)
+        return this
+    }
+
+    fun row(child: JComponent): SettingsRows {
         next(child)
         return this
     }

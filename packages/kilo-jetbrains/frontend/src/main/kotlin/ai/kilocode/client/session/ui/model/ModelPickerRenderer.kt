@@ -8,7 +8,6 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.NewUI
-import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
@@ -68,16 +67,14 @@ internal class ModelPickerRenderer(
     private val title = SimpleColoredComponent()
     private val badge = FilledBadgeIcon(
         ModelText.freeLabel(),
-        ModelText.freeBg(),
-        JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE),
+        UiStyle.Badge.Highlight,
     )
     private val badgeLabel = BadgeLabel(badge).apply {
         border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
     }
     private val byok = FilledBadgeIcon(
         "BYOK",
-        UiStyle.Colors.badgeBg(),
-        UiStyle.Colors.badgeFg(),
+        UiStyle.Badge.Highlight,
     )
     private val byokLabel = BadgeLabel(byok).apply {
         border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())

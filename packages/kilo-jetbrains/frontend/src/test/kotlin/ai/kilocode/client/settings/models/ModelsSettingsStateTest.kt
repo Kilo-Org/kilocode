@@ -35,6 +35,7 @@ class ModelsSettingsStateTest {
         val from = ModelsDraft(agents = mapOf("ask" to null))
         val set = ModelsDraft(agents = mapOf("ask" to "openai/gpt"))
         assertEquals("openai/gpt", patch(from, set).agents["ask"]?.model)
+        assertEquals(listOf("model"), patch(set, from).agents["ask"]?.clear)
         assertNull(patch(set, from).agents["ask"]?.model)
     }
 

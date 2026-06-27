@@ -1,6 +1,11 @@
 package ai.kilocode.client.settings.providers
 
 import ai.kilocode.client.app.KiloProviderService
+import ai.kilocode.client.settings.base.SettingsListItem
+import ai.kilocode.client.settings.base.SettingsListRenderer
+import ai.kilocode.client.settings.base.settingsListCellAt
+import ai.kilocode.client.settings.base.settingsListCellBounds
+import ai.kilocode.client.settings.base.settingsListVisibleCells
 import ai.kilocode.client.testing.FakeProviderRpcApi
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
@@ -14,6 +19,7 @@ import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.replaceService
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.CollectionListModel
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBList
@@ -41,6 +47,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JScrollPane
 import javax.swing.KeyStroke
+import javax.swing.JList
 import javax.swing.JTextField
 import javax.swing.UIManager
 
@@ -140,7 +147,27 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             )
         }
 
-        edt { assertEquals(listOf(ProviderListAction.DISCONNECT), rows(content).single().actions) }
+        edt {
+            val row = rows(content).single()
+            assertEquals(listOf(ProviderListAction.DISCONNECT), row.actions)
+            assertTrue(row.badges.isEmpty())
+        }
+    }
+
+    fun `test custom providers have no badge while env providers keep env badge`() {
+        val rows = providerListRows(
+            ProviderSettingsDto(
+                providers = listOf(
+                    provider("local-openai", "Local OpenAI", source = "custom"),
+                    provider("env-provider", "Env Provider", source = "env"),
+                ),
+                config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@ai-sdk/openai-compatible")),
+            ),
+            "",
+        )
+
+        assertTrue(rows.single { it.key == "local-openai" }.badges.isEmpty())
+        assertEquals(listOf("env"), rows.single { it.key == "env-provider" }.badges.map { it.text })
     }
 
     fun `test popular rows use vscode order including kilo`() {
@@ -308,12 +335,12 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
             val bounds = Rectangle(0, 0, 320, 48)
-            val areas = ProviderListRenderer.actionBounds(list, bounds, row, selected = true)
+            val areas = actionBounds(list, bounds, row, selected = true)
 
-            assertEquals(ProviderListAction.CONNECT, ProviderListRenderer.actionAt(list, bounds, center(areas.getValue(ProviderListAction.CONNECT)), row, selected = true))
-            assertEquals(ProviderListAction.OAUTH, ProviderListRenderer.actionAt(list, bounds, center(areas.getValue(ProviderListAction.OAUTH)), row, selected = true))
-            assertNull(ProviderListRenderer.actionAt(list, bounds, Point(4, 4), row, selected = true))
-            assertTrue(ProviderListRenderer.actionBounds(list, bounds, row, selected = false).isEmpty())
+            assertEquals(ProviderListAction.CONNECT, actionAt(list, bounds, center(areas.getValue(ProviderListAction.CONNECT)), row, selected = true))
+            assertEquals(ProviderListAction.OAUTH, actionAt(list, bounds, center(areas.getValue(ProviderListAction.OAUTH)), row, selected = true))
+            assertNull(actionAt(list, bounds, Point(4, 4), row, selected = true))
+            assertTrue(actionBounds(list, bounds, row, selected = false).isEmpty())
         }
     }
 
@@ -322,9 +349,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Connected providers", listOf(ProviderListAction.DISCONNECT), connected = true)
             val list = JBList(listOf(row))
             val bounds = Rectangle(0, 0, 320, 48)
-            val area = ProviderListRenderer.actionBounds(list, bounds, row, selected = false).getValue(ProviderListAction.DISCONNECT)
+            val area = actionBounds(list, bounds, row, selected = false).getValue(ProviderListAction.DISCONNECT)
 
-            assertEquals(ProviderListAction.DISCONNECT, ProviderListRenderer.actionAt(list, bounds, center(area), row, selected = false))
+            assertEquals(ProviderListAction.DISCONNECT, actionAt(list, bounds, center(area), row, selected = false))
         }
     }
 
@@ -333,9 +360,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             val row = ProviderListRow(provider("env", "Env", source = "env"), "All providers", listOf(ProviderListAction.DISCONNECT))
             val list = JBList(listOf(row))
             val bounds = Rectangle(0, 0, 320, 48)
-            val area = ProviderListRenderer.actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.DISCONNECT)
+            val area = actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.DISCONNECT)
 
-            assertNull(ProviderListRenderer.actionAt(list, bounds, center(area), row, selected = true))
+            assertNull(actionAt(list, bounds, center(area), row, selected = true))
         }
     }
 
@@ -343,11 +370,11 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertEquals(listOf("OAuth", "Connect"), renderer.actionTexts())
+            assertEquals(listOf("OAuth", "Connect"), renderer.cellTexts())
         }
     }
 
@@ -355,9 +382,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Popular providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
             renderer.setSize(320, renderer.preferredSize.height)
             renderer.doLayout()
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
@@ -373,11 +400,11 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            render(renderer, list, row, selected = false)
 
-            assertTrue(renderer.actionTexts().isEmpty())
+            assertTrue(renderer.cellTexts().isEmpty())
         }
     }
 
@@ -386,14 +413,14 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT), disabled = true)
             val list = JBList(listOf(row))
             val bounds = Rectangle(0, 0, 320, 48)
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertTrue(ProviderListRenderer.visibleActions(row, selected = true).isEmpty())
-            assertTrue(ProviderListRenderer.actionBounds(list, bounds, row, selected = true).isEmpty())
-            assertNull(ProviderListRenderer.actionAt(list, bounds, Point(300, 24), row, selected = true))
-            assertTrue(renderer.actionTexts().isEmpty())
+            assertTrue(visibleActions(row, selected = true).isEmpty())
+            assertTrue(actionBounds(list, bounds, row, selected = true).isEmpty())
+            assertNull(actionAt(list, bounds, Point(300, 24), row, selected = true))
+            assertTrue(renderer.cellTexts().isEmpty())
         }
     }
 
@@ -401,9 +428,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
             val fg = UIManager.getColor("Button.foreground") ?: UIUtil.getLabelForeground()
             val labels = components(renderer).filterIsInstance<JBLabel>().filter { it.text in listOf("OAuth", "Connect") }
@@ -426,12 +453,12 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
                 listOf(ProviderListAction.CONNECT),
             )
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertTrue(renderer.providerIconVisible())
-            assertEquals(Dimension(JBUI.scale(20), JBUI.scale(20)), renderer.providerIconSize())
+            assertTrue(renderer.iconVisible())
+            assertEquals(Dimension(JBUI.scale(20), JBUI.scale(20)), renderer.iconSize())
             assertEquals("GPT and Codex models with API key or ChatGPT login", renderer.descriptionText())
             assertTrue(renderer.preferredSize.height > JBUI.scale(44))
         }
@@ -450,9 +477,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
                 listOf(ProviderListAction.CONNECT),
             )
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
             assertEquals("Build with OpenAI models", renderer.descriptionText())
         }
@@ -462,9 +489,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Popular providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
             assertEquals("", renderer.descriptionText())
         }
@@ -475,7 +502,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Popular providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
             val bounds = Rectangle(0, 10, 320, 80)
-            val area = ProviderListRenderer.actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.CONNECT)
+            val area = actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.CONNECT)
 
             assertTrue(kotlin.math.abs((bounds.y + bounds.height / 2) - (area.y + area.height / 2)) <= 1)
             assertTrue(bounds.contains(area))
@@ -486,9 +513,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            render(renderer, list, row, selected = false)
             renderer.setSize(320, 64)
             renderer.doLayout()
 
@@ -536,7 +563,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             assertEquals(UiStyle.Components.actionBackground(), cancel.background)
             assertEquals(requireNotNull(UiStyle.Components.actionBorder()).getBorderInsets(cancel), requireNotNull(cancel.border).getBorderInsets(cancel))
             assertTrue(rows(panel).single().disabled)
-            assertTrue(ProviderListRenderer.visibleActions(rows(panel).single(), selected = true).isEmpty())
+            assertTrue(visibleActions(rows(panel).single(), selected = true).isEmpty())
             panel.reload()
         }
 
@@ -817,6 +844,27 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     private fun fieldsByName(root: Container, name: String): List<JTextField> = components(root).filterIsInstance<JTextField>().filter { it.name == name }
 
     private fun center(rect: Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
+
+    private fun renderer(row: ProviderListRow) = SettingsListRenderer(CollectionListModel<SettingsListItem>(listOf(row)))
+
+    private fun render(renderer: SettingsListRenderer, list: JBList<ProviderListRow>, row: ProviderListRow, selected: Boolean) {
+        @Suppress("UNCHECKED_CAST")
+        renderer.getListCellRendererComponent(list as JList<out SettingsListItem>, row, 0, selected, false)
+    }
+
+    private fun actionAt(list: JBList<ProviderListRow>, bounds: Rectangle, point: Point, row: ProviderListRow, selected: Boolean): ProviderListAction? {
+        val id = settingsListCellAt(list, bounds, point, row, selected) ?: return null
+        return ProviderListAction.entries.firstOrNull { it.name == id }
+    }
+
+    private fun actionBounds(list: JBList<ProviderListRow>, bounds: Rectangle, row: ProviderListRow, selected: Boolean): Map<ProviderListAction, Rectangle> {
+        val cells = settingsListCellBounds(list, bounds, row, selected)
+        return cells.mapNotNull { (id, rect) -> ProviderListAction.entries.firstOrNull { it.name == id }?.let { it to rect } }.toMap()
+    }
+
+    private fun visibleActions(row: ProviderListRow, selected: Boolean): List<ProviderListAction> {
+        return settingsListVisibleCells(row, selected).mapNotNull { cell -> ProviderListAction.entries.firstOrNull { it.name == cell.id } }
+    }
 
     private fun triggerPrimary(component: JComponent) {
         val list = list(component)

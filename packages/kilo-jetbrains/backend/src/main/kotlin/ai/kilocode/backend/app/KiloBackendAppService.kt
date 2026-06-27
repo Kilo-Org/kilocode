@@ -245,6 +245,7 @@ class KiloBackendAppService private constructor(
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppState {
         val http = connection.apiClient ?: throw IllegalStateException("Not connected")
         val current = _appState.value as? KiloAppState.Ready ?: throw IllegalStateException("Kilo backend is not ready")
+        val connected = connection.state.value as? ConnectionState.Connected
         val body = KiloCliDataParser.buildConfigPatch(patch)
         val summary = summary(patch)
         log.info("Global config patch: started $summary")
@@ -263,9 +264,15 @@ class KiloBackendAppService private constructor(
             }
         }
         log.info("Global config patch: saved $summary")
-        refreshConfigState()
+        val cfg = fetchConfig().value ?: throw IllegalStateException("Global config patch succeeded but config reload failed")
+        val warns = fetchWarnings()
+        val state = _appState.value
+        if (state is KiloAppState.Ready && state.data === current.data && connection.state.value == connected) {
+            config = cfg
+            setAppReady(current.data.copy(config = cfg, warnings = warns))
+        }
         log.info("Global config patch: state refreshed $summary")
-        return (_appState.value as? KiloAppState.Ready) ?: current
+        return KiloAppState.Ready(current.data.copy(config = cfg, warnings = warns))
     }
 
     internal suspend fun resumeAfterMigration() {

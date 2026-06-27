@@ -2,7 +2,6 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
-import java.awt.Color
 
 enum class SessionActivityKind {
     RUNNING,
@@ -20,13 +19,8 @@ enum class SessionActivityKind {
         QUESTION -> KiloBundle.message("history.badge.question")
     }
 
-    fun bg(): Color = when (this) {
-        RUNNING -> UiStyle.Colors.runningBadgeBg()
-        LOGIN_REQUIRED, PERMISSION, PLAN, QUESTION -> UiStyle.Colors.activityBadgeBg()
-    }
-
-    fun fg(): Color = when (this) {
-        RUNNING -> UiStyle.Colors.runningBadgeFg()
-        LOGIN_REQUIRED, PERMISSION, PLAN, QUESTION -> UiStyle.Colors.activityBadgeFg()
+    fun style(): UiStyle.Badge.Style = when (this) {
+        RUNNING -> UiStyle.Badge.Alert
+        LOGIN_REQUIRED, PERMISSION, PLAN, QUESTION -> UiStyle.Badge.Primary
     }
 }

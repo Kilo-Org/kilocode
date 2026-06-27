@@ -24,6 +24,7 @@ class KiloBackendCliManagerEnvTest {
 
     @AfterTest
     fun tearDown() {
+        KiloClaudeCompatSettings.set(false)
         System.clearProperty("kilo.dev.storage.isolated")
         System.clearProperty("kilo.dev.worktree.root")
         System.clearProperty("idea.plugin.in.sandbox.mode")
@@ -51,6 +52,15 @@ class KiloBackendCliManagerEnvTest {
         val env = manager.buildEnv("pwd123", emptyMap())
 
         assertEquals("off", env["KILO_TELEMETRY_LEVEL"])
+    }
+
+    @Test
+    fun `claude compatibility omits disable env var`() {
+        KiloClaudeCompatSettings.set(true)
+
+        val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertFalse(env.containsKey("KILO_DISABLE_CLAUDE_CODE"))
     }
 
     @Test

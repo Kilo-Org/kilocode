@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +40,7 @@ class FakeAppRpcApi : KiloAppRpcApi {
         private set
     var configUpdateGate: CompletableDeferred<Unit>? = null
     var configUpdateError: Exception? = null
+    var configUpdateReturnStale = false
 
     var connected = false
         private set
@@ -130,19 +132,50 @@ class FakeAppRpcApi : KiloAppRpcApi {
         val current = state.value
         val next = current.copy(config = applyPatch(current.config ?: ConfigDto(), patch))
         state.value = next
+        if (configUpdateReturnStale) return current
         return next
     }
 
     private fun applyPatch(config: ConfigDto, patch: ConfigPatchDto): ConfigDto {
         val values = patch.values
         val agents = patch.agents.entries.fold(config.agent) { acc, (name, item) ->
-            acc + (name to (acc[name] ?: AgentConfigDto()).copy(model = item.model))
+            val cfg = acc[name] ?: AgentConfigDto()
+            val cleared = item.clear.fold(cfg) { next, field ->
+                when (field) {
+                    "model" -> next.copy(model = null)
+                    "variant" -> next.copy(variant = null)
+                    "prompt" -> next.copy(prompt = null)
+                    "description" -> next.copy(description = null)
+                    "mode" -> next.copy(mode = null)
+                    "temperature" -> next.copy(temperature = null)
+                    "top_p" -> next.copy(top_p = null)
+                    "steps" -> next.copy(steps = null)
+                    "permission" -> next.copy(permission = null)
+                    else -> next
+                }
+            }
+            acc + (name to cleared.copy(
+                model = item.model ?: cleared.model,
+                variant = item.variant ?: cleared.variant,
+                prompt = item.prompt ?: cleared.prompt,
+                description = item.description ?: cleared.description,
+                mode = item.mode ?: cleared.mode,
+                hidden = item.hidden ?: cleared.hidden,
+                disable = item.disable ?: cleared.disable,
+                temperature = item.temperature ?: cleared.temperature,
+                top_p = item.top_p ?: cleared.top_p,
+                steps = item.steps ?: cleared.steps,
+                permission = item.permission ?: cleared.permission,
+            ))
         }
         return config.copy(
+            defaultAgent = if (values.containsKey("default_agent")) values["default_agent"] else config.defaultAgent,
             model = if (values.containsKey("model")) values["model"] else config.model,
             smallModel = if (values.containsKey("small_model")) values["small_model"] else config.smallModel,
             subagentModel = if (values.containsKey("subagent_model")) values["subagent_model"] else config.subagentModel,
             subagentVariant = if (values.containsKey("subagent_variant")) values["subagent_variant"] else config.subagentVariant,
+            instructions = patch.instructions ?: config.instructions,
+            skills = patch.skills?.let { SkillsConfigDto(paths = it.paths.orEmpty(), urls = it.urls.orEmpty()) } ?: config.skills,
             agent = agents,
         )
     }

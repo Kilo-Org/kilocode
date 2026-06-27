@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloProviderService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsPanel
+import ai.kilocode.client.settings.base.SettingsListView
 import ai.kilocode.client.settings.auth.DeviceOAuthInfo
 import ai.kilocode.client.settings.auth.DeviceOAuthPanel
 import ai.kilocode.client.settings.auth.DeviceOAuthText
@@ -421,36 +422,12 @@ internal class ProvidersContent(
     private val disconnect: (ProviderSettingsProviderDto) -> Unit,
     private val enable: (ProviderSettingsProviderDto) -> Unit,
 ) : BaseContentPanel() {
-    private val model = CollectionListModel<ProviderListRow>()
-    private val list = JBList(model).apply {
-        selectionMode = ListSelectionModel.SINGLE_SELECTION
-        emptyText.text = KiloBundle.message("settings.providers.noMatches")
-    }
+    private val view = SettingsListView(KiloBundle.message("settings.providers.noMatches")) { key, id -> activate(key, id) }
     private var state = ProviderSettingsDto()
-    private var filter = ""
     private var busy = false
 
     init {
-        list.cellRenderer = ProviderListRenderer(model)
-        list.registerKeyboardAction(
-            { primary() },
-            KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
-            JComponent.WHEN_FOCUSED,
-        )
-        list.addMouseListener(object : MouseAdapter() {
-            override fun mouseReleased(e: MouseEvent) {
-                if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_RELEASED, true)) return
-                val idx = list.locationToIndex(e.point)
-                val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return
-                if (!bounds.contains(e.point)) return
-                val row = model.getElementAt(idx)
-                val action = ProviderListRenderer.actionAt(list, bounds, e.point, row, idx == list.selectedIndex) ?: return
-                activate(row, action)
-                e.consume()
-            }
-        })
-        ScrollingUtil.installActions(list)
-        next(list)
+        next(view)
     }
 
     @RequiresEdt
@@ -459,8 +436,9 @@ internal class ProvidersContent(
         val notes = state.providers.count { providerDescription(it).isNotBlank() }
         ProvidersSettingsUi.LOG.info("provider settings content update: start providers=${state.providers.size} connected=${state.connected.size} disabled=${state.disabled.size} descriptions=$notes")
         this.state = state
-        sync()
-        ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${model.size}")
+        val rows = providerListRows(state, "", disabledRows = busy)
+        view.update(rows)
+        ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${rows.size}")
     }
 
     @RequiresEdt
@@ -468,58 +446,33 @@ internal class ProvidersContent(
         checkEdt()
         if (busy == next) return
         busy = next
-        list.isEnabled = !next
-        sync()
+        view.setBusy(next)
+        view.update(providerListRows(state, "", disabledRows = busy))
     }
 
     @RequiresEdt
     fun filter(text: String) {
         checkEdt()
-        if (filter == text) return
-        filter = text
-        sync()
-    }
-
-    @RequiresEdt
-    private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null) {
-        checkEdt()
-        val rows = providerListRows(state, filter, disabledRows = busy)
-        model.replaceAll(rows)
-        val idx = at?.let { providerListIndex(rows, it) }?.takeIf { it >= 0 }
-            ?: providerListIndex(rows, prefer).takeIf { it >= 0 }
-            ?: rows.indices.firstOrNull()
-            ?: -1
-        if (idx >= 0) choose(idx)
-        else list.clearSelection()
-    }
-
-    @RequiresEdt
-    private fun choose(idx: Int) {
-        checkEdt()
-        list.selectedIndex = idx
-        ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        view.filter(text)
     }
 
     @RequiresEdt
     fun move(step: Int) {
         checkEdt()
-        val size = model.size
-        if (size <= 0) return
-        val idx = ((list.selectedIndex.takeIf { it >= 0 } ?: 0) + step).coerceIn(0, size - 1)
-        choose(idx)
+        view.move(step)
     }
 
     @RequiresEdt
     fun primary() {
         checkEdt()
-        val row = list.selectedValue ?: return
-        val action = ProviderListRenderer.visibleActions(row, true).firstOrNull() ?: return
-        activate(row, action)
+        view.primary()
     }
 
     @RequiresEdt
-    private fun activate(row: ProviderListRow, action: ProviderListAction) {
+    private fun activate(key: String, id: String) {
         checkEdt()
+        val row = providerListRows(state, "").firstOrNull { it.key == key } ?: return
+        val action = ProviderListAction.entries.firstOrNull { it.name == id } ?: return
         if (!row.enabled(action)) return
         when (action) {
             ProviderListAction.CONNECT -> connect(row.provider)

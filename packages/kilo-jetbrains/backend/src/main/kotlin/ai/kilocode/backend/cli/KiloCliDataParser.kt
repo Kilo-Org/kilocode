@@ -35,6 +35,7 @@ import ai.kilocode.rpc.dto.ProviderAuthPromptDto
 import ai.kilocode.rpc.dto.ProviderMetadataDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import ai.kilocode.rpc.dto.PartTimeDto
+import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
@@ -645,28 +646,78 @@ object KiloCliDataParser {
     }
 
     fun buildConfigPatch(patch: ConfigPatchDto): String {
-        val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant")
-        val sb = StringBuilder("{")
-        var first = true
-        fun sep() { if (!first) sb.append(","); first = false }
-        fun value(value: String?) = value?.let(::escape) ?: "null"
-
-        for ((key, value) in patch.values) {
-            if (key !in allowed) continue
-            sep(); sb.append("\"$key\":${value(value)}")
-        }
-
-        if (patch.agents.isNotEmpty()) {
-            sep(); sb.append("\"agent\":{")
-            patch.agents.entries.forEachIndexed { idx, (name, agent) ->
-                if (idx > 0) sb.append(",")
-                sb.append("${escape(name)}:{\"model\":${value(agent.model)}}")
+        val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant", "default_agent")
+        val obj = buildJsonObject {
+            for ((key, value) in patch.values) {
+                if (key !in allowed) continue
+                put(key, value?.let(::JsonPrimitive) ?: JsonNull)
             }
-            sb.append("}")
+
+            val instructions = patch.instructions
+            if (instructions != null) put("instructions", JsonArray(instructions.map(::JsonPrimitive)))
+
+            val skills = patch.skills
+            if (skills != null) {
+                put("skills", buildJsonObject {
+                    val paths = skills.paths
+                    if (paths != null) put("paths", JsonArray(paths.map(::JsonPrimitive)))
+                    val urls = skills.urls
+                    if (urls != null) put("urls", JsonArray(urls.map(::JsonPrimitive)))
+                })
+            }
+
+            val mcp = patch.mcp
+            if (mcp != null) {
+                put("mcp", buildJsonObject {
+                    for ((name, cfg) in mcp) put(name, cfg?.let {
+                        buildJsonObject {
+                            if (it.type != null) put("type", it.type)
+                            val command = it.command
+                            if (command != null) put("command", JsonArray(command.map(::JsonPrimitive)))
+                            if (it.url != null) put("url", it.url)
+                            if (it.environment != null) {
+                                put("environment", buildJsonObject {
+                                    for ((key, value) in it.environment) put(key, value)
+                                })
+                            }
+                        }
+                    } ?: JsonNull)
+                })
+            }
+
+            if (patch.agents.isNotEmpty()) {
+                put("agent", buildJsonObject {
+                    for ((name, agent) in patch.agents) put(name, buildJsonObject {
+                        for (field in agent.clear) put(field, JsonNull)
+                        if (agent.model != null) put("model", agent.model)
+                        if (agent.variant != null) put("variant", agent.variant)
+                        if (agent.prompt != null) put("prompt", agent.prompt)
+                        if (agent.description != null) put("description", agent.description)
+                        if (agent.mode != null) put("mode", agent.mode)
+                        if (agent.hidden != null) put("hidden", agent.hidden)
+                        if (agent.disable != null) put("disable", agent.disable)
+                        if (agent.temperature != null) put("temperature", agent.temperature)
+                        if (agent.top_p != null) put("top_p", agent.top_p)
+                        if (agent.steps != null) put("steps", agent.steps)
+                        val permission = agent.permission
+                        if (permission != null) put("permission", buildPermission(permission))
+                    })
+                })
+            }
         }
 
-        sb.append("}")
-        return sb.toString()
+        return json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    private fun buildPermission(permission: Map<String, PermissionRuleDto>) = buildJsonObject {
+        for ((tool, rule) in permission) {
+            when (rule) {
+                is PermissionRuleDto.Level -> put(tool, rule.value?.let(::JsonPrimitive) ?: JsonNull)
+                is PermissionRuleDto.Patterns -> put(tool, buildJsonObject {
+                    for ((pattern, level) in rule.map) put(pattern, level?.let(::JsonPrimitive) ?: JsonNull)
+                })
+            }
+        }
     }
 
     fun buildProviderAuthJson(key: String, metadata: Map<String, String>): String {

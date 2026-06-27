@@ -144,7 +144,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
         fun setKind(value: SessionActivityKind?) {
             kind = value
             isVisible = value != null
-            icon = value?.let { FilledBadgeIcon(it.label(), it.bg(), it.fg()) }
+            icon = value?.let { FilledBadgeIcon(it.label(), it.style()) }
         }
     }
 }

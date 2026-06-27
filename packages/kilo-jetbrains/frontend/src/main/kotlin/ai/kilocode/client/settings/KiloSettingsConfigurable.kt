@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
@@ -62,6 +63,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         providers.border = JBUI.Borders.emptyBottom(4)
         panel.next(providers)
+
+        val behavior = ActionLink(KiloBundle.message("settings.agentBehavior.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, AgentBehaviorConfigurable.ID)
+        }
+        behavior.border = JBUI.Borders.emptyBottom(4)
+        panel.next(behavior)
 
         return panel
     }
