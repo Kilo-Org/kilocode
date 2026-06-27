@@ -7,6 +7,7 @@ import {
   toErrorMessage,
 } from "../../src/services/cli-backend/server-manager"
 import {
+  copyCliResources,
   copyKiloSandboxWorker,
   copySandboxResources,
   copyTreeSitterResources,
@@ -97,6 +98,28 @@ describe("cli tree-sitter resources", () => {
 
       await copyKiloSandboxWorker(source, target)
 
+      expect(await fs.readFile(kiloSandboxWorkerForBinary(target), "utf8")).toBe("worker")
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("copies every required CLI sidecar through the packaging entry point", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-cli-resources-"))
+    try {
+      const source = path.join(root, "dist", "@kilocode", "cli-linux-arm64", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      const tree = treeSitterDirForBinary(source)
+      await fs.mkdir(tree, { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+      await fs.writeFile(source, "binary")
+      await fs.writeFile(target, "binary")
+      await fs.writeFile(path.join(tree, "tree-sitter.wasm"), "runtime")
+      await fs.writeFile(kiloSandboxWorkerForBinary(source), "worker")
+
+      await copyCliResources(source, target)
+
+      expect(await fs.readFile(path.join(treeSitterDirForBinary(target), "tree-sitter.wasm"), "utf8")).toBe("runtime")
       expect(await fs.readFile(kiloSandboxWorkerForBinary(target), "utf8")).toBe("worker")
     } finally {
       await fs.rm(root, { recursive: true, force: true })

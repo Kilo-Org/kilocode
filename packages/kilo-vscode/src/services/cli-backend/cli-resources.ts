@@ -78,6 +78,12 @@ export async function copyKiloSandboxWorker(source: string, target: string): Pro
   await fs.promises.copyFile(from, to)
 }
 
+export async function copyCliResources(source: string, target: string): Promise<void> {
+  await copyTreeSitterResources(source, target)
+  await copySandboxResources(source, target)
+  await copyKiloSandboxWorker(source, target)
+}
+
 function cacheRoot() {
   const root = process.env.XDG_CACHE_HOME ?? path.join(os.homedir(), ".cache")
   return path.join(root, "kilo-vscode", "bwrap")
