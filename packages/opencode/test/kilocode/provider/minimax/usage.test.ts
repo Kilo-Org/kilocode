@@ -60,7 +60,7 @@ describe("MiniMax usage normalization", () => {
     expect(direct.windows[0]?.remaining).not.toBe(1)
   })
 
-  test("keeps video status 3 out of plan and zero-zero unknown", () => {
+  test("treats status 3 as out of plan for direct and managed usage", () => {
     const value = decode({
       base_resp: { status_code: 0 },
       model_remains: [
@@ -78,10 +78,12 @@ describe("MiniMax usage normalization", () => {
         },
       ],
     })
-    const item = normalize(value, { ...options, planID: "minimax-token-plan-plus" })
+    const direct = normalize(value, options)
+    const managed = normalize(value, { ...options, sourceKind: "kilo_managed", planID: "minimax-token-plan-plus" })
 
-    expect(item.windows.find((window) => window.id === "video-interval")?.state).toBe("not_in_plan")
-    expect(item.windows.find((window) => window.id === "general-interval")?.state).toBe("unknown")
+    expect(direct.windows.find((window) => window.id === "video-interval")?.state).toBe("not_in_plan")
+    expect(managed.windows.find((window) => window.id === "video-interval")?.state).toBe("not_in_plan")
+    expect(direct.windows.find((window) => window.id === "general-interval")?.state).toBe("unknown")
   })
 
   test("uses positive count-only usage_count as remaining with medium confidence", () => {
