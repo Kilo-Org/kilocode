@@ -20,6 +20,7 @@ import { useConfig } from "../../context/config"
 import { useProvider } from "../../context/provider"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { SandboxButtonBase, SandboxTooltipContent } from "../shared/SandboxButton"
 import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
@@ -44,6 +45,7 @@ import {
   isPromptBusy,
   isPathMention,
   applySandboxState,
+  type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
 import type { ExtensionMessage, ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
@@ -81,49 +83,6 @@ interface PromptInputProps {
   questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
-}
-
-export const SandboxTooltipContent: Component<{ enabled: boolean; network: boolean }> = (props) => {
-  const language = useLanguage()
-
-  return (
-    <div class="prompt-sandbox-tooltip">
-      <div class="prompt-sandbox-tooltip-title">
-        {language.t(props.enabled ? "prompt.action.sandbox.status.enabled" : "prompt.action.sandbox.status.disabled")}
-      </div>
-      <div class="prompt-sandbox-tooltip-row">
-        <Icon name="folder" size="small" />
-        <span>{language.t("prompt.action.sandbox.filesystem")}</span>
-        <span class="prompt-sandbox-tooltip-state">
-          {language.t(
-            props.enabled ? "prompt.action.sandbox.filesystem.restricted" : "prompt.action.sandbox.unrestricted",
-          )}
-        </span>
-      </div>
-      <div class="prompt-sandbox-tooltip-row">
-        <Icon name="globe" size="small" />
-        <span>{language.t("prompt.action.sandbox.network")}</span>
-        <span class="prompt-sandbox-tooltip-state">
-          {language.t(
-            props.enabled && props.network
-              ? "prompt.action.sandbox.network.blocked"
-              : props.enabled
-                ? "prompt.action.sandbox.network.allowed"
-                : "prompt.action.sandbox.unrestricted",
-          )}
-        </span>
-      </div>
-      <div class="prompt-sandbox-tooltip-description">
-        {language.t(
-          props.enabled
-            ? "prompt.action.sandbox.description.enabled"
-            : props.network
-              ? "prompt.action.sandbox.description.disabled"
-              : "prompt.action.sandbox.description.disabledNetworkAllowed",
-        )}
-      </div>
-    </div>
-  )
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
@@ -192,6 +151,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxState, setSandboxState] = createSignal<SandboxState>()
+  const [sandboxDefault, setSandboxDefault] = createSignal<SandboxDefaultState>()
   const [sandboxRequest, setSandboxRequest] = createSignal<string>()
   const [sandboxTarget, setSandboxTarget] = createSignal<string | null>()
   let sandboxRetry: ReturnType<typeof setTimeout> | undefined
@@ -200,23 +160,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const id = session.currentSessionID()
     return id?.startsWith("cloud:") ? undefined : id
   }
-  const sandboxVisible = () => {
-    const id = session.currentSessionID()
-    return features().sandboxControls && config().experimental?.sandbox === true && !id?.startsWith("cloud:")
-  }
+  const sandboxVisible = () => features().sandboxControls && !session.currentSessionID()?.startsWith("cloud:")
   const sandbox = () => {
     const state = sandboxState()
     return state?.sessionID === sandboxID() ? state : undefined
   }
-  const sandboxEnabled = () => sandbox()?.enabled ?? (!sandboxID() && config().experimental?.sandbox === true)
+  const sandboxEnabled = () => (sandboxID() ? sandbox()?.enabled : sandboxDefault()?.enabled) ?? false
+  const sandboxAvailable = () => (sandboxID() ? sandbox()?.available : sandboxDefault()?.available) ?? false
+  const sandboxReason = () => (sandboxID() ? sandbox()?.reason : sandboxDefault()?.reason)
+  const sandboxReady = () => (sandboxID() ? sandbox() !== undefined : sandboxDefault() !== undefined)
   const sandboxNetworkEnabled = () => config().experimental?.sandbox_restrict_network !== false
-  const sandboxReady = () => !sandboxID() || sandbox() !== undefined
   const sandboxDisabled = () =>
-    !server.isConnected() || !sandboxReady() || sandbox()?.available === false || sandboxRequest() !== undefined
+    !server.isConnected() || !sandboxReady() || !sandboxAvailable() || sandboxRequest() !== undefined
   const requestSandbox = () => {
+    if (server.connectionState() !== "connected") return
     const sessionID = sandboxID()
-    if (!sessionID || server.connectionState() !== "connected") return
-    vscode.postMessage({ type: "requestSandboxStatus", sessionID })
+    if (sessionID) {
+      vscode.postMessage({ type: "requestSandboxStatus", sessionID })
+      return
+    }
+    vscode.postMessage({ type: "requestSandboxDefault", agentManagerContext: ctx() })
   }
   const toggleSandbox = () => {
     const sessionID = sandboxID()
@@ -225,10 +188,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!sessionID) saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
     setSandboxRequest(requestID)
     setSandboxTarget(sessionID ?? null)
+    if (!sessionID) {
+      vscode.postMessage({
+        type: "setSandboxDefault",
+        enabled: !sandboxDefault()!.desired,
+        requestID,
+        agentManagerContext: ctx(),
+      })
+      return
+    }
     vscode.postMessage({
       type: "toggleSandbox",
       sessionID,
-      draftID: props.pendingSessionID ?? session.draftSessionID(),
       requestID,
       agentManagerContext: ctx(),
     })
@@ -269,14 +240,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!connected) {
       clearSandboxRequest()
       setSandboxState(undefined)
+      setSandboxDefault(undefined)
       return
     }
-    if (target && target !== sessionID) clearSandboxRequest()
+    if (target !== undefined && target !== sessionID) clearSandboxRequest()
     if (!sessionID) {
       setSandboxState(undefined)
+      if (sandboxRequest() && target === null) return
+      requestSandbox()
       return
     }
-    if (sandboxRequest() && target === null) return
     requestSandbox()
   })
 
@@ -512,6 +485,31 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handleSandboxMessage = (message: ExtensionMessage) => {
+    if (message.type === "sandboxDefaultStatus") {
+      const matching = message.requestID !== undefined && message.requestID === sandboxRequest()
+      if (sandboxID() && !matching) return false
+      if (!server.isConnected()) return true
+      if (matching) clearSandboxRequest()
+      const current = sandboxDefault()
+      if (!current || current.revision <= message.revision) {
+        setSandboxDefault({
+          desired: message.desired,
+          enabled: message.enabled,
+          available: message.available,
+          reason: message.reason,
+          revision: message.revision,
+        })
+      }
+      if (matching && !message.available) {
+        showToast({
+          variant: "error",
+          title: language.t("common.requestFailed"),
+          description: message.reason,
+        })
+      }
+      return true
+    }
+
     if (message.type === "sandboxStatus") {
       const matching = message.requestID !== undefined && message.requestID === sandboxRequest()
       if (message.sessionID !== sandboxID() && !matching) return false
@@ -1268,33 +1266,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Button>
           </Tooltip>
           <Show when={sandboxVisible()}>
-            <Tooltip
-              value={
-                sandbox()?.available === false ? (
-                  (sandbox()?.reason ?? language.t("common.requestFailed"))
-                ) : (
-                  <SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />
-                )
-              }
-              contentClass="prompt-sandbox-tooltip-content"
-              placement="top"
-            >
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={toggleSandbox}
-                disabled={sandboxDisabled()}
-                aria-label={
-                  sandboxEnabled()
-                    ? language.t("prompt.action.sandbox.disable")
-                    : language.t("prompt.action.sandbox.enable")
-                }
-                aria-pressed={sandboxEnabled()}
-                class={`prompt-status-button ${sandboxEnabled() ? "prompt-status-button--active" : ""}`}
-              >
-                <Icon name="lock" size="small" />
-              </Button>
-            </Tooltip>
+            <SandboxButtonBase
+              enabled={sandboxEnabled()}
+              available={sandboxReady() ? sandboxAvailable() : undefined}
+              reason={sandboxReason()}
+              disabled={sandboxDisabled()}
+              tooltip={<SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />}
+              tooltipClass="prompt-sandbox-tooltip-content"
+              onToggle={toggleSandbox}
+            />
           </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button

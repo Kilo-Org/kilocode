@@ -1,7 +1,7 @@
 import path from "node:path"
 import * as vscode from "vscode"
 import { normalizeOutputs, normalizeSource } from "./output"
-import { NotebookError, resolveNotebookPath, type NotebookPathDeps } from "./path"
+import { NotebookError, resolveNotebookCreatePath, resolveNotebookPath, type NotebookPathDeps } from "./path"
 import { cellFingerprint, fingerprint, notebookState, sameCell, type NotebookState } from "./revision"
 import {
   NOTEBOOK_LIMITS,
@@ -20,6 +20,18 @@ import {
 const RETAINED_REVISIONS = 1_000
 const revisions = new Map<string, NotebookState>()
 const locks = new Map<string, Promise<void>>()
+
+// Minimal valid empty Jupyter notebook accepted by the built-in ipynb serializer.
+const EMPTY_IPYNB = JSON.stringify(
+  {
+    cells: [],
+    metadata: {},
+    nbformat: 4,
+    nbformat_minor: 5,
+  },
+  null,
+  1,
+)
 
 function revisionKey(target: string, revision: string): string {
   return `${target}\0${revision}`
@@ -60,6 +72,7 @@ function defaults(): NotebookAdapterDeps {
   return {
     documents: () => vscode.workspace.notebookDocuments,
     open: (uri) => Promise.resolve(vscode.workspace.openNotebookDocument(uri)),
+    write: (uri, content) => Promise.resolve(vscode.workspace.fs.writeFile(uri, content)),
     apply: (edit) => Promise.resolve(vscode.workspace.applyEdit(edit)),
     execute: (command, ...args) => Promise.resolve(vscode.commands.executeCommand(command, ...args)),
     change: (listener) => vscode.workspace.onDidChangeNotebookDocument(listener),
@@ -167,12 +180,23 @@ export class NotebookAdapter {
   }
 
   async edit(request: NotebookEditRequest): Promise<NotebookEditResult> {
+    const edit = request.edit
+    if (edit.action === "create") {
+      return this.create(request)
+    }
     const loaded = await this.document(request.directory, request.path)
     return this.lock(loaded.target, async () => {
       const before = this.remember(loaded.document, loaded.target)
-      this.revision(before, request.expectedRevision, loaded.path, request.index)
+      const expectedRevision = request.expectedRevision
+      if (expectedRevision === undefined) {
+        throw new NotebookError("invalid_cell", "An expected revision is required for this edit", {
+          path: loaded.path,
+          index: request.index,
+        })
+      }
+      this.revision(before, expectedRevision, loaded.path, request.index)
       const count = loaded.document.cellCount
-      const max = request.edit.action === "insert" ? count : count - 1
+      const max = edit.action === "insert" ? count : count - 1
       if (!Number.isInteger(request.index) || request.index < 0 || request.index > max) {
         throw new NotebookError("invalid_cell", `Cell index ${request.index} is out of range`, {
           path: loaded.path,
@@ -182,25 +206,25 @@ export class NotebookAdapter {
 
       const expected = [...before.cells]
       const edits = (() => {
-        if (request.edit.action === "delete") {
+        if (edit.action === "delete") {
           expected.splice(request.index, 1)
           return [this.deps.delete(request.index)]
         }
-        const language = request.edit.language ?? (request.edit.kind === "code" ? "plaintext" : "markdown")
+        const language = edit.language ?? (edit.kind === "code" ? "plaintext" : "markdown")
         const cell = this.deps.cell({
-          kind: request.edit.kind,
-          language: request.edit.language,
-          source: request.edit.source,
+          kind: edit.kind,
+          language: edit.language,
+          source: edit.source,
         })
-        const value = fingerprint(request.edit.kind, language, request.edit.source)
-        if (request.edit.action === "insert") {
+        const value = fingerprint(edit.kind, language, edit.source)
+        if (edit.action === "insert") {
           expected.splice(request.index, 0, value)
           return [this.deps.insert(request.index, [cell])]
         }
         expected.splice(request.index, 1, value)
         return [this.deps.replace(request.index, [cell])]
       })()
-      this.revision(this.remember(loaded.document, loaded.target), request.expectedRevision, loaded.path, request.index)
+      this.revision(this.remember(loaded.document, loaded.target), expectedRevision, loaded.path, request.index)
       if (!(await this.deps.apply(this.deps.edit(loaded.document.uri, edits)))) {
         throw new NotebookError("unsupported", "VS Code rejected the notebook edit", {
           path: loaded.path,
@@ -217,12 +241,34 @@ export class NotebookAdapter {
         requestPath: request.path,
         revision: after.revision,
         index: request.index,
-        action: request.edit.action,
+        action: edit.action,
       }
-      if (request.edit.action !== "delete" && request.index < loaded.document.cellCount) {
+      if (edit.action !== "delete" && request.index < loaded.document.cellCount) {
         result.cell = this.cell(loaded.document.cellAt(request.index), request.index)
       }
       return result
+    })
+  }
+
+  private async create(request: NotebookEditRequest): Promise<NotebookEditResult> {
+    const resolved = await resolveNotebookCreatePath(request.directory, request.path, this.access, this.options.paths)
+    return this.lock(resolved.target, async () => {
+      await this.deps.write(this.deps.uri(resolved.target), new TextEncoder().encode(EMPTY_IPYNB))
+      const document = await this.deps.open(this.deps.uri(resolved.target))
+      if (document.isClosed) {
+        throw new NotebookError("closed", `Notebook ${JSON.stringify(resolved.relative)} is closed`, {
+          path: resolved.relative,
+        })
+      }
+      const state = this.remember(document, resolved.target)
+      return {
+        operation: "edit",
+        path: resolved.relative,
+        requestPath: request.path,
+        revision: state.revision,
+        index: 0,
+        action: "create",
+      }
     })
   }
 

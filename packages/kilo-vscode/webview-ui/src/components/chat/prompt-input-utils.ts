@@ -1,3 +1,11 @@
+export type SandboxDefaultState = {
+  desired: boolean
+  enabled: boolean
+  available: boolean
+  reason?: string
+  revision: number
+}
+
 export type SandboxState = {
   sessionID: string
   enabled: boolean

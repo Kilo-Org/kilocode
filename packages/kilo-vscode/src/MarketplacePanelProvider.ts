@@ -36,6 +36,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
   private generation = 0
   private refresh: ReturnType<typeof setTimeout> | undefined
   private statuses = new Map<string, SessionStatus["type"]>()
+  private pendingInstall: MarketplaceItem | undefined
   private disposables: vscode.Disposable[] = []
   private subscriptions: Array<() => void> = []
   private readonly marketplace = new MarketplaceService()
@@ -81,6 +82,13 @@ export class MarketplacePanelProvider implements vscode.Disposable {
 
   deserializePanel(panel: vscode.WebviewPanel): void {
     this.attach(panel, this.resolveProject())
+  }
+
+  /** Open the panel and surface the install dialog for a specific item, project scope preselected. */
+  openInstall(item: MarketplaceItem): void {
+    this.openPanel()
+    this.pendingInstall = item
+    this.flushPendingInstall()
   }
 
   dispose(): void {
@@ -183,6 +191,7 @@ export class MarketplacePanelProvider implements vscode.Disposable {
         if (this.connection.getConnectionState() === "connected") await this.sync(true)
         else await this.connect()
         await this.fetchData()
+        this.flushPendingInstall()
         return
       case "retryConnection":
         await this.connect()
@@ -206,6 +215,14 @@ export class MarketplacePanelProvider implements vscode.Disposable {
         if (msg.event) TelemetryProxy.capture(msg.event as TelemetryEventName, msg.properties)
         return
     }
+  }
+
+  /** Ask the webview to open the install dialog for a queued suggestion, once it can receive it. */
+  private flushPendingInstall(): void {
+    if (!this.pendingInstall || !this.ready) return
+    const item = this.pendingInstall
+    this.pendingInstall = undefined
+    this.post({ type: "openInstallModal", mpItem: item })
   }
 
   private scheduleRefresh(): void {

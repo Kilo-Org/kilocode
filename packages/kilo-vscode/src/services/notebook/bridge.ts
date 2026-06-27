@@ -264,7 +264,7 @@ export class NotebookBridge {
       return adapter.edit({
         path: request.path,
         directory,
-        expectedRevision: request.expectedRevision,
+        ...(request.expectedRevision !== undefined ? { expectedRevision: request.expectedRevision } : {}),
         index: request.index,
         edit: request.edit,
       })

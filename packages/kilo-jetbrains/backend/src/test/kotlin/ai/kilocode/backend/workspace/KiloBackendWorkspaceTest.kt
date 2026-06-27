@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,11 +50,21 @@ class KiloBackendWorkspaceTest {
     private fun setup(): KiloBackendAppService =
         KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
 
-    private suspend fun ready(app: KiloBackendAppService): KiloBackendWorkspace {
+    private suspend fun connect(app: KiloBackendAppService) {
         app.connect()
-        withTimeout(10_000) {
-            app.appState.first { it is KiloAppState.Ready }
-        }
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                app.appState.first {
+                    it is KiloAppState.Ready || it is KiloAppState.Error || it is KiloAppState.MigrationRequired
+                }
+            },
+            "App startup timed out in ${app.appState.value}; logs=${log.messages}",
+        )
+        assertIs<KiloAppState.Ready>(state, "App startup failed; logs=${log.messages}")
+    }
+
+    private suspend fun ready(app: KiloBackendAppService): KiloBackendWorkspace {
+        connect(app)
         return app.workspaces.get("/test/project")
     }
 
@@ -89,8 +100,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `same directory returns same workspace instance`() = runBlocking {
         val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        connect(app)
 
         val ws1 = app.workspaces.get("/test")
         val ws2 = app.workspaces.get("/test")
@@ -100,8 +110,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `different directories return different workspaces`() = runBlocking {
         val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        connect(app)
 
         val ws1 = app.workspaces.get("/project-a")
         val ws2 = app.workspaces.get("/project-b")
@@ -160,8 +169,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `workspace reaches Ready after creation`() = runBlocking {
         val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        connect(app)
 
         // get() creates workspace and starts loading immediately
         val ws = app.workspaces.get("/test")

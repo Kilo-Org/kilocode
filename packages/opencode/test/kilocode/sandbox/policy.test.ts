@@ -5,6 +5,7 @@ import { Global } from "@opencode-ai/core/global"
 import { assertWrite, run as runSandbox } from "@kilocode/sandbox"
 import { Effect, Exit } from "effect"
 import { profile } from "@/kilocode/sandbox/policy"
+import { SandboxStore } from "@/kilocode/sandbox/store"
 import type { InstanceContext } from "@/project/instance-context"
 import { ProjectID } from "@/project/schema"
 import { tmpdir } from "../../fixture/fixture"
@@ -172,13 +173,18 @@ describe("sandbox policy", () => {
     expect(Exit.isFailure(right.other)).toBe(true)
   })
 
-  test("keeps Kilo state and temporary roots writable", async () => {
+  test("keeps Kilo state writable without exposing sandbox policy state", async () => {
     await using tmp = await fixture()
     const dirs = tmp.extra
     const ctx = context(dirs.a, dirs.a, dirs)
+    const policy = profile(ctx)
+    const write = await Effect.runPromise(runSandbox(policy, assertWrite(SandboxStore.root)).pipe(Effect.exit))
 
     expect(new Set(roots(ctx))).toEqual(expected(dirs.a))
-    expect(profile(ctx).filesystem.temporaryDirectory).toBe(Global.Path.tmp)
+    expect(policy.filesystem.temporaryDirectory).toBe(Global.Path.tmp)
+    expect(policy.filesystem.denyWrite).toEqual([{ path: SandboxStore.root, kind: "subtree" }])
+    expect(policy.environment.deny).toEqual(["KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"])
+    expect(Exit.isFailure(write)).toBe(true)
   })
 
   test("uses deny-by-default and configurable network profiles", async () => {

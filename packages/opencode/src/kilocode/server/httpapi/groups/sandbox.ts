@@ -20,10 +20,25 @@ export const SandboxStatus = Schema.Struct({
   version: Schema.Int,
 })
 
+export const SandboxSupport = Schema.Struct({
+  available: Schema.Boolean,
+  reason: Schema.optional(Schema.String),
+})
+
 export const SandboxApi = HttpApi.make("sandbox")
   .add(
     HttpApiGroup.make("sandbox")
       .add(
+        HttpApiEndpoint.get("support", "/sandbox/support", {
+          query: WorkspaceRoutingQuery,
+          success: described(SandboxSupport, "Sandbox backend support"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sandbox.support",
+            summary: "Get sandbox backend support",
+            description: "Get sandbox backend availability without creating a session.",
+          }),
+        ),
         HttpApiEndpoint.get("status", root, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
@@ -45,7 +60,7 @@ export const SandboxApi = HttpApi.make("sandbox")
           OpenApi.annotations({
             identifier: "sandbox.toggle",
             summary: "Toggle session sandbox",
-            description: "Toggle the ephemeral sandbox override for one session.",
+            description: "Toggle and persist the sandbox state for one session.",
           }),
         ),
       )

@@ -1,8 +1,14 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "再次检查",
+  "provider.anaconda.state.noServer_one":
+    "有 1 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
+  "provider.anaconda.state.noServer_other":
+    "有 {{count}} 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
   "command.category.suggested": "建议",
   "command.category.view": "视图",
   "command.category.project": "项目",
@@ -174,6 +180,7 @@ export const dict = {
   "model.tag.free": "免费",
   "model.tag.dataCollected": "数据可能会用于训练",
   "model.tag.latest": "最新",
+  "model.group.auto": "自动模型",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
   "model.group.collapse": "折叠 {{group}}",
@@ -202,6 +209,7 @@ export const dict = {
   "model.preview.label.average": "预估平均成本",
   "model.preview.label.context": "上下文",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "模型选择",
   "model.preview.label.completion": "完成率",
   "model.preview.label.costAttempt": "成本 / 次尝试",
   "model.preview.value.notSupported": "不支持",
@@ -1216,6 +1224,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "此操作仅将 VS Code 扩展专属设置重置为默认值。与 CLI 共享的设置（如模式和自动审批规则）存储在 CLI 配置中，不会被重置。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有设置",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "设置迁移",
   "settings.aboutKiloCode.settingsTransfer.description": "导出或导入设置，以便在 VS Code 实例之间传输。",
   "settings.aboutKiloCode.exportSettings": "导出",
