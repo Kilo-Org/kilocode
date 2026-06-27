@@ -20,6 +20,7 @@ import { PartID } from "./schema"
 import * as Log from "@opencode-ai/core/util/log"
 import { EffectBridge } from "@/effect/bridge"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
+import { KiloMcpStructuredContent } from "@/kilocode/mcp/structured-content" // kilocode_change
 
 const log = Log.create({ service: "session.tools" })
 
@@ -90,7 +91,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
-            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            const effect: Effect.Effect<Tool.ExecuteResult> = item.execute(args, ctx)
+            const result = yield* (SandboxPolicy.executeTool(ctx.sessionID, item, effect) as Effect.Effect<Tool.ExecuteResult>)
             // kilocode_change end
             const output = {
               ...result,
@@ -182,8 +184,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           }
 
           const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
+          const persisted = KiloMcpStructuredContent.persist(result.structuredContent) // kilocode_change
           const metadata = {
-            ...result.metadata,
+            ...KiloMcpStructuredContent.metadata(result), // kilocode_change
+            ...persisted.metadata, // kilocode_change
             truncated: truncated.truncated,
             ...(truncated.truncated && { outputPath: truncated.outputPath }),
           }
@@ -198,6 +202,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               sessionID: ctx.sessionID,
               messageID: input.processor.message.id,
             })),
+            // kilocode_change start
+            ...(persisted.structuredContent !== undefined ? { structuredContent: persisted.structuredContent } : {}),
+            // kilocode_change end
             content: result.content,
           }
           if (opts.abortSignal?.aborted) {

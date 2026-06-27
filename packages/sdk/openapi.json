@@ -16894,6 +16894,7 @@
                                   "output": {
                                     "type": "string"
                                   },
+                                  "structuredContent": {},
                                   "title": {
                                     "type": "string"
                                   },
@@ -19749,6 +19750,7 @@
           "output": {
             "type": "string"
           },
+          "structuredContent": {},
           "title": {
             "type": "string"
           },

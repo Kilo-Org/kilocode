@@ -765,6 +765,7 @@ export type ToolStateCompleted = {
     [key: string]: unknown
   }
   output: string
+  structuredContent?: unknown
   title: string
   metadata: {
     [key: string]: unknown
@@ -11624,6 +11625,7 @@ export type KilocodeSessionImportPartData = {
                   [key: string]: unknown
                 }
                 output: string
+                structuredContent?: unknown
                 title: string
                 metadata: {
                   [key: string]: unknown

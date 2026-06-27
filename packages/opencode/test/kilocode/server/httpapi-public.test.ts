@@ -17,6 +17,7 @@ type Schema = {
   anyOf?: Schema[]
   items?: Schema
   properties?: Record<string, Schema>
+  required?: string[]
   type?: string
   enum?: string[]
   minLength?: number
@@ -197,5 +198,13 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const body = spec.paths[KiloGatewayPaths.audioTranscriptions]?.post?.requestBody as Body | undefined
     const schema = body?.content?.["application/json"]?.schema
     expect(schema?.properties?.prompt).toEqual({ type: "string" })
+  })
+
+  test("exposes structured content on completed tool state", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const schema = spec.components?.schemas?.ToolStateCompleted as Schema | undefined
+
+    expect(schema?.properties?.structuredContent).toBeDefined()
+    expect(schema?.required ?? []).not.toContain("structuredContent")
   })
 })

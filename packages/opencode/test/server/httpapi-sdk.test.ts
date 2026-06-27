@@ -336,6 +336,49 @@ function seedMessage(directory: string, sessionID: string) {
   )
 }
 
+// kilocode_change start
+function seedToolMessage(directory: string, sessionID: string) {
+  const id = SessionID.make(sessionID)
+  return InstanceStore.Service.use((store) =>
+    store.provide(
+      { directory },
+      SessionNs.Service.use((svc) =>
+        Effect.gen(function* () {
+          const message = yield* svc.updateMessage({
+            id: MessageID.ascending(),
+            sessionID: id,
+            role: "assistant",
+            parentID: MessageID.ascending(),
+            mode: "build",
+            agent: "test",
+            path: { cwd: directory, root: directory },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ModelID.make("test"),
+            providerID: ProviderID.make("test"),
+            time: { created: Date.now() },
+          } satisfies MessageV2.Assistant)
+          const part = yield* svc.updatePart({
+            id: PartID.ascending(),
+            sessionID: id,
+            messageID: message.id,
+            type: "tool",
+            callID: "call_seeded",
+            tool: "lookup",
+            state: {
+              status: "running",
+              input: { query: "weather" },
+              time: { start: Date.now() },
+            },
+          } satisfies MessageV2.ToolPart)
+          return { message, part }
+        }),
+      ).pipe(Effect.provide(SessionNs.defaultLayer)),
+    ),
+  )
+}
+// kilocode_change end
+
 afterEach(async () => {
   Flag.KILO_SERVER_PASSWORD = original.KILO_SERVER_PASSWORD
   Flag.KILO_SERVER_USERNAME = original.KILO_SERVER_USERNAME
@@ -714,6 +757,80 @@ describe("HttpApi SDK", () => {
       }),
     ),
   )
+
+  // kilocode_change start
+  serverPathParity("streams completed tool structuredContent to /event subscribers", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk, directory }) =>
+      Effect.gen(function* () {
+        const session = yield* capture(() => sdk.session.create({ title: "structured tool part event" }))
+        const sessionID = String(record(session.data).id)
+        const seeded = yield* seedToolMessage(directory, sessionID)
+
+        const controller = new AbortController()
+        yield* Effect.addFinalizer(() => Effect.sync(() => controller.abort()))
+        const events = yield* call(() => sdk.event.subscribe(undefined, { signal: controller.signal }))
+        yield* Effect.addFinalizer(() =>
+          call(async () => void (await events.stream.return?.(undefined))).pipe(Effect.ignore),
+        )
+
+        const ready = yield* Deferred.make<void>()
+        const received = yield* Deferred.make<unknown>()
+
+        yield* call(async () => {
+          for await (const event of events.stream) {
+            const payload = record(event).payload ?? event
+            const type = record(payload).type
+            if (type === "server.connected") {
+              Deferred.doneUnsafe(ready, Effect.void)
+              continue
+            }
+            if (type === MessageV2.Event.PartUpdated.type) {
+              Deferred.doneUnsafe(received, Effect.succeed(payload))
+              return
+            }
+          }
+        }).pipe(Effect.forkScoped)
+
+        yield* awaitWithTimeout(Deferred.await(ready), "timed out waiting for /event server.connected", "2 seconds")
+
+        const start = seeded.part.state.status === "running" ? seeded.part.state.time.start : Date.now()
+        const updated = yield* capture(() =>
+          sdk.part.update({
+            sessionID,
+            messageID: seeded.message.id,
+            partID: seeded.part.id,
+            part: {
+              ...seeded.part,
+              state: {
+                status: "completed",
+                input: { query: "weather" },
+                output: "result:weather",
+                title: "Weather lookup",
+                metadata: { source: "test" },
+                time: { start, end: Date.now() },
+                structuredContent: { forecast: "sunny" },
+              },
+            } as NonNullable<Parameters<Sdk["part"]["update"]>[0]["part"]>,
+          }),
+        )
+        expect(updated.status).toBe(200)
+
+        const event = yield* awaitWithTimeout(
+          Deferred.await(received),
+          "timed out waiting for structured message.part.updated bus payload over /event",
+          "5 seconds",
+        )
+        const properties = record(record(event).properties)
+        const part = record(properties.part)
+        const state = record(part.state)
+
+        expect(part).toMatchObject({ id: seeded.part.id, type: "tool" })
+        expect(state.structuredContent).toEqual({ forecast: "sunny" })
+        return { type: record(event).type, structuredContent: state.structuredContent }
+      }),
+    ),
+  )
+  // kilocode_change end
 
   serverPathParity("matches generated SDK prompt no-reply routes", (serverPath) =>
     withStandardProject(serverPath, ({ sdk }) =>

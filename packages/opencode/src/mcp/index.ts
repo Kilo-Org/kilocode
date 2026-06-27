@@ -8,6 +8,7 @@ if (process.platform === "win32" && !("type" in process)) {
 // kilocode_change end
 
 import { dynamicTool, type Tool, jsonSchema, type JSONSchema7 } from "ai"
+import * as z from "zod/v4" // kilocode_change
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
@@ -16,9 +17,12 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
 import {
   CallToolResultSchema,
+  ErrorCode, // kilocode_change
+  McpError, // kilocode_change
+  type CallToolResult, // kilocode_change
   ListToolsResultSchema,
   ToolSchema,
-  type Tool as MCPToolDef,
+  type Tool as MCPSDKToolDef,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js"
 import { Config } from "@/config/config"
@@ -41,6 +45,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
+import { KiloMcpStructuredContent } from "@/kilocode/mcp/structured-content" // kilocode_change
 
 const log = Log.create({ service: "mcp" })
 const DEFAULT_TIMEOUT = 30_000
@@ -59,9 +64,14 @@ export function ensureDockerRm(cmd: string, args: string[]): string[] {
 }
 // kilocode_change end
 
-const TolerantListToolsResultSchema = ListToolsResultSchema.extend({
-  tools: ToolSchema.omit({ outputSchema: true }).array(),
+// kilocode_change start - preserve raw MCP outputSchema for Kilo validation after tolerant discovery
+const TolerantToolSchema = ToolSchema.omit({ outputSchema: true }).extend({
+  outputSchema: z.unknown().optional(),
 })
+const TolerantListToolsResultSchema = ListToolsResultSchema.extend({
+  tools: TolerantToolSchema.array(),
+})
+// kilocode_change end
 
 export const Resource = Schema.Struct({
   name: Schema.String,
@@ -96,6 +106,10 @@ export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("MCP
 }) {}
 
 type MCPClient = Client
+// kilocode_change start - tolerant discovery keeps raw outputSchema for later compile/downgrade
+type MCPToolDef = Omit<MCPSDKToolDef, "outputSchema"> & { outputSchema?: unknown }
+type DynamicToolOptions = Parameters<typeof dynamicTool>[0]
+// kilocode_change end
 
 const StatusConnected = Schema.Struct({ status: Schema.Literal("connected") }).annotate({
   identifier: "MCPStatusConnected",
@@ -165,15 +179,7 @@ function listTools(key: string, client: MCPClient, timeout: number) {
             timeout,
           }),
         catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-      }).pipe(
-        Effect.map((result) =>
-          result.tools.map((tool) => ({
-            name: tool.name,
-            description: tool.description,
-            inputSchema: tool.inputSchema,
-          })),
-        ),
-      )
+      }).pipe(Effect.map((result) => result.tools as MCPToolDef[])) // kilocode_change
     }),
   )
 }
@@ -181,6 +187,7 @@ function listTools(key: string, client: MCPClient, timeout: number) {
 // Convert MCP tool definition to AI SDK Tool type
 function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Tool {
   const inputSchema = mcpTool.inputSchema
+  const output = KiloMcpStructuredContent.compile(mcpTool.outputSchema) // kilocode_change
 
   // Spread first, then override type to ensure it's always "object"
   const schema: JSONSchema7 = {
@@ -190,14 +197,25 @@ function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number
     additionalProperties: false,
   }
 
-  return dynamicTool({
+  // kilocode_change start - Kilo validates MCP structuredContent separately from the AI SDK output contract
+  const options: DynamicToolOptions = {
     description: mcpTool.description ?? "",
     inputSchema: jsonSchema(schema),
     execute: async (args: unknown) => {
-      return client.callTool(
+      if (mcpTool.execution?.taskSupport === "required") {
+        throw new McpError(
+          ErrorCode.InvalidRequest,
+          `Tool "${mcpTool.name}" requires task-based execution. Use client.experimental.tasks.callToolStream() instead.`,
+        )
+      }
+
+      const result = await client.request(
         {
-          name: mcpTool.name,
-          arguments: (args || {}) as Record<string, unknown>,
+          method: "tools/call",
+          params: {
+            name: mcpTool.name,
+            arguments: (args || {}) as Record<string, unknown>,
+          },
         },
         CallToolResultSchema,
         {
@@ -205,8 +223,11 @@ function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number
           timeout,
         },
       )
+      return KiloMcpStructuredContent.validate(mcpTool.name, output, result as CallToolResult)
     },
-  })
+  }
+  return dynamicTool(options)
+  // kilocode_change end
 }
 
 function defs(key: string, client: MCPClient, timeout?: number) {

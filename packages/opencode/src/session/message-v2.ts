@@ -279,6 +279,7 @@ export const ToolStateCompleted = Schema.Struct({
   status: Schema.Literal("completed"),
   input: Schema.Record(Schema.String, Schema.Any),
   output: Schema.String,
+  structuredContent: Schema.optional(Schema.Any), // kilocode_change
   title: Schema.String,
   metadata: Schema.Record(Schema.String, Schema.Any),
   time: Schema.Struct({

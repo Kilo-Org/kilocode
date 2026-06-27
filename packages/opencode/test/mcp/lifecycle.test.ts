@@ -1,4 +1,5 @@
 import { expect, mock, beforeEach } from "bun:test"
+import type { ToolExecutionOptions } from "ai" // kilocode_change
 import { Cause, Effect, Exit } from "effect"
 import type { MCP as MCPNS } from "../../src/mcp/index"
 import { testEffect } from "../lib/effect"
@@ -18,6 +19,8 @@ interface MockClientState {
   listResourcesShouldFail: boolean
   prompts: Array<{ name: string; description?: string }>
   resources: Array<{ name: string; uri: string; description?: string }>
+  callToolCalls: Array<{ request: { name: string; arguments?: Record<string, unknown> } }> // kilocode_change
+  callToolResult: Record<string, unknown> & { content: Array<Record<string, unknown>> } // kilocode_change
   closed: boolean
   notificationHandlers: Map<unknown, (...args: any[]) => any>
 }
@@ -46,6 +49,8 @@ function getOrCreateClientState(name?: string): MockClientState {
       listResourcesShouldFail: false,
       prompts: [],
       resources: [],
+      callToolCalls: [], // kilocode_change
+      callToolResult: { content: [{ type: "text", text: "ok" }] }, // kilocode_change
       closed: false,
       notificationHandlers: new Map(),
     }
@@ -143,9 +148,18 @@ void mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
       return { tools: this._state?.tools ?? [] }
     }
 
-    async request(request: { method: string }, schema: { parse: (value: unknown) => unknown }) {
+    async request(
+      request: { method: string; params?: { name: string; arguments?: Record<string, unknown> } },
+      schema: { parse: (value: unknown) => unknown },
+    ) {
       if (this._state) this._state.requestCalls++
       if (request.method === "tools/list") return schema.parse({ tools: this._state?.tools ?? [] })
+      // kilocode_change start
+      if (request.method === "tools/call" && request.params) {
+        this._state.callToolCalls.push({ request: request.params })
+        return schema.parse(this._state.callToolResult)
+      }
+      // kilocode_change end
       throw new Error(`unsupported request: ${request.method}`)
     }
 
@@ -199,6 +213,24 @@ function statusName(status: Record<string, MCPNS.Status> | MCPNS.Status, server:
   if ("status" in status) return status.status
   return status[server]?.status
 }
+
+// kilocode_change start
+function options(): ToolExecutionOptions {
+  return {
+    toolCallId: "call_mcp",
+    messages: [],
+    abortSignal: new AbortController().signal,
+  }
+}
+
+function execute(tool: { execute?: (input: unknown, options: ToolExecutionOptions) => unknown }, input: unknown) {
+  if (!tool.execute) return Effect.die(new Error("expected MCP tool execute callback"))
+  return Effect.tryPromise({
+    try: () => Promise.resolve(tool.execute?.(input, options())),
+    catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+  })
+}
+// kilocode_change end
 
 // kilocode_change start
 it.instance(
@@ -519,6 +551,12 @@ it.instance(
             outputSchema: { type: "object", properties: { screen: { $ref: "#/$defs/ScreenInstance" } } },
           },
         ]
+        // kilocode_change start
+        serverState.callToolResult = {
+          content: [{ type: "text", text: "screen rendered" }],
+          structuredContent: { screen: { id: "screen_1" } },
+        }
+        // kilocode_change end
 
         const addResult = yield* mcp.add("stitch-like-server", {
           type: "local",
@@ -531,10 +569,113 @@ it.instance(
         expect(Object.keys(tools).some((key) => key.includes("render_screen"))).toBe(true)
         expect(serverState.listToolsCalls).toBe(1)
         expect(serverState.requestCalls).toBe(1)
+        // kilocode_change start
+        const tool = Object.entries(tools).find(([key]) => key.includes("render_screen"))?.[1]
+        if (!tool) return yield* Effect.die(new Error("expected fallback MCP tool"))
+        expect((tool as { outputSchema?: unknown }).outputSchema).toBeUndefined()
+        const result = (yield* execute(tool, { prompt: "draw" })) as { structuredContent?: unknown; _meta?: unknown }
+        expect(result.structuredContent).toBeUndefined()
+        expect(result._meta).toMatchObject({ structuredContentSchema: { valid: false, reason: "compile" } })
+        // kilocode_change end
       }),
     ),
   { config: { mcp: {} } },
 )
+
+// kilocode_change start
+it.instance(
+  "validates structured tool results without exposing a mismatched output schema",
+  () =>
+    MCP.Service.use((mcp: MCPNS.Interface) =>
+      Effect.gen(function* () {
+        lastCreatedClientName = "schema-server"
+        const serverState = getOrCreateClientState("schema-server")
+        serverState.tools = [
+          {
+            name: "tool.name",
+            description: "schema tool",
+            inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+            outputSchema: {
+              type: "object",
+              properties: { answer: { type: "string" } },
+              required: ["answer"],
+              additionalProperties: false,
+            },
+          },
+        ]
+        serverState.callToolResult = {
+          content: [{ type: "text", text: "ok" }],
+          structuredContent: { answer: "sunny" },
+        }
+
+        yield* mcp.add("schema-server", { type: "local", command: ["echo", "test"] })
+
+        const tools = yield* mcp.tools()
+        const tool = Object.entries(tools).find(([key]) => key.includes("tool_name"))?.[1]
+        if (!tool) return yield* Effect.die(new Error("expected schema MCP tool"))
+
+        expect((tool as { outputSchema?: unknown }).outputSchema).toBeUndefined()
+        const result = (yield* execute(tool, { query: "weather" })) as { structuredContent?: unknown }
+
+        expect(result.structuredContent).toEqual({ answer: "sunny" })
+        expect(serverState.callToolCalls[0]?.request.name).toBe("tool.name")
+        expect(serverState.callToolCalls[0]?.request.arguments).toEqual({ query: "weather" })
+      }),
+    ),
+  { config: { mcp: {} } },
+)
+
+it.instance(
+  "rejects missing or invalid structured content for valid MCP output schemas",
+  () =>
+    MCP.Service.use((mcp: MCPNS.Interface) =>
+      Effect.gen(function* () {
+        lastCreatedClientName = "reject-server"
+        const serverState = getOrCreateClientState("reject-server")
+        serverState.tools = [
+          {
+            name: "lookup",
+            inputSchema: { type: "object", properties: {} },
+            outputSchema: {
+              type: "object",
+              properties: { answer: { type: "string" } },
+              required: ["answer"],
+              additionalProperties: false,
+            },
+          },
+        ]
+
+        yield* mcp.add("reject-server", { type: "local", command: ["echo", "test"] })
+
+        const tools = yield* mcp.tools()
+        const tool = Object.entries(tools).find(([key]) => key.includes("lookup"))?.[1]
+        if (!tool) return yield* Effect.die(new Error("expected reject MCP tool"))
+
+        serverState.callToolResult = { content: [{ type: "text", text: "{}" }] }
+        const missing = yield* execute(tool, {}).pipe(Effect.exit)
+
+        serverState.callToolResult = {
+          content: [{ type: "text", text: "bad" }],
+          structuredContent: { answer: 123 },
+        }
+        const invalid = yield* execute(tool, {}).pipe(Effect.exit)
+
+        serverState.callToolResult = {
+          content: [{ type: "text", text: "error" }],
+          structuredContent: { answer: 123 },
+          isError: true,
+        }
+        const error = (yield* execute(tool, {})) as { structuredContent?: unknown; isError?: boolean }
+
+        expect(Exit.isFailure(missing)).toBe(true)
+        expect(Exit.isFailure(invalid)).toBe(true)
+        expect(error.isError).toBe(true)
+        expect(error.structuredContent).toBeUndefined()
+      }),
+    ),
+  { config: { mcp: {} } },
+)
+// kilocode_change end
 
 it.instance(
   "does not fall back for non-schema MCP tool discovery errors",
