@@ -220,6 +220,8 @@ export function mockSessionValue(overrides?: {
     clearModelOverride: noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
+    modelUsage: () => undefined,
+    refreshModelUsage: noop,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     allAgents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     skills: () => [],
