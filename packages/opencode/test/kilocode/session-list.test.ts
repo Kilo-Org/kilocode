@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import { WithInstance } from "../../src/project/with-instance"
+import path from "path"
+import { provideTestInstance } from "../fixture/fixture"
 import { ProjectTable } from "../../src/project/project.sql"
 import { ProjectID } from "../../src/project/schema"
 import { Session } from "../../src/session/session"
@@ -18,7 +19,7 @@ afterEach(async () => {
 describe("Kilo Session.list", () => {
   test("includes directory matches from legacy project ids", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await Effect.runPromise(
@@ -46,6 +47,39 @@ describe("Kilo Session.list", () => {
         )
         const ids = sessions.map((item) => item.id)
 
+        expect(ids).toContain(session.id)
+      },
+    })
+  })
+
+  test("matches legacy project ids through active sandboxes", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async (ctx) => {
+        const session = await Effect.runPromise(
+          Session.Service.use((svc) => svc.create({ title: "sandbox-session" })).pipe(
+            Effect.provide(Session.defaultLayer),
+          ),
+        )
+        const project = ProjectID.make(`sandbox-project-${Date.now()}`)
+        Database.use((db) => {
+          db.insert(ProjectTable)
+            .values({
+              id: project,
+              worktree: path.join(tmp.path, "removed-worktree"),
+              vcs: "git",
+              time_created: Date.now(),
+              time_updated: Date.now(),
+              sandboxes: [tmp.path],
+            })
+            .run()
+          db.update(SessionTable).set({ project_id: project }).where(eq(SessionTable.id, session.id)).run()
+        })
+
+        const ids = [...Session.listGlobal({ projectID: ctx.project.id, directories: [tmp.path], roots: true })].map(
+          (item) => item.id,
+        )
         expect(ids).toContain(session.id)
       },
     })

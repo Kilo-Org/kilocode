@@ -7,6 +7,11 @@ export interface SpeechToTextModelDef {
 
 const models: SpeechToTextModelDef[] = [
   {
+    id: "openai/whisper-large-v3-turbo",
+    label: "Whisper Large V3 Turbo",
+    provider: "OpenAI-compatible",
+  },
+  {
     id: "openai/gpt-4o-mini-transcribe",
     label: "GPT-4o Mini Transcribe",
     provider: "OpenAI",
@@ -24,11 +29,6 @@ const models: SpeechToTextModelDef[] = [
     provider: "OpenAI",
   },
   {
-    id: "openai/whisper-large-v3-turbo",
-    label: "Whisper Large V3 Turbo",
-    provider: "OpenAI-compatible",
-  },
-  {
     id: "openai/whisper-large-v3",
     label: "Whisper Large V3",
     provider: "OpenAI-compatible",
@@ -37,6 +37,11 @@ const models: SpeechToTextModelDef[] = [
     id: "google/chirp-3",
     label: "Chirp 3",
     provider: "Google",
+  },
+  {
+    id: "nvidia/parakeet-tdt-0.6b-v3",
+    label: "Parakeet TDT 0.6B v3",
+    provider: "NVIDIA",
   },
 ]
 

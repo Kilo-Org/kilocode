@@ -9,9 +9,12 @@ import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 
 const log = Log.create({ service: "question" })
 
-// Schemas
+// Schemas — these are pure data; nothing checks class identity (see PR
+// description) so they're plain `Schema.Struct` + type alias. That lets
+// `Question.ask` and other internal sites trust the type contract without a
+// re-decode to coerce nested class instances.
 
-export class Option extends Schema.Class<Option>("QuestionOption")({
+export const Option = Schema.Struct({
   label: Schema.String.annotate({
     description: "Display text (1-5 words, concise)",
   }),
@@ -33,7 +36,8 @@ export class Option extends Schema.Class<Option>("QuestionOption")({
     description: "Optional agent/mode name to pre-select in the UI when this option is picked",
   }),
   // kilocode_change end
-}) {}
+}).annotate({ identifier: "QuestionOption" })
+export type Option = Schema.Schema.Type<typeof Option>
 
 const base = {
   question: Schema.String.annotate({
@@ -58,21 +62,24 @@ const base = {
   // kilocode_change end
 }
 
-export class Info extends Schema.Class<Info>("QuestionInfo")({
+export const Info = Schema.Struct({
   ...base,
   custom: Schema.optional(Schema.Boolean).annotate({
     description: "Allow typing a custom answer (default: true)",
   }),
-}) {}
+}).annotate({ identifier: "QuestionInfo" })
+export type Info = Schema.Schema.Type<typeof Info>
 
-export class Prompt extends Schema.Class<Prompt>("QuestionPrompt")(base) {}
+export const Prompt = Schema.Struct(base).annotate({ identifier: "QuestionPrompt" })
+export type Prompt = Schema.Schema.Type<typeof Prompt>
 
-export class Tool extends Schema.Class<Tool>("QuestionTool")({
+export const Tool = Schema.Struct({
   messageID: MessageID,
   callID: Schema.String,
-}) {}
+}).annotate({ identifier: "QuestionTool" })
+export type Tool = Schema.Schema.Type<typeof Tool>
 
-export class Request extends Schema.Class<Request>("QuestionRequest")({
+export const Request = Schema.Struct({
   id: QuestionID,
   sessionID: SessionID,
   questions: Schema.Array(Info).annotate({
@@ -83,27 +90,29 @@ export class Request extends Schema.Class<Request>("QuestionRequest")({
     description: "Whether this question blocks prompt input (default: true)",
   }),
   tool: Schema.optional(Tool),
-}) {}
+}).annotate({ identifier: "QuestionRequest" })
+export type Request = Schema.Schema.Type<typeof Request>
 
 export const Answer = Schema.Array(Schema.String).annotate({ identifier: "QuestionAnswer" })
 export type Answer = Schema.Schema.Type<typeof Answer>
 
-export class Reply extends Schema.Class<Reply>("QuestionReply")({
+export const Reply = Schema.Struct({
   answers: Schema.Array(Answer).annotate({
     description: "User answers in order of questions (each answer is an array of selected labels)",
   }),
-}) {}
+}).annotate({ identifier: "QuestionReply" })
+export type Reply = Schema.Schema.Type<typeof Reply>
 
-class Replied extends Schema.Class<Replied>("QuestionReplied")({
+const Replied = Schema.Struct({
   sessionID: SessionID,
   requestID: QuestionID,
   answers: Schema.Array(Answer),
-}) {}
+}).annotate({ identifier: "QuestionReplied" })
 
-class Rejected extends Schema.Class<Rejected>("QuestionRejected")({
+const Rejected = Schema.Struct({
   sessionID: SessionID,
   requestID: QuestionID,
-}) {}
+}).annotate({ identifier: "QuestionRejected" })
 
 export const Event = {
   Asked: BusEvent.define("question.asked", Request),
@@ -184,13 +193,13 @@ export const layer = Layer.effect(
       log.info("asking", { id, questions: input.questions.length })
 
       const deferred = yield* Deferred.make<ReadonlyArray<Answer>, RejectedError>()
-      const info = Schema.decodeUnknownSync(Request)({
+      const info: Request = {
         id,
         sessionID: input.sessionID,
         questions: input.questions,
         blocking: input.blocking, // kilocode_change
         tool: input.tool,
-      })
+      }
 
       // kilocode_change start
       yield* KiloQuestion.guardFollowup(input.sessionID, () => new RejectedError())
@@ -201,9 +210,13 @@ export const layer = Layer.effect(
 
       return yield* Effect.ensuring(
         Deferred.await(deferred),
-        Effect.sync(() => {
-          pending.delete(id)
+        // kilocode_change start - every asked question gets a terminal event when its waiter is interrupted
+        KiloQuestion.finalize({
+          pending,
+          id,
+          publishRejected: () => bus.publish(Event.Rejected, { sessionID: info.sessionID, requestID: info.id }),
         }),
+        // kilocode_change end
       )
     })
 

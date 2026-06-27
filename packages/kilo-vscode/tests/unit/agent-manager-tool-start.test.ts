@@ -34,6 +34,7 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
     cleanupWorktree: mock(async () => calls.push("cleanupWorktree")),
     setup: mock(async () => calls.push("setup")),
     createSessionInWorktree: mock(async () => session("s-wt")),
+    sessionMetadata: mock(async () => ({ "kilocode.sandbox": { enabled: true, version: 0 } })),
     registerWorktreeSession: mock(() => calls.push("registerWorktreeSession")),
     notifyReady: mock(() => calls.push("notifyReady")),
     push: mock(() => calls.push("push")),
@@ -79,7 +80,11 @@ describe("agent manager tool start", () => {
     const panel = c.getPanel()
     expect(panel?.waitForReady).toHaveBeenCalled()
     expect(client.session.create).toHaveBeenCalledWith(
-      { directory: "/repo", platform: "agent-manager" },
+      {
+        directory: "/repo",
+        platform: "agent-manager",
+        metadata: { "kilocode.sandbox": { enabled: true, version: 0 } },
+      },
       { throwOnError: true },
     )
     expect(client.session.promptAsync).toHaveBeenCalledWith(

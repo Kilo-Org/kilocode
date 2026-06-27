@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
@@ -64,6 +65,14 @@ class Text(id: String) : Content(id) {
 class Reasoning(id: String) : Content(id) {
     val content = StringBuilder()
     var done: Boolean = true
+}
+
+/** User-provided file or image attachment. */
+class FileAttachment(id: String) : Content(id) {
+    var mime: String = "application/octet-stream"
+    var url: String = ""
+    var filename: String? = null
+    var source: PartSourceDto? = null
 }
 
 /** Tool invocation with lifecycle state. */

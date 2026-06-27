@@ -24,6 +24,8 @@ import { PluginCommand } from "../../src/cli/cmd/plug"
 import { DbCommand } from "../../src/cli/cmd/db"
 import { HelpCommand } from "../../src/kilocode/help-command"
 import { ProfileCommand } from "../../src/kilocode/cli/cmd/profile"
+import { DaemonCommand } from "../../src/kilocode/cli/cmd/daemon"
+import { KiloConsoleCommand } from "../../src/kilocode/cli/cmd/console"
 
 // Stand-in for TuiThreadCommand — the real one imports @opentui/solid which
 // doesn't resolve in the test environment. Only command/describe matter here.
@@ -72,6 +74,8 @@ const commands = [
   ConfigCLICommand,
   PluginCommand,
   ProfileCommand,
+  DaemonCommand,
+  KiloConsoleCommand,
   HelpCommand,
   CompletionStub,
 ] as any[]
@@ -119,6 +123,20 @@ describe("kilo help <command>", () => {
     const output = await generateHelp({ command: "auth", format: "md", commands })
     expect(output).not.toContain("## kilo run")
     expect(output).not.toContain("## kilo debug")
+  })
+
+  test("documents console stop and foreground mode", async () => {
+    const output = await generateHelp({ command: "console", format: "md", commands })
+    expect(output).toContain("kilo console stop")
+    expect(output).toContain("--foreground")
+    expect(output).toContain("-f")
+  })
+
+  test("documents daemon foreground mode", async () => {
+    const output = await generateHelp({ command: "daemon", format: "md", commands })
+    expect(output).toContain("kilo daemon start")
+    expect(output).toContain("--foreground")
+    expect(output).toContain("-f")
   })
 })
 
@@ -188,7 +206,7 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
   test("index.ts invokes the KiloCli integration points", async () => {
     // These thin call-sites are the only wiring between upstream index.ts and the Kilo
     // customizations in setup.ts. If a future upstream merge drops them, every Kilo command
-    // and the telemetry/lifecycle hooks silently disappear — exactly the regression this guards.
+    // and the telemetry/lifecycle hooks silently disappear, exactly the regression this guards.
     const index = await file(INDEX)
     expect(index).toContain("KiloCli.register(")
     expect(index).toContain("KiloCli.bootstrap(")
@@ -198,8 +216,10 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
   test("registers the local Kilo Console instead of the upstream account console", async () => {
     const index = await file(INDEX)
     const setup = await file(SETUP)
+    const barrel = await file(BARREL)
     expect(setup).toContain("KiloConsoleCommand")
     expect(index).not.toContain(".command(ConsoleCommand)")
+    expect(barrel).not.toContain('from "../cli/cmd/account"')
   })
 
   test("every .command() in index.ts has an entry in the commands array", async () => {
@@ -222,7 +242,7 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
   test("every barrel command is registered in index.ts or setup.ts", async () => {
     // Reverse direction of the test above: every source-of-truth command must actually be
     // runnable. The merge dropped `daemon`/`profile`/`remote`/`config` from index.ts while the
-    // barrel still listed them — this catches that.
+    // barrel still listed them, this catches that.
     const index = await file(INDEX)
     const setup = await file(SETUP)
     const barrel = await file(BARREL)
@@ -233,16 +253,15 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
 
     const arrayMatch = barrel.match(/export const commands\s*=\s*\[([\s\S]*?)\]/)
     expect(arrayMatch).toBeTruthy()
-    // Strip comments first — the array body contains a comment mentioning `AuthCommand`.
+    // Strip comments first, the array body contains a comment mentioning `AuthCommand`.
     const body = arrayMatch![1]!.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "")
     const entries = [...body.matchAll(/\b(\w+Command)\b/g)].map((m) => m[1]!)
 
     // Not registered as a bare `.command(Ident)`:
-    //  ConsoleCommand    → replaced by KiloConsoleCommand
-    //  CompletionCommand → provided by yargs `.completion(...)`
-    //  HelpCommand       → registered via createHelpCommand(() => cli)
+    //  CompletionCommand - provided by yargs `.completion(...)`
+    //  HelpCommand       - registered via createHelpCommand(() => cli)
     //  (DevSetup/DevAlias enter the array via `...dev`, so they aren't scraped here)
-    const except = new Set(["ConsoleCommand", "CompletionCommand", "HelpCommand"])
+    const except = new Set(["CompletionCommand", "HelpCommand"])
     const missing = entries.filter((name) => !except.has(name) && !registered.has(name))
     expect(missing).toEqual([])
   })

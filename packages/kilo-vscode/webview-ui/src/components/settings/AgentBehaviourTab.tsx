@@ -43,6 +43,8 @@ interface SelectOption {
 
 import SettingsRow from "./SettingsRow"
 
+const builtin = (skill: SkillInfo) => skill.location === "builtin" || skill.location === "<built-in>"
+
 // View states for the agents subtab
 type AgentView = "list" | "create" | "edit"
 
@@ -848,10 +850,10 @@ const AgentBehaviourTab: Component = () => {
                     }}
                   >
                     <div>{skill.description}</div>
-                    {skill.location !== "builtin" && <div>{skill.location}</div>}
+                    {!builtin(skill) && <div>{skill.location}</div>}
                   </div>
                 </div>
-                {skill.location !== "builtin" && (
+                {!builtin(skill) && (
                   <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
                 )}
               </div>

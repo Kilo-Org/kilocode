@@ -174,7 +174,17 @@ internal class ModelsSettingsUi(
             .filter { it.id == KILO_PROVIDER || it.id in cfg.connected }
             .flatMap { provider ->
                 provider.models.mapNotNull { (id, model) ->
-                    val item = ModelPicker.Item(id, model.name, provider.id, provider.name, model.recommendedIndex, model.free, model.variants)
+                    val item = ModelPicker.Item(
+                        id,
+                        model.name,
+                        provider.id,
+                        provider.name,
+                        model.recommendedIndex,
+                        model.free,
+                        model.byok,
+                        model.variants,
+                        mayTrainOnYourPrompts = model.mayTrainOnYourPrompts,
+                    )
                     if (!includeSmall && ModelText.small(item)) return@mapNotNull null
                     item
                 }

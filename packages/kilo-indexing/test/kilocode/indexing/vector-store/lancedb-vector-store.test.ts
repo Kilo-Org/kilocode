@@ -173,9 +173,50 @@ describe("LocalVectorStore", () => {
       expect(mockLoadLanceDB).toHaveBeenCalledTimes(1)
       expect(mockLanceDBModule.connect).not.toHaveBeenCalled()
     })
+
+    test("serializes native connections across stores", async () => {
+      const other = new LanceDBVectorStore(path.join("mock", "other"), vectorSize, dbDirectory)
+      store["db"] = null
+      other["lancedbModule"] = mockLanceDBModule
+      let active = 0
+      let maximum = 0
+      mockLanceDBModule.connect.mockImplementation(async () => {
+        active += 1
+        maximum = Math.max(maximum, active)
+        await Bun.sleep(10)
+        active -= 1
+        return mockDb
+      })
+
+      try {
+        await Promise.all([store.collectionExists(), other.collectionExists()])
+      } finally {
+        await other.close()
+      }
+
+      expect(maximum).toBe(1)
+    })
   })
 
   describe("initialize", () => {
+    test("opens a complete compatible baseline without mutating it", async () => {
+      spyOn(fs, "existsSync").mockReturnValue(true as any)
+      store["_getStoredEmbeddingProfile"] = mock().mockResolvedValue({
+        provider: "openai",
+        modelId: "",
+        dimension: vectorSize,
+      })
+      store["_getMetadataValue"] = mock((_: unknown, key: string) =>
+        Promise.resolve(key === "index_schema" ? "2" : "true"),
+      )
+
+      await store.openExisting()
+
+      expect(mockDb.createTable).not.toHaveBeenCalled()
+      expect(mockDb.dropTable).not.toHaveBeenCalled()
+      expect(mockTable.delete).not.toHaveBeenCalled()
+    })
+
     test("should create tables if not exist", async () => {
       mockDb.tableNames.mockResolvedValue([])
       mockDb.createTable.mockResolvedValue(mockTable)
@@ -195,17 +236,47 @@ describe("LocalVectorStore", () => {
       expect(mockDb.dropTable).toHaveBeenCalled()
     })
 
-    test("should not recreate if vector size matches", async () => {
+    test("should not recreate if vector size and schema match", async () => {
       mockDb.tableNames.mockResolvedValue(["vector", "metadata"])
       mockDb.openTable.mockResolvedValue(mockTable)
       store["_getStoredVectorSize"] = mock().mockResolvedValue(vectorSize)
+      store["_getMetadataValue"] = mock().mockResolvedValue("2")
       const result = await store.initialize()
       expect(result).toBe(false)
+    })
+
+    test("recreates an index using the legacy payload schema", async () => {
+      mockDb.tableNames.mockResolvedValue(["vector", "metadata"])
+      mockDb.openTable.mockResolvedValue(mockTable)
+      store["_getStoredVectorSize"] = mock().mockResolvedValue(vectorSize)
+      store["_getMetadataValue"] = mock().mockResolvedValue("1")
+
+      expect(await store.initialize()).toBe(true)
+      expect(mockDb.dropTable).toHaveBeenCalledTimes(2)
     })
 
     test("should throw error on LanceDB failure", async () => {
       mockDb.tableNames.mockRejectedValue(new Error("fail"))
       await expect(store.initialize()).rejects.toThrow()
+    })
+
+    test("does not recreate when vector metadata cannot be read", async () => {
+      store["_getStoredVectorSize"] = mock().mockRejectedValue(new Error("metadata unavailable"))
+
+      await expect(store.initialize()).rejects.toThrow("metadata unavailable")
+      expect(mockDb.dropTable).not.toHaveBeenCalled()
+      expect(mockDb.createTable).not.toHaveBeenCalled()
+    })
+
+    test("does not recreate when profile metadata cannot be read", async () => {
+      mockTable.countRows.mockResolvedValue(1)
+      store["_getStoredVectorSize"] = mock().mockResolvedValue(vectorSize)
+      store["_getMetadataValue"] = mock().mockResolvedValue("2")
+      store["_getStoredEmbeddingProfile"] = mock().mockRejectedValue(new Error("profile unavailable"))
+
+      await expect(store.initialize()).rejects.toThrow("profile unavailable")
+      expect(mockDb.dropTable).not.toHaveBeenCalled()
+      expect(mockDb.createTable).not.toHaveBeenCalled()
     })
 
     test("should recreate tables when stored embedding identity differs", async () => {
@@ -316,7 +387,7 @@ describe("LocalVectorStore", () => {
         {
           id: "123e4567-e89b-12d3-a456-426614174000",
           vector: [1, 2, 3],
-          payload: { filePath: "a", codeChunk: "b", startLine: 1, endLine: 2 },
+          payload: { filePath: "a", fileHash: "hash-a", codeChunk: "b", startLine: 1, endLine: 2 },
         },
       ]
       mockTable.delete.mockResolvedValue(undefined)
@@ -331,7 +402,7 @@ describe("LocalVectorStore", () => {
         {
           id: "123e4567-e89b-12d3-a456-426614174000",
           vector: [1, 2, 3],
-          payload: { filePath: "a", codeChunk: "b", startLine: 1, endLine: 2 },
+          payload: { filePath: "a", fileHash: "hash-a", codeChunk: "b", startLine: 1, endLine: 2 },
         },
       ]
       mockTable.delete.mockResolvedValue(undefined)
@@ -349,7 +420,7 @@ describe("LocalVectorStore", () => {
         distanceRange: distanceRangeSpy,
         limit: mock().mockReturnThis(),
         toArray: mock().mockResolvedValue([
-          { id: "2", _distance: 0.2, filePath: "a", codeChunk: "c", startLine: 3, endLine: 4 },
+          { id: "2", _distance: 0.2, filePath: "a", fileHash: "hash-a", codeChunk: "c", startLine: 3, endLine: 4 },
         ]),
       })
       const results = await store.search([1, 2, 3], "a", 0.7, 1)
@@ -373,7 +444,7 @@ describe("LocalVectorStore", () => {
         distanceRange: distanceRangeSpy,
         limit: mock().mockReturnThis(),
         toArray: mock().mockResolvedValue([
-          { id: "2", _distance: 0.2, filePath: "a", codeChunk: "c", startLine: 3, endLine: 4 },
+          { id: "2", _distance: 0.2, filePath: "a", fileHash: "hash-a", codeChunk: "c", startLine: 3, endLine: 4 },
         ]),
       })
       const results = await store.search([1, 2, 3], "a", 0.1, 2)
@@ -490,7 +561,7 @@ describe("LocalVectorStore", () => {
     })
 
     test("should return true for valid payload", () => {
-      const payload: Payload = { filePath: "a", codeChunk: "b", startLine: 1, endLine: 2 }
+      const payload: Payload = { filePath: "a", fileHash: "hash-a", codeChunk: "b", startLine: 1, endLine: 2 }
       expect(store["isPayloadValid"](payload)).toBe(true)
     })
   })
@@ -590,6 +661,7 @@ describe("LocalVectorStore", () => {
           vector: [1, 2, 3],
           payload: {
             filePath: "test.ts",
+            fileHash: "hash-test",
             codeChunk: "code",
             startLine: 1,
             endLine: 2,
@@ -609,12 +681,12 @@ describe("LocalVectorStore", () => {
         {
           id: "123e4567-e89b-12d3-a456-426614174000",
           vector: [1, 2, 3],
-          payload: { filePath: "a", codeChunk: "b", startLine: 1, endLine: 2 },
+          payload: { filePath: "a", fileHash: "hash-a", codeChunk: "b", startLine: 1, endLine: 2 },
         },
         {
           id: "' OR '1'='1",
           vector: [4, 5, 6],
-          payload: { filePath: "c", codeChunk: "d", startLine: 3, endLine: 4 },
+          payload: { filePath: "c", fileHash: "hash-c", codeChunk: "d", startLine: 3, endLine: 4 },
         },
       ]
 

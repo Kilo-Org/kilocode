@@ -5,7 +5,7 @@ import type {
 } from "@kilocode/kilo-indexing/engine"
 import type { IndexingStatus } from "@kilocode/kilo-indexing/status"
 import { withTimeout } from "@/util/timeout"
-import type { Log, Message, Request, Result } from "./indexing-worker-protocol"
+import type { Event, Log, Message, Request, Result } from "./indexing-worker-protocol"
 import type { IndexingWarning } from "./indexing-warning"
 
 declare global {
@@ -22,7 +22,7 @@ export namespace IndexingWorker {
   }
 
   export type Driver = {
-    init(input: IndexingConfigInput): Promise<IndexingStatus>
+    init(input: IndexingConfigInput, baselineDirectory?: string): Promise<IndexingStatus>
     search(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]>
     dispose(): Promise<void>
   }
@@ -31,131 +31,173 @@ export namespace IndexingWorker {
 
   type Host = Driver & {
     use(hooks: Hooks): void
+    event(message: Event): void
+    fail(err: unknown): void
+  }
+
+  type Outgoing =
+    | Omit<Extract<Request, { method: "init" }>, "id">
+    | Omit<Extract<Request, { method: "search" }>, "id">
+    | Omit<Extract<Request, { method: "dispose" }>, "id">
+
+  type Channel = {
+    task: Worker
+    pending: Map<number, { resolve(message: Result): void; reject(err: unknown): void }>
+    hosts: Map<string, Host>
+    id: number
+    stopped: boolean
   }
 
   const pool = new Map<string, Host>()
+  let shared: Channel | undefined
 
-  const worker = (directory: string, root: string, hooks: Hooks): Host => {
+  const channel = () => {
+    if (shared && !shared.stopped) return shared
+
     const file =
       typeof KILO_INDEXING_WORKER_PATH !== "undefined"
         ? KILO_INDEXING_WORKER_PATH
         : new URL("./indexing-worker.ts", import.meta.url)
-    const key = `${directory}\0${root}`
-    const task = new Worker(file, { ref: false })
-    const pending = new Map<number, { resolve(message: Result): void; reject(err: unknown): void }>()
-    let id = 0
-    let stopped = false
-    let active = true
-    let callbacks = hooks
-
-    const reject = (err: unknown) => {
-      for (const item of pending.values()) item.reject(err)
-      pending.clear()
+    const state: Channel = {
+      task: new Worker(file, { ref: false }),
+      pending: new Map(),
+      hosts: new Map(),
+      id: 0,
+      stopped: false,
     }
 
     const fail = (err: unknown) => {
-      if (stopped) return
-      stopped = true
-      active = false
-      reject(err)
-      if (pool.get(key) === host) pool.delete(key)
-      callbacks.failure(err)
+      if (state.stopped) return
+      state.stopped = true
+      for (const item of state.pending.values()) item.reject(err)
+      state.pending.clear()
+      for (const host of state.hosts.values()) host.fail(err)
+      state.hosts.clear()
+      pool.clear()
+      if (shared === state) shared = undefined
     }
 
-    task.onmessage = (event: MessageEvent<Message>) => {
+    state.task.onmessage = (event: MessageEvent<Message>) => {
       const message = event.data
       if (message.type === "event") {
-        if (stopped || !active) return
-        if (message.event === "status") callbacks.status(message.data)
-        if (message.event === "telemetry") callbacks.telemetry(message.data)
-        if (message.event === "warning") callbacks.warning(message.data)
-        if (message.event === "log") callbacks.log(message.data)
+        if (message.key) {
+          state.hosts.get(message.key)?.event(message)
+          return
+        }
+        for (const host of state.hosts.values()) host.event(message)
         return
       }
 
-      const request = pending.get(message.id)
+      const request = state.pending.get(message.id)
       if (!request) return
-      pending.delete(message.id)
+      state.pending.delete(message.id)
       if (message.ok) {
         request.resolve(message)
         return
       }
       request.reject(new Error(message.error))
     }
+    state.task.onerror = (event) => fail(event.error ?? new Error(event.message))
+    state.task.addEventListener("close", () => fail(new Error("Indexing worker exited.")))
+    shared = state
+    return state
+  }
 
-    task.onerror = (event) => {
-      fail(event.error ?? new Error(event.message))
-    }
-
-    task.addEventListener("close", () => {
-      if (pool.get(key) === host) pool.delete(key)
-      fail(new Error("Indexing worker exited."))
-    })
-
-    const call = <T>(request: Request, read: (message: Result) => T) => {
-      if (stopped) return Promise.reject(new Error("Indexing worker is unavailable."))
-      return new Promise<T>((resolve, reject) => {
-        pending.set(request.id, {
-          resolve(message) {
-            try {
-              resolve(read(message))
-            } catch (err) {
-              reject(err)
-            }
-          },
-          reject,
-        })
-        task.postMessage(request)
+  const call = <T>(state: Channel, request: Outgoing, read: (message: Result) => T) => {
+    if (state.stopped) return Promise.reject(new Error("Indexing worker is unavailable."))
+    const id = state.id++
+    const message: Request = { ...request, id }
+    return new Promise<T>((resolve, reject) => {
+      state.pending.set(id, {
+        resolve(result) {
+          try {
+            resolve(read(result))
+          } catch (err) {
+            reject(err)
+          }
+        },
+        reject,
       })
-    }
+      state.task.postMessage(message)
+    })
+  }
+
+  const worker = (directory: string, root: string, hooks: Hooks): Host => {
+    const key = `${directory}\0${root}`
+    const state = channel()
+    let active = true
+    let callbacks = hooks
 
     const host: Host = {
       use(next) {
         callbacks = next
         active = true
+        state.hosts.set(key, host)
       },
-      init(config) {
+      event(message) {
+        if (!active) return
+        if (message.event === "status") callbacks.status(message.data)
+        if (message.event === "telemetry") callbacks.telemetry(message.data)
+        if (message.event === "warning") callbacks.warning(message.data)
+        if (message.event === "log") callbacks.log(message.data)
+      },
+      fail(err) {
+        if (!active) return
+        active = false
+        callbacks.failure(err)
+      },
+      init(config, baselineDirectory) {
         active = true
-        const request: Request = {
-          type: "request",
-          id: id++,
-          method: "init",
-          input: {
-            directory,
-            root,
-            config,
-            lancedbPath: process.env.KILO_LANCEDB_PATH,
+        state.hosts.set(key, host)
+        return call(
+          state,
+          {
+            type: "request",
+            key,
+            method: "init",
+            input: {
+              directory,
+              root,
+              config,
+              baselineDirectory,
+              lancedbPath: process.env.KILO_LANCEDB_PATH,
+            },
           },
-        }
-        return call(request, (message) => {
-          if (message.ok && message.method === "init") return message.value
-          throw new Error("Unexpected indexing worker init response.")
-        })
+          (message) => {
+            if (message.ok && message.method === "init") return message.value
+            throw new Error("Unexpected indexing worker init response.")
+          },
+        )
       },
       search(query, directoryPrefix) {
-        const request: Request = { type: "request", id: id++, method: "search", input: { query, directoryPrefix } }
-        return call(request, (message) => {
+        return call(state, { type: "request", key, method: "search", input: { query, directoryPrefix } }, (message) => {
           if (message.ok && message.method === "search") return message.value
           throw new Error("Unexpected indexing worker search response.")
         })
       },
       async dispose() {
-        if (stopped || !active) return
+        if (!active || state.stopped) return
         active = false
-        const request: Request = { type: "request", id: id++, method: "dispose", input: undefined }
-        await withTimeout(
-          call(request, (message) => {
-            if (message.ok && message.method === "dispose") return message.value
-            throw new Error("Unexpected indexing worker dispose response.")
-          }),
-          1000,
-          "Indexing worker reset timed out",
-        ).catch((err) => {
-          stopped = true
-          reject(err)
-        })
+        if (state.hosts.get(key) === host) state.hosts.delete(key)
+        if (pool.get(key) === host) pool.delete(key)
+        try {
+          await withTimeout(
+            call(state, { type: "request", key, method: "dispose", input: undefined }, (message) => {
+              if (message.ok && message.method === "dispose") return message.value
+              throw new Error("Unexpected indexing worker dispose response.")
+            }),
+            5000,
+            "Indexing worker reset timed out",
+          )
+        } catch (err) {
+          callbacks.failure(err)
+        } finally {
+          if (state.hosts.get(key) === host) state.hosts.delete(key)
+          if (pool.get(key) === host) pool.delete(key)
+        }
       },
     }
+    state.hosts.set(key, host)
     return host
   }
 

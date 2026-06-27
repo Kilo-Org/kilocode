@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/radio-group"
+export * from "@opencode-ai/ui/radio-group"

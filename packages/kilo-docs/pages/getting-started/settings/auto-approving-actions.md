@@ -125,6 +125,40 @@ Permissions are configured under the `permission` key in `kilo.jsonc`. The follo
 
 Instead of a simple `"allow"` or `"deny"`, each tool can use glob-pattern rules for granular control. Patterns are matched against the tool's arguments (command strings, file paths, etc.), and the last matching rule wins.
 
+### Rule Precedence
+
+Permission rules are evaluated in config order. When more than one rule matches the requested permission and target pattern, the last matching rule wins.
+
+Put broad fallbacks first and exceptions after them:
+
+```json
+{
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "uv *": "allow"
+    }
+  }
+}
+```
+
+With that config, `uv pip install ...` is allowed because `uv *` appears after the catch-all `*`.
+
+If you put the catch-all last, it overrides the earlier specific rule:
+
+```json
+{
+  "permission": {
+    "bash": {
+      "uv *": "allow",
+      "*": "ask"
+    }
+  }
+}
+```
+
+With that config, `uv pip install ...` asks because the later `*` rule also matches.
+
 ### Example: Shell Commands
 
 Allow git commands automatically, but prompt for everything else:
@@ -133,8 +167,8 @@ Allow git commands automatically, but prompt for everything else:
 {
   "permission": {
     "bash": {
-      "git *": "allow",
-      "*": "ask"
+      "*": "ask",
+      "git *": "allow"
     }
   }
 }
@@ -148,8 +182,8 @@ Prompt before reading `.env` files, but allow all other reads:
 {
   "permission": {
     "read": {
-      "*.env": "ask",
-      "*": "allow"
+      "*": "allow",
+      "*.env": "ask"
     }
   }
 }
@@ -163,11 +197,11 @@ Deny `rm -rf` commands, allow common dev commands, and ask for anything else:
 {
   "permission": {
     "bash": {
+      "*": "ask",
       "rm -rf *": "deny",
       "npm *": "allow",
       "bun *": "allow",
-      "git *": "allow",
-      "*": "ask"
+      "git *": "allow"
     }
   }
 }
@@ -185,7 +219,7 @@ Different agents can have different permission levels. Override the default perm
   "agent": {
     "code": {
       "permission": {
-        "bash": { "git *": "allow", "*": "ask" }
+        "bash": { "*": "ask", "git *": "allow" }
       }
     },
     "plan": {
@@ -198,6 +232,26 @@ Different agents can have different permission levels. Override the default perm
 ```
 
 In this example, the `code` agent can run `git` commands automatically and asks for other shell commands, while the `plan` agent cannot run shell commands at all.
+
+## Markdown Agent Files
+
+If you define agents in Markdown files, the `permission` frontmatter uses the same `allow` / `ask` / `deny` values and glob patterns as `kilo.jsonc`:
+
+```markdown
+---
+description: Reviews code for quality and best practices
+mode: subagent
+permission:
+  bash:
+    "*": ask
+    "git *": allow
+  read:
+    "*": allow
+    "*.env": ask
+---
+```
+
+This is the same permission shape described in [Agent Permissions](/docs/customize/agent-permissions), just shown in the agent-file format.
 
 ## Runtime Permission Requests
 
@@ -234,12 +288,12 @@ This is a custom example showing the available configuration options — it does
 ```json
 {
   "permission": {
-    "read": { "*.env": "ask", "*": "allow" },
-    "edit": { "*.env": "ask", "*": "allow" },
+    "read": { "*": "allow", "*.env": "ask" },
+    "edit": { "*": "allow", "*.env": "ask" },
     "glob": { "*": "allow" },
     "grep": { "*": "allow" },
     "list": { "*": "allow" },
-    "bash": { "git *": "allow", "npm *": "allow", "*": "ask" },
+    "bash": { "*": "ask", "git *": "allow", "npm *": "allow" },
     "task": { "*": "allow" },
     "skill": { "*": "allow" },
     "lsp": { "*": "allow" },
@@ -253,7 +307,7 @@ This is a custom example showing the available configuration options — it does
   "agent": {
     "code": {
       "permission": {
-        "bash": { "git *": "allow", "npm *": "allow", "*": "ask" }
+        "bash": { "*": "ask", "git *": "allow", "npm *": "allow" }
       }
     }
   }

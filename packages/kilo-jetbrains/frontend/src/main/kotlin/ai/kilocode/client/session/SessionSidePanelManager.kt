@@ -6,6 +6,9 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.history.HistoryController
 import ai.kilocode.client.session.history.HistoryPanel
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.UiTimer
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.application.ApplicationManager
@@ -20,17 +23,23 @@ import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.Timer
 
 class SessionSidePanelManager(
     private val project: Project,
     private val root: Workspace,
-    private val create: (Project, Workspace, SessionManager, SessionRef?) -> SessionUi = { project, workspace, manager, ref ->
-        service<SessionUiFactory>().create(project, workspace, manager, ref)
-    },
+    private val create: (Project, Workspace, SessionManager, SessionRef?, UiTimerSource) -> SessionUi =
+        { project, workspace, manager, ref, timers ->
+            service<SessionUiFactory>().create(project, workspace, manager, ref, timers)
+        },
     private val resolve: (String) -> Workspace = { dir -> service<KiloWorkspaceService>().workspace(dir) },
     private val status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activity() },
     private val history: ((Disposable, (SessionRef) -> Unit, (String) -> Unit) -> JComponent)? = null,
+    private val timers: UiTimerSource = UiTimers,
+    private val request: (JComponent) -> Unit = { focus ->
+        ApplicationManager.getApplication().invokeLater({
+            IdeFocusManager.getInstance(project).requestFocusInProject(focus, project)
+        }, ModalityState.defaultModalityState())
+    },
 ) : SessionManager, Disposable {
     val component: JPanel = object : JPanel(BorderLayout()), DataProvider {
         override fun getData(dataId: String): Any? {
@@ -42,7 +51,7 @@ class SessionSidePanelManager(
 
     private val opened = mutableMapOf<String, SessionUi>()
     private val all = mutableSetOf<SessionUi>()
-    private val timers = mutableMapOf<SessionUi, Timer>()
+    private val activeTimers = mutableMapOf<SessionUi, UiTimer>()
     private var current: SessionUi? = null
     private var latest: SessionUi? = null
     private var panel: JComponent? = null
@@ -53,7 +62,7 @@ class SessionSidePanelManager(
         val active = current
         if (active?.blank == true) return
         register(active)
-        show(create(project, root, this, null))
+        show(create(project, root, this, null, timers))
     }
 
     override fun openSession(ref: SessionRef) {
@@ -100,7 +109,7 @@ class SessionSidePanelManager(
             is SessionRef.Local -> ref.session?.directory?.let(resolve) ?: root
             is SessionRef.Cloud -> root
         }
-        return create(project, workspace, this, ref).also {
+        return create(project, workspace, this, ref, timers).also {
             all.add(it)
             opened[ref.key] = it
             val local = (ref as? SessionRef.Local)?.session?.id
@@ -116,7 +125,7 @@ class SessionSidePanelManager(
         val view = cached ?: createHistory().also { panel = it }
         if (cached != null && view is HistoryPanel) view.refresh()
         if (current == null && component.componentCount == 1 && component.getComponent(0) === view) {
-            focusHistory(view)
+            focus((view as? HistoryPanel)?.defaultFocusedComponent)
             return
         }
         current = null
@@ -124,14 +133,12 @@ class SessionSidePanelManager(
         component.add(view, BorderLayout.CENTER)
         component.revalidate()
         component.repaint()
-        focusHistory(view)
+        focus((view as? HistoryPanel)?.defaultFocusedComponent)
     }
 
-    private fun focusHistory(view: JComponent) {
-        val focus = (view as? HistoryPanel)?.defaultFocusedComponent ?: return
-        ApplicationManager.getApplication().invokeLater({
-            IdeFocusManager.getInstance(project).requestFocusInProject(focus, project)
-        }, ModalityState.defaultModalityState())
+    private fun focus(component: JComponent?) {
+        val focus = component ?: return
+        request(focus)
     }
 
     private fun createHistory(): JComponent {
@@ -147,7 +154,7 @@ class SessionSidePanelManager(
             deleted = this::removeSession,
         )
         Disposer.register(this) { cs.cancel() }
-        return HistoryPanel(this, controller, nav = this::back, manager = this).component
+        return HistoryPanel(this, controller, nav = this::back, manager = this, timers = timers).component
     }
 
     private fun back() {
@@ -177,6 +184,7 @@ class SessionSidePanelManager(
         component.add(ui, BorderLayout.CENTER)
         component.revalidate()
         component.repaint()
+        focus(ui.defaultFocusedComponent)
     }
 
     private fun register(ui: SessionUi?) {
@@ -206,24 +214,23 @@ class SessionSidePanelManager(
     private fun schedule(ui: SessionUi) {
         cancel(ui)
         val delay = Registry.intValue("kilo.session.inactive.disposeTimeoutMs").coerceAtLeast(0)
-        val timer = Timer(delay) {
-            timers.remove(ui)
-            if (ui === current || ui !in all) return@Timer
+        val timer = timers.timer(delay, repeats = false) {
+            activeTimers.remove(ui)
+            if (ui === current || ui !in all) return@timer
             disposeUi(ui)
         }
-        timer.isRepeats = false
-        timers[ui] = timer
+        activeTimers[ui] = timer
         timer.start()
     }
 
     private fun cancel(ui: SessionUi) {
-        timers.remove(ui)?.stop()
+        activeTimers.remove(ui)?.stop()
     }
 
     override fun dispose() {
         val items = all.toList()
-        timers.values.forEach { it.stop() }
-        timers.clear()
+        activeTimers.values.forEach { it.stop() }
+        activeTimers.clear()
         opened.clear()
         all.clear()
         current = null

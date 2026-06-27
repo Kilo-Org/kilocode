@@ -65,6 +65,10 @@ export namespace KiloSessionPromptQueue {
     targets.set(sessionID, { base: current.base, extras })
   }
 
+  export function active(sessionID: SessionID) {
+    return targets.get(sessionID)?.base
+  }
+
   /**
    * True when a newer prompt was enqueued after the currently running slot
    * began. runLoop calls this between LLM steps to break out so the next

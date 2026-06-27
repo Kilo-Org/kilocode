@@ -37,16 +37,18 @@ ONLY review the changes shown by the commands above. Do NOT review or flag issue
 
 ## Review Focus
 
-Review only these things:
+The following six tracks are the only permitted review topics. The Required Workflow (step 3) determines which tracks are active for a given review based on diff size — not all six are spawned for every review. Never flag issues outside these tracks, regardless of how many sub-agents are spawned.
+
+Permitted tracks:
 
 - security
 - performance
 - business logic
-- deploy safety, especially database rollout risk or unintended historical data work
-- duplicated code or duplicated logic
-- dead code caused by the reviewed changes
+- deploy safety
+- duplication
+- dead code
 
-Do not review these things:
+Always out of scope — never flag these:
 
 - code style
 - clean code
@@ -55,33 +57,45 @@ Do not review these things:
 - lint-only issues
 - generic refactors with no bug or product risk
 
-Deploy safety rules:
+Rules for the deploy safety track (apply only when this track is active):
 
 - Look for rollout risks that can become expensive or unsafe in production, especially database queries, migrations, backfills, or processors that touch historical data.
 - Challenge operations that read, mutate, or re-process records older than 2 days unless the change context makes that clearly necessary.
 - Check for missing or overly broad date filters.
 
-Duplication rules:
+Rules for the duplication track (apply only when this track is active):
 
 - Only flag duplication if it creates bug risk, drift risk, or conflicting behavior.
 - Do not flag simple cleanup ideas.
 
-Dead-code rules:
+Rules for the dead code track (apply only when this track is active):
 
 - Only flag code that the reviewed changes themselves leave unused, unreachable, or obsolete.
 - Do not flag dead code that already existed before the uncommitted diff.
+- Also flag functions or files that the reviewed changes make noticeably larger than comparable ones in the codebase; infer what is typical by sampling similar files or functions in the repo rather than applying a hard line-count threshold.
 
 ## Required Workflow
 
 1. Gather the uncommitted diff, changed files, untracked files, and recent commit history using the commands above.
 2. If there are no changes, use the no-changes output exactly as specified below.
-3. For non-trivial changes, spawn six sub-agents in parallel with the Task tool:
+3. Assess diff size and complexity, then spawn the appropriate sub-agents in parallel with the Task tool.
+
+   Count changed lines (additions + deletions) from the diff output and the number of distinct files changed. Use these thresholds:
+
+   **Small** (< 100 changed lines AND ≤ 3 files): spawn 1-2 sub-agents. Choose the 1-2 tracks most relevant to the nature of the change. Default priority order if unclear: security → business logic → deploy safety → performance → duplication → dead code.
+
+   **Medium** (100–300 changed lines OR 4–10 files): spawn 3-4 sub-agents. Always include security and business logic, then add the next most relevant tracks for the change type.
+
+   **Large or complex** (> 300 changed lines OR > 10 files OR changes span multiple architectural boundaries such as API + database + auth): spawn all six sub-agents:
    - security
    - performance
    - business logic
    - deploy safety
    - duplication
    - dead code
+
+   When the complexity signals are mixed (e.g., few files but security-sensitive code, or many files of pure test additions), adjust up or down by one tier using your judgment. Err toward fewer sub-agents for additive-only or test-only changes.
+
 4. Each sub-agent is research only. No sub-agent may edit files or produce the final user-facing review.
 5. Give each sub-agent the diff scope, current branch when available, and its track.
 6. Tell each sub-agent to return only high-confidence findings. Use this exact shape for each finding:

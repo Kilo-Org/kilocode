@@ -9,9 +9,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "透過 Kilo's Gateway 進行 BYOK",
   "provider.connect.kiloGateway.byok.suffix": "。",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "推薦",
-  "dialog.provider.kilo.note": "存取 500+ AI 模型",
+  // Provider settings translations
+  "settings.providers.group.recommended": "推薦",
+  "settings.providers.note.kilo": "存取 500+ AI 模型",
+  "settings.providers.note.opencode": "精選模型，包括 Claude、GPT、Gemini 等",
+  "settings.providers.note.anthropic": "直接存取 Claude 模型，包括 Pro 和 Max",
+  "settings.providers.note.deepseek": "用於推理和程式設計工作的 DeepSeek 模型",
+  "settings.providers.note.copilot": "用於程式設計輔助的 Claude 模型",
+  "settings.providers.note.openai": "使用 API 金鑰或 ChatGPT 登入存取 GPT 和 Codex 模型",
+  "settings.providers.note.google": "用於快速結構化回應的 Gemini 模型",
+  "settings.providers.note.openrouter": "透過單一供應商存取所有支援的模型",
+  "settings.providers.note.vercel": "透過智慧路由統一存取 AI 模型",
 
   // Reasoning block label
   "ui.permission.run": "執行",
@@ -32,6 +40,23 @@ export const dict = {
   "marketplace.install.scope": "作用域",
   "marketplace.install.scope.project": "專案",
   "marketplace.install.scope.global": "全域",
+  "marketplace.install.scope.project.description":
+    "僅限此專案。安裝的檔案可以提交至版本控制並與你的團隊分享。",
+  "marketplace.install.scope.global.description": "此電腦上的所有專案。儲存在你的使用者設定中。",
+  "marketplace.install.destination": "安裝位置",
+  "marketplace.install.about.mcp":
+    "MCP 伺服器為 Kilo 提供用於處理外部服務或本機程式的額外工具。",
+  "marketplace.install.about.agent": "智能體會新增一個具有專屬指示和權限的可重複使用角色。",
+  "marketplace.install.about.skill": "技能會新增特定任務的指示和資源，Kilo 可在需要時載入它們。",
+  "marketplace.install.mcp.warning":
+    "MCP 伺服器可以執行本機命令或連線至外部服務。除非你的權限允許自動使用，否則 Kilo 會在使用其工具前請求許可。",
+  "marketplace.install.project.warning":
+    "專案檔案可能會提交至版本控制。除非設定引用了環境變數，否則請勿在此儲存密鑰。",
+  "marketplace.install.learnMore": "瞭解 Marketplace 安裝的運作方式",
+  "marketplace.install.learnMcp": "深入瞭解 MCP",
+  "marketplace.install.installedAt": "已安裝至 {{path}}",
+  "marketplace.intro": "為一個專案或所有專案安裝可重複使用的智能體、技能和 MCP 工具。",
+  "marketplace.intro.learnMore": "關於 Marketplace",
   "marketplace.install.prerequisites": "先決條件",
   "marketplace.install.installing": "安裝中...",
   "marketplace.install.cancel": "取消",
@@ -48,7 +73,9 @@ export const dict = {
   "marketplace.search": "搜尋...",
   "marketplace.filter.all": "所有項目",
   "marketplace.filter.notInstalled": "未安裝",
+  "marketplace.filter.relevant": "與我的工作區相關",
   "marketplace.empty": "找不到項目",
+  "marketplace.empty.relevant": "找不到與此工作區相關的市集項目。",
   "marketplace.badge.mcpServer": "MCP 伺服器",
   "marketplace.badge.mode": "模式",
   "marketplace.card.by": "作者：{{author}}",

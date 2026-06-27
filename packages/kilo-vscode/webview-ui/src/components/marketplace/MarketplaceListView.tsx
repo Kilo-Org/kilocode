@@ -1,16 +1,19 @@
-import { createSignal, createMemo, For, Show } from "solid-js"
+import { createSignal, createMemo, createEffect, For, Show } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import type {
   MarketplaceItem,
   McpMarketplaceItem,
   SkillMarketplaceItem,
   MarketplaceInstalledMetadata,
+  MarketplaceRelevanceMetadata,
 } from "../../types/marketplace"
 import { useLanguage } from "../../context/language"
-import { isInstalled } from "./utils"
+import { useVSCode } from "../../context/vscode"
+import { filterItems, hasRelevantItems, retain } from "./utils"
 import { ItemCard } from "./ItemCard"
 import { MarketplaceContribute } from "./MarketplaceContribute"
 
@@ -22,19 +25,24 @@ interface StatusOption {
 interface Props {
   items: MarketplaceItem[]
   metadata: MarketplaceInstalledMetadata
+  relevance: MarketplaceRelevanceMetadata
   fetching: boolean
-  type: "mcp" | "agent" | "skill"
   searchPlaceholder: string
   emptyMessage: string
+  relevantEmptyMessage: string
+  initialRelevant?: boolean
   onInstall: (item: MarketplaceItem) => void
   onRemove: (item: MarketplaceItem, scope: "project" | "global") => void
 }
 
 export const MarketplaceListView = (props: Props) => {
   const { t } = useLanguage()
+  const vscode = useVSCode()
   const [search, setSearch] = createSignal("")
   const [status, setStatus] = createSignal<StatusOption>({ value: "all", label: t("marketplace.filter.all") })
-  const [tags, setTags] = createSignal<string[]>([])
+  const [types, setTypes] = createSignal<MarketplaceItem["type"][]>([])
+  const [categories, setCategories] = createSignal<string[]>([])
+  const [relevant, setRelevant] = createSignal(props.initialRelevant ?? false)
 
   const options = (): StatusOption[] => [
     { value: "all", label: t("marketplace.filter.all") },
@@ -42,54 +50,79 @@ export const MarketplaceListView = (props: Props) => {
     { value: "notInstalled", label: t("marketplace.filter.notInstalled") },
   ]
 
-  const tagsFor = (item: MarketplaceItem): string[] => {
-    if (item.type === "skill") return [(item as SkillMarketplaceItem).displayCategory]
-    return item.tags ?? []
+  const label = (category: string) =>
+    category
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ")
+
+  const allTypes = createMemo(() => {
+    const available = new Set(props.items.map((item) => item.type))
+    return (["agent", "mcp", "skill"] as const).filter((type) => available.has(type))
+  })
+  const allCategories = createMemo(() => Array.from(new Set(props.items.map((item) => item.category))).sort())
+
+  const typeLabel = (type: MarketplaceItem["type"]) => {
+    if (type === "mcp") return t("marketplace.badge.mcpServer")
+    if (type === "agent") return t("marketplace.remove.type.agent")
+    return t("marketplace.remove.type.skill")
   }
 
-  const allTags = createMemo(() => {
-    const counts = new Map<string, number>()
-    for (const item of props.items) {
-      for (const tag of tagsFor(item)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
-    }
-    const min = props.type === "mcp" ? 5 : 1
-    return Array.from(counts.entries())
-      .filter(([, n]) => n >= min)
-      .map(([tag]) => tag)
-      .sort()
+  createEffect(() => {
+    setTypes((current) => retain(current, allTypes()))
+    setCategories((current) => retain(current, allCategories()))
   })
 
-  const toggleTag = (tag: string) => {
-    const current = tags()
-    if (current.includes(tag)) {
-      setTags(current.filter((t) => t !== tag))
-    } else {
-      setTags([...current, tag])
+  const toggleType = (type: MarketplaceItem["type"]) => {
+    const current = types()
+    if (current.includes(type)) {
+      setTypes(current.filter((value) => value !== type))
+      return
     }
+    setTypes([...current, type])
   }
 
-  const filtered = createMemo(() => {
-    const q = search().toLowerCase()
-    const s = status().value
-    const active = tags()
-    return props.items.filter((item) => {
-      if (s === "installed" && !isInstalled(item.id, item.type, props.metadata)) return false
-      if (s === "notInstalled" && isInstalled(item.id, item.type, props.metadata)) return false
-      if (active.length > 0 && !active.some((tag) => tagsFor(item).includes(tag))) return false
-      if (!q) return true
-      const skill = item.type === "skill" ? (item as SkillMarketplaceItem) : undefined
-      return (
-        item.id.toLowerCase().includes(q) ||
-        item.name.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        (item.author?.toLowerCase().includes(q) ?? false) ||
-        (skill?.displayName.toLowerCase().includes(q) ?? false)
-      )
-    })
-  })
+  const toggleCategory = (category: string) => {
+    const current = categories()
+    if (current.includes(category)) {
+      setCategories(current.filter((value) => value !== category))
+      return
+    }
+    setCategories([...current, category])
+  }
+
+  const filtered = createMemo(() =>
+    filterItems(
+      props.items,
+      props.metadata,
+      search(),
+      status().value,
+      categories(),
+      types(),
+      {
+        agent: typeLabel("agent"),
+        mcp: typeLabel("mcp"),
+        skill: typeLabel("skill"),
+      },
+      relevant(),
+      props.relevance,
+    ),
+  )
 
   return (
     <div class="marketplace-list">
+      <div class="marketplace-intro">
+        <span>{t("marketplace.intro")}</span>
+        <button
+          type="button"
+          class="link"
+          onClick={() =>
+            vscode.postMessage({ type: "openExternal", url: "https://kilo.ai/docs/customize/marketplace" })
+          }
+        >
+          {t("marketplace.intro.learnMore")}
+        </button>
+      </div>
       <div class="marketplace-filters">
         <div class="marketplace-search-field">
           <TextField placeholder={props.searchPlaceholder} value={search()} onChange={setSearch} />
@@ -102,16 +135,38 @@ export const MarketplaceListView = (props: Props) => {
           onSelect={(v: StatusOption | undefined) => v && setStatus(v)}
         />
       </div>
-      <Show when={allTags().length > 0}>
-        <div class="marketplace-active-tags">
-          <For each={allTags()}>
-            {(tag) => (
+      <div class="marketplace-relevance-filter">
+        <Checkbox checked={relevant()} onChange={setRelevant}>
+          {t("marketplace.filter.relevant")}
+        </Checkbox>
+      </div>
+      <Show when={allTypes().length > 1}>
+        <div class="marketplace-types">
+          <For each={allTypes()}>
+            {(type) => (
               <button
-                class="marketplace-tag-filter"
-                classList={{ active: tags().includes(tag) }}
-                onClick={() => toggleTag(tag)}
+                class={`marketplace-type-filter marketplace-type-${type}`}
+                classList={{ active: types().includes(type) }}
+                aria-pressed={types().includes(type)}
+                onClick={() => toggleType(type)}
               >
-                <Tag>{tag}</Tag>
+                <Tag>{typeLabel(type)}</Tag>
+              </button>
+            )}
+          </For>
+        </div>
+      </Show>
+      <Show when={allCategories().length > 0}>
+        <div class="marketplace-categories">
+          <For each={allCategories()}>
+            {(category) => (
+              <button
+                class="marketplace-category-filter"
+                classList={{ active: categories().includes(category) }}
+                aria-pressed={categories().includes(category)}
+                onClick={() => toggleCategory(category)}
+              >
+                <Tag>{label(category)}</Tag>
               </button>
             )}
           </For>
@@ -129,7 +184,11 @@ export const MarketplaceListView = (props: Props) => {
           when={filtered().length > 0}
           fallback={
             <div class="marketplace-empty">
-              <span class="marketplace-empty-message">{props.emptyMessage}</span>
+              <span class="marketplace-empty-message">
+                {relevant() && !hasRelevantItems(props.items, props.relevance)
+                  ? props.relevantEmptyMessage
+                  : props.emptyMessage}
+              </span>
               <MarketplaceContribute />
             </div>
           }
@@ -147,7 +206,7 @@ export const MarketplaceListView = (props: Props) => {
                     linkUrl={skill?.githubUrl ?? mcp?.url}
                     onInstall={props.onInstall}
                     onRemove={props.onRemove}
-                    footer={<For each={tagsFor(item)}>{(tag) => <Tag>{tag}</Tag>}</For>}
+                    footer={<Tag>{label(item.category)}</Tag>}
                   />
                 )
               }}

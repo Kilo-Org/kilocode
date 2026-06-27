@@ -157,7 +157,7 @@ abstract class AbstractSessionPartView(
     }
 
     private fun syncArrow(): Boolean {
-        val icon = if (isExpanded()) SessionViewIcons.chevronDown else SessionViewIcons.chevronRight
+        val icon = if (isExpanded()) SessionViewIcons.chevronExpanded else SessionViewIcons.chevronCollapsed
         if (arrow.icon === icon) return false
         arrow.icon = icon
         return true

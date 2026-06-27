@@ -9,7 +9,7 @@ import {
   sanitizeCustomProviderConfig,
   withCustomProviderDeletions,
 } from "./shared/custom-provider"
-import { CUSTOM_PROVIDER_PACKAGE, KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { isCustomProviderPackage, KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "./shared/provider-model"
 import { configFeatures } from "./features"
 
 /**
@@ -17,6 +17,12 @@ import { configFeatures } from "./features"
  * Pure function — takes cachedConfig and vscode settings as parameters.
  */
 type AuthState = "api" | "oauth" | "wellknown"
+
+/** API key retained extension-side for authenticated model fetches (#10139). */
+export interface StoredProviderKey {
+  key: string
+  baseURL: string
+}
 
 function disabledWithout(list: string[] | undefined, id: string) {
   return (list ?? []).filter((item) => item !== id)
@@ -27,7 +33,7 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function customProvider(config: unknown) {
-  return record(config) && config.npm === CUSTOM_PROVIDER_PACKAGE
+  return record(config) && isCustomProviderPackage(config.npm)
 }
 
 function same(a: unknown, b: unknown): boolean {
@@ -44,7 +50,7 @@ function same(a: unknown, b: unknown): boolean {
   return akeys.every((key, index) => key === bkeys[index] && same(a[key], b[key]))
 }
 
-/** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
+/** Fetch provider availability and authentication state without exposing stored credentials. */
 export async function fetchProviderData(client: KiloClient, dir: string) {
   const authRequest =
     typeof client.provider.auth === "function"
@@ -53,23 +59,56 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
           .then((r) => r.data ?? {})
           .catch(() => ({}))
       : Promise.resolve({})
+  const kiloRequest = client.kilo
+    .authStatus({ directory: dir }, { throwOnError: true })
+    .then((r) => (r.data?.authenticated ? (r.data.type ?? null) : null))
+    .catch(() => null)
 
-  const [{ data: response }, authMethods] = await Promise.all([
+  const [{ data: response }, authMethods, kiloAuth] = await Promise.all([
     client.provider.list({ directory: dir }, { throwOnError: true }),
     authRequest,
+    kiloRequest,
   ])
   const authStates: Record<string, AuthState> = {}
+  const storedKeys: Record<string, StoredProviderKey> = {}
   const all = response.all.map((item) => {
     const raw = item as Record<string, unknown>
     if (typeof raw.id === "string" && typeof raw.key === "string" && raw.key) {
       authStates[raw.id] = "api"
+      // Retain the key on the extension side so model fetches for an existing
+      // provider can authenticate without the webview ever seeing the secret
+      // (#10139). Only providers with a configured baseURL are retained — the
+      // fetch handler requires a URL match before applying a stored key.
+      const options = record(raw.options) ? raw.options : undefined
+      const baseURL = options && typeof options.baseURL === "string" ? options.baseURL : undefined
+      if (baseURL) storedKeys[raw.id] = { key: raw.key, baseURL }
     }
     if (!("key" in raw)) return item
     const next = { ...raw }
     delete next.key
     return next as (typeof response.all)[number]
   })
-  return { response: { ...response, all }, authMethods, authStates }
+  delete authStates[KILO_PROVIDER_ID]
+  if (kiloAuth) authStates[KILO_PROVIDER_ID] = kiloAuth
+  return { response: { ...response, all }, authMethods, authStates, storedKeys }
+}
+
+/**
+ * Resolve the stored API key for a model fetch on an existing provider.
+ * The key is only applied when the requested URL matches the provider's
+ * configured baseURL, so a stored secret can never be redirected to a
+ * different host (e.g. after the user edits the URL field).
+ */
+export function resolveStoredKey(
+  storedKeys: Record<string, StoredProviderKey>,
+  providerID: unknown,
+  url: string,
+): string | undefined {
+  if (typeof providerID !== "string" || !providerID) return undefined
+  const stored = storedKeys[providerID]
+  if (!stored) return undefined
+  const normalize = (value: string) => value.trim().replace(/\/+$/, "")
+  return normalize(stored.baseURL) === normalize(url) ? stored.key : undefined
 }
 
 export function buildActionContext(

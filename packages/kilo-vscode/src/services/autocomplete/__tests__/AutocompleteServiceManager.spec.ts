@@ -84,10 +84,6 @@ vi.mock("../classic-auto-complete/AutocompleteInlineCompletionProvider", () => {
     public setModel(id: string) {
       this.modelId = id
     }
-    public getModelId(): string {
-      return this.modelId
-    }
-
     constructor(..._args: any[]) {}
   }
   return { AutocompleteInlineCompletionProvider }
@@ -255,10 +251,39 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
       await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenCalledWith(
-        { scheme: "file" },
+        [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }],
         manager.inlineCompletionProvider,
       )
       expect((manager as any).inlineCompletionProviderDisposable).toBe(disposable)
+    })
+
+    it("registers classic notebook fallback when Next Edit is selected", async () => {
+      const manager = await createManager()
+
+      const primary = { dispose: vi.fn() }
+      const notebook = { dispose: vi.fn() }
+      vi.mocked(vscode.languages.registerInlineCompletionItemProvider)
+        .mockReturnValueOnce(primary as any)
+        .mockReturnValueOnce(notebook as any)
+      ;(manager as any).settings = {
+        enableAutoTrigger: true,
+        provider: "kilo",
+        model: "inception/mercury-next-edit",
+      }
+
+      await (manager as any).ensureInlineCompletionProviderRegistration()
+
+      expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenNthCalledWith(
+        1,
+        [{ scheme: "file" }],
+        manager.nextEditProvider,
+      )
+      expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenNthCalledWith(
+        2,
+        [{ scheme: "vscode-notebook-cell" }],
+        manager.inlineCompletionProvider,
+      )
+      expect((manager as any).notebookCompletionProviderDisposable).toBe(notebook)
     })
 
     it("does not register the provider when snoozed", async () => {
@@ -316,22 +341,6 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
       ;(manager as any).settings = { snoozeUntil: Date.now() + 60_000 }
 
       expect(manager.isSnoozed()).toBe(true)
-    })
-
-    it("getSnoozeRemainingSeconds() returns 0 when not snoozed", async () => {
-      const manager = await createManager()
-      ;(manager as any).settings = {}
-
-      expect(manager.getSnoozeRemainingSeconds()).toBe(0)
-    })
-
-    it("getSnoozeRemainingSeconds() returns a positive number when snoozed", async () => {
-      const manager = await createManager()
-      ;(manager as any).settings = { snoozeUntil: Date.now() + 30_000 }
-
-      const remaining = manager.getSnoozeRemainingSeconds()
-      expect(remaining).toBeGreaterThan(0)
-      expect(remaining).toBeLessThanOrEqual(30)
     })
   })
 })

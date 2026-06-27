@@ -3,8 +3,8 @@ import { Effect, Layer, ManagedRuntime } from "effect"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
 import { PlanFile } from "../../src/kilocode/plan-file"
-import { Instance } from "../../src/project/instance"
-import { WithInstance } from "../../src/project/with-instance"
+import { Instance } from "../../src/kilocode/instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Session } from "../../src/session/session"
 import { MessageID } from "../../src/session/schema"
 import { PlanExitTool } from "../../src/tool/plan"
@@ -26,7 +26,7 @@ async function init() {
 describe("PlanFile", () => {
   test("plan_exit accepts custom paths from plan agent", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await rt.runPromise(Session.Service.use((svc) => svc.create({})))
@@ -54,7 +54,7 @@ describe("PlanFile", () => {
 
   test("rejects custom plan paths outside the worktree", async () => {
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         expect(PlanFile.resolve("../../etc/shadow", Instance.current)).toBeUndefined()

@@ -51,6 +51,20 @@ export const SettingsPanel: Story = {
   ),
 }
 
+export const SandboxingPanel: Story = {
+  name: "Settings — sandboxing network restriction",
+  render: () => (
+    <StoryProviders
+      config={{ experimental: { sandbox: true, sandbox_restrict_network: true } }}
+      features={{ sandboxControls: true }}
+    >
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (
@@ -77,6 +91,17 @@ export const ModelsAccessibleLabels: Story = {
   name: "ModelsTab — accessible model labels",
   render: () => (
     <StoryProviders config={{} as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <ModelsTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const ModelsSpeechToText: Story = {
+  name: "ModelsTab — speech-to-text model",
+  render: () => (
+    <StoryProviders kiloAuth config={{ experimental: { speech_to_text_model: "google/chirp-3" } } as any}>
       <div style={{ "max-height": "700px", overflow: "auto" }}>
         <ModelsTab />
       </div>

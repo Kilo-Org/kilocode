@@ -10,10 +10,12 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -79,6 +81,7 @@ class KiloBackendChatManager(
     private var client: OkHttpClient? = null
     private var base: String? = null
     private var watcher: Job? = null
+    private var normalizer = KiloCliDataParser.ChatEventNormalizer()
 
     fun start(http: OkHttpClient, port: Int, sse: SharedFlow<SseEvent>) {
         client = http
@@ -87,18 +90,36 @@ class KiloBackendChatManager(
         watcher = cs.launch {
             sse.collect { event ->
                 if (event.type in CHAT_EVENTS) {
-                    val parsed = KiloCliDataParser.parseChatEvent(event.type, event.data)
-                    if (parsed != null) {
-                        log.debug { ChatLogSummary.event(parsed) }
-                        if (parsed is ChatEventDto.SessionStatusChanged && parsed.status.type != "busy") {
-                            log.info(
-                                "${ChatLogSummary.sid(parsed.sessionID)} kind=status route=chat-events emit=true " +
-                                    "${ChatLogSummary.status(parsed.status)} bytes=${event.data.length}",
-                            )
+                    val events = try {
+                        normalizer.parse(event.type, event.data)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn(
+                            "route=chat-events parse=false type=${event.type} bytes=${event.data.length} ${ChatLogSummary.body(event.data)}",
+                            e,
+                        )
+                        return@collect
+                    }
+                    if (events != null) {
+                        for (parsed in events) {
+                            log.debug { ChatLogSummary.event(parsed) }
+                            ChatLogSummary.error(parsed)?.let { error ->
+                                log.warn(
+                                    "route=chat-events emit=true raw=${event.type} bytes=${event.data.length} " +
+                                        "subscribers=${_events.subscriptionCount.value} $error",
+                                )
+                            }
+                            if (parsed is ChatEventDto.SessionStatusChanged && parsed.status.type != "busy") {
+                                log.info(
+                                    "${ChatLogSummary.sid(parsed.sessionID)} kind=status route=chat-events emit=true " +
+                                        "${ChatLogSummary.status(parsed.status)} bytes=${event.data.length}",
+                                )
+                            }
+                            _events.emit(parsed)
                         }
-                        _events.emit(parsed)
                     } else {
-                        log.warn("SSE parse returned null for type=${event.type} bytes=${event.data.length}")
+                        log.warn("route=chat-events parse=null type=${event.type} bytes=${event.data.length} ${ChatLogSummary.body(event.data)}")
                     }
                 }
             }
@@ -111,6 +132,7 @@ class KiloBackendChatManager(
         watcher = null
         client = null
         base = null
+        normalizer = KiloCliDataParser.ChatEventNormalizer()
         log.info("Chat manager stopped")
     }
 
@@ -163,8 +185,10 @@ class KiloBackendChatManager(
                     val raw = response.body?.string()
                     log.warn("prompt_async failed: HTTP $code")
                     raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=prompt op=prompt_async error=${ChatLogSummary.body(it)}" } }
-                    throw RuntimeException("prompt_async failed: HTTP $code")
+                    val detail = raw?.takeIf { it.isNotBlank() }?.let { ": ${ChatLogSummary.body(it)}" }.orEmpty()
+                    throw RuntimeException("prompt_async failed: HTTP $code$detail")
                 }
+                log.info("${ChatLogSummary.sid(id)} kind=prompt op=prompt_async accepted=true code=$code ${ChatLogSummary.prompt(prompt)}")
                 log.debug { "${ChatLogSummary.sid(id)} kind=prompt op=prompt_async ok=true code=$code" }
             }
         } catch (e: RuntimeException) {
@@ -173,6 +197,12 @@ class KiloBackendChatManager(
             log.warn("${ChatLogSummary.sid(id)} kind=prompt op=prompt_async dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             throw RuntimeException("prompt_async HTTP call failed: ${e.message}", e)
         }
+    }
+
+    fun command(id: String, dir: String, command: String, args: String, prompt: PromptDto) {
+        log.info("${ChatLogSummary.sid(id)} kind=command command=$command args=${args.length} parts=${prompt.parts.size}")
+        val body = KiloCliDataParser.buildCommandJson(command, args, prompt)
+        post("/session/$id/command?directory=${encode(dir)}", body, "command", "${ChatLogSummary.sid(id)} kind=command command=$command")
     }
 
     // ------ abort ------
@@ -249,6 +279,17 @@ class KiloBackendChatManager(
             log.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(parsed)} op=messages ok=true code=${response.code}" }
             parsed
         }
+    }
+
+    fun attachmentPart(id: String, dir: String, message: String, part: String, key: String?): PartDto? {
+        return messages(id, dir)
+            .firstOrNull { it.info.id == message }
+            ?.parts
+            ?.firstOrNull {
+                if (it.type != "file") return@firstOrNull false
+                if (!key.isNullOrBlank()) attachmentKey(it.id, it.filename.orEmpty(), it.url.orEmpty()) == key
+                else it.id == part
+            }
     }
 
     // ------ config update ------
@@ -370,4 +411,10 @@ class KiloBackendChatManager(
 
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, "UTF-8")
+
+    private fun attachmentKey(part: String, name: String, url: String): String {
+        val value = listOf(part, name, url).joinToString("\u0000")
+        val bytes = java.security.MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+        return bytes.take(16).joinToString("") { "%02x".format(it) }
+    }
 }

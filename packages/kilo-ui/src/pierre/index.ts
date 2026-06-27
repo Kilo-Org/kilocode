@@ -10,6 +10,10 @@ import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/u
 
 export { styleVariables }
 
+// Character matching fragments inserted identifiers when they share letters with
+// existing symbols. Word-alt keeps those logical additions visually intact.
+export const LINE_DIFF_TYPE = "word-alt" as const
+
 // Pierre 1.1 treats its changed-line override properties as tint targets. Apply
 // Kilo semantic surfaces at the computed row level so host diff colors stay final.
 const css = `
@@ -35,6 +39,7 @@ export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) 
   const opts = defaults<T>(style)
   return {
     ...opts,
+    lineDiffType: LINE_DIFF_TYPE,
     unsafeCSS: `${opts.unsafeCSS}\n${css}`,
   }
 }

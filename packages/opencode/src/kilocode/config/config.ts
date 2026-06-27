@@ -181,8 +181,9 @@ export namespace KilocodeConfig {
     const err = new ConfigError.InvalidError({ path: item, issues }, { cause })
     if (warnings) warnings.push({ path: item, message, detail: text || undefined })
     try {
-      const { Session } = await import("@/session/session")
-      Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+      const [{ Session }, { capture }] = await Promise.all([import("@/session/session"), import("@/kilocode/instance")])
+      const ctx = capture()
+      if (ctx) Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
     } catch (e) {
       log.warn("could not publish session error", { message, err: e })
     }
@@ -352,7 +353,7 @@ export namespace KilocodeConfig {
         .catch(() => "")
       const data = parseJsonc(text) ?? {}
       configs.push({ file, data })
-      if (isRecord(data.permission) && data.permission.bash) return
+      if (typeof data.permission === "string" || (isRecord(data.permission) && data.permission.bash)) return
     }
 
     // A schema-only file is generated for editor completion. It does not mean

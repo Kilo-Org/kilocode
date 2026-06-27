@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/text-field"
+export * from "@opencode-ai/ui/text-field"

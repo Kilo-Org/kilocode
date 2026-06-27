@@ -191,7 +191,7 @@ The `permission` field controls what tools the subagent can use. Each tool permi
 }
 ```
 
-For bash commands, you can use glob patterns to set permissions per command. Rules are evaluated in order, with the **last matching rule winning**.
+For bash commands, you can use glob patterns to set permissions per command. Rules are evaluated in order, with the **last matching rule winning**. See [Agent Permissions](/docs/customize/agent-permissions) for rule precedence, shell command patterns, path matching, and sensitive-file behavior.
 
 You can also control which subagents an agent can invoke via `permission.task`:
 

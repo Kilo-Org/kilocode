@@ -109,25 +109,25 @@ module.exports = [
   },
   {
     source: "/docs/features/slash-commands",
-    destination: "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/customize/workflows.md",
+    destination: "/docs/customize/workflows",
     basePath: false,
     permanent: true,
   },
   {
     source: "/docs/features/slash-commands/workflows",
-    destination: "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/customize/workflows.md",
+    destination: "/docs/customize/workflows",
     basePath: false,
     permanent: true,
   },
   {
     source: "/docs/features/custom-instructions",
-    destination: "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/customize/custom-instructions.md",
+    destination: "/docs/customize/custom-instructions",
     basePath: false,
     permanent: true,
   },
   {
     source: "/docs/advanced-usage/custom-instructions",
-    destination: "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/customize/custom-instructions.md",
+    destination: "/docs/customize/custom-instructions",
     basePath: false,
     permanent: true,
   },
@@ -139,7 +139,7 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/custom-rules",
-    destination: "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/customize/custom-rules.md",
+    destination: "/docs/customize/custom-rules",
     basePath: false,
     permanent: true,
   },
@@ -260,6 +260,12 @@ module.exports = [
   {
     source: "/docs/automate/tools/write-to-file",
     destination: "https://github.com/Kilo-Org/kilocode-legacy/blob/main/docs/legacy-ides/automate/tools/write-to-file.md",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/kiloclaw/tools",
+    destination: "/docs/kiloclaw/development-tools",
     basePath: false,
     permanent: true,
   },
@@ -871,7 +877,13 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/managed-indexing",
-    destination: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/customize/context/codebase-indexing",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/customize/context/codebase-indexing",
     basePath: false,
     permanent: true,
   },

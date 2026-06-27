@@ -100,6 +100,11 @@ describe("previous-docs-redirects", () => {
       ["/docs/providers/:path*", "/docs/ai-providers/:path*"],
       ["/docs/providers/openai-codex", "/docs/ai-providers/openai-chatgpt-plus-pro"],
       ["/docs/basic-usage/using-modes", "/docs/code-with-ai/agents/using-agents"],
+      ["/docs/features/slash-commands", "/docs/customize/workflows"],
+      ["/docs/features/slash-commands/workflows", "/docs/customize/workflows"],
+      ["/docs/features/custom-instructions", "/docs/customize/custom-instructions"],
+      ["/docs/advanced-usage/custom-instructions", "/docs/customize/custom-instructions"],
+      ["/docs/advanced-usage/custom-rules", "/docs/customize/custom-rules"],
       ["/docs/features/skills", "/docs/customize/skills"],
       ["/docs/features/shell-integration", "/docs/automate/extending/shell-integration"],
     ])

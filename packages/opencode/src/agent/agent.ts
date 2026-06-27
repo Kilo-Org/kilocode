@@ -1,4 +1,5 @@
 import { Config } from "@/config/config"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
@@ -25,6 +26,7 @@ import { type DeepMutable } from "@opencode-ai/core/schema"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Reference } from "@/reference/reference" // kilocode_change
+import { ConfigReference } from "@/config/reference" // kilocode_change
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -71,13 +73,15 @@ export interface Interface {
       whenToUse: string
       systemPrompt: string
     },
-    Provider.ModelNotFoundError
+    Provider.DefaultModelError
   >
 }
 
 type State = Omit<Interface, "generate"> & { version: string } // kilocode_change
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Agent") {}
+
+export const use = serviceUse(Service)
 
 export const layer = Layer.effect(
   Service,
@@ -365,7 +369,7 @@ export const layer = Layer.effect(
 
         if (flags.experimentalScout) {
           const resolvedReferences = Reference.resolveAll({
-            references: cfg.reference ?? {},
+            references: ConfigReference.normalize(cfg.reference ?? {}), // kilocode_change
             directory: ctx.directory,
             worktree: ctx.worktree,
           })
@@ -412,6 +416,8 @@ export const layer = Layer.effect(
             Permission.fromConfig({ external_directory: { [Truncate.GLOB]: "allow" } }),
           )
         }
+
+        KiloAgent.hardenSystemAgents(agents) // kilocode_change - keep system utility agents deny-only after config merges
 
         const get = Effect.fnUntraced(function* (agent: string) {
           return agents[KiloAgent.resolveKey(agent)] // kilocode_change - treat "build" as "code"

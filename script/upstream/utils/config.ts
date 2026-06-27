@@ -122,8 +122,11 @@ export const defaultConfig: MergeConfig = {
     ".github/workflows/docs-update.yml",
     ".github/workflows/docs-locale-sync.yml",
     // Workflows deleted in Kilo (replaced or no longer needed)
+    ".github/workflows/close-prs.yml",
     ".github/workflows/opencode.yml",
     ".github/workflows/publish-vscode.yml",
+    // Upstream PR cleanup is replaced by .github/workflows/kilo-auto-close.yml
+    "script/github/close-prs.ts",
     // VS Code example configs (Kilo ships real .vscode/* files)
     ".vscode/launch.example.json",
     ".vscode/settings.example.json",
@@ -156,6 +159,8 @@ export const defaultConfig: MergeConfig = {
     "packages/app/**",
     "packages/desktop/**",
     "packages/desktop-electron/**",
+    "packages/cli/**",
+    "packages/stats/**",
     "sdks/vscode/**",
     // GitHub Action - Kilo version is fully ported and complete
     "github/index.ts",

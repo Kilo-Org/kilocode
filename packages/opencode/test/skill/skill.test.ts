@@ -5,6 +5,7 @@ import { Discovery } from "../../src/skill/discovery"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { Git } from "../../src/git" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Global } from "@opencode-ai/core/global"
@@ -15,18 +16,20 @@ import fs from "fs/promises"
 
 const node = CrossSpawnSpawner.defaultLayer
 
-const skills = (disableClaudeCodeSkills: boolean) =>
+const skills = (disableExternalSkills: boolean, disableClaudeCodeSkills: boolean) =>
   Skill.layer.pipe(
+    Layer.provide(Git.defaultLayer), // kilocode_change
     Layer.provide(Discovery.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Bus.layer),
     Layer.provide(AppFileSystem.defaultLayer),
     Layer.provide(Global.layer),
-    Layer.provide(RuntimeFlags.layer({ disableClaudeCodeSkills })),
+    Layer.provide(RuntimeFlags.layer({ disableExternalSkills, disableClaudeCodeSkills })),
   )
 
-const it = testEffect(Layer.mergeAll(skills(false), node))
-const itWithoutClaudeCodeSkills = testEffect(Layer.mergeAll(skills(true), node))
+const it = testEffect(Layer.mergeAll(skills(false, false), node))
+const itWithoutExternalSkills = testEffect(Layer.mergeAll(skills(true, false), node))
+const itWithoutClaudeCodeSkills = testEffect(Layer.mergeAll(skills(false, true), node)) // kilocode_change
 
 async function createGlobalSkill(homeDir: string) {
   const skillDir = path.join(homeDir, ".claude", "skills", "global-test-skill")
@@ -281,6 +284,37 @@ description: A skill in the .claude/skills directory.
     ),
   )
 
+  it.live("fails with typed error when requiring a missing skill", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const skill = yield* Skill.Service
+          const error = yield* Effect.flip(skill.require("missing-skill"))
+          expect(error).toBeInstanceOf(Skill.NotFoundError)
+          expect(error._tag).toBe("Skill.NotFoundError")
+          expect(error.name).toBe("missing-skill")
+          expect(error.message).toContain('Skill "missing-skill" not found.')
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("exposes tagged expected skill failure classes", () =>
+    Effect.sync(() => {
+      const invalid = new Skill.InvalidError({ path: "/tmp/SKILL.md", message: "Invalid skill frontmatter" })
+      const mismatch = new Skill.NameMismatchError({
+        path: "/tmp/SKILL.md",
+        expected: "expected-skill",
+        actual: "actual-skill",
+      })
+
+      expect(invalid).toBeInstanceOf(Skill.InvalidError)
+      expect(invalid._tag).toBe("SkillInvalidError")
+      expect(mismatch).toBeInstanceOf(Skill.NameMismatchError)
+      expect(mismatch._tag).toBe("SkillNameMismatchError")
+    }),
+  )
+
   it.live("discovers skills from .agents/skills/ directory", () =>
     provideTmpdirInstance(
       (dir) =>
@@ -420,6 +454,53 @@ description: A skill in the .agents/skills directory.
           const skill = yield* Skill.Service
           const list = discovered(yield* skill.all()) // kilocode_change
           expect(list.map((s) => s.name)).toEqual(["agent-skill"])
+        }),
+      { git: true },
+    ),
+  )
+
+  itWithoutExternalSkills.live("skips external skill directories when disabled", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(() =>
+            Promise.all([
+              Bun.write(
+                path.join(dir, ".claude", "skills", "claude-skill", "SKILL.md"),
+                `---
+name: claude-skill
+description: A skill in the .claude/skills directory.
+---
+
+# Claude Skill
+`,
+              ),
+              Bun.write(
+                path.join(dir, ".agents", "skills", "agent-skill", "SKILL.md"),
+                `---
+name: agent-skill
+description: A skill in the .agents/skills directory.
+---
+
+# Agent Skill
+`,
+              ),
+              Bun.write(
+                path.join(dir, ".opencode", "skill", "opencode-skill", "SKILL.md"),
+                `---
+name: opencode-skill
+description: A skill in the .opencode/skill directory.
+---
+
+# OpenCode Skill
+`,
+              ),
+            ]),
+          )
+
+          const skill = yield* Skill.Service
+          const list = discovered(yield* skill.all()) // kilocode_change
+          expect(list.map((s) => s.name)).toEqual(["opencode-skill"])
         }),
       { git: true },
     ),

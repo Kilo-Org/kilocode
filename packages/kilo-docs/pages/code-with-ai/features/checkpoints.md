@@ -182,7 +182,7 @@ When using the Agent Manager with git worktrees, each worktree gets its own isol
 
 ## Git Installation
 
-Checkpoints require Git to be installed on your system.
+Checkpoints require Git to be installed on your system. If Git is unavailable or the workspace is not a Git repository, Kilo skips checkpoints automatically; you do not need to disable them manually.
 
 ### macOS
 

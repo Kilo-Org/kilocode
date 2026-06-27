@@ -12,11 +12,13 @@ import { KilocodeDefaultPlugins } from "../../../src/kilocode/config/default-plu
 import { INDEXING_PLUGIN } from "../../../src/kilocode/indexing-feature"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../../src/env"
+import { Git } from "../../../src/git"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Filesystem } from "../../../src/util/filesystem"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { Npm } from "@opencode-ai/core/npm"
+import { HttpClient } from "effect/unstable/http"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
@@ -34,7 +36,11 @@ const noopNpm = Layer.mock(Npm.Service)({
   add: () => Effect.die("not implemented"),
   which: () => Effect.succeed(Option.none()),
 })
+const unexpectedHttp = HttpClient.make((request) =>
+  Effect.die(`unexpected http request: ${request.method} ${request.url}`),
+)
 const layer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),
@@ -42,6 +48,7 @@ const layer = Config.layer.pipe(
   Layer.provide(emptyAccount),
   Layer.provideMerge(infra),
   Layer.provide(noopNpm),
+  Layer.provide(Layer.succeed(HttpClient.HttpClient, unexpectedHttp)),
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
@@ -78,20 +85,20 @@ describe("kilocode default indexing plugin", () => {
 
     try {
       await using tmp = await tmpdir({
-      init: async (dir) => {
-        await Filesystem.write(
-          path.join(dir, "opencode.json"),
-          JSON.stringify({
-            $schema: "https://app.kilo.ai/config.json",
-            plugin: ["global-plugin-1"],
-          }),
-        )
-      },
-    })
+        init: async (dir) => {
+          await Filesystem.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://app.kilo.ai/config.json",
+              plugin: ["global-plugin-1"],
+            }),
+          )
+        },
+      })
 
-    await WithInstance.provide({
-      directory: tmp.path,
-      fn: async () => {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
           const config = await load()
           expect(hasIndexingPlugin(config.plugin ?? [])).toBe(false)
         },

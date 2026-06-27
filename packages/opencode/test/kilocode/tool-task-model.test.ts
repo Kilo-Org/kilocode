@@ -11,7 +11,7 @@ import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/kilocode/instance"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
@@ -153,7 +153,6 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void;
     cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     prompt,
-    loop: (input) => prompt({ sessionID: input.sessionID, parts: [] }),
   }
 }
 

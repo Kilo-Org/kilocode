@@ -17,6 +17,7 @@ type Schema = {
   items?: Schema
   properties?: Record<string, Schema>
   type?: string
+  enum?: string[]
   minLength?: number
   maxLength?: number
   pattern?: string
@@ -163,7 +164,14 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
     const profile = response(KiloGatewayPaths.profile)?.properties
     expect(profile?.balance).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
+    expect(profile?.kiloPass).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
     expect(profile?.currentOrgId).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
+
+    const auth = response(KiloGatewayPaths.authStatus)?.properties
+    expect(auth).toEqual({
+      authenticated: { type: "boolean" },
+      type: { type: "string", enum: ["api", "oauth"] },
+    })
 
     const sessions = response(KiloGatewayPaths.cloudSessions)?.properties
     expect(sessions?.cliSessions?.items?.properties?.title).toEqual({

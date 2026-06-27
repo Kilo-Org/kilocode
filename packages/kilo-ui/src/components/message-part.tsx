@@ -348,7 +348,7 @@ function renderable(part: PartType, showReasoningSummaries = true) {
 function toolDefaultOpen(tool: string, shell = false, edit = false) {
   if (tool === "bash") return shell
   if (tool === "edit" || tool === "write") return edit
-  if (tool === "apply_patch") return false
+  if (tool === "apply_patch") return edit
 }
 
 function partDefaultOpen(part: PartType, shell = false, edit = false) {
@@ -770,7 +770,7 @@ export function UserMessageDisplay(props: {
     const providerID = props.message.model?.providerID
     const modelID = props.message.model?.modelID
     if (!providerID || !modelID) return ""
-    const match = data.store.provider?.all?.find((p) => p.id === providerID)
+    const match = data.store.provider?.all?.get(providerID)
     return match?.models?.[modelID]?.name ?? modelID
   })
 
@@ -1591,8 +1591,10 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-              <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+            <div data-slot="reasoning-details">
+              <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
+                <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+              </div>
             </div>
           </Collapsible.Content>
         </Collapsible>
@@ -1852,7 +1854,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -1883,7 +1885,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -1917,7 +1919,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -2162,34 +2164,36 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
   return (
     <div data-component="bash-output">
       <Show when={props.cmd}>
-        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.command")}</div>
-        <div data-slot="bash-section">
-          <div data-slot="bash-section-code" ref={cmdRef} />
-          <div data-slot="bash-section-actions">
-            <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+        <div data-slot="bash-terminal" data-kind="command">
+          <div data-slot="bash-section" data-kind="command">
+            <span data-slot="bash-prompt" aria-hidden="true">
+              $
+            </span>
+            <div data-slot="bash-section-code" data-scrollable ref={cmdRef} />
+            <div data-slot="bash-section-actions">
+              <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+            </div>
           </div>
         </div>
       </Show>
-      <Show when={props.cmd && props.output}>
-        <div data-slot="bash-divider" />
-      </Show>
       <Show when={props.output}>
-        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.output")}</div>
-        <div data-slot="bash-section">
-          <div data-slot="bash-section-code" data-scrollable ref={outRef} />
-          <div data-slot="bash-section-actions">
-            <Show when={data.openContent || (props.outputPath && data.openFile)}>
-              <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
-                <IconButton
-                  icon="square-arrow-top-right"
-                  size="small"
-                  variant="ghost"
-                  onClick={openInEditor}
-                  aria-label={i18n.t("ui.messagePart.openInEditor")}
-                />
-              </Tooltip>
-            </Show>
-            <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+        <div data-slot="bash-terminal" data-kind="output">
+          <div data-slot="bash-section" data-kind="output">
+            <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+            <div data-slot="bash-section-actions">
+              <Show when={data.openContent || (props.outputPath && data.openFile)}>
+                <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
+                  <IconButton
+                    icon="square-arrow-top-right"
+                    size="small"
+                    variant="ghost"
+                    onClick={openInEditor}
+                    aria-label={i18n.t("ui.messagePart.openInEditor")}
+                  />
+                </Tooltip>
+              </Show>
+              <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+            </div>
           </div>
         </div>
       </Show>
@@ -2229,7 +2233,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="console"
-        animated
         hasDetails
         defaultOpen={props.defaultOpen ?? true}
         onOpenChange={setOpen}

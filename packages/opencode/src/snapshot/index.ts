@@ -1,4 +1,5 @@
-import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Struct, Context } from "effect" // kilocode_change
+import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } from "effect"
+import { Struct } from "effect" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
@@ -184,7 +185,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             files: string[],
             opts?: { env?: Record<string, string>; root?: boolean },
           ) {
-          // kilocode_change end
+            // kilocode_change end
             if (!files.length) return
             // kilocode_change start
             // A new root snapshot covers the full worktree, so a single pathspec avoids
@@ -244,7 +245,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             yield* fs.writeFileString(target, text ? `${text}\n` : "").pipe(Effect.orDie)
           })
 
-          const add = Effect.fnUntraced(function* (opts?: { env?: Record<string, string>; root?: boolean }) { // kilocode_change
+          // kilocode_change start
+          const add = Effect.fnUntraced(function* (opts?: { env?: Record<string, string>; root?: boolean }) {
+            // kilocode_change end
             yield* sync()
             const [diff, other] = yield* Effect.all(
               [
@@ -347,7 +350,9 @@ export const layer: Layer.Layer<Service, never, Requirements> =
             )
           })
 
-          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) { // kilocode_change
+          // kilocode_change start
+          const track = Effect.fnUntraced(function* (opts?: Parameters<Interface["track"]>[0]) {
+            // kilocode_change end
             return yield* locked(
               Effect.gen(function* () {
                 if (!(yield* enabled())) return
@@ -420,7 +425,12 @@ export const layer: Layer.Layer<Service, never, Requirements> =
               Effect.gen(function* () {
                 yield* add()
                 const result = yield* git(
-                  [...quote, ...args(["diff", "--cached", "--no-ext-diff", "--name-only", hash, "--", "."])],
+                  // kilocode_change start
+                  [
+                    ...quote,
+                    ...args(["diff", "--cached", "--no-ext-diff", "--no-renames", "--name-only", hash, "--", "."]),
+                  ],
+                  // kilocode_change end
                   {
                     cwd: state.directory,
                   },
@@ -863,7 +873,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
       )
 
       // kilocode_change start - service-local state and cache avoid leaking across Snapshot layer instances
-      const trackState = KiloSnapshotTrack.makeState()
+      const trackState = KiloSnapshotTrack.makeStates()
       const cache = new Map<string, Promise<FileDiff[]>>()
       const max = 100
       // kilocode_change end
@@ -875,20 +885,34 @@ export const layer: Layer.Layer<Service, never, Requirements> =
         cleanup: Effect.fn("Snapshot.cleanup")(function* () {
           return yield* InstanceState.useEffect(state, (s) => s.cleanup())
         }),
-        // kilocode_change start - guard slow snapshots and surface progress to the active session
+        // kilocode_change start - isolate turn-facing snapshot work from poisoned locks
         track: Effect.fn("Snapshot.track")(function* (opts) {
-          return yield* KiloSnapshotTrack.wrap({
-            inner: InstanceState.useEffect(state, (s) => s.track(opts)),
-            state: trackState,
-            snapshotInitialization: opts?.snapshotInitialization,
-            sessionID: opts?.sessionID,
-            messageID: opts?.messageID,
+          const ctx = yield* InstanceState.context
+          const guard = trackState(ctx.worktree)
+          return yield* KiloSnapshotTrack.protect({
+            inner: KiloSnapshotTrack.wrap({
+              inner: InstanceState.useEffect(state, (s) => s.track(opts)),
+              state: guard,
+              snapshotInitialization: opts?.snapshotInitialization,
+              sessionID: opts?.sessionID,
+              messageID: opts?.messageID,
+            }),
+            state: guard,
+            fallback: undefined,
+            operation: "track",
+          })
+        }),
+        patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
+          const ctx = yield* InstanceState.context
+          const guard = trackState(ctx.worktree)
+          return yield* KiloSnapshotTrack.protect({
+            inner: InstanceState.useEffect(state, (s) => s.patch(hash)),
+            state: guard,
+            fallback: { hash, files: [] },
+            operation: "patch",
           })
         }),
         // kilocode_change end
-        patch: Effect.fn("Snapshot.patch")(function* (hash: string) {
-          return yield* InstanceState.useEffect(state, (s) => s.patch(hash))
-        }),
         restore: Effect.fn("Snapshot.restore")(function* (snapshot: string) {
           return yield* InstanceState.useEffect(state, (s) => s.restore(snapshot))
         }),

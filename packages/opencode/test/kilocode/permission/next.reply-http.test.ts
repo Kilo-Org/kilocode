@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { tmpdir } from "../../fixture/fixture"
 
 async function app() {
@@ -11,7 +11,7 @@ describe("POST /permission/:requestID/reply", () => {
   test("returns 404 when requestID is not pending", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const server = await app()
@@ -23,9 +23,12 @@ describe("POST /permission/:requestID/reply", () => {
         })
 
         expect(response.status).toBe(404)
-        const body = (await response.json()) as { name: string; data: { message: string } }
-        expect(body.name).toBe("NotFoundError")
-        expect(body.data.message).toMatch(/permission_missing/)
+        const body = (await response.json()) as { _tag: string; requestID: string; message: string }
+        expect(body).toEqual({
+          _tag: "PermissionNotFoundError",
+          requestID: "permission_missing",
+          message: "Permission request not found: permission_missing",
+        })
       },
     })
   })
@@ -35,7 +38,7 @@ describe("POST /permission/:requestID/always-rules", () => {
   test("returns 404 when requestID is not pending", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const server = await app()
@@ -47,8 +50,12 @@ describe("POST /permission/:requestID/always-rules", () => {
         })
 
         expect(response.status).toBe(404)
-        const body = (await response.json()) as { name: string }
-        expect(body.name).toBe("NotFoundError")
+        const body = (await response.json()) as { _tag: string; requestID: string; message: string }
+        expect(body).toEqual({
+          _tag: "PermissionNotFoundError",
+          requestID: "permission_missing",
+          message: "Permission request not found: permission_missing",
+        })
       },
     })
   })

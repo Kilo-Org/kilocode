@@ -10,7 +10,7 @@ export default defineConfig({
   },
   resolve: {
     conditions: ["browser", "solid", "module", "import"],
-    dedupe: ["solid-js", "solid-js/web", "solid-js/store"],
+    dedupe: ["solid-js", "solid-js/web", "solid-js/store", "@pierre/diffs"],
   },
   build: {
     target: "esnext",

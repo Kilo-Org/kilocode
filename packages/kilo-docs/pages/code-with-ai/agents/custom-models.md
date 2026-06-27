@@ -10,7 +10,7 @@ Kilo Code ships with a curated list of models for each provider, but you can use
 
 - Using a newly released model before it's added to the built-in catalog
 - Running a custom or fine-tuned model via LM Studio, Ollama, or another local provider
-- Connecting to a self-hosted model behind an OpenAI-compatible API
+- Connecting to a self-hosted model through a custom API endpoint
 - Configuring model-specific options like token limits, pricing, or reasoning settings
 
 ## Defining a Custom Model
@@ -32,7 +32,8 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 
 - **Provider ID** — A unique identifier using lowercase letters, numbers, hyphens, or underscores (e.g., `myprovider`). This becomes the `provider_id` in the `provider_id/model_id` format.
 - **Display name** — A human-readable name shown in the UI (e.g., `My AI Provider`).
-- **Base URL** — The OpenAI-compatible API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, Kilo automatically fetches available models from the endpoint.
+- **Provider API** — The protocol used by the provider. Use **OpenAI Responses** for OpenAI and xAI models. Use **Anthropic Messages** for Anthropic and MiniMax models. **OpenAI Compatible** is the default for other OpenAI Chat Completions-compatible endpoints.
+- **Base URL** — The provider's API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, Kilo automatically fetches available models from the endpoint if it exposes an OpenAI-compatible models endpoint.
 - **API key** — Your provider's API key. Optional — leave empty if you manage authentication via headers.
 - **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL.
 - **Headers** (optional) — Add custom HTTP headers as key-value pairs if your provider requires them.
@@ -253,7 +254,7 @@ Connect to any provider that exposes an OpenAI-compatible API:
 
 ### Configuring model options and variants
 
-Override options or define reasoning variants for a built-in model:
+Override options or define reasoning variants for a built-in model. Variant fields are provider-specific and are merged into the request when you select that variant.
 
 ```jsonc
 {
@@ -285,6 +286,18 @@ Override options or define reasoning variants for a built-in model:
   },
 }
 ```
+
+MiniMax's OpenAI-compatible Chat Completions API supports the optional boolean `reasoning_split` field. Set it on the relevant variant to control how the API returns thinking content:
+
+```jsonc
+"variants": {
+  "thinking": {
+    "reasoning_split": true,
+  },
+}
+```
+
+With `true`, MiniMax returns thinking separately in `reasoning_content` and `reasoning_details`. This setting changes only the response format, not whether the model thinks. Leave it unset for providers that do not support it, including MiniMax using the Anthropic Messages API.
 
 ### Using the id field to map model names
 
@@ -375,6 +388,7 @@ You can also set options that apply to all models from a provider:
 | `apiKey` | `string` | API key (supports `{env:VAR}` syntax) |
 | `baseURL` | `string` | Override the provider's base API URL |
 | `timeout` | `number \| false` | Request timeout in milliseconds. Defaults to `300000` (5 minutes); set to `false` to disable |
+| `chunkTimeout` | `number` | Timeout in milliseconds between streamed response chunks. If no chunk arrives within this window, the request is aborted and retried. This catches silent provider dropouts where the TCP connection stays open but SSE streaming stops. Recommended: `15000`–`30000` (15–30 seconds) for providers with unreliable streaming. |
 
 ## Filtering Available Models
 

@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 
-import fs from "fs"
-import path from "path"
-import os from "os"
 import childProcess from "child_process"
-import { fileURLToPath } from "url"
+import fs from "fs"
+import os from "os"
+import path from "path"
 import { createRequire } from "module"
+import { fileURLToPath } from "url"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
 
 // kilocode_change start - variant detection matching bin/kilo logic
 const platformMap = {
@@ -22,14 +23,13 @@ const archMap = {
   arm: "arm",
 }
 
-function detectPlatformAndArch() {
-  const platform = platformMap[os.platform()] || os.platform()
-  const arch = archMap[os.arch()] || os.arch()
-  return { platform, arch }
-}
+const platform = platformMap[os.platform()] ?? os.platform()
+const arch = archMap[os.arch()] ?? os.arch()
+const base = `@kilocode/cli-${platform}-${arch}`
+const sourceBinary = platform === "windows" ? "kilo.exe" : "kilo"
+const targetBinary = path.join(__dirname, "bin", ".kilo")
 
 function supportsAvx2() {
-  const { platform, arch } = detectPlatformAndArch()
   if (arch !== "x64") return false
 
   if (platform === "linux") {
@@ -53,125 +53,169 @@ function supportsAvx2() {
     }
   }
 
+  if (platform === "windows") {
+    const command =
+      '(Add-Type -MemberDefinition "[DllImport(""kernel32.dll"")] public static extern bool IsProcessorFeaturePresent(int ProcessorFeature);" -Name Kernel32 -Namespace Win32 -PassThru)::IsProcessorFeaturePresent(40)'
+
+    for (const executable of ["powershell.exe", "pwsh.exe", "pwsh", "powershell"]) {
+      try {
+        const result = childProcess.spawnSync(executable, ["-NoProfile", "-NonInteractive", "-Command", command], {
+          encoding: "utf8",
+          timeout: 3000,
+          windowsHide: true,
+        })
+        if (result.status !== 0) continue
+        const output = (result.stdout || "").trim().toLowerCase()
+        if (output === "true" || output === "1") return true
+        if (output === "false" || output === "0") return false
+      } catch {
+        continue
+      }
+    }
+  }
+
   return false
 }
 
 function isMusl() {
+  if (platform !== "linux") return false
+
   try {
     if (fs.existsSync("/etc/alpine-release")) return true
   } catch {
-    // ignore
+    // Ignore filesystem probes that are blocked by the host.
   }
 
   try {
     const result = childProcess.spawnSync("ldd", ["--version"], { encoding: "utf8" })
-    const text = ((result.stdout || "") + (result.stderr || "")).toLowerCase()
-    if (text.includes("musl")) return true
+    return `${result.stdout || ""}${result.stderr || ""}`.toLowerCase().includes("musl")
   } catch {
-    // ignore
+    return false
   }
-
-  return false
 }
 
-function getPackageNames() {
-  const { platform, arch } = detectPlatformAndArch()
-  const base = `@kilocode/cli-${platform}-${arch}`
-  const avx2 = supportsAvx2()
-  const baseline = arch === "x64" && !avx2
+function packageNames() {
+  const baseline = arch === "x64" && !supportsAvx2()
 
   if (platform === "linux") {
-    const musl = isMusl()
-    if (musl) {
-      if (arch === "x64") {
-        if (baseline) return [`${base}-baseline-musl`, `${base}-musl`, `${base}-baseline`, base]
-        return [`${base}-musl`, `${base}-baseline-musl`, base, `${base}-baseline`]
-      }
+    if (isMusl()) {
+      if (arch === "x64")
+        return baseline
+          ? [`${base}-baseline-musl`, `${base}-musl`, `${base}-baseline`, base]
+          : [`${base}-musl`, `${base}-baseline-musl`, base, `${base}-baseline`]
       return [`${base}-musl`, base]
     }
-    if (arch === "x64") {
-      if (baseline) return [`${base}-baseline`, base, `${base}-baseline-musl`, `${base}-musl`]
-      return [base, `${base}-baseline`, `${base}-musl`, `${base}-baseline-musl`]
-    }
+
+    if (arch === "x64")
+      return baseline
+        ? [`${base}-baseline`, base, `${base}-baseline-musl`, `${base}-musl`]
+        : [base, `${base}-baseline`, `${base}-musl`, `${base}-baseline-musl`]
     return [base, `${base}-musl`]
   }
 
-  if (arch === "x64") {
-    if (baseline) return [`${base}-baseline`, base]
-    return [base, `${base}-baseline`]
-  }
+  if (arch === "x64") return baseline ? [`${base}-baseline`, base] : [base, `${base}-baseline`]
   return [base]
 }
 
-function findBinary() {
-  const { platform } = detectPlatformAndArch()
-  const binaryName = platform === "windows" ? "kilo.exe" : "kilo"
-  const names = getPackageNames()
-
-  for (const packageName of names) {
-    try {
-      const packageJsonPath = require.resolve(`${packageName}/package.json`)
-      const packageDir = path.dirname(packageJsonPath)
-      const binaryPath = path.join(packageDir, "bin", binaryName)
-
-      if (fs.existsSync(binaryPath)) {
-        return { binaryPath, binaryName }
-      }
-    } catch {
-      // package not installed, try next variant
-    }
-  }
-
-  throw new Error(`Could not find any binary package. Tried: ${names.map((n) => `"${n}"`).join(", ")}`)
+function resolveBinary(name) {
+  const packageJsonPath = require.resolve(`${name}/package.json`)
+  const binaryPath = path.join(path.dirname(packageJsonPath), "bin", sourceBinary)
+  if (!fs.existsSync(binaryPath)) throw new Error(`Binary not found at ${binaryPath}`)
+  return binaryPath
 }
 // kilocode_change end
 
 // kilocode_change start - copy runtime resources next to cached binary
-function copyTreeSitterResources(binaryPath) {
-  const source = path.join(path.dirname(binaryPath), "tree-sitter")
-  const target = path.join(__dirname, "bin", "tree-sitter")
-  const runtime = path.join(source, "tree-sitter.wasm")
+function copyResources(source) {
+  for (const [name, entry] of [
+    ["tree-sitter", "tree-sitter.wasm"],
+    ["console", "index.html"],
+  ]) {
+    const dir = path.join(path.dirname(source), name)
+    if (!fs.existsSync(path.join(dir, entry))) continue
+    const target = path.join(__dirname, "bin", name)
+    fs.rmSync(target, { recursive: true, force: true })
+    fs.cpSync(dir, target, { recursive: true })
+  }
 
-  if (!fs.existsSync(runtime)) return
+  const bwrap = path.join(path.dirname(source), "bwrap")
+  if (fs.existsSync(bwrap)) {
+    const target = path.join(__dirname, "bin", "bwrap")
+    fs.copyFileSync(bwrap, target)
+    fs.chmodSync(target, 0o755)
+  }
 
-  fs.rmSync(target, { recursive: true, force: true })
-  fs.cpSync(source, target, { recursive: true })
+  const licenses = path.join(path.dirname(source), "licenses")
+  if (fs.existsSync(licenses)) {
+    const target = path.join(__dirname, "bin", "licenses")
+    fs.rmSync(target, { recursive: true, force: true })
+    fs.cpSync(licenses, target, { recursive: true })
+  }
+
+  const worker = path.join(path.dirname(source), "kilo-sandbox-mutation-worker.js")
+  if (fs.existsSync(worker)) fs.copyFileSync(worker, path.join(__dirname, "bin", "kilo-sandbox-mutation-worker.js"))
 }
 
-function copyConsoleResources(binaryPath) {
-  const source = path.join(path.dirname(binaryPath), "console")
-  const target = path.join(__dirname, "bin", "console")
-  const index = path.join(source, "index.html")
-
-  if (!fs.existsSync(index)) return
-
-  fs.rmSync(target, { recursive: true, force: true })
-  fs.cpSync(source, target, { recursive: true })
+function copyBinary(source) {
+  if (!fs.existsSync(source)) throw new Error(`Binary not found at ${source}`)
+  fs.mkdirSync(path.dirname(targetBinary), { recursive: true })
+  if (fs.existsSync(targetBinary)) fs.unlinkSync(targetBinary)
+  try {
+    fs.linkSync(source, targetBinary)
+  } catch {
+    fs.copyFileSync(source, targetBinary)
+  }
+  copyResources(source)
+  fs.chmodSync(targetBinary, 0o755)
 }
 // kilocode_change end
 
+function verifyBinary() {
+  const result = childProcess.spawnSync(targetBinary, ["--version"], {
+    stdio: "ignore",
+    windowsHide: true,
+  })
+  return result.status === 0
+}
+
 function main() {
-  if (os.platform() === "win32") {
-    // On Windows, the .exe is already included in the package and bin field points to it
-    console.log("Windows detected: binary setup not needed (using packaged .exe)")
+  if (platform === "windows") {
+    console.log("Windows detected: binary setup not needed (using packaged wrapper)")
     return
   }
 
-  const { binaryPath } = findBinary()
-  const target = path.join(__dirname, "bin", ".kilo") // kilocode_change
-  if (fs.existsSync(target)) fs.unlinkSync(target)
-  try {
-    fs.linkSync(binaryPath, target)
-  } catch {
-    fs.copyFileSync(binaryPath, target)
+  for (const name of packageNames()) {
+    try {
+      copyBinary(resolveBinary(name))
+      if (verifyBinary()) return
+    } catch {
+      const temp = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-install-"))
+      try {
+        const version = packageJson.optionalDependencies?.[name]
+        if (!version) continue
+        const result = childProcess.spawnSync(
+          "npm",
+          ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
+          { stdio: "inherit", windowsHide: true },
+        )
+        if (result.status !== 0) continue
+        copyBinary(path.join(temp, "node_modules", name, "bin", sourceBinary))
+        if (verifyBinary()) return
+      } finally {
+        fs.rmSync(temp, { recursive: true, force: true })
+      }
+    }
   }
-  copyTreeSitterResources(binaryPath) // kilocode_change
-  copyConsoleResources(binaryPath) // kilocode_change
-  fs.chmodSync(target, 0o755)
+
+  throw new Error(
+    `It seems your package manager failed to install the right Kilo CLI package. Try manually installing ${packageNames()
+      .map((name) => JSON.stringify(name))
+      .join(" or ")}.`,
+  )
 }
 
 try {
-  void main()
+  main()
 } catch (error) {
   console.error("Failed to setup kilo binary:", error.message)
   process.exit(1)

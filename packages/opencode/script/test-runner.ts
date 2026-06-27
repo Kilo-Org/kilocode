@@ -7,6 +7,7 @@
 import os from "os"
 import path from "path"
 import fs from "fs/promises"
+import { TestProfile } from "./kilocode/test-profile"
 
 const root = path.resolve(import.meta.dir, "..")
 const argv = process.argv.slice(2)
@@ -29,6 +30,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --timeout <ms>       Per-test timeout passed to bun test (default: 60000)",
       "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
       "  --retries <N>        Extra attempts for failing files (default: 1)",
+      "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
       "  --bail               Stop on first failure",
       "  --verbose            Show full output for every file",
       "  -h, --help           Show this help",
@@ -50,6 +52,15 @@ function opt(name: string, fallback: number) {
   return i >= 0 && i + 1 < argv.length ? Number(argv[i + 1]) || fallback : fallback
 }
 
+function text(name: string) {
+  const i = argv.indexOf(`--${name}`)
+  if (i < 0) return
+  const value = argv[i + 1]
+  if (value && !value.startsWith("-")) return value
+  console.error(`Missing value for --${name}`)
+  process.exit(2)
+}
+
 const ci = argv.includes("--ci")
 const bail = argv.includes("--bail")
 const verbose = argv.includes("--verbose")
@@ -60,8 +71,15 @@ const concurrency = opt("concurrency", Math.min(4, os.cpus().length))
 const timeout = opt("timeout", 60000)
 const deadline = opt("file-timeout", 300000)
 const retries = opt("retries", 1)
+const flag = text("profile")
+const env = process.env.KILO_TEST_PROFILE?.trim() || undefined
+if (flag && env && flag !== env) {
+  console.error(`Conflicting test profiles: --profile=${flag}, KILO_TEST_PROFILE=${env}`)
+  process.exit(2)
+}
+const profile = flag ?? env
 
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries"])
+const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile"])
 const patterns = argv.filter((arg, i) => {
   if (arg.startsWith("-")) return false
   if (i > 0 && valued.has(argv[i - 1])) return false
@@ -84,7 +102,9 @@ const bold = (s: string) => (tty ? `\x1b[1m${s}\x1b[0m` : s)
 // ---------------------------------------------------------------------------
 
 const glob = new Bun.Glob("**/*.test.{ts,tsx}")
-const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") }))).sort()
+const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") })))
+  .map((file) => file.replaceAll("\\", "/"))
+  .sort()
 
 export const skipped = new Set([
   // Upstream browser OAuth integration tests bind the fixed callback port and
@@ -92,9 +112,28 @@ export const skipped = new Set([
   "mcp/oauth-browser.test.ts",
 ])
 
+const selected = (() => {
+  if (!profile) return all
+  const result = TestProfile.resolve(profile, all)
+  if (!result.ok) {
+    console.error(result.error)
+    process.exit(2)
+  }
+  const blocked = result.files.filter((file) => skipped.has(file))
+  if (blocked.length > 0) {
+    console.error(`Test profile "${profile}" contains skipped files:\n${blocked.map((file) => `- ${file}`).join("\n")}`)
+    process.exit(2)
+  }
+  console.log(`Using test profile "${profile}": ${result.description} (${result.files.length} files)`)
+  return result.files
+})()
 const matched =
-  patterns.length > 0 ? all.filter((f) => patterns.some((p) => f.includes(p) || path.join("test", f).includes(p))) : all
-const files = patterns.length > 0 ? matched : matched.filter((f) => !skipped.has(f)) // kilocode_change
+  patterns.length > 0
+    ? selected.filter((file) =>
+        patterns.some((pattern) => file.includes(pattern) || path.join("test", file).includes(pattern)),
+      )
+    : selected
+const files = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
 
 if (files.length === 0) {
   console.log("No test files found")

@@ -30,10 +30,12 @@ export const GettingStartedNav: NavSection[] = [
         children: "Settings",
         subLinks: [
           { href: "/getting-started/settings/auto-approving-actions", children: "Auto-Approving Actions" },
+          { href: "/getting-started/settings/sandboxing", children: "Sandboxing" },
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
-      { href: "/getting-started/rate-limits-and-costs", children: "Rate Limits and Costs" },
+      { href: "/getting-started/rate-limits-and-costs", children: "Cost Efficiency & Model Selection" },
+      { href: "/getting-started/cost-controls-and-usage-safeguards", children: "Cost Controls and Usage Safeguards" },
     ],
   },
   {

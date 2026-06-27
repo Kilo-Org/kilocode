@@ -1,11 +1,14 @@
 import { ProviderAuth } from "@/provider/auth"
 import { Config } from "@/config/config"
-import { ModelsDev } from "@opencode-ai/core/models"
+import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Provider } from "@/provider/provider"
 import { ProviderID } from "@/provider/schema"
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { disposeAllInstancesAfterProviderAuthCallback } from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
+import { providerMetadata } from "@/kilocode/provider/metadata" // kilocode_change
+import { filterPromptTrainingModels } from "@/kilocode/provider/model-filter" // kilocode_change
+import { overlay as overlayAnacondaDesktop } from "@/kilocode/anaconda-desktop/provider" // kilocode_change
 import { Effect, Schema } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
@@ -41,7 +44,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
-      const all = yield* ModelsDev.Service.use((s) => s.get())
+      const all = overlayAnacondaDesktop(yield* ModelsDev.Service.use((s) => s.get())) // kilocode_change
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const filtered: Record<string, (typeof all)[string]> = {}
@@ -49,10 +52,15 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) filtered[key] = value
       }
       const connected = yield* provider.list()
-      const providers = Object.assign(
-        mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
-        connected,
+      // kilocode_change start
+      const providers = filterPromptTrainingModels(
+        Object.assign(
+          mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
+          connected,
+        ),
+        config.hide_prompt_training_models === true,
       )
+      // kilocode_change end
       // kilocode_change start
       const failed = yield* cache.failedProviders()
       // Note: connected only contains providers with non-empty models after Provider.Service.list(),
@@ -63,7 +71,10 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         (item, id) => Object.keys(item.models).length > 0 || id in connected || failedSet.has(id),
       )
       return {
-        all: Object.values(validProviders).map(Provider.toPublicInfo),
+        all: Object.values(validProviders).map((item) => ({
+          ...Provider.toPublicInfo(item),
+          metadata: providerMetadata(item.id),
+        })), // kilocode_change
         default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
         connected: Object.keys(connected),
         failed,

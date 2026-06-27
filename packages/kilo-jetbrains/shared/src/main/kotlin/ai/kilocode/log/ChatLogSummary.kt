@@ -2,6 +2,7 @@ package ai.kilocode.log
 
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
@@ -50,14 +51,23 @@ object ChatLogSummary {
 
     fun prompt(prompt: PromptDto): String {
         val out = mutableListOf<String>()
-        val text = prompt.parts.joinToString("\n") { it.text }
+        val text = prompt.parts.mapNotNull { it.text }.joinToString("\n")
+        val files = prompt.parts.filter { it.type == "file" }
         out += "kind=prompt"
         out += "parts=${prompt.parts.size}"
         out += "chars=${text.length}"
+        if (files.isNotEmpty()) out += "attachments=${files.size}"
+        files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }
+            .takeIf { it > 0 }
+            ?.let { out += "media=$it" }
         prompt.parts.map { it.type }
             .distinct()
             .takeIf { it.isNotEmpty() }
             ?.let { out += "types=${it.joinToString(",")}" }
+        files.mapNotNull { it.mime ?: it.type }
+            .distinct()
+            .takeIf { it.isNotEmpty() }
+            ?.let { out += "attachmentTypes=${it.joinToString(",")}" }
         prompt.agent?.takeIf { it.isNotBlank() }?.let { out += "agent=$it" }
         model(prompt.providerID, prompt.modelID)?.let { out += "model=$it" }
         prompt.variant?.takeIf { it.isNotBlank() }?.let { out += "variant=$it" }
@@ -224,12 +234,36 @@ object ChatLogSummary {
         join("evt=$evt", rest)
     }
 
+    fun hasError(event: ChatEventDto): Boolean = when (event) {
+        is ChatEventDto.Error -> true
+        is ChatEventDto.MessageUpdated -> event.info.error != null
+        else -> false
+    }
+
+    fun error(event: ChatEventDto): String? = when (event) {
+        is ChatEventDto.Error -> error(event.error, sid(event.sessionID), "evt=session.error")
+        is ChatEventDto.MessageUpdated -> event.info.error?.let { err ->
+            error(err, sid(event.sessionID), "evt=message.updated", "mid=${event.info.id}")
+        }
+        else -> null
+    }
+
     private fun message(dto: MessageDto): String = join(
         "mid=${dto.id}",
         "role=${dto.role}",
         dto.agent?.takeIf { it.isNotBlank() }?.let { "agent=$it" },
         model(dto.providerID, dto.modelID)?.let { "model=$it" },
         dto.error?.type?.let { "err=$it" },
+    )
+
+    private fun error(err: MessageErrorDto?, vararg parts: String): String = join(
+        *parts,
+        err?.type?.let { "err=$it" },
+        err?.statusCode?.let { "code=$it" },
+        err?.message?.let { msg -> statusPreview(msg)?.let { "message=\"$it\"" } },
+        err?.responseBody?.let { body(it) },
+        err?.dataKeys?.takeIf { it.isNotEmpty() }?.let { "dataKeys=${it.joinToString(",")}" },
+        err?.ref?.takeIf { it.isNotBlank() }?.let { "ref=$it" },
     )
 
     private fun part(dto: PartDto): String = join(

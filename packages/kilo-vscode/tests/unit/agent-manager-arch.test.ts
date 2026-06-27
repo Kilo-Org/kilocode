@@ -24,6 +24,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/FullScreenDiffView.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/ImageDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownDiffView.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/MarkdownAnnotationLayer.tsx"),
   path.join(ROOT, "webview-ui/diff-viewer/markdown-comment-ranges.ts"),
@@ -35,8 +36,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -209,6 +211,18 @@ describe("Agent Manager Provider Messages", () => {
     const body = getMethodBody("disposeAsync")
     expect(body).toContain("await this.terminalRouter.dispose()")
     expect(body).not.toContain("void this.terminalRouter.dispose()")
+  })
+
+  it("clears remote session registrations when the panel closes", () => {
+    const body = getMethodBody("attachPanel")
+    expect(body).toContain('this.connectionService.unregisterFocused("agent-manager")')
+    expect(body).toContain('this.connectionService.registerOpen("agent-manager", [])')
+    expect(body).toContain("this.activeSessionId = undefined")
+  })
+
+  it("reports all open Agent Manager sessions for remote control", () => {
+    const body = fs.readFileSync(TSX_FILE, "utf-8")
+    expect(body).toContain("reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)")
   })
 })
 
