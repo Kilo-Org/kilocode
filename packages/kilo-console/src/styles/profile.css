@@ -420,7 +420,7 @@
 
 .kilo-console .profile-login-code small {
   color: var(--muted-foreground);
-  font-family: var(--font-family-sans, system-ui, sans-serif);
+  font-family: var(--font-family-sans);
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0;

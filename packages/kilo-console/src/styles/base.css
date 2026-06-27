@@ -1,5 +1,5 @@
 :root {
-  font-family: var(--font-family-sans, Inter, system-ui, sans-serif);
+  font-family: var(--font-family-sans);
   background: var(--background-base);
   color: var(--text-base);
 }
