@@ -37,6 +37,8 @@ import type {
   BackgroundProcessStopResponses,
   BackgroundProcessStopSessionErrors,
   BackgroundProcessStopSessionResponses,
+  BranchNameGenerateErrors,
+  BranchNameGenerateResponses,
   CommandListErrors,
   CommandListResponses,
   CommitMessageGenerateErrors,
@@ -6235,6 +6237,51 @@ export class BackgroundProcess extends HeyApiClient {
   }
 }
 
+export class BranchName extends HeyApiClient {
+  /**
+   * Generate branch name
+   *
+   * Generate a task-focused branch name from the current conversation.
+   */
+  public generate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      sessionID?: string
+      prompt?: string
+      providerID?: string
+      modelID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "prompt" },
+            { in: "body", key: "providerID" },
+            { in: "body", key: "modelID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<BranchNameGenerateResponses, BranchNameGenerateErrors, ThrowOnError>({
+      url: "/branch-name",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class CommitMessage extends HeyApiClient {
   /**
    * Generate commit message
@@ -8345,6 +8392,11 @@ export class KiloClient extends HeyApiClient {
   private _backgroundProcess?: BackgroundProcess
   get backgroundProcess(): BackgroundProcess {
     return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
+  }
+
+  private _branchName?: BranchName
+  get branchName(): BranchName {
+    return (this._branchName ??= new BranchName({ client: this.client }))
   }
 
   private _commitMessage?: CommitMessage
