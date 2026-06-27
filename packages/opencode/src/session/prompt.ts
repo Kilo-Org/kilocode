@@ -427,6 +427,7 @@ export const layer = Layer.effect(
                 ...req,
                 sessionID,
               },
+              abort: taskAbort.signal,
             }).pipe(Effect.orDie),
           // kilocode_change end
         })

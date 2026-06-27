@@ -193,7 +193,9 @@ function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number
   return dynamicTool({
     description: mcpTool.description ?? "",
     inputSchema: jsonSchema(schema),
-    execute: async (args: unknown) => {
+    // kilocode_change start - accept the AI SDK cancellation signal
+    execute: async (args: unknown, opts) => {
+      // kilocode_change end
       return client.callTool(
         {
           name: mcpTool.name,
@@ -203,6 +205,7 @@ function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number
         {
           resetTimeoutOnProgress: true,
           timeout,
+          signal: opts.abortSignal, // kilocode_change - cancel the remote MCP request with its tool execution
         },
       )
     },

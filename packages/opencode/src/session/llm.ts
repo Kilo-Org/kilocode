@@ -234,6 +234,7 @@ const live: Layer.Layer<
                 always: uniquePatterns,
                 ruleset: [],
               }),
+              { signal: input.abort }, // kilocode_change - abort detached workflow approval waits with the session
             )
             for (const name of uniqueNames) approvedToolsForSession.add(name)
             workflowModel.sessionPreapprovedTools = [...(workflowModel.sessionPreapprovedTools ?? []), ...uniqueNames]
