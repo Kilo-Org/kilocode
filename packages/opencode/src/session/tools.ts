@@ -74,6 +74,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   for (const item of yield* registry.tools({
     modelID: ModelID.make(input.model.api.id),
     providerID: input.model.providerID,
+    family: input.model.family, // kilocode_change
     agent: input.agent,
   })) {
     const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
