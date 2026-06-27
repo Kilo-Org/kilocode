@@ -682,14 +682,20 @@ export const layer = Layer.effect(
     const connect = Effect.fn("MCP.connect")(function* (name: string) {
       const mcp = yield* requireMcpConfig(name)
       yield* createAndStore(name, { ...mcp, enabled: true })
+      yield* cfgSvc.update({
+        mcp: { [name]: { ...mcp, enabled: true } },
+      })
     })
 
     const disconnect = Effect.fn("MCP.disconnect")(function* (name: string) {
-      yield* requireMcpConfig(name)
+      const mcp = yield* requireMcpConfig(name)
       const s = yield* InstanceState.get(state)
       yield* closeClient(s, name)
       delete s.clients[name]
       s.status[name] = { status: "disabled" }
+      yield* cfgSvc.update({
+        mcp: { [name]: { ...mcp, enabled: false } },
+      })
     })
 
     const tools = Effect.fn("MCP.tools")(function* () {

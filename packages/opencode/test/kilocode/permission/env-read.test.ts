@@ -155,3 +155,64 @@ describe("env read permissions", () => {
     ),
   )
 })
+
+describe("config dir read hardening", () => {
+  const broadAllow = Permission.fromConfig({ read: { "*": "allow" } })
+
+  it.live("broad read allow is downgraded to ask for .kilo/config files", () =>
+    Effect.sync(() => {
+      expect(Permission.resolve("read", ".kilo/config.json", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", ".kilo/kilo.json", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", ".kilocode/settings.yaml", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", ".opencode/opencode.json", broadAllow).action).toBe("ask")
+    }),
+  )
+
+  it.live("broad read allow is NOT downgraded for excluded subdirs (plans)", () =>
+    Effect.sync(() => {
+      expect(Permission.resolve("read", ".kilo/plans/plan.md", broadAllow).action).toBe("allow")
+      expect(Permission.resolve("read", ".kilocode/plans/design.md", broadAllow).action).toBe("allow")
+      expect(Permission.resolve("read", ".opencode/plans/spec.md", broadAllow).action).toBe("allow")
+    }),
+  )
+
+  it.live("broad read allow is NOT downgraded for non-config paths", () =>
+    Effect.sync(() => {
+      expect(Permission.resolve("read", "src/index.ts", broadAllow).action).toBe("allow")
+      expect(Permission.resolve("read", "README.md", broadAllow).action).toBe("allow")
+      expect(Permission.resolve("read", "project/.env", broadAllow).action).toBe("ask")
+    }),
+  )
+
+  it.live("non-broad allow is not downgraded for config dirs", () =>
+    Effect.sync(() => {
+      const specific = Permission.fromConfig({ read: { ".kilo/config.json": "allow" } })
+      expect(Permission.resolve("read", ".kilo/config.json", specific).action).toBe("allow")
+    }),
+  )
+
+  it.live("edit permission is not affected by config dir hardening", () =>
+    Effect.sync(() => {
+      const editAllow = Permission.fromConfig({ edit: { "*": "allow" } })
+      expect(Permission.resolve("edit", ".kilo/config.json", editAllow).action).toBe("allow")
+      expect(Permission.resolve("edit", ".kilo/plans/plan.md", editAllow).action).toBe("allow")
+    }),
+  )
+
+  it.live("nested config dirs are also hardened", () =>
+    Effect.sync(() => {
+      expect(Permission.resolve("read", "packages/sub/.kilo/config.json", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "packages/sub/.kilo/plans/plan.md", broadAllow).action).toBe("allow")
+    }),
+  )
+
+  it.live("root-level config files are hardened", () =>
+    Effect.sync(() => {
+      expect(Permission.resolve("read", "kilo.json", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "kilo.jsonc", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "opencode.json", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "opencode.jsonc", broadAllow).action).toBe("ask")
+      expect(Permission.resolve("read", "AGENTS.md", broadAllow).action).toBe("ask")
+    }),
+  )
+})
