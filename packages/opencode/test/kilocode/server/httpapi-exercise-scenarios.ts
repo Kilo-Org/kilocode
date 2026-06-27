@@ -4,6 +4,7 @@ import path from "path"
 import { array, check, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
+import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
 
 function directory(ctx: ScenarioContext) {
   if (!ctx.directory) throw new Error("scenario needs a project directory")
@@ -33,6 +34,7 @@ const edit = {
 }
 
 export const kiloScenarios: Scenario[] = [
+  ...anacondaDesktopScenarios,
   http.protected.get("/background-process", "backgroundProcess.list").json(200, array),
   http.protected
     .get("/background-process/{processID}", "backgroundProcess.get")

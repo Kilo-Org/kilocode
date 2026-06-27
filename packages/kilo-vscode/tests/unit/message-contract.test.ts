@@ -22,6 +22,7 @@ const KILO_PROVIDER_UTILS_FILE = path.join(ROOT, "src/kilo-provider-utils.ts")
 // Some wire types (partUpdated, partsUpdated) live in a file shared by the
 // extension and webview; the contract checks must include it.
 const SHARED_STREAM_MESSAGES_FILE = path.join(ROOT, "src/shared/stream-messages.ts")
+const ANACONDA_DESKTOP_MESSAGES_FILE = path.join(ROOT, "src/shared/anaconda-desktop-messages.ts")
 
 function readFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf-8")
@@ -36,7 +37,7 @@ function readMessagesDir(): string {
 }
 
 function readMessageTypeSources(): string {
-  return readMessagesDir() + "\n" + readFile(SHARED_STREAM_MESSAGES_FILE)
+  return [readMessagesDir(), readFile(SHARED_STREAM_MESSAGES_FILE), readFile(ANACONDA_DESKTOP_MESSAGES_FILE)].join("\n")
 }
 
 /**

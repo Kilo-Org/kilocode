@@ -38,6 +38,19 @@ export const ModelSelectorNoProviders: Story = {
 }
 
 const ACCESSIBLE_MODELS: EnrichedModel[] = [
+  {
+    id: "kilo-auto/efficient",
+    name: "Kilo Auto Efficient",
+    providerID: "kilo",
+    providerName: "Kilo",
+    recommendedIndex: 0,
+    options: {
+      description:
+        "Routes each request to the cheapest model that gets the job done, based on continuously benchmarked accuracy and cost.",
+    },
+    autoRouting: { models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"] },
+  },
+  { id: "omega", name: "Omega", providerID: "openai", providerName: "OpenAI", recommendedIndex: 1 },
   { id: "alpha", name: "Alpha", providerID: "kilo", providerName: "Kilo" },
   { id: "bravo", name: "Bravo", providerID: "kilo", providerName: "Kilo" },
   { id: "charlie", name: "Charlie", providerID: "kilo", providerName: "Kilo" },
