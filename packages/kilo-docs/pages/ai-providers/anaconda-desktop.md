@@ -54,6 +54,12 @@ To refresh an existing connection, run `/connect`, select **Anaconda Desktop**, 
 3. Follow the setup dialog. Kilo can open Anaconda Desktop; after making changes there, return and select **Check again**.
 4. When the model server is ready, select **Connect** to import its connection and refresh the model picker.
 
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/not-installed-chromium-linux.png" alt="Anaconda Desktop not installed prompt" width="420" caption="Setup dialog when Anaconda Desktop is not yet installed" /%}
+
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/waiting-chromium-linux.png" alt="Anaconda Desktop waiting for a server" width="420" caption="Setup dialog when Desktop is running but no model server is started" /%}
+
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/ready-chromium-linux.png" alt="Anaconda Desktop ready to connect" width="420" caption="Setup dialog when a model server with tool calling is ready to connect" /%}
+
 For an existing connection, open **Settings**, select **Providers**, and select **Manage / Refresh** for Anaconda Desktop after changing the model, server address or port, or server API key in Desktop.
 
 {% /tab %}
@@ -66,6 +72,8 @@ When Desktop reports that the model server supports tool calling, Kilo allows yo
 {% callout type="warning" %}
 If tool support is unavailable or cannot be detected, Kilo shows a warning and requires confirmation before connecting. You can still use the model for text generation, but normal coding-agent actions are limited and may fail. For the best experience, choose a **Text Generation** model tagged **Tool Calling** and enable the server's tool-call support when available.
 {% /callout %}
+
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/limited-tools-chromium-linux.png" alt="Anaconda Desktop limited tools warning" width="420" caption="Setup dialog when tool calling is unavailable for the active server" /%}
 
 ## How Keys Are Handled
 

@@ -73,6 +73,30 @@ const DOCS = new Map<string, string[]>([
       "packages/kilo-docs/pages/customize/workflows.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-workflows-chromium-linux.png",
     ],
   ],
+  [
+    "anaconda-desktop--not-installed",
+    [
+      "packages/kilo-docs/pages/ai-providers/anaconda-desktop.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/not-installed-chromium-linux.png",
+    ],
+  ],
+  [
+    "anaconda-desktop--waiting",
+    [
+      "packages/kilo-docs/pages/ai-providers/anaconda-desktop.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/waiting-chromium-linux.png",
+    ],
+  ],
+  [
+    "anaconda-desktop--ready",
+    [
+      "packages/kilo-docs/pages/ai-providers/anaconda-desktop.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/ready-chromium-linux.png",
+    ],
+  ],
+  [
+    "anaconda-desktop--limited-tools",
+    [
+      "packages/kilo-docs/pages/ai-providers/anaconda-desktop.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/anaconda-desktop/limited-tools-chromium-linux.png",
+    ],
+  ],
 ])
 
 // Generate one test() per story so Playwright's scheduler can distribute
