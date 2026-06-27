@@ -1610,6 +1610,8 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
+    image_generation?: boolean
+    image_generation_model?: string
     native_notebook_tools?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
@@ -10413,6 +10415,38 @@ export type KiloAudioTranscriptionsResponses = {
 }
 
 export type KiloAudioTranscriptionsResponse = KiloAudioTranscriptionsResponses[keyof KiloAudioTranscriptionsResponses]
+
+export type KiloModelsImagesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/models/images"
+}
+
+export type KiloModelsImagesErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KiloModelsImagesError = KiloModelsImagesErrors[keyof KiloModelsImagesErrors]
+
+export type KiloModelsImagesResponses = {
+  /**
+   * Image-capable model list
+   */
+  200: Array<{
+    id: string
+    name: string
+    description?: string
+  }>
+}
+
+export type KiloModelsImagesResponse = KiloModelsImagesResponses[keyof KiloModelsImagesResponses]
 
 export type KiloNotificationsData = {
   body?: never

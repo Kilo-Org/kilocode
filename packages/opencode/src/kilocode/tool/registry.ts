@@ -3,6 +3,7 @@ import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { GenerateImageTool } from "./generate-image"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -39,13 +40,14 @@ export namespace KiloToolRegistry {
       const recall = yield* RecallTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
-      if (!notebook) return { codebase, recall, manager, process }
+      const image = yield* GenerateImageTool
+      if (!notebook) return { codebase, recall, manager, process, image }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, manager, process, ...tools }
+      return { codebase, recall, manager, process, image, ...tools }
     })
   }
 
@@ -57,6 +59,7 @@ export namespace KiloToolRegistry {
       recall: Tool.Info
       manager: Tool.Info
       process: Tool.Info
+      image: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
@@ -70,6 +73,7 @@ export namespace KiloToolRegistry {
         recall: Tool.init(tools.recall),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
+        image: Tool.init(tools.image),
       })
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
@@ -129,18 +133,19 @@ export namespace KiloToolRegistry {
       recall: Tool.Def
       manager: Tool.Def
       process: Tool.Def
+      image: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean; native_notebook_tools?: boolean } },
+    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean; native_notebook_tools?: boolean } },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
+      ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
-      // The extension is the only client that can consume the Agent Manager start event.
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&

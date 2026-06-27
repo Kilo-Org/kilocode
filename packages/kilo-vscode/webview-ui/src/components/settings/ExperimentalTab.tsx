@@ -6,6 +6,7 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { useImageModels } from "../../context/image-models"
 import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
@@ -23,6 +24,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 const ExperimentalTab: Component = () => {
   const { config, features, updateConfig } = useConfig()
   const language = useLanguage()
+  const imageModels = useImageModels()
   const vscode = useVSCode()
   const [active, setActive] = createSignal(false)
 
@@ -153,6 +155,41 @@ const ExperimentalTab: Component = () => {
             {language.t("settings.experimental.codebaseSearch.title")}
           </Switch>
         </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.imageGeneration.title")}
+          description={language.t("settings.experimental.imageGeneration.description")}
+        >
+          <Switch
+            checked={experimental().image_generation ?? false}
+            onChange={(checked) => updateExperimental("image_generation", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.imageGeneration.title")}
+          </Switch>
+        </SettingsRow>
+
+        <Show when={experimental().image_generation}>
+          <SettingsRow
+            title={language.t("settings.experimental.imageGenerationModel.title")}
+            description={language.t("settings.experimental.imageGenerationModel.description")}
+          >
+            <Select
+              options={imageModels.models().map((m) => ({ value: m.id, label: m.name }))}
+              current={imageModels
+                .models()
+                .map((m) => ({ value: m.id, label: m.name }))
+                .find((m) => m.value === experimental().image_generation_model)}
+              value={(item) => item.value}
+              label={(item) => item.label}
+              onSelect={(item) => updateExperimental("image_generation_model", item?.value ?? undefined)}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              placeholder={language.t("settings.experimental.imageGenerationModel.placeholder")}
+            />
+          </SettingsRow>
+        </Show>
 
         <SettingsRow
           title={language.t("settings.experimental.nativeNotebookTools.title")}

@@ -439,6 +439,10 @@ export interface RequestKiloEmbeddingModelsMessage {
   type: "requestKiloEmbeddingModels"
 }
 
+export interface RequestImageModelsMessage {
+  type: "requestImageModels"
+}
+
 export interface OpenSettingsTabRequest {
   type: "openSettingsTab"
   tab: string
@@ -1331,6 +1335,7 @@ export type WebviewMessage =
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalResizeRequest
+  | RequestImageModelsMessage
 
 // ============================================
 // VS Code API type

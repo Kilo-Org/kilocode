@@ -327,6 +327,11 @@ export interface KiloEmbeddingModelsLoadedMessage {
   catalog: KiloEmbeddingModelCatalog
 }
 
+export interface ImageModelsLoadedMessage {
+  type: "imageModelsLoaded"
+  models: Array<{ id: string; name: string; description?: string }>
+}
+
 export interface ProvidersLoadedMessage {
   type: "providersLoaded"
   providers: Record<string, Provider>
@@ -1041,6 +1046,7 @@ export type ExtensionMessage =
   | IndexingStatusLoadedMessage
   | IndexingSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
+  | ImageModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
