@@ -23,8 +23,8 @@ export const ServeCommand = effectCmd({
     const urls = server.urls
 
     console.log(`kilo server listening on ${urls.bind}`)
+    console.log(`  Local:   ${urls.local}`)
     if (urls.network) {
-      console.log(`  Local:   ${urls.local}`)
       console.log(`  Network: ${urls.network}`)
     }
     // kilocode_change end
