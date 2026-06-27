@@ -830,6 +830,8 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
         return {}
       }
       if (model.id.includes("claude")) {
+        // claude-haiku-* models don't support reasoning_effort
+        if (id.includes("haiku")) return {}
         return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
       }
       const copilotEfforts = iife(() => {
