@@ -191,8 +191,10 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       acc.plugin_origins = plugins
     })
 
-  // Every config dir we may read from: global config dir, any `.opencode`
+  // kilocode_change start - discover canonical and legacy Kilo config directories
+  // Every config dir we may read from: global config, .kilo and legacy .kilocode
   // folders between cwd and home, and KILO_CONFIG_DIR.
+  // kilocode_change end
   const directories = yield* ConfigPaths.directories(ctx.directory)
   yield* Effect.promise(() => migrateTuiConfig({ directories, cwd: ctx.directory }))
 
@@ -220,18 +222,16 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     yield* mergeFile(acc, file)
   }
 
-  // 4. `.opencode` directories (and KILO_CONFIG_DIR) discovered while
-  // walking up the tree. Also returned below so callers can install plugin
-  // dependencies from each location.
-  // kilocode_change start - also load tui.json from .kilo/.kilocode
+  // kilocode_change start - load tui.json from supported Kilo config directories
+  // 4. `.kilo` and legacy `.kilocode` directories (and KILO_CONFIG_DIR)
+  // discovered while walking up the tree. Also returned below so callers can
+  // install plugin dependencies from each location.
   const dirs = unique(directories).filter(
-    (dir) =>
-      dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR,
+    (dir) => dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir === Flag.KILO_CONFIG_DIR,
   )
   // kilocode_change end
 
   for (const dir of dirs) {
-    // if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue // kilocode_change
     for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
       yield* mergeFile(acc, file)
     }
