@@ -367,6 +367,42 @@ export const LANGUAGES: { [extension: string]: AutocompleteLanguageInfo } = {
   luau: Lua,
 }
 
+const IDS: Record<string, AutocompleteLanguageInfo> = {
+  typescript: Typescript,
+  typescriptreact: Typescript,
+  javascript: JavaScript,
+  javascriptreact: JavaScript,
+  json: Json,
+  jsonc: Json,
+  python: Python,
+  java: Java,
+  cpp: Cpp,
+  c: C,
+  csharp: CSharp,
+  scala: Scala,
+  go: Go,
+  rust: Rust,
+  haskell: Haskell,
+  php: PHP,
+  ruby: Ruby,
+  swift: Swift,
+  kotlin: Kotlin,
+  clojure: Clojure,
+  julia: Julia,
+  fsharp: FSharp,
+  r: R,
+  dart: Dart,
+  solidity: Solidity,
+  yaml: YAML,
+  markdown: Markdown,
+  lua: Lua,
+  luau: Lua,
+}
+
+export function languageForId(id: string): AutocompleteLanguageInfo | undefined {
+  return IDS[id]
+}
+
 export function languageForFilepath(fileUri: string): AutocompleteLanguageInfo {
   const extension = getUriFileExtension(fileUri)
   return LANGUAGES[extension] || Typescript
