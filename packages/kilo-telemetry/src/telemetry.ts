@@ -10,7 +10,7 @@ export interface TelemetryProperties {
   vscodeVersion?: string
 }
 
-export type ReviewCommand = "review" | "local-review" | "local-review-uncommitted"
+export type ReviewCommand = "review"
 
 export interface IndexingTelemetryProperties extends Record<string, unknown> {
   source: "scan" | "watcher"

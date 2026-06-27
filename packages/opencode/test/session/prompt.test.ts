@@ -2631,7 +2631,7 @@ it.instance(
 
       yield* llm.tool("suggest", {
         suggest: "Run a local review?",
-        actions: [{ label: "Review", prompt: "/local-review-uncommitted --focus telemetry" }],
+        actions: [{ label: "Review", prompt: "/review uncommitted --focus telemetry" }],
       })
       yield* llm.text("review done", { usage: { input: 100, output: 50 } })
 
@@ -2659,7 +2659,7 @@ it.instance(
           (p) =>
             p.mode === "review" &&
             p.feature === "code_reviews" &&
-            p.command === "local-review-uncommitted" &&
+            p.command === "review" &&
             p.tool === "suggest",
         )
       expect(tagged).toBeDefined()

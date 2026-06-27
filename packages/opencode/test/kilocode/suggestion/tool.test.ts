@@ -82,8 +82,8 @@ describe("tool.suggest", () => {
 
       const result = yield* tool.execute(
         {
-          suggest: "Run review?",
-          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+          suggest: "Run checks?",
+          actions: [{ label: "Start", prompt: "/verify" }],
         },
         ctx as any,
       )
@@ -98,35 +98,35 @@ describe("tool.suggest", () => {
     Effect.gen(function* () {
       const tool = yield* init()
       show.mockResolvedValueOnce({
-        label: "Start review",
-        description: "Run a local review now",
-        prompt: "/local-review-uncommitted",
+        label: "Run checks",
+        description: "Run the project checks now",
+        prompt: "/verify",
       })
-      cmds["local-review-uncommitted"] = {
-        name: "local-review-uncommitted",
-        description: "local review (uncommitted changes)",
-        template: Promise.resolve("Review these uncommitted changes:\n\n## Files Changed\n..."),
+      cmds["verify"] = {
+        name: "verify",
+        description: "run project checks",
+        template: Promise.resolve("Run the project checks now."),
         hints: [],
       }
 
       const result = yield* tool.execute(
         {
-          suggest: "Run review?",
-          actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
+          suggest: "Run checks?",
+          actions: [{ label: "Run checks", prompt: "/verify" }],
         },
         ctx as any,
       )
 
-      expect(result.title).toBe("User accepted: Start review")
-      expect(result.output).toContain("Review these uncommitted changes:")
+      expect(result.title).toBe("User accepted: Run checks")
+      expect(result.output).toContain("Run the project checks now.")
       expect(result.output).toContain("Carry out the following request now")
       expect(result.metadata.dismissed).toBe(false)
       expect(result.metadata.accepted).toEqual({
-        label: "Start review",
-        description: "Run a local review now",
-        prompt: "/local-review-uncommitted",
+        label: "Run checks",
+        description: "Run the project checks now",
+        prompt: "/verify",
       })
-      expect(names).toEqual(["local-review-uncommitted"])
+      expect(names).toEqual(["verify"])
     }),
   )
 
@@ -180,26 +180,26 @@ describe("tool.suggest", () => {
     Effect.gen(function* () {
       const tool = yield* init()
       show.mockResolvedValueOnce({
-        label: "Start review",
-        prompt: "/local-review-uncommitted",
+        label: "Run checks",
+        prompt: "/verify",
       })
-      cmds["local-review-uncommitted"] = {
-        name: "local-review-uncommitted",
-        description: "local review (uncommitted changes)",
+      cmds["verify"] = {
+        name: "verify",
+        description: "run project checks",
         template: Promise.reject(new Error("git not found")),
         hints: [],
       }
 
       const result = yield* tool.execute(
         {
-          suggest: "Run review?",
-          actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
+          suggest: "Run checks?",
+          actions: [{ label: "Run checks", prompt: "/verify" }],
         },
         ctx as any,
       )
 
-      expect(result.title).toBe("User accepted: Start review")
-      expect(result.output).toContain("/local-review-uncommitted")
+      expect(result.title).toBe("User accepted: Run checks")
+      expect(result.output).toContain("/verify")
       expect(result.metadata.dismissed).toBe(false)
     }),
   )
@@ -214,8 +214,8 @@ describe("tool.suggest", () => {
 
       yield* tool.execute(
         {
-          suggest: "Run review?",
-          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+          suggest: "Run checks?",
+          actions: [{ label: "Start", prompt: "/verify" }],
         },
         ctx as any,
       )

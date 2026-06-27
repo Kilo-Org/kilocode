@@ -10,8 +10,8 @@ function pending(id: string, sessionID: string): RecoverableSuggestion {
   return {
     id,
     sessionID,
-    text: "Review changes?",
-    actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+    text: "Run tests?",
+    actions: [{ label: "Run tests", prompt: "Run the test suite" }],
   }
 }
 

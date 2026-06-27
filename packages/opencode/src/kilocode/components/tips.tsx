@@ -112,7 +112,7 @@ const TIPS = [
   "Press {highlight}Ctrl+X S{/highlight} or {highlight}/status{/highlight} to see config paths, MCP servers, and system info",
   "Toggle username display in chat via command palette ({highlight}Ctrl+P{/highlight})",
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
-  "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
+  "Use {highlight}/review{/highlight} to review uncommitted changes, commits, branches, or PRs",
   "Run {highlight}/help{/highlight} to show the help dialog",
   "Use {highlight}/rename{/highlight} to rename the current session",
   "Press {highlight}Ctrl+Z{/highlight} to suspend the terminal and return to your shell",
