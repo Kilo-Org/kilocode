@@ -67,8 +67,72 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
             yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
         })
 
+        // kilocode_change start - Inject avian provider with hardcoded models
+        const addAvian = () => {
+          if (providers["avian"]) return
+          providers["avian"] = {
+            id: "avian",
+            name: "Avian",
+            env: ["AVIAN_API_KEY"],
+            api: "https://api.avian.io/v1/",
+            npm: "@ai-sdk/openai-compatible",
+            models: {
+              "deepseek/deepseek-v3.2": {
+                id: "deepseek/deepseek-v3.2",
+                name: "DeepSeek V3.2",
+                family: "deepseek",
+                release_date: "2025-06-01",
+                attachment: false,
+                reasoning: false,
+                temperature: true,
+                tool_call: true,
+                limit: { context: 163840, output: 65536 },
+                modalities: { input: ["text"], output: ["text"] },
+              },
+              "moonshotai/kimi-k2.5": {
+                id: "moonshotai/kimi-k2.5",
+                name: "Kimi K2.5",
+                family: "kimi",
+                release_date: "2025-07-01",
+                attachment: false,
+                reasoning: false,
+                temperature: true,
+                tool_call: true,
+                limit: { context: 262144, output: 262144 },
+                modalities: { input: ["text"], output: ["text"] },
+              },
+              "z-ai/glm-5": {
+                id: "z-ai/glm-5",
+                name: "GLM-5",
+                family: "glm",
+                release_date: "2025-07-01",
+                attachment: false,
+                reasoning: false,
+                temperature: true,
+                tool_call: true,
+                limit: { context: 204800, output: 131072 },
+                modalities: { input: ["text"], output: ["text"] },
+              },
+              "minimax/minimax-m2.5": {
+                id: "minimax/minimax-m2.5",
+                name: "MiniMax M2.5",
+                family: "minimax",
+                release_date: "2025-07-01",
+                attachment: false,
+                reasoning: false,
+                temperature: true,
+                tool_call: true,
+                limit: { context: 196608, output: 131072 },
+                modalities: { input: ["text"], output: ["text"] },
+              },
+            },
+          }
+        }
+        // kilocode_change end
+
         if (!allowed) {
           yield* addApertis()
+          addAvian()
           return providers
         }
 
@@ -91,6 +155,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
         }
         if (Object.keys(models).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
         yield* addApertis()
+        addAvian()
         return providers
       })
 
