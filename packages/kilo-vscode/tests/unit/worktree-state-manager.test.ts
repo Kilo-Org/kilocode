@@ -392,7 +392,18 @@ describe("WorktreeStateManager", () => {
   })
 
   describe("sessionsCollapsed", () => {
-    it("defaults to false", () => {
+    it("defaults to true when state is missing", async () => {
+      await manager.load()
+
+      expect(manager.getSessionsCollapsed()).toBe(true)
+    })
+
+    it("preserves the expanded default from legacy state", async () => {
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      fs.writeFileSync(file, JSON.stringify({ worktrees: {}, sessions: {} }))
+
+      await manager.load()
+
       expect(manager.getSessionsCollapsed()).toBe(false)
     })
 
@@ -414,14 +425,18 @@ describe("WorktreeStateManager", () => {
       expect(loaded.getSessionsCollapsed()).toBe(true)
     })
 
-    it("does not persist when false", async () => {
+    it("persists and loads expanded state", async () => {
       manager.setSessionsCollapsed(false)
       await manager.flush()
       await manager.save()
 
       const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
       const data = JSON.parse(content)
-      expect(data.sessionsCollapsed).toBeUndefined()
+      expect(data.sessionsCollapsed).toBe(false)
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getSessionsCollapsed()).toBe(false)
     })
   })
 
