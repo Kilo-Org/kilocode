@@ -13,6 +13,10 @@ export function validateCloudFork(args: {
   if (!args.session) return "--cloud-fork requires --session"
 }
 
+export function localSessionID(args: { cloudFork?: boolean; session?: string }) {
+  return args.cloudFork ? undefined : args.session
+}
+
 /**
  * Import a cloud session to local storage and return the new local session ID.
  * Wraps the SDK's `.kilo.cloud.session.import()` which returns `unknown` due to
