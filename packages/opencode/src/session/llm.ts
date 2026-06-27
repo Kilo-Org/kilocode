@@ -141,7 +141,7 @@ const live: Layer.Layer<
         messages: estimated,
         tools: base.tools,
         configured: base.params.maxOutputTokens,
-        tokens: usage?.raw,
+        contextTokens: usage?.normalized,
       })
       if (
         preflight &&
