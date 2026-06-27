@@ -31,6 +31,7 @@ export namespace ModelUsage {
   type Model = typeof Model.Type
 
   export const Info = Schema.Struct({
+    sessionIDs: Schema.Array(SessionID),
     totals: Usage,
     models: Schema.Array(Model),
   })
@@ -75,6 +76,23 @@ export namespace ModelUsage {
     )
     SELECT id, parent_id AS parentID
     FROM ancestor`
+
+  const FAMILY_SQL = `
+    WITH RECURSIVE family(id) AS (
+      SELECT id
+      FROM session
+      WHERE id = ? AND project_id = ?
+
+      UNION
+
+      SELECT child.id
+      FROM session AS child
+      JOIN family AS parent ON child.parent_id = parent.id
+      WHERE child.project_id = ?
+    )
+    SELECT id
+    FROM family
+    ORDER BY id`
 
   const USAGE_SQL = `
     WITH RECURSIVE family(id) AS (
@@ -141,6 +159,10 @@ export namespace ModelUsage {
       const ids = new Set(ancestors.map((item) => item.id))
       const rootID = ancestors.find((item) => !item.parentID || !ids.has(item.parentID))?.id ?? sessionID
       const familyArgs = [rootID, anchor.projectID, anchor.projectID] as const
+      const sessionIDs = db
+        .prepare<{ id: SessionID }, [string, string, string]>(FAMILY_SQL)
+        .all(...familyArgs)
+        .map((item) => item.id)
       const rows = db.prepare<Row, [string, string, string]>(USAGE_SQL).all(...familyArgs)
       const totals = empty()
       const models = rows.map((row): Model => {
@@ -165,7 +187,7 @@ export namespace ModelUsage {
         }
       })
 
-      return { totals, models } satisfies Info
+      return { sessionIDs, totals, models } satisfies Info
     })
   })
 }

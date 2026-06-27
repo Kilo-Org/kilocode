@@ -983,6 +983,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "loadSessions":
           this.handleLoadSessions().catch((e) => console.error("[Kilo New] handleLoadSessions failed:", e))
           break
+        case "requestSessionModelUsage":
+          void this.fetchAndSendSessionModelUsage(message.sessionID, message.requestID)
+          break
         case "login": {
           const attempt = ++this.loginAttempt
           await handleLogin(this.authCtx, attempt, () => this.loginAttempt)
@@ -1660,6 +1663,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       })
       .catch((e: unknown) => console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", e))
+  }
+
+  private fetchAndSendSessionModelUsage(sessionID: string, requestID: string): Promise<void> {
+    const directory = this.getWorkspaceDirectory(sessionID)
+    return this.connectionService
+      .getClientAsync(directory)
+      .then(async (client) => {
+        const load = () => client.kilocode.sessionModelUsage({ sessionID, directory }, { throwOnError: true })
+        const first = await load()
+        const added = first.data.sessionIDs.some((id) => {
+          if (this.trackedSessionIds.has(id)) return false
+          this.trackedSessionIds.add(id)
+          return true
+        })
+        return added ? load() : first
+      })
+      .then((response) => {
+        this.postMessage({ type: "sessionModelUsageLoaded", sessionID, requestID, data: response.data })
+      })
+      .catch((error: unknown) => {
+        console.warn("[Kilo New] KiloProvider: Failed to load session model usage:", error)
+        this.postMessage({ type: "sessionModelUsageLoaded", sessionID, requestID })
+      })
   }
 
   private async handleLoadMessages(
@@ -3412,7 +3438,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               : sessionPatchToWebview(event.properties.sessionID, event.properties.info),
         }
       case "session.deleted":
-        return null
+        return {
+          type: "sessionDeleted" as const,
+          sessionID: event.properties.sessionID,
+        }
     }
   }
 
@@ -3547,6 +3576,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.sessionID) {
       this.setCurrentSession(applySessionPatch(this.currentSession, event.properties.info))
       this.contextSessionID = event.properties.sessionID
+    }
+    if (event.type === "session.deleted") {
+      const sid = event.properties.sessionID
+      this.trackedSessionIds.delete(sid)
+      this.sessionDirectories.delete(sid)
+      this.connectionService.pruneSession(sid)
     }
 
     // Auto-adopt child sessions as soon as the task tool part reveals their ID.

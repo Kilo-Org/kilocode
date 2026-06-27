@@ -22,6 +22,7 @@ const session = (id: string, parentID?: string) =>
   }) satisfies Session
 
 const data = {
+  sessionIDs: ["ses_current"],
   totals: {
     steps: 0,
     cost: 0,
