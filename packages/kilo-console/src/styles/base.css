@@ -4,6 +4,16 @@
   color: var(--text-base);
 }
 
+.kilo-console .header-mark-logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+}
+
 * {
   box-sizing: border-box;
 }
