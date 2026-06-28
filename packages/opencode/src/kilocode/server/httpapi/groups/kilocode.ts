@@ -14,6 +14,8 @@ import {
   RequestID as NotebookRequestID,
   Result as NotebookResult,
 } from "@/kilocode/notebook/protocol"
+import { ModelUsage } from "@/kilocode/session/model-usage"
+import { SessionID } from "@/session/schema"
 
 const root = "/kilocode"
 
@@ -35,6 +37,7 @@ export const KilocodePaths = {
   notebookList: `${root}/notebook`,
   notebookReply: `${root}/notebook/:requestID/reply`,
   notebookReject: `${root}/notebook/:requestID/reject`,
+  sessionModelUsage: `/session/:sessionID/model-usage`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -111,6 +114,18 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.notebook.reject",
             summary: "Reject a notebook request",
             description: "Complete a pending native notebook request with a structured host error.",
+          }),
+        ),
+        HttpApiEndpoint.get("sessionModelUsage", KilocodePaths.sessionModelUsage, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          success: described(ModelUsage.Info, "Model usage for a session tree"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.sessionModelUsage",
+            summary: "Get session model usage",
+            description: "Get token usage and direct cost by model for the complete top-level session tree.",
           }),
         ),
       )
