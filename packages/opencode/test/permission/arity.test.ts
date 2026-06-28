@@ -1,5 +1,7 @@
 import { test, expect } from "bun:test"
-import { BashArity } from "../../src/permission/arity"
+// kilocode_change start
+import { BashArity_DoNotUse as BashArity } from "../../src/permission/arity"
+// kilocode_change end
 
 test("arity 1 - unknown commands default to first token", () => {
   expect(BashArity.prefix(["unknown", "command", "subcommand"])).toEqual(["unknown"])

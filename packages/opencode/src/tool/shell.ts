@@ -16,6 +16,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Shell } from "@/shell/shell"
 import { ShellID } from "./shell/id"
 
+import { KiloFlagArity } from "@/kilocode/permission/flag-arity" // kilocode_change
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
@@ -23,7 +24,6 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
-import { BashArity } from "@/permission/arity"
 
 export { Parameters } from "./shell/prompt"
 
@@ -440,7 +440,7 @@ export const ShellTool = Tool.define(
 
         if (tokens.length && (!cmd || !CWD.has(cmd))) {
           scan.patterns.add(source(node))
-          scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
+          scan.always.add(KiloFlagArity.prefix(tokens).join(" ") + " *") // kilocode_change
         }
       }
 
