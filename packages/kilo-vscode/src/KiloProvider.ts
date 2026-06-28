@@ -3661,7 +3661,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Get the git remote URL for the current workspace using VS Code's built-in Git API.
-   * Returns undefined if not in a git repo or no remotes are configured.
+   * Returns the normalized canonical HTTPS URL, or undefined if not in a git repo or no remotes are configured.
    */
   private async getGitRemoteUrl(): Promise<string | undefined> {
     try {
@@ -3672,7 +3672,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const repo = api.repositories?.[0]
       if (!repo) return undefined
       const remote = repo.state?.remotes?.find((r: { name: string }) => r.name === "origin")
-      return remote?.fetchUrl ?? remote?.pushUrl
+      const raw = remote?.fetchUrl ?? remote?.pushUrl
+      return raw ? normalizeGitRemoteUrl(raw) : undefined
     } catch (error) {
       console.warn("[Kilo New] KiloProvider: Failed to get git remote URL:", error)
       return undefined
@@ -3949,5 +3950,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
     disposeGitChangesTarget()
+  }
+}
+
+/**
+ * Normalize a git remote URL to canonical HTTPS form, matching the normalization applied
+ * by the CLI when storing gitUrl on cloud sessions. Converts SSH format to HTTPS and
+ * strips credentials, so that SSH and HTTPS remotes for the same repo produce the same
+ * canonical URL for filtering.
+ *
+ * Examples:
+ *   git@github.com:Kilo-Org/kilocode.git        → https://github.com/Kilo-Org/kilocode.git
+ *   https://x-access-token:t@github.com/org.git → https://github.com/org.git
+ *   https://github.com/Kilo-Org/kilocode.git     → https://github.com/Kilo-Org/kilocode.git
+ */
+function normalizeGitRemoteUrl(raw: string): string | undefined {
+  // Convert SSH format (git@host:owner/repo) to HTTPS canonical form
+  const ssh = raw.match(/^git@([^:]+):(.+)$/)
+  if (ssh) return `https://${ssh[1]}/${ssh[2].split("?")[0]}`
+  try {
+    const parsed = new URL(raw)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined
+    parsed.username = ""
+    parsed.password = ""
+    parsed.search = ""
+    parsed.hash = ""
+    return parsed.toString()
+  } catch {
+    return undefined
   }
 }
