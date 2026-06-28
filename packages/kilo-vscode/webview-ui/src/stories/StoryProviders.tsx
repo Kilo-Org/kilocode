@@ -29,6 +29,7 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { File } from "@kilocode/kilo-ui/file"
 import { SessionContext } from "../context/session"
+import { AgentRequirementsContext, type AgentRequirementsContextValue } from "../context/agent-requirements"
 import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
 import { IndexingProvider } from "../context/indexing"
@@ -48,6 +49,7 @@ import type {
   SessionCloseReason,
   QuestionRequest,
   SuggestionRequest,
+  AgentRequirementResult,
 } from "../types/messages"
 
 type PluginSpec = string | [string, Record<string, unknown>]
@@ -277,6 +279,9 @@ interface StoryProvidersProps {
   questions?: QuestionRequest[]
   suggestions?: SuggestionRequest[]
   notifications?: KilocodeNotification[]
+  agentRequirements?: AgentRequirementResult
+  agentRequirementsChecking?: boolean
+  agentRequirementsBlocked?: boolean
   status?: string
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
@@ -385,6 +390,22 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
   })
   const notifications = mockNotificationsValue(props.notifications)
   const [locale] = createSignal<"en">("en")
+  const result = () => props.agentRequirements
+  const visible = () => {
+    const value = result()
+    return value?.state === "blocked" || value?.state === "error"
+  }
+  const requirements: AgentRequirementsContextValue = {
+    result,
+    checking: () => props.agentRequirementsChecking ?? false,
+    blocked: () => {
+      if (props.agentRequirementsBlocked !== undefined) return props.agentRequirementsBlocked
+      const value = result()
+      if (!value) return props.agentRequirementsChecking === true
+      return value.enabled && (value.state === "blocked" || value.state === "error")
+    },
+    visible,
+  }
 
   return (
     <VSCodeProvider>
@@ -413,30 +434,32 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                     <I18nProvider value={{ locale: () => "en", t }}>
                       <NotificationsContext.Provider value={notifications}>
                         <SessionContext.Provider value={session as any}>
-                          <IndexingProvider>
-                            <KiloEmbeddingModelsProvider>
-                              <DataProvider
-                                data={data()}
-                                directory="/project/"
-                                onOpenDiff={props.onOpenDiff}
-                                onOpenFile={props.onOpenFile}
-                              >
-                                <DiffComponentProvider component={Diff}>
-                                  <CodeComponentProvider component={Code}>
-                                    <FileComponentProvider component={File}>
-                                      <MarkedProvider>
-                                        {props.noPadding ? (
-                                          props.children
-                                        ) : (
-                                          <div style={{ padding: "12px" }}>{props.children}</div>
-                                        )}
-                                      </MarkedProvider>
-                                    </FileComponentProvider>
-                                  </CodeComponentProvider>
-                                </DiffComponentProvider>
-                              </DataProvider>
-                            </KiloEmbeddingModelsProvider>
-                          </IndexingProvider>
+                          <AgentRequirementsContext.Provider value={requirements}>
+                            <IndexingProvider>
+                              <KiloEmbeddingModelsProvider>
+                                <DataProvider
+                                  data={data()}
+                                  directory="/project/"
+                                  onOpenDiff={props.onOpenDiff}
+                                  onOpenFile={props.onOpenFile}
+                                >
+                                  <DiffComponentProvider component={Diff}>
+                                    <CodeComponentProvider component={Code}>
+                                      <FileComponentProvider component={File}>
+                                        <MarkedProvider>
+                                          {props.noPadding ? (
+                                            props.children
+                                          ) : (
+                                            <div style={{ padding: "12px" }}>{props.children}</div>
+                                          )}
+                                        </MarkedProvider>
+                                      </FileComponentProvider>
+                                    </CodeComponentProvider>
+                                  </DiffComponentProvider>
+                                </DataProvider>
+                              </KiloEmbeddingModelsProvider>
+                            </IndexingProvider>
+                          </AgentRequirementsContext.Provider>
                         </SessionContext.Provider>
                       </NotificationsContext.Provider>
                     </I18nProvider>

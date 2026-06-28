@@ -17,7 +17,7 @@ import type { PermissionRequest } from "./permissions"
 import type { AnacondaDesktopExtensionMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
-import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
+import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } from "./agents"
 import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
@@ -347,6 +347,15 @@ export interface AgentsLoadedMessage {
 export interface SkillsLoadedMessage {
   type: "skillsLoaded"
   skills: SkillInfo[]
+}
+
+export interface AgentRequirementsLoadedMessage {
+  type: "agentRequirementsLoaded"
+  result: AgentRequirementResult
+}
+
+export interface AgentRequirementsInvalidatedMessage {
+  type: "agentRequirementsInvalidated"
 }
 
 export interface CommandsLoadedMessage {
@@ -1044,6 +1053,8 @@ export type ExtensionMessage =
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
+  | AgentRequirementsLoadedMessage
+  | AgentRequirementsInvalidatedMessage
   | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage

@@ -757,6 +757,7 @@ export const layer = Layer.effect(
         yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
+      yield* agents.guardRequirements(ag) // kilocode_change - enforce requirements before creating a turn
 
       const current = Database.use((db) =>
         db
@@ -1885,6 +1886,7 @@ export const layer = Layer.effect(
         yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
+      yield* agents.guardRequirements(agent) // kilocode_change - command agent overrides must satisfy requirements
 
       const templateParts = yield* resolvePromptParts(template)
       KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry

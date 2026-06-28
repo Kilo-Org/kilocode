@@ -146,6 +146,8 @@ import type {
   KiloCloudSessionImportResponses,
   KiloCloudSessionsErrors,
   KiloCloudSessionsResponses,
+  KilocodeAgentRequirementsErrors,
+  KilocodeAgentRequirementsResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
   KilocodeNotebookListErrors,
@@ -7488,6 +7490,42 @@ export class SessionImport extends HeyApiClient {
 }
 
 export class Kilocode extends HeyApiClient {
+  /**
+   * Check agent requirements
+   *
+   * Check whether the selected agent's requirements are available in the request directory.
+   */
+  public agentRequirements<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      agent: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeAgentRequirementsResponses,
+      KilocodeAgentRequirementsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/agent/requirements",
+      ...options,
+      ...params,
+    })
+  }
+
   /**
    * Remove a skill
    *

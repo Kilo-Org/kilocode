@@ -35,6 +35,7 @@ import { KiloSession, kiloSessionFork } from "@/kilocode/session"
 import { SessionExport } from "@/kilocode/session-export"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { baseKey, cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
+import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements"
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { NonNegativeInt, optionalOmitUndefined } from "@opencode-ai/core/schema"
@@ -375,7 +376,9 @@ export const Event = {
       sessionID: Schema.optional(SessionID),
       // Reuses MessageV2.Assistant.fields.error (already Schema.optional) so
       // the derived zod keeps the same discriminated-union shape on the bus.
-      error: MessageV2.Assistant.fields.error,
+      // kilocode_change start - carry pre-message requirement failures over session.error
+      error: Schema.optional(Schema.Union([MessageV2.Assistant.fields.error, AgentRequirementError.EffectSchema])),
+      // kilocode_change end
     }),
   ),
   // kilocode_change start

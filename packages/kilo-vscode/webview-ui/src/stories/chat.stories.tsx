@@ -21,11 +21,81 @@ import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
-import type { Message, Part, QuestionRequest, ReviewComment, SuggestionRequest, TodoItem } from "../types/messages"
+import type {
+  AgentRequirementResult,
+  Message,
+  Part,
+  QuestionRequest,
+  ReviewComment,
+  SuggestionRequest,
+  TodoItem,
+} from "../types/messages"
 import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
 import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
+
+const missingToolsRequirements: AgentRequirementResult = {
+  agent: "code-review",
+  directory: "/project",
+  enabled: true,
+  state: "blocked",
+  skills: [
+    { name: "review-checklist", status: "ready" },
+    { name: "security-audit", status: "missing" },
+  ],
+  mcps: [
+    { name: "github", status: "missing" },
+    { name: "filesystem", status: "ready" },
+  ],
+  vscode_extensions: [],
+}
+
+const missingExtensionRequirements: AgentRequirementResult = {
+  agent: "release-review",
+  directory: "/project",
+  enabled: true,
+  state: "blocked",
+  skills: [],
+  mcps: [],
+  vscode_extensions: [
+    {
+      name: "GitHub Pull Requests",
+      id: "github.vscode-pull-request-github",
+      status: "missing",
+    },
+  ],
+}
+
+const malformedRequirements: AgentRequirementResult = {
+  agent: "malformed-agent",
+  directory: "/project",
+  enabled: true,
+  state: "error",
+  skills: [],
+  mcps: [],
+  vscode_extensions: [],
+  error: {
+    code: "malformed_declaration",
+    message: "Invalid requirements declaration.",
+  },
+}
+
+const readyRequirements: AgentRequirementResult = {
+  agent: "ready-agent",
+  directory: "/project",
+  enabled: true,
+  state: "ready",
+  skills: [{ name: "review-checklist", status: "ready" }],
+  mcps: [{ name: "filesystem", status: "ready" }],
+  vscode_extensions: [
+    {
+      name: "GitHub Pull Requests",
+      id: "github.vscode-pull-request-github",
+      status: "ready",
+    },
+  ],
+}
 
 // ---------------------------------------------------------------------------
 // Question fixtures
@@ -151,6 +221,71 @@ export const ChatViewWithMessages: Story = {
       </StoryProviders>
     )
   },
+}
+
+export const ChatViewRequirementsChecking: Story = {
+  name: "ChatView — agent requirements checking",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirementsChecking agentRequirementsBlocked>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsMissingTools: Story = {
+  name: "ChatView — missing skills and MCPs",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingToolsRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsMissingExtension: Story = {
+  name: "ChatView — missing VS Code extension",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingExtensionRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsMalformed: Story = {
+  name: "ChatView — malformed agent requirements",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={malformedRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsReady: Story = {
+  name: "ChatView — requirements ready (no card)",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={readyRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
 }
 
 export const ChatViewAgentManagerCompleted: Story = {

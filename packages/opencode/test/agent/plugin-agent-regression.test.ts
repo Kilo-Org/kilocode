@@ -10,6 +10,7 @@ import { Config } from "../../src/config/config"
 import { Env } from "../../src/env"
 import { Git } from "../../src/git" // kilocode_change
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { MCP } from "../../src/mcp" // kilocode_change
 import { Plugin } from "../../src/plugin"
 import { AccountTest } from "../fake/account"
 import { AuthTest } from "../fake/auth"
@@ -43,6 +44,7 @@ const dependencies = Layer.mergeAll(configLayer, pluginLayer).pipe(Layer.provide
 const agentLayer = Agent.layer.pipe(
   Layer.provide(AuthTest.empty),
   Layer.provide(SkillTest.empty),
+  Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
   Layer.provide(provider.layer),
   Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
 )
