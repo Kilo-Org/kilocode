@@ -22562,6 +22562,19 @@
             "required": ["overallScore", "avgAttemptCostUsd"],
             "additionalProperties": false
           },
+          "autoRouting": {
+            "type": "object",
+            "properties": {
+              "models": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["models"],
+            "additionalProperties": false
+          },
           "ai_sdk_provider": {
             "type": "string",
             "enum": ["alibaba", "anthropic", "mistral", "openai", "openai-compatible", "openrouter"]
