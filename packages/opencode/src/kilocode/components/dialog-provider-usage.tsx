@@ -50,7 +50,7 @@ function Item(props: { item: ProviderUsageSnapshot }) {
       <Show
         when={props.item.windows.length === 0 && props.item.balances.length === 0 && props.item.credits.length === 0}
       >
-        <text fg={theme.textMuted}>No usage details reported by provider.</text>
+        <text fg={theme.textMuted}>No usage details reported by provider for this plan.</text>
       </Show>
       <For each={props.item.windows}>
         {(window) => (
