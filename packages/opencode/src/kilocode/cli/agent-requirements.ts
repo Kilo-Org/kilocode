@@ -100,7 +100,9 @@ export function format(input: ErrorData | RequirementError) {
   if (skills.length) lines.push("", "Skills:", ...skills.map((skill) => `- ${item(skill)}`))
   if (mcps.length) lines.push("", "MCP servers:", ...mcps.map((mcp) => `- ${item(mcp)}`))
 
-  lines.push("", "Install the required skills and configure or connect the required MCP servers, then retry.")
+  if (skills.length || mcps.length) {
+    lines.push("", "Install the required skills and configure or connect the required MCP servers, then retry.")
+  }
   return lines.join("\n")
 }
 

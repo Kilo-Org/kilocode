@@ -1636,7 +1636,8 @@ export const dict = {
   "agentRequirements.group.mcps": "MCP",
   "agentRequirements.group.extensions": "Estensioni VS Code",
   "agentRequirements.blocked.title": "Prerequisiti dell’agente {{agent}}",
-  "agentRequirements.blocked.description": "Questo agente richiede i seguenti strumenti prima di poter essere eseguito.",
+  "agentRequirements.blocked.description":
+    "Questo agente richiede i seguenti strumenti prima di poter essere eseguito.",
   "agentRequirements.prompt.blocked": "Completa prima i controlli richiesti per usare questo agente",
   "agentRequirements.action.openMarketplace": "Apri Marketplace",
   "agentRequirements.error.unknownAgent": "Impossibile trovare l’agente selezionato.",

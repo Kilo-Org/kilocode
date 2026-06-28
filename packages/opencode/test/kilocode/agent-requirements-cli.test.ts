@@ -102,7 +102,9 @@ describe("CLI agent requirements", () => {
     if (output.ok) return
     expect(output.error.data.state).toBe("blocked")
     expect(output.error.data.vscode_extensions).toEqual([{ name: "Sample Extension", id: "publisher.extension" }])
-    expect(Requirements.format(output.error)).toContain("Use the Kilo VS Code extension instead")
+    const text = Requirements.format(output.error)
+    expect(text).toContain("Use the Kilo VS Code extension instead")
+    expect(text).not.toContain("Install the required skills and configure or connect the required MCP servers")
   })
 
   test("formats grouped actionable guidance", () => {

@@ -51,7 +51,7 @@ export type AgentRequirementsControllerOptions = {
 
 export class AgentRequirementsController {
   private readonly cache = new Map<string, HostAgentRequirementResult>()
-  private readonly generations = new Map<string, number>()
+  private readonly generations = new Map<string, object>()
   private readonly subscription: Disposable | undefined
 
   constructor(private readonly opts: AgentRequirementsControllerOptions) {
@@ -61,9 +61,7 @@ export class AgentRequirementsController {
   clear(): void {
     const active = this.cache.size > 0 || this.generations.size > 0
     this.cache.clear()
-    for (const [key, generation] of this.generations) {
-      this.generations.set(key, generation + 1)
-    }
+    this.generations.clear()
     if (!active) return
     this.opts.post({ type: "agentRequirementsInvalidated" })
   }
@@ -151,19 +149,24 @@ export class AgentRequirementsController {
     if (!client || !this.opts.connected()) throw new Error("Not connected to CLI backend")
 
     const connection = this.opts.generation()
-    const generation = (this.generations.get(key) ?? 0) + 1
-    this.generations.set(key, generation)
+    const token = {}
+    this.generations.set(key, token)
 
     const endpoint = client.kilocode as typeof client.kilocode & AgentRequirementsClient
-    const response = await endpoint.agentRequirements({ agent, directory }, { throwOnError: true })
+    const response = await endpoint.agentRequirements({ agent, directory }, { throwOnError: true }).catch((error) => {
+      if (this.generations.get(key) === token) this.generations.delete(key)
+      throw error
+    })
 
     if (this.opts.generation() !== connection || this.opts.client() !== client) {
+      if (this.generations.get(key) === token) this.generations.delete(key)
       throw new Error("Connection changed while checking agent requirements")
     }
-    if (this.generations.get(key) !== generation) throw new Error("Agent requirement check was superseded")
+    if (this.generations.get(key) !== token) throw new Error("Agent requirement check was superseded")
 
     const result = this.apply(response.data, directory)
     this.cache.set(key, result)
+    this.generations.delete(key)
     return result
   }
 
