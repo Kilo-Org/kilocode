@@ -1140,6 +1140,9 @@ export const dict = {
   "profile.balance.refresh": "Refresh balance",
   "profile.action.dashboard": "Dashboard",
   "profile.action.logout": "Log Out",
+  "profile.kiloPass.title": "Kilo Pass",
+  "profile.kiloPass.description": "Get monthly credits at a discount and save on AI usage.",
+  "profile.kiloPass.action": "Get Kilo Pass",
 
   "settings.section.configuration": "Configuration",
   "settings.agentBehaviour.title": "Agent Behaviour",
