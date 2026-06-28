@@ -3,4 +3,4 @@
 "kilo-code": patch
 ---
 
-Gate experimental VS Code agents on their declared skill, MCP, and VS Code extension requirements, with a Marketplace shortcut for missing skills and MCPs.
+Gate experimental agents on their declared skill, MCP, and VS Code extension requirements. VS Code shows requirement groups with Marketplace shortcuts, and the CLI stops before sending when requirements are unmet.
