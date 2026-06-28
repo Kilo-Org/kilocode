@@ -1104,6 +1104,7 @@ export const dict = {
   "profile.usage.description": "Kvote og saldoer for gjeldende abonnement",
   "profile.usage.refresh": "Oppdater leverandørforbruk",
   "profile.usage.empty": "Ingen kilder til leverandørforbruk oppdaget.",
+  "profile.usage.detailsUnavailable": "Leverandøren har ikke rapportert noen forbruksdetaljer.",
   "profile.usage.source.viaKilo": "via Kilo",
   "profile.usage.source.direct": "Direkte",
   "profile.usage.source.chatgpt": "ChatGPT",
