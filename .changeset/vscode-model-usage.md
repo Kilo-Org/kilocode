@@ -4,4 +4,4 @@
 "kilo-code": patch
 ---
 
-Show full task token usage and a provider-grouped model breakdown in the VS Code session header.
+Include session-tree IDs in model usage API responses and show full task token usage with a provider-grouped model breakdown in the VS Code session header.

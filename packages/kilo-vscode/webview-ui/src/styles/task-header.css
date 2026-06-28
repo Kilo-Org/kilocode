@@ -273,10 +273,11 @@
 
 .task-header-usage-trigger {
   display: flex;
-  align-items: flex-start;
-  width: 100%;
+  align-items: center;
+  width: calc(100% - 16px);
   min-height: 28px;
   height: auto;
+  margin: 0 8px;
   padding: 2px 0;
   border-radius: 3px;
   color: inherit;
@@ -294,7 +295,11 @@
 .task-header-usage-trigger .task-header-tokens {
   flex: 1;
   min-width: 0;
-  padding-right: 0;
+  padding: 0;
+}
+
+.task-header-usage [data-slot="collapsible-arrow"] {
+  opacity: 1;
 }
 
 .task-header-usage-detail {
@@ -331,7 +336,6 @@
 
 .task-header-usage-model + .task-header-usage-model {
   padding-top: 4px;
-  border-top: 1px solid var(--border-weak-base);
 }
 
 .task-header-usage-model-name {
