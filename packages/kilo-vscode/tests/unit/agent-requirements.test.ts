@@ -157,11 +157,13 @@ describe("AgentRequirementsController", () => {
     })
   })
 
-  it("clears requirements when the extension subscription fires", () => {
+  it("clears requirements when the extension subscription fires", async () => {
     const posts: unknown[] = []
     let listener: (() => void) | undefined
     let disposed = false
+    const backend = client(result())
     const requirements = controller({
+      api: backend.api,
       posts,
       subscribe: (fn) => {
         listener = fn
@@ -169,6 +171,8 @@ describe("AgentRequirementsController", () => {
       },
     })
 
+    await requirements.fetch({ agent: "demo", directory: root })
+    posts.length = 0
     listener?.()
     requirements.dispose()
 

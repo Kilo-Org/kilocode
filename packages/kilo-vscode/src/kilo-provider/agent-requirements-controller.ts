@@ -59,10 +59,12 @@ export class AgentRequirementsController {
   }
 
   clear(): void {
+    const active = this.cache.size > 0 || this.generations.size > 0
     this.cache.clear()
     for (const [key, generation] of this.generations) {
       this.generations.set(key, generation + 1)
     }
+    if (!active) return
     this.opts.post({ type: "agentRequirementsInvalidated" })
   }
 

@@ -448,7 +448,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       sessions: () => this.sessionDirectories,
       worktrees: this.opts.worktreeDirectories,
       extension: (id) => vscode.extensions.getExtension(id),
-      subscribe: (listener) => vscode.extensions.onDidChange(listener),
+      subscribe:
+        typeof vscode.extensions.onDidChange === "function"
+          ? (listener) => vscode.extensions.onDidChange(listener)
+          : undefined,
       error: getErrorMessage,
     })
 
