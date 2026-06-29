@@ -268,7 +268,7 @@ internal class LoggedInProfileUi(
             val base = item.currentPeriodBaseCreditsUsd.coerceAtLeast(1.0)
             passMeter.setFraction(item.currentPeriodUsageUsd / base)
             val bonus = if (item.currentPeriodBonusCreditsUsd > 0.0) {
-                formatBalance(item.currentPeriodBonusCreditsUsd)
+                "+${formatBalance(item.currentPeriodBonusCreditsUsd)}"
             } else null
             if (passBonusValue.text != bonus.orEmpty()) {
                 passBonusValue.text = bonus.orEmpty()
@@ -303,6 +303,7 @@ internal class LoggedInProfileUi(
         return changed
     }
 
+    @RequiresEdt
     private fun visible(component: JComponent, show: Boolean): Boolean {
         if (component.isVisible == show) return false
         component.isVisible = show
@@ -388,6 +389,7 @@ internal class LoggedInProfileUi(
     private class PassMeter : JComponent() {
         private var fraction = 0.0
 
+        @RequiresEdt
         fun setFraction(value: Double) {
             val next = value.coerceIn(0.0, 1.0)
             if (fraction == next) return
