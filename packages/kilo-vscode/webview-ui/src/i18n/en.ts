@@ -1632,6 +1632,7 @@ export const dict = {
   "settings.models.refreshCatalog.button": "Update now",
   "settings.models.refreshCatalog.refreshing": "Updating…",
   "settings.models.refreshCatalog.toast.success": "Model catalog updated",
+  "settings.models.refreshCatalog.toast.error": "The model catalog could not be fully refreshed. Please try again.",
   "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
   "settings.models.hidePromptTraining.description":
     "Hide Kilo Gateway models whose providers may use your prompts for training.",

@@ -99,11 +99,17 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     const refreshCatalog = Effect.fn("KiloGatewayHttpApi.refreshCatalog")(function* () {
       // Force a models.dev refetch; this also notifies the provider layer to rebuild its catalog.
-      yield* modelsDev.refresh(true).pipe(Effect.ignore)
-      // Drop the gateway caches so the next provider listing re-fetches fresh kilo/apertis models.
-      yield* cache.clear("kilo").pipe(Effect.ignore)
-      yield* cache.clear("apertis").pipe(Effect.ignore)
-      return { success: true }
+      // Note: core ModelsDev.refresh swallows its own transport failures, so we cannot observe a
+      // models.dev outage here — only the gateway re-fetch below produces a reliable success signal.
+      yield* modelsDev.refresh(true)
+      // Drop the gateway caches and re-fetch eagerly so the response reflects whether the gateway
+      // was actually reachable, instead of always reporting success.
+      yield* cache.clear("kilo")
+      yield* cache.clear("apertis")
+      yield* cache.fetch("kilo").pipe(Effect.ignore)
+      yield* cache.fetch("apertis").pipe(Effect.ignore)
+      const failed = yield* cache.failedProviders()
+      return { success: failed.length === 0 }
     })
 
     const modes = Effect.fn("KiloGatewayHttpApi.modes")(function* () {

@@ -39,7 +39,10 @@ const ModelsTab: Component = () => {
         })
         return
       }
-      showToast({ title: language.t("common.requestFailed"), description: message.error })
+      showToast({
+        title: language.t("common.requestFailed"),
+        description: message.error ?? language.t("settings.models.refreshCatalog.toast.error"),
+      })
     }),
   )
 
