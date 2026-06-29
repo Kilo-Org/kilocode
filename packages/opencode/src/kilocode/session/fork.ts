@@ -3,6 +3,7 @@ import { SessionID } from "@/session/schema"
 import { Database } from "@/storage/db"
 import { SyncEvent } from "@/sync"
 import { Effect } from "effect"
+import { KiloPartLifecycle } from "./part-lifecycle"
 
 const task = "task"
 const stale = /^[ \t]*task_id:[^\r\n]*(?:(?:\r?\n){1,2}|$)/m
@@ -17,6 +18,7 @@ export function writer(sessionID: SessionID, sync: SyncEvent.Interface) {
       return info
     },
     part(part: MessageV2.Part) {
+      if (KiloPartLifecycle.transient(part)) return
       items.push({ type: "part", part: structuredClone(detachPart(part)), time: Date.now() })
     },
     commit() {

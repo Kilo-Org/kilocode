@@ -321,18 +321,21 @@ describe("sandbox FileSystem", () => {
     },
   )
 
-  test.skipIf(process.platform === "darwin")("fails closed when the OS backend is unavailable", async () => {
-    await execute(
-      run(
-        makeProfile(allowed),
-        Effect.gen(function* () {
-          const fs = yield* FileSystem.FileSystem
-          const denied = yield* fs.writeFileString(path.join(allowed, "blocked.txt"), "blocked").pipe(Effect.flip)
-          expect(denied.reason._tag).toBe("PermissionDenied")
-        }),
-      ),
-    )
-  })
+  test.skipIf(process.platform === "darwin" || process.platform === "linux")(
+    "fails closed when the OS backend is unavailable",
+    async () => {
+      await execute(
+        run(
+          makeProfile(allowed),
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem
+            const denied = yield* fs.writeFileString(path.join(allowed, "blocked.txt"), "blocked").pipe(Effect.flip)
+            expect(denied.reason._tag).toBe("PermissionDenied")
+          }),
+        ),
+      )
+    },
+  )
 
   test("passes through mutations when no profile is active", async () => {
     await execute(

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 /**
  * Kilo-specific overrides for the provider dialog.
  *
@@ -10,6 +9,7 @@ import type { JSX } from "solid-js"
 import type { RGBA } from "@opentui/core"
 import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
 import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method"
+export { selectProvider } from "@/kilocode/anaconda-desktop/tui/setup"
 
 // ---------------------------------------------------------------------------
 // Failed-state gutter/description helpers
@@ -51,6 +51,7 @@ export const PROVIDER_PRIORITY: Record<string, number> = {
   "github-copilot": 1,
   openai: 2,
   google: 3,
+  "anaconda-desktop": 4,
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +62,7 @@ export const PROVIDER_DESCRIPTIONS: Record<string, string> = {
   kilo: "(Recommended)",
   anthropic: "(Claude Max or API key)",
   openai: "(ChatGPT login or API key)",
+  "anaconda-desktop": "(Local models)",
 }
 
 export const PROVIDER_TITLES: Record<string, string> = {

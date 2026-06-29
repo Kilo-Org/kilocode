@@ -13,6 +13,7 @@ import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -134,8 +135,9 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
         open: (SessionRef) -> Unit = {},
+        log: KiloLog? = null,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs = displayMs, open = open)
+        return controller(id, flushMs, true, displayMs = displayMs, open = open, log = log)
     }
 
     protected fun controller(
@@ -155,6 +157,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         beforeUpdate: () -> Boolean = { false },
         afterUpdate: (Boolean) -> Unit = {},
         open: (SessionRef) -> Unit = {},
+        log: KiloLog? = null,
         ref: SessionRef? = if (session != null) SessionRef.Local(session) else SessionRef.from(id),
     ): SessionController {
         val root = Root()
@@ -174,6 +177,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             afterUpdate = afterUpdate,
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
             timers = timers,
+            log = log ?: KiloLog.create(SessionController::class.java),
         )
         controllers.add(m)
         roots[m] = root

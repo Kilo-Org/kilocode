@@ -76,6 +76,6 @@ const available: Support = existsSync(executable)
   : { available: false, reason: `${executable} is not available` }
 
 export const seatbelt: Backend = {
-  support: available,
+  support: () => available,
   prepare: (profile, launch) => Effect.succeed(generate(profile, launch)),
 }

@@ -1374,6 +1374,14 @@ export type Config = {
      */
     openTelemetry?: boolean
     /**
+     * Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access
+     */
+    sandbox?: boolean
+    /**
+     * Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)
+     */
+    sandbox_restrict_network?: boolean
+    /**
      * Tools that should only be available to primary agents.
      */
     primary_tools?: Array<string>
