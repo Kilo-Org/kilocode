@@ -1350,17 +1350,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "toggleFavorite": {
-          const current = validateFavorites(this.extensionContext?.globalState.get("favoriteModels"))
-          const key = `${message.providerID}/${message.modelID}`
-          const exists = current.some((f) => `${f.providerID}/${f.modelID}` === key)
-          const favorites =
-            message.action === "add" && !exists
-              ? [...current, { providerID: message.providerID, modelID: message.modelID }]
-              : message.action === "remove" && exists
-                ? current.filter((f) => `${f.providerID}/${f.modelID}` !== key)
-                : current
-          await this.extensionContext?.globalState.update("favoriteModels", favorites)
-          this.connectionService.notifyFavoritesChanged(favorites)
+          await this.toggleFavorite(message)
           break
         }
         case "requestFavorites": {
@@ -1426,6 +1416,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       storage: this.extensionContext?.globalStorageUri,
       post: (msg) => this.postMessage(msg),
     })
+  }
+
+  private async toggleFavorite(message: {
+    action: "add" | "remove"
+    providerID: string
+    modelID: string
+  }): Promise<void> {
+    const current = validateFavorites(this.extensionContext?.globalState.get("favoriteModels"))
+    const key = `${message.providerID}/${message.modelID}`
+    const exists = current.some((f) => `${f.providerID}/${f.modelID}` === key)
+    const favorites =
+      message.action === "add" && !exists
+        ? [...current, { providerID: message.providerID, modelID: message.modelID }]
+        : message.action === "remove" && exists
+          ? current.filter((f) => `${f.providerID}/${f.modelID}` !== key)
+          : current
+    await this.extensionContext?.globalState.update("favoriteModels", favorites)
+    this.connectionService.notifyFavoritesChanged(favorites)
   }
 
   /**
