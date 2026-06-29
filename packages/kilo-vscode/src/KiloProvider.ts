@@ -3513,7 +3513,28 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private postModelUsageChanged(event: ProviderEvent, sessionID: string | undefined): boolean {
     if (!sessionID || this.trackedSessionIds.has(sessionID)) return false
+    if (event.type === "session.created") {
+      const parent = event.properties.info.parentID
+      if (!parent || !this.modelUsageSessionIds.has(parent)) return false
+      this.modelUsageSessionIds.add(sessionID)
+      this.postMessage({ type: "sessionModelUsageChanged", sessionID })
+      return true
+    }
     if (!this.modelUsageSessionIds.has(sessionID)) return false
+    if (event.type === "message.part.updated") {
+      const part = event.properties.part as {
+        type?: string
+        tool?: string
+        metadata?: { sessionId?: string }
+        state?: { metadata?: { sessionId?: string } }
+      }
+      const child = childID(part)
+      if (child && !this.modelUsageSessionIds.has(child)) {
+        this.modelUsageSessionIds.add(child)
+        this.postMessage({ type: "sessionModelUsageChanged", sessionID: child })
+        return true
+      }
+    }
     const changed =
       event.type === "message.removed" ||
       event.type === "message.part.removed" ||
