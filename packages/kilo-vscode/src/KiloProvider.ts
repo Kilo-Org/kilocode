@@ -1669,16 +1669,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const directory = this.getWorkspaceDirectory(sessionID)
     return this.connectionService
       .getClientAsync(directory)
-      .then(async (client) => {
-        const load = () => client.kilocode.sessionModelUsage({ sessionID, directory }, { throwOnError: true })
-        const first = await load()
-        const added = first.data.sessionIDs.some((id) => {
-          if (this.trackedSessionIds.has(id)) return false
-          this.trackedSessionIds.add(id)
-          return true
-        })
-        return added ? load() : first
-      })
+      .then((client) => client.kilocode.sessionModelUsage({ sessionID, directory }, { throwOnError: true }))
       .then((response) => {
         this.postMessage({ type: "sessionModelUsageLoaded", sessionID, requestID, data: response.data })
       })
