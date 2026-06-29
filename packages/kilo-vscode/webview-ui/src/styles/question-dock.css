@@ -196,7 +196,7 @@
     height: 14px;
     padding: 1px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-base);
+    border: 1px solid var(--vscode-button-background);
     display: inline-flex;
     align-items: center;
     justify-content: center;
