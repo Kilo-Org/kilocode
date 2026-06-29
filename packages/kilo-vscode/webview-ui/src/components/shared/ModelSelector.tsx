@@ -965,7 +965,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                 <Show when={isAuto(model)}>
                                   <Tooltip value={autoLabel(model)} placement="top">
                                     <span class="model-selector-auto-icon" aria-label={autoLabel(model)}>
-                                      <Icon name="branch" size="small" />
+                                      <Icon name="models" size="small" />
                                     </span>
                                   </Tooltip>
                                 </Show>
