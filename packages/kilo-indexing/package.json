@@ -38,6 +38,7 @@
     "@kilocode/plugin": "workspace:*",
     "@lancedb/lancedb": "0.26.2",
     "@qdrant/js-client-rest": "1.17.0",
+    "@valkey/valkey-glide": "2.4.0",
     "async-mutex": "0.5.0",
     "chokidar": "4.0.3",
     "effect": "catalog:",
@@ -57,6 +58,7 @@
     "@tsconfig/node22": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "fast-check": "4.7.0",
     "typescript": "catalog:"
   },
   "peerDependencies": {}
