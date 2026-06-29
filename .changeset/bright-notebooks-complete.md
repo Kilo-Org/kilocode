@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Enable autocomplete in Jupyter notebooks.
+Enable autocomplete across supported languages in Jupyter notebooks.
