@@ -356,6 +356,7 @@ export const layer: Layer.Layer<
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
+        if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
         }

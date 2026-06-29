@@ -14,6 +14,7 @@ import { commitMessageHandlers } from "./handlers/commit-message"
 import { configConsoleHandlers } from "./handlers/config-console"
 import { enhancePromptHandlers } from "./handlers/enhance-prompt"
 import { indexingHandlers } from "./handlers/indexing"
+import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
 import { networkHandlers } from "./handlers/network"
@@ -31,6 +32,7 @@ export const provide = Layer.provide([
   configConsoleHandlers,
   enhancePromptHandlers,
   indexingHandlers,
+  interactiveTerminalHandlers,
   kiloGatewayHandlers,
   kilocodeHandlers,
   networkHandlers,
