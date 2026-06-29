@@ -48,6 +48,14 @@ const AgentSchema = Schema.StructWithRest(
     }),
     // kilocode_change end
     mode: Schema.optional(Schema.Literals(["subagent", "primary", "all"])),
+    // kilocode_change start - typed metadata carriers so they never fall into `options` (provider params)
+    displayName: Schema.optional(Schema.String).annotate({
+      description: "Human-readable name shown in the UI (e.g. for organization or marketplace agents)",
+    }),
+    source: Schema.optional(Schema.String).annotate({
+      description: "Origin marker for managed agents (organization | global | project)",
+    }),
+    // kilocode_change end
     hidden: Schema.optional(Schema.Boolean).annotate({
       description: "Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)",
     }),
@@ -76,6 +84,8 @@ const KNOWN_KEYS = new Set([
   "temperature",
   "top_p",
   "mode",
+  "displayName", // kilocode_change
+  "source", // kilocode_change
   "hidden",
   "color",
   "steps",

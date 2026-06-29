@@ -871,7 +871,7 @@ export const layer = Layer.effect(
         const directories = yield* ConfigPaths.directories(ctx.directory, ctx.worktree)
         const primary = Flag.KILO_DISABLE_PROJECT_CONFIG
           ? []
-          : yield* primaryPaths(ctx.directory, ctx.worktree, [".kilocode", ".kilo", ".opencode"])
+          : yield* primaryPaths(ctx.directory, ctx.worktree, [".kilocode", ".kilo"])
         // Load primary fallbacks before active-worktree config, then track them as local.
         directories.splice(1, 0, ...primary)
         const primarySet = new Set(primary)
@@ -940,7 +940,7 @@ export const layer = Layer.effect(
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir, warnings)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings)))
           // kilocode_change end
-          // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
+          // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list, scope) // kilocode_change
