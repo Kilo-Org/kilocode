@@ -2,7 +2,7 @@
 import { $ } from "bun"
 import { join } from "node:path"
 import { existsSync, mkdirSync, rmSync, chmodSync } from "node:fs"
-import { copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import { copySandboxResources, copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
 import { ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const packageJsonPath = join(import.meta.dir, "..", "package.json")
@@ -77,6 +77,7 @@ for (const config of targets) {
   console.log(`  📥 Copying binary from ${config.cliDir}/bin/${config.binary}...`)
   await $`cp ${sourceBinary} ${targetBinary}`
   await copyTreeSitterResources(sourceBinary, targetBinary)
+  await copySandboxResources(sourceBinary, targetBinary)
 
   if (config.binary !== "kilo.exe") {
     chmodSync(targetBinary, 0o755)

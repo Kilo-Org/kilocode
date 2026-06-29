@@ -153,7 +153,6 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void;
     cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     prompt,
-    loop: (input) => prompt({ sessionID: input.sessionID, parts: [] }),
   }
 }
 

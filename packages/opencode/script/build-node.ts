@@ -45,7 +45,7 @@ console.log(`Loaded ${migrations.length} migrations`)
 
 await Bun.build({
   target: "node",
-  entrypoints: ["./src/node.ts"],
+  entrypoints: ["./src/node.ts", "../kilo-sandbox/src/kilo-sandbox-mutation-worker.ts"], // kilocode_change
   outdir: "./dist/node",
   format: "esm",
   sourcemap: "linked",
@@ -53,6 +53,7 @@ await Bun.build({
   define: {
     KILO_MIGRATIONS: JSON.stringify(migrations),
     KILO_MODELS_DEV: generated.modelsData,
+    KILO_SANDBOX_MUTATION_WORKER_PATH: `'./kilo-sandbox-mutation-worker.js'`, // kilocode_change
     KILO_CHANNEL: `'${Script.channel}'`,
   },
   files: {

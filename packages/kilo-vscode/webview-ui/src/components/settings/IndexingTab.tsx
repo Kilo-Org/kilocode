@@ -93,7 +93,7 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
 }
 
 const IndexingTab: Component = () => {
-  const { globalConfig, projectConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
+  const { globalConfig, projectConfig, settings, updateGlobalConfig, updateProjectConfig, updateSetting } = useConfig()
   const indexing = useIndexing()
   const embeds = useKiloEmbeddingModels()
   const language = useLanguage()
@@ -292,10 +292,22 @@ const IndexingTab: Component = () => {
               : language.t("settings.indexing.enable.description")
           }
           tag={() => tag(scope(), [["enabled"]])}
-          last
         >
           <Switch checked={enabled()} onChange={saveEnabled} hideLabel>
             {language.t("settings.indexing.enable.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.indexing.showButton.title")}
+          description={language.t("settings.indexing.showButton.description")}
+          last
+        >
+          <Switch
+            checked={Boolean(settings()["indexing.showButtonWhenDisabled"] ?? true)}
+            onChange={(checked) => updateSetting("indexing.showButtonWhenDisabled", checked)}
+            hideLabel
+          >
+            {language.t("settings.indexing.showButton.title")}
           </Switch>
         </SettingsRow>
       </Card>

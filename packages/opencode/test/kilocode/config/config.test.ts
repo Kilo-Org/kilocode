@@ -1,3 +1,4 @@
+import { $ } from "bun"
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
@@ -14,6 +15,7 @@ import { Config } from "../../../src/config/config"
 import { ConfigMarkdown } from "../../../src/config/markdown"
 import { ConfigParse } from "../../../src/config/parse"
 import { Env } from "../../../src/env"
+import { Git } from "../../../src/git"
 import { KiloIndexing } from "../../../src/kilocode/indexing"
 import { KilocodeConfig } from "../../../src/kilocode/config/config"
 import { provideTestInstance } from "../../fixture/fixture"
@@ -39,6 +41,7 @@ const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
 )
 const layer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),
@@ -406,6 +409,174 @@ describe("agent config", () => {
       ;(Global.Path as { config: string }).config = prev
       await clear()
       await disposeAllInstances()
+    }
+  })
+})
+
+describe("project config directory precedence", () => {
+  test("prefers .kilo over legacy .kilocode and ignores .opencode", async () => {
+    await using tmp = await tmpdir()
+    const entries = [
+      {
+        root: ".opencode",
+        source: "opencode",
+        config: {
+          username: "opencode",
+          model: "test/opencode",
+          small_model: "test/opencode",
+        },
+        names: ["shared", "legacy", "opencode-only"],
+      },
+      {
+        root: ".kilocode",
+        source: "kilocode",
+        config: {
+          username: "kilocode",
+          model: "test/kilocode",
+        },
+        names: ["shared", "legacy"],
+      },
+      {
+        root: ".kilo",
+        source: "kilo",
+        config: {
+          username: "kilo",
+        },
+        names: ["shared"],
+      },
+    ] as const
+
+    for (const item of entries) {
+      const dir = path.join(tmp.path, item.root)
+      await writeConfig(dir, {
+        $schema: "https://app.kilo.ai/config.json",
+        ...item.config,
+      })
+      for (const name of item.names) {
+        await Filesystem.write(
+          path.join(dir, "command", `${name}.md`),
+          `---\ndescription: ${item.source} command\n---\n${item.source} command template`,
+        )
+        await Filesystem.write(
+          path.join(dir, "agent", `${name}.md`),
+          `---\ndescription: ${item.source} agent\nmode: subagent\n---\n${item.source} agent prompt`,
+        )
+      }
+      await Filesystem.write(path.join(dir, "plugin", `${item.source}.ts`), "export default {}")
+    }
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+
+        expect(config.username).toBe("kilo")
+        expect(config.model).toBe("test/kilocode")
+        expect(config.small_model).toBeUndefined()
+
+        expect(config.command?.shared).toMatchObject({
+          description: "kilo command",
+          template: "kilo command template",
+        })
+        expect(config.command?.legacy).toMatchObject({
+          description: "kilocode command",
+          template: "kilocode command template",
+        })
+        expect(config.command?.["opencode-only"]).toBeUndefined()
+
+        expect(config.agent?.shared).toMatchObject({
+          description: "kilo agent",
+          prompt: "kilo agent prompt",
+        })
+        expect(config.agent?.legacy).toMatchObject({
+          description: "kilocode agent",
+          prompt: "kilocode agent prompt",
+        })
+        expect(config.agent?.["opencode-only"]).toBeUndefined()
+
+        const plugins = JSON.stringify(config.plugin)
+        expect(plugins).toContain("kilocode.ts")
+        expect(plugins).toContain("kilo.ts")
+        expect(plugins).not.toContain("opencode.ts")
+      },
+    })
+  })
+})
+
+describe("linked worktree config", () => {
+  test("uses primary config directories as local fallbacks", async () => {
+    await using primary = await tmpdir({ git: true })
+    const worktree = path.join(path.dirname(primary.path), `${path.basename(primary.path)}-config-feature`)
+    await Bun.write(path.join(primary.path, "kilo.json"), JSON.stringify({ model: "test/primary" }))
+    await $`git add kilo.json`.cwd(primary.path).quiet()
+    await $`git commit -m config`.cwd(primary.path).quiet()
+    await $`git worktree add -b config-sibling-worktree ${worktree}`.cwd(primary.path).quiet()
+
+    try {
+      await Bun.write(path.join(worktree, "kilo.json"), JSON.stringify({ model: "test/worktree" }))
+      await Bun.write(
+        path.join(primary.path, ".kilo", "kilo.jsonc"),
+        JSON.stringify({ username: "primary-dir", indexing: { enabled: true } }),
+      )
+      await Bun.write(path.join(worktree, ".kilo", "kilo.jsonc"), JSON.stringify({ username: "worktree-dir" }))
+
+      const config = await provideTestInstance({ directory: worktree, fn: load })
+
+      expect(config.model).toBe("test/worktree")
+      expect(config.username).toBe("worktree-dir")
+      expect(config.indexing?.enabled).toBe(true)
+    } finally {
+      await $`git worktree remove --force ${worktree}`.cwd(primary.path).quiet().nothrow()
+    }
+  })
+
+  test("uses nested primary config directories as local fallbacks", async () => {
+    await using primary = await tmpdir({ git: true })
+    const worktree = path.join(path.dirname(primary.path), `${path.basename(primary.path)}-config-nested`)
+    const directory = path.join(worktree, "packages", "app")
+    await $`git worktree add -b config-nested-worktree ${worktree}`.cwd(primary.path).quiet()
+
+    try {
+      await Bun.write(path.join(directory, "placeholder"), "")
+      await Bun.write(
+        path.join(primary.path, "packages", ".opencode", "kilo.jsonc"),
+        JSON.stringify({ snapshot: true, autoupdate: false, share: "auto", default_agent: "opencode-only" }),
+      )
+      await Bun.write(
+        path.join(primary.path, "packages", ".kilocode", "kilo.jsonc"),
+        JSON.stringify({ snapshot: true, autoupdate: "notify", share: "disabled" }),
+      )
+      await Bun.write(path.join(primary.path, "packages", ".kilo", "kilo.jsonc"), JSON.stringify({ snapshot: false }))
+      await Bun.write(path.join(directory, ".kilo", "kilo.jsonc"), JSON.stringify({ share: "manual" }))
+
+      const config = await provideTestInstance({ directory, fn: load })
+
+      expect(config.snapshot).toBe(false)
+      expect(config.autoupdate).toBe("notify")
+      expect(config.share).toBe("manual")
+      expect(config.default_agent).toBeUndefined()
+    } finally {
+      await $`git worktree remove --force ${worktree}`.cwd(primary.path).quiet().nothrow()
+    }
+  })
+
+  test("keeps KILO_CONFIG_DIR above the primary fallback", async () => {
+    await using primary = await tmpdir({ git: true })
+    await using explicit = await tmpdir()
+    const worktree = path.join(path.dirname(primary.path), `${path.basename(primary.path)}-config-explicit`)
+    await $`git worktree add -b config-explicit-worktree ${worktree}`.cwd(primary.path).quiet()
+    await Bun.write(path.join(primary.path, ".kilo", "kilo.jsonc"), JSON.stringify({ username: "primary-dir" }))
+    await Bun.write(path.join(explicit.path, "kilo.jsonc"), JSON.stringify({ username: "explicit-dir" }))
+    const previous = process.env["KILO_CONFIG_DIR"]
+    process.env["KILO_CONFIG_DIR"] = explicit.path
+
+    try {
+      const config = await provideTestInstance({ directory: worktree, fn: load })
+      expect(config.username).toBe("explicit-dir")
+    } finally {
+      if (previous === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = previous
+      await $`git worktree remove --force ${worktree}`.cwd(primary.path).quiet().nothrow()
     }
   })
 })

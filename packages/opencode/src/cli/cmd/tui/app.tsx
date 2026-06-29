@@ -1,9 +1,9 @@
-import { render, TimeToFirstDraw, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid" // kilocode_change
+import { render, TimeToFirstDraw, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import * as Clipboard from "@tui/util/clipboard"
 import * as Selection from "@tui/util/selection"
 import * as TuiAudio from "@tui/util/audio"
-import { createCliRenderer, MouseButton, TextAttributes, type CliRendererConfig } from "@opentui/core" // kilocode_change
+import { createCliRenderer, MouseButton, type CliRenderer, type CliRendererConfig } from "@opentui/core"
 import { RouteProvider, useRoute } from "@tui/context/route"
 import {
   Switch,
@@ -19,12 +19,12 @@ import {
   on,
   untrack, // kilocode_change
 } from "solid-js"
-import { win32DisableProcessedInput, win32FlushInputBuffer, win32InstallCtrlCGuard } from "./win32" // kilocode_change
+import { win32DisableProcessedInput, win32FlushInputBuffer, win32InstallCtrlCGuard } from "./win32"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import semver from "semver"
 import { DialogProvider, useDialog } from "@tui/ui/dialog"
 import { DialogProvider as DialogProviderList } from "@tui/component/dialog-provider"
-import { InstallationVersion } from "@opencode-ai/core/installation/version" // kilocode_change
+import { ErrorComponent } from "@tui/component/error-component"
 import { PluginRouteMissing } from "@tui/component/plugin-route-missing"
 import { ProjectProvider, useProject } from "@tui/context/project"
 import { EditorContextProvider } from "@tui/context/editor"
@@ -43,6 +43,7 @@ import { DialogHelp } from "./ui/dialog-help"
 import { DialogHeadlessLink } from "@/kilocode/cli/cmd/tui/component/dialog-headless-link" // kilocode_change
 import { DialogAgent } from "@tui/component/dialog-agent"
 import { DialogSessionList } from "@tui/component/dialog-session-list"
+import { DialogWorkspaceList } from "@tui/component/dialog-workspace-list"
 import { DialogConsoleOrg } from "@tui/component/dialog-console-org"
 import { ThemeProvider, useTheme } from "@tui/context/theme"
 import { Home } from "@tui/routes/home"
@@ -53,11 +54,7 @@ import { PromptStashProvider } from "./component/prompt/stash"
 import { DialogAlert } from "./ui/dialog-alert"
 import { DialogConfirm } from "./ui/dialog-confirm"
 import { ToastProvider, useToast } from "./ui/toast"
-import { ExitProvider, useExit } from "./context/exit"
-// kilocode_change start
-import { DialogSelect } from "./ui/dialog-select"
-import { Link } from "./ui/link"
-// kilocode_change end
+import { createExit, ExitProvider, useExit, type Exit } from "./context/exit"
 import { TuiEvent } from "./event"
 import { KVProvider, useKV } from "./context/kv"
 import { Provider } from "@/provider/provider"
@@ -87,8 +84,7 @@ import {
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
-const appBindingCommands = [
-  "command.palette.show",
+const appGlobalBindingCommands = [
   "session.list",
   "session.new",
   "session.quick_switch.1",
@@ -100,6 +96,10 @@ const appBindingCommands = [
   "session.quick_switch.7",
   "session.quick_switch.8",
   "session.quick_switch.9",
+] as const
+
+const appBindingCommands = [
+  "command.palette.show",
   "model.list",
   "model.cycle_recent",
   "model.cycle_recent_reverse",
@@ -119,6 +119,7 @@ const appBindingCommands = [
   "theme.mode.lock",
   "help.show",
   "docs.open",
+  "workspace.list",
   "app.debug",
   "app.console",
   "app.heap_snapshot",
@@ -131,7 +132,7 @@ const appBindingCommands = [
   "app.toggle.session_directory_filter",
 ] as const
 
-function rendererConfig(_config: TuiConfig.Resolved): CliRendererConfig {
+export function tuiRendererConfig(_config: TuiConfig.Resolved): CliRendererConfig {
   const mouseEnabled = !Flag.KILO_DISABLE_MOUSE && (_config.mouse ?? true)
   const keyboard = kitty() // kilocode_change
 
@@ -155,6 +156,34 @@ function rendererConfig(_config: TuiConfig.Resolved): CliRendererConfig {
   }
 }
 
+export function createTuiRenderer(config: TuiConfig.Resolved) {
+  return createCliRenderer(tuiRendererConfig(config))
+}
+
+export type TuiHandle = {
+  ready: Promise<void>
+  done: Promise<void>
+  exit: Exit
+}
+
+type TuiInput = {
+  url: string
+  args: Args
+  config: TuiConfig.Resolved
+  renderer: CliRenderer
+  onSnapshot?: () => Promise<string[]>
+  directory?: string
+  fetch?: typeof fetch
+  headers?: RequestInit["headers"]
+  events?: EventSource
+}
+
+type TuiLifecycle = {
+  exit: Exit
+  exited: Promise<void>
+  fail(error: unknown): Promise<never>
+}
+
 function errorMessage(error: unknown) {
   const formatted = FormatError(error)
   if (formatted !== undefined) return formatted
@@ -172,107 +201,181 @@ function errorMessage(error: unknown) {
   return FormatUnknownError(error)
 }
 
-export function tui(input: {
-  url: string
-  args: Args
-  config: TuiConfig.Resolved
-  onSnapshot?: () => Promise<string[]>
-  directory?: string
-  fetch?: typeof fetch
-  headers?: RequestInit["headers"]
-  events?: EventSource
-}) {
-  // promise to prevent immediate exit
-  // oxlint-disable-next-line no-async-promise-executor -- intentional: async executor used for sequential setup before resolve
-  return new Promise<void>(async (resolve) => {
-    const unguard = win32InstallCtrlCGuard()
-    win32DisableProcessedInput()
+export function tui(input: TuiInput): TuiHandle {
+  const unguard = win32InstallCtrlCGuard()
+  win32DisableProcessedInput()
 
-    const onExit = async () => {
-      unguard?.()
-      resolve()
-    }
-    const onBeforeExit = async () => {
-      offKeymap()
+  process.on("exit", resetTerminalState) // kilocode_change
+
+  const renderer = input.renderer
+  const keymap = createDefaultOpenTuiKeymap(renderer)
+  const unregisterKeymap = registerOpencodeKeymap(keymap, renderer, input.config)
+  const lifecycle = createTuiLifecycle({
+    renderer,
+    unguard,
+    cleanup: async () => {
+      unregisterKeymap()
       await TuiPluginRuntime.dispose()
       TuiAudio.dispose()
-    }
-
-    process.on("exit", resetTerminalState) // kilocode_change
-
-    const renderer = await createCliRenderer(rendererConfig(input.config))
-    // Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
-    void renderer.getPalette({ size: 16 }).catch(() => undefined)
-    const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
-
-    const keymap = createDefaultOpenTuiKeymap(renderer)
-    const offKeymap = registerOpencodeKeymap(keymap, renderer, input.config)
-
-    await render(() => {
-      return (
-        <ErrorBoundary
-          fallback={(error, reset) => (
-            <ErrorComponent error={error} reset={reset} onBeforeExit={onBeforeExit} onExit={onExit} mode={mode} />
-          )}
-        >
-          <OpencodeKeymapProvider keymap={keymap}>
-            <ArgsProvider {...input.args}>
-              <ExitProvider onBeforeExit={onBeforeExit} onExit={onExit}>
-                <KVProvider>
-                  <ToastProvider>
-                    <RouteProvider
-                      initialRoute={
-                        input.args.continue
-                          ? {
-                              type: "session",
-                              sessionID: "dummy",
-                            }
-                          : undefined
-                      }
-                    >
-                      <TuiConfigProvider config={input.config}>
-                        <SDKProvider
-                          url={input.url}
-                          directory={input.directory}
-                          fetch={input.fetch}
-                          headers={input.headers}
-                          events={input.events}
-                        >
-                          <ProjectProvider>
-                            <SyncProvider>
-                              <SyncProviderV2>
-                                <ThemeProvider mode={mode}>
-                                  <LocalProvider>
-                                    <PromptStashProvider>
-                                      <DialogProvider>
-                                        <FrecencyProvider>
-                                          <PromptHistoryProvider>
-                                            <PromptRefProvider>
-                                              <EditorContextProvider>
-                                                <App onSnapshot={input.onSnapshot} />
-                                              </EditorContextProvider>
-                                            </PromptRefProvider>
-                                          </PromptHistoryProvider>
-                                        </FrecencyProvider>
-                                      </DialogProvider>
-                                    </PromptStashProvider>
-                                  </LocalProvider>
-                                </ThemeProvider>
-                              </SyncProviderV2>
-                            </SyncProvider>
-                          </ProjectProvider>
-                        </SDKProvider>
-                      </TuiConfigProvider>
-                    </RouteProvider>
-                  </ToastProvider>
-                </KVProvider>
-              </ExitProvider>
-            </ArgsProvider>
-          </OpencodeKeymapProvider>
-        </ErrorBoundary>
-      )
-    }, renderer)
+    },
   })
+  const ready = mountTui({ ...input, keymap, exit: lifecycle.exit }).catch((error) => lifecycle.fail(error))
+  const done = waitUntilDone(ready, lifecycle.exited)
+
+  return { ready, done, exit: lifecycle.exit }
+}
+
+async function mountTui(input: TuiInput & { keymap: ReturnType<typeof createDefaultOpenTuiKeymap>; exit: Exit }) {
+  const renderer = input.renderer
+  // Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
+  void renderer.getPalette({ size: 16 }).catch(() => undefined)
+  const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
+  if (renderer.isDestroyed) return
+
+  await render(() => {
+    return (
+      <ErrorBoundary
+        fallback={(error, reset) => <ErrorComponent error={error} reset={reset} exit={input.exit} mode={mode} />}
+      >
+        <OpencodeKeymapProvider keymap={input.keymap}>
+          <ArgsProvider {...input.args}>
+            <ExitProvider exit={input.exit}>
+              <KVProvider>
+                <ToastProvider>
+                  <RouteProvider
+                    initialRoute={
+                      input.args.continue
+                        ? {
+                            type: "session",
+                            sessionID: "dummy",
+                          }
+                        : undefined
+                    }
+                  >
+                    <TuiConfigProvider config={input.config}>
+                      <SDKProvider
+                        url={input.url}
+                        directory={input.directory}
+                        fetch={input.fetch}
+                        headers={input.headers}
+                        events={input.events}
+                      >
+                        <ProjectProvider>
+                          <SyncProvider>
+                            <SyncProviderV2>
+                              <ThemeProvider mode={mode}>
+                                <LocalProvider>
+                                  <PromptStashProvider>
+                                    <DialogProvider>
+                                      <FrecencyProvider>
+                                        <PromptHistoryProvider>
+                                          <PromptRefProvider>
+                                            <EditorContextProvider>
+                                              <App onSnapshot={input.onSnapshot} />
+                                            </EditorContextProvider>
+                                          </PromptRefProvider>
+                                        </PromptHistoryProvider>
+                                      </FrecencyProvider>
+                                    </DialogProvider>
+                                  </PromptStashProvider>
+                                </LocalProvider>
+                              </ThemeProvider>
+                            </SyncProviderV2>
+                          </SyncProvider>
+                        </ProjectProvider>
+                      </SDKProvider>
+                    </TuiConfigProvider>
+                  </RouteProvider>
+                </ToastProvider>
+              </KVProvider>
+            </ExitProvider>
+          </ArgsProvider>
+        </OpencodeKeymapProvider>
+      </ErrorBoundary>
+    )
+  }, renderer)
+}
+
+function createTuiLifecycle(input: {
+  renderer: CliRenderer
+  unguard?: () => void
+  cleanup: () => Promise<void>
+}): TuiLifecycle {
+  let resolveExited!: () => void
+  const exited = new Promise<void>((resolve) => {
+    resolveExited = resolve
+  })
+  let exitCompleted = false
+  let exiting = false
+  let cleanupTask: Promise<void> | undefined
+
+  const completeExit = () => {
+    if (exitCompleted) return
+    exitCompleted = true
+    resolveExited()
+  }
+
+  const cleanup = () => {
+    cleanupTask ??= (async () => {
+      process.off("SIGHUP", onSighup)
+      try {
+        await input.cleanup()
+      } finally {
+        input.unguard?.()
+      }
+    })()
+    return cleanupTask
+  }
+
+  const exit = createExit(async (reason, message) => {
+    exiting = true
+    await cleanup()
+    if (!input.renderer.isDestroyed) {
+      input.renderer.setTerminalTitle("")
+      input.renderer.destroy()
+    }
+    win32FlushInputBuffer()
+    resetTerminalState() // kilocode_change
+    if (reason) {
+      const formatted = FormatError(reason) ?? FormatUnknownError(reason)
+      if (formatted) process.stderr.write(formatted + "\n")
+    }
+    const text = message()
+    if (text) process.stdout.write(text + "\n")
+    completeExit()
+  })
+  const onSighup = () => {
+    void exit()
+  }
+
+  input.renderer.once("destroy", () => {
+    if (exiting) return
+    void cleanup().finally(() => {
+      win32FlushInputBuffer()
+      resetTerminalState() // kilocode_change
+      completeExit()
+    })
+  })
+  process.on("SIGHUP", onSighup)
+
+  return {
+    exit,
+    exited,
+    async fail(error) {
+      exiting = true
+      await cleanup().catch(() => {})
+      if (!input.renderer.isDestroyed) input.renderer.destroy()
+      win32FlushInputBuffer() // kilocode_change
+      resetTerminalState() // kilocode_change
+      completeExit()
+      throw error
+    },
+  }
+}
+
+async function waitUntilDone(ready: Promise<void>, exited: Promise<void>) {
+  await ready
+  await exited
 }
 
 function App(props: { onSnapshot?: () => Promise<string[]> }) {
@@ -519,6 +622,16 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
             .then(() => toast.show({ message: "Copied worktree path", variant: "info" }))
             .catch(toast.error)
           dialog.clear()
+        },
+      },
+      {
+        name: "workspace.list",
+        title: "Manage workspaces",
+        category: "Workspace",
+        hidden: !Flag.KILO_EXPERIMENTAL_WORKSPACES,
+        slashName: "workspaces",
+        run: () => {
+          dialog.replace(() => <DialogWorkspaceList />)
         },
       },
       ...Array.from({ length: 9 }, (_, i) => ({
@@ -854,6 +967,10 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   }))
 
   useBindings(() => ({
+    bindings: tuiConfig.keybinds.gather("app.global", appGlobalBindingCommands),
+  }))
+
+  useBindings(() => ({
     mode: KILO_BASE_MODE,
     enabled: () => {
       const current = promptRef.current
@@ -1009,115 +1126,3 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     </box>
   )
 }
-
-// kilocode_change start — guard against missing renderer context in ErrorBoundary fallback
-function tryUseRenderer() {
-  try {
-    return useRenderer()
-  } catch {
-    return undefined
-  }
-}
-
-function tryUseTerminalDimensions() {
-  try {
-    return useTerminalDimensions()
-  } catch {
-    return undefined
-  }
-}
-
-function ErrorComponent(props: {
-  error: Error
-  reset: () => void
-  onBeforeExit?: () => Promise<void>
-  onExit: () => Promise<void>
-  mode?: "dark" | "light"
-}) {
-  const term = tryUseTerminalDimensions()
-  const renderer = tryUseRenderer()
-
-  const height = () => term?.().height ?? process.stdout.rows ?? 24
-
-  const handleExit = async () => {
-    await props.onBeforeExit?.()
-    renderer?.setTerminalTitle("")
-    renderer?.destroy()
-    win32FlushInputBuffer()
-    resetTerminalState()
-    await props.onExit()
-  }
-
-  try {
-    useKeyboard((evt) => {
-      if (evt.ctrl && evt.name === "c") {
-        handleExit()
-      }
-    })
-  } catch {
-    // Keyboard handler unavailable — renderer context may be missing.
-    // Ctrl+C will still work via the default signal handler.
-  }
-
-  const [copied, setCopied] = createSignal(false)
-
-  const issueURL = new URL("https://github.com/Kilo-Org/kilocode/issues/new?template=bug-report.yml")
-
-  // Choose safe fallback colors per mode since theme context may not be available
-  const isLight = props.mode === "light"
-  const colors = {
-    bg: isLight ? "#ffffff" : "#0a0a0a",
-    text: isLight ? "#1a1a1a" : "#eeeeee",
-    muted: isLight ? "#8a8a8a" : "#808080",
-    primary: isLight ? "#3b7dd8" : "#fab283",
-  }
-
-  if (props.error.message) {
-    issueURL.searchParams.set("title", `opentui: fatal: ${props.error.message}`)
-  }
-
-  if (props.error.stack) {
-    issueURL.searchParams.set(
-      "description",
-      "```\n" + props.error.stack.substring(0, 6000 - issueURL.toString().length) + "...\n```",
-    )
-  }
-
-  issueURL.searchParams.set("opencode-version", InstallationVersion)
-
-  const copyIssueURL = () => {
-    Clipboard.copy(issueURL.toString()).then(() => {
-      setCopied(true)
-    })
-  }
-
-  return (
-    <box flexDirection="column" gap={1} backgroundColor={colors.bg}>
-      <box flexDirection="row" gap={1} alignItems="center">
-        <text attributes={TextAttributes.BOLD} fg={colors.text}>
-          Please report an issue.
-        </text>
-        <box onMouseUp={copyIssueURL} backgroundColor={colors.primary} padding={1}>
-          <text attributes={TextAttributes.BOLD} fg={colors.bg}>
-            Copy issue URL (exception info pre-filled)
-          </text>
-        </box>
-        {copied() && <text fg={colors.muted}>Successfully copied</text>}
-      </box>
-      <box flexDirection="row" gap={2} alignItems="center">
-        <text fg={colors.text}>A fatal error occurred!</text>
-        <box onMouseUp={props.reset} backgroundColor={colors.primary} padding={1}>
-          <text fg={colors.bg}>Reset TUI</text>
-        </box>
-        <box onMouseUp={handleExit} backgroundColor={colors.primary} padding={1}>
-          <text fg={colors.bg}>Exit</text>
-        </box>
-      </box>
-      <scrollbox height={Math.floor(height() * 0.7)}>
-        <text fg={colors.muted}>{props.error.stack}</text>
-      </scrollbox>
-      <text fg={colors.text}>{props.error.message}</text>
-    </box>
-  )
-}
-// kilocode_change end

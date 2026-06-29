@@ -1,5 +1,5 @@
 import path from "path"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Cause, Context, Effect, Fiber, Layer, Queue, Schema, Stream } from "effect"
 import type { PlatformError } from "effect/PlatformError"
@@ -441,7 +441,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
 
         const root: Node = { name: "", children: new Map() }
         for (const file of list) {
-          if (file.includes(".kilo") || file.includes(".opencode")) continue // kilocode_change
+          if (file.includes(".kilo") || file.includes(".kilocode")) continue // kilocode_change
           const parts = file.split(path.sep)
           if (parts.length < 2) continue
           let node = root

@@ -508,7 +508,7 @@ async function getCustomThemes() {
     Global.Path.config,
     ...(await Array.fromAsync(
       Filesystem.up({
-        targets: [".kilo", ".opencode"], // kilocode_change
+        targets: [".kilocode", ".kilo"], // kilocode_change
         start: process.cwd(),
       }),
     )),

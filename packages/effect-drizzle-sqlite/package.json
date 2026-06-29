@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.50",
+  "version": "7.3.54",
   "name": "@opencode-ai/effect-drizzle-sqlite",
   "type": "module",
   "license": "MIT",
@@ -25,5 +25,6 @@
   "dependencies": {
     "drizzle-orm": "catalog:",
     "effect": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }
