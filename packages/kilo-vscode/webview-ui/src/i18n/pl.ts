@@ -1,12 +1,58 @@
-import { anacondaDesktopDict } from "./en"
-
-export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Sprawdź ponownie",
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Połącz Anaconda Desktop",
+  "provider.anaconda.title.manage": "Zarządzaj Anaconda Desktop",
+  "provider.anaconda.status.checking": "Sprawdzanie Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Otwieranie Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Odświeżanie modeli dostawcy...",
+  "provider.anaconda.status.ready": "Gotowy do połączenia",
+  "provider.anaconda.status.waiting": "Oczekiwanie na Desktop",
+  "provider.anaconda.status.attention": "Wymaga uwagi",
+  "provider.anaconda.status.unavailable": "Niedostępny",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop nie jest obsługiwana w systemie {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Zainstaluj Anaconda Desktop na tym komputerze, a następnie wróć tutaj. Kilo nie uruchamia instalatora za Ciebie.",
+  "provider.anaconda.state.notRunning":
+    "Otwórz Anaconda Desktop, dokończ konfigurację i zaloguj się, a następnie wybierz Sprawdź ponownie.",
+  "provider.anaconda.state.invalidConfig":
+    "Konfiguracja Anaconda Desktop jest niekompletna. Otwórz Desktop, dokończ konfigurację i w razie potrzeby uruchom ją ponownie.",
+  "provider.anaconda.state.signedOut": "Otwórz Anaconda Desktop i zaloguj się przed połączeniem Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo nie mógł uzyskać dostępu do Anaconda Desktop. Otwórz Desktop, zaloguj się ponownie i w razie potrzeby uruchom ją ponownie.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop jeszcze nie odpowiada. Otwórz ją i poczekaj, aż aplikacja zakończy uruchamianie.",
+  "provider.anaconda.state.noModel":
+    "W Anaconda Desktop pobierz model generowania tekstu. Jeśli to możliwe, wybierz model obsługujący wywoływanie narzędzi, a następnie uruchom jego serwer.",
   "provider.anaconda.state.noServer_one":
     "Dostępny jest 1 pobrany model generowania tekstu. W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
   "provider.anaconda.state.noServer_other":
     "Dostępne są pobrane modele generowania tekstu (łącznie: {{count}}). W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
+  "provider.anaconda.state.unhealthy":
+    "Aktywny serwer wnioskowania nie jest jeszcze sprawny. Sprawdź go w Anaconda Desktop i w razie potrzeby uruchom serwer ponownie.",
+  "provider.anaconda.state.ready":
+    "Kilo znalazł sprawny lokalny serwer generowania tekstu i może zaimportować jego bieżące ustawienia połączenia.",
+  "provider.anaconda.server": "Aktywny serwer wnioskowania",
+  "provider.anaconda.context": "Okno kontekstu",
+  "provider.anaconda.contextValue": "{{count}} tokenów",
+  "provider.anaconda.tools": "Wywoływanie narzędzi",
+  "provider.anaconda.tools.supported": "Obsługiwane",
+  "provider.anaconda.tools.unsupported": "Nie włączone",
+  "provider.anaconda.tools.unknown": "Nieznane",
+  "provider.anaconda.warning.title": "Obsługa narzędzi jest ograniczona",
+  "provider.anaconda.warning.description":
+    "Ten serwer nie potwierdza wywoływania narzędzi. Działania agenta kodującego mogą się nie powieść lub być niedostępne. Kontynuuj tylko wtedy, gdy akceptujesz te ograniczenia.",
+  "provider.anaconda.action.download": "Pobierz Anaconda Desktop",
+  "provider.anaconda.action.open": "Otwórz Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Sprawdź ponownie",
+  "provider.anaconda.action.continue": "Kontynuuj mimo to",
+  "provider.anaconda.action.manage": "Zarządzaj / Odśwież",
+  "provider.anaconda.toast.refreshed.title": "Odświeżono Anaconda Desktop",
+  "provider.anaconda.toast.refreshed.description": "Aktywny serwer lokalny i modele są aktualne w Kilo.",
+  "settings.providers.note.anacondaDesktop": "Uruchom model serwowany lokalnie przez Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokalny",
+} as const
+
+export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Sugerowane",
   "command.category.view": "Widok",
   "command.category.project": "Projekt",

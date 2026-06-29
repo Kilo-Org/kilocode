@@ -1,12 +1,58 @@
-import { anacondaDesktopDict } from "./en"
-
-export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Перевірити ще раз",
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Підключити Anaconda Desktop",
+  "provider.anaconda.title.manage": "Керувати Anaconda Desktop",
+  "provider.anaconda.status.checking": "Перевірка Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Відкриття Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Оновлення моделей провайдера...",
+  "provider.anaconda.status.ready": "Готово до підключення",
+  "provider.anaconda.status.waiting": "Очікування Desktop",
+  "provider.anaconda.status.attention": "Потребує уваги",
+  "provider.anaconda.status.unavailable": "Недоступно",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop не підтримується на {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Встановіть Anaconda Desktop на цьому комп'ютері, а потім поверніться сюди. Kilo не запускає інсталятор за вас.",
+  "provider.anaconda.state.notRunning":
+    "Відкрийте Anaconda Desktop, завершіть налаштування та увійдіть, потім виберіть «Перевірити ще раз».",
+  "provider.anaconda.state.invalidConfig":
+    "Налаштування Anaconda Desktop неповне. Відкрийте Desktop, завершіть налаштування та перезапустіть його за потреби.",
+  "provider.anaconda.state.signedOut": "Відкрийте Anaconda Desktop та увійдіть перед підключенням Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo не вдалося отримати доступ до Anaconda Desktop. Відкрийте Desktop, увійдіть знову та перезапустіть його за потреби.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop ще не відповідає. Відкрийте його та зачекайте, доки програма завершить запуск.",
+  "provider.anaconda.state.noModel":
+    "В Anaconda Desktop завантажте модель генерації тексту. За можливості виберіть модель із підтримкою виклику інструментів, потім запустіть її сервер.",
   "provider.anaconda.state.noServer_one":
     "Доступна 1 завантажена модель генерації тексту. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
   "provider.anaconda.state.noServer_other":
     "Доступно завантажених моделей генерації тексту: {{count}}. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.unhealthy":
+    "Активний сервер інференсу ще не справний. Перевірте його в Anaconda Desktop та перезапустіть сервер за потреби.",
+  "provider.anaconda.state.ready":
+    "Kilo знайшов справний локальний сервер генерації тексту та може імпортувати його поточні налаштування підключення.",
+  "provider.anaconda.server": "Активний сервер інференсу",
+  "provider.anaconda.context": "Вікно контексту",
+  "provider.anaconda.contextValue": "{{count}} токенів",
+  "provider.anaconda.tools": "Виклик інструментів",
+  "provider.anaconda.tools.supported": "Підтримується",
+  "provider.anaconda.tools.unsupported": "Не увімкнено",
+  "provider.anaconda.tools.unknown": "Невідомо",
+  "provider.anaconda.warning.title": "Підтримка інструментів обмежена",
+  "provider.anaconda.warning.description":
+    "Цей сервер не підтверджує виклик інструментів. Дії агента кодування можуть не спрацювати або бути недоступними. Продовжуйте, лише якщо приймаєте ці обмеження.",
+  "provider.anaconda.action.download": "Завантажити Anaconda Desktop",
+  "provider.anaconda.action.open": "Відкрити Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Перевірити ще раз",
+  "provider.anaconda.action.continue": "Усе одно продовжити",
+  "provider.anaconda.action.manage": "Керувати / Оновити",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop оновлено",
+  "provider.anaconda.toast.refreshed.description": "Активний локальний сервер та моделі актуальні в Kilo.",
+  "settings.providers.note.anacondaDesktop": "Запустіть модель, що обслуговується локально через Anaconda Desktop.",
+  "settings.providers.tag.local": "Локальний",
+} as const
+
+export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Запропоновані",
   "command.category.view": "Вигляд",
   "command.category.project": "Проєкт",

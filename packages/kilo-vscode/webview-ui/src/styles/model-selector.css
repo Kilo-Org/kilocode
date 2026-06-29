@@ -2,6 +2,11 @@
    Model Selector (uses kilo-ui Popover)
    ============================================ */
 
+.popup-selector[data-expanded],
+.popup-selector[data-closed] {
+  animation: none;
+}
+
 .model-selector-popover {
   transition:
     width 0.2s ease,
@@ -383,7 +388,7 @@
   outline-offset: -1px;
 }
 
-.model-selector-group:not(:first-child) > .model-selector-group-label {
+.model-selector-group-label--divided {
   border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
   margin-top: 4px;
   padding-top: 8px;
