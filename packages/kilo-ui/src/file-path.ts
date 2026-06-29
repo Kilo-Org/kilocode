@@ -27,10 +27,11 @@ export function normalizeCandidatePath(path: string): string {
 
 // Matches a URI scheme but NOT a Windows drive letter (single char followed by colon).
 const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]+:/
+const EXTENSIONLESS_FILES = new Set(["Dockerfile", "LICENSE", "Makefile"])
 
 function looksLikeFilePath(path: string): boolean {
   const name = path.split(/[\\/]/).pop() ?? path
-  return name.includes(".")
+  return name.includes(".") || EXTENSIONLESS_FILES.has(name)
 }
 
 /**

@@ -101,6 +101,12 @@ describe("extractFilePathFromHref", () => {
       expect(extractFilePathFromHref("AGENTS.md")).toEqual({ path: "AGENTS.md" })
     })
 
+    it("common extensionless workspace filename", () => {
+      expect(extractFilePathFromHref("LICENSE")).toEqual({ path: "LICENSE" })
+      expect(extractFilePathFromHref("Dockerfile")).toEqual({ path: "Dockerfile" })
+      expect(extractFilePathFromHref("Makefile")).toEqual({ path: "Makefile" })
+    })
+
     it("relative path", () => {
       expect(extractFilePathFromHref("src/foo.ts")).toEqual({ path: "src/foo.ts" })
     })
@@ -175,6 +181,10 @@ describe("extractFilePathFromHref", () => {
 
     it("extensionless absolute docs path", () => {
       expect(extractFilePathFromHref("/docs")).toBeUndefined()
+    })
+
+    it("unknown extensionless filename", () => {
+      expect(extractFilePathFromHref("README")).toBeUndefined()
     })
   })
 
