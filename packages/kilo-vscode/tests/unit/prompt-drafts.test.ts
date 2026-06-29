@@ -60,17 +60,21 @@ describe("movePromptDraft", () => {
     const text = new Map([[source, "Keep this prompt"]])
     const comments = new Map([[source, [comment]]])
     const images = new Map([[source, [image]]])
+    const scrolls = new Map([[source, 128]])
 
-    expect(movePromptDraft({ text, comments, images }, source, target)).toEqual({
+    expect(movePromptDraft({ text, comments, images, scrolls }, source, target)).toEqual({
       text: "Keep this prompt",
       comments: [comment],
       images: [image],
+      scroll: 128,
     })
     expect(text.get(target)).toBe("Keep this prompt")
     expect(comments.get(target)).toEqual([comment])
     expect(images.get(target)).toEqual([image])
+    expect(scrolls.get(target)).toBe(128)
     expect(text.has(source)).toBe(false)
     expect(comments.has(source)).toBe(false)
     expect(images.has(source)).toBe(false)
+    expect(scrolls.has(source)).toBe(false)
   })
 })
