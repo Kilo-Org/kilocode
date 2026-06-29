@@ -41,6 +41,9 @@ jobs:
       - name: Check Effect Promise facade allowlist
         run: bun run script/check-opencode-promise-facades.ts
 
+      - name: Check model tool network boundary
+        run: bun run script/check-model-tool-network.ts
+
       - name: Check workflow allowlist
         run: bun run script/check-workflows.ts
       # kilocode_change end

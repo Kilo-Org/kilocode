@@ -38,6 +38,7 @@ function transformSkill(raw: RawSkill): SkillMarketplaceItem {
     displayCategory: kebabToTitleCase(raw.category),
     githubUrl: raw.githubUrl,
     content: raw.content,
+    suggest_for: raw.suggest_for,
   }
 }
 

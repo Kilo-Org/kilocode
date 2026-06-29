@@ -196,7 +196,7 @@ export const LanguageProvider: ParentComponent<LanguageProviderProps> = (props) 
   })
 
   const t = (key: UiI18nKey, params?: UiI18nParams) => {
-    const text = (dict() as Record<string, string>)[key] ?? String(key)
+    const text = (dict() as Record<string, string>)[key] ?? (dicts.en as Record<string, string>)[key] ?? String(key)
     return resolveTemplate(text, params)
   }
 

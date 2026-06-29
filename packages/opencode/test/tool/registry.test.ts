@@ -2,7 +2,7 @@ import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { fileURLToPath, pathToFileURL } from "url"
-import { Effect, Layer, Result, Schema } from "effect"
+import { Effect, Exit, Layer, Result, Schema } from "effect" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ToolRegistry } from "@/tool/registry"
 import { Tool } from "@/tool/tool"
@@ -35,6 +35,8 @@ import { ToolJsonSchema } from "@/tool/json-schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Command } from "@/command" // kilocode_change
+import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
+import { run as runSandbox, type Profile } from "@kilocode/sandbox" // kilocode_change
 
 const node = CrossSpawnSpawner.defaultLayer
 const configLayer = TestConfig.layer({
@@ -106,12 +108,58 @@ const scout = testEffect(
 const withBrokenPlugin = testEffect(
   Layer.mergeAll(registryLayer({ plugin: brokenPluginLayer }), node, Agent.defaultLayer),
 )
+// kilocode_change start
+const sandboxed = testEffect(
+  Layer.mergeAll(registryLayer({ flags: { experimentalLspTool: true } }), node, Agent.defaultLayer),
+)
+// kilocode_change end
 
 afterEach(async () => {
   await disposeAllInstances()
 })
 
+// kilocode_change start
+function sandboxProfile(): Profile {
+  return {
+    filesystem: { allowWrite: [], denyWrite: [], denyNames: [] },
+    network: { mode: "deny", allowedHosts: [] },
+    environment: { deny: [], set: {} },
+  }
+}
+// kilocode_change end
+
 describe("tool.registry", () => {
+  // kilocode_change start
+  sandboxed.instance("preserves built-in network classification through production tool definition processing", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agent = yield* Agent.Service
+      const build = yield* agent.get("build")
+      if (!build) return yield* Effect.die(new Error("build agent not found"))
+      const tools = yield* registry.tools({
+        providerID: ProviderID.opencode,
+        modelID: ModelID.make("test"),
+        agent: build,
+      })
+      const all = yield* registry.all()
+      const read = tools.find((tool) => tool.id === "read")
+      const search = all.find((tool) => tool.id === "lsp")
+      if (!read || !search) return yield* Effect.die(new Error("expected built-in tools are missing"))
+
+      const allowed = yield* runSandbox(sandboxProfile(), SandboxNetwork.tool(read, Effect.succeed("allowed"))).pipe(
+        Effect.exit,
+      )
+      const denied = yield* runSandbox(
+        sandboxProfile(),
+        SandboxNetwork.tool(search, Effect.succeed("unexpected")),
+      ).pipe(Effect.exit)
+
+      expect(Exit.isSuccess(allowed)).toBe(true)
+      expect(Exit.isFailure(denied)).toBe(true)
+    }),
+  )
+  // kilocode_change end
+
   it.instance("hides repo research tools unless experimental", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service

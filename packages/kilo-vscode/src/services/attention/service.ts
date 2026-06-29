@@ -7,9 +7,14 @@ import { playSound, resolveSoundID } from "./sound"
 type Sync = Extract<SSEPayload, { type: "sync" }>
 type Question = Extract<SSEPayload, { type: "question.asked" | "question.replied" | "question.rejected" }>
 type Permission = Extract<SSEPayload, { type: "permission.asked" | "permission.replied" }>
+type Asked = Extract<Permission, { type: "permission.asked" }>
 type Status = Extract<SSEPayload, { type: "session.status" }>
 type Close = Extract<SSEPayload, { type: "session.turn.close" }>
 type Error = Extract<SSEPayload, { type: "session.error" }>
+
+type Options = {
+  approve?: (event: Asked, directory?: string) => boolean | Promise<boolean>
+}
 
 export function previewSound(value: string) {
   void playSound("default", resolveSoundID(value))
@@ -23,8 +28,11 @@ export class AttentionService implements vscode.Disposable {
   private readonly unsubscribeEvent: () => void
   private readonly unsubscribeState: () => void
 
-  constructor(connection: KiloConnectionService) {
-    this.unsubscribeEvent = connection.onEvent((event) => this.handle(event))
+  constructor(
+    connection: KiloConnectionService,
+    private readonly opts: Options = {},
+  ) {
+    this.unsubscribeEvent = connection.onEvent((event, directory) => this.handle(event, directory))
     this.unsubscribeState = connection.onStateChange((state) => {
       if (state === "error" || state === "disconnected") this.reset()
     })
@@ -36,12 +44,14 @@ export class AttentionService implements vscode.Disposable {
     this.reset()
   }
 
-  private handle(event: SSEPayload) {
+  private handle(event: SSEPayload, directory?: string) {
     if (event.type === "sync") return this.sync(event)
     if (event.type === "question.asked" || event.type === "question.replied" || event.type === "question.rejected") {
       return this.question(event)
     }
-    if (event.type === "permission.asked" || event.type === "permission.replied") return this.permission(event)
+    if (event.type === "permission.asked" || event.type === "permission.replied") {
+      return this.permission(event, directory)
+    }
     if (event.type === "session.deleted") return this.remove(event.properties.sessionID)
     if (event.type === "session.status") return this.status(event)
     if (event.type === "session.turn.close") return this.close(event)
@@ -68,14 +78,24 @@ export class AttentionService implements vscode.Disposable {
     this.notify("question")
   }
 
-  private permission(event: Permission) {
+  private permission(event: Permission, directory?: string) {
     if (event.type !== "permission.asked") {
       this.permissions.delete(event.properties.requestID)
       return
     }
-    if (this.permissions.has(event.properties.id)) return
-    this.permissions.add(event.properties.id)
-    this.notify("permission")
+    const id = event.properties.id
+    if (this.permissions.has(id)) return
+    this.permissions.add(id)
+    const alert = () => {
+      if (!this.permissions.has(id)) return
+      this.notify("permission")
+    }
+    const approval = this.opts.approve?.(event, directory)
+    if (approval === true) return
+    if (approval === false || approval === undefined) return alert()
+    void approval.then((handled) => {
+      if (!handled) alert()
+    }, alert)
   }
 
   private status(event: Status) {

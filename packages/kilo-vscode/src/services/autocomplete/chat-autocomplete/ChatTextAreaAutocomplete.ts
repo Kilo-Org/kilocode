@@ -7,7 +7,7 @@ import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import type { KiloConnectionService } from "../../cli-backend"
 import { generateFim, hasValidCredentials } from "../fim"
-import { getAutocompleteModel } from "../../../shared/autocomplete-models"
+import { getAutocompleteModel, getAutocompleteModelById } from "../../../shared/autocomplete-models"
 import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
 
 interface ChatCompletionRequestMessage {
@@ -18,6 +18,12 @@ interface ChatCompletionRequestMessage {
 
 interface ChatCompletionResponseSender {
   postMessage(message: { type: "chatCompletionResult"; text: string; requestId: string }): void
+}
+
+export function getChatAutocompleteModel(provider?: string, model?: string) {
+  const info = getAutocompleteModel(provider, model)
+  if (info.kind !== "edit") return info
+  return getAutocompleteModelById(info.fimModelID)
 }
 
 /**
@@ -77,7 +83,7 @@ export class ChatTextAreaAutocomplete {
 
   async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
     const cfg = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
-    const entry = getAutocompleteModel(cfg.get<string>("provider"), cfg.get<string>("model"))
+    const entry = getChatAutocompleteModel(cfg.get<string>("provider"), cfg.get<string>("model"))
     const startTime = Date.now()
 
     // Build context for telemetry

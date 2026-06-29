@@ -289,7 +289,7 @@ export namespace KiloSessionPrompt {
     const target = saved ?? plan
     const time = input.session.time.created
     const dir = path.dirname(target)
-    if (saved && !(await Filesystem.exists(target))) await ensurePlanDir(dir)
+    if (!saved || !(await Filesystem.exists(target))) await ensurePlanDir(dir)
 
     const info = saved
       ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`

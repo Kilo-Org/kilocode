@@ -27,9 +27,17 @@ export const Balance = Schema.Struct({
   balance: Schema.Finite,
 })
 
+export const KiloPassState = Schema.Struct({
+  currentPeriodBaseCreditsUsd: Schema.Finite,
+  currentPeriodUsageUsd: Schema.Finite,
+  currentPeriodBonusCreditsUsd: Schema.Finite,
+  nextBillingAt: Schema.optional(Schema.NullOr(Schema.String)),
+})
+
 export const ProfileWithBalance = Schema.Struct({
   profile: Profile,
   balance: Schema.NullOr(Balance),
+  kiloPass: Schema.NullOr(KiloPassState),
   currentOrgId: Schema.NullOr(Schema.String),
 })
 

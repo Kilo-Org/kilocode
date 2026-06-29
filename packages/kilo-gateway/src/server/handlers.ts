@@ -1,8 +1,9 @@
 import { fetchBalance, fetchProfile } from "../api/profile.js"
+import { fetchKiloPassState } from "../api/kilo-pass.js"
 import { fetchKilocodeNotifications } from "../api/notifications.js"
 import { clearModesCache } from "../api/modes.js"
 import { HEADER_ORGANIZATIONID, KILO_API_BASE, KILO_CHAT_URL, KILO_EVENT_SERVICE_URL } from "../api/constants.js"
-import type { KilocodeBalance, KilocodeProfile } from "../types.js"
+import type { KilocodeBalance, KilocodeProfile, KiloPassState } from "../types.js"
 import { buildKiloHeaders } from "../headers.js"
 
 export type KiloAuth =
@@ -13,6 +14,7 @@ export type KiloAuth =
 export interface KiloProfileResult {
   profile: KilocodeProfile
   balance: KilocodeBalance | null
+  kiloPass: KiloPassState | null
   currentOrgId: string | null
 }
 
@@ -67,11 +69,12 @@ export async function getProfile(auth: AuthStore): Promise<KiloProfileResult> {
   if (!info || info.type !== "oauth") throw new UnauthorizedError("Not authenticated with Kilo Gateway")
 
   const currentOrgId = info.accountId ?? null
-  const [profile, balance] = await Promise.all([
+  const [profile, balance, kiloPass] = await Promise.all([
     fetchProfile(info.access),
     fetchBalance(info.access, currentOrgId ?? undefined),
+    fetchKiloPassState(info.access),
   ])
-  return { profile, balance, currentOrgId }
+  return { profile, balance, kiloPass, currentOrgId }
 }
 
 export async function getNotifications(auth: AuthStore) {

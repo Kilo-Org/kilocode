@@ -12,7 +12,10 @@ export type Event =
   | EventTuiCommandExecute
   | EventTuiToastShow1
   | EventTuiSessionSelect
+  | EventSandboxStatusChanged
   | EventKilocodeAgentManagerStart
+  | EventKilocodeNotebookRequested
+  | EventKilocodeNotebookCancelled
   | EventIndexingStatus
   | EventIndexingWarning
   | EventServerInstanceDisposed
@@ -190,6 +193,67 @@ export type EventTuiSessionSelect = {
     sessionID: string
   }
 }
+
+export type NotebookRequestId = string
+
+export type NotebookReadRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "read"
+  includeOutputs: boolean
+}
+
+export type NotebookEditRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "edit"
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  expectedRevision?: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  edit:
+    | {
+        action: "insert"
+        kind: "code" | "markdown"
+        language?: string
+        source: string
+      }
+    | {
+        action: "replace"
+        kind: "code" | "markdown"
+        language?: string
+        source: string
+      }
+    | {
+        action: "delete"
+      }
+    | {
+        action: "create"
+      }
+}
+
+export type NotebookExecuteRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "execute"
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  expectedRevision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+}
+
+export type NotebookRequest = NotebookReadRequest | NotebookEditRequest | NotebookExecuteRequest
 
 export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
 
@@ -381,6 +445,30 @@ export type ApiError = {
     metadata?: {
       [key: string]: string
     }
+  }
+}
+
+export type AgentRequirementError = {
+  name: "AgentRequirementError"
+  data: {
+    message: string
+    agent: string
+    directory: string
+    state: "blocked" | "error"
+    skills: Array<{
+      name: string
+      status: "ready" | "missing" | "error"
+      message?: string
+    }>
+    mcps: Array<{
+      name: string
+      status: "ready" | "missing" | "error"
+      message?: string
+    }>
+    vscode_extensions: Array<{
+      name: string
+      id: string
+    }>
   }
 }
 
@@ -758,6 +846,10 @@ export type StepFinishPart = {
   type: "step-finish"
   reason: string
   snapshot?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
   cost: number
   tokens: {
     total?: number
@@ -926,7 +1018,10 @@ export type GlobalEvent = {
     | EventTuiCommandExecute
     | EventTuiToastShow
     | EventTuiSessionSelect
+    | EventSandboxStatusChanged
     | EventKilocodeAgentManagerStart
+    | EventKilocodeNotebookRequested
+    | EventKilocodeNotebookCancelled
     | EventIndexingStatus
     | EventIndexingWarning
     | EventServerInstanceDisposed
@@ -1177,6 +1272,9 @@ export type PermissionConfig =
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
       agent_manager?: PermissionRuleConfig
+      notebook_read?: PermissionRuleConfig
+      notebook_edit?: PermissionRuleConfig
+      notebook_execute?: PermissionRuleConfig
       [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
 
@@ -1203,6 +1301,14 @@ export type AgentConfig = {
   steps?: number
   maxSteps?: number
   permission?: PermissionConfig
+  requirements?: {
+    skills?: Array<string>
+    mcps?: Array<string>
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
+  }
   [key: string]:
     | unknown
     | string
@@ -1227,6 +1333,14 @@ export type AgentConfig = {
     | "info"
     | number
     | PermissionConfig
+    | {
+        skills?: Array<string>
+        mcps?: Array<string>
+        vscode_extensions?: Array<{
+          name: string
+          id: string
+        }>
+      }
     | undefined
 }
 
@@ -1536,10 +1650,14 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
+    agent_requirements?: boolean
+    native_notebook_tools?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
+    sandbox?: boolean
+    sandbox_restrict_network?: boolean
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }
@@ -1634,6 +1752,9 @@ export type Model = {
   terminalBench?: {
     overallScore: number
     avgAttemptCostUsd: number
+  }
+  autoRouting?: {
+    models: Array<string>
   }
   ai_sdk_provider?: "alibaba" | "anthropic" | "mistral" | "openai" | "openai-compatible" | "openrouter"
 }
@@ -1915,6 +2036,14 @@ export type Agent = {
   prompt?: string
   options: {
     [key: string]: unknown
+  }
+  requirements?: {
+    skills?: Array<string>
+    mcps?: Array<string>
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
   }
   steps?: number
 }
@@ -2412,6 +2541,191 @@ export type EffectHttpApiErrorUnauthorized = {
 
 export type EffectHttpApiErrorServiceUnavailable = {
   _tag: "ServiceUnavailable"
+}
+
+export type AgentRequirementResult = {
+  agent: string
+  directory: string
+  enabled: boolean
+  state: "disabled" | "ready" | "blocked" | "error"
+  skills: Array<{
+    name: string
+    status: "ready" | "missing" | "error"
+    message?: string
+  }>
+  mcps: Array<{
+    name: string
+    status: "ready" | "missing" | "error"
+    message?: string
+  }>
+  vscode_extensions: Array<{
+    name: string
+    id: string
+  }>
+  error?: {
+    code: "unknown_agent" | "malformed_declaration" | "discovery_failed" | "mcp_status_failed"
+    message: string
+  }
+}
+
+export type NotebookOutput = {
+  mime: string
+  text?: string
+  name?: string
+  message?: string
+  stack?: string
+  omitted?: boolean
+  truncated?: boolean
+}
+
+export type NotebookCell = {
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  kind: "code" | "markdown"
+  language: string
+  source: string
+  execution?: {
+    order?: number
+    success?: boolean
+    started?: number
+    ended?: number
+  }
+  outputs?: Array<NotebookOutput>
+}
+
+export type NotebookReadResult = {
+  operation: "read"
+  path: string
+  requestPath: string
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  revision: string
+  cells: Array<NotebookCell>
+  truncated?: boolean
+}
+
+export type NotebookEditResult = {
+  operation: "edit"
+  path: string
+  requestPath: string
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  revision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  action: "insert" | "replace" | "delete" | "create"
+  cell?: NotebookCell
+}
+
+export type NotebookExecuteResult = {
+  operation: "execute"
+  path: string
+  requestPath: string
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  revision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  status: "success" | "error"
+  outputs: Array<NotebookOutput>
+  truncated?: boolean
+}
+
+export type NotebookResult = NotebookReadResult | NotebookEditResult | NotebookExecuteResult
+
+export type NotebookFailure = {
+  code:
+    | "already_exists"
+    | "cancelled"
+    | "closed"
+    | "disconnected"
+    | "execution_failed"
+    | "invalid_cell"
+    | "invalid_path"
+    | "no_kernel"
+    | "not_found"
+    | "stale_revision"
+    | "timeout"
+    | "unsupported"
+  message: string
+  path?: string
+  /**
+   * Zero-based cell index
+   */
+  index?: number
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  currentRevision?: string
+}
+
+export type AnacondaDesktopStatus =
+  | {
+      type: "unsupported-platform"
+      platform: string
+    }
+  | {
+      type: "not-installed"
+      downloadURL: string
+    }
+  | {
+      type: "not-running"
+    }
+  | {
+      type: "invalid-config"
+      reason: "missing" | "malformed" | "missing-key" | "invalid-port"
+    }
+  | {
+      type: "signed-out"
+    }
+  | {
+      type: "management-unauthorized"
+    }
+  | {
+      type: "management-unavailable"
+      reason: "timeout" | "unexpected-response"
+    }
+  | {
+      type: "no-downloaded-model"
+    }
+  | {
+      type: "no-running-server"
+      downloadedModels: number
+    }
+  | {
+      type: "inference-unhealthy"
+      serverID: string
+    }
+  | {
+      type: "ready"
+      serverID: string
+      serverName?: string
+      models: Array<{
+        id: string
+        name: string
+      }>
+      context: number
+      toolcall: "supported" | "unsupported" | "unknown"
+    }
+
+export type AnacondaDesktopConflictError = {
+  code: "unsupported-platform" | "not-installed" | "not-ready" | "acknowledgement-required"
+  message: string
+  status?: AnacondaDesktopStatus
+}
+
+export type AnacondaDesktopOperationError = {
+  operation: "open" | "sync"
+  message: string
 }
 
 export type KilocodeSessionImportResult = {
@@ -2983,6 +3297,19 @@ export type EventGlobalConfigUpdated = {
   }
 }
 
+export type EventSandboxStatusChanged = {
+  id: string
+  type: "sandbox.status.changed"
+  properties: {
+    sessionID: string
+    directory: string
+    enabled: boolean
+    available: boolean
+    reason?: string
+    version: number
+  }
+}
+
 export type EventKilocodeAgentManagerStart = {
   id: string
   type: "kilocode.agent_manager.start"
@@ -2996,6 +3323,22 @@ export type EventKilocodeAgentManagerStart = {
       name?: string
       branchName?: string
     }>
+  }
+}
+
+export type EventKilocodeNotebookRequested = {
+  id: string
+  type: "kilocode.notebook.requested"
+  properties: NotebookRequest
+}
+
+export type EventKilocodeNotebookCancelled = {
+  id: string
+  type: "kilocode.notebook.cancelled"
+  properties: {
+    requestID: NotebookRequestId
+    sessionID: string
+    reason: "cancelled" | "disposed" | "timeout"
   }
 }
 
@@ -3209,6 +3552,7 @@ export type EventSessionError = {
       | StructuredOutputError
       | ContextOverflowError
       | ApiError
+      | AgentRequirementError
   }
 }
 
@@ -9912,6 +10256,12 @@ export type KiloProfileResponses = {
     balance: {
       balance: number
     } | null
+    kiloPass: {
+      currentPeriodBaseCreditsUsd: number
+      currentPeriodUsageUsd: number
+      currentPeriodBonusCreditsUsd: number
+      nextBillingAt?: string | null
+    } | null
     currentOrgId: string | null
   }
 }
@@ -10465,6 +10815,36 @@ export type KilocodeHeapSnapshotResponses = {
 
 export type KilocodeHeapSnapshotResponse = KilocodeHeapSnapshotResponses[keyof KilocodeHeapSnapshotResponses]
 
+export type KilocodeAgentRequirementsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    agent: string
+  }
+  url: "/kilocode/agent/requirements"
+}
+
+export type KilocodeAgentRequirementsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeAgentRequirementsError = KilocodeAgentRequirementsErrors[keyof KilocodeAgentRequirementsErrors]
+
+export type KilocodeAgentRequirementsResponses = {
+  /**
+   * Agent requirement status
+   */
+  200: AgentRequirementResult
+}
+
+export type KilocodeAgentRequirementsResponse =
+  KilocodeAgentRequirementsResponses[keyof KilocodeAgentRequirementsResponses]
+
 export type KilocodeRemoveSkillData = {
   body?: {
     location: string
@@ -10524,6 +10904,282 @@ export type KilocodeRemoveAgentResponses = {
 }
 
 export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
+
+export type KilocodeNotebookListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notebook"
+}
+
+export type KilocodeNotebookListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeNotebookListError = KilocodeNotebookListErrors[keyof KilocodeNotebookListErrors]
+
+export type KilocodeNotebookListResponses = {
+  /**
+   * Pending notebook host requests
+   */
+  200: Array<NotebookRequest>
+}
+
+export type KilocodeNotebookListResponse = KilocodeNotebookListResponses[keyof KilocodeNotebookListResponses]
+
+export type KilocodeNotebookReplyData = {
+  body?: {
+    result: NotebookResult
+  }
+  path: {
+    requestID: NotebookRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notebook/{requestID}/reply"
+}
+
+export type KilocodeNotebookReplyErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeNotebookReplyError = KilocodeNotebookReplyErrors[keyof KilocodeNotebookReplyErrors]
+
+export type KilocodeNotebookReplyResponses = {
+  /**
+   * Notebook reply accepted
+   */
+  200: boolean
+}
+
+export type KilocodeNotebookReplyResponse = KilocodeNotebookReplyResponses[keyof KilocodeNotebookReplyResponses]
+
+export type KilocodeNotebookRejectData = {
+  body?: {
+    error: NotebookFailure
+  }
+  path: {
+    requestID: NotebookRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notebook/{requestID}/reject"
+}
+
+export type KilocodeNotebookRejectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeNotebookRejectError = KilocodeNotebookRejectErrors[keyof KilocodeNotebookRejectErrors]
+
+export type KilocodeNotebookRejectResponses = {
+  /**
+   * Notebook rejection accepted
+   */
+  200: boolean
+}
+
+export type KilocodeNotebookRejectResponse = KilocodeNotebookRejectResponses[keyof KilocodeNotebookRejectResponses]
+
+export type KilocodeSessionModelUsageData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/model-usage"
+}
+
+export type KilocodeSessionModelUsageErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeSessionModelUsageError = KilocodeSessionModelUsageErrors[keyof KilocodeSessionModelUsageErrors]
+
+export type KilocodeSessionModelUsageResponses = {
+  /**
+   * Model usage for a session tree
+   */
+  200: {
+    totals: {
+      steps: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+    }
+    models: Array<{
+      providerID: string
+      modelID: string
+      steps: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+    }>
+  }
+}
+
+export type KilocodeSessionModelUsageResponse =
+  KilocodeSessionModelUsageResponses[keyof KilocodeSessionModelUsageResponses]
+
+export type AnacondaDesktopStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/status"
+}
+
+export type AnacondaDesktopStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AnacondaDesktopStatusError = AnacondaDesktopStatusErrors[keyof AnacondaDesktopStatusErrors]
+
+export type AnacondaDesktopStatusResponses = {
+  /**
+   * Anaconda Desktop setup status
+   */
+  200: AnacondaDesktopStatus
+}
+
+export type AnacondaDesktopStatusResponse = AnacondaDesktopStatusResponses[keyof AnacondaDesktopStatusResponses]
+
+export type AnacondaDesktopOpenData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/open"
+}
+
+export type AnacondaDesktopOpenErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * AnacondaDesktopConflictError
+   */
+  409: AnacondaDesktopConflictError
+  /**
+   * AnacondaDesktopOperationError
+   */
+  500: AnacondaDesktopOperationError
+}
+
+export type AnacondaDesktopOpenError = AnacondaDesktopOpenErrors[keyof AnacondaDesktopOpenErrors]
+
+export type AnacondaDesktopOpenResponses = {
+  /**
+   * Anaconda Desktop opened
+   */
+  200: true
+}
+
+export type AnacondaDesktopOpenResponse = AnacondaDesktopOpenResponses[keyof AnacondaDesktopOpenResponses]
+
+export type AnacondaDesktopSyncData = {
+  body?: {
+    acknowledgeToolLimitations?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/sync"
+}
+
+export type AnacondaDesktopSyncErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * AnacondaDesktopConflictError
+   */
+  409: AnacondaDesktopConflictError
+  /**
+   * AnacondaDesktopOperationError
+   */
+  500: AnacondaDesktopOperationError
+}
+
+export type AnacondaDesktopSyncError = AnacondaDesktopSyncErrors[keyof AnacondaDesktopSyncErrors]
+
+export type AnacondaDesktopSyncResponses = {
+  /**
+   * Anaconda Desktop connection synchronized
+   */
+  200: {
+    type: "ready"
+    serverID: string
+    serverName?: string
+    models: Array<{
+      id: string
+      name: string
+    }>
+    context: number
+    toolcall: "supported" | "unsupported" | "unknown"
+  }
+}
+
+export type AnacondaDesktopSyncResponse = AnacondaDesktopSyncResponses[keyof AnacondaDesktopSyncResponses]
 
 export type NetworkListData = {
   body?: never
@@ -10713,6 +11369,117 @@ export type RemoteStatusResponses = {
 }
 
 export type RemoteStatusResponse = RemoteStatusResponses[keyof RemoteStatusResponses]
+
+export type SandboxSupportData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sandbox/support"
+}
+
+export type SandboxSupportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SandboxSupportError = SandboxSupportErrors[keyof SandboxSupportErrors]
+
+export type SandboxSupportResponses = {
+  /**
+   * Sandbox backend support
+   */
+  200: {
+    available: boolean
+    reason?: string
+  }
+}
+
+export type SandboxSupportResponse = SandboxSupportResponses[keyof SandboxSupportResponses]
+
+export type SandboxStatusData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/sandbox"
+}
+
+export type SandboxStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SandboxStatusError = SandboxStatusErrors[keyof SandboxStatusErrors]
+
+export type SandboxStatusResponses = {
+  /**
+   * Session sandbox status
+   */
+  200: {
+    directory: string
+    enabled: boolean
+    available: boolean
+    reason?: string
+    version: number
+  }
+}
+
+export type SandboxStatusResponse = SandboxStatusResponses[keyof SandboxStatusResponses]
+
+export type SandboxToggleData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/sandbox/toggle"
+}
+
+export type SandboxToggleErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SandboxToggleError = SandboxToggleErrors[keyof SandboxToggleErrors]
+
+export type SandboxToggleResponses = {
+  /**
+   * Updated session sandbox status
+   */
+  200: {
+    directory: string
+    enabled: boolean
+    available: boolean
+    reason?: string
+    version: number
+  }
+}
+
+export type SandboxToggleResponse = SandboxToggleResponses[keyof SandboxToggleResponses]
 
 export type KilocodeSessionImportProjectData = {
   body?: {
