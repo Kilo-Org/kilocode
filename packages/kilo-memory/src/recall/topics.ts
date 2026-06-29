@@ -9,15 +9,10 @@ export namespace MemoryTopics {
   }
 
   const limit = {
-    topics: 3,
     terms: 6,
     expanded: 24,
   }
   const matcher = /[\p{L}\p{N}][\p{L}\p{N}_.-]{1,}/gu
-
-  function uniq(input: MemorySchema.Topic[]): MemorySchema.Topic[] {
-    return [...new Set(input)].slice(0, limit.topics)
-  }
 
   function section(input: string | undefined) {
     return input?.trim().toLowerCase() ?? ""

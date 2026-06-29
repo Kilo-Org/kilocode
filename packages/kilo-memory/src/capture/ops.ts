@@ -249,7 +249,11 @@ export namespace MemoryOperations {
   function planAdd(plan: Plan, item: Prepared, now: number) {
     const found = duplicate({ item, inventory: plan.inventory })
     const next = found ? rekey({ item, key: found.key }) : item
-    const result = MemoryMarkdown.upsert({ text: plan.docs.get(next.file) ?? "", section: next.section, line: next.line })
+    const result = MemoryMarkdown.upsert({
+      text: plan.docs.get(next.file) ?? "",
+      section: next.section,
+      line: next.line,
+    })
     if (result.changed) {
       plan.docs.set(next.file, result.text)
       plan.touched.add(next.file)

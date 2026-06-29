@@ -1,7 +1,16 @@
 export const MEMORY_USAGE =
   "/memory [project] enable|status|show|inspect|auto status|auto on|auto off|remember <text>|correct <text>|forget <query>|purge confirm|rebuild|disable"
 
-export const MEMORY_OPERATIONS = ["enable", "disable", "rebuild", "remember", "correct", "forget", "purge", "auto"] as const
+export const MEMORY_OPERATIONS = [
+  "enable",
+  "disable",
+  "rebuild",
+  "remember",
+  "correct",
+  "forget",
+  "purge",
+  "auto",
+] as const
 export const MEMORY_PROMPT_OPERATIONS = ["remember", "forget"] as const
 
 export type MemoryOperation = (typeof MEMORY_OPERATIONS)[number]

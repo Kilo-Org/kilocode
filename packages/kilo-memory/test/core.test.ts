@@ -177,6 +177,22 @@ describe("memory core package", () => {
     })
   })
 
+  test("does not trust workspace-controlled gitdir pointers for project identity", async () => {
+    await use(async (t) => {
+      const victim = path.join(t.dir, "victim")
+      const other = path.join(t.dir, "other")
+      await mkdir(path.join(other, ".git"), { recursive: true })
+      await mkdir(victim)
+      await writeFile(path.join(victim, ".git"), "gitdir: ../other/.git\n")
+
+      const id = MemoryPaths.identity({ ctx: { directory: victim, worktree: victim } })
+
+      expect(path.basename(id.canonical)).toBe("victim")
+      expect(path.basename(id.canonical)).not.toBe("other")
+      expect(id.folder.startsWith("victim-")).toBe(true)
+    })
+  })
+
   test("serializes concurrent operations for one root", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
@@ -206,7 +222,10 @@ describe("memory core package", () => {
         ],
       })
       await expect(
-        Memory.apply({ root: t.root, ops: [{ action: "add", key: "bad", text: "api_key=sk-abcdefghijklmnopqrstuvwxyz" }] }),
+        Memory.apply({
+          root: t.root,
+          ops: [{ action: "add", key: "bad", text: "api_key=sk-abcdefghijklmnopqrstuvwxyz" }],
+        }),
       ).rejects.toThrow("secret-like content")
       const shown = await Memory.show({ root: t.root })
 
@@ -457,12 +476,10 @@ describe("memory core package", () => {
 
       const inventory = await MemoryFiles.deriveInventory(t.root)
       const shown = await Memory.show({ root: t.root })
-      const first = inventory.items[
-        MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "first_hint" })
-      ]!
-      const second = inventory.items[
-        MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "second_hint" })
-      ]!
+      const first =
+        inventory.items[MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "first_hint" })]!
+      const second =
+        inventory.items[MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "second_hint" })]!
 
       expect(first.createdAt).toBe(first.updatedAt)
       expect(second.createdAt).toBe(second.updatedAt)
@@ -948,7 +965,9 @@ describe("memory core package", () => {
       expect(shown.index.match(/type=latest_session_digest/g)?.length).toBe(1)
       expect(shown.index).toContain("type=latest_session_digest")
       expect(shown.index).toContain("session=ses_empty_newest")
-      expect(shown.index.indexOf("session=ses_empty_newest")).toBeLessThan(shown.index.indexOf("session=ses_substantive"))
+      expect(shown.index.indexOf("session=ses_empty_newest")).toBeLessThan(
+        shown.index.indexOf("session=ses_substantive"),
+      )
     })
   })
 

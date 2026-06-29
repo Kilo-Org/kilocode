@@ -26,8 +26,7 @@ const key = z.string().trim().min(1).max(80)
 const value = z.string().trim().min(1).max(2_000)
 const addSchema = (
   op: "upsert_project_fact" | "upsert_project_decision" | "upsert_project_constraint" | "append_correction",
-) =>
-  z.object({ op: z.literal(op), key, value }).strict()
+) => z.object({ op: z.literal(op), key, value }).strict()
 
 export const typedSchema = z
   .object({
