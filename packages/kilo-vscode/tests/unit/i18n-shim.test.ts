@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test"
-import { resolveLocale, t } from "../../src/services/autocomplete/shims/i18n"
+import { resolveLocale, t } from "../../src/services/i18n"
 
-describe("t()", () => {
+describe("extension host i18n", () => {
   it("returns translated string for known key", () => {
     const result = t("kilocode:autocomplete.statusBar.enabled")
     expect(typeof result).toBe("string")
