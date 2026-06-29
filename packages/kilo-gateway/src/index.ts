@@ -63,21 +63,9 @@ export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/not
 export { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "./cloud-sessions.js"
 
 // ============================================================================
-// Server Routes (optional - requires hono and OpenCode dependencies)
+// Server Handlers
 // ============================================================================
-export { createKiloRoutes } from "./server/routes.js"
-export {
-  GatewayError,
-  UnauthorizedError,
-  getOrganizationId,
-  getClawChatCredentials,
-  getClawStatus,
-  getCloudSessions,
-  getNotifications,
-  getProfile,
-  getToken,
-  setOrganization,
-} from "./server/handlers.js"
+export { GatewayError, getOrganizationId, getCloudSessions, getToken } from "./server/handlers.js"
 
 // ============================================================================
 // Note: TUI exports moved to separate entry point
