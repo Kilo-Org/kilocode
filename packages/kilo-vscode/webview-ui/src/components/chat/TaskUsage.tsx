@@ -39,7 +39,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
     return money().format(value)
   }
   const rate = (model: SessionModelUsage["models"][number]) => {
-    const total = model.tokens.input + model.tokens.cache.read + model.tokens.cache.write
+    const total = model.tokens.input + model.tokens.cache.read
     if (total === 0) return "-"
     return `${((model.tokens.cache.read / total) * 100).toFixed(1)}%`
   }
