@@ -24,13 +24,16 @@ export function normalizeCandidatePath(path: string): string {
   if (/^[a-zA-Z]:[/\\]/.test(path)) return path
   // Windows UNC paths (\\server\...) — leave as-is
   if (path.startsWith("\\\\")) return path
-  // Strip a/b diff prefixes
-  const stripped = path.replace(/^[ab]\//, "")
-  return `./${stripped}`
+  return `./${path}`
 }
 
 // Matches a URI scheme but NOT a Windows drive letter (single char followed by colon).
 const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]+:/
+
+function looksLikeFilePath(path: string): boolean {
+  const name = path.split(/[\\/]/).pop() ?? path
+  return name.includes(".")
+}
 
 /**
  * Extract a file path (with optional line/column) from a markdown link href,
@@ -68,8 +71,7 @@ export function extractFilePathFromHref(href: string): { path: string; line?: nu
   // Strip fragment and query before treating as file path
   const cleaned = href.replace(/[#?].*$/, "")
   if (!cleaned) return undefined
-  // Strip a/b diff prefixes, parse :line[:col] suffix
-  const stripped = cleaned.replace(/^[ab]\//, "")
-  const { candidate, line, column } = extractSuffix(stripped)
+  const { candidate, line, column } = extractSuffix(cleaned)
+  if (!looksLikeFilePath(candidate)) return undefined
   return { path: candidate, line, column }
 }

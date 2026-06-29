@@ -77,12 +77,12 @@ describe("normalizeCandidatePath", () => {
     expect(normalizeCandidatePath("\\\\server\\share")).toBe("\\\\server\\share")
   })
 
-  it("strips a/ diff prefix", () => {
-    expect(normalizeCandidatePath("a/src/app.ts")).toBe("./src/app.ts")
+  it("preserves a/ as a real workspace directory", () => {
+    expect(normalizeCandidatePath("a/src/app.ts")).toBe("./a/src/app.ts")
   })
 
-  it("strips b/ diff prefix", () => {
-    expect(normalizeCandidatePath("b/src/app.ts")).toBe("./src/app.ts")
+  it("preserves b/ as a real workspace directory", () => {
+    expect(normalizeCandidatePath("b/src/app.ts")).toBe("./b/src/app.ts")
   })
 
   it("Windows forward-slash drive path preserved", () => {
@@ -150,7 +150,7 @@ describe("extractFilePathFromHref", () => {
     })
   })
 
-  describe("strips fragments, queries, and diff prefixes", () => {
+  describe("strips fragments and queries", () => {
     it("strips #fragment", () => {
       expect(extractFilePathFromHref("AGENTS.md#worktrees")).toEqual({ path: "AGENTS.md" })
     })
@@ -159,12 +159,22 @@ describe("extractFilePathFromHref", () => {
       expect(extractFilePathFromHref("README.md?plain=1")).toEqual({ path: "README.md" })
     })
 
-    it("strips a/ prefix", () => {
-      expect(extractFilePathFromHref("a/src/app.ts")).toEqual({ path: "src/app.ts" })
+    it("preserves a/ as a real workspace directory", () => {
+      expect(extractFilePathFromHref("a/src/app.ts")).toEqual({ path: "a/src/app.ts" })
     })
 
-    it("strips b/ prefix with line", () => {
-      expect(extractFilePathFromHref("b/src/app.ts:42")).toEqual({ path: "src/app.ts", line: 42 })
+    it("preserves b/ as a real workspace directory with line", () => {
+      expect(extractFilePathFromHref("b/src/app.ts:42")).toEqual({ path: "b/src/app.ts", line: 42 })
+    })
+  })
+
+  describe("rejects relative hrefs that do not look like files", () => {
+    it("extensionless relative doc link", () => {
+      expect(extractFilePathFromHref("docs/getting-started")).toBeUndefined()
+    })
+
+    it("extensionless absolute docs path", () => {
+      expect(extractFilePathFromHref("/docs")).toBeUndefined()
     })
   })
 

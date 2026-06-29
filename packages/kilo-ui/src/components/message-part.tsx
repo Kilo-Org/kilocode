@@ -1327,7 +1327,9 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const promote = (el: HTMLElement, path: string, exists: boolean) => {
     if (!exists) {
       el.classList.remove("file-link-candidate")
+      el.classList.remove("file-link")
       el.removeAttribute("data-file-candidate")
+      el.removeAttribute("data-file-path")
       el.removeAttribute("data-file-line")
       el.removeAttribute("data-file-col")
       return
@@ -1379,23 +1381,35 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   // The Markdown component writes its DOM asynchronously (rAF-coalesced
   // morphdom), so scanning for candidates synchronously misses them. Drive
   // validation from a MutationObserver instead, coalescing streaming bursts
-  // into one pass per frame. promote() only mutates classes/attributes, which
-  // childList observation ignores, so it never re-triggers the observer.
+  // into one pass per frame. Observe child, text, and file-link attributes
+  // because morphdom can update an existing <code> node in place as streaming
+  // text changes (for example `src/fo` -> `src/foo.ts`).
   onMount(() => {
     if (!bodyRef) return
     let scheduled = false
+    let frame: number | undefined
     const schedule = () => {
       if (scheduled) return
       scheduled = true
-      requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
         scheduled = false
+        frame = undefined
         validate()
       })
     }
     const observer = new MutationObserver(schedule)
-    observer.observe(bodyRef, { childList: true, subtree: true })
+    observer.observe(bodyRef, {
+      attributes: true,
+      attributeFilter: ["class", "data-file-candidate", "data-file-line", "data-file-col"],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    })
     schedule()
-    onCleanup(() => observer.disconnect())
+    onCleanup(() => {
+      observer.disconnect()
+      if (frame !== undefined) cancelAnimationFrame(frame)
+    })
   })
 
   const handleMarkdownClick = (e: MouseEvent) => {
