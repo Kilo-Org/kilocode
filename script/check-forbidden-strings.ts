@@ -32,6 +32,7 @@ const forbidden: { pattern: string; reason: string; allow?: string[] }[] = [
       "packages/kilo-docs/source-links.md",
       "patches/",
       "script/upstream/",
+      "translations/",
     ],
   },
   {
