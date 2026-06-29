@@ -7,7 +7,7 @@ export const dict = {
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
     "**Nessun modello di completamento automatico configurato**\n\nPer abilitare il completamento automatico, aggiungi un profilo con uno di questi provider supportati: {{providers}}.\n\n[Apri impostazioni]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Costo totale della sessione:",
-  "kilocode:autocomplete.statusBar.tooltip.provider": "Provider:",
+  "kilocode:autocomplete.statusBar.tooltip.provider": "Fornitore:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Modello:",
   "kilocode:autocomplete.statusBar.tooltip.profile": "Profilo: ",
   "kilocode:autocomplete.statusBar.tooltip.defaultProfile": "Predefinito",
@@ -40,8 +40,8 @@ export const dict = {
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Disabilita Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Disabilita completamento automatico",
   "kilocode:autocomplete.creditsExhausted.message":
-    "Kilo Code Autocomplete has been paused. Possible causes: your Kilo account has no remaining credits, or your configured API key (BYOK) has reached its quota limit. Add Kilo credits or check your API key configuration to resume autocomplete.",
+    "Il completamento automatico di Kilo Code è stato messo in pausa. Possibili cause: il tuo account Kilo non ha crediti residui, oppure la chiave API configurata (BYOK) ha raggiunto il limite di quota. Aggiungi crediti Kilo o controlla la configurazione della chiave API per riprendere il completamento automatico.",
   "kilocode:autocomplete.creditsExhausted.addCredits": "Aggiungi crediti",
   "kilocode:autocomplete.authError.message":
-    "Kilo Code Autocomplete has been paused due to an authentication issue. Possible causes: you are not signed in to Kilo, or your API key (BYOK) is invalid or missing. Please sign in again or check your provider API key settings.",
+    "Il completamento automatico di Kilo Code è stato messo in pausa a causa di un problema di autenticazione. Possibili cause: non hai effettuato l’accesso a Kilo, oppure la tua chiave API (BYOK) non è valida o manca. Accedi di nuovo o controlla le impostazioni della chiave API del provider.",
 }

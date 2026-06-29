@@ -32,8 +32,8 @@ export const dict = {
   "kilocode:autocomplete.commands.applyAllSuggestions": "Alle vorgeschlagenen Änderungen anwenden",
   "kilocode:autocomplete.commands.category": "Kilo Code",
   "kilocode:autocomplete.codeAction.title": "Kilo Code: Vorgeschlagene Änderungen",
-  "kilocode:autocomplete.chatParticipant.fullName": "Kilo Code Agent",
-  "kilocode:autocomplete.chatParticipant.name": "Agent",
+  "kilocode:autocomplete.chatParticipant.fullName": "Kilo Code-Agent",
+  "kilocode:autocomplete.chatParticipant.name": "Assistent",
   "kilocode:autocomplete.chatParticipant.description":
     "Ich kann dir bei Schnellaufgaben und vorgeschlagenen Änderungen helfen.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.message":
@@ -41,8 +41,8 @@ export const dict = {
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot deaktivieren",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autovervollständigung deaktivieren",
   "kilocode:autocomplete.creditsExhausted.message":
-    "Kilo Code Autocomplete has been paused. Possible causes: your Kilo account has no remaining credits, or your configured API key (BYOK) has reached its quota limit. Add Kilo credits or check your API key configuration to resume autocomplete.",
+    "Kilo Code Autovervollständigung wurde pausiert. Mögliche Ursachen: Dein Kilo-Konto hat keine verbleibenden Credits, oder dein konfigurierter API-Schlüssel (BYOK) hat sein Kontingentlimit erreicht. Füge Kilo-Credits hinzu oder prüfe deine API-Schlüsselkonfiguration, um die Autovervollständigung fortzusetzen.",
   "kilocode:autocomplete.creditsExhausted.addCredits": "Credits hinzufügen",
   "kilocode:autocomplete.authError.message":
-    "Kilo Code Autocomplete has been paused due to an authentication issue. Possible causes: you are not signed in to Kilo, or your API key (BYOK) is invalid or missing. Please sign in again or check your provider API key settings.",
+    "Kilo Code Autovervollständigung wurde aufgrund eines Authentifizierungsproblems pausiert. Mögliche Ursachen: Du bist nicht bei Kilo angemeldet, oder dein API-Schlüssel (BYOK) ist ungültig oder fehlt. Bitte melde dich erneut an oder prüfe die API-Schlüsseleinstellungen deines Anbieters.",
 }

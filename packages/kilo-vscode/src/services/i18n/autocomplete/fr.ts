@@ -33,7 +33,7 @@ export const dict = {
   "kilocode:autocomplete.commands.category": "Kilo Code",
   "kilocode:autocomplete.codeAction.title": "Kilo Code : modifications suggérées",
   "kilocode:autocomplete.chatParticipant.fullName": "Agent Kilo Code",
-  "kilocode:autocomplete.chatParticipant.name": "Agent",
+  "kilocode:autocomplete.chatParticipant.name": "Assistant",
   "kilocode:autocomplete.chatParticipant.description":
     "Je peux vous aider avec des tâches rapides et des modifications suggérées.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.message":
@@ -41,8 +41,8 @@ export const dict = {
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Désactiver Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Désactiver la saisie automatique",
   "kilocode:autocomplete.creditsExhausted.message":
-    "Kilo Code Autocomplete has been paused. Possible causes: your Kilo account has no remaining credits, or your configured API key (BYOK) has reached its quota limit. Add Kilo credits or check your API key configuration to resume autocomplete.",
+    "La saisie semi-automatique de Kilo Code a été mise en pause. Causes possibles : votre compte Kilo n’a plus de crédits, ou votre clé API configurée (BYOK) a atteint sa limite de quota. Ajoutez des crédits Kilo ou vérifiez la configuration de votre clé API pour reprendre la saisie semi-automatique.",
   "kilocode:autocomplete.creditsExhausted.addCredits": "Ajouter des crédits",
   "kilocode:autocomplete.authError.message":
-    "Kilo Code Autocomplete has been paused due to an authentication issue. Possible causes: you are not signed in to Kilo, or your API key (BYOK) is invalid or missing. Please sign in again or check your provider API key settings.",
+    "La saisie semi-automatique de Kilo Code a été mise en pause en raison d’un problème d’authentification. Causes possibles : vous n’êtes pas connecté à Kilo, ou votre clé API (BYOK) est invalide ou manquante. Reconnectez-vous ou vérifiez les paramètres de clé API de votre fournisseur.",
 }
