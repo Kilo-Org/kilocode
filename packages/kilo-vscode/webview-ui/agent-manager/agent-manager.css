@@ -710,6 +710,7 @@ button.am-section-toggle:hover .am-section-label {
 .am-pr-badge:hover .am-pr-badge-number {
   color: var(--pr-accent);
 }
+/* Checks still running — pulse the whole amber badge. */
 .am-pr-badge[data-pending] {
   animation: am-pr-pulse 1.5s ease-in-out infinite;
 }
