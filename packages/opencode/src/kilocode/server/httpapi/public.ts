@@ -53,6 +53,8 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
   const profile = json("/kilo/profile")?.schema?.properties
   if (profile?.balance) profile.balance = nullable(profile.balance)
   if (profile?.kiloPass) profile.kiloPass = nullable(profile.kiloPass)
+  const pass = profile?.kiloPass?.anyOf?.find((item) => item.type === "object")?.properties
+  if (pass?.nextBillingAt) pass.nextBillingAt = nullable(pass.nextBillingAt)
   if (profile?.currentOrgId) profile.currentOrgId = nullable(profile.currentOrgId)
 
   const sessions = json("/kilo/cloud-sessions")?.schema?.properties
