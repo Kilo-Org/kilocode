@@ -351,27 +351,17 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                           >
                             <Switch fallback={<Icon name="branch" size="small" />}>
                               <Match when={indicator() === "failure"}>
-                                <Icon
-                                  name="circle-x"
-                                  size="small"
-                                  class="am-pr-badge-status"
-                                  style={{ color: "#ef4444" }}
-                                />
+                                <Icon name="circle-x" size="small" class="am-pr-badge-status" data-status="failure" />
                               </Match>
                               <Match when={indicator() === "changes"}>
-                                <Icon
-                                  name="warning"
-                                  size="small"
-                                  class="am-pr-badge-status"
-                                  style={{ color: "#fbbf24" }}
-                                />
+                                <Icon name="warning" size="small" class="am-pr-badge-status" data-status="changes" />
                               </Match>
                               <Match when={indicator() === "approved"}>
                                 <Icon
                                   name="circle-check"
                                   size="small"
                                   class="am-pr-badge-status"
-                                  style={{ color: "#34d399" }}
+                                  data-status="approved"
                                 />
                               </Match>
                             </Switch>

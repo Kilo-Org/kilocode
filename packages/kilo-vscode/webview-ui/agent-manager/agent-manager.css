@@ -710,6 +710,18 @@ button.am-section-toggle:hover .am-section-label {
 .am-pr-badge:hover .am-pr-badge-number {
   color: var(--pr-accent);
 }
+/* Status icon overlaid on the badge — colored by CI/review result, independent
+   of the badge's PR-state accent color. */
+.am-pr-badge-status[data-status="failure"] {
+  color: #ef4444;
+}
+.am-pr-badge-status[data-status="changes"] {
+  color: #fbbf24;
+}
+.am-pr-badge-status[data-status="approved"] {
+  color: #34d399;
+}
+
 /* Checks still running — pulse the whole amber badge. */
 .am-pr-badge[data-pending] {
   animation: am-pr-pulse 1.5s ease-in-out infinite;
