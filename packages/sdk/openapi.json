@@ -18631,6 +18631,10 @@
             "type": "string",
             "enum": ["starting", "running", "ready", "exited", "failed", "stopping", "stopped"]
           },
+          "lifetime": {
+            "type": "string",
+            "enum": ["session", "parent", "persistent"]
+          },
           "ready": {
             "type": "boolean"
           },
@@ -18664,7 +18668,7 @@
             "additionalProperties": false
           }
         },
-        "required": ["id", "sessionID", "command", "cwd", "ports", "status", "ready", "output", "time"],
+        "required": ["id", "sessionID", "command", "cwd", "ports", "status", "lifetime", "ready", "output", "time"],
         "additionalProperties": false
       },
       "SnapshotFileDiff": {
@@ -28362,9 +28366,12 @@
             "properties": {
               "info": {
                 "$ref": "#/components/schemas/BackgroundProcessInfo"
+              },
+              "scope": {
+                "type": "string"
               }
             },
-            "required": ["info"],
+            "required": ["info", "scope"],
             "additionalProperties": false
           }
         },
@@ -28390,9 +28397,12 @@
               },
               "processID": {
                 "type": "string"
+              },
+              "scope": {
+                "type": "string"
               }
             },
-            "required": ["sessionID", "processID"],
+            "required": ["sessionID", "processID", "scope"],
             "additionalProperties": false
           }
         },
