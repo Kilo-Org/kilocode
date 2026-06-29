@@ -17,6 +17,7 @@ import {
   isLocalProviderOptionalApiKey,
   LOCAL_PROVIDER_API_KEY_PLACEHOLDER,
 } from "../../utils/local-providers"
+import AnacondaDesktopDialog from "./AnacondaDesktopDialog"
 
 interface ProviderConnectDialogProps {
   providerID: string
@@ -56,6 +57,8 @@ function visible(prompt: Prompt, values: Record<string, string>) {
 }
 
 const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => {
+  if (props.providerID === "anaconda-desktop") return <AnacondaDesktopDialog />
+
   const dialog = useDialog()
   const language = useLanguage()
   const provider = useProvider()

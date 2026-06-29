@@ -18,11 +18,6 @@ Kilo Code supports Venice AI through the native Venice provider. Venice offers p
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-Use the **OpenAI Compatible** provider if the legacy provider list does not include Venice AI. Enter your Venice API base URL, API key, and model ID from the Venice dashboard.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Venice AI and enter your API key.

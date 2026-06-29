@@ -9,25 +9,38 @@
   gap: 8px;
 }
 
-.marketplace-tabs-root {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-.marketplace-content {
-  flex: 1;
-  overflow: auto;
-}
-
 /* List layout */
 
 .marketplace-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-top: 12px;
+}
+
+.marketplace-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.marketplace-intro .link,
+.install-modal-links .link {
+  all: unset;
+  color: var(--text-interactive-base);
+  cursor: pointer;
+}
+
+.marketplace-intro .link:hover,
+.install-modal-links .link:hover {
+  text-decoration: underline;
+}
+
+.marketplace-intro .link:focus-visible,
+.install-modal-links .link:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
 }
 
 .marketplace-filters {
@@ -40,30 +53,41 @@
   flex: 1;
 }
 
-.marketplace-category-filters {
-  overflow-x: auto;
+.marketplace-relevance-filter {
+  display: flex;
+  align-items: center;
 }
 
-/* Tag filters */
+/* Type and category filters */
 
-.marketplace-active-tags {
+.marketplace-types,
+.marketplace-categories {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.marketplace-tag-filter {
+.marketplace-type-filter,
+.marketplace-category-filter {
   all: unset;
   cursor: pointer;
   opacity: 0.5;
   transition: opacity 0.15s ease;
 }
 
-.marketplace-tag-filter:hover {
+.marketplace-type-filter:hover,
+.marketplace-category-filter:hover {
   opacity: 0.8;
 }
 
-.marketplace-tag-filter.active {
+.marketplace-type-filter:focus-visible,
+.marketplace-category-filter:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+.marketplace-type-filter.active,
+.marketplace-category-filter.active {
   opacity: 1;
 }
 
@@ -210,6 +234,32 @@
 
 /* Installed badge */
 
+.marketplace-badge-type {
+  flex-shrink: 0;
+  letter-spacing: 0.4px;
+}
+
+.marketplace-type-agent [data-component="tag"],
+.marketplace-badge-type.marketplace-type-agent {
+  color: var(--text-on-success-base) !important;
+  background-color: color-mix(in srgb, var(--border-success-base) 14%, transparent) !important;
+  border-color: var(--border-success-base) !important;
+}
+
+.marketplace-type-mcp [data-component="tag"],
+.marketplace-badge-type.marketplace-type-mcp {
+  color: var(--text-on-info-base) !important;
+  background-color: color-mix(in srgb, var(--border-info-base) 14%, transparent) !important;
+  border-color: var(--border-info-base) !important;
+}
+
+.marketplace-type-skill [data-component="tag"],
+.marketplace-badge-type.marketplace-type-skill {
+  color: var(--text-on-warning-base) !important;
+  background-color: color-mix(in srgb, var(--border-warning-base) 14%, transparent) !important;
+  border-color: var(--border-warning-base) !important;
+}
+
 .marketplace-badge-installed {
   color: var(--text-on-success-base) !important;
   border-color: var(--border-success-base) !important;
@@ -253,6 +303,57 @@
   gap: 6px;
 }
 
+.install-modal-about,
+.install-modal-warning,
+.install-modal-destination {
+  padding: 10px;
+  border: 1px solid var(--border-base, var(--vscode-widget-border));
+  border-radius: 4px;
+  background: var(--surface-raised-base, var(--vscode-editorWidget-background));
+}
+
+.install-modal-about p,
+.install-modal-warning p,
+.install-modal-help,
+.install-modal-result-path {
+  margin: 0;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.install-modal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 6px;
+  font-size: var(--kilo-font-size-12);
+}
+
+.install-modal-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-color: var(--border-warning-base);
+}
+
+.install-modal-destination {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.install-modal-destination span {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+}
+
+.install-modal-destination code {
+  color: var(--text-base);
+  font-size: var(--kilo-font-size-12);
+  overflow-wrap: anywhere;
+}
+
 .install-modal-label {
   font-weight: 600;
   font-size: var(--kilo-font-size-13);
@@ -285,7 +386,12 @@
   color: var(--text-on-success-base);
   font-size: var(--kilo-font-size-14);
   font-weight: 600;
-  margin: 0 0 16px;
+  margin: 0 0 6px;
+}
+
+.install-modal-result-path {
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
 }
 
 .install-modal-error-msg {
@@ -326,11 +432,13 @@ body.vscode-high-contrast-light {
     border: 1px solid var(--vscode-contrastBorder, transparent);
   }
 
-  .marketplace-tag-filter {
+  .marketplace-type-filter,
+  .marketplace-category-filter {
     border: 1px solid var(--vscode-contrastBorder, transparent);
   }
 
-  .marketplace-tag-filter.active {
+  .marketplace-type-filter.active,
+  .marketplace-category-filter.active {
     border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
   }
 

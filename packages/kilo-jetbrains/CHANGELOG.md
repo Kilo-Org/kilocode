@@ -88,6 +88,23 @@
 
 ## [Unreleased]
 
+## [7.0.1-rc.13] - 2026-06-23
+
+### Added
+
+- Add slash command and file mention completion in the prompt.
+- Add support for clickable and explainable `@file` mentions in the prompt.
+
+### Fixed
+
+- Fix  prompt undo/redo behavior and restore prompt focus after history navigation.
+- Fix lazy session creation to avoid duplicate initialization.
+- Fix prompt-training model disclosure.
+
+### Changed
+
+- Update the bundled CLI to include upstream OpenCode 1.15.13 changes.
+
 ## [7.0.1-rc.12] - 2026-06-18
 
 ### Added

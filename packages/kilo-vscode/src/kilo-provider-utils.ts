@@ -518,6 +518,15 @@ export type WebviewMessage =
   | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }
+  | {
+      type: "sandboxStatus"
+      sessionID: string
+      directory: string
+      enabled: boolean
+      available: boolean
+      reason?: string
+      version: number
+    }
   | null
 
 type PartEvent =
@@ -552,6 +561,12 @@ function mapPartEvent(event: PartEvent, sessionID: string | undefined): WebviewM
     part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
     delta: { type: "text-delta", textDelta: props.delta },
   }
+}
+
+function statusExtra(info: Extract<Event, { type: "session.status" }>["properties"]["status"]) {
+  if (info.type === "retry") return { attempt: info.attempt, message: info.message, next: info.next }
+  if (info.type === "offline") return { message: info.message }
+  return {}
 }
 
 export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: string | undefined): WebviewMessage {
@@ -595,12 +610,7 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
     case "session.status": {
       const info = event.properties.status
       const status = info.type
-      const extra =
-        info.type === "retry"
-          ? { attempt: info.attempt, message: info.message, next: info.next }
-          : info.type === "offline"
-            ? { message: info.message }
-            : {}
+      const extra = statusExtra(info)
       return {
         type: "sessionStatus" as const,
         sessionID: event.properties.sessionID,
@@ -681,6 +691,16 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
         error: event.properties.error,
       }
     }
+    case "sandbox.status.changed":
+      return {
+        type: "sandboxStatus",
+        sessionID: event.properties.sessionID,
+        directory: event.properties.directory,
+        enabled: event.properties.enabled,
+        available: event.properties.available,
+        reason: event.properties.reason,
+        version: event.properties.version,
+      }
     case "indexing.status":
       return {
         type: "indexingStatusLoaded",

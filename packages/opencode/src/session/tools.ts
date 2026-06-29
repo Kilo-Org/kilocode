@@ -90,7 +90,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
-            const result = yield* SandboxPolicy.executeTool(item, item.execute(args, ctx))
+            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
             // kilocode_change end
             const output = {
               ...result,
@@ -134,6 +134,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           )
           // kilocode_change start
           const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
+            ctx.sessionID,
             item,
             Effect.gen(function* () {
               yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })

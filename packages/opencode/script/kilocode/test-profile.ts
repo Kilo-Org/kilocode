@@ -7,7 +7,6 @@ export namespace TestProfile {
       groups: {
         cli: [
           "cli/acp/*.test.ts",
-          "cli/install-artifact.test.ts",
           "cli/run/{footer.view,run-process,scrollback.surface}.test.{ts,tsx}",
           "cli/serve/*.test.ts",
           "cli/smokes/*.test.ts",
@@ -25,6 +24,8 @@ export namespace TestProfile {
         ],
         kilo: [
           "kilocode/{background-process,bin-tree-sitter-env,daemon,external-directory-boundary,indexing-worker,indexing-worktree,mcp-oauth-callback,primary-worktree,snapshot-freeze-repro,snapshot-revert-move,snapshot-seed}.test.ts",
+          "kilocode/cli/install-artifact.test.ts",
+          "kilocode/sandbox/*.test.ts",
           "kilocode/server/{listener-runtime,worktree-list}.test.ts",
           "kilocode/session-export/{e2e,sequence,worker,workspace-provider}.test.ts",
           "kilocode/session-export/worker/{storage,zstd}.test.ts",

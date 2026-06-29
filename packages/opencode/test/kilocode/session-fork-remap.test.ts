@@ -11,6 +11,7 @@ import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { Database, eq } from "../../src/storage/db"
 import { EventSequenceTable, EventTable } from "../../src/sync/event.sql"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { KiloPartLifecycle } from "../../src/kilocode/session/part-lifecycle"
 
 Log.init({ print: false })
 
@@ -376,6 +377,50 @@ describe("Session.fork task detachment", () => {
           const msgs = await sessions.messages({ sessionID: forked.id })
           expect(msgs).toHaveLength(1)
           expect(msgs[0].parts[0]).toMatchObject({ type: "text", text: "hello" })
+        },
+      })
+    },
+    { timeout: 30000 },
+  )
+
+  test(
+    "drops transient UI parts while preserving durable synthetic context",
+    async () => {
+      await using tmp = await tmpdir({ git: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const parent = await sessions.create({ title: "parent" })
+          const user = await userMsg(parent.id)
+          const parts = [
+            { text: "Initializing snapshot... but durable", synthetic: true },
+            { text: "<system-reminder>durable context</system-reminder>", synthetic: true },
+            {
+              text: "arbitrary live status",
+              synthetic: true,
+              metadata: { [KiloPartLifecycle.key]: "transient" },
+            },
+          ]
+          for (const part of parts) {
+            await sessions.updatePart({
+              id: PartID.ascending(),
+              messageID: user,
+              sessionID: parent.id,
+              type: "text",
+              ...part,
+            } as MessageV2.TextPart)
+          }
+
+          const forked = await Session.fork({ sessionID: parent.id })
+          const source = await sessions.messages({ sessionID: parent.id })
+          const copy = await sessions.messages({ sessionID: forked.id })
+          const texts = copy.flatMap((msg) => msg.parts).flatMap((part) => (part.type === "text" ? [part.text] : []))
+
+          expect(source.flatMap((msg) => msg.parts)).toHaveLength(3)
+          expect(texts).toEqual([
+            "Initializing snapshot... but durable",
+            "<system-reminder>durable context</system-reminder>",
+          ])
         },
       })
     },

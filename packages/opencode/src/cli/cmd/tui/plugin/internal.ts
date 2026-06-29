@@ -10,6 +10,7 @@ import KiloSidebarBackgroundProcesses from "@/kilocode/plugins/sidebar-backgroun
 import KiloSidebarIndexing from "@/kilocode/plugins/sidebar-indexing"
 import KiloSidebarPr from "@/kilocode/plugins/sidebar-pr"
 import KiloSidebarUsage from "@/kilocode/plugins/sidebar-usage"
+import KiloSandbox from "@/kilocode/plugins/sandbox"
 // kilocode_change end
 import SidebarContext from "../feature-plugins/sidebar/context"
 import SidebarMcp from "../feature-plugins/sidebar/mcp"
@@ -44,6 +45,7 @@ export function internalTuiPlugins(flags: Pick<RuntimeFlags.Info, "experimentalE
     KiloSidebarIndexing, // kilocode_change
     KiloSidebarPr, // kilocode_change
     KiloSidebarUsage, // kilocode_change
+    KiloSandbox, // kilocode_change
     HomeFooter,
     HomeTips,
     SidebarContext,

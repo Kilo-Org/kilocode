@@ -4,6 +4,7 @@ import path from "path"
 import os from "os"
 import { Filesystem } from "@/util/filesystem"
 import { InvalidError } from "./error"
+import { ConfigVariableGuard } from "@/kilocode/config/variable" // kilocode_change
 
 type ParseSource =
   | {
@@ -36,6 +37,11 @@ export async function substitute(input: SubstituteInput) {
   const missing = input.missing ?? "error"
   const escape = input.escapeJson ?? true // kilocode_change
   let text = input.text.replace(/\{env:([^}]+)\}/g, (_, varName) => {
+    // kilocode_change start - reject server credentials instead of silently changing config semantics
+    if (!ConfigVariableGuard.env(varName)) {
+      throw new InvalidError({ path: source(input), message: `blocked environment reference: "{env:${varName}}"` })
+    }
+    // kilocode_change end
     return (input.env?.[varName] ?? process.env[varName]) || ""
   })
 
@@ -66,8 +72,9 @@ export async function substitute(input: SubstituteInput) {
     }
 
     const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(configDir, filePath)
+    // kilocode_change start - validate and read one opened file to prevent credential substitution races
     const fileContent = (
-      await Filesystem.readText(resolvedPath).catch((error: NodeJS.ErrnoException) => {
+      await ConfigVariableGuard.read(resolvedPath, Filesystem.readText).catch((error: NodeJS.ErrnoException) => {
         if (missing === "empty") return ""
 
         const errMsg = `bad file reference: "${token}"`
@@ -83,6 +90,7 @@ export async function substitute(input: SubstituteInput) {
         throw new InvalidError({ path: configSource, message: errMsg }, { cause: error })
       })
     ).trim()
+    // kilocode_change end
 
     out += escape ? JSON.stringify(fileContent).slice(1, -1) : fileContent // kilocode_change
     cursor = index + token.length

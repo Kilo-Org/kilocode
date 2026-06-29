@@ -155,6 +155,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.nativeNotebookTools.title")}
+          description={language.t("settings.experimental.nativeNotebookTools.description")}
+        >
+          <Switch
+            checked={experimental().native_notebook_tools ?? false}
+            onChange={(checked) => updateExperimental("native_notebook_tools", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.nativeNotebookTools.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.continueOnDeny.title")}
           description={language.t("settings.experimental.continueOnDeny.description")}
         >

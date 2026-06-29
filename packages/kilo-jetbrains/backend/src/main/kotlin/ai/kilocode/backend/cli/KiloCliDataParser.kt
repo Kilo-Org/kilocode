@@ -907,6 +907,8 @@ object KiloCliDataParser {
             msg,
             statusCode = data?.long("statusCode")?.safeInt(),
             responseBody = data?.str("responseBody"),
+            dataKeys = data?.keys?.sorted().orEmpty(),
+            ref = data?.str("ref"),
         )
     }
 

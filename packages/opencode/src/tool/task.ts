@@ -11,6 +11,7 @@ import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
 import { Provider } from "@/provider/provider" // kilocode_change
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
+import { KiloTaskBackgroundProcess } from "../kilocode/tool/task-background-process" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
 import { KiloSession } from "../kilocode/session" // kilocode_change
@@ -18,6 +19,7 @@ import { errorMessage } from "@/util/error" // kilocode_change
 import { Cause, Effect, Exit, Schema, Scope } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 
 export interface TaskPromptOps {
   cancel(sessionID: SessionID): Effect.Effect<void>
@@ -160,7 +162,10 @@ export const TaskTool = Tool.define(
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
       // kilocode_change end
       // kilocode_change start - refresh current parent restrictions when resuming an existing task session
+      const mode: "allow" | "deny" = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
+      const fallback = { enabled: cfg.experimental?.sandbox ?? false, mode }
       if (session) {
+        yield* SandboxPolicy.inherit(ctx.sessionID, session.id, fallback)
         const permission = KiloTask.merge(
           session.permission ?? [],
           deriveSubagentSessionPermission({
@@ -175,6 +180,7 @@ export const TaskTool = Tool.define(
       }
       // kilocode_change end
       const platform = KiloSession.resolvePlatform(ctx.sessionID) // kilocode_change - preserve parent attribution across task creation/resume
+      // kilocode_change start - create a child session with inherited Kilo restrictions
       const nextSession =
         session ??
         (yield* sessions.create({
@@ -197,8 +203,10 @@ export const TaskTool = Tool.define(
           ),
           // kilocode_change end
         }))
-      // kilocode_change start - rebuild in-memory ancestry and attribution after process restart
+      // kilocode_change end
+      // kilocode_change start - rebuild in-memory ancestry and inherit confinement after creation/resume
       KiloSession.register({ id: nextSession.id, parentID: ctx.sessionID, platform })
+      yield* SandboxPolicy.inherit(ctx.sessionID, nextSession.id, fallback)
       // kilocode_change end
 
       const msg = yield* MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }).pipe(Effect.orDie)
@@ -261,8 +269,9 @@ export const TaskTool = Tool.define(
         }
         // kilocode_change end
         return result.parts.findLast((item) => item.type === "text")?.text ?? ""
-      })
+      }, Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id))) // kilocode_change - transfer inherited processes when the child run ends
 
+      // kilocode_change start - inject completed background task results into the parent session
       const inject = Effect.fn("TaskTool.injectBackgroundResult")(function* (
         state: "completed" | "error",
         text: string,
@@ -287,6 +296,7 @@ export const TaskTool = Tool.define(
           })
           .pipe(Effect.ignore, Effect.forkIn(scope, { startImmediately: true }))
       })
+      // kilocode_change end
 
       const existing = yield* background.get(nextSession.id)
       if (existing?.status === "running") {

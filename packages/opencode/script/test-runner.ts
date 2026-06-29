@@ -32,6 +32,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --retries <N>        Extra attempts for failing files (default: 1)",
       "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
       "  --bail               Stop on first failure",
+      "  --dots               Show compact dot progress",
       "  --verbose            Show full output for every file",
       "  -h, --help           Show this help",
       "",
@@ -64,6 +65,7 @@ function text(name: string) {
 const ci = argv.includes("--ci")
 const bail = argv.includes("--bail")
 const verbose = argv.includes("--verbose")
+const dots = !verbose && (ci || argv.includes("--dots"))
 // Cap concurrency at 4 even on bigger runners: the bottleneck is shared
 // resources (ports, global filesystem like ~/.local/share/kilo), not CPU.
 // Eight parallel processes was triggering port/FS races, not going faster.
@@ -164,6 +166,14 @@ if (ci) await fs.mkdir(xmldir, { recursive: true })
 
 const counter = { done: 0 }
 const pad = String(files.length).length
+const progress = { width: 80 }
+const marks = {
+  pass: ".",
+  retry: "R",
+  fail: "F",
+  timeout: "T",
+} as const
+const legend = `Legend: ${marks.pass}=pass ${marks.retry}=pass-after-retry ${marks.fail}=fail ${marks.timeout}=timeout`
 
 // ---------------------------------------------------------------------------
 // Run a single test file
@@ -216,8 +226,21 @@ async function run(file: string): Promise<Result> {
 // Report a single result
 // ---------------------------------------------------------------------------
 
+function mark(result: Result) {
+  if (result.timedout) return marks.timeout
+  if (!result.passed) return marks.fail
+  if (result.attempts > 1) return marks.retry
+  return marks.pass
+}
+
 function report(result: Result) {
   counter.done++
+  if (dots) {
+    process.stdout.write(mark(result))
+    if (counter.done % progress.width === 0) process.stdout.write("\n")
+    return
+  }
+
   const idx = String(counter.done).padStart(pad)
   const secs = (result.duration / 1000).toFixed(1)
   const tries = result.attempts > 1 ? dim(` [attempt ${result.attempts}/${retries + 1}]`) : ""
@@ -250,7 +273,9 @@ function report(result: Result) {
 // Parallel execution
 // ---------------------------------------------------------------------------
 
-console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}\n`)
+console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
+if (dots) console.log(dim(legend))
+console.log()
 
 const start = performance.now()
 const results: Result[] = []
@@ -277,6 +302,8 @@ const workers = Array.from({ length: Math.min(concurrency, files.length) }, asyn
 })
 
 await Promise.all(workers)
+
+if (dots && counter.done % progress.width !== 0) console.log()
 
 const elapsed = (performance.now() - start) / 1000
 

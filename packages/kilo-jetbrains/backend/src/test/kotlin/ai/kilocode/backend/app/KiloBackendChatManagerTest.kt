@@ -2,17 +2,21 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import java.util.concurrent.CountDownLatch
 import kotlin.test.AfterTest
@@ -107,5 +111,24 @@ class KiloBackendChatManagerTest {
         gate.countDown()
 
         assertTrue(request.isCancelled)
+    }
+
+    @Test
+    fun `malformed session error logs warning and keeps collecting`() = runBlocking {
+        val port = mock.start()
+        val log = TestLog()
+        val sse = MutableSharedFlow<SseEvent>(replay = 8)
+        val chat = KiloBackendChatManager(scope, log)
+        chat.start(OkHttpClient(), port, sse)
+
+        val received = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { chat.events.first() } }
+        withTimeout(5_000) { sse.subscriptionCount.first { it > 0 } }
+        sse.emit(SseEvent("session.error", """{"payload":{"properties":{"sessionID":"ses_abc","error":42}}}"""))
+        sse.emit(SseEvent("session.turn.open", """{"payload":{"properties":{"sessionID":"ses_abc"}}}"""))
+
+        val event = received.await()
+        assertTrue(event is ChatEventDto.TurnOpen)
+        assertEquals("ses_abc", event.sessionID)
+        assertTrue(log.messages.any { it.contains("route=chat-events parse=false type=session.error") }, log.messages.joinToString("\n"))
     }
 }
