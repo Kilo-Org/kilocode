@@ -123,7 +123,7 @@ exports[`tool parameters JSON Schema (wire shape) grep 1`] = `
       "type": "string",
     },
     "pattern": {
-      "description": "The regex pattern to search for in file contents",
+      "description": "The regex pattern to search for in file contents. Put the search regex in exactly \`pattern\`; do not use \`query\`, \`regex\`, or \`search\`.",
       "type": "string",
     },
   },

@@ -148,6 +148,14 @@ describe("tool parameters", () => {
   })
 
   describe("grep", () => {
+    test("documents exact pattern key in JSON Schema", () => {
+      expect(toJsonSchema(Grep)).toMatchObject({
+        required: ["pattern"],
+        properties: {
+          pattern: { description: expect.stringContaining("exactly `pattern`") },
+        },
+      })
+    })
     test("accepts pattern-only", () => {
       expect(parse(Grep, { pattern: "TODO" })).toEqual({ pattern: "TODO" })
     })
