@@ -12,7 +12,10 @@ import { Reference } from "@/reference/reference"
 const MAX_LINE_LENGTH = 2000
 
 export const Parameters = Schema.Struct({
-  pattern: Schema.String.annotate({ description: "The regex pattern to search for in file contents" }),
+  pattern: Schema.String.annotate({
+    description:
+      "The regex pattern to search for in file contents. Put the search regex in exactly `pattern`; do not use `query`, `regex`, or `search`.",
+  }),
   path: Schema.optional(Schema.String).annotate({
     description: "The directory to search in. Defaults to the current working directory.",
   }),
