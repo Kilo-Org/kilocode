@@ -157,9 +157,9 @@ class MockCliServer : AutoCloseable {
     /** Reset all request counters. */
     fun resetCounts() { counts.clear() }
 
-    private val executor = Executors.newCachedThreadPool { r ->
-        Thread(r, "mock-cli-${Thread.currentThread().id}").apply { isDaemon = true }
-    }
+    private val executor = Executors.newThreadPerTaskExecutor(
+        Thread.ofVirtual().name("mock-cli-", 0).factory(),
+    )
     private val closed = AtomicBoolean(false)
 
     private var server: ServerSocket? = null
@@ -221,6 +221,7 @@ class MockCliServer : AutoCloseable {
         if (!closed.compareAndSet(false, true)) return
         shutdownServer()
         executor.shutdownNow()
+        check(executor.awaitTermination(5, TimeUnit.SECONDS)) { "Mock CLI executor did not terminate" }
     }
 
     private fun shutdownServer() {
