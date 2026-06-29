@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Sprawdź ponownie",
+  "provider.anaconda.state.noServer_one":
+    "Dostępny jest 1 pobrany model generowania tekstu. W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
+  "provider.anaconda.state.noServer_other":
+    "Dostępne są pobrane modele generowania tekstu (łącznie: {{count}}). W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
   "command.category.suggested": "Sugerowane",
   "command.category.view": "Widok",
   "command.category.project": "Projekt",
@@ -174,6 +182,7 @@ export const dict = {
   "model.tag.free": "Darmowy",
   "model.tag.dataCollected": "Dane mogą być wykorzystywane do trenowania",
   "model.tag.latest": "Najnowszy",
+  "model.group.auto": "Modele automatyczne",
   "model.group.recommended": "Zalecane",
   "model.group.favorites": "Ulubione",
   "model.group.collapse": "Zwiń {{group}}",
@@ -201,6 +210,7 @@ export const dict = {
   "model.preview.label.average": "Szac. średni koszt",
   "model.preview.label.context": "Kontekst",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Wybór modeli",
   "model.preview.label.completion": "Ukończenie",
   "model.preview.label.costAttempt": "Koszt / próbę",
   "model.preview.value.notSupported": "Nieobsługiwane",
@@ -1210,6 +1220,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "To resetuje tylko ustawienia specyficzne dla rozszerzenia VS Code do ich domyślnych wartości. Ustawienia współdzielone z CLI, takie jak tryby i reguły automatycznego zatwierdzania, są przechowywane w konfiguracji CLI i nie zostaną zresetowane.",
   "settings.aboutKiloCode.resetSettings.button": "Resetuj wszystkie ustawienia",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Przenoszenie ustawień",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksportuj lub importuj ustawienia, aby przenosić je między instancjami VS Code.",

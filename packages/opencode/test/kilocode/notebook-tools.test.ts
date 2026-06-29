@@ -27,7 +27,7 @@ const notebook = Layer.mock(Notebook.Service, {
         operation: "edit" as const,
         path: input.path,
         requestPath: input.path,
-        revision: "content:edit",
+        revision: input.edit.action === "create" ? "content:create" : "content:edit",
         index: input.index,
         action: input.edit.action,
       })
@@ -132,6 +132,26 @@ describe("native notebook tools", () => {
           .pipe(Effect.exit)
         expect(exit._tag).toBe("Failure")
         expect(asks).toEqual([])
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "creates a new notebook through notebook_edit without a revision or cell fields",
+    () =>
+      Effect.gen(function* () {
+        calls.length = 0
+        const edit = yield* NotebookEditTool.pipe(Effect.flatMap(Tool.init))
+        const asks: Parameters<Tool.Context["ask"]>[0][] = []
+        const ctx = context(asks)
+        const result = yield* edit.execute({ path: "fresh.ipynb", action: "create" }, ctx)
+
+        expect(asks.map((item) => item.permission)).toEqual(["notebook_edit"])
+        expect(calls).toEqual([
+          { operation: "edit", sessionID: ctx.sessionID, path: "fresh.ipynb", index: 0, edit: { action: "create" } },
+        ])
+        expect(result.title).toContain("created notebook")
+        expect(result.metadata).toMatchObject({ path: "fresh.ipynb", revision: "content:create", index: 0 })
       }),
     { git: true },
   )

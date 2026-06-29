@@ -43,6 +43,11 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
       avgAttemptCostUsd: Schema.Finite,
     }),
   ),
+  autoRouting: optionalOmitUndefined(
+    Schema.Struct({
+      models: Schema.Array(Schema.String),
+    }),
+  ),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
 }
 
@@ -59,6 +64,7 @@ export function patchModelsDevModel(providerID: string, source: any) {
     mayTrainOnYourPrompts: source.mayTrainOnYourPrompts,
     hasUserByokAvailable: source.hasUserByokAvailable,
     terminalBench: source.terminalBench,
+    autoRouting: source.autoRouting,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
   }
@@ -76,6 +82,7 @@ export function patchConfigModel(cfg: any, existing: any) {
     mayTrainOnYourPrompts: cfg.mayTrainOnYourPrompts ?? existing?.mayTrainOnYourPrompts,
     hasUserByokAvailable: cfg.hasUserByokAvailable ?? existing?.hasUserByokAvailable,
     terminalBench: existing?.terminalBench,
+    autoRouting: existing?.autoRouting,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants
       ? mapValues(

@@ -10,6 +10,8 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders } from "./StoryProviders"
 import { MarketplaceListView } from "../components/marketplace/MarketplaceListView"
 import { ItemCard } from "../components/marketplace/ItemCard"
+import { InstallModal } from "../components/marketplace/InstallModal"
+import { MarketplaceSessionProvider } from "../context/marketplace-session"
 import type {
   SkillMarketplaceItem,
   McpMarketplaceItem,
@@ -440,6 +442,19 @@ export const InstalledMcpCard: Story = {
           onRemove={noop}
         />
       </div>
+    </StoryProviders>
+  ),
+}
+
+export const InstallMcpModal: Story = {
+  name: "InstallModal — MCP explanation and destination",
+  render: () => (
+    <StoryProviders>
+      <MarketplaceSessionProvider>
+        <div style={{ "max-height": "700px", overflow: "auto", padding: "12px" }}>
+          <InstallModal item={MOCK_MCPS[0]} onClose={noop} onInstallResult={noop} />
+        </div>
+      </MarketplaceSessionProvider>
     </StoryProviders>
   ),
 }

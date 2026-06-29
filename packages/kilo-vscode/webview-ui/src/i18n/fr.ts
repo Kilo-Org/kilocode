@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Vérifier à nouveau",
+  "provider.anaconda.state.noServer_one":
+    "1 modèle de génération de texte téléchargé est disponible. Dans Anaconda Desktop, démarrez un serveur de modèle. Les modèles prenant en charge l’appel d’outils sont vivement recommandés.",
+  "provider.anaconda.state.noServer_other":
+    "{{count}} modèles de génération de texte téléchargés sont disponibles. Dans Anaconda Desktop, démarrez un serveur de modèle. Les modèles prenant en charge l’appel d’outils sont vivement recommandés.",
   "command.category.suggested": "Suggéré",
   "command.category.view": "Affichage",
   "command.category.project": "Projet",
@@ -176,6 +184,7 @@ export const dict = {
   "model.tag.free": "Gratuit",
   "model.tag.dataCollected": "Les données peuvent être utilisées pour l’entraînement",
   "model.tag.latest": "Dernier",
+  "model.group.auto": "Modèles automatiques",
   "model.group.recommended": "Recommandé",
   "model.group.favorites": "Favoris",
   "model.group.collapse": "Réduire {{group}}",
@@ -204,6 +213,7 @@ export const dict = {
   "model.preview.label.average": "Coût moyen est.",
   "model.preview.label.context": "Contexte",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Choix de modèles",
   "model.preview.label.completion": "Réussite",
   "model.preview.label.costAttempt": "Coût / tentative",
   "model.preview.value.notSupported": "Non pris en charge",
@@ -1272,6 +1282,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Ceci réinitialise uniquement les paramètres spécifiques à l'extension VS Code à leurs valeurs par défaut. Les paramètres partagés avec le CLI, tels que les modes et les règles d'approbation automatique, sont stockés dans la configuration du CLI et ne seront pas réinitialisés.",
   "settings.aboutKiloCode.resetSettings.button": "Réinitialiser tous les paramètres",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Transfert des paramètres",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exportez ou importez vos paramètres pour les transférer entre instances VS Code.",

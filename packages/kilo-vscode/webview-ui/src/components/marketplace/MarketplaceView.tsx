@@ -49,6 +49,10 @@ export const MarketplaceView = () => {
         setFetching(false)
         setShowMigrationBanner(msg.showAgentMigrationBanner ?? false)
       }
+      if (msg.type === "openInstallModal") {
+        const match = items().find((i) => i.type === msg.mpItem.type && i.id === msg.mpItem.id)
+        handleInstall(match ?? msg.mpItem)
+      }
       if (msg.type === "marketplaceRemoveResult") {
         const removed = pending()
         setPending(null)
@@ -104,7 +108,6 @@ export const MarketplaceView = () => {
               ...(extra?.hasParameters && { hasParameters: true }),
               ...(extra?.installationMethodName && { installationMethodName: extra.installationMethodName }),
             })
-            dialog.close()
             fetchData()
           }
         }}

@@ -4,6 +4,7 @@ import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter, type SSEPayload } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { SandboxPreference } from "../sandbox-preference"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: SSEPayload, directory?: string) => void
@@ -50,6 +51,7 @@ async function drainNetworkWaits(client: KiloClient, dir: string) {
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
 export class KiloConnectionService {
+  readonly sandboxPreference: SandboxPreference
   private readonly serverManager: ServerManager
   private client: KiloClient | null = null
   private sseClient: SdkSSEAdapter | null = null
@@ -92,6 +94,13 @@ export class KiloConnectionService {
   private unsubRemote: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext) {
+    const state =
+      context.workspaceState ??
+      ({
+        get: <T>(_key: string, fallback?: T) => fallback,
+        update: async () => undefined,
+      } satisfies Pick<vscode.Memento, "get" | "update">)
+    this.sandboxPreference = new SandboxPreference(state)
     this.serverManager = new ServerManager(context, (code) => this.handleServerExit(code))
   }
 

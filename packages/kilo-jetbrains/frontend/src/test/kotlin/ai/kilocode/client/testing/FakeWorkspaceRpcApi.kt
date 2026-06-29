@@ -10,6 +10,7 @@ import ai.kilocode.rpc.dto.WorkspaceFileDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Fake [KiloWorkspaceRpcApi] for testing.
@@ -41,7 +42,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var globalConfigExists = true
     val fileCalls = mutableListOf<Pair<String, String>>()
     val searchQueries = mutableListOf<String>()
-    val opened = mutableListOf<String>()
+    val opened = CopyOnWriteArrayList<String>()
     val localConfigs = mutableListOf<String>()
     var globalConfigs = 0
     var localConfigPathCalls = 0

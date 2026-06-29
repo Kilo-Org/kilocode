@@ -1,8 +1,14 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "다시 확인",
+  "provider.anaconda.state.noServer_one":
+    "다운로드된 텍스트 생성 모델 1개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.noServer_other":
+    "다운로드된 텍스트 생성 모델 {{count}}개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
   "command.category.suggested": "추천",
   "command.category.view": "보기",
   "command.category.project": "프로젝트",
@@ -177,6 +183,7 @@ export const dict = {
   "model.tag.free": "무료",
   "model.tag.dataCollected": "데이터가 학습에 사용될 수 있습니다",
   "model.tag.latest": "최신",
+  "model.group.auto": "자동 모델",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
   "model.group.collapse": "{{group}} 접기",
@@ -205,6 +212,7 @@ export const dict = {
   "model.preview.label.average": "예상 평균 비용",
   "model.preview.label.context": "컨텍스트",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "모델 선택지",
   "model.preview.label.completion": "완료율",
   "model.preview.label.costAttempt": "시도당 비용",
   "model.preview.value.notSupported": "미지원",
@@ -1237,6 +1245,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "이 기능은 VS Code 확장 프로그램 전용 설정만 기본값으로 초기화합니다. 모드 및 자동 승인 규칙과 같이 CLI와 공유되는 설정은 CLI 구성에 저장되며 초기화되지 않습니다.",
   "settings.aboutKiloCode.resetSettings.button": "모든 설정 초기화",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "설정 이전",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code 인스턴스 간에 설정을 전송하려면 내보내기 또는 가져오기하세요.",
