@@ -30,6 +30,8 @@ import { ConfigReference } from "@/config/reference" // kilocode_change
 import * as AgentRequirements from "@/kilocode/agent-requirements" // kilocode_change
 import { MCP } from "@/mcp" // kilocode_change
 
+export type RequirementBlockedError = InstanceType<typeof AgentRequirements.BlockedError> // kilocode_change
+
 export const Info = Schema.Struct({
   name: Schema.String,
   displayName: Schema.optional(Schema.String), // kilocode_change - human-readable name for org modes
@@ -68,7 +70,7 @@ export interface Interface {
   readonly defaultInfo: () => Effect.Effect<Info>
   readonly defaultAgent: () => Effect.Effect<string>
   readonly requirementStatus: (agent: string) => Effect.Effect<AgentRequirements.Result> // kilocode_change
-  readonly guardRequirements: (agent: Info) => Effect.Effect<void> // kilocode_change
+  readonly guardRequirements: (agent: Info) => Effect.Effect<void, RequirementBlockedError> // kilocode_change
   readonly generate: (input: {
     description: string
     model?: { providerID: ProviderID; modelID: ModelID }

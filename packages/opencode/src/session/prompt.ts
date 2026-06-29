@@ -109,10 +109,14 @@ function isOrphanedInterruptedTool(part: MessageV2.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  readonly prompt: (
+    input: PromptInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError> // kilocode_change
   readonly loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError>
-  readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  readonly command: (
+    input: CommandInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError> // kilocode_change
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -753,7 +757,7 @@ export const layer = Layer.effect(
       if (!ag) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
         yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
@@ -1882,7 +1886,7 @@ export const layer = Layer.effect(
       if (!agent) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
         yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }

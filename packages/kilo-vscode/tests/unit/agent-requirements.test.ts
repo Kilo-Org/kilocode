@@ -114,10 +114,11 @@ describe("agent requirement webview state", () => {
     vscode_extensions: [],
   }
 
-  it("preserves blocked and error results only for the same agent and directory", () => {
+  it("preserves ready, blocked, and error results only for the same agent and directory", () => {
     expect(keepAgentRequirementsResult(blocked, "demo", root)).toBe(true)
     expect(keepAgentRequirementsResult({ ...blocked, state: "error" }, "demo", root)).toBe(true)
-    expect(keepAgentRequirementsResult({ ...blocked, state: "ready" }, "demo", root)).toBe(false)
+    expect(keepAgentRequirementsResult({ ...blocked, state: "ready" }, "demo", root)).toBe(true)
+    expect(keepAgentRequirementsResult({ ...blocked, state: "disabled" }, "demo", root)).toBe(false)
     expect(keepAgentRequirementsResult(blocked, "other", root)).toBe(false)
     expect(keepAgentRequirementsResult(blocked, "demo", "/other")).toBe(false)
   })

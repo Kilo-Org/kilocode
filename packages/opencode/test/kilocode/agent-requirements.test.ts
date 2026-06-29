@@ -106,6 +106,24 @@ describe("agent requirements", () => {
     ])
   })
 
+  test("accepts non-empty marketplace skill and MCP IDs", async () => {
+    const result = await status("demo", {
+      active: true,
+      agents: {
+        demo: {
+          name: "demo",
+          requirements: { skills: ["skill with space"], mcps: ["mcp/with/slash"] },
+        },
+      },
+      skills: ["skill with space"],
+      mcp: { "mcp/with/slash": { status: "connected" } },
+    })
+
+    expect(result.state).toBe("ready")
+    expect(result.skills).toEqual([{ name: "skill with space", status: "ready" }])
+    expect(result.mcps).toEqual([{ name: "mcp/with/slash", status: "ready" }])
+  })
+
   test("reports skill discovery failures as errors", async () => {
     const result = await status("demo", {
       active: true,
@@ -205,17 +223,45 @@ describe("agent requirements", () => {
     expect(result.mcps[0]?.message).toContain("status unavailable")
   })
 
-  test("guards only VS Code clients", async () => {
-    const input = {
+  test("guards unmet requirements for all clients", async () => {
+    const missing = {
       active: true,
       agents: { demo: { name: "demo", requirements: { skills: ["missing"] } } },
     }
 
     await client("cli", async () => {
-      await Effect.runPromise(AgentRequirements.guard({ ...services(input), agent: input.agents.demo, directory: dir }))
+      const exit = await Effect.runPromiseExit(
+        AgentRequirements.guard({ ...services(missing), agent: missing.agents.demo, directory: dir }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isSuccess(exit)) return
+      const error = Cause.squash(exit.cause)
+      expect(AgentRequirements.BlockedError.isInstance(error)).toBe(true)
     })
 
     await client("vscode", async () => {
+      const exit = await Effect.runPromiseExit(
+        AgentRequirements.guard({ ...services(missing), agent: missing.agents.demo, directory: dir }),
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isSuccess(exit)) return
+      const error = Cause.squash(exit.cause)
+      expect(AgentRequirements.BlockedError.isInstance(error)).toBe(true)
+    })
+  })
+
+  test("blocks VS Code extension requirements outside VS Code", async () => {
+    const input = {
+      active: true,
+      agents: {
+        demo: {
+          name: "demo",
+          requirements: { vscode_extensions: [{ name: "Jupyter", id: "ms-toolsai.jupyter" }] },
+        },
+      },
+    }
+
+    await client("cli", async () => {
       const exit = await Effect.runPromiseExit(
         AgentRequirements.guard({ ...services(input), agent: input.agents.demo, directory: dir }),
       )
@@ -223,6 +269,23 @@ describe("agent requirements", () => {
       if (Exit.isSuccess(exit)) return
       const error = Cause.squash(exit.cause)
       expect(AgentRequirements.BlockedError.isInstance(error)).toBe(true)
+    })
+
+    await client("vscode", async () => {
+      await Effect.runPromise(AgentRequirements.guard({ ...services(input), agent: input.agents.demo, directory: dir }))
+    })
+  })
+
+  test("allows non-VS Code clients when requirements are ready", async () => {
+    const input = {
+      active: true,
+      agents: { demo: { name: "demo", requirements: { skills: ["ready"], mcps: ["connected"] } } },
+      skills: ["ready"],
+      mcp: { connected: { status: "connected" as const } },
+    }
+
+    await client("cli", async () => {
+      await Effect.runPromise(AgentRequirements.guard({ ...services(input), agent: input.agents.demo, directory: dir }))
     })
   })
 

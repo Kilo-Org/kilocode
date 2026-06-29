@@ -19,7 +19,7 @@ export const VSCodeExtension = Schema.Struct({
 })
 export type VSCodeExtension = Schema.Schema.Type<typeof VSCodeExtension>
 
-const Group = Schema.mutable(Schema.Array(ID)).check(Schema.isMinLength(1), Schema.isMaxLength(20))
+const Group = Schema.mutable(Schema.Array(Name)).check(Schema.isMinLength(1), Schema.isMaxLength(20))
 const VSCodeExtensions = Schema.mutable(Schema.Array(VSCodeExtension)).check(
   Schema.isMinLength(1),
   Schema.isMaxLength(20),
@@ -158,6 +158,7 @@ export function evaluate(input: {
   agent: AgentInfo
   directory: string
   enabled: boolean
+  requirements: Requirements
   discovered?: ReadonlySet<string>
   discoveryError?: string
   mcp?: Readonly<Record<string, MCP.Status>>
@@ -165,10 +166,7 @@ export function evaluate(input: {
 }): Result {
   if (!input.enabled) return ready({ agent: input.agent.name, directory: input.directory, enabled: false })
 
-  const requirements = decode(input.agent, input.directory)
-  if ("state" in requirements) return requirements
-
-  const skills = (requirements.skills ?? []).map((skill) => ({
+  const skills = (input.requirements.skills ?? []).map((skill) => ({
     name: skill,
     status: input.discoveryError
       ? ("error" as const)
@@ -177,7 +175,7 @@ export function evaluate(input: {
         : ("missing" as const),
     ...(input.discoveryError ? { message: input.discoveryError } : {}),
   }))
-  const mcps = (requirements.mcps ?? []).map((name) => {
+  const mcps = (input.requirements.mcps ?? []).map((name) => {
     if (input.mcpError) return { name, status: "error" as const, message: input.mcpError }
     return item(name, input.mcp?.[name])
   })
@@ -190,7 +188,7 @@ export function evaluate(input: {
       state: "error",
       skills,
       mcps,
-      vscode_extensions: requirements.vscode_extensions ?? [],
+      vscode_extensions: input.requirements.vscode_extensions ?? [],
       error: { code: "discovery_failed", message: input.discoveryError },
     }
   }
@@ -203,7 +201,7 @@ export function evaluate(input: {
       state: "error",
       skills,
       mcps,
-      vscode_extensions: requirements.vscode_extensions ?? [],
+      vscode_extensions: input.requirements.vscode_extensions ?? [],
       error: { code: "mcp_status_failed", message: input.mcpError },
     }
   }
@@ -216,7 +214,7 @@ export function evaluate(input: {
     state: valid ? "ready" : "blocked",
     skills,
     mcps,
-    vscode_extensions: requirements.vscode_extensions ?? [],
+    vscode_extensions: input.requirements.vscode_extensions ?? [],
   }
 }
 
@@ -258,6 +256,7 @@ export const status = Effect.fn("AgentRequirements.status")(function* (
       agent,
       directory: input.directory,
       enabled: active,
+      requirements,
       discoveryError: Cause.pretty(discovered.cause),
       mcp: Exit.isSuccess(mcp) ? mcp.value : undefined,
     })
@@ -268,6 +267,7 @@ export const status = Effect.fn("AgentRequirements.status")(function* (
       agent,
       directory: input.directory,
       enabled: active,
+      requirements,
       discovered: discoveredSet,
       mcpError: Cause.pretty(mcp.cause),
     })
@@ -277,6 +277,7 @@ export const status = Effect.fn("AgentRequirements.status")(function* (
     agent,
     directory: input.directory,
     enabled: active,
+    requirements,
     discovered: discoveredSet,
     mcp: mcp.value,
   })
@@ -285,17 +286,17 @@ export const status = Effect.fn("AgentRequirements.status")(function* (
 export const guard = Effect.fn("AgentRequirements.guard")(function* (
   input: Services & { agent: AgentInfo; directory: string },
 ) {
-  if (Flag.KILO_CLIENT !== "vscode") return
-
   const result = yield* status({ ...input, name: input.agent.name })
-  if (result.state === "disabled" || result.state === "ready") return
+  const unsupported = Flag.KILO_CLIENT !== "vscode" && result.vscode_extensions.length > 0
+  if (result.state === "disabled" || (result.state === "ready" && !unsupported)) return
+  const state = result.state === "error" ? result.state : "blocked"
 
-  return yield* Effect.die(
+  return yield* Effect.fail(
     new BlockedError({
       message: "Complete the required checks to use this agent first",
       agent: result.agent,
       directory: result.directory,
-      state: result.state,
+      state,
       skills: [...result.skills],
       mcps: [...result.mcps],
       vscode_extensions: [...result.vscode_extensions],

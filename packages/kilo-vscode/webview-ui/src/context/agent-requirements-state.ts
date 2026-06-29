@@ -6,5 +6,5 @@ export function keepAgentRequirementsResult(
   directory: string,
 ) {
   if (!value || value.agent !== agent || value.directory !== directory) return false
-  return value.state === "blocked" || value.state === "error"
+  return value.state === "ready" || value.state === "blocked" || value.state === "error"
 }
