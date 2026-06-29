@@ -7,10 +7,9 @@ describe("Pierre diff options", () => {
     expect(createDefaultOptions("split").lineDiffType).toBe("word-alt")
   })
 
-  test("uses readable change indicators and final semantic surfaces", () => {
+  test("applies final semantic diff surfaces and host color scheme", () => {
     const opts = createDefaultOptions("unified")
 
-    expect(opts.diffIndicators).toBe("classic")
     expect(opts.unsafeCSS).toContain(":host([data-color-scheme='light'])")
     expect(opts.unsafeCSS).toContain(":host([data-color-scheme='dark'])")
     expect(opts.unsafeCSS).toContain("--surface-diff-add-base")

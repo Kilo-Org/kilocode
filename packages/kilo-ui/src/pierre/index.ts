@@ -53,7 +53,6 @@ export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) 
   const opts = defaults<T>(style)
   return {
     ...opts,
-    diffIndicators: "classic" as const,
     lineDiffType: LINE_DIFF_TYPE,
     unsafeCSS: `${opts.unsafeCSS}\n${css}`,
   }

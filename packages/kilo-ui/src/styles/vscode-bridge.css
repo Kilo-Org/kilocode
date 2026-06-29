@@ -283,27 +283,29 @@ html[data-theme="kilo-vscode"] {
   --icon-agent-build-base: var(--vscode-charts-blue);
 
   /* ===== Syntax highlighting ===== */
-  /* Use the active theme's own token hues directly. VS Code does not expose its
-     TextMate palette to webviews, so these mirror the closest exposed tokens,
-     keeping each theme's natural color and lightness rather than recoloring it.
-     Per-token fallbacks rescue themes that omit a token instead of collapsing
-     several roles onto the same foreground. */
-  --syntax-comment: var(--vscode-descriptionForeground, light-dark(#57606a, #8b949e));
-  --syntax-regexp: var(--vscode-debugTokenExpression-string, light-dark(#0a3069, #a5d6ff));
-  --syntax-string: var(--vscode-debugTokenExpression-string, light-dark(#0a3069, #a5d6ff));
-  --syntax-keyword: var(--vscode-textLink-foreground, light-dark(#cf222e, #ff7b72));
-  --syntax-primitive: var(--vscode-debugTokenExpression-number, light-dark(#098658, #79c0ff));
-  --syntax-operator: var(--vscode-foreground, light-dark(#1f2328, #e6edf3));
-  --syntax-variable: var(--vscode-editor-foreground, light-dark(#1f2328, #e6edf3));
-  --syntax-property: var(--vscode-debugTokenExpression-name, light-dark(#0550ae, #79c0ff));
+  /* VS Code never exposes its TextMate editor palette to a webview, so the only
+     tokens we could read (descriptionForeground, textLink, charts-*) are muted
+     UI colors that render code washed-out and low-contrast. Instead use a
+     curated, vivid editor palette (VS Code Dark+/Light+ family) for the roles
+     whose exposed token is muted, and keep the accurate debug-token colors
+     (string/number/name/type) so it still tracks the active theme where those
+     are reliable. Result: natural, high-contrast code colors on any theme. */
+  --syntax-comment: light-dark(#008000, #6a9955);
+  --syntax-regexp: light-dark(#811f3f, #d16969);
+  --syntax-string: var(--vscode-debugTokenExpression-string, light-dark(#a31515, #ce9178));
+  --syntax-keyword: light-dark(#0000ff, #569cd6);
+  --syntax-primitive: var(--vscode-debugTokenExpression-number, light-dark(#098658, #b5cea8));
+  --syntax-operator: var(--vscode-editor-foreground, light-dark(#1f2328, #d4d4d4));
+  --syntax-variable: light-dark(#001080, #9cdcfe);
+  --syntax-property: var(--vscode-debugTokenExpression-name, light-dark(#001080, #9cdcfe));
   --syntax-type: var(--vscode-debugTokenExpression-type, light-dark(#267f99, #4ec9b0));
-  --syntax-constant: var(--vscode-charts-blue, light-dark(#0550ae, #79c0ff));
-  --syntax-punctuation: var(--vscode-foreground, light-dark(#1f2328, #e6edf3));
-  --syntax-object: var(--vscode-editor-foreground, light-dark(#1f2328, #e6edf3));
+  --syntax-constant: light-dark(#0070c1, #4fc1ff);
+  --syntax-punctuation: var(--vscode-editor-foreground, light-dark(#1f2328, #d4d4d4));
+  --syntax-object: var(--vscode-editor-foreground, light-dark(#1f2328, #d4d4d4));
   --syntax-success: var(--vscode-charts-green, light-dark(#116329, #7ee787));
   --syntax-warning: var(--vscode-charts-yellow, light-dark(#7d4e00, #e3b341));
   --syntax-critical: var(--vscode-errorForeground, var(--vscode-charts-red, light-dark(#cf222e, #ff7b72)));
-  --syntax-info: var(--vscode-charts-blue, light-dark(#0550ae, #79c0ff));
+  --syntax-info: light-dark(#0070c1, #4fc1ff);
   --syntax-diff-add: var(
     --vscode-gitDecoration-addedResourceForeground,
     var(--vscode-charts-green, light-dark(#116329, #7ee787))
@@ -316,8 +318,11 @@ html[data-theme="kilo-vscode"] {
     --vscode-gitDecoration-modifiedResourceForeground,
     var(--vscode-charts-yellow, light-dark(#7d4e00, #e3b341))
   );
-  /* kilo-diff-theme references --syntax-unknown; alias it so it resolves. */
-  --syntax-unknown: var(--syntax-diff-unknown);
+  /* kilo-diff-theme uses --syntax-unknown as a neutral catch-all for assorted
+     scopes (markdown separators like "---", diff ranges, links, brackets).
+     Keep it at the default text color, not the modified-diff hue, so those
+     tokens stay neutral instead of rendering in the git "modified" yellow. */
+  --syntax-unknown: var(--vscode-editor-foreground, light-dark(#1f2328, #e6edf3));
 
   /* ===== Pierre diff engine (theme its CSS vars to VS Code editor colors) ===== */
   --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);

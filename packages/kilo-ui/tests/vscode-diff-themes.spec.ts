@@ -66,7 +66,6 @@ test.describe.parallel("VS Code diff themes", () => {
           const editor = sample("--vscode-editor-background", "background")
           const root = node.shadowRoot!
           const line = root.querySelector<HTMLElement>("[data-line-type='change-addition']")!
-          const indicator = root.querySelector<HTMLElement>("[data-indicators='classic']")
 
           return {
             distinctColors: new Set(palette).size,
@@ -81,7 +80,6 @@ test.describe.parallel("VS Code diff themes", () => {
               distance(editor, backgrounds["--surface-diff-delete-weak"]),
             ],
             fontSize: Number.parseFloat(getComputedStyle(line).fontSize),
-            classic: Boolean(indicator),
             outline: getComputedStyle(line).outlineStyle,
             outlineColor: getComputedStyle(line).outlineColor,
           }
@@ -97,7 +95,6 @@ test.describe.parallel("VS Code diff themes", () => {
       expect(result.deletion[0]).toBeLessThan(result.deletion[1])
       expect(result.deletion[1]).toBeLessThan(result.deletion[2])
       expect(result.fontSize).toBeGreaterThanOrEqual(12)
-      expect(result.classic).toBe(true)
       if (id === "hc-black" || id === "hc-light") {
         expect(result.outline).toBe("solid")
         expect(result.outlineColor).not.toBe("rgba(0, 0, 0, 0)")
