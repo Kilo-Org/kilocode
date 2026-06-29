@@ -1041,6 +1041,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
           break
+        case "openKiloClaw":
+          vscode.commands.executeCommand("kilo-code.new.kiloClawOpen")
+          break
         case "openVSCodeSettings":
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
           break
@@ -1171,7 +1174,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.fetchAndSendSandboxStatus(message.sessionID)
           break
         case "requestSandboxDefault":
-          await this.fetchAndSendSandboxDefault(message.contextDirectory)
+          await this.fetchAndSendSandboxDefault(message.contextDirectory, message.requestID)
           break
         case "setSandboxDefault":
           await this.handleSetSandboxDefault(message.enabled, message.requestID, message.contextDirectory)

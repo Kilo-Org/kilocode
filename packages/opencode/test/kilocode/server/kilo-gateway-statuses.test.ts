@@ -183,6 +183,32 @@ describe("Kilo gateway HttpApi statuses", () => {
     }),
   )
 
+  it.live("normalizes numeric KiloClaw timestamps", () =>
+    Effect.gen(function* () {
+      const started = 1_700_000_000_000
+      yield* stub(() =>
+        Response.json({
+          status: "running",
+          sandboxId: "sandbox",
+          userId: "user",
+          lastStartedAt: started,
+          lastStoppedAt: null,
+        }),
+      )
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.clawStatus)
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({
+        status: "running",
+        sandboxId: "sandbox",
+        userId: "user",
+        lastStartedAt: new Date(started).toISOString(),
+        lastStoppedAt: null,
+      })
+    }),
+  )
+
   it.live("maps KiloClaw transport failures to bad gateway", () =>
     Effect.gen(function* () {
       yield* stub(() => Promise.reject(new TypeError("network error")))

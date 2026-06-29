@@ -7,6 +7,7 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -120,7 +121,8 @@ class KiloBackendChatManagerTest {
         val chat = KiloBackendChatManager(scope, log)
         chat.start(OkHttpClient(), port, sse)
 
-        val received = async { withTimeout(5_000) { chat.events.first() } }
+        val received = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { chat.events.first() } }
+        withTimeout(5_000) { sse.subscriptionCount.first { it > 0 } }
         sse.emit(SseEvent("session.error", """{"payload":{"properties":{"sessionID":"ses_abc","error":42}}}"""))
         sse.emit(SseEvent("session.turn.open", """{"payload":{"properties":{"sessionID":"ses_abc"}}}"""))
 

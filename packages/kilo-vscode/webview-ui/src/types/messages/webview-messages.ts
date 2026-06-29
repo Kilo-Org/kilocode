@@ -234,6 +234,10 @@ export interface OpenAdvancedWorktreeRequest {
   type: "openAdvancedWorktree"
 }
 
+export interface OpenKiloClawRequest {
+  type: "openKiloClaw"
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -960,6 +964,7 @@ export interface RequestSandboxStatusMessage {
 
 export interface RequestSandboxDefaultMessage {
   type: "requestSandboxDefault"
+  requestID?: string
   agentManagerContext?: string
   contextDirectory?: string
 }
@@ -1179,6 +1184,7 @@ export type WebviewMessage =
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
+  | OpenKiloClawRequest
   | OpenFileRequest
   | ValidateFilesRequest
   | CancelLoginRequest
