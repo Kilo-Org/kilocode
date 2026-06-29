@@ -1167,7 +1167,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.fetchAndSendSandboxStatus(message.sessionID)
           break
         case "requestSandboxDefault":
-          await this.fetchAndSendSandboxDefault(message.contextDirectory)
+          await this.fetchAndSendSandboxDefault(message.contextDirectory, message.requestID)
           break
         case "setSandboxDefault":
           await this.handleSetSandboxDefault(message.enabled, message.requestID, message.contextDirectory)
