@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { resolveLocale, selectedLocale, t } from "../../src/services/i18n"
+import { resolveLocale, selectedLocale, t, translate } from "../../src/services/i18n"
 
 describe("extension host i18n", () => {
   it("returns translated string for known key", () => {
@@ -77,12 +77,25 @@ describe("extension host i18n", () => {
     expect(resolveLocale("sv-SE")).toBe("en")
   })
 
-  it("prefers Kilo language setting over VS Code language", () => {
+  it("prefers Kilo new language setting over VS Code language", () => {
     const vscode = {
       env: { language: "en" },
       workspace: {
-        getConfiguration: () => ({
-          get: () => "nl",
+        getConfiguration: (section: string) => ({
+          get: () => (section === "kilo-code.new" ? "de" : undefined),
+        }),
+      },
+    } as unknown as typeof import("vscode")
+
+    expect(selectedLocale(vscode)).toBe("de")
+  })
+
+  it("falls back to legacy Kilo language setting", () => {
+    const vscode = {
+      env: { language: "en" },
+      workspace: {
+        getConfiguration: (section: string) => ({
+          get: () => (section === "kilo-code" ? "nl" : undefined),
         }),
       },
     } as unknown as typeof import("vscode")
@@ -101,5 +114,17 @@ describe("extension host i18n", () => {
     } as unknown as typeof import("vscode")
 
     expect(selectedLocale(vscode)).toBe("nl")
+  })
+
+  it("translates status bar tooltip copy for German", () => {
+    const text = translate("de", "kilocode:autocomplete.statusBar.tooltip.completionSummary", {
+      count: 1,
+      startTime: "12:25:24",
+      endTime: "12:25:26",
+      cost: "$0.00",
+    })
+
+    expect(text).not.toContain("Performed")
+    expect(text).toContain("Vervollständigungen")
   })
 })

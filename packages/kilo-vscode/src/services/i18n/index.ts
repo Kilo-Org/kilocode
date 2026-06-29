@@ -62,18 +62,17 @@ export function resolveLocale(lang: string | undefined): string {
 
 export function selectedLocale(vscode: typeof import("vscode")): string {
   const cfg = vscode.workspace.getConfiguration("kilo-code")
-  const lang = cfg.get<string>("language")
+  const next = vscode.workspace.getConfiguration("kilo-code.new")
+  const lang = next.get<string>("language") || cfg.get<string>("language")
   return resolveLocale(lang || vscode.env.language)
 }
 
-function load(): Record<string, string> {
-  const vscode = require("vscode") as typeof import("vscode")
-  const locale = selectedLocale(vscode)
-  return { ...en, ...(bundles[locale] ?? {}) }
-}
-
-export function t(key: keyof typeof enDict | string, vars?: Record<string, string | number>): string {
-  const translations = load()
+export function translate(
+  locale: string,
+  key: keyof typeof enDict | string,
+  vars?: Record<string, string | number>,
+): string {
+  const translations: Record<string, string> = { ...en, ...(bundles[resolveLocale(locale)] ?? {}) }
   let text = translations[key] ?? key
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
@@ -81,4 +80,9 @@ export function t(key: keyof typeof enDict | string, vars?: Record<string, strin
     }
   }
   return text
+}
+
+export function t(key: keyof typeof enDict | string, vars?: Record<string, string | number>): string {
+  const locale = selectedLocale(require("vscode") as typeof import("vscode"))
+  return translate(locale, key, vars)
 }
