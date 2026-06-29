@@ -1013,6 +1013,12 @@ export interface RemoteStatusMessage {
   connected: boolean
 }
 
+export interface ValidateFilesResultMessage {
+  type: "validateFilesResult"
+  id: string
+  existing: string[]
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | FontSizeChangedMessage
@@ -1167,3 +1173,4 @@ export type ExtensionMessage =
   | ExtensionDataReadyMessage
   | TelemetryStateMessage
   | RemoteStatusMessage
+  | ValidateFilesResultMessage
