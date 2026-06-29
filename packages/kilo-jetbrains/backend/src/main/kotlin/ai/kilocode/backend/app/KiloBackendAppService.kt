@@ -442,6 +442,7 @@ class KiloBackendAppService private constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    ensureActive()
                     log.warn("Application start failed: ${e.message}")
                     captureLoad("Backend Load Failed", start, mapOf(
                         "errorCount" to errors.size.toString(),
