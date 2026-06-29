@@ -94,9 +94,7 @@ export function RunInteractiveTerminalBody(props: Props) {
       state.vt.resize(width, VIEW_ROWS)
       setOffset((value) => Math.min(state.vt.scrollbackSize(), value))
       refresh((value) => value + 1)
-      void props
-        .onResize({ terminalID: props.terminal().info.id, cols: width, rows: VIEW_ROWS })
-        .catch(() => undefined)
+      void props.onResize({ terminalID: props.terminal().info.id, cols: width, rows: VIEW_ROWS }).catch(() => undefined)
     }),
   )
 

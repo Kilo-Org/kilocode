@@ -108,7 +108,12 @@ export class VtScreen {
     const distance = Math.max(0, Math.min(this.history.length, offset))
     const end = rows.length - distance
     const start = Math.max(0, end - size)
-    return rows.slice(start, end).map((row) => row.map((cell) => cell.char).join("").replace(/\s+$/u, ""))
+    return rows.slice(start, end).map((row) =>
+      row
+        .map((cell) => cell.char)
+        .join("")
+        .replace(/\s+$/u, ""),
+    )
   }
 
   viewText(offset = 0, height = this.rows) {

@@ -158,17 +158,12 @@ describe("InteractiveTerminal", () => {
       const err = new Error("stop before terminal launch")
       const requests: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
       expect(
-        yield* failTool(
-          { command: `cat ${quote(file)}` },
-          context(requests, { permission: "bash", error: err }),
-        ),
+        yield* failTool({ command: `cat ${quote(file)}` }, context(requests, { permission: "bash", error: err })),
       ).toMatchObject({ message: err.message })
       const ext = requests.find((item) => item.permission === "external_directory")
       const bash = requests.find((item) => item.permission === "bash")
       const want =
-        process.platform === "win32"
-          ? AppFileSystem.normalizePathPattern(path.join(tmp, "*"))
-          : path.join(tmp, "*")
+        process.platform === "win32" ? AppFileSystem.normalizePathPattern(path.join(tmp, "*")) : path.join(tmp, "*")
       expect(ext?.patterns).toContain(want)
       expect(bash?.patterns).toContain(`cat ${quote(file)}`)
     }),

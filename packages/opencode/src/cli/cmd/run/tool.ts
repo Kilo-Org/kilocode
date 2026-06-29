@@ -439,7 +439,9 @@ function runInteractiveTerminal(p: ToolProps<typeof InteractiveTerminalTool>): T
 function scrollInteractiveTerminalStart(p: ToolProps<typeof InteractiveTerminalTool>) {
   const command = p.input.command ?? ""
   const description = p.input.description || command || "Interactive terminal"
-  return command && command !== description ? `# Interactive terminal: ${description}\n$ ${command}` : `# ${description}`
+  return command && command !== description
+    ? `# Interactive terminal: ${description}\n$ ${command}`
+    : `# ${description}`
 }
 
 function scrollInteractiveTerminalFinal(p: ToolProps<typeof InteractiveTerminalTool>) {
