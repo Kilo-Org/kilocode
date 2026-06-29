@@ -57,6 +57,79 @@
   scrollbar-gutter: stable;
 }
 
+.chat-search-bar {
+  position: absolute;
+  top: 8px;
+  right: calc(var(--chat-scrollbar-width, 10px) + 12px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: min(360px, calc(100% - 24px));
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid var(--vscode-widget-border, var(--border-weak-base));
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, var(--surface-panel-base));
+  color: var(--vscode-editorWidget-foreground, var(--text-base));
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.chat-search-input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--kilo-font-size-12);
+}
+
+.chat-search-count {
+  flex-shrink: 0;
+  min-width: 52px;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-12);
+  text-align: right;
+}
+
+.chat-search-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chat-search-button:hover:not(:disabled) {
+  background: var(--vscode-toolbar-hoverBackground, var(--surface-hover-base));
+}
+
+.chat-search-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.chat-search-button-next [data-slot="icon-svg"] {
+  transform: rotate(180deg);
+}
+
+::highlight(kilo-chat-search) {
+  background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 179, 8, 0.35));
+}
+
+::highlight(kilo-chat-search-current) {
+  background: var(--vscode-editor-findMatchBackground, rgba(245, 158, 11, 0.65));
+  color: var(--vscode-editor-foreground);
+}
+
 .message-list-loading {
   display: flex;
   flex-direction: column;
