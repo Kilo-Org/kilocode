@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | Français | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | Français | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ Pour la configuration et tout le reste, consultez la [documentation](https://kil
 
 ### Contribuer
 
-Les contributions des développeurs, rédacteurs et de toute personne intéressée sont les bienvenues. Commencez par le [guide de contribution](/CONTRIBUTING.md) pour la configuration de l'environnement, les standards de code et l'ouverture d'une pull request. Consultez [RELEASING.md](RELEASING.md) pour le processus de release de l'extension VS Code et de la CLI, et [packages/kilo-jetbrains/RELEASING.md](packages/kilo-jetbrains/RELEASING.md) pour le plugin JetBrains.
+Les contributions des développeurs, rédacteurs et de toute personne intéressée sont les bienvenues. Commencez par le [guide de contribution](/CONTRIBUTING.md) pour la configuration de l'environnement, les standards de code et l'ouverture d'une pull request. Consultez [RELEASING.md](../RELEASING.md) pour le processus de release de l'extension VS Code et de la CLI, et [packages/kilo-jetbrains/RELEASING.md](../packages/kilo-jetbrains/RELEASING.md) pour le plugin JetBrains.
 
 Veuillez lire notre [Code de conduite](/CODE_OF_CONDUCT.md) avant de participer.
 
@@ -168,7 +168,7 @@ MIT. Vous pouvez utiliser, modifier et distribuer ce code, y compris commerciale
 <details>
 <summary>D'où vient Kilo CLI ?</summary>
 
-Kilo CLI est un fork d'[OpenCode](https://github.com/Kilo-Org/kilocode), amélioré pour fonctionner au sein de la plateforme d'ingénierie agentique Kilo.
+Kilo CLI est un fork d'[OpenCode](https://github.com/anomalyco/opencode), amélioré pour fonctionner au sein de la plateforme d'ingénierie agentique Kilo.
 
 </details>
 

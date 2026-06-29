@@ -53,6 +53,7 @@ import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
 import { createMarketplaceRemover, removeAgent, removeMcp } from "./kilo-provider/remove-config-item"
+import { AgentRequirementsController } from "./kilo-provider/agent-requirements-controller"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
@@ -423,6 +424,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
+  private readonly requirements: AgentRequirementsController
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -434,6 +436,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.slimEditMetadata = opts.slimEditMetadata ?? true
     this.unsubscribeSandboxPreference = this.connectionService.sandboxPreference?.onChange(() => {
       if (this.connectionState === "connected") void this.fetchAndSendSandboxDefault()
+    })
+    this.requirements = new AgentRequirementsController({
+      post: (msg) => this.postMessage(msg),
+      client: () => this.client,
+      connected: () => this.connectionState === "connected",
+      generation: () => this.connectionGeneration,
+      root: () => this.getRootDirectory(),
+      folders: () => vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath),
+      project: () => this.projectDirectory,
+      sessions: () => this.sessionDirectories,
+      worktrees: this.opts.worktreeDirectories,
+      extension: (id) => vscode.extensions.getExtension(id),
+      subscribe:
+        typeof vscode.extensions.onDidChange === "function"
+          ? (listener) => vscode.extensions.onDidChange(listener)
+          : undefined,
+      error: getErrorMessage,
     })
 
     TelemetryProxy.getInstance().setProvider(this)
@@ -497,6 +516,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.projectDirectory === directory) return
     this.projectDirectory = directory
     this.postMessage({ type: "workspaceDirectoryChanged", directory: directory ?? "" })
+    this.requirements.clear()
   }
 
   public setDiffVirtualProvider(provider: import("./DiffVirtualProvider").DiffVirtualProvider): void {
@@ -537,6 +557,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  private openMarketplacePanel(directory: unknown): void {
+    if (typeof directory === "string" && directory) {
+      vscode.commands.executeCommand("kilo-code.new.marketplaceButtonClicked", directory)
+      return
+    }
+    vscode.commands.executeCommand("kilo-code.new.marketplaceButtonClicked", this.projectDirectory)
+  }
+
   // Strip metadata unused by the webview to keep session switches fast.
   // Logic in kilo-provider/slim-metadata.ts.
   private slimInfo<T>(info: T): T {
@@ -575,6 +603,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.cachedAgentsMessage = null
         this.cachedConfigMessage = null
         await Promise.all([this.fetchAndSendAgents(), this.fetchAndSendConfig()])
+        this.requirements.clear()
       },
       storage: this.extensionContext?.globalStorageUri,
     }
@@ -743,12 +772,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   public setSessionDirectory(sessionId: string, directory: string): void {
     this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), this.getWorkspaceDirectory(sessionId))
     this.sessionDirectories.set(sessionId, directory)
+    this.requirements.clear()
     if (this.connectionState === "connected") void this.fetchAndSendSandboxStatus(sessionId)
   }
 
   public clearSessionDirectory(sessionId: string): void {
     this.aborts.preserve(sessionId, this.sessionStatusMap.get(sessionId), this.getWorkspaceDirectory(sessionId))
     this.sessionDirectories.delete(sessionId)
+    this.requirements.clear()
     if (this.connectionState === "connected") void this.fetchAndSendSandboxStatus(sessionId)
   }
 
@@ -1016,7 +1047,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await openConfig(message.scope, message.labels, this.getProjectDirectory(this.currentSession?.id))
           break
         case "openMarketplacePanel":
-          vscode.commands.executeCommand("kilo-code.new.marketplaceButtonClicked", this.projectDirectory)
+          this.openMarketplacePanel(message.directory)
           break
         case "forkSession":
           handleForkSession(this.forkCtx, message.sessionId, message.messageId).catch((e) =>
@@ -1070,6 +1101,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestSkills":
           this.fetchAndSendSkills().catch((e) => console.error("[Kilo New] fetchAndSendSkills failed:", e))
           break
+        case "requestAgentRequirements":
+          this.requirements
+            .fetch({
+              agent: message.agent,
+              directory: message.directory,
+              sessionID: message.sessionID,
+              force: message.force === true,
+            })
+            .catch((e) => console.error("[Kilo New] fetchAndSendAgentRequirements failed:", e))
+          break
         case "requestCommands":
           this.fetchAndSendCommands().catch((e) => console.error("[Kilo New] fetchAndSendCommands failed:", e))
           break
@@ -1091,7 +1132,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const c1 = this.client
           if (c1) {
             void McpOAuth.connectMcpServer(c1, message.name, this.getWorkspaceDirectory(), () =>
-              this.fetchAndSendMcpStatus(),
+              this.refreshMcpStatus(),
             ).catch((e) => console.error("[Kilo New] connectMcpServer failed:", e))
           }
           break
@@ -1100,7 +1141,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const c2 = this.client
           if (c2) {
             void McpOAuth.disconnectMcpServer(c2, message.name, this.getWorkspaceDirectory(), () =>
-              this.fetchAndSendMcpStatus(),
+              this.refreshMcpStatus(),
             ).catch((e) => console.error("[Kilo New] disconnectMcpServer failed:", e))
           }
           break
@@ -1109,7 +1150,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           const c = this.client
           if (c) {
             void McpOAuth.authenticateMcpServer(c, message.name, this.getWorkspaceDirectory(), () =>
-              this.fetchAndSendMcpStatus(),
+              this.refreshMcpStatus(),
             ).catch((e) => console.error("[Kilo New] authenticateMcpServer failed:", e))
           }
           break
@@ -1379,6 +1420,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       dir: () => this.getWorkspaceDirectory(this.currentSession?.id),
       diff: this.diffVirtualProvider,
       storage: this.extensionContext?.globalStorageUri,
+      post: (msg) => this.postMessage(msg),
     })
   }
 
@@ -1648,6 +1690,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
       .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", e))
     this.postMessage({ type: "workspaceDirectoryChanged", directory: this.getWorkspaceDirectory(sessionID) })
+    this.requirements.clear()
     this.client.session
       .status({ directory: dir })
       .then((r) => {
@@ -2204,6 +2247,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.cachedSkillsMessage = null
     this.cachedCommandsMessage = null
     await Promise.all([this.fetchAndSendSkills(), this.fetchAndSendCommands()])
+    this.requirements.clear()
     return true
   }
 
@@ -2215,6 +2259,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (!result.error) {
         this.cachedAgentsMessage = null
         await this.fetchAndSendAgents()
+        this.requirements.clear()
         return
       }
     } catch {
@@ -2230,6 +2275,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!removed) {
       console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
     }
+  }
+
+  private async refreshMcpStatus(): Promise<void> {
+    await this.fetchAndSendMcpStatus()
+    this.requirements.clear()
   }
 
   private async fetchAndSendMcpStatus(): Promise<void> {
@@ -2776,6 +2826,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         projectConfig: overlay?.project,
         features: configFeatures(merged),
       })
+      this.requirements.clear()
       await Promise.all([
         refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
         refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
@@ -2796,6 +2847,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         globalConfig: this.cachedGlobalConfig ?? undefined,
         features: features ?? configFeatures(optimistic as Config),
       })
+      this.requirements.clear()
     } finally {
       this.pending--
     }
@@ -2975,6 +3027,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const sid = resolved!.sid
       const dir = resolved!.dir
+      await this.requirements.assertAgentRequirements(agent, dir)
       const editorContext = await this.gatherEditorContext(dir)
 
       if (messageID) {
@@ -3064,6 +3117,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const sid = resolved!.sid
       const dir = resolved!.dir
+      await this.requirements.assertAgentRequirements(agent, dir)
       await this.checkpoints.get(sid)
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", () =>
         this.withRetry(
@@ -3372,6 +3426,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Re-fetch all server-side state after an auth change. */
   private async reloadAfterAuthChange(): Promise<void> {
+    this.requirements.clear()
     await this.fetchAndSendConfig()
     await Promise.all([
       this.fetchAndSendProviders(),
@@ -3553,6 +3608,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Fetch and push the updated config + refresh agents and providers so the
     // Settings panel and mode/model pickers reflect the change.
     if (event.type === "global.config.updated") {
+      this.requirements.clear()
       void Promise.all([this.fetchAndSendConfigUpdated(), this.fetchAndSendAgents(), this.fetchAndSendProviders()])
       return
     }
@@ -3972,6 +4028,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.anacondaDesktop.dispose()
     this.aborts.clear()
     this.sessionStatusMap.clear()
+    this.requirements.dispose()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
     disposeGitChangesTarget()

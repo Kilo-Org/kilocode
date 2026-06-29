@@ -119,14 +119,14 @@ describe("ProjectV2.resolve", () => {
         Effect.promise(() => tmpdir()),
         (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
       )
-      yield* Effect.promise(() => initRepo(ssh.path, { commit: true, remote: "git@github.com:owner/repo.git" }))
-      yield* Effect.promise(() => initRepo(https.path, { commit: true, remote: "https://github.com/owner/repo.git" }))
+      yield* Effect.promise(() => initRepo(ssh.path, { commit: true, remote: "git@example.com:owner/repo.git" }))
+      yield* Effect.promise(() => initRepo(https.path, { commit: true, remote: "https://example.com/owner/repo.git" }))
       const project = yield* Project.Service
 
       const a = yield* project.resolve(abs(ssh.path))
       const b = yield* project.resolve(abs(https.path))
 
-      expect(a.id).toBe(remoteID("github.com/owner/repo"))
+      expect(a.id).toBe(remoteID("example.com/owner/repo"))
       expect(b.id).toBe(a.id)
     }),
   )

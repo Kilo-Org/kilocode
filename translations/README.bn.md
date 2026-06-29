@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | বাংলা | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
+  <a href="../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | বাংলা | <a href="README.gr.md">Ελληνικά</a> | <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ Configuration এবং বাকি সবকিছুর জন্য [docs](h
 
 ### Contributing
 
-Developer, writer এবং সবাইকে contribution-এর জন্য স্বাগতম। environment setup, coding standard এবং pull request খোলার পদ্ধতির জন্য [Contributing Guide](/CONTRIBUTING.md) দিয়ে শুরু করুন। VS Code extension এবং CLI release process-এর জন্য [RELEASING.md](RELEASING.md), এবং JetBrains plugin-এর জন্য [packages/kilo-jetbrains/RELEASING.md](packages/kilo-jetbrains/RELEASING.md) দেখুন।
+Developer, writer এবং সবাইকে contribution-এর জন্য স্বাগতম। environment setup, coding standard এবং pull request খোলার পদ্ধতির জন্য [Contributing Guide](/CONTRIBUTING.md) দিয়ে শুরু করুন। VS Code extension এবং CLI release process-এর জন্য [RELEASING.md](../RELEASING.md), এবং JetBrains plugin-এর জন্য [packages/kilo-jetbrains/RELEASING.md](../packages/kilo-jetbrains/RELEASING.md) দেখুন।
 
 অংশ নেওয়ার আগে আমাদের [Code of Conduct](/CODE_OF_CONDUCT.md) পড়ুন।
 
@@ -168,7 +168,7 @@ MIT। attribution এবং license notice রেখে আপনি এই cod
 <details>
 <summary>Kilo CLI কোথা থেকে এসেছে?</summary>
 
-Kilo CLI হলো [OpenCode](https://github.com/Kilo-Org/kilocode)-এর একটি fork, Kilo agentic engineering platform-এর মধ্যে কাজ করার জন্য উন্নত করা হয়েছে।
+Kilo CLI হলো [OpenCode](https://github.com/anomalyco/opencode)-এর একটি fork, Kilo agentic engineering platform-এর মধ্যে কাজ করার জন্য উন্নত করা হয়েছে।
 
 </details>
 

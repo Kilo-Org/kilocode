@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | Tiếng Việt
+  <a href="../README.md">English</a> | <a href="README.zh.md">简体中文</a> | <a href="README.zht.md">繁體中文</a> | <a href="README.ko.md">한국어</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.it.md">Italiano</a> | <a href="README.da.md">Dansk</a> | <a href="README.ja.md">日本語</a> | <a href="README.pl.md">Polski</a> | <a href="README.ru.md">Русский</a> | <a href="README.bs.md">Bosanski</a> | <a href="README.ar.md">العربية</a> | <a href="README.no.md">Norsk</a> | <a href="README.br.md">Português (Brasil)</a> | <a href="README.th.md">ไทย</a> | <a href="README.tr.md">Türkçe</a> | <a href="README.uk.md">Українська</a> | <a href="README.bn.md">বাংলা</a> | <a href="README.gr.md">Ελληνικά</a> | Tiếng Việt
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ Về cấu hình và mọi thứ khác, hãy xem [tài liệu](https://kilo.ai/d
 
 ### Đóng góp
 
-Chúng tôi chào đón đóng góp từ developer, writer và tất cả mọi người. Bắt đầu với [Contributing Guide](/CONTRIBUTING.md) để thiết lập môi trường, tiêu chuẩn code và cách mở pull request. Xem [RELEASING.md](RELEASING.md) cho quy trình release tiện ích VS Code và CLI, và [packages/kilo-jetbrains/RELEASING.md](packages/kilo-jetbrains/RELEASING.md) cho plugin JetBrains.
+Chúng tôi chào đón đóng góp từ developer, writer và tất cả mọi người. Bắt đầu với [Contributing Guide](/CONTRIBUTING.md) để thiết lập môi trường, tiêu chuẩn code và cách mở pull request. Xem [RELEASING.md](../RELEASING.md) cho quy trình release tiện ích VS Code và CLI, và [packages/kilo-jetbrains/RELEASING.md](../packages/kilo-jetbrains/RELEASING.md) cho plugin JetBrains.
 
 Vui lòng đọc [Code of Conduct](/CODE_OF_CONDUCT.md) trước khi tham gia.
 
@@ -168,7 +168,7 @@ MIT. Bạn có thể sử dụng, chỉnh sửa và phân phối code này, kể
 <details>
 <summary>Kilo CLI đến từ đâu?</summary>
 
-Kilo CLI là một fork của [OpenCode](https://github.com/Kilo-Org/kilocode), được cải tiến để hoạt động trong nền tảng Kilo agentic engineering.
+Kilo CLI là một fork của [OpenCode](https://github.com/anomalyco/opencode), được cải tiến để hoạt động trong nền tảng Kilo agentic engineering.
 
 </details>
 

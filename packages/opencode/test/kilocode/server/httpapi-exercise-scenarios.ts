@@ -284,6 +284,19 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .get("/kilocode/agent/requirements", "kilocode.agentRequirements")
+    .at((ctx) => ({ path: "/kilocode/agent/requirements?agent=httpapi-agent", headers: ctx.headers() }))
+    .json(200, (body, ctx) => {
+      object(body)
+      check(body.agent === "httpapi-agent", "agent requirements should echo the requested agent")
+      check(body.directory === ctx.directory, "agent requirements should use the routed workspace directory")
+      check(body.enabled === false, "agent requirements should report disabled when the experiment is off")
+      check(body.state === "disabled", "agent requirements should return the disabled state")
+      array(body.skills)
+      array(body.mcps)
+      array(body.vscode_extensions)
+    }),
+  http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .mutating()
     .preserveDatabase()
