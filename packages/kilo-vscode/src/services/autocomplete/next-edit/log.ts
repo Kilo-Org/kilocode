@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
+import { t } from "../shims/i18n"
 
-const CHANNEL_NAME = "Kilo Code · Next Edit"
+const CHANNEL_NAME = t("kilocode:autocomplete.nextEdit.outputChannel")
 
 let channel: vscode.OutputChannel | null = null
 

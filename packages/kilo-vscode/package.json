@@ -197,23 +197,23 @@
       },
       {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
-        "title": "Generate Suggested Edits",
-        "category": "Kilo Code"
+        "title": "%kilocode:autocomplete.commands.generateSuggestions.title%",
+        "category": "%kilocode:autocomplete.commands.category%"
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",
-        "title": "Cancel Suggested Edits",
-        "category": "Kilo Code"
+        "title": "%kilocode:autocomplete.commands.cancelSuggestions%",
+        "category": "%kilocode:autocomplete.commands.category%"
       },
       {
         "command": "kilo-code.new.autocomplete.nextEdit.acceptOrJump",
-        "title": "Next Edit: Accept or Jump to Suggested Edit",
-        "category": "Kilo Code"
+        "title": "%kilocode:autocomplete.commands.nextEdit.acceptOrJump%",
+        "category": "%kilocode:autocomplete.commands.category%"
       },
       {
         "command": "kilo-code.new.autocomplete.nextEdit.dismiss",
-        "title": "Next Edit: Dismiss Pending Suggestion",
-        "category": "Kilo Code"
+        "title": "%kilocode:autocomplete.commands.nextEdit.dismiss%",
+        "category": "%kilocode:autocomplete.commands.category%"
       },
       {
         "command": "kilo-code.new.agentManager.previousSession",
@@ -886,14 +886,14 @@
             "mercury-next-edit"
           ],
           "enumDescriptions": [
-            "Codestral via Kilo Gateway",
-            "Mercury Edit 2 (FIM) via Kilo Gateway",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
-            "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
+            "%kilocode:autocomplete.configuration.model.enum.codestralGateway%",
+            "%kilocode:autocomplete.configuration.model.enum.mercuryFimGateway%",
+            "%kilocode:autocomplete.configuration.model.enum.mercuryNextEditGateway%",
+            "%kilocode:autocomplete.configuration.model.enum.codestralMistral%",
+            "%kilocode:autocomplete.configuration.model.enum.mercuryFimInception%",
+            "%kilocode:autocomplete.configuration.model.enum.mercuryNextEditInception%"
           ],
-          "description": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
+          "description": "%kilocode:autocomplete.configuration.model.description%"
         },
         "kilo-code.new.autocomplete.provider": {
           "type": "string",
@@ -903,26 +903,26 @@
             "inception"
           ],
           "enumDescriptions": [
-            "Use autocomplete models through Kilo Gateway",
-            "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
+            "%kilocode:autocomplete.configuration.provider.enum.kilo%",
+            "%kilocode:autocomplete.configuration.provider.enum.mistral%",
+            "%kilocode:autocomplete.configuration.provider.enum.inception%"
           ],
-          "description": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
+          "description": "%kilocode:autocomplete.configuration.provider.description%"
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {
           "type": "boolean",
           "default": true,
-          "description": "Enable automatic inline completion suggestions"
+          "description": "%kilocode:autocomplete.configuration.enableAutoTrigger.description%"
         },
         "kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding": {
           "type": "boolean",
           "default": false,
-          "description": "Enable smart inline task keybinding"
+          "description": "%kilocode:autocomplete.configuration.enableSmartInlineTaskKeybinding.description%"
         },
         "kilo-code.new.autocomplete.enableChatAutocomplete": {
           "type": "boolean",
           "default": false,
-          "description": "Enable chat textarea autocomplete"
+          "description": "%kilocode:autocomplete.configuration.enableChatAutocomplete.description%"
         },
         "kilo-code.new.indexing.showButtonWhenDisabled": {
           "type": "boolean",

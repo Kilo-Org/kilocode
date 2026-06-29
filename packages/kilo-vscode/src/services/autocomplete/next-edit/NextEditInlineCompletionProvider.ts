@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../../cli-backend"
+import { t } from "../shims/i18n"
 import { computeEditableRegion } from "./editableRegion"
 import { EditHistoryTracker } from "./editHistoryTracker"
 import { nesLog } from "./log"
@@ -259,7 +260,7 @@ export class NextEditInlineCompletionProvider implements vscode.InlineCompletion
 
     const item = new vscode.InlineCompletionItem(insertText, renderRange, {
       command: INLINE_COMPLETION_ACCEPTED_COMMAND,
-      title: "Next Edit Accepted",
+      title: t("kilocode:autocomplete.nextEdit.acceptedCommandTitle"),
     })
     nesLog(
       `RENDER range=[${renderRange.start.line}:${renderRange.start.character}..${renderRange.end.line}:${renderRange.end.character}] insertChars=${insertText.length}`,

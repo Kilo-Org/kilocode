@@ -23,6 +23,7 @@ import {
 import { FimPromptBuilder } from "./FillInTheMiddle"
 import { hasValidCredentials } from "../fim"
 import type { KiloConnectionService } from "../../cli-backend"
+import { t } from "../shims/i18n"
 import { getAutocompleteModelById } from "../../../shared/autocomplete-models"
 import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
@@ -110,7 +111,7 @@ export function stringToInlineCompletions(text: string, position: vscode.Positio
 
   const item = new vscode.InlineCompletionItem(text, new vscode.Range(position, position), {
     command: INLINE_COMPLETION_ACCEPTED_COMMAND,
-    title: "Autocomplete Accepted",
+    title: t("kilocode:autocomplete.inlineCompletion.acceptedCommandTitle"),
   })
   return [item]
 }

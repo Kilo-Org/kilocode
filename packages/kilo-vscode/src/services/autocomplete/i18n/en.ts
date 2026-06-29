@@ -28,12 +28,44 @@ export const dict = {
   "kilocode:autocomplete.input.title": "Kilo Code: Quick Task",
   "kilocode:autocomplete.input.placeholder": "e.g., 'refactor this function to be more efficient'",
   "kilocode:autocomplete.commands.generateSuggestions": "Kilo Code: Generate Suggested Edits",
+  "kilocode:autocomplete.commands.generateSuggestions.title": "Generate Suggested Edits",
   "kilocode:autocomplete.commands.displaySuggestions": "Display Suggested Edits",
   "kilocode:autocomplete.commands.cancelSuggestions": "Cancel Suggested Edits",
+  "kilocode:autocomplete.commands.nextEdit.acceptOrJump": "Next Edit: Accept or Jump to Suggested Edit",
+  "kilocode:autocomplete.commands.nextEdit.dismiss": "Next Edit: Dismiss Pending Suggestion",
   "kilocode:autocomplete.commands.applyCurrentSuggestion": "Apply Current Suggested Edit",
   "kilocode:autocomplete.commands.applyAllSuggestions": "Apply All Suggested Edits",
   "kilocode:autocomplete.commands.category": "Kilo Code",
   "kilocode:autocomplete.codeAction.title": "Kilo Code: Suggested Edits",
+  "kilocode:autocomplete.inlineCompletion.acceptedCommandTitle": "Autocomplete Accepted",
+  "kilocode:autocomplete.nextEdit.outputChannel": "Kilo Code · Next Edit",
+  "kilocode:autocomplete.nextEdit.acceptedCommandTitle": "Next Edit Accepted",
+  "kilocode:autocomplete.nextEdit.decoration.removed": "→ (removed)",
+  "kilocode:autocomplete.nextEdit.hint.apply": "  ↳ Tab to apply · Esc to dismiss",
+  "kilocode:autocomplete.nextEdit.hint.jump": "  ↳ Tab to jump here · Esc to dismiss",
+  "kilocode:autocomplete.configuration.model.enum.codestralGateway": "Codestral via Kilo Gateway",
+  "kilocode:autocomplete.configuration.model.enum.mercuryFimGateway": "Mercury Edit 2 (FIM) via Kilo Gateway",
+  "kilocode:autocomplete.configuration.model.enum.mercuryNextEditGateway":
+    "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
+  "kilocode:autocomplete.configuration.model.enum.codestralMistral":
+    "Codestral via your connected Mistral provider API key",
+  "kilocode:autocomplete.configuration.model.enum.mercuryFimInception":
+    "Mercury Edit 2 (FIM) via your connected Inception provider API key",
+  "kilocode:autocomplete.configuration.model.enum.mercuryNextEditInception":
+    "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key",
+  "kilocode:autocomplete.configuration.model.description":
+    "Model to use for inline autocomplete suggestions. If unset, the recommended default is used.",
+  "kilocode:autocomplete.configuration.provider.enum.kilo": "Use autocomplete models through Kilo Gateway",
+  "kilocode:autocomplete.configuration.provider.enum.mistral":
+    "Use autocomplete models through your connected Mistral provider API key",
+  "kilocode:autocomplete.configuration.provider.enum.inception":
+    "Use autocomplete models through your connected Inception provider API key",
+  "kilocode:autocomplete.configuration.provider.description":
+    "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used.",
+  "kilocode:autocomplete.configuration.enableAutoTrigger.description": "Enable automatic inline completion suggestions",
+  "kilocode:autocomplete.configuration.enableSmartInlineTaskKeybinding.description":
+    "Enable smart inline task keybinding",
+  "kilocode:autocomplete.configuration.enableChatAutocomplete.description": "Enable chat textarea autocomplete",
   "kilocode:autocomplete.chatParticipant.fullName": "Kilo Code Agent",
   "kilocode:autocomplete.chatParticipant.name": "Agent",
   "kilocode:autocomplete.chatParticipant.description": "I can help you with quick tasks and suggested edits.",

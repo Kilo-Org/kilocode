@@ -116,6 +116,8 @@ import { dict as cliUk } from "../../src/services/cli-backend/i18n/uk"
 import { dict as cliIt } from "../../src/services/cli-backend/i18n/it"
 
 import { dict as acEn } from "../../src/services/autocomplete/i18n/en"
+import pkg from "../../package.json"
+import nls from "../../package.nls.json"
 
 // ── Locale maps ─────────────────────────────────────────────────────────────
 
@@ -217,6 +219,7 @@ const cliLocales: Record<string, Record<string, string>> = {
 const webviewKeys = new Set(Object.keys({ ...appEn, ...uiEn, ...kiloEn, ...amEn }))
 const cliKeys = new Set(Object.keys(cliEn))
 const acKeys = new Set(Object.keys(acEn))
+const nlsKeys = new Set(Object.keys(nls))
 
 // ── File scanning ───────────────────────────────────────────────────────────
 
@@ -254,6 +257,23 @@ function extractKeys(content: string): Array<{ line: number; key: string }> {
     if (key) results.push({ line: offsetToLine(content, match.index), key })
   }
   return results
+}
+
+function collectManifestKeys(value: unknown): string[] {
+  if (typeof value === "string") {
+    const matches = value.matchAll(/^%([^%]+)%$/g)
+    return Array.from(matches, (match) => match[1]).filter((key): key is string => key !== undefined)
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap(collectManifestKeys)
+  }
+
+  if (value && typeof value === "object") {
+    return Object.values(value).flatMap(collectManifestKeys)
+  }
+
+  return []
 }
 
 async function collectFiles(glob: Glob, dir: string): Promise<string[]> {
@@ -437,6 +457,18 @@ describe("i18n locale completeness — every English key exists in all locales",
         `Found ${missing.length} missing cli-backend translation(s):\n${formatLocaleReport(missing)}`,
       ).toEqual([])
     }
+    expect(missing).toEqual([])
+  })
+})
+
+describe("package manifest localization", () => {
+  it("all package.json localization placeholders exist in package.nls.json", () => {
+    const missing = collectManifestKeys(pkg).filter((key) => !nlsKeys.has(key))
+    expect(missing).toEqual([])
+  })
+
+  it("all autocomplete package.nls.json keys mirror the autocomplete dictionary", () => {
+    const missing = Object.keys(nls).filter((key) => key.startsWith("kilocode:autocomplete.") && !acKeys.has(key))
     expect(missing).toEqual([])
   })
 })

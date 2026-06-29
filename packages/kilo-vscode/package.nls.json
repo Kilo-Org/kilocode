@@ -1,0 +1,21 @@
+{
+  "kilocode:autocomplete.commands.generateSuggestions.title": "Generate Suggested Edits",
+  "kilocode:autocomplete.commands.cancelSuggestions": "Cancel Suggested Edits",
+  "kilocode:autocomplete.commands.nextEdit.acceptOrJump": "Next Edit: Accept or Jump to Suggested Edit",
+  "kilocode:autocomplete.commands.nextEdit.dismiss": "Next Edit: Dismiss Pending Suggestion",
+  "kilocode:autocomplete.commands.category": "Kilo Code",
+  "kilocode:autocomplete.configuration.model.enum.codestralGateway": "Codestral via Kilo Gateway",
+  "kilocode:autocomplete.configuration.model.enum.mercuryFimGateway": "Mercury Edit 2 (FIM) via Kilo Gateway",
+  "kilocode:autocomplete.configuration.model.enum.mercuryNextEditGateway": "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
+  "kilocode:autocomplete.configuration.model.enum.codestralMistral": "Codestral via your connected Mistral provider API key",
+  "kilocode:autocomplete.configuration.model.enum.mercuryFimInception": "Mercury Edit 2 (FIM) via your connected Inception provider API key",
+  "kilocode:autocomplete.configuration.model.enum.mercuryNextEditInception": "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key",
+  "kilocode:autocomplete.configuration.model.description": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used.",
+  "kilocode:autocomplete.configuration.provider.enum.kilo": "Use autocomplete models through Kilo Gateway",
+  "kilocode:autocomplete.configuration.provider.enum.mistral": "Use autocomplete models through your connected Mistral provider API key",
+  "kilocode:autocomplete.configuration.provider.enum.inception": "Use autocomplete models through your connected Inception provider API key",
+  "kilocode:autocomplete.configuration.provider.description": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used.",
+  "kilocode:autocomplete.configuration.enableAutoTrigger.description": "Enable automatic inline completion suggestions",
+  "kilocode:autocomplete.configuration.enableSmartInlineTaskKeybinding.description": "Enable smart inline task keybinding",
+  "kilocode:autocomplete.configuration.enableChatAutocomplete.description": "Enable chat textarea autocomplete"
+}

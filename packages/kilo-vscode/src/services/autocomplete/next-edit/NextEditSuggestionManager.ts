@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { t } from "../shims/i18n"
 import { nesLog } from "./log"
 import { planInsertion, planReplacement } from "./pendingEdit"
 
@@ -252,7 +253,7 @@ export class NextEditSuggestionManager implements vscode.Disposable {
         removedRanges.push(lineRange)
         proposedAnnotations.push({
           range: new vscode.Range(lineRange.end, lineRange.end),
-          renderOptions: { after: { contentText: `→ (removed)` } },
+          renderOptions: { after: { contentText: t("kilocode:autocomplete.nextEdit.decoration.removed") } },
         })
       }
       // Additions inside a replace — anchor on last shared line
@@ -292,7 +293,9 @@ export class NextEditSuggestionManager implements vscode.Disposable {
       p.kind === "replace"
         ? cursor.line >= p.diffStartLine && cursor.line <= p.diffEndLine
         : cursor.line === p.diffStartLine || cursor.line === p.diffStartLine - 1
-    const hintText = cursorAtDiff ? "  ↳ Tab to apply · Esc to dismiss" : "  ↳ Tab to jump here · Esc to dismiss"
+    const hintText = cursorAtDiff
+      ? t("kilocode:autocomplete.nextEdit.hint.apply")
+      : t("kilocode:autocomplete.nextEdit.hint.jump")
     const hintOptions: vscode.DecorationOptions[] = [
       {
         range: new vscode.Range(hintLineEnd, hintLineEnd),
