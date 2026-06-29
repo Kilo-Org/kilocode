@@ -44,7 +44,7 @@ import {
   insertSpacedText,
   isPromptBusy,
   isPathMention,
-  applySandboxState,
+  applySandboxStates,
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
@@ -65,6 +65,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 const drafts = new Map<string, string>()
 const reviewDrafts = new Map<string, ReviewComment[]>()
 const imageDrafts = new Map<string, ImageAttachment[]>()
+const scrolls = new Map<string, number>()
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
   if (incoming.length === 0) return current
@@ -125,6 +126,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     adjustHeight()
   })
   const history = usePromptHistory()
+  let textareaRef: HTMLTextAreaElement | undefined
+  let highlightRef: HTMLDivElement | undefined
+  let dropdownRef: HTMLDivElement | undefined
+  let slashDropdownRef: HTMLDivElement | undefined
 
   const boxKey = () => props.boxId ?? "prompt:default"
   const rawKey = () =>
@@ -132,28 +137,36 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
     "new"
   const draftKey = () => scopeDraftKey(boxKey(), rawKey())
-  const saveDraft = (key: string, next: string, comments: ReviewComment[], imgs: ImageAttachment[]) => {
+  const saveDraft = (
+    key: string,
+    next: string,
+    comments: ReviewComment[],
+    imgs: ImageAttachment[],
+    scroll = textareaRef?.scrollTop ?? scrolls.get(key) ?? 0,
+  ) => {
     if (next) drafts.set(key, next)
     else drafts.delete(key)
     if (comments.length > 0) reviewDrafts.set(key, comments)
     else reviewDrafts.delete(key)
     if (imgs.length > 0) imageDrafts.set(key, imgs)
     else imageDrafts.delete(key)
+    if (next || comments.length > 0 || imgs.length > 0) scrolls.set(key, scroll)
+    else scrolls.delete(key)
   }
   const readDraft = () => ({
     text: text().trim(),
     comments: reviewComments(),
     images: imageAttach.images(),
+    scroll: textareaRef?.scrollTop ?? scrolls.get(draftKey()) ?? 0,
   })
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
   const [autoApprove, setAutoApprove] = createSignal(false)
-  const [sandboxState, setSandboxState] = createSignal<SandboxState>()
+  const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
   const [sandboxDefault, setSandboxDefault] = createSignal<SandboxDefaultState>()
-  const [sandboxRequest, setSandboxRequest] = createSignal<string>()
-  const [sandboxTarget, setSandboxTarget] = createSignal<string | null>()
+  const [sandboxRequests, setSandboxRequests] = createSignal<Record<string, string>>({})
   let sandboxRetry: ReturnType<typeof setTimeout> | undefined
   let sandboxAttempts = 0
   const sandboxID = () => {
@@ -162,16 +175,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const sandboxVisible = () => features().sandboxControls && !session.currentSessionID()?.startsWith("cloud:")
   const sandbox = () => {
-    const state = sandboxState()
-    return state?.sessionID === sandboxID() ? state : undefined
+    const id = sandboxID()
+    return id ? sandboxes()[id] : undefined
   }
   const sandboxEnabled = () => (sandboxID() ? sandbox()?.enabled : sandboxDefault()?.enabled) ?? false
   const sandboxAvailable = () => (sandboxID() ? sandbox()?.available : sandboxDefault()?.available) ?? false
   const sandboxReason = () => (sandboxID() ? sandbox()?.reason : sandboxDefault()?.reason)
   const sandboxReady = () => (sandboxID() ? sandbox() !== undefined : sandboxDefault() !== undefined)
   const sandboxNetworkEnabled = () => config().experimental?.sandbox_restrict_network !== false
+  const sandboxRequest = (sessionID?: string) => sandboxRequests()[sessionID ?? ""]
   const sandboxDisabled = () =>
-    !server.isConnected() || !sandboxReady() || !sandboxAvailable() || sandboxRequest() !== undefined
+    !server.isConnected() || !sandboxReady() || !sandboxAvailable() || sandboxRequest(sandboxID()) !== undefined
   const requestSandbox = () => {
     if (server.connectionState() !== "connected") return
     const sessionID = sandboxID()
@@ -186,8 +200,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!sandboxVisible() || sandboxDisabled()) return
     const requestID = crypto.randomUUID()
     if (!sessionID) saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
-    setSandboxRequest(requestID)
-    setSandboxTarget(sessionID ?? null)
+    setSandboxRequests((current) => ({ ...current, [sessionID ?? ""]: requestID }))
     if (!sessionID) {
       vscode.postMessage({
         type: "setSandboxDefault",
@@ -214,9 +227,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return hidden
     },
   )
-  const clearSandboxRequest = () => {
-    setSandboxRequest(undefined)
-    setSandboxTarget(undefined)
+  const clearSandboxRequest = (sessionID: string | undefined, requestID: string) => {
+    setSandboxRequests((current) => {
+      const key = sessionID ?? ""
+      if (current[key] !== requestID) return current
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
   }
   const retrySandbox = (sessionID: string) => {
     if (sandboxAttempts >= 2) return
@@ -233,20 +251,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   createEffect(() => {
     const sessionID = sandboxID()
     const connected = server.connectionState() === "connected"
-    const target = untrack(sandboxTarget)
     if (sandboxRetry) clearTimeout(sandboxRetry)
     sandboxRetry = undefined
     sandboxAttempts = 0
     if (!connected) {
-      clearSandboxRequest()
-      setSandboxState(undefined)
+      setSandboxRequests({})
+      setSandboxes({})
       setSandboxDefault(undefined)
       return
     }
-    if (target !== undefined && target !== sessionID) clearSandboxRequest()
     if (!sessionID) {
-      setSandboxState(undefined)
-      if (sandboxRequest() && target === null) return
+      if (sandboxRequest(undefined)) return
       requestSandbox()
       return
     }
@@ -271,10 +286,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     replaceReviewComments(reviewComments().filter((item) => item.id !== id))
   }
 
-  let textareaRef: HTMLTextAreaElement | undefined
-  let highlightRef: HTMLDivElement | undefined
-  let dropdownRef: HTMLDivElement | undefined
-  let slashDropdownRef: HTMLDivElement | undefined
   // Save/restore input text when switching sessions.
   // Uses `on()` to track only draftKey — avoids re-running on every keystroke.
   createEffect(
@@ -284,6 +295,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
       const draft = drafts.get(key) ?? ""
       const pending = reviewDrafts.get(key) ?? []
+      const scroll = scrolls.get(key) ?? 0
       setText(draft)
       setReviewComments(pending)
       imageAttach.replace(imageDrafts.get(key) ?? [])
@@ -295,6 +307,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         // Reset height then adjust
         textareaRef.style.height = "auto"
         textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+        textareaRef.scrollTop = scroll
+        if (highlightRef) highlightRef.scrollTop = scroll
       }
       window.dispatchEvent(new Event("focusPrompt"))
     }),
@@ -347,10 +361,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const draft = text().trim()
     const comments = reviewComments()
     const imgs = imageAttach.images()
+    const scroll = textareaRef?.scrollTop ?? 0
     session.clearCurrentSession()
     // After clearing, draftKey() points to the "new" bucket — save there
     // so the session-switch effect restores the prompt in the new-task view.
-    saveDraft(draftKey(), draft, comments, imgs)
+    saveDraft(draftKey(), draft, comments, imgs, scroll)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
@@ -372,7 +387,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const draft = captured.get(id)
     captured.delete(id)
     if (!draft) return
-    saveDraft(scopeDraftKey(box, sessionDraftKey(sid)), draft.text, draft.comments, draft.images)
+    saveDraft(scopeDraftKey(box, sessionDraftKey(sid)), draft.text, draft.comments, draft.images, draft.scroll)
   }
   window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
   onCleanup(() => window.removeEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft))
@@ -486,10 +501,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const handleSandboxMessage = (message: ExtensionMessage) => {
     if (message.type === "sandboxDefaultStatus") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest()
+      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(undefined)
       if (sandboxID() && !matching) return false
       if (!server.isConnected()) return true
-      if (matching) clearSandboxRequest()
+      if (matching) clearSandboxRequest(undefined, message.requestID!)
       const current = sandboxDefault()
       if (!current || current.revision <= message.revision) {
         setSandboxDefault({
@@ -511,16 +526,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "sandboxStatus") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest()
-      if (message.sessionID !== sandboxID() && !matching) return false
+      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(message.sessionID)
       if (!server.isConnected()) return true
-      const current = sandboxState()
-      if (matching) clearSandboxRequest()
-      const state = applySandboxState(current, message)
-      if (state !== current) setSandboxState(state)
-      sandboxAttempts = 0
-      if (sandboxRetry) clearTimeout(sandboxRetry)
-      sandboxRetry = undefined
+      const current = sandboxes()
+      if (matching) clearSandboxRequest(message.sessionID, message.requestID!)
+      const next = applySandboxStates(current, message)
+      if (next !== current) setSandboxes(next)
+      const state = next[message.sessionID]
+      if (message.sessionID === sandboxID()) {
+        sandboxAttempts = 0
+        if (sandboxRetry) clearTimeout(sandboxRetry)
+        sandboxRetry = undefined
+      }
       if (matching && !state.available) {
         showToast({
           variant: "error",
@@ -532,24 +549,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "sandboxStatusError") {
-      const matching = message.requestID !== undefined && message.requestID === sandboxRequest()
-      if (message.sessionID !== sandboxID() && !matching) return false
+      const matching = message.requestID !== undefined && message.requestID === sandboxRequest(message.sessionID)
       if (!server.isConnected()) return true
-      const current = sandboxState()
-      if (matching) clearSandboxRequest()
-      if ((current?.revision ?? -1) > message.revision) return true
+      const current = sandboxes()
+      const state = current[message.sessionID]
+      if (matching) clearSandboxRequest(message.sessionID, message.requestID!)
+      if ((state?.revision ?? -1) > message.revision) return true
       if (!message.requestID) {
-        const same = current?.sessionID === message.sessionID && current.directory === message.directory
-        setSandboxState({
-          sessionID: message.sessionID,
-          directory: message.directory,
-          enabled: same ? current.enabled : false,
-          available: false,
-          reason: message.message,
-          version: same ? current.version : 0,
-          revision: message.revision,
-        })
-        retrySandbox(message.sessionID)
+        const same = state?.directory === message.directory
+        setSandboxes(
+          applySandboxStates(current, {
+            sessionID: message.sessionID,
+            directory: message.directory,
+            enabled: same ? state.enabled : false,
+            available: false,
+            reason: message.message,
+            version: same ? state.version : 0,
+            revision: message.revision,
+          }),
+        )
+        if (message.sessionID === sandboxID()) retrySandbox(message.sessionID)
       }
       if (matching) {
         showToast({
@@ -614,12 +633,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
 
     if (message.type === "sessionCreated") {
-      const raw = createdDraftKey(message.draftID, sandboxRequest() !== undefined && sandboxTarget() === null)
+      const raw = createdDraftKey(message.draftID, sandboxRequest(undefined) !== undefined)
       if (raw) {
         const source = scopeDraftKey(boxKey(), raw)
         const target = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id))
         if (source === draftKey()) saveDraft(source, text(), reviewComments(), imageAttach.images())
-        movePromptDraft({ text: drafts, comments: reviewDrafts, images: imageDrafts }, source, target)
+        movePromptDraft({ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls }, source, target)
       }
       if (
         message.draftID &&
@@ -696,9 +715,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const syncHighlightScroll = () => {
-    if (highlightRef && textareaRef) {
-      highlightRef.scrollTop = textareaRef.scrollTop
-    }
+    if (!textareaRef) return
+    scrolls.set(draftKey(), textareaRef.scrollTop)
+    if (highlightRef) highlightRef.scrollTop = textareaRef.scrollTop
   }
 
   const adjustHeight = () => {
@@ -918,6 +937,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       drafts.delete(draftKey())
       reviewDrafts.delete(draftKey())
       imageDrafts.delete(draftKey())
+      scrolls.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       matched.action()
       return
@@ -978,6 +998,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     drafts.delete(key)
     reviewDrafts.delete(key)
     imageDrafts.delete(key)
+    scrolls.delete(key)
     if (draftKey() !== key) return
 
     history.append(draft)

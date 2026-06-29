@@ -1,14 +1,64 @@
-import { anacondaDesktopDict, dict as en } from "./en"
+import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
-export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Erneut prüfen",
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
+  "provider.anaconda.title.manage": "Anaconda Desktop verwalten",
+  "provider.anaconda.status.checking": "Anaconda Desktop wird geprüft...",
+  "provider.anaconda.status.opening": "Anaconda Desktop wird geöffnet...",
+  "provider.anaconda.status.syncing": "Anbietermodelle werden aktualisiert...",
+  "provider.anaconda.status.ready": "Bereit zum Verbinden",
+  "provider.anaconda.status.waiting": "Warten auf Desktop",
+  "provider.anaconda.status.attention": "Erfordert Aufmerksamkeit",
+  "provider.anaconda.status.unavailable": "Nicht verfügbar",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop wird unter {{platform}} nicht unterstützt.",
+  "provider.anaconda.state.notInstalled":
+    "Installieren Sie Anaconda Desktop auf diesem Computer und kehren Sie dann hierher zurück. Kilo führt das Installationsprogramm nicht für Sie aus.",
+  "provider.anaconda.state.notRunning":
+    "Öffnen Sie Anaconda Desktop, schließen Sie die Einrichtung ab und melden Sie sich an. Wählen Sie dann Erneut prüfen.",
+  "provider.anaconda.state.invalidConfig":
+    "Die Einrichtung von Anaconda Desktop ist unvollständig. Öffnen Sie Desktop, schließen Sie die Einrichtung ab und starten Sie es bei Bedarf neu.",
+  "provider.anaconda.state.signedOut": "Öffnen Sie Anaconda Desktop und melden Sie sich an, bevor Sie Kilo verbinden.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo konnte nicht auf Anaconda Desktop zugreifen. Öffnen Sie Desktop, melden Sie sich erneut an und starten Sie es bei Bedarf neu.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop antwortet noch nicht. Öffnen Sie es und warten Sie, bis die Anwendung vollständig gestartet ist.",
+  "provider.anaconda.state.noModel":
+    "Laden Sie in Anaconda Desktop ein Textgenerierungsmodell herunter. Wählen Sie nach Möglichkeit eines mit Unterstützung für Tool-Aufrufe und starten Sie dann dessen Server.",
   "provider.anaconda.state.noServer_one":
     "1 heruntergeladenes Textgenerierungsmodell ist verfügbar. Starten Sie in Anaconda Desktop einen Modellserver. Modelle mit Unterstützung für Tool-Aufrufe werden dringend empfohlen.",
   "provider.anaconda.state.noServer_other":
     "{{count}} heruntergeladene Textgenerierungsmodelle sind verfügbar. Starten Sie in Anaconda Desktop einen Modellserver. Modelle mit Unterstützung für Tool-Aufrufe werden dringend empfohlen.",
+  "provider.anaconda.state.unhealthy":
+    "Der aktive Inferenzserver ist noch nicht funktionsfähig. Überprüfen Sie ihn in Anaconda Desktop und starten Sie den Server bei Bedarf neu.",
+  "provider.anaconda.state.ready":
+    "Kilo hat einen funktionsfähigen lokalen Textgenerierungsserver gefunden und kann dessen aktuelle Verbindungseinstellungen importieren.",
+  "provider.anaconda.server": "Aktiver Inferenzserver",
+  "provider.anaconda.context": "Kontextfenster",
+  "provider.anaconda.contextValue": "{{count}} Token",
+  "provider.anaconda.tools": "Tool-Aufrufe",
+  "provider.anaconda.tools.supported": "Unterstützt",
+  "provider.anaconda.tools.unsupported": "Nicht aktiviert",
+  "provider.anaconda.tools.unknown": "Unbekannt",
+  "provider.anaconda.warning.title": "Tool-Unterstützung ist eingeschränkt",
+  "provider.anaconda.warning.description":
+    "Dieser Server bestätigt keine Tool-Aufrufe. Aktionen des Coding-Agenten können fehlschlagen oder nicht verfügbar sein. Fahren Sie nur fort, wenn Sie diese Einschränkungen akzeptieren.",
+  "provider.anaconda.action.download": "Anaconda Desktop herunterladen",
+  "provider.anaconda.action.open": "Anaconda Desktop öffnen",
+  "provider.anaconda.action.checkAgain": "Erneut prüfen",
+  "provider.anaconda.action.continue": "Trotzdem fortfahren",
+  "provider.anaconda.action.manage": "Verwalten / Aktualisieren",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop aktualisiert",
+  "provider.anaconda.toast.refreshed.description":
+    "Der aktive lokale Server und die Modelle sind in Kilo auf dem neuesten Stand.",
+  "settings.providers.note.anacondaDesktop":
+    "Führen Sie ein Modell aus, das lokal von Anaconda Desktop bereitgestellt wird.",
+  "settings.providers.tag.local": "Lokal",
+} as const
+
+export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Vorgeschlagen",
   "command.category.view": "Ansicht",
   "command.category.project": "Projekt",
