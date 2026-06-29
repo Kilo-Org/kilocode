@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.3.49",
+  "version": "7.3.54",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -924,6 +924,12 @@
           "default": false,
           "description": "Enable chat textarea autocomplete"
         },
+        "kilo-code.new.indexing.showButtonWhenDisabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Show the codebase indexing button below the prompt while indexing is disabled."
+        },
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,
@@ -1100,6 +1106,7 @@
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "happy-dom": "20.8.9",
     "knip": "5.85.0",
     "prettier": "3.6.2",
     "qrcode": "^1.5.4",

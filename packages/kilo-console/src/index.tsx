@@ -6,6 +6,7 @@ import "./styles.css"
 import { ProjectConsoleRoute } from "./routes/projects/ProjectConsoleRoute"
 import { ProjectsRoute } from "./routes/projects/ProjectsRoute"
 import { ProfileRoute } from "./routes/profile/ProfileRoute"
+import { LoginRoute } from "./routes/profile/LoginRoute"
 import { ConfigLayout } from "./layouts/ConfigLayout"
 import { configSections } from "./routes/config/sections"
 
@@ -27,6 +28,7 @@ render(
         {routes()}
       </Route>
       <Route path="/profile" component={ProfileRoute} />
+      <Route path="/kilo/login" component={LoginRoute} />
       <Route path="/settings" component={ConfigLayout}>
         {routes()}
       </Route>

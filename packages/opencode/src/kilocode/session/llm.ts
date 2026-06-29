@@ -1,6 +1,7 @@
 import type { ModelMessage } from "ai"
 import * as Stream from "effect/Stream"
 import type { LLMEvent } from "@opencode-ai/llm"
+import type { Logger } from "@opencode-ai/core/util/log"
 import type { Provider } from "@/provider/provider"
 import { KiloSessionOverflow } from "./overflow"
 
@@ -14,6 +15,22 @@ export namespace KiloLLM {
       Stream.map((event) => (event.type === "text-delta" ? event.text : "")),
       Stream.mkString,
     )
+  }
+
+  export function timeout(input: {
+    options: Record<string, unknown>
+    fallback?: Record<string, unknown>
+    log?: Pick<Logger, "debug">
+  }): { timeout?: { chunkMs: number } } {
+    const value =
+      typeof input.options["chunkTimeout"] === "number"
+        ? input.options["chunkTimeout"]
+        : typeof input.fallback?.["chunkTimeout"] === "number"
+          ? input.fallback["chunkTimeout"]
+          : undefined
+    if (!value) return {}
+    input.log?.debug("chunk idle timeout configured", { chunkTimeout: value })
+    return { timeout: { chunkMs: value } }
   }
 
   export function needsEstimate(input: { model: Provider.Model; configured: number | undefined }) {

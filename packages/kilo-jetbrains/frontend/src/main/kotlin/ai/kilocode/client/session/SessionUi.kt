@@ -8,6 +8,7 @@ import ai.kilocode.client.migration.KiloMigrationService
 import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.migration.MigrationUiState
 import ai.kilocode.client.migration.ui.MigrationOverlayPanel
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -18,7 +19,11 @@ import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
+import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
+import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SlashAction
+import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionDropOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
@@ -40,6 +45,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
+import ai.kilocode.client.settings.KiloSettingsConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.layout.Stack
@@ -67,6 +73,7 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -168,6 +175,7 @@ class SessionUi(
     private lateinit var connection: ConnectionPanel
 
     private lateinit var prompt: PromptPanel
+    private lateinit var completion: KiloPromptCompletionProvider
     private lateinit var load: LoadingPanel
     private lateinit var migrationOverlay: MigrationOverlayPanel
     private var empty: EmptySessionPanel? = null
@@ -336,12 +344,21 @@ class SessionUi(
         scroll.onScroll = overlay::clear
         connection = ConnectionPanel(this, controller)
 
+        completion = KiloPromptCompletionProvider(
+            workspace = workspace,
+            service = workspaces,
+            actions = slashActions(),
+            mentions = mentionActions(),
+            scope = cs,
+        )
         prompt = PromptPanel(
             project = project,
             selection = selection,
             onSend = { text, files -> sendPrompt(text, files) },
             onAbort = { controller.abort() },
             onEnhance = controller::enhancePrompt,
+            onMentions = ::mentionParts,
+            completion = completion,
         )
 
         drop = SessionDropOverlay()
@@ -398,15 +415,17 @@ class SessionUi(
                     }, m.agent)
                     val items = m.models.map {
                         ModelPicker.Item(
-                            it.id,
-                            it.display,
-                            it.provider,
-                            it.providerName,
-                             it.recommendedIndex,
-                             it.free,
-                             it.variants,
-                             it.attachment,
-                         )
+                            id = it.id,
+                            display = it.display,
+                            provider = it.provider,
+                            providerName = it.providerName,
+                            recommendedIndex = it.recommendedIndex,
+                            free = it.free,
+                            byok = it.byok,
+                            variants = it.variants,
+                            attachment = it.attachment,
+                            mayTrainOnYourPrompts = it.mayTrainOnYourPrompts,
+                        )
                     }
                     val selected =
                         m.model?.let { full -> items.firstOrNull { it.key == full }?.key }
@@ -415,6 +434,7 @@ class SessionUi(
                     prompt.reasoning.setItems(m.variants.map { ReasoningPicker.Item(it, variantTitle(it)) }, m.variant)
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
+                    prompt.refreshHighlights()
                 }
 
                 is SessionControllerEvent.ViewChanged.ShowProgress -> {
@@ -588,8 +608,64 @@ class SessionUi(
         }
         prompt.clear()
         val follow = scroll.atBottom()
+        val action = completion.clientAction(text)
+        if (action != null) {
+            action.action()
+            scroll.followBottom(follow)
+            return
+        }
+        val command = completion.serverCommand(text)
+        if (command != null) {
+            controller.command(command.first, command.second, files)
+            scroll.followBottom(follow)
+            return
+        }
         controller.prompt(text, files)
         scroll.followBottom(follow)
+    }
+
+    private fun slashActions(): List<SlashAction> {
+        val fns: Map<SlashAction.Spec, () -> Unit> = mapOf(
+            SlashAction.NEW to { manager?.newSession() },
+            SlashAction.SESSIONS to { manager?.showHistory() },
+            SlashAction.MODELS to { prompt.model.open() },
+            SlashAction.AGENTS to { prompt.mode.open() },
+            SlashAction.VARIANT to { prompt.reasoning.open() },
+            SlashAction.COMPACT to { controller.compact() },
+            SlashAction.SETTINGS to { openKiloSettings() },
+            SlashAction.HELP to { BrowserUtil.browse("https://kilo.ai/docs") },
+        )
+        return SlashAction.ALL.map { spec -> bind(spec, fns.getValue(spec)) }
+    }
+
+    private fun bind(spec: SlashAction.Spec, action: () -> Unit) = SlashAction(
+        spec.name,
+        KiloBundle.message(spec.descriptionKey),
+        spec.hints,
+        {
+            Telemetry.send("Slash Command Used", mapOf("slashCommandType" to "client", "command" to spec.name))
+            action()
+        },
+    )
+
+    private fun mentionActions(): List<MentionAction> = MentionAction.ALL.map(::bind)
+
+    private fun bind(spec: MentionAction.Spec) = MentionAction(
+        spec.name,
+        KiloBundle.message(spec.descriptionKey),
+        spec.hints,
+        spec.available,
+    )
+
+    private fun mentionParts(text: String): List<PromptPartDto> = runBlockingCancellable {
+        val names = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
+        promptMentionParts(
+            text = text,
+            directory = workspace.directory,
+            reserved = names,
+            resolve = { path -> workspaces.files(workspace.directory, path).isNotEmpty() },
+            gitChanges = { workspaces.gitChanges(workspace.directory) },
+        )
     }
 
     private fun openFile(path: String) {
@@ -703,6 +779,16 @@ class SessionUi(
                 cfg is ConfigurableWithId && cfg.getId() == UserProfileConfigurable.ID
             },
             { cfg: Configurable -> cfg.focusOn(UserProfileConfigurable.FOCUS_ACCOUNT_COMBO) },
+        )
+    }
+
+    private fun openKiloSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == KiloSettingsConfigurable.ID
+            },
+            { _: Configurable -> },
         )
     }
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { fileURLToPath, pathToFileURL } from "url"
-import { Effect, Layer, Result, Schema } from "effect"
+import { Effect, Exit, Layer, Result, Schema } from "effect" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ToolRegistry } from "@/tool/registry"
 import { Tool } from "@/tool/tool"
@@ -35,10 +35,12 @@ import { ToolJsonSchema } from "@/tool/json-schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Command } from "@/command" // kilocode_change
+import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
+import { run as runSandbox, type Profile } from "@kilocode/sandbox" // kilocode_change
 
 const node = CrossSpawnSpawner.defaultLayer
 const configLayer = TestConfig.layer({
-  directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".opencode")])),
+  directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".kilo")])), // kilocode_change
 })
 
 type RegistryLayerOptions = {
@@ -103,18 +105,61 @@ const it = testEffect(Layer.mergeAll(registryLayer(), node, Agent.defaultLayer))
 const scout = testEffect(
   Layer.mergeAll(registryLayer({ flags: { experimentalScout: true } }), node, Agent.defaultLayer),
 )
-const background = testEffect(
-  Layer.mergeAll(registryLayer({ flags: { experimentalBackgroundSubagents: true } }), node, Agent.defaultLayer),
-)
 const withBrokenPlugin = testEffect(
   Layer.mergeAll(registryLayer({ plugin: brokenPluginLayer }), node, Agent.defaultLayer),
 )
+// kilocode_change start
+const sandboxed = testEffect(
+  Layer.mergeAll(registryLayer({ flags: { experimentalLspTool: true } }), node, Agent.defaultLayer),
+)
+// kilocode_change end
 
 afterEach(async () => {
   await disposeAllInstances()
 })
 
+// kilocode_change start
+function sandboxProfile(): Profile {
+  return {
+    filesystem: { allowWrite: [], denyWrite: [], denyNames: [] },
+    network: { mode: "deny", allowedHosts: [] },
+    environment: { deny: [], set: {} },
+  }
+}
+// kilocode_change end
+
 describe("tool.registry", () => {
+  // kilocode_change start
+  sandboxed.instance("preserves built-in network classification through production tool definition processing", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agent = yield* Agent.Service
+      const build = yield* agent.get("build")
+      if (!build) return yield* Effect.die(new Error("build agent not found"))
+      const tools = yield* registry.tools({
+        providerID: ProviderID.opencode,
+        modelID: ModelID.make("test"),
+        agent: build,
+      })
+      const all = yield* registry.all()
+      const read = tools.find((tool) => tool.id === "read")
+      const search = all.find((tool) => tool.id === "lsp")
+      if (!read || !search) return yield* Effect.die(new Error("expected built-in tools are missing"))
+
+      const allowed = yield* runSandbox(sandboxProfile(), SandboxNetwork.tool(read, Effect.succeed("allowed"))).pipe(
+        Effect.exit,
+      )
+      const denied = yield* runSandbox(
+        sandboxProfile(),
+        SandboxNetwork.tool(search, Effect.succeed("unexpected")),
+      ).pipe(Effect.exit)
+
+      expect(Exit.isSuccess(allowed)).toBe(true)
+      expect(Exit.isFailure(denied)).toBe(true)
+    }),
+  )
+  // kilocode_change end
+
   it.instance("hides repo research tools unless experimental", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
@@ -135,7 +180,7 @@ describe("tool.registry", () => {
     }),
   )
 
-  it.instance("hides task_status unless experimental background subagents are enabled", () =>
+  it.instance("does not expose task_status", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
       const ids = yield* registry.ids()
@@ -161,19 +206,10 @@ describe("tool.registry", () => {
     }),
   )
 
-  background.instance("shows task_status when experimental background subagents are enabled", () =>
-    Effect.gen(function* () {
-      const registry = yield* ToolRegistry.Service
-      const ids = yield* registry.ids()
-
-      expect(ids).toContain("task_status")
-    }),
-  )
-
-  it.instance("loads tools from .opencode/tool (singular)", () =>
+  it.instance("loads tools from .kilo/tool (singular)" /* kilocode_change */, () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const opencode = path.join(test.directory, ".opencode")
+      const opencode = path.join(test.directory, ".kilo") // kilocode_change
       const tool = path.join(opencode, "tool")
       yield* Effect.promise(() => fs.mkdir(tool, { recursive: true }))
       yield* Effect.promise(() =>
@@ -197,10 +233,10 @@ describe("tool.registry", () => {
     }),
   )
 
-  it.instance("ignores non-tool exports in .opencode/tool files", () =>
+  it.instance("ignores non-tool exports in .kilo/tool files" /* kilocode_change */, () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const tool = path.join(test.directory, ".opencode", "tool")
+      const tool = path.join(test.directory, ".kilo", "tool") // kilocode_change
       yield* Effect.promise(() => fs.mkdir(tool, { recursive: true }))
       yield* Effect.promise(() =>
         Bun.write(
@@ -233,7 +269,7 @@ describe("tool.registry", () => {
   it.instance("tolerates a custom tool exporting null/undefined args (no-args fallback)", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const tool = path.join(test.directory, ".opencode", "tool")
+      const tool = path.join(test.directory, ".kilo", "tool") // kilocode_change
       yield* Effect.promise(() => fs.mkdir(tool, { recursive: true }))
       yield* Effect.promise(() =>
         Bun.write(
@@ -275,10 +311,10 @@ describe("tool.registry", () => {
     }),
   )
 
-  it.instance("loads tools from .opencode/tools (plural)", () =>
+  it.instance("loads tools from .kilo/tools (plural)" /* kilocode_change */, () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const opencode = path.join(test.directory, ".opencode")
+      const opencode = path.join(test.directory, ".kilo") // kilocode_change
       const tools = path.join(opencode, "tools")
       yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
       yield* Effect.promise(() =>
@@ -305,7 +341,7 @@ describe("tool.registry", () => {
   it.instance("loads Zod-schema custom tools with JSON Schema and validation", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const customTools = path.join(test.directory, ".opencode", "tools")
+      const customTools = path.join(test.directory, ".kilo", "tools") // kilocode_change
       const pluginTool = pathToFileURL(path.resolve(import.meta.dir, "../../../plugin/src/tool.ts")).href
       yield* Effect.promise(() => fs.mkdir(customTools, { recursive: true }))
       yield* Effect.promise(() =>
@@ -358,7 +394,7 @@ describe("tool.registry", () => {
     () =>
       Effect.gen(function* () {
         const test = yield* TestInstance
-        const opencode = path.join(test.directory, ".opencode")
+        const opencode = path.join(test.directory, ".kilo") // kilocode_change
         const customTools = path.join(opencode, "tools")
         const plugin = path.join(opencode, "node_modules", "@kilocode", "plugin") // kilocode_change
         yield* Effect.promise(() => fs.mkdir(path.join(plugin, "dist"), { recursive: true }))
@@ -423,7 +459,7 @@ describe("tool.registry", () => {
   it.instance("preserves attachments from structured custom tool results", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const customTools = path.join(test.directory, ".opencode", "tools")
+      const customTools = path.join(test.directory, ".kilo", "tools") // kilocode_change
       const pluginTool = pathToFileURL(path.resolve(import.meta.dir, "../../../plugin/src/tool.ts")).href
       yield* Effect.promise(() => fs.mkdir(customTools, { recursive: true }))
       yield* Effect.promise(() =>
@@ -468,7 +504,7 @@ describe("tool.registry", () => {
   it.instance("loads legacy JSON-schema-shaped custom tools with wire schema", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const tools = path.join(test.directory, ".opencode", "tools")
+      const tools = path.join(test.directory, ".kilo", "tools") // kilocode_change
       yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
       yield* Effect.promise(() =>
         Bun.write(
@@ -500,7 +536,7 @@ describe("tool.registry", () => {
   it.instance("loads tools with external dependencies without crashing", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const opencode = path.join(test.directory, ".opencode")
+      const opencode = path.join(test.directory, ".kilo") // kilocode_change
       const tools = path.join(opencode, "tools")
       yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
       yield* Effect.promise(() =>

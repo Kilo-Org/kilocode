@@ -114,11 +114,20 @@ class MessageView(
     fun upsertPart(content: Content) {
         if (content is StepFinish) return
         if (isHidden(content)) {
+            if (isPromptMention(content)) syncPromptMentions()
             // Remove any stale view for this content so it disappears when suppressed
             val id = aliases.remove(content.id)
             sources.remove(content.id)
             val stale = if (id == null) parts.remove(content.id) else null
             if (stale != null) {
+                if (stale is PromptAttachmentView) {
+                    stale.remove(content.id)
+                    if (!stale.isEmpty()) {
+                        refresh()
+                        return
+                    }
+                    attachments = null
+                }
                 detach(stale)
                 remove(stale)
                 Disposer.dispose(stale)
@@ -262,6 +271,7 @@ class MessageView(
      * pending/running question tool part linked to the active question.
      */
     private fun isHidden(content: Content): Boolean {
+        if (isPromptMention(content)) return true
         if (content !is Tool) return false
         if (role == SessionUiStyle.View.Message.USER_ROLE && content.name == "read") return true
         if (content.name == "todoread") return true
@@ -307,9 +317,22 @@ class MessageView(
     }
 
     private fun view(content: Content) = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-        ViewFactory.createUser(content, openFile, openUrl, selection, repo) { openAttachment(msg.info.id, it) }
+        ViewFactory.createUser(content, openFile, openUrl, selection, repo, promptMentions(msg)) { openAttachment(msg.info.id, it) }
     } else {
         ViewFactory.create(content, openFile, openUrl, selection, repo) { openAttachment(msg.info.id, it) }
+    }
+
+    private fun syncPromptMentions() {
+        val mentions = promptMentions(msg)
+        for (view in parts.values) {
+            if (view is PromptView) view.setMentions(mentions)
+        }
+    }
+
+    private fun isPromptMention(content: Content): Boolean {
+        if (role != SessionUiStyle.View.Message.USER_ROLE) return false
+        if (content !is FileAttachment) return false
+        return content.source != null && content.mime.lowercase().startsWith("text/plain")
     }
 
     /** Append a streaming delta to the renderer for [contentId]. */

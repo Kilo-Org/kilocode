@@ -34,6 +34,11 @@ const InputObject = Schema.StructWithRest(
     doom_loop: Schema.optional(Action),
     skill: Schema.optional(Rule),
     agent_manager: Schema.optional(Rule), // kilocode_change
+    // kilocode_change start
+    notebook_read: Schema.optional(Rule),
+    notebook_edit: Schema.optional(Rule),
+    notebook_execute: Schema.optional(Rule),
+    // kilocode_change end
   }),
   [Schema.Record(Schema.String, Rule)],
 )

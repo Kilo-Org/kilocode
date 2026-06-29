@@ -152,6 +152,12 @@ export const layer = Layer.effect(
               partID: part.id,
             })
           }
+          // kilocode_change start - clear a reverted provider error from the retained assistant message
+          if (target.info.role === "assistant" && target.info.error) {
+            delete target.info.error
+            yield* sessions.updateMessage(target.info)
+          }
+          // kilocode_change end
         }
       }
       yield* sessions.clearRevert(sessionID)

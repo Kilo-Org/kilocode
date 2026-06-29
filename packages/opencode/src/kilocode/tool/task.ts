@@ -42,12 +42,18 @@ export namespace KiloTask {
   }
 
   /**
-   * Build inherited permission rules from the calling agent.
+   * Build inherited permission ceilings from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions
-   * so restrictions survive multi-hop chains (plan → general → explore).
+   * so denials survive multi-hop chains (plan → general → explore) without
+   * overriding the selected subagent's own allowlist with parent ask/allow rules.
+   *
+   * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
+   * Kilo intentionally differs: parent denials remain hard ceilings for Plan Mode
+   * and MCP restrictions, while parent ask/allow rules must not replace the
+   * selected subagent's policy. Preserve this distinction during upstream merges.
    *
    * The caller must resolve `caller` (Agent.Info) and `session` (Session.Info)
-   * before calling — this function is pure/synchronous.
+   * before calling. This function is pure/synchronous.
    */
   export function inherited(input: {
     caller: Agent.Info
@@ -58,7 +64,8 @@ export namespace KiloTask {
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     return rules.filter(
-      (r: Permission.Rule) => r.permission === "edit" || r.permission === "bash" || isMcp(r.permission),
+      (r: Permission.Rule) =>
+        r.action === "deny" && (r.permission === "edit" || r.permission === "bash" || isMcp(r.permission)),
     )
   }
 

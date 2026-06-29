@@ -36,10 +36,16 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
   mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
+  hasUserByokAvailable: Schema.optional(Schema.Boolean),
   terminalBench: optionalOmitUndefined(
     Schema.Struct({
       overallScore: Schema.Finite,
       avgAttemptCostUsd: Schema.Finite,
+    }),
+  ),
+  autoRouting: optionalOmitUndefined(
+    Schema.Struct({
+      models: Schema.Array(Schema.String),
     }),
   ),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
@@ -56,7 +62,9 @@ export function patchModelsDevModel(providerID: string, source: any) {
     prompt: source.prompt,
     isFree: source.isFree,
     mayTrainOnYourPrompts: source.mayTrainOnYourPrompts,
+    hasUserByokAvailable: source.hasUserByokAvailable,
     terminalBench: source.terminalBench,
+    autoRouting: source.autoRouting,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
   }
@@ -72,7 +80,9 @@ export function patchConfigModel(cfg: any, existing: any) {
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,
     mayTrainOnYourPrompts: cfg.mayTrainOnYourPrompts ?? existing?.mayTrainOnYourPrompts,
+    hasUserByokAvailable: cfg.hasUserByokAvailable ?? existing?.hasUserByokAvailable,
     terminalBench: existing?.terminalBench,
+    autoRouting: existing?.autoRouting,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants
       ? mapValues(

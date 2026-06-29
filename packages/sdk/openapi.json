@@ -64,7 +64,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.auth.set({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.auth.set({\n  ...\n})"
           }
         ]
       },
@@ -116,7 +116,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.auth.remove({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.auth.remove({\n  ...\n})"
           }
         ]
       }
@@ -207,7 +207,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.app.log({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.app.log({\n  ...\n})"
           }
         ]
       }
@@ -256,7 +256,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.global.health({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.health({\n  ...\n})"
           }
         ]
       }
@@ -293,7 +293,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.global.event({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.event({\n  ...\n})"
           }
         ]
       }
@@ -330,7 +330,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.global.config.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.config.get({\n  ...\n})"
           }
         ]
       },
@@ -381,7 +381,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.global.config.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.config.update({\n  ...\n})"
           }
         ]
       }
@@ -419,7 +419,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.global.dispose({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.dispose({\n  ...\n})"
           }
         ]
       }
@@ -508,7 +508,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.global.upgrade({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.global.upgrade({\n  ...\n})"
           }
         ]
       }
@@ -552,7 +552,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.event.subscribe({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.event.subscribe({\n  ...\n})"
           }
         ]
       }
@@ -606,7 +606,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.get({\n  ...\n})"
           }
         ]
       },
@@ -674,7 +674,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.update({\n  ...\n})"
           }
         ]
       }
@@ -745,7 +745,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.warnings({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.warnings({\n  ...\n})"
           }
         ]
       }
@@ -816,7 +816,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.providers({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.providers({\n  ...\n})"
           }
         ]
       }
@@ -880,7 +880,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.console.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.console.get({\n  ...\n})"
           }
         ]
       }
@@ -977,7 +977,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.console.listOrgs({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.console.listOrgs({\n  ...\n})"
           }
         ]
       }
@@ -1041,7 +1041,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.console.switchOrg({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.console.switchOrg({\n  ...\n})"
           }
         ]
       }
@@ -1118,7 +1118,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tool.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tool.list({\n  ...\n})"
           }
         ]
       }
@@ -1179,7 +1179,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tool.ids({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tool.ids({\n  ...\n})"
           }
         ]
       }
@@ -1244,7 +1244,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.list({\n  ...\n})"
           }
         ]
       },
@@ -1312,7 +1312,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.create({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.create({\n  ...\n})"
           }
         ]
       },
@@ -1381,7 +1381,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.remove({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.remove({\n  ...\n})"
           }
         ]
       }
@@ -1452,7 +1452,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.reset({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.reset({\n  ...\n})"
           }
         ]
       }
@@ -1525,7 +1525,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diff({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.diff({\n  ...\n})"
           }
         ]
       }
@@ -1598,7 +1598,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diffSummary({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.diffSummary({\n  ...\n})"
           }
         ]
       }
@@ -1675,7 +1675,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.worktree.diffFile({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.worktree.diffFile({\n  ...\n})"
           }
         ]
       }
@@ -1822,7 +1822,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.session.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.session.list({\n  ...\n})"
           }
         ]
       }
@@ -1880,7 +1880,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.resource.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.resource.list({\n  ...\n})"
           }
         ]
       }
@@ -2006,7 +2006,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.find.text({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.find.text({\n  ...\n})"
           }
         ]
       }
@@ -2100,7 +2100,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.find.files({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.find.files({\n  ...\n})"
           }
         ]
       }
@@ -2166,7 +2166,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.find.symbols({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.find.symbols({\n  ...\n})"
           }
         ]
       }
@@ -2232,7 +2232,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.file.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.file.list({\n  ...\n})"
           }
         ]
       }
@@ -2294,7 +2294,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.file.read({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.file.read({\n  ...\n})"
           }
         ]
       }
@@ -2352,7 +2352,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.file.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.file.status({\n  ...\n})"
           }
         ]
       }
@@ -2407,7 +2407,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.instance.dispose({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.instance.dispose({\n  ...\n})"
           }
         ]
       }
@@ -2461,7 +2461,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.path.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.path.get({\n  ...\n})"
           }
         ]
       }
@@ -2515,7 +2515,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.vcs.get({\n  ...\n})"
           }
         ]
       }
@@ -2573,7 +2573,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.vcs.status({\n  ...\n})"
           }
         ]
       }
@@ -2649,7 +2649,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.diff({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.vcs.diff({\n  ...\n})"
           }
         ]
       }
@@ -2703,7 +2703,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.diff.raw({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.vcs.diff.raw({\n  ...\n})"
           }
         ]
       }
@@ -2788,7 +2788,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.apply({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.vcs.apply({\n  ...\n})"
           }
         ]
       }
@@ -2846,7 +2846,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.command.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.command.list({\n  ...\n})"
           }
         ]
       }
@@ -2904,7 +2904,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.app.agents({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.app.agents({\n  ...\n})"
           }
         ]
       }
@@ -2978,7 +2978,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.app.skills({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.app.skills({\n  ...\n})"
           }
         ]
       }
@@ -3036,7 +3036,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.lsp.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.lsp.status({\n  ...\n})"
           }
         ]
       }
@@ -3094,7 +3094,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.formatter.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.formatter.status({\n  ...\n})"
           }
         ]
       }
@@ -3152,7 +3152,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.status({\n  ...\n})"
           }
         ]
       },
@@ -3241,7 +3241,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.add({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.add({\n  ...\n})"
           }
         ]
       }
@@ -3331,7 +3331,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.auth.start({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.start({\n  ...\n})"
           }
         ]
       },
@@ -3410,7 +3410,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.auth.remove({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.remove({\n  ...\n})"
           }
         ]
       }
@@ -3505,7 +3505,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.auth.callback({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.callback({\n  ...\n})"
           }
         ]
       }
@@ -3584,7 +3584,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.auth.authenticate({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.auth.authenticate({\n  ...\n})"
           }
         ]
       }
@@ -3656,7 +3656,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.connect({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.connect({\n  ...\n})"
           }
         ]
       }
@@ -3728,7 +3728,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.mcp.disconnect({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.mcp.disconnect({\n  ...\n})"
           }
         ]
       }
@@ -3786,7 +3786,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.project.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.project.list({\n  ...\n})"
           }
         ]
       }
@@ -3840,7 +3840,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.project.current({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.project.current({\n  ...\n})"
           }
         ]
       }
@@ -3894,7 +3894,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.project.initGit({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.project.initGit({\n  ...\n})"
           }
         ]
       }
@@ -4013,7 +4013,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.project.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.project.update({\n  ...\n})"
           }
         ]
       }
@@ -4084,7 +4084,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.shells({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.shells({\n  ...\n})"
           }
         ]
       }
@@ -4142,7 +4142,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.list({\n  ...\n})"
           }
         ]
       },
@@ -4234,7 +4234,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.create({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.create({\n  ...\n})"
           }
         ]
       }
@@ -4307,7 +4307,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.get({\n  ...\n})"
           }
         ]
       },
@@ -4426,7 +4426,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.update({\n  ...\n})"
           }
         ]
       },
@@ -4498,7 +4498,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.remove({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.remove({\n  ...\n})"
           }
         ]
       }
@@ -4593,7 +4593,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.connectToken({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.connectToken({\n  ...\n})"
           }
         ]
       }
@@ -4651,7 +4651,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.question.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.question.list({\n  ...\n})"
           }
         ]
       }
@@ -4752,7 +4752,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.question.reply({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.question.reply({\n  ...\n})"
           }
         ]
       }
@@ -4833,7 +4833,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.question.reject({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.question.reject({\n  ...\n})"
           }
         ]
       }
@@ -4891,7 +4891,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.permission.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.permission.list({\n  ...\n})"
           }
         ]
       }
@@ -4992,7 +4992,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.permission.reply({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.permission.reply({\n  ...\n})"
           }
         ]
       }
@@ -5090,7 +5090,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.permission.saveAlwaysRules({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.permission.saveAlwaysRules({\n  ...\n})"
           }
         ]
       }
@@ -5184,7 +5184,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.permission.allowEverything({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.permission.allowEverything({\n  ...\n})"
           }
         ]
       }
@@ -5267,7 +5267,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.provider.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.provider.list({\n  ...\n})"
           }
         ]
       }
@@ -5328,7 +5328,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.provider.auth({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.provider.auth({\n  ...\n})"
           }
         ]
       }
@@ -5420,7 +5420,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.provider.oauth.authorize({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.provider.oauth.authorize({\n  ...\n})"
           }
         ]
       }
@@ -5510,7 +5510,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.provider.oauth.callback({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.provider.oauth.callback({\n  ...\n})"
           }
         ]
       }
@@ -5625,7 +5625,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.list({\n  ...\n})"
           }
         ]
       },
@@ -5713,6 +5713,9 @@
                     "required": ["id", "providerID"],
                     "additionalProperties": false
                   },
+                  "metadata": {
+                    "type": "object"
+                  },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
                   },
@@ -5732,7 +5735,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.create({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.create({\n  ...\n})"
           }
         ]
       }
@@ -5797,7 +5800,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.status({\n  ...\n})"
           }
         ]
       }
@@ -5877,7 +5880,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.get({\n  ...\n})"
           }
         ]
       },
@@ -5956,7 +5959,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.delete({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.delete({\n  ...\n})"
           }
         ]
       },
@@ -6040,6 +6043,9 @@
                   "title": {
                     "type": "string"
                   },
+                  "metadata": {
+                    "type": "object"
+                  },
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
                   },
@@ -6061,7 +6067,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.update({\n  ...\n})"
           }
         ]
       }
@@ -6145,7 +6151,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.children({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.children({\n  ...\n})"
           }
         ]
       }
@@ -6229,7 +6235,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.todo({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.todo({\n  ...\n})"
           }
         ]
       }
@@ -6305,7 +6311,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.diff({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.diff({\n  ...\n})"
           }
         ]
       }
@@ -6420,7 +6426,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.messages({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.messages({\n  ...\n})"
           }
         ]
       },
@@ -6608,7 +6614,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.prompt({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.prompt({\n  ...\n})"
           }
         ]
       }
@@ -6711,7 +6717,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.message({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.message({\n  ...\n})"
           }
         ]
       },
@@ -6809,7 +6815,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.deleteMessage({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.deleteMessage({\n  ...\n})"
           }
         ]
       }
@@ -6905,7 +6911,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.fork({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.fork({\n  ...\n})"
           }
         ]
       }
@@ -6976,7 +6982,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.abort({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.abort({\n  ...\n})"
           }
         ]
       }
@@ -7080,7 +7086,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.init({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.init({\n  ...\n})"
           }
         ]
       }
@@ -7163,7 +7169,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.share({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.share({\n  ...\n})"
           }
         ]
       },
@@ -7244,7 +7250,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.unshare({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.unshare({\n  ...\n})"
           }
         ]
       }
@@ -7347,7 +7353,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.summarize({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.summarize({\n  ...\n})"
           }
         ]
       }
@@ -7518,7 +7524,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.prompt_async({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.prompt_async({\n  ...\n})"
           }
         ]
       }
@@ -7676,7 +7682,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.command({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.command({\n  ...\n})"
           }
         ]
       }
@@ -7816,7 +7822,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.shell({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.shell({\n  ...\n})"
           }
         ]
       }
@@ -7927,7 +7933,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.revert({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.revert({\n  ...\n})"
           }
         ]
       }
@@ -8017,7 +8023,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.unrevert({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.unrevert({\n  ...\n})"
           }
         ]
       }
@@ -8132,7 +8138,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.permission.respond({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.permission.respond({\n  ...\n})"
           }
         ]
       }
@@ -8230,7 +8236,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.part.delete({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.part.delete({\n  ...\n})"
           }
         ]
       },
@@ -8334,7 +8340,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.part.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.part.update({\n  ...\n})"
           }
         ]
       }
@@ -8413,7 +8419,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.session.viewed({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.session.viewed({\n  ...\n})"
           }
         ]
       }
@@ -8468,7 +8474,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.start({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sync.start({\n  ...\n})"
           }
         ]
       }
@@ -8580,7 +8586,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.replay({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sync.replay({\n  ...\n})"
           }
         ]
       }
@@ -8667,7 +8673,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.steal({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sync.steal({\n  ...\n})"
           }
         ]
       }
@@ -8765,7 +8771,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.history.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sync.history.list({\n  ...\n})"
           }
         ]
       }
@@ -8906,7 +8912,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.session.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.session.list({\n  ...\n})"
           }
         ]
       }
@@ -9019,7 +9025,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.session.prompt({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.session.prompt({\n  ...\n})"
           }
         ]
       }
@@ -9106,7 +9112,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.session.compact({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.session.compact({\n  ...\n})"
           }
         ]
       }
@@ -9193,7 +9199,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.session.wait({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.session.wait({\n  ...\n})"
           }
         ]
       }
@@ -9290,7 +9296,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.session.context({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.session.context({\n  ...\n})"
           }
         ]
       }
@@ -9417,7 +9423,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.session.messages({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.session.messages({\n  ...\n})"
           }
         ]
       }
@@ -9498,7 +9504,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.model.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.model.list({\n  ...\n})"
           }
         ]
       }
@@ -9579,7 +9585,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.provider.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.provider.list({\n  ...\n})"
           }
         ]
       }
@@ -9675,7 +9681,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.v2.provider.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.v2.provider.get({\n  ...\n})"
           }
         ]
       }
@@ -9753,7 +9759,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.appendPrompt({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.appendPrompt({\n  ...\n})"
           }
         ]
       }
@@ -9808,7 +9814,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.openHelp({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.openHelp({\n  ...\n})"
           }
         ]
       }
@@ -9863,7 +9869,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.openSessions({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.openSessions({\n  ...\n})"
           }
         ]
       }
@@ -9918,7 +9924,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.openThemes({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.openThemes({\n  ...\n})"
           }
         ]
       }
@@ -9973,7 +9979,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.openModels({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.openModels({\n  ...\n})"
           }
         ]
       }
@@ -10028,7 +10034,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.submitPrompt({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.submitPrompt({\n  ...\n})"
           }
         ]
       }
@@ -10083,7 +10089,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.clearPrompt({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.clearPrompt({\n  ...\n})"
           }
         ]
       }
@@ -10161,7 +10167,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.executeCommand({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.executeCommand({\n  ...\n})"
           }
         ]
       }
@@ -10243,7 +10249,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.showToast({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.showToast({\n  ...\n})"
           }
         ]
       }
@@ -10327,7 +10333,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.publish({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.publish({\n  ...\n})"
           }
         ]
       }
@@ -10417,7 +10423,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.selectSession({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.selectSession({\n  ...\n})"
           }
         ]
       }
@@ -10480,7 +10486,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.control.next({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.control.next({\n  ...\n})"
           }
         ]
       }
@@ -10542,7 +10548,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.control.response({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.control.response({\n  ...\n})"
           }
         ]
       }
@@ -10613,7 +10619,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.adapter.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.workspace.adapter.list({\n  ...\n})"
           }
         ]
       }
@@ -10671,7 +10677,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.workspace.list({\n  ...\n})"
           }
         ]
       },
@@ -10708,11 +10714,14 @@
             }
           },
           "400": {
-            "description": "BadRequest | InvalidRequestError",
+            "description": "WorkspaceCreateError | BadRequest | InvalidRequestError",
             "content": {
               "application/json": {
                 "schema": {
                   "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkspaceCreateError"
+                    },
                     {
                       "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
                     },
@@ -10768,7 +10777,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.create({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.workspace.create({\n  ...\n})"
           }
         ]
       }
@@ -10815,7 +10824,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.syncList({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.workspace.syncList({\n  ...\n})"
           }
         ]
       }
@@ -10885,7 +10894,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.workspace.status({\n  ...\n})"
           }
         ]
       }
@@ -10955,7 +10964,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.remove({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.workspace.remove({\n  ...\n})"
           }
         ]
       }
@@ -11053,7 +11062,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.warp({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.experimental.workspace.warp({\n  ...\n})"
           }
         ]
       }
@@ -11207,7 +11216,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.agentBuilder.preview({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentBuilder.preview({\n  ...\n})"
           }
         ]
       }
@@ -11372,7 +11381,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.agentBuilder.save({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.agentBuilder.save({\n  ...\n})"
           }
         ]
       }
@@ -11430,7 +11439,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.backgroundProcess.list({\n  ...\n})"
           }
         ]
       }
@@ -11503,7 +11512,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.backgroundProcess.get({\n  ...\n})"
           }
         ]
       }
@@ -11576,7 +11585,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.logs({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.backgroundProcess.logs({\n  ...\n})"
           }
         ]
       }
@@ -11649,7 +11658,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.stop({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.backgroundProcess.stop({\n  ...\n})"
           }
         ]
       }
@@ -11722,7 +11731,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.restart({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.backgroundProcess.restart({\n  ...\n})"
           }
         ]
       }
@@ -11786,7 +11795,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.backgroundProcess.stopSession({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.backgroundProcess.stopSession({\n  ...\n})"
           }
         ]
       }
@@ -11881,7 +11890,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.commitMessage.generate({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.commitMessage.generate({\n  ...\n})"
           }
         ]
       }
@@ -11945,7 +11954,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.overlay({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.overlay({\n  ...\n})"
           }
         ]
       },
@@ -12026,7 +12035,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.overlayUpdate({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.overlayUpdate({\n  ...\n})"
           }
         ]
       }
@@ -12080,7 +12089,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.sources({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.sources({\n  ...\n})"
           }
         ]
       }
@@ -12134,7 +12143,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.effective({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.effective({\n  ...\n})"
           }
         ]
       }
@@ -12198,7 +12207,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.rules({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.rules({\n  ...\n})"
           }
         ]
       },
@@ -12271,7 +12280,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.rulesUpdate({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.rulesUpdate({\n  ...\n})"
           }
         ]
       }
@@ -12325,7 +12334,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.modelState({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.modelState({\n  ...\n})"
           }
         ]
       },
@@ -12405,7 +12414,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.config.modelStateUpdate({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.config.modelStateUpdate({\n  ...\n})"
           }
         ]
       }
@@ -12459,7 +12468,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.config.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.config.get({\n  ...\n})"
           }
         ]
       },
@@ -12664,7 +12673,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.config.update({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.config.update({\n  ...\n})"
           }
         ]
       }
@@ -12718,7 +12727,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.tui.keybind.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.tui.keybind.list({\n  ...\n})"
           }
         ]
       }
@@ -12805,7 +12814,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.enhancePrompt.enhance({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.enhancePrompt.enhance({\n  ...\n})"
           }
         ]
       }
@@ -12859,7 +12868,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.indexing.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.indexing.status({\n  ...\n})"
           }
         ]
       }
@@ -12917,7 +12926,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.indexing.warnings({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.indexing.warnings({\n  ...\n})"
           }
         ]
       }
@@ -12971,7 +12980,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.indexing.models({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.indexing.models({\n  ...\n})"
           }
         ]
       }
@@ -13055,6 +13064,43 @@
                         }
                       ]
                     },
+                    "kiloPass": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "currentPeriodBaseCreditsUsd": {
+                              "type": "number"
+                            },
+                            "currentPeriodUsageUsd": {
+                              "type": "number"
+                            },
+                            "currentPeriodBonusCreditsUsd": {
+                              "type": "number"
+                            },
+                            "nextBillingAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "currentPeriodBaseCreditsUsd",
+                            "currentPeriodUsageUsd",
+                            "currentPeriodBonusCreditsUsd"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "currentOrgId": {
                       "anyOf": [
                         {
@@ -13066,7 +13112,7 @@
                       ]
                     }
                   },
-                  "required": ["profile", "balance", "currentOrgId"],
+                  "required": ["profile", "balance", "kiloPass", "currentOrgId"],
                   "additionalProperties": false,
                   "description": "Profile data"
                 }
@@ -13096,7 +13142,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.profile({\n  ...\n})"
           }
         ]
       }
@@ -13169,7 +13215,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.authStatus({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.authStatus({\n  ...\n})"
           }
         ]
       }
@@ -13332,7 +13378,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.modes({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.modes({\n  ...\n})"
           }
         ]
       }
@@ -13459,7 +13505,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.fim({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.fim({\n  ...\n})"
           }
         ]
       }
@@ -13611,7 +13657,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.edit({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.edit({\n  ...\n})"
           }
         ]
       }
@@ -13719,7 +13765,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.audio.transcriptions({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.audio.transcriptions({\n  ...\n})"
           }
         ]
       }
@@ -13819,7 +13865,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.notifications({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.notifications({\n  ...\n})"
           }
         ]
       }
@@ -13904,7 +13950,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.organization.set({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.organization.set({\n  ...\n})"
           }
         ]
       }
@@ -14061,7 +14107,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.claw.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.claw.status({\n  ...\n})"
           }
         ]
       }
@@ -14138,7 +14184,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.claw.chatCredentials({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.claw.chatCredentials({\n  ...\n})"
           }
         ]
       }
@@ -14270,7 +14316,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloudSessions({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloudSessions({\n  ...\n})"
           }
         ]
       }
@@ -14431,7 +14477,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.get({\n  ...\n})"
           }
         ]
       }
@@ -14541,7 +14587,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.import({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.cloud.session.import({\n  ...\n})"
           }
         ]
       }
@@ -14603,7 +14649,69 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.heap.snapshot({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.heap.snapshot({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/agent/requirements": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.agentRequirements",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "agent",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent requirement status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRequirementResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Check whether the selected agent's requirements are available in the request directory.",
+        "summary": "Check agent requirements",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.agentRequirements({\n  ...\n})"
           }
         ]
       }
@@ -14681,7 +14789,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.removeSkill({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeSkill({\n  ...\n})"
           }
         ]
       }
@@ -14759,7 +14867,697 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.removeAgent({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.removeAgent({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/notebook": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.notebook.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending notebook host requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotebookRequest"
+                  },
+                  "description": "Pending notebook host requests"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List pending native notebook requests for the routed workspace.",
+        "summary": "List pending notebook requests",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/notebook/{requestID}/reply": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.notebook.reply",
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/NotebookRequestID"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notebook reply accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Notebook reply accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Complete a pending native notebook request with a structured result.",
+        "summary": "Reply to a notebook request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "result": {
+                    "$ref": "#/components/schemas/NotebookResult"
+                  }
+                },
+                "required": ["result"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.reply({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/notebook/{requestID}/reject": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.notebook.reject",
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/NotebookRequestID"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notebook rejection accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Notebook rejection accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Complete a pending native notebook request with a structured host error.",
+        "summary": "Reject a notebook request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "$ref": "#/components/schemas/NotebookFailure"
+                  }
+                },
+                "required": ["error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.reject({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/session/{sessionID}/model-usage": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.sessionModelUsage",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model usage for a session tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "steps": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "cost": {
+                          "type": "number"
+                        },
+                        "tokens": {
+                          "type": "object",
+                          "properties": {
+                            "input": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "output": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "reasoning": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "cache": {
+                              "type": "object",
+                              "properties": {
+                                "read": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "write": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": ["read", "write"],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": ["input", "output", "reasoning", "cache"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["steps", "cost", "tokens"],
+                      "additionalProperties": false
+                    },
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "providerID": {
+                            "type": "string"
+                          },
+                          "modelID": {
+                            "type": "string"
+                          },
+                          "steps": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cost": {
+                            "type": "number"
+                          },
+                          "tokens": {
+                            "type": "object",
+                            "properties": {
+                              "input": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "output": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "reasoning": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "cache": {
+                                "type": "object",
+                                "properties": {
+                                  "read": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "write": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": ["read", "write"],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": ["input", "output", "reasoning", "cache"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["providerID", "modelID", "steps", "cost", "tokens"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["totals", "models"],
+                  "additionalProperties": false,
+                  "description": "Model usage for a session tree"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get token usage and direct cost by model for the complete top-level session tree.",
+        "summary": "Get session model usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionModelUsage({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/anaconda-desktop/status": {
+      "get": {
+        "tags": ["anaconda-desktop"],
+        "operationId": "anacondaDesktop.status",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Anaconda Desktop setup status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnacondaDesktopStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Discover the locally installed Anaconda Desktop and its active inference server.",
+        "summary": "Get Anaconda Desktop setup status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.anacondaDesktop.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/anaconda-desktop/open": {
+      "post": {
+        "tags": ["anaconda-desktop"],
+        "operationId": "anacondaDesktop.open",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Anaconda Desktop opened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "enum": [true],
+                  "description": "Anaconda Desktop opened"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "AnacondaDesktopConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnacondaDesktopConflictError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "AnacondaDesktopOperationError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnacondaDesktopOperationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Open the locally installed Anaconda Desktop application.",
+        "summary": "Open Anaconda Desktop",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.anacondaDesktop.open({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/anaconda-desktop/sync": {
+      "post": {
+        "tags": ["anaconda-desktop"],
+        "operationId": "anacondaDesktop.sync",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Anaconda Desktop connection synchronized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["ready"]
+                    },
+                    "serverID": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "serverName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "models": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": ["id", "name"],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    },
+                    "context": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "toolcall": {
+                      "type": "string",
+                      "enum": ["supported", "unsupported", "unknown"]
+                    }
+                  },
+                  "required": ["type", "serverID", "models", "context", "toolcall"],
+                  "additionalProperties": false,
+                  "description": "Anaconda Desktop connection synchronized"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "AnacondaDesktopConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnacondaDesktopConflictError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "AnacondaDesktopOperationError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnacondaDesktopOperationError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Discover the active local inference server and replace Kilo provider authentication metadata.",
+        "summary": "Synchronize Anaconda Desktop provider",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "acknowledgeToolLimitations": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.anacondaDesktop.sync({\n  ...\n})"
           }
         ]
       }
@@ -14817,7 +15615,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.network.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.network.list({\n  ...\n})"
           }
         ]
       }
@@ -14898,7 +15696,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.network.reply({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.network.reply({\n  ...\n})"
           }
         ]
       }
@@ -14979,7 +15777,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.network.reject({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.network.reject({\n  ...\n})"
           }
         ]
       }
@@ -15044,7 +15842,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.remote.enable({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.remote.enable({\n  ...\n})"
           }
         ]
       }
@@ -15109,7 +15907,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.remote.disable({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.remote.disable({\n  ...\n})"
           }
         ]
       }
@@ -15174,7 +15972,258 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.remote.status({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.remote.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/sandbox/support": {
+      "get": {
+        "tags": ["sandbox"],
+        "operationId": "sandbox.support",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sandbox backend support",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["available"],
+                  "additionalProperties": false,
+                  "description": "Sandbox backend support"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get sandbox backend availability without creating a session.",
+        "summary": "Get sandbox backend support",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sandbox.support({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/session/{sessionID}/sandbox": {
+      "get": {
+        "tags": ["sandbox"],
+        "operationId": "sandbox.status",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session sandbox status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "directory": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["directory", "enabled", "available", "version"],
+                  "additionalProperties": false,
+                  "description": "Session sandbox status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get the effective sandbox state for one session.",
+        "summary": "Get session sandbox status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sandbox.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/session/{sessionID}/sandbox/toggle": {
+      "post": {
+        "tags": ["sandbox"],
+        "operationId": "sandbox.toggle",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated session sandbox status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "directory": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "available": {
+                      "type": "boolean"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["directory", "enabled", "available", "version"],
+                  "additionalProperties": false,
+                  "description": "Updated session sandbox status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Toggle and persist the sandbox state for one session.",
+        "summary": "Toggle session sandbox",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.sandbox.toggle({\n  ...\n})"
           }
         ]
       }
@@ -15290,7 +16339,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.project({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.project({\n  ...\n})"
           }
         ]
       }
@@ -15450,7 +16499,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.session({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.session({\n  ...\n})"
           }
         ]
       }
@@ -15688,7 +16737,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.message({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.message({\n  ...\n})"
           }
         ]
       }
@@ -15987,7 +17036,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.part({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.sessionImport.part({\n  ...\n})"
           }
         ]
       }
@@ -16045,7 +17094,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.suggestion.list({\n  ...\n})"
           }
         ]
       }
@@ -16143,7 +17192,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.accept({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.suggestion.accept({\n  ...\n})"
           }
         ]
       }
@@ -16223,7 +17272,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.dismiss({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.suggestion.dismiss({\n  ...\n})"
           }
         ]
       }
@@ -16305,7 +17354,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
           }
         ]
       }
@@ -16383,7 +17432,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.telemetry.setEnabled({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.telemetry.setEnabled({\n  ...\n})"
           }
         ]
       }
@@ -16403,20 +17452,32 @@
             "required": true
           },
           {
-            "name": "directory",
             "in": "query",
+            "name": "directory",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
           },
           {
-            "name": "workspace",
             "in": "query",
+            "name": "workspace",
             "schema": {
               "type": "string"
-            },
-            "required": false
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ticket",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -16457,7 +17518,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.pty.connect({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.pty.connect({\n  ...\n})"
           }
         ]
       }
@@ -16489,7 +17550,16 @@
             "$ref": "#/components/schemas/Event.tui.session.select"
           },
           {
+            "$ref": "#/components/schemas/EventSandboxStatusChanged"
+          },
+          {
             "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeNotebookCancelled"
           },
           {
             "$ref": "#/components/schemas/EventIndexingStatus"
@@ -16730,6 +17800,9 @@
           },
           {
             "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+          },
+          {
+            "$ref": "#/components/schemas/EventPluginAdded"
           },
           {
             "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -17067,6 +18140,188 @@
         },
         "required": ["id", "type", "properties"],
         "additionalProperties": false
+      },
+      "NotebookRequestID": {
+        "type": "string"
+      },
+      "NotebookReadRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/NotebookRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["read"]
+          },
+          "includeOutputs": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "sessionID", "path", "operation", "includeOutputs"],
+        "additionalProperties": false
+      },
+      "NotebookEditRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/NotebookRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["edit"]
+          },
+          "expectedRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "edit": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["insert"]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": ["code", "markdown"]
+                  },
+                  "language": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 200000
+                  }
+                },
+                "required": ["action", "kind", "source"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["replace"]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": ["code", "markdown"]
+                  },
+                  "language": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 200000
+                  }
+                },
+                "required": ["action", "kind", "source"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["delete"]
+                  }
+                },
+                "required": ["action"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": ["create"]
+                  }
+                },
+                "required": ["action"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": ["id", "sessionID", "path", "operation", "index", "edit"],
+        "additionalProperties": false
+      },
+      "NotebookExecuteRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/NotebookRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["execute"]
+          },
+          "expectedRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          }
+        },
+        "required": ["id", "sessionID", "path", "operation", "expectedRevision", "index"],
+        "additionalProperties": false
+      },
+      "NotebookRequest": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NotebookReadRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookEditRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookExecuteRequest"
+          }
+        ]
       },
       "IndexingStatusState": {
         "type": "string",
@@ -17608,6 +18863,99 @@
         "required": ["name", "data"],
         "additionalProperties": false
       },
+      "AgentRequirementError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["AgentRequirementError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "agent": {
+                "type": "string"
+              },
+              "directory": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["blocked", "error"]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["ready", "missing", "error"]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["name", "status"],
+                  "additionalProperties": false
+                }
+              },
+              "mcps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["ready", "missing", "error"]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["name", "status"],
+                  "additionalProperties": false
+                }
+              },
+              "vscode_extensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "\\S"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                    }
+                  },
+                  "required": ["name", "id"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["message", "agent", "directory", "state", "skills", "mcps", "vscode_extensions"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "Todo": {
         "type": "object",
         "properties": {
@@ -17873,7 +19221,7 @@
           },
           "pid": {
             "type": "integer",
-            "exclusiveMinimum": 0
+            "minimum": 0
           },
           "sessionID": {
             "anyOf": [
@@ -18732,6 +20080,19 @@
           "snapshot": {
             "type": "string"
           },
+          "model": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "modelID": {
+                "type": "string"
+              }
+            },
+            "required": ["providerID", "modelID"],
+            "additionalProperties": false
+          },
           "cost": {
             "type": "number"
           },
@@ -19149,6 +20510,9 @@
           "version": {
             "type": "string"
           },
+          "metadata": {
+            "type": "object"
+          },
           "time": {
             "type": "object",
             "properties": {
@@ -19263,7 +20627,16 @@
                 "$ref": "#/components/schemas/Event.tui.session.select"
               },
               {
+                "$ref": "#/components/schemas/EventSandboxStatusChanged"
+              },
+              {
                 "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeNotebookCancelled"
               },
               {
                 "$ref": "#/components/schemas/EventIndexingStatus"
@@ -19504,6 +20877,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventSessionNextCompactionEnded"
+              },
+              {
+                "$ref": "#/components/schemas/EventPluginAdded"
               },
               {
                 "$ref": "#/components/schemas/EventCatalogModelUpdated"
@@ -20045,6 +21421,15 @@
               },
               "agent_manager": {
                 "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
+              "notebook_read": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
+              "notebook_edit": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
+              },
+              "notebook_execute": {
+                "$ref": "#/components/schemas/PermissionRuleConfig"
               }
             },
             "additionalProperties": {
@@ -20116,6 +21501,58 @@
           },
           "permission": {
             "$ref": "#/components/schemas/PermissionConfig"
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "mcps": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "vscode_extensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "\\S"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                    }
+                  },
+                  "required": ["name", "id"],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": {}
@@ -20179,7 +21616,20 @@
                     "enum": [false]
                   }
                 ],
-                "description": "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout."
+                "description": "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout."
+              },
+              "headerTimeout": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "boolean",
+                    "enum": [false]
+                  }
+                ],
+                "description": "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout."
               },
               "chunkTimeout": {
                 "type": "integer",
@@ -20328,7 +21778,6 @@
                       }
                     }
                   },
-                  "required": ["input", "output"],
                   "additionalProperties": false
                 },
                 "experimental": {
@@ -21003,6 +22452,12 @@
               "codebase_search": {
                 "type": "boolean"
               },
+              "agent_requirements": {
+                "type": "boolean"
+              },
+              "native_notebook_tools": {
+                "type": "boolean"
+              },
               "speech_to_text_model": {
                 "type": "string"
               },
@@ -21018,9 +22473,21 @@
               "continue_loop_on_deny": {
                 "type": "boolean"
               },
+              "sandbox": {
+                "type": "boolean"
+              },
+              "sandbox_restrict_network": {
+                "type": "boolean"
+              },
               "mcp_timeout": {
                 "type": "integer",
                 "exclusiveMinimum": 0
+              },
+              "policies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ConfigV2ExperimentalPolicy"
+                }
               }
             },
             "additionalProperties": false
@@ -21286,6 +22753,9 @@
           "mayTrainOnYourPrompts": {
             "type": "boolean"
           },
+          "hasUserByokAvailable": {
+            "type": "boolean"
+          },
           "terminalBench": {
             "type": "object",
             "properties": {
@@ -21297,6 +22767,19 @@
               }
             },
             "required": ["overallScore", "avgAttemptCostUsd"],
+            "additionalProperties": false
+          },
+          "autoRouting": {
+            "type": "object",
+            "properties": {
+              "models": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["models"],
             "additionalProperties": false
           },
           "ai_sdk_provider": {
@@ -21692,6 +23175,9 @@
           },
           "version": {
             "type": "string"
+          },
+          "metadata": {
+            "type": "object"
           },
           "time": {
             "type": "object",
@@ -22123,6 +23609,58 @@
           },
           "options": {
             "type": "object"
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "mcps": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "vscode_extensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "\\S"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                    }
+                  },
+                  "required": ["name", "id"],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "additionalProperties": false
           },
           "steps": {
             "type": "number"
@@ -23042,6 +24580,27 @@
         "required": ["id", "type", "name", "projectID", "timeUsed"],
         "additionalProperties": false
       },
+      "WorkspaceCreateError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["WorkspaceCreateError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "WorkspaceWarpError": {
         "type": "object",
         "properties": {
@@ -23646,6 +25205,580 @@
         "required": ["_tag"],
         "additionalProperties": false
       },
+      "AgentRequirementResult": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["disabled", "ready", "blocked", "error"]
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["ready", "missing", "error"]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["name", "status"],
+              "additionalProperties": false
+            }
+          },
+          "mcps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["ready", "missing", "error"]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["name", "status"],
+              "additionalProperties": false
+            }
+          },
+          "vscode_extensions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "required": ["name", "id"],
+              "additionalProperties": false
+            }
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["unknown_agent", "malformed_declaration", "discovery_failed", "mcp_status_failed"]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["agent", "directory", "enabled", "state", "skills", "mcps", "vscode_extensions"],
+        "additionalProperties": false
+      },
+      "NotebookOutput": {
+        "type": "object",
+        "properties": {
+          "mime": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "stack": {
+            "type": "string",
+            "maxLength": 50000
+          },
+          "omitted": {
+            "type": "boolean"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["mime"],
+        "additionalProperties": false
+      },
+      "NotebookCell": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["code", "markdown"]
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200000
+          },
+          "execution": {
+            "type": "object",
+            "properties": {
+              "order": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "success": {
+                "type": "boolean"
+              },
+              "started": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ended": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotebookOutput"
+            },
+            "maxItems": 100
+          }
+        },
+        "required": ["index", "kind", "language", "source"],
+        "additionalProperties": false
+      },
+      "NotebookReadResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["read"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "requestPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotebookCell"
+            },
+            "maxItems": 2000
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["operation", "path", "requestPath", "revision", "cells"],
+        "additionalProperties": false
+      },
+      "NotebookEditResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["edit"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "requestPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["insert", "replace", "delete", "create"]
+          },
+          "cell": {
+            "$ref": "#/components/schemas/NotebookCell"
+          }
+        },
+        "required": ["operation", "path", "requestPath", "revision", "index", "action"],
+        "additionalProperties": false
+      },
+      "NotebookExecuteResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["execute"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "requestPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "error"]
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotebookOutput"
+            },
+            "maxItems": 100
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["operation", "path", "requestPath", "revision", "index", "status", "outputs"],
+        "additionalProperties": false
+      },
+      "NotebookResult": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NotebookReadResult"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookEditResult"
+          },
+          {
+            "$ref": "#/components/schemas/NotebookExecuteResult"
+          }
+        ]
+      },
+      "NotebookFailure": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "already_exists",
+              "cancelled",
+              "closed",
+              "disconnected",
+              "execution_failed",
+              "invalid_cell",
+              "invalid_path",
+              "no_kernel",
+              "not_found",
+              "stale_revision",
+              "timeout",
+              "unsupported"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based cell index"
+          },
+          "currentRevision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Opaque notebook content revision; pass it back unchanged and do not parse or increment it"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "AnacondaDesktopStatus": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["unsupported-platform"]
+              },
+              "platform": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "platform"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["not-installed"]
+              },
+              "downloadURL": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "downloadURL"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["not-running"]
+              }
+            },
+            "required": ["type"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["invalid-config"]
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["missing", "malformed", "missing-key", "invalid-port"]
+              }
+            },
+            "required": ["type", "reason"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["signed-out"]
+              }
+            },
+            "required": ["type"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["management-unauthorized"]
+              }
+            },
+            "required": ["type"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["management-unavailable"]
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["timeout", "unexpected-response"]
+              }
+            },
+            "required": ["type", "reason"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["no-downloaded-model"]
+              }
+            },
+            "required": ["type"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["no-running-server"]
+              },
+              "downloadedModels": {
+                "type": "integer"
+              }
+            },
+            "required": ["type", "downloadedModels"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["inference-unhealthy"]
+              },
+              "serverID": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["type", "serverID"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["ready"]
+              },
+              "serverID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "serverName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "models": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": ["id", "name"],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              },
+              "context": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "toolcall": {
+                "type": "string",
+                "enum": ["supported", "unsupported", "unknown"]
+              }
+            },
+            "required": ["type", "serverID", "models", "context", "toolcall"],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "AnacondaDesktopConflictError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["unsupported-platform", "not-installed", "not-ready", "acknowledgement-required"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AnacondaDesktopStatus"
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
+      "AnacondaDesktopOperationError": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["open", "sync"]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["operation", "message"],
+        "additionalProperties": false
+      },
       "KilocodeSessionImportResult": {
         "type": "object",
         "properties": {
@@ -24126,6 +26259,16 @@
                       }
                     ]
                   },
+                  "metadata": {
+                    "anyOf": [
+                      {
+                        "type": "object"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "time": {
                     "type": "object",
                     "properties": {
@@ -24349,7 +26492,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -24581,7 +26724,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -25581,6 +27724,46 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventSandboxStatusChanged": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sandbox.status.changed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "directory": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "available": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["sessionID", "directory", "enabled", "available", "version"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventKilocodeAgent_managerStart": {
         "type": "object",
         "properties": {
@@ -25621,6 +27804,22 @@
                     },
                     "branchName": {
                       "type": "string"
+                    },
+                    "model": {
+                      "type": "object",
+                      "properties": {
+                        "providerID": {
+                          "type": "string"
+                        },
+                        "modelID": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["providerID", "modelID"],
+                      "additionalProperties": false
+                    },
+                    "variant": {
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -25630,6 +27829,55 @@
               }
             },
             "required": ["requestID", "sessionID", "mode", "tasks"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventKilocodeNotebookRequested": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.notebook.requested"]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/NotebookRequest"
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventKilocodeNotebookCancelled": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.notebook.cancelled"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "requestID": {
+                "$ref": "#/components/schemas/NotebookRequestID"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["cancelled", "disposed", "timeout"]
+              }
+            },
+            "required": ["requestID", "sessionID", "reason"],
             "additionalProperties": false
           }
         },
@@ -26196,6 +28444,10 @@
                 "type": "string",
                 "pattern": "^ses"
               },
+              "parentID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
               "reason": {
                 "type": "string",
                 "enum": ["completed", "error", "interrupted"]
@@ -26278,6 +28530,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/APIError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentRequirementError"
                   }
                 ]
               }
@@ -27144,7 +29399,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               }
             },
@@ -27407,7 +29662,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["id", "providerID", "variant"],
+                "required": ["id", "providerID"],
                 "additionalProperties": false
               },
               "snapshot": {
@@ -28223,6 +30478,30 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventPluginAdded": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["plugin.added"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "ModelV2Info": {
         "type": "object",
         "properties": {
@@ -28740,6 +31019,27 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "PolicyEffect": {
+        "type": "string",
+        "enum": ["allow", "deny"]
+      },
+      "ConfigV2ExperimentalPolicy": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["provider.use"]
+          },
+          "effect": {
+            "$ref": "#/components/schemas/PolicyEffect"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": ["action", "effect", "resource"],
+        "additionalProperties": false
+      },
       "SessionInfo": {
         "type": "object",
         "properties": {
@@ -28777,7 +31077,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "cost": {
@@ -28905,7 +31205,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           }
         },
@@ -29284,7 +31584,7 @@
                 "type": "string"
               }
             },
-            "required": ["id", "providerID", "variant"],
+            "required": ["id", "providerID"],
             "additionalProperties": false
           },
           "content": {
@@ -30119,12 +32419,20 @@
       "description": "Kilo-specific routes."
     },
     {
+      "name": "anaconda-desktop",
+      "description": "Local Anaconda Desktop provider setup routes."
+    },
+    {
       "name": "network",
       "description": "Kilo network routes."
     },
     {
       "name": "remote",
       "description": "Kilo remote connection routes."
+    },
+    {
+      "name": "sandbox",
+      "description": "Kilo session sandbox routes."
     },
     {
       "name": "session-import",

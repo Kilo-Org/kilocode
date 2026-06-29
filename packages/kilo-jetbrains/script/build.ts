@@ -12,8 +12,8 @@
  * 1. Builds CLI binaries (or uses prebuilt ones from dist/).
  *    Local: builds only current platform (--single).
  *    Production: builds all platforms.
- * 2. Copies them into backend/build/generated/cli/cli/{os}/kilo[.exe]
- *    so they end up inside the backend jar at /cli/{os}/kilo.
+ * 2. Copies them and the Kilo sandbox mutation worker into backend/build/generated/cli/cli/{os}/
+ *    so they end up inside the backend jar at /cli/{os}/.
  * 3. Invokes Gradle to build the plugin.
  */
 
@@ -53,13 +53,17 @@ function distBinPath(os: string, exe: string): string {
   return join(distDir, `@kilocode/cli-${os}`, "bin", exe)
 }
 
+function hasArtifacts(os: string, exe: string): boolean {
+  return existsSync(distBinPath(os, exe)) && existsSync(distBinPath(os, "kilo-sandbox-mutation-worker.js"))
+}
+
 function hasDist(): boolean {
   if (production) {
-    return platforms.every((p) => existsSync(distBinPath(p.os, p.exe)))
+    return platforms.every((p) => hasArtifacts(p.os, p.exe))
   }
   const tag = localPlatformTag()
   const local = platforms.find((p) => p.os === tag)
-  return local ? existsSync(distBinPath(local.os, local.exe)) : false
+  return local ? hasArtifacts(local.os, local.exe) : false
 }
 
 async function prepareCli() {
@@ -85,7 +89,8 @@ async function prepareCli() {
   let copied = 0
   for (const p of platforms) {
     const src = distBinPath(p.os, p.exe)
-    if (!existsSync(src)) {
+    const worker = distBinPath(p.os, "kilo-sandbox-mutation-worker.js")
+    if (!existsSync(src) || !existsSync(worker)) {
       missing.push(p.os)
       continue
     }
@@ -94,9 +99,10 @@ async function prepareCli() {
     mkdirSync(dir, { recursive: true })
     const dest = join(dir, p.exe)
     cpSync(src, dest)
+    cpSync(worker, join(dir, "kilo-sandbox-mutation-worker.js"))
     chmodSync(dest, 0o755)
     copied++
-    log(`Copied ${relative(root, src)} -> ${relative(root, dest)}`)
+    log(`Copied ${relative(root, src)} and Kilo sandbox mutation worker -> ${relative(root, dir)}`)
   }
 
   if (copied === 0) {

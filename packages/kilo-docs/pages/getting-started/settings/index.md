@@ -59,6 +59,18 @@ When the Kilo provider is enabled and you are signed in, choose the transcriptio
 }
 ```
 
+### Prompt-Training Model Visibility
+
+Enable **Hide Prompt-Training Models** under **Models** to remove Kilo Gateway models whose providers may use your prompts for training from model lists. Models from other providers and models without explicit prompt-training metadata remain visible. The setting is disabled by default.
+
+You can also enable it in `kilo.jsonc`:
+
+```json
+{
+  "hide_prompt_training_models": true
+}
+```
+
 ### Reasoning Blocks
 
 Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
@@ -212,6 +224,7 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
+- **Sandbox** - confine agent shell commands and file writes to the project and Kilo state directories, with optional outbound network blocking. See [Sandboxing](/docs/getting-started/settings/sandboxing).
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
 

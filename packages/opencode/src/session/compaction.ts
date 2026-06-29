@@ -16,7 +16,7 @@ import { Effect, Layer, Context, Schema } from "effect"
 import * as DateTime from "effect/DateTime"
 import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 // kilocode_change start
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery"

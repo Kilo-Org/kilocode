@@ -4,6 +4,21 @@ import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../type
 
 export const SLASH_PATTERN = /^\/(\S*)$/
 
+function getMatchScore(cmd: SlashCommandEntry, lower: string): number {
+  const name = cmd.name.toLowerCase()
+  if (name === lower) return 3
+  if (name.startsWith(lower)) return 2
+  if (name.includes(lower)) return 1
+  if (cmd.description?.toLowerCase().includes(lower)) return 1
+  if (cmd.hints.some((h) => h.toLowerCase().includes(lower))) return 1
+  return 0
+}
+
+export function sortByScore(matches: SlashCommandEntry[], query: string): SlashCommandEntry[] {
+  const lower = query.toLowerCase()
+  return [...matches].sort((a, b) => getMatchScore(b, lower) - getMatchScore(a, lower))
+}
+
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -11,6 +26,7 @@ interface VSCodeContext {
 
 export interface SlashCommandEntry extends SlashCommandInfo {
   action?: () => void
+  enabled?: Accessor<boolean>
 }
 
 export interface SlashCommand {
@@ -35,7 +51,11 @@ export interface SlashCommand {
   close: () => void
 }
 
-export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | Accessor<Set<string>>): SlashCommand {
+export function useSlashCommand(
+  vscode: VSCodeContext,
+  sandbox: { action: () => void; enabled: Accessor<boolean> },
+  exclude?: Set<string> | Accessor<Set<string>>,
+): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
@@ -123,6 +143,13 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
         vscode.postMessage({ type: "toggleRemote" })
       },
     },
+    {
+      name: "sandbox",
+      description: "Toggle sandbox",
+      hints: [],
+      action: sandbox.action,
+      enabled: sandbox.enabled,
+    },
   ]
 
   const excluded = () => {
@@ -158,12 +185,13 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
     const all = commands()
     if (!q) return all
     const lower = q.toLowerCase()
-    return all.filter(
+    const matches = all.filter(
       (cmd) =>
         cmd.name.toLowerCase().includes(lower) ||
         cmd.description?.toLowerCase().includes(lower) ||
         cmd.hints.some((h) => h.toLowerCase().includes(lower)),
     )
+    return sortByScore(matches, lower)
   }
 
   const unsubscribe = vscode.onMessage((message) => {
@@ -198,6 +226,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | A
     onSelect?: () => void,
   ) => {
     if (cmd.action) {
+      if (cmd.enabled && !cmd.enabled()) return
       textarea.value = ""
       setText("")
       close()

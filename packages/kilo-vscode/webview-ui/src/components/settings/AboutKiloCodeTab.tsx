@@ -357,21 +357,18 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         >
           {language.t("settings.aboutKiloCode.resetSettings.description")}
         </p>
-        <button
-          type="button"
-          onClick={() => vscode.postMessage({ type: "resetAllSettings" })}
-          style={{
-            background: "var(--vscode-button-background)",
-            color: "var(--vscode-button-foreground)",
-            border: "none",
-            padding: "6px 14px",
-            "border-radius": "2px",
-            cursor: "pointer",
-            "font-size": "var(--kilo-font-size-12)",
-          }}
-        >
-          {language.t("settings.aboutKiloCode.resetSettings.button")}
-        </button>
+        <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
+          <Button variant="primary" size="small" onClick={() => vscode.postMessage({ type: "resetAllSettings" })}>
+            {language.t("settings.aboutKiloCode.resetSettings.button")}
+          </Button>
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={() => vscode.postMessage({ type: "resetReadNotifications" })}
+          >
+            {language.t("settings.aboutKiloCode.resetSettings.notificationsButton")}
+          </Button>
+        </div>
       </div>
     </div>
   )

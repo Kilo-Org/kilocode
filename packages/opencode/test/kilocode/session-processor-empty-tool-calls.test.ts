@@ -46,10 +46,10 @@ class TestLLM extends Context.Service<
   }
 >()("@test/EmptyToolCallsLLM") {}
 
-function model(): Provider.Model {
+function model(selection = ref): Provider.Model {
   return {
-    id: "test-model",
-    providerID: "test",
+    id: selection.modelID,
+    providerID: selection.providerID,
     name: "Test",
     limit: { context: 128000, output: 4096 },
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
@@ -541,6 +541,84 @@ describe("session processor empty tool-calls", () => {
           const parts = MessageV2.parts(msg.id)
           const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(1)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("persists routed model metadata on step-finish parts", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+          const selection = {
+            providerID: ProviderID.kilo,
+            modelID: ModelID.make("kilo-auto/efficient"),
+          }
+
+          yield* test.reply(
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.stepFinish({
+              index: 0,
+              reason: "stop",
+              usage: usage(),
+              providerMetadata: { kilocode: { routedModelID: "openai/gpt-5.5-20260423" } },
+            }),
+            LLMEvent.finish({ reason: "stop", usage: usage() }),
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: selection,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: selection.modelID,
+            providerID: selection.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model(selection)
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          yield* handle.process(input)
+          const parts = MessageV2.parts(msg.id)
+          const part = parts.find((item): item is MessageV2.StepFinishPart => item.type === "step-finish")
+
+          expect(part?.model).toEqual({
+            providerID: selection.providerID,
+            modelID: ModelID.make("openai/gpt-5.5-20260423"),
+          })
         }),
       { git: true },
     ),

@@ -128,9 +128,9 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     // kilocode_change end
 
     const worktreeCreate = Effect.fn("ExperimentalHttpApi.worktreeCreate")(function* (ctx: {
-      payload: Worktree.CreateInput | undefined
+      payload: typeof Worktree.CreateInput.Type | void
     }) {
-      return yield* mapWorktreeError(worktreeSvc.create(ctx.payload))
+      return yield* mapWorktreeError(worktreeSvc.create(ctx.payload ?? undefined))
     })
 
     const worktreeRemove = Effect.fn("ExperimentalHttpApi.worktreeRemove")(function* (input: {

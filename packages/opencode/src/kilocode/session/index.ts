@@ -17,6 +17,7 @@ import type { Provider } from "@/provider/provider"
 import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import { ENV_FEATURE } from "@kilocode/kilo-gateway"
 import { fn } from "@/kilocode/fn"
+import { existsSync } from "fs"
 import path from "path"
 
 export namespace KiloSession {
@@ -39,6 +40,7 @@ export namespace KiloSession {
       "session.turn.close",
       Schema.Struct({
         sessionID: SessionID,
+        parentID: Schema.optional(SessionID),
         reason: CloseReasonSchema,
       }),
     ),
@@ -117,25 +119,26 @@ export namespace KiloSession {
   // Project family resolution (worktree-aware)
   // ---------------------------------------------------------------------------
 
-  export function family(id: string): string[] {
-    const row = Database.use((db) =>
+  export function family(id: string, directories: string[] = []): string[] {
+    const rows = Database.use((db) =>
       db
-        .select({ worktree: ProjectTable.worktree })
+        .select({ id: ProjectTable.id, worktree: ProjectTable.worktree, sandboxes: ProjectTable.sandboxes })
         .from(ProjectTable)
-        .where(eq(ProjectTable.id, ProjectID.make(id)))
-        .get(),
+        .all(),
     )
-    const root = row?.worktree ? Filesystem.resolve(row.worktree) : undefined
-    if (!root || root === "/") return [id]
-    const ids = Database.use((db) =>
-      db
-        .select({ id: ProjectTable.id })
-        .from(ProjectTable)
-        .where(eq(ProjectTable.worktree, root))
-        .all()
-        .map((item) => item.id),
-    )
-    return ids.length ? ids : [id]
+    const current = rows.find((row) => row.id === id)
+    const root = current?.worktree ? Filesystem.resolve(current.worktree) : undefined
+    // Combine the stored root with Git's current sibling worktrees.
+    const roots = new Set([...(root && root !== "/" ? [root] : []), ...directories.map(Filesystem.resolve)])
+    if (roots.size === 0) return [id]
+
+    // Match both each project's recorded root and its saved worktrees.
+    const ids = rows.flatMap((row) => {
+      const dirs = [row.worktree, ...row.sandboxes].map(Filesystem.resolve)
+      return dirs.some((dir) => roots.has(dir)) ? [row.id] : []
+    })
+    // Always keep the requested ID and remove duplicates.
+    return [...new Set([id, ...ids])]
   }
 
   export function filters(input: { projectID: ProjectID; directory?: string }): SQL[] {
@@ -326,9 +329,10 @@ export namespace KiloSession {
     archived?: boolean
   }) {
     const conditions: SQL[] = []
+    const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
 
     if (input.projectID) {
-      const ids = family(input.projectID)
+      const ids = family(input.projectID, dirs)
       if (ids.length === 1 && ids[0] === input.projectID) {
         conditions.push(eq(SessionTable.project_id, ProjectID.make(input.projectID)))
       } else {
@@ -361,11 +365,16 @@ export namespace KiloSession {
     }
 
     const limit = input.limit ?? 100
-    const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
     const sorted = [...dirs].sort((a, b) => b.length - a.length)
+    const nested = (root: string, dir: string): boolean => {
+      if (dir === root || !Filesystem.contains(root, dir)) return false
+      if (existsSync(path.join(dir, ".git"))) return true
+      const parent = path.dirname(dir)
+      return parent !== dir && nested(root, parent)
+    }
     const worktree = (dir: string) => {
       for (const root of sorted) {
-        if (!Filesystem.contains(root, dir)) continue
+        if (!Filesystem.contains(root, dir) || nested(root, dir)) continue
         const rel = path.relative(root, dir)
         const parts = rel.split(path.sep)
         if ((parts[0] === ".kilo" || parts[0] === ".kilocode") && parts[1] === "worktrees" && parts[2]) {

@@ -80,6 +80,11 @@ class ReasoningPicker : PickerButton() {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
+    fun open() {
+        if (!isEnabled || items.isEmpty()) return
+        showPopup()
+    }
+
     private fun showPopup() {
         val step = object : BaseListPopupStep<Item>("", items) {
             override fun getTextFor(value: Item) = value.display

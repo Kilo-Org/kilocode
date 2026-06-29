@@ -18,7 +18,7 @@
   min-height: 0;
   overflow: hidden;
   container: chat / inline-size;
-  --chat-readable-width: 88ch;
+  --chat-readable-width: 98ch;
   --chat-gutter: clamp(16px, 4cqi, 48px);
   --chat-scrollbar-width: 10px;
 }

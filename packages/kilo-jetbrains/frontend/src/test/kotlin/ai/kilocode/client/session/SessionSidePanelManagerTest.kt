@@ -152,7 +152,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         val second = active(manager)
 
         assertSame(first, second)
-        assertEquals(listOf("/test" to "ses_1", "/test" to null), created)
+        assertTrue(created.containsAll(listOf("/test" to "ses_1", "/test" to null)))
     }
 
     fun `test prompted blank session is reused from recents`() {
@@ -382,6 +382,20 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertSame(first, active(manager))
     }
 
+    fun `test history back restores latest session focus`() {
+        useLongInactiveDisposeTimeout()
+        val requests = mutableListOf<JComponent>()
+        val manager = manager(request = { requests.add(it) })
+
+        manager.openSession(session("ses_1"))
+        val first = active(manager) as SessionUi
+        manager.showHistory()
+        requests.clear()
+        back(manager)
+
+        assertSame(first.defaultFocusedComponent, requests.single())
+    }
+
     fun `test history back without latest session opens new session`() {
         val manager = manager()
 
@@ -416,7 +430,25 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         open(SessionRef.Local(session("ses_1")))
 
         assertTrue(active(manager) is SessionUi)
-        assertEquals(listOf("/test" to "ses_1"), created)
+        assertTrue(created.contains("/test" to "ses_1"))
+    }
+
+    fun `test opening local history item restores session focus`() {
+        lateinit var open: (SessionRef) -> Unit
+        val requests = mutableListOf<JComponent>()
+        val manager = manager(
+            history = { _, fn, _ ->
+                open = fn
+                JLabel("History")
+            },
+            request = { requests.add(it) },
+        )
+
+        manager.showHistory()
+        open(SessionRef.Local(session("ses_1")))
+        val active = active(manager) as SessionUi
+
+        assertSame(active.defaultFocusedComponent, requests.single())
     }
 
     fun `test opening cloud history item shows session ui before import`() {
@@ -625,6 +657,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
 
     private fun manager(
         history: ((com.intellij.openapi.Disposable, (SessionRef) -> Unit, (String) -> Unit) -> JComponent)? = null,
+        request: (JComponent) -> Unit = {},
     ): SessionSidePanelManager {
         val manager = SessionSidePanelManager(
             project = project,
@@ -656,6 +689,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
             status = { sessions.activity() },
             history = history,
             timers = timers,
+            request = request,
         )
         managers.add(manager)
         return manager

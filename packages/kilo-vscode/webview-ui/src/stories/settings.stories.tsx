@@ -51,6 +51,20 @@ export const SettingsPanel: Story = {
   ),
 }
 
+export const SandboxingPanel: Story = {
+  name: "Settings — sandboxing network restriction",
+  render: () => (
+    <StoryProviders
+      config={{ experimental: { sandbox: true, sandbox_restrict_network: true } }}
+      features={{ sandboxControls: true }}
+    >
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (

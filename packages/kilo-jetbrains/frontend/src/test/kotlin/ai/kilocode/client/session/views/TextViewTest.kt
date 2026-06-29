@@ -1,8 +1,15 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageTimeDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.util.ui.JBUI
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -243,9 +250,168 @@ class TextViewTest : BasePlatformTestCase() {
         val urls = mutableListOf<String>()
         val view = TextView(Text("p1"), openUrl = { urls.add(it) })
 
-        view.md.simulateLink("https://kilocode.ai/docs")
+        view.simulateLink("https://kilocode.ai/docs")
 
         assertEquals(listOf("https://kilocode.ai/docs"), urls)
+    }
+
+    fun `test linkifyMentions rewrites tracked token`() {
+        val out = linkifyMentions(
+            "read @src/a.kt",
+            listOf(PromptMention("@src/a.kt", "src/a.kt", 5, 14)),
+        )
+
+        assertEquals("read [@src/a.kt](src/a.kt)", out)
+    }
+
+    fun `test linkifyMentions escapes text and encodes href`() {
+        val out = linkifyMentions(
+            "open @[a] file.kt",
+            listOf(PromptMention("@[a] file.kt", "[a] file.kt", 5, 17)),
+        )
+
+        assertEquals("open [@\\[a\\] file.kt]([a]%20file.kt)", out)
+    }
+
+    fun `test linkifyMentions handles multiple mentions by offset`() {
+        val out = linkifyMentions(
+            "read @src/a.kt and @src/b.kt",
+            listOf(
+                PromptMention("@src/a.kt", "src/a.kt", 5, 14),
+                PromptMention("@src/b.kt", "src/b.kt", 19, 28),
+            ),
+        )
+
+        assertEquals("read [@src/a.kt](src/a.kt) and [@src/b.kt](src/b.kt)", out)
+    }
+
+    fun `test linkifyMentions falls back to literal replacement when offset drifts`() {
+        val out = linkifyMentions(
+            "read @src/a.kt",
+            listOf(PromptMention("@src/a.kt", "src/a.kt", 0, 4)),
+        )
+
+        assertEquals("read [@src/a.kt](src/a.kt)", out)
+    }
+
+    fun `test linkifyMentions fallback does not relink generated markdown`() {
+        val out = linkifyMentions(
+            "read @src/a.kt and @src/a.kt",
+            listOf(
+                PromptMention("@src/a.kt", "src/a.kt", 5, 14),
+                PromptMention("@src/a.kt", "src/a.kt", 0, 4),
+            ),
+        )
+
+        assertEquals("read [@src/a.kt](src/a.kt) and [@src/a.kt](src/a.kt)", out)
+    }
+
+    fun `test linkifyMentions leaves text without mentions unchanged`() {
+        assertEquals("read @src/a.kt", linkifyMentions("read @src/a.kt", emptyList()))
+    }
+
+    fun `test promptMentions extracts source backed text files`() {
+        val msg = Message(MessageDto("m1", "ses", "user", MessageTimeDto(0.0)))
+        msg.parts["keep"] = file("keep", "text/plain", "@src/a.kt", "src/a.kt", 0, 9)
+        msg.parts["image"] = file("image", "image/png", "@src/a.png", "src/a.png", 0, 10)
+        msg.parts["blank"] = file("blank", "text/plain", "@src/b.kt", "", 0, 9)
+        msg.parts["plain"] = FileAttachment("plain").also { it.mime = "text/plain" }
+
+        val mentions = promptMentions(msg)
+        assertEquals(1, mentions.size)
+        assertEquals("@src/a.kt", mentions.single().token)
+        assertEquals("src/a.kt", mentions.single().path)
+        assertEquals(0, mentions.single().start)
+        assertEquals(9, mentions.single().end)
+        assertSame(msg.parts["keep"], mentions.single().attachment)
+    }
+
+    fun `test prompt view renders mention as link`() {
+        val text = Text("p1").also { it.content.append("read @src/a.kt") }
+        val view = PromptView(text, mentions = listOf(PromptMention("@src/a.kt", "src/a.kt", 5, 14)))
+
+        assertEquals("read [@src/a.kt](src/a.kt)", view.markdown())
+        assertTrue(view.md.html().contains("href=\"src/a.kt\""))
+        assertTrue(view.md.html().contains("@src/a.kt"))
+    }
+
+    fun `test prompt view routes mention links to file and urls to browser`() {
+        val files = mutableListOf<String>()
+        val urls = mutableListOf<String>()
+        val text = Text("p1").also { it.content.append("read @src/a file.kt") }
+        val view = PromptView(
+            text,
+            openFile = { files.add(it) },
+            openUrl = { urls.add(it) },
+            mentions = listOf(PromptMention("@src/a file.kt", "src/a file.kt", 5, 19)),
+        )
+
+        view.simulateLink("src/a%20file.kt")
+        view.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("src/a file.kt"), files)
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
+    }
+
+    fun `test prompt view routes attachment backed mention link to attachment opener`() {
+        val opened = mutableListOf<FileAttachment>()
+        val item = file("f1", "text/plain", "@git-changes", "git-changes", 7, 19).also {
+            it.url = "data:text/plain;charset=utf-8,diff%20content"
+            it.filename = "git-changes.txt"
+        }
+        val text = Text("p1").also { it.content.append("review @git-changes") }
+        val view = PromptView(
+            text,
+            openFile = { error("should not open file") },
+            openAttachment = { opened.add(it) },
+            mentions = listOf(PromptMention("@git-changes", "git-changes", 7, 19, item)),
+        )
+
+        view.simulateLink("git-changes")
+
+        assertEquals(listOf(item), opened)
+    }
+
+    fun `test prompt view setMentions refreshes existing prompt`() {
+        val text = Text("p1").also { it.content.append("read @src/a.kt") }
+        val view = PromptView(text)
+
+        view.setMentions(listOf(PromptMention("@src/a.kt", "src/a.kt", 5, 14)))
+
+        assertEquals("read [@src/a.kt](src/a.kt)", view.markdown())
+    }
+
+    fun `test message view syncs prompt mentions from hidden part`() {
+        val msg = Message(MessageDto("m1", "ses", "user", MessageTimeDto(0.0)))
+        val view = MessageView(msg, openFile = {})
+        val text = Text("p1").also { it.content.append("read @src/a.kt") }
+        msg.parts["p1"] = text
+        view.upsertPart(text)
+
+        assertEquals("read @src/a.kt", (view.part("p1") as PromptView).markdown())
+
+        val mention = file("f1", "text/plain", "@src/a.kt", "src/a.kt", 5, 14)
+        msg.parts["f1"] = mention
+        view.upsertPart(mention)
+
+        assertNull(view.part("f1"))
+        assertEquals("read [@src/a.kt](src/a.kt)", (view.part("p1") as PromptView).markdown())
+    }
+
+    fun `test prompt view colors links with metadata color`() {
+        val style = SessionEditorStyle.current()
+        val color = style.editorScheme.getAttributes(DefaultLanguageHighlighterColors.METADATA)?.foregroundColor
+        val view = PromptView(Text("p1"))
+        val before = view.md.linkColor
+
+        view.applyStyle(style)
+
+        assertEquals(color ?: before, view.md.linkColor)
+    }
+
+    private fun file(id: String, mime: String, token: String, path: String, start: Int, end: Int) = FileAttachment(id).also {
+        it.mime = mime
+        it.source = PartSourceDto("file", PartSourceTextDto(token, start.toDouble(), end.toDouble()), path = path)
     }
 
     private class TrackingRepaintManager(private val watched: JComponent) : RepaintManager() {

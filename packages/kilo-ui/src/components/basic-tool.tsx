@@ -20,14 +20,16 @@ export function initialOpen(props: OpenProps) {
 export function BasicTool(props: BasicToolProps) {
   const key = () => toolOpenKey(props)
   const initial = () => initialOpen(props)
+  const change = (open: boolean) => {
+    writeToolOpen(key(), open)
+    props.onOpenChange?.(open)
+  }
+  if (!("children" in props)) {
+    return <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} />
+  }
   return (
-    <Base
-      {...props}
-      defaultOpen={initial()}
-      onOpenChange={(open) => {
-        writeToolOpen(key(), open)
-        props.onOpenChange?.(open)
-      }}
-    />
+    <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change}>
+      <div data-slot="basic-tool-details">{props.children}</div>
+    </Base>
   )
 }
