@@ -624,3 +624,23 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
     }
   })
 })
+
+describe("#9980: CLI model flag beats stale persisted picks", () => {
+  test("17: --model takes precedence over model.json for the current agent", async () => {
+    mockArgs = { model: "anthropic/claude-opus" }
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        model: { code: SONNET },
+        favorite: [],
+        variant: {},
+      },
+    })
+    try {
+      expect(local.model.saved("code")).toEqual(SONNET)
+      expect(local.model.current()).toEqual(OPUS)
+    } finally {
+      dispose()
+    }
+  })
+})
