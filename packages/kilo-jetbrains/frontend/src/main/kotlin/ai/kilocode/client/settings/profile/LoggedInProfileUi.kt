@@ -9,15 +9,21 @@ import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.RelativeFont
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import java.awt.BorderLayout
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.KeyboardFocusManager
+import java.awt.RenderingHints
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
 import javax.swing.DefaultComboBoxModel
@@ -25,7 +31,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import java.awt.BorderLayout
+import kotlin.math.roundToInt
 
 /**
  * Retained logged-in UI. Labels, combo box, and buttons are built once and
@@ -33,6 +39,8 @@ import java.awt.BorderLayout
  */
 internal class LoggedInProfileUi(
     private val dashboard: () -> Unit,
+    private val topUp: () -> Unit,
+    private val pass: () -> Unit,
     private val logout: () -> Unit,
     private val organization: (String?) -> Unit,
     private val refresh: () -> Unit,
@@ -70,12 +78,66 @@ internal class LoggedInProfileUi(
             }
         }
 
+    private val passTitleLabel = JBLabel(KiloBundle.message("profile.pass.title")).apply {
+        font = UiStyle.Fonts.bold()
+    }
+    private val passUsageLabel = JBLabel().apply {
+        foreground = UiStyle.Colors.weak()
+        font = UiStyle.Fonts.small()
+    }
+    private val passBonusLabel = JBLabel(KiloBundle.message("profile.pass.bonusLabel")).apply {
+        foreground = UiStyle.Colors.weak()
+        font = UiStyle.Fonts.small()
+    }
+    private val passBonusValue = JBLabel().apply {
+        foreground = UiStyle.Colors.weak()
+        font = UiStyle.Fonts.small()
+    }
+    private val passRenewLabel = JBLabel(KiloBundle.message("profile.pass.renewsLabel")).apply {
+        foreground = UiStyle.Colors.weak()
+        font = UiStyle.Fonts.small()
+    }
+    private val passRenewValue = JBLabel().apply {
+        foreground = UiStyle.Colors.weak()
+        font = UiStyle.Fonts.small()
+    }
+    private val passMeter = PassMeter().apply {
+        name = "kilo.profile.passMeter"
+    }
+    private val passBonusRow = Stack.horizontal(UiStyle.Gap.md())
+        .next(passBonusLabel)
+        .fill(UiStyle.Gap.md())
+        .next(passBonusValue)
+    private val passRenewRow = Stack.horizontal(UiStyle.Gap.md())
+        .next(passRenewLabel)
+        .fill(UiStyle.Gap.md())
+        .next(passRenewValue)
+    private val passLink = ActionLink(KiloBundle.message("profile.pass.subscribe")) {
+        pass()
+    }.apply {
+        name = "kilo.profile.passSubscribe"
+    }
+    private val passInfo = Stack.vertical(UiStyle.Gap.sm())
+        .next(Stack.horizontal(UiStyle.Gap.md())
+            .next(passTitleLabel)
+            .fill(UiStyle.Gap.md())
+            .next(passUsageLabel))
+        .next(passMeter)
+        .next(passBonusRow)
+        .next(passRenewRow)
+    private val passPanel = Stack.vertical(UiStyle.Gap.md()).apply {
+        name = "kilo.profile.passPanel"
+        next(passInfo)
+        next(passLink.align(HAlign.LEFT, VAlign.CENTER))
+    }
+
     private val balanceCard = RoundedContentPanel(UiStyle.Gap.pad(), UiStyle.Gap.xl()).apply {
         name = "kilo.profile.balanceCard"
         addToTop(titleLabel)
         addToCenter(Stack.vertical(UiStyle.Gap.pad())
             .next(valueLabel)
             .next(refreshBtn)
+            .next(passPanel)
             .align(HAlign.CENTER, VAlign.CENTER))
     }
 
@@ -84,11 +146,14 @@ internal class LoggedInProfileUi(
 
     val dashboardBtn = JButton(KiloBundle.message("profile.action.dashboard"))
         .also { it.addActionListener { dashboard() } }
+    val topUpBtn = JButton(KiloBundle.message("profile.action.topUp"))
+        .also { it.addActionListener { topUp() } }
     val logoutBtn = JButton(KiloBundle.message("profile.action.logout"))
         .also { it.addActionListener { logout() } }
 
     private val actionRow = Stack.horizontal(UiStyle.Gap.md())
         .next(dashboardBtn)
+        .next(topUpBtn)
         .next(logoutBtn)
 
     private val header = JPanel(BorderLayout()).apply {
@@ -161,26 +226,87 @@ internal class LoggedInProfileUi(
         if (showEmail && emailLabel.text != profile.email) emailLabel.text = profile.email
 
         val bal = profile.balance
+        val personal = profile.currentOrgId == null
+        val item = if (personal) profile.kiloPass else null
+        val showPass = personal && (bal != null || item != null)
         var changed = false
+        changed = visible(titleLabel, bal != null) || changed
+        changed = visible(valueLabel, bal != null) || changed
+        changed = visible(refreshBtn, bal != null || showPass) || changed
         if (bal != null) {
             val balText = formatBalance(bal.balance)
             if (valueLabel.text != balText) {
                 valueLabel.text = balText
                 changed = true
             }
-            if (!balanceCard.isVisible) {
-                balanceCard.isVisible = true
-                changed = true
-            }
-        } else {
-            if (balanceCard.isVisible) {
-                balanceCard.isVisible = false
-                changed = true
-            }
         }
+        changed = syncPass(item, showPass) || changed
+        changed = visible(balanceCard, bal != null || showPass) || changed
 
         applyOrganizations(profile)
         if (changed) syncLayout()
+    }
+
+    @RequiresEdt
+    private fun syncPass(item: ProfileKiloPassDto?, show: Boolean): Boolean {
+        var changed = false
+        val info = show && item != null
+        if (passInfo.isVisible != info) {
+            passInfo.isVisible = info
+            changed = true
+        }
+        if (item != null) {
+            val usage = KiloBundle.message(
+                "profile.pass.used",
+                formatShortBalance(item.currentPeriodUsageUsd),
+                formatShortBalance(item.currentPeriodBaseCreditsUsd),
+            )
+            if (passUsageLabel.text != usage) {
+                passUsageLabel.text = usage
+                changed = true
+            }
+            val base = item.currentPeriodBaseCreditsUsd.coerceAtLeast(1.0)
+            passMeter.setFraction(item.currentPeriodUsageUsd / base)
+            val bonus = if (item.currentPeriodBonusCreditsUsd > 0.0) {
+                formatBalance(item.currentPeriodBonusCreditsUsd)
+            } else null
+            if (passBonusValue.text != bonus.orEmpty()) {
+                passBonusValue.text = bonus.orEmpty()
+                changed = true
+            }
+            val bonusVisible = bonus != null
+            if (passBonusRow.isVisible != bonusVisible) {
+                passBonusRow.isVisible = bonusVisible
+                changed = true
+            }
+            val reset = formatResetDate(item.nextBillingAt)
+            if (passRenewValue.text != reset.orEmpty()) {
+                passRenewValue.text = reset.orEmpty()
+                changed = true
+            }
+            val renewVisible = reset != null
+            if (passRenewRow.isVisible != renewVisible) {
+                passRenewRow.isVisible = renewVisible
+                changed = true
+            }
+        }
+        val link = show && item == null
+        if (passLink.isVisible != link) {
+            passLink.isVisible = link
+            changed = true
+        }
+        val panel = info || link
+        if (passPanel.isVisible != panel) {
+            passPanel.isVisible = panel
+            changed = true
+        }
+        return changed
+    }
+
+    private fun visible(component: JComponent, show: Boolean): Boolean {
+        if (component.isVisible == show) return false
+        component.isVisible = show
+        return true
     }
 
     @RequiresEdt
@@ -255,6 +381,35 @@ internal class LoggedInProfileUi(
                 // Insert new name before the stale one, then remove stale — never leaves a gap.
                 comboModel.insertElementAt(name, i)
                 comboModel.removeElementAt(i + 1)
+            }
+        }
+    }
+
+    private class PassMeter : JComponent() {
+        private var fraction = 0.0
+
+        fun setFraction(value: Double) {
+            val next = value.coerceIn(0.0, 1.0)
+            if (fraction == next) return
+            fraction = next
+            repaint()
+        }
+
+        override fun getPreferredSize() = JBUI.size(160, 6)
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                val arc = JBUI.scale(6)
+                g2.color = UiStyle.Colors.contentBorder()
+                g2.fillRoundRect(0, 0, width, height, arc, arc)
+                val fill = (width * fraction).roundToInt()
+                if (fill <= 0) return
+                g2.color = JBUI.CurrentTheme.Link.Foreground.ENABLED
+                g2.fillRoundRect(0, 0, fill, height, arc, arc)
+            } finally {
+                g2.dispose()
             }
         }
     }
