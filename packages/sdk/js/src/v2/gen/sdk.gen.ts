@@ -182,6 +182,8 @@ import type {
   KiloOrganizationSetResponses,
   KiloProfileErrors,
   KiloProfileResponses,
+  KiloRefreshCatalogErrors,
+  KiloRefreshCatalogResponses,
   LspStatusErrors,
   LspStatusResponses,
   McpAddErrors,
@@ -6718,6 +6720,36 @@ export class Kilo extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<KiloAuthStatusResponses, KiloAuthStatusErrors, ThrowOnError>({
       url: "/kilo/auth-status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh model catalog
+   *
+   * Force an immediate refresh of the models.dev catalog and clear the Kilo Gateway and Apertis model caches so the next provider listing re-fetches fresh data.
+   */
+  public refreshCatalog<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<KiloRefreshCatalogResponses, KiloRefreshCatalogErrors, ThrowOnError>({
+      url: "/kilo/refresh-catalog",
       ...options,
       ...params,
     })

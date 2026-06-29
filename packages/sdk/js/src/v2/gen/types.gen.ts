@@ -10299,6 +10299,36 @@ export type KiloAuthStatusResponses = {
 
 export type KiloAuthStatusResponse = KiloAuthStatusResponses[keyof KiloAuthStatusResponses]
 
+export type KiloRefreshCatalogData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/refresh-catalog"
+}
+
+export type KiloRefreshCatalogErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KiloRefreshCatalogError = KiloRefreshCatalogErrors[keyof KiloRefreshCatalogErrors]
+
+export type KiloRefreshCatalogResponses = {
+  /**
+   * Catalog refresh result
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type KiloRefreshCatalogResponse = KiloRefreshCatalogResponses[keyof KiloRefreshCatalogResponses]
+
 export type KiloModesData = {
   body?: never
   path?: never

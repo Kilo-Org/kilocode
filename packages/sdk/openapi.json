@@ -13220,6 +13220,75 @@
         ]
       }
     },
+    "/kilo/refresh-catalog": {
+      "post": {
+        "tags": ["kilo"],
+        "operationId": "kilo.refreshCatalog",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Catalog refresh result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"],
+                  "additionalProperties": false,
+                  "description": "Catalog refresh result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Force an immediate refresh of the models.dev catalog and clear the Kilo Gateway and Apertis model caches so the next provider listing re-fetches fresh data.",
+        "summary": "Refresh model catalog",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.refreshCatalog({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/modes": {
       "get": {
         "tags": ["kilo"],

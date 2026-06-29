@@ -1626,6 +1626,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagent Model",
   "settings.providers.subagentModel.description":
     "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
+  "settings.models.refreshCatalog.title": "Update model catalog",
+  "settings.models.refreshCatalog.description":
+    "Fetch the latest models from models.dev and the Kilo Gateway right now.",
+  "settings.models.refreshCatalog.button": "Update now",
+  "settings.models.refreshCatalog.refreshing": "Updating…",
+  "settings.models.refreshCatalog.toast.success": "Model catalog updated",
   "settings.models.hidePromptTraining.title": "Hide Prompt-Training Models",
   "settings.models.hidePromptTraining.description":
     "Hide Kilo Gateway models whose providers may use your prompts for training.",

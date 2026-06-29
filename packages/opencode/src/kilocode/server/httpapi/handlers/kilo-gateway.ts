@@ -29,6 +29,7 @@ import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
+import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
@@ -61,6 +62,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const auth = yield* Auth.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
+    const modelsDev = yield* ModelsDev.Service
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -93,6 +95,15 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         token: getToken(info),
         organizationId: getOrganizationId(info),
       }
+    })
+
+    const refreshCatalog = Effect.fn("KiloGatewayHttpApi.refreshCatalog")(function* () {
+      // Force a models.dev refetch; this also notifies the provider layer to rebuild its catalog.
+      yield* modelsDev.refresh(true).pipe(Effect.ignore)
+      // Drop the gateway caches so the next provider listing re-fetches fresh kilo/apertis models.
+      yield* cache.clear("kilo").pipe(Effect.ignore)
+      yield* cache.clear("apertis").pipe(Effect.ignore)
+      return { success: true }
     })
 
     const modes = Effect.fn("KiloGatewayHttpApi.modes")(function* () {
@@ -518,6 +529,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     return handlers
       .handle("profile", profile)
       .handle("authStatus", authStatus)
+      .handle("refreshCatalog", refreshCatalog)
       .handle("modes", modes)
       .handle("fim", fim)
       .handle("edit", edit)
