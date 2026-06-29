@@ -123,10 +123,15 @@ describe("Agent Manager sandbox startup", () => {
     expect(provider).toContain("wt.result.path, wt.result.branch, session.id")
   })
 
-  test("uses the experiment-aware visibility condition for UI and payload", () => {
-    expect(dialog).toContain("const sandboxVisible = () => isSandboxVisible(features(), config())")
-    expect(dialog).toContain("sandbox: sandboxVisible() ? sandbox() : undefined")
+  test("uses the persisted sandbox default for UI and only sends explicit overrides", () => {
+    expect(dialog).toContain("const sandboxVisible = () => features().sandboxControls")
+    expect(dialog).toContain('vscode.postMessage({ type: "requestSandboxDefault", requestID: sandboxRequestID })')
+    expect(dialog).toContain(
+      'vscode.postMessage({ type: "setSandboxDefault", enabled: next, requestID: sandboxRequestID })',
+    )
+    expect(dialog).toContain("sandbox: sandboxVisible() ? sandboxOverride() : undefined")
     expect(dialog).toContain("<Show when={sandboxVisible()}>")
+    expect(dialog).not.toContain("visible as isSandboxVisible")
   })
 
   test("places the sandbox toggle with prompt actions instead of model selectors", () => {

@@ -3322,6 +3322,11 @@ export type EventKilocodeAgentManagerStart = {
       prompt?: string
       name?: string
       branchName?: string
+      model?: {
+        providerID: string
+        modelID: string
+      }
+      variant?: string
     }>
   }
 }
@@ -11035,6 +11040,7 @@ export type KilocodeSessionModelUsageResponses = {
    * Model usage for a session tree
    */
   200: {
+    sessionIDs: Array<string>
     totals: {
       steps: number
       cost: number

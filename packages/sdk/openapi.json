@@ -15154,6 +15154,13 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "sessionIDs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      }
+                    },
                     "totals": {
                       "type": "object",
                       "properties": {
@@ -15260,7 +15267,7 @@
                       }
                     }
                   },
-                  "required": ["totals", "models"],
+                  "required": ["sessionIDs", "totals", "models"],
                   "additionalProperties": false,
                   "description": "Model usage for a session tree"
                 }
@@ -27799,6 +27806,22 @@
                       "type": "string"
                     },
                     "branchName": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "object",
+                      "properties": {
+                        "providerID": {
+                          "type": "string"
+                        },
+                        "modelID": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["providerID", "modelID"],
+                      "additionalProperties": false
+                    },
+                    "variant": {
                       "type": "string"
                     }
                   },
