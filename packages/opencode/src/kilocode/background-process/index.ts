@@ -759,7 +759,11 @@ export namespace BackgroundProcess {
       process.kill(-pid, "SIGTERM")
     } catch (err) {
       log.warn("failed to terminate process group", { err, pid })
-      process.kill(pid, "SIGTERM")
+      try {
+        process.kill(pid, "SIGTERM")
+      } catch (err) {
+        if (code(err) !== "ESRCH") throw err
+      }
     }
     if (active.proc) await waitExit(active.proc, KILL_MS)
     if (!active.proc) await Bun.sleep(KILL_MS)
@@ -768,7 +772,11 @@ export namespace BackgroundProcess {
       process.kill(-pid, "SIGKILL")
     } catch (err) {
       log.warn("failed to kill process group", { err, pid })
-      process.kill(pid, "SIGKILL")
+      try {
+        process.kill(pid, "SIGKILL")
+      } catch (err) {
+        if (code(err) !== "ESRCH") throw err
+      }
     }
   }
 
