@@ -31,21 +31,38 @@ function detect(text: string): Ref[] {
   }))
 }
 
-function resolve(text: string, ref: Ref): Ref | undefined {
+function locate(text: string, ref: Ref, index: number): Ref | undefined {
   const source = ref.source
   if (!source.value) return undefined
 
   if (Number.isFinite(source.start) && Number.isFinite(source.end)) {
-    const start = Math.max(0, source.start)
-    const end = Math.min(text.length, source.end)
-    if (start <= end && text.slice(start, end) === source.value) {
+    const start = Math.min(text.length, Math.max(0, source.start))
+    const end = Math.min(text.length, Math.max(0, source.end))
+    if (start >= index && start <= end && text.slice(start, end) === source.value) {
       return { ...ref, source: { ...source, start, end } }
     }
   }
 
-  const start = text.indexOf(source.value)
+  const hint = Number.isFinite(source.start) ? Math.min(text.length, Math.max(index, source.start)) : index
+  const found = text.indexOf(source.value, hint)
+  const start = found === -1 ? text.indexOf(source.value, index) : found
   if (start === -1) return undefined
   return { ...ref, source: { ...source, start, end: start + source.value.length } }
+}
+
+function resolve(text: string, refs: Ref[]): Ref[] {
+  const result: Ref[] = []
+  let index = 0
+
+  for (const ref of [...refs].sort((a, b) => a.source.start - b.source.start || b.source.end - a.source.end)) {
+    const next = locate(text, ref, index)
+    if (!next) continue
+
+    result.push(next)
+    index = next.source.end
+  }
+
+  return result
 }
 
 export function buildHighlightedTextSegments(text: string, files: FileRef[], agents: AgentRef[]): HighlightSegment[] {
@@ -60,9 +77,9 @@ export function buildHighlightedTextSegments(text: string, files: FileRef[], age
       .map((source) => ({ source, type: "agent" as const })),
   ]
 
-  const ranges = (
-    refs.length > 0 ? refs.map((ref) => resolve(text, ref)).filter((ref): ref is Ref => !!ref) : detect(text)
-  ).sort((a, b) => a.source.start - b.source.start || b.source.end - a.source.end)
+  const ranges = (refs.length > 0 ? resolve(text, refs) : detect(text)).sort(
+    (a, b) => a.source.start - b.source.start || b.source.end - a.source.end,
+  )
 
   const result: HighlightSegment[] = []
   let index = 0

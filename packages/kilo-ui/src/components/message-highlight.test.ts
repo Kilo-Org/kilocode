@@ -24,6 +24,37 @@ describe("message highlight", () => {
     ])
   })
 
+  test("relocates repeated stale source values in order", () => {
+    const text = "expanded @git-changes then @git-changes"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        {
+          source: {
+            type: "file",
+            path: "git-changes.txt",
+            text: { value: "@git-changes", start: 3, end: 15 },
+          },
+        },
+        {
+          source: {
+            type: "file",
+            path: "git-changes.txt",
+            text: { value: "@git-changes", start: 16, end: 28 },
+          },
+        },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "expanded " },
+      { text: "@git-changes", type: "file" },
+      { text: " then " },
+      { text: "@git-changes", type: "file" },
+    ])
+  })
+
   test("keeps valid source offsets", () => {
     const text = "use @src/index.ts"
     const segments = buildHighlightedTextSegments(
