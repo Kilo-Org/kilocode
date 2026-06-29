@@ -18,7 +18,7 @@
   min-height: 0;
   overflow: hidden;
   container: chat / inline-size;
-  --chat-readable-width: 78ch;
+  --chat-readable-width: 98ch;
   --chat-gutter: clamp(16px, 4cqi, 48px);
   --chat-scrollbar-width: 10px;
 }
@@ -38,7 +38,6 @@
 
 .chat-input {
   flex-shrink: 0;
-  border-top: 1px solid var(--vscode-panel-border);
 }
 
 /* ============================================
@@ -205,6 +204,14 @@
   padding: 0 4px 12px;
 }
 
+.vscode-session-turn[data-row="assistant"] {
+  padding-bottom: 6px;
+}
+
+.vscode-session-turn[data-row="assistant"]:has(> .vscode-session-turn-assistant:empty) {
+  padding-bottom: 0;
+}
+
 .vscode-session-turn-user {
   width: 100%;
 }
@@ -217,7 +224,7 @@
 .vscode-session-turn-assistant {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   width: 100%;
 }
 

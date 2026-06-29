@@ -336,8 +336,18 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
     )
     setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(picked.length) }))
-    setFetchedModels(undefined)
-    setSearch("")
+
+    // Keep the picker open with the un-picked models so the user can keep adding.
+    // Only close the picker when every fetched model has been added.
+    const pickedIds = new Set(picked.map((m) => m.id))
+    const remaining = models.filter((m) => !pickedIds.has(m.id))
+    if (remaining.length === 0) {
+      setFetchedModels(undefined)
+      setSearch("")
+    } else {
+      setFetchedModels(remaining)
+      setSelected(new Set<string>())
+    }
   }
 
   function cancelFetch() {

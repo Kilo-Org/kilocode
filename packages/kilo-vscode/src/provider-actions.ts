@@ -9,7 +9,7 @@ import {
   sanitizeCustomProviderConfig,
   withCustomProviderDeletions,
 } from "./shared/custom-provider"
-import { isCustomProviderPackage, KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { isCustomProviderPackage, KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "./shared/provider-model"
 import { configFeatures } from "./features"
 
 /**
@@ -50,7 +50,7 @@ function same(a: unknown, b: unknown): boolean {
   return akeys.every((key, index) => key === bkeys[index] && same(a[key], b[key]))
 }
 
-/** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
+/** Fetch provider availability and authentication state without exposing stored credentials. */
 export async function fetchProviderData(client: KiloClient, dir: string) {
   const authRequest =
     typeof client.provider.auth === "function"
@@ -59,10 +59,15 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
           .then((r) => r.data ?? {})
           .catch(() => ({}))
       : Promise.resolve({})
+  const kiloRequest = client.kilo
+    .authStatus({ directory: dir }, { throwOnError: true })
+    .then((r) => (r.data?.authenticated ? (r.data.type ?? null) : null))
+    .catch(() => null)
 
-  const [{ data: response }, authMethods] = await Promise.all([
+  const [{ data: response }, authMethods, kiloAuth] = await Promise.all([
     client.provider.list({ directory: dir }, { throwOnError: true }),
     authRequest,
+    kiloRequest,
   ])
   const authStates: Record<string, AuthState> = {}
   const storedKeys: Record<string, StoredProviderKey> = {}
@@ -83,6 +88,8 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
     delete next.key
     return next as (typeof response.all)[number]
   })
+  delete authStates[KILO_PROVIDER_ID]
+  if (kiloAuth) authStates[KILO_PROVIDER_ID] = kiloAuth
   return { response: { ...response, all }, authMethods, authStates, storedKeys }
 }
 

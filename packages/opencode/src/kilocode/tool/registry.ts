@@ -1,18 +1,22 @@
 // kilocode_change - new file
 import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
+import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { InteractiveTerminalTool } from "./interactive-terminal"
+import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
+import { Notebook } from "@/kilocode/notebook/service"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "@/agent/agent"
 import * as Truncate from "@/tool/truncate"
+import type { Config } from "@/config/config"
 
 const log = Log.create({ service: "kilocode-tool-registry" })
-type Deps = { agent: Agent.Interface; truncate: Truncate.Interface }
+type Deps = { agent: Agent.Interface; truncate: Truncate.Interface; indexing?: boolean }
 type Loaders = {
   indexing?: () => Promise<{ KiloIndexing: { ready: () => boolean } }>
   semantic?: () => Promise<Pick<typeof import("@/kilocode/tool/semantic-search"), "SemanticSearchTool">>
@@ -22,16 +26,30 @@ export namespace KiloToolRegistry {
   const hint =
     "- When you are doing an open-ended search where you do not know the exact symbol name, use the `semantic_search` tool first to narrow down the search scope, then follow up with `Grep` and/or `Read`"
 
+  export function indexing(
+    config: Pick<Config.Info, "indexing">,
+    global?: Pick<Config.Info, "indexing">,
+  ): boolean | undefined {
+    return config.indexing?.enabled ?? global?.indexing?.enabled
+  }
+
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
-  export function infos() {
+  export function infos(notebook?: Notebook.Interface) {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
+      const managerModels = yield* AgentManagerModelsTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
       const terminal = yield* InteractiveTerminalTool
-      return { codebase, recall, manager, process, terminal }
+      if (!notebook) return { codebase, recall, managerModels, manager, process, terminal }
+      const tools = yield* Effect.all({
+        notebookRead: NotebookReadTool,
+        notebookEdit: NotebookEditTool,
+        notebookExecute: NotebookExecuteTool,
+      }).pipe(Effect.provideService(Notebook.Service, notebook))
+      return { codebase, recall, managerModels, manager, process, terminal, ...tools }
     })
   }
 
@@ -41,9 +59,13 @@ export namespace KiloToolRegistry {
     tools: {
       codebase: Tool.Info
       recall: Tool.Info
+      managerModels: Tool.Info
       manager: Tool.Info
       process: Tool.Info
       terminal?: Tool.Info
+      notebookRead?: Tool.Info
+      notebookEdit?: Tool.Info
+      notebookExecute?: Tool.Info
     },
     deps: Deps,
     loaders: Loaders = {},
@@ -52,26 +74,39 @@ export namespace KiloToolRegistry {
       const base = yield* Effect.all({
         codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
+        managerModels: Tool.init(tools.managerModels),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
       })
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
+      const notebooks =
+        tools.notebookRead && tools.notebookEdit && tools.notebookExecute
+          ? yield* Effect.all({
+              notebookRead: Tool.init(tools.notebookRead),
+              notebookEdit: Tool.init(tools.notebookEdit),
+              notebookExecute: Tool.init(tools.notebookExecute),
+            })
+          : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, semantic }
+      return { ...base, terminal, ...notebooks, semantic }
     })
   }
 
   function semanticTool(deps: Deps, loaders: Loaders) {
     return Effect.gen(function* () {
-      const indexing = loaders.indexing ?? (() => import("@/kilocode/indexing"))
-      const ready = yield* Effect.tryPromise(() => indexing().then((mod) => mod.KiloIndexing.ready())).pipe(
-        Effect.catch((err) =>
-          Effect.sync(() => {
-            log.warn("semantic search unavailable", { err })
-            return false
-          }),
-        ),
-      )
+      const ready = yield* deps.indexing === undefined
+        ? (() => {
+            const indexing = loaders.indexing ?? (() => import("@/kilocode/indexing"))
+            return Effect.tryPromise(() => indexing().then((mod) => mod.KiloIndexing.ready())).pipe(
+              Effect.catch((err) =>
+                Effect.sync(() => {
+                  log.warn("semantic search unavailable", { err })
+                  return false
+                }),
+              ),
+            )
+          })()
+        : Effect.succeed(deps.indexing)
       if (!ready) return undefined
 
       const semantic = loaders.semantic ?? (() => import("@/kilocode/tool/semantic-search"))
@@ -106,11 +141,15 @@ export namespace KiloToolRegistry {
       codebase: Tool.Def
       semantic?: Tool.Def
       recall: Tool.Def
+      managerModels: Tool.Def
       manager: Tool.Def
       process: Tool.Def
       terminal?: Tool.Def
+      notebookRead?: Tool.Def
+      notebookEdit?: Tool.Def
+      notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean } },
+    cfg: { experimental?: { codebase_search?: boolean; native_notebook_tools?: boolean } },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
@@ -118,8 +157,15 @@ export namespace KiloToolRegistry {
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
-      // The extension is the only client that can consume the Agent Manager start event.
-      ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      // Agent Manager tools are useful only when the extension can create and display their sessions.
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.managerModels, tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "vscode" &&
+      cfg.experimental?.native_notebook_tools === true &&
+      tools.notebookRead &&
+      tools.notebookEdit &&
+      tools.notebookExecute
+        ? [tools.notebookRead, tools.notebookEdit, tools.notebookExecute]
+        : []),
     ]
   }
 

@@ -1,27 +1,57 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.PromptAttachment
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
 import ai.kilocode.client.session.ui.attachment.AttachmentCardItem
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
+import ai.kilocode.client.session.ui.prompt.MentionAction
 import ai.kilocode.client.session.ui.prompt.PROMPT_ATTACHMENT_PASTE_HANDLER_KEY
 import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteHandler
 import ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.prompt.SlashAction
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.test.CopyProviderSink
+import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.rpc.dto.FileSearchResultDto
+import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.WorkspaceFileDto
+import com.intellij.ide.actions.UndoRedoAction
 import com.intellij.icons.AllIcons
+import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.codeInsight.lookup.LookupManager
+import com.intellij.codeInsight.lookup.LookupPositionStrategy
+import com.intellij.codeInsight.lookup.impl.LookupImpl
 import com.intellij.notification.Notification
 import com.intellij.notification.Notifications
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.DataKey
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.actions.PasteAction
+import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.fileEditor.TextEditor
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -32,7 +62,11 @@ import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import java.awt.Container
 import java.awt.BorderLayout
 import java.awt.datatransfer.DataFlavor
@@ -53,11 +87,22 @@ import javax.swing.SwingUtilities
 @Suppress("UnstableApiUsage")
 class PromptPanelTest : BasePlatformTestCase() {
     private val roots = mutableListOf<SessionRootPanel>()
+    private lateinit var scope: CoroutineScope
+    private lateinit var rpc: FakeWorkspaceRpcApi
+    private lateinit var workspaces: KiloWorkspaceService
+
+    override fun setUp() {
+        super.setUp()
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        rpc = FakeWorkspaceRpcApi()
+        workspaces = KiloWorkspaceService(scope, rpc)
+    }
 
     override fun tearDown() {
         try {
             roots.asReversed().forEach { it.removeNotify() }
             roots.clear()
+            scope.cancel()
         } finally {
             super.tearDown()
         }
@@ -197,6 +242,224 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertFalse(editor.settings.isPaintSoftWraps)
     }
 
+    fun `test prompt editor highlights validated commands and mentions`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        rpc.fileResolver = { emptyList() }
+
+        realize(panel, 260, 400)
+        field.text = "/new use ${MentionAction.GIT_CHANGES.token} and @unknown "
+        field.getEditor(false)!!.caretModel.moveToOffset(field.text.length)
+        panel.refreshHighlights()
+        waitForSend { spans(field).any { it.first == "@unknown" } }
+
+        val spans = spans(field)
+        assertTrue(spans.contains("/new" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans.contains(MentionAction.GIT_CHANGES.token to DefaultLanguageHighlighterColors.METADATA))
+        assertTrue(spans.contains("@unknown" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
+    }
+
+    fun `test prompt editor exposes file editor for undo redo`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val editor = field.getEditor(false)!!
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(0, "hello")
+        }
+        val sink = TestSink()
+        (field as UiDataProvider).uiDataSnapshot(sink)
+        val file = sink.file as? TextEditor ?: error("missing file editor")
+
+        assertNotNull(file)
+        assertSame(editor.document, file.editor.document)
+        UndoManager.getInstance(project).undo(file)
+        assertEquals("", editor.document.text)
+        UndoManager.getInstance(project).redo(file)
+        assertEquals("hello", editor.document.text)
+    }
+
+    fun `test prompt editor platform undo redo actions target prompt editor`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val editor = field.getEditor(false)!!
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(0, "hello")
+        }
+        assertSame(true, editor.contentComponent.getClientProperty(UndoRedoAction.IGNORE_SWING_UNDO_MANAGER))
+        val sink = TestSink()
+        (field as UiDataProvider).uiDataSnapshot(sink)
+        val file = sink.file as? TextEditor ?: error("missing file editor")
+        assertSame(editor.document, file.editor.document)
+        assertTrue("prompt file editor should have undo", UndoManager.getInstance(project).isUndoAvailable(file))
+
+        invokeAction(IdeActions.ACTION_UNDO, editor.contentComponent, file)
+        assertEquals("", editor.document.text)
+        invokeAction(IdeActions.ACTION_REDO, editor.contentComponent, file)
+        assertEquals("hello", editor.document.text)
+    }
+
+    fun `test prompt editor component undo redo shortcuts target prompt editor`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        val editor = field.getEditor(false)!!
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(0, "hello")
+        }
+
+        invokeComponentAction("Kilo Session Undo", editor)
+        assertEquals("", editor.document.text)
+        invokeComponentAction("Kilo Session Redo", editor)
+        assertEquals("hello", editor.document.text)
+    }
+
+    fun `test prompt editor highlights missing mention as wrong reference`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+        rpc.fileResolver = { emptyList() }
+
+        realize(panel, 260, 400)
+        field.text = "@missing "
+        field.getEditor(false)!!.caretModel.moveToOffset(field.text.length)
+        panel.refreshHighlights()
+        waitForSend { spans(field).contains("@missing" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES) }
+
+        assertTrue(spans(field).contains("@missing" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
+    }
+
+    fun `test accepted file mention highlights immediately`() {
+        rpc.searchResult = FileSearchResultDto(files = listOf(file("src/deploy.ts")))
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "@dep"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        waitForLookupItems(editor)
+        acceptLookup(editor)
+        waitForSend { spans(field).contains("@src/deploy.ts" to DefaultLanguageHighlighterColors.METADATA) }
+
+        assertTrue(spans(field).contains("@src/deploy.ts" to DefaultLanguageHighlighterColors.METADATA))
+    }
+
+    fun `test invalid edited file mention highlights after caret leaves token`() {
+        rpc.searchResult = FileSearchResultDto(files = listOf(file("src/deploy.ts")))
+        rpc.fileResolver = { path -> if (path == "src/deploy.ts") listOf(file(path)) else emptyList() }
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "@dep"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+        invokeCompletionAction(editor)
+        waitForLookupItems(editor)
+        acceptLookup(editor)
+        waitForSend { spans(field).contains("@src/deploy.ts" to DefaultLanguageHighlighterColors.METADATA) }
+
+        val offset = field.text.indexOf(' ')
+        WriteCommandAction.runWriteCommandAction(project) {
+            editor.document.insertString(offset, "x")
+        }
+        editor.caretModel.moveToOffset(offset + 1)
+        UIUtil.dispatchAllInvocationEvents()
+        editor.caretModel.moveToOffset(field.text.length)
+        waitForSend { spans(field).contains("@src/deploy.tsx" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES) }
+
+        assertTrue(spans(field).contains("@src/deploy.tsx" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
+    }
+
+    fun `test prompt clear removes prompt highlighters`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "use ${MentionAction.GIT_CHANGES.token}"
+        UIUtil.dispatchAllInvocationEvents()
+        assertEquals(1, field.getEditor(false)!!.markupModel.allHighlighters.size)
+
+        panel.clear()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(0, field.getEditor(false)!!.markupModel.allHighlighters.size)
+    }
+
+    fun `test prompt highlighters stay bounded across edits`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        repeat(50) {
+            field.text = if (it % 2 == 0) {
+                "/new ${MentionAction.GIT_CHANGES.token}"
+            } else {
+                "/new ${MentionAction.GIT_CHANGES.token} now"
+            }
+            UIUtil.dispatchAllInvocationEvents()
+            assertTrue(field.getEditor(false)!!.markupModel.allHighlighters.size <= 2)
+        }
+    }
+
+    fun `test prompt local completion shortcut opens mention lookup`() {
+        rpc.searchResult = ai.kilocode.rpc.dto.FileSearchResultDto(
+            files = listOf(ai.kilocode.rpc.dto.WorkspaceFileDto("src/deploy.ts", "deploy.ts")),
+        )
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "@dep"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        val items = waitForLookupItems(editor)
+
+        assertTrue("items=$items", items.contains("src/deploy.ts"))
+    }
+
+    fun `test prompt local completion shortcut opens slash lookup`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "/ne"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        val items = waitForLookupItems(editor)
+
+        assertTrue("items=$items", items.contains("new"))
+    }
+
+    fun `test prompt completion lookup is positioned above caret`() {
+        rpc.searchResult = FileSearchResultDto(
+            files = listOf(WorkspaceFileDto("src/deploy.ts", "deploy.ts")),
+        )
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
+        val field = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 260, 400)
+        field.text = "@dep"
+        val editor = field.getEditor(false)!!
+        editor.caretModel.moveToOffset(field.text.length)
+
+        invokeCompletionAction(editor)
+        waitForLookupItems(editor)
+        val lookup = LookupManager.getActiveLookup(editor) as? LookupImpl ?: error("missing lookup")
+
+        assertEquals(LookupPositionStrategy.ONLY_ABOVE, lookup.presentation.positionStrategy)
+    }
+
     fun `test prompt editor shrinks when lines are removed`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
@@ -225,6 +488,49 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(min, editor.preferredSize.height)
     }
 
+    fun `test prompt editor exposes selection copy provider`() {
+        val selection = SessionSelection()
+        val panel = PromptPanel(project = project, selection = selection, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val host = JPanel()
+        host.add(panel)
+        host.addNotify()
+        try {
+            editor.text = "alpha prompt"
+
+            editor.getEditor(true)!!.selectionModel.setSelection(0, 5)
+            val sink = TestSink()
+            (editor as UiDataProvider).uiDataSnapshot(sink)
+            sink.copy!!.performCopy(DataContext.EMPTY_CONTEXT)
+
+            assertEquals("alpha", CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor))
+        } finally {
+            editor.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
+            selection.dispose()
+        }
+    }
+
+    fun `test prompt editor copies full content without selection`() {
+        val selection = SessionSelection()
+        val panel = PromptPanel(project = project, selection = selection, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        val host = JPanel()
+        host.add(panel)
+        host.addNotify()
+        try {
+            editor.text = "alpha prompt"
+
+            val sink = TestSink()
+            (editor as UiDataProvider).uiDataSnapshot(sink)
+            sink.copy!!.performCopy(DataContext.EMPTY_CONTEXT)
+
+            assertEquals("alpha prompt", CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor))
+        } finally {
+            editor.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
+            selection.dispose()
+        }
+    }
+
     fun `test attachment only prompt can send`() {
         var sent = false
         val panel = PromptPanel(project, { text, files ->
@@ -237,6 +543,31 @@ class PromptPanelTest : BasePlatformTestCase() {
         waitForSend { sent }
 
         assertTrue(sent)
+    }
+
+    fun `test submit resolves mentions from current text`() {
+        var text: String? = null
+        var sent: List<PromptPartDto>? = null
+        val part = PromptPartDto(type = "file", mime = "text/plain", url = "file:///repo/src/x.kt")
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, files -> sent = files },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            onMentions = { value ->
+                text = value
+                listOf(part)
+            },
+        )
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        panel.setReady(true)
+
+        editor.text = "read @src/x.kt"
+        panel.send()
+        waitForSend { sent != null }
+
+        assertEquals("read @src/x.kt", text)
+        assertEquals(listOf(part), sent)
     }
 
     fun `test clear removes attachments`() {
@@ -732,6 +1063,97 @@ class PromptPanelTest : BasePlatformTestCase() {
         return root
     }
 
+    private fun completion() = KiloPromptCompletionProvider(
+        workspace = workspaces.workspace("/test"),
+        service = workspaces,
+        actions = listOf(
+            SlashAction(SlashAction.NEW.name, "New") {},
+            SlashAction("next", "Next") {},
+        ),
+        mentions = listOf(MentionAction(
+            MentionAction.GIT_CHANGES.name,
+            "Git Changes",
+            available = MentionAction.GIT_CHANGES.available,
+        )),
+        scope = scope,
+    )
+
+    private fun invokeCompletionAction(editor: Editor) {
+        val action = ActionUtil.getActions(editor.contentComponent).first { item ->
+            item.templatePresentation.text == "Kilo Prompt Completion"
+        }
+        val event = event(action, editor)
+        ActionUtil.updateAction(action, event)
+        ActionUtil.performAction(action, event)
+    }
+
+    private fun invokeComponentAction(text: String, editor: Editor) {
+        val action = ActionUtil.getActions(editor.contentComponent).first { item ->
+            item.templatePresentation.text == text
+        }
+        val event = event(action, editor)
+        ActionUtil.updateAction(action, event)
+        assertTrue("action $text should be enabled", event.presentation.isEnabled)
+        ActionUtil.performAction(action, event)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun invokeAction(id: String, component: java.awt.Component, file: TextEditor) {
+        val action = ActionManager.getInstance().getAction(id) ?: error("missing action $id")
+        val ctx = DataContext { data ->
+            when (data) {
+                CommonDataKeys.PROJECT.name -> project
+                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> component
+                PlatformCoreDataKeys.FILE_EDITOR.name -> file
+                else -> null
+            }
+        }
+        val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
+        ActionUtil.updateAction(action, event)
+        assertTrue("action $id should be enabled", event.presentation.isEnabled)
+        ActionUtil.performAction(action, event)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun waitForLookupItems(editor: Editor): List<String> {
+        repeat(50) {
+            UIUtil.dispatchAllInvocationEvents()
+            val items = LookupManager.getActiveLookup(editor)?.items.orEmpty().map { item -> item.lookupString }
+            if (items.isNotEmpty()) return items
+            Thread.sleep(20)
+        }
+        return LookupManager.getActiveLookup(editor)?.items.orEmpty().map { it.lookupString }
+    }
+
+    private fun acceptLookup(editor: Editor) {
+        val lookup = LookupManager.getActiveLookup(editor) as? LookupImpl ?: error("missing lookup")
+        lookup.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun file(path: String) = WorkspaceFileDto(
+        path = path,
+        name = path.substringAfterLast('/'),
+    )
+
+    private fun event(action: AnAction, editor: Editor): AnActionEvent {
+        val ctx = DataContext { id ->
+            when (id) {
+                CommonDataKeys.EDITOR.name -> editor
+                CommonDataKeys.PROJECT.name -> project
+                else -> null
+            }
+        }
+        return AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
+    }
+
+    private fun spans(field: EditorTextField): List<Pair<String, com.intellij.openapi.editor.colors.TextAttributesKey?>> {
+        val editor = field.getEditor(false)!!
+        return editor.markupModel.allHighlighters.map {
+            field.text.substring(it.startOffset, it.endOffset) to it.textAttributesKey
+        }
+    }
+
     private fun createEditor(): Editor {
         val factory = EditorFactory.getInstance()
         return factory.createEditor(factory.createDocument(""), project)
@@ -795,34 +1217,14 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
-    private class TestSink : DataSink {
+    private class TestSink : CopyProviderSink() {
         var send: Any? = null
+        var file: Any? = null
 
-        override fun <T : Any> set(key: com.intellij.openapi.actionSystem.DataKey<T>, data: T?) {
+        override fun <T : Any> set(key: DataKey<T>, data: T?) {
+            super.set(key, data)
             if (key == PromptDataKeys.SEND) send = data
-        }
-
-        override fun <T : Any> setNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {
-        }
-
-        override fun <T : Any> lazyNull(key: com.intellij.openapi.actionSystem.DataKey<T>) {
-        }
-
-        override fun <T : Any> lazyValue(
-            key: com.intellij.openapi.actionSystem.DataKey<T>,
-            data: (com.intellij.openapi.actionSystem.DataMap) -> T?,
-        ) {
-        }
-
-        override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.UiDataProvider) {
-            provider.uiDataSnapshot(this)
-        }
-
-        override fun dataSnapshot(provider: com.intellij.openapi.actionSystem.DataSnapshotProvider) {
-            provider.dataSnapshot(this)
-        }
-
-        override fun uiDataSnapshot(provider: com.intellij.openapi.actionSystem.DataProvider) {
+            if (key == PlatformCoreDataKeys.FILE_EDITOR) file = data
         }
     }
 

@@ -6,6 +6,7 @@ import { BackgroundProcessPaths } from "../../../src/kilocode/server/httpapi/gro
 import { ConfigConsolePaths } from "../../../src/kilocode/server/httpapi/groups/config-console"
 import { IndexingPaths, KiloEmbeddingModel } from "../../../src/kilocode/server/httpapi/groups/indexing"
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
+import { KilocodePaths } from "../../../src/kilocode/server/httpapi/groups/kilocode"
 import { NetworkPaths } from "../../../src/kilocode/server/httpapi/groups/network"
 import { TelemetryPaths } from "../../../src/kilocode/server/httpapi/groups/telemetry"
 import { ExperimentalPaths } from "../../../src/server/routes/instance/httpapi/groups/experimental"
@@ -17,6 +18,7 @@ type Schema = {
   items?: Schema
   properties?: Record<string, Schema>
   type?: string
+  enum?: string[]
   minLength?: number
   maxLength?: number
   pattern?: string
@@ -135,6 +137,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.tuiConfig },
       { method: "get", path: ConfigConsolePaths.tuiKeybinds },
       { method: "patch", path: ConfigConsolePaths.tuiConfig },
+      { method: "get", path: KilocodePaths.sessionModelUsage },
     ] satisfies Array<{ method: Method; path: string }>
 
     for (const route of routes) {
@@ -163,7 +166,16 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
     const profile = response(KiloGatewayPaths.profile)?.properties
     expect(profile?.balance).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
+    expect(profile?.kiloPass).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
+    const pass = profile?.kiloPass?.anyOf?.find((item) => item.type === "object")?.properties
+    expect(pass?.nextBillingAt).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
     expect(profile?.currentOrgId).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
+
+    const auth = response(KiloGatewayPaths.authStatus)?.properties
+    expect(auth).toEqual({
+      authenticated: { type: "boolean" },
+      type: { type: "string", enum: ["api", "oauth"] },
+    })
 
     const sessions = response(KiloGatewayPaths.cloudSessions)?.properties
     expect(sessions?.cliSessions?.items?.properties?.title).toEqual({

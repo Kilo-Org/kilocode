@@ -1,7 +1,9 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
+import { Npm } from "@opencode-ai/core/npm"
 import type { ConfigPlugin } from "@/config/plugin"
 import { hasAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
+import { PluginLoader } from "@/plugin/loader"
 
 const atomic = "@kilocode/plugin-atomic-chat"
 
@@ -95,5 +97,22 @@ describe("kilocode default atomic chat plugin", () => {
     expect(cfg.plugin).toContain(spec)
     expect(cfg.plugin).toContain(atomic)
     expect(cfg.plugin_origins).toEqual([origin])
+  })
+
+  test("external loader skips bundled atomic chat before npm installation", async () => {
+    const install = spyOn(Npm, "add").mockRejectedValue(new Error("unexpected install"))
+    const specs = [atomic, `${atomic}@7.3.46`, `npm:${atomic}`, `atomic@npm:${atomic}@7.3.46`]
+
+    try {
+      const loaded = await PluginLoader.loadExternal({
+        items: specs.map((spec) => ({ spec, source: "test", scope: "global" as const })),
+        kind: "server",
+      })
+
+      expect(loaded).toEqual([])
+      expect(install).not.toHaveBeenCalled()
+    } finally {
+      install.mockRestore()
+    }
   })
 })

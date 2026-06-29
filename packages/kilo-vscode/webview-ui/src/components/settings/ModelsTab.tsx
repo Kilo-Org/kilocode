@@ -1,6 +1,8 @@
 import { Component, For, Show, createMemo } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -9,6 +11,9 @@ import { parseModelString } from "../../../../src/shared/provider-model"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
+import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
+import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
+import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
 import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
@@ -37,6 +42,9 @@ const ModelsTab: Component = () => {
   }
 
   const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
+  const speechOption = createMemo(() => SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel()))
+  const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.authStates()))
   const variantKey = createMemo(() => config().subagent_model ?? undefined)
   const subagentVariants = createMemo(() => Object.keys(provider.findModel(subagentModel())?.variants ?? {}))
   const subagentVariant = createMemo(() => {
@@ -167,6 +175,43 @@ const ModelsTab: Component = () => {
             label={language.t("settings.autocomplete.model.title")}
             description={language.t("settings.autocomplete.model.description")}
           />
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.models.speechToTextModel.title")}
+          description={
+            kiloReady()
+              ? language.t("settings.models.speechToTextModel.description")
+              : language.t("settings.models.speechToText.disabledDescription")
+          }
+        >
+          <Tooltip
+            value={language.t("settings.models.speechToText.disabledDescription")}
+            placement="top"
+            inactive={kiloReady()}
+          >
+            <Select
+              options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+              current={speechOption()}
+              value={(item) => item.value}
+              label={(item) => `${item.label} (${item.provider})`}
+              onSelect={(item) =>
+                updateConfig({
+                  experimental: {
+                    ...config().experimental,
+                    speech_to_text_model: item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id,
+                  },
+                })
+              }
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              triggerProps={{
+                "aria-label": `${language.t("settings.models.speechToTextModel.title")}: ${speechOption()?.label}`,
+              }}
+              disabled={!kiloReady()}
+              placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
+            />
+          </Tooltip>
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.models.hidePromptTraining.title")}

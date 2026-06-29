@@ -114,7 +114,6 @@ export const CodeWithAiNav: NavSection[] = [
         children: "Agent Behavior",
         subLinks: [
           { href: "/code-with-ai/features/browser-use", children: "Browser Use" },
-          { href: "/code-with-ai/features/fast-edits", children: "Fast Edits" },
           {
             href: "/code-with-ai/features/task-todo-list",
             children: "Task Todo List",

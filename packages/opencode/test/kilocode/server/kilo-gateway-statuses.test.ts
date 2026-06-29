@@ -84,6 +84,17 @@ function post(path: string, body: Record<string, unknown>) {
 }
 
 describe("Kilo gateway HttpApi statuses", () => {
+  it.live("reports locally stored API authentication without a Gateway request", () =>
+    Effect.gen(function* () {
+      yield* stub(() => Promise.reject(new Error("unexpected Gateway request")))
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.authStatus)
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({ authenticated: true, type: "api" })
+    }),
+  )
+
   it.live("preserves cloud session list rate limits", () =>
     Effect.gen(function* () {
       yield* stub(() => new Response("rate limited", { status: 429 }))
@@ -169,6 +180,32 @@ describe("Kilo gateway HttpApi statuses", () => {
 
       expect(response.status).toBe(500)
       expect(yield* response.json).toEqual({ error: "KiloClaw request failed: 500 worker failed" })
+    }),
+  )
+
+  it.live("normalizes numeric KiloClaw timestamps", () =>
+    Effect.gen(function* () {
+      const started = 1_700_000_000_000
+      yield* stub(() =>
+        Response.json({
+          status: "running",
+          sandboxId: "sandbox",
+          userId: "user",
+          lastStartedAt: started,
+          lastStoppedAt: null,
+        }),
+      )
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.clawStatus)
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({
+        status: "running",
+        sandboxId: "sandbox",
+        userId: "user",
+        lastStartedAt: new Date(started).toISOString(),
+        lastStoppedAt: null,
+      })
     }),
   )
 

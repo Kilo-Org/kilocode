@@ -20,14 +20,6 @@ MiniMax is a global AI foundation model company focused on fast, cost-efficient 
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2. **Select Provider:** Navigate to **Providers**. Choose **MiniMax** from the API Provider dropdown.
-3. **Enter API Key:** Paste your MiniMax API key into the MiniMax API Key field.
-4. **Select Model:** Choose your desired MiniMax model from the Model dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add MiniMax and enter your API key.

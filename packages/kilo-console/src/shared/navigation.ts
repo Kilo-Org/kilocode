@@ -21,7 +21,7 @@ export function settings(input: string, prefix = base()) {
 
 export function path(input: string, prefix = base()): Path {
   const route = strip(input, prefix)
-  if (route === "/profile") return "/profile"
+  if (route === "/profile" || route.startsWith("/kilo/login")) return "/profile"
   if (route.startsWith("/settings") || route.startsWith("/config")) return "/settings"
   if (route.startsWith("/projects/")) return "/project"
   return "/projects"

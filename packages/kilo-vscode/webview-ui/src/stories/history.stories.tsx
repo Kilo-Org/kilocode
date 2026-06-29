@@ -119,7 +119,11 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
                         session_diff: {},
                         message: {},
                         part: {},
-                        provider: { all: [], connected: [] as string[], default: {} as any, failed: [] as string[] },
+                        provider: {
+                          all: new Map(),
+                          connected: [] as string[],
+                          default: {} as any,
+                        },
                       }}
                       directory="/project/"
                     >

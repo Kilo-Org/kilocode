@@ -1,4 +1,5 @@
 import type { AuthOAuthResult, Hooks } from "@kilocode/plugin"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import { optionalOmitUndefined } from "@opencode-ai/core/schema"
@@ -106,6 +107,8 @@ interface State {
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ProviderAuth") {}
+
+export const use = serviceUse(Service)
 
 // kilocode_change start
 export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(

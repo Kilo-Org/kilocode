@@ -148,14 +148,20 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("returns false for unknown request ID", () =>
+  it.live("fails for unknown request ID", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
-        const accepted = yield* saveAlwaysRules({
+        const exit = yield* saveAlwaysRules({
           requestID: PermissionID.make("permission_nonexistent"),
           approvedAlways: ["npm install"],
-        })
-        expect(accepted).toBe(false)
+        }).pipe(Effect.exit)
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) {
+          expect(Cause.squash(exit.cause)).toMatchObject({
+            _tag: "Permission.NotFoundError",
+            requestID: "permission_nonexistent",
+          })
+        }
       }),
     ),
   )

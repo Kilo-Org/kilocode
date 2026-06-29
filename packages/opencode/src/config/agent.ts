@@ -1,6 +1,6 @@
 export * as ConfigAgent from "./agent"
 
-import path from "path" // kilocode_change
+import path from "path"
 import { Schema, SchemaGetter } from "effect"
 import { PositiveInt } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
@@ -17,6 +17,7 @@ import { Bus } from "@/bus"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
+import { Requirements } from "@/kilocode/agent-requirements"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
@@ -47,6 +48,14 @@ const AgentSchema = Schema.StructWithRest(
     }),
     // kilocode_change end
     mode: Schema.optional(Schema.Literals(["subagent", "primary", "all"])),
+    // kilocode_change start - typed metadata carriers so they never fall into `options` (provider params)
+    displayName: Schema.optional(Schema.String).annotate({
+      description: "Human-readable name shown in the UI (e.g. for organization or marketplace agents)",
+    }),
+    source: Schema.optional(Schema.String).annotate({
+      description: "Origin marker for managed agents (organization | global | project)",
+    }),
+    // kilocode_change end
     hidden: Schema.optional(Schema.Boolean).annotate({
       description: "Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)",
     }),
@@ -61,6 +70,7 @@ const AgentSchema = Schema.StructWithRest(
     // kilocode_change end
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
     permission: Schema.optional(ConfigPermission.Info),
+    requirements: Schema.optional(Requirements), // kilocode_change
   }),
   [Schema.Record(Schema.String, Schema.Any)],
 )
@@ -74,6 +84,8 @@ const KNOWN_KEYS = new Set([
   "temperature",
   "top_p",
   "mode",
+  "displayName", // kilocode_change
+  "source", // kilocode_change
   "hidden",
   "color",
   "steps",
@@ -82,6 +94,7 @@ const KNOWN_KEYS = new Set([
   "permission",
   "disable",
   "tools",
+  "requirements", // kilocode_change
 ])
 
 // Post-parse normalisation:
@@ -153,19 +166,7 @@ export async function load(dir: string, warnings?: Warning[]) {
     })
     if (!md) continue
 
-    // kilocode_change start
-    const patterns = [
-      "/.kilo/agent/",
-      "/.kilo/agents/",
-      "/.kilocode/agent/",
-      "/.kilocode/agents/",
-      "/.opencode/agent/",
-      "/.opencode/agents/",
-      "/agent/",
-      "/agents/",
-    ]
-    // kilocode_change end
-    const name = configEntryNameFromPath(item, patterns)
+    const name = configEntryNameFromPath(path.relative(dir, item), ["agent/", "agents/"])
 
     // kilocode_change start - substitute agent prompt variables relative to the agent file
     const prompt = await ConfigVariable.substitute({
@@ -230,7 +231,7 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
     if (!md) continue
 
     const config = {
-      name: configEntryNameFromPath(item, []),
+      name: configEntryNameFromPath(path.relative(dir, item), ["mode/", "modes/"]),
       ...md.data,
       prompt: md.content.trim(),
     }

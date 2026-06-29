@@ -11,6 +11,7 @@ import { type Accessor, Component, createSignal, For, onCleanup, Show } from "so
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -63,13 +64,14 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   }
 
   function onOpen(val: boolean) {
-    setOpen(val)
     if (val) {
       const items = rows()
       const idx = items.findIndex((v) => v === props.value)
-      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+      setFocused(idx >= 0 ? idx : 0)
+      setOpen(true)
       return
     }
+    setOpen(false)
     refocus()
   }
 
@@ -117,7 +119,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
       focusItem(len - 1)
       return
     }
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === " " || isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       if (cur >= 0 && cur < len) pick(items[cur])
       return
@@ -165,6 +167,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
                   role="option"
                   aria-selected={props.value === v}
                   tabindex={focused() === i() ? 0 : -1}
+                  data-autofocus={focused() === i() ? "" : undefined}
                   onClick={() => pick(v)}
                   onFocus={() => setFocused(i())}
                 >

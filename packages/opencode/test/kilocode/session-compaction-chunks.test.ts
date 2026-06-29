@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
-import { Effect, Layer, ManagedRuntime, Scope } from "effect"
+import { Effect, Layer, ManagedRuntime } from "effect"
 import * as Stream from "effect/Stream"
+import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
@@ -112,12 +113,10 @@ async function assistant(sessionID: SessionID, parentID: MessageID, root: string
 }
 
 function llm() {
-  const queue: Array<
-    Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)
-  > = []
+  const queue: Array<Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)> = []
 
   return {
-    push(stream: Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)) {
+    push(stream: Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)) {
       queue.push(stream)
     },
     layer: Layer.succeed(
@@ -136,104 +135,15 @@ function llm() {
 function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   return (input: LLM.StreamInput) => {
     capture?.(input)
+    const usage = { inputTokens: 1, outputTokens: 1, totalTokens: 2 }
     return Stream.make(
-      { type: "start" } as LLM.Event,
-      { type: "text-start", id: "txt-0" } as LLM.Event,
-      { type: "text-delta", id: "txt-0", delta: text, text } as LLM.Event,
-      { type: "text-end", id: "txt-0" } as LLM.Event,
-      {
-        type: "finish-step",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        response: { id: "res", modelId: "test-model", timestamp: new Date() },
-        providerMetadata: undefined,
-        usage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
-      {
-        type: "finish",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        totalUsage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
+      LLMEvent.textStart({ id: "txt-0" }),
+      LLMEvent.textDelta({ id: "txt-0", text }),
+      LLMEvent.textEnd({ id: "txt-0" }),
+      LLMEvent.stepFinish({ index: 0, reason: "stop", usage }),
+      LLMEvent.finish({ reason: "stop", usage }),
     )
   }
-}
-
-function overflow() {
-  return Stream.make(
-    { type: "start" } as LLM.Event,
-    {
-      type: "finish-step",
-      finishReason: "stop",
-      rawFinishReason: "stop",
-      response: { id: "res", modelId: "test-model", timestamp: new Date() },
-      providerMetadata: undefined,
-      usage: {
-        inputTokens: 20_000,
-        outputTokens: 1,
-        totalTokens: 20_001,
-        inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-        outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-      },
-    } as LLM.Event,
-    {
-      type: "finish",
-      finishReason: "stop",
-      rawFinishReason: "stop",
-      totalUsage: {
-        inputTokens: 20_000,
-        outputTokens: 1,
-        totalTokens: 20_001,
-        inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-        outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-      },
-    } as LLM.Event,
-  )
-}
-
-function runtime(layer: Layer.Layer<LLM.Service>, context = 7_000) {
-  const bus = Bus.layer
-  const status = SessionStatus.layer.pipe(Layer.provide(bus))
-  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(SyncEvent.defaultLayer),
-  )
-  const model = ProviderTest.model({ providerID, id: modelID, limit: { context, output: 1_000 } })
-  return ManagedRuntime.make(
-    Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
-      Layer.provide(ProviderTest.fake({ model }).layer),
-      Layer.provide(SessionNs.defaultLayer),
-      Layer.provide(Snapshot.defaultLayer),
-      Layer.provide(layer),
-      Layer.provide(Permission.defaultLayer),
-      Layer.provide(Agent.defaultLayer),
-      Layer.provide(Plugin.defaultLayer),
-      Layer.provide(SyncEvent.defaultLayer),
-      Layer.provide(EventV2Bridge.defaultLayer),
-      Layer.provide(RuntimeFlags.layer()),
-      Layer.provide(Reference.defaultLayer),
-      Layer.provide(status),
-      Layer.provide(bus),
-      Layer.provide(
-        Layer.mock(Config.Service)({
-          get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
-        }),
-      ),
-    ),
-  )
 }
 
 function fakeRuntime(outputTokenMax?: number) {
@@ -251,6 +161,7 @@ function fakeRuntime(outputTokenMax?: number) {
               return input.assistantMessage
             },
             updateToolCall: Effect.fn("TestSessionProcessor.updateToolCall")(() => Effect.succeed(undefined)),
+            metadata: Effect.fn("TestSessionProcessor.metadata")(() => Effect.void),
             completeToolCall: Effect.fn("TestSessionProcessor.completeToolCall")(() => Effect.void),
             process: Effect.fn("TestSessionProcessor.process")((stream: LLM.StreamInput) =>
               Effect.gen(function* () {

@@ -1,8 +1,9 @@
 import { Question } from "@/question"
 import { QuestionID } from "@/question/schema"
 import { Effect } from "effect"
-import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi" // kilocode_change - map Question missing requests to declared 404 errors
+import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
+import { QuestionNotFoundError } from "../errors"
 
 export const questionHandlers = HttpApiBuilder.group(InstanceHttpApi, "question", (handlers) =>
   Effect.gen(function* () {
@@ -16,21 +17,35 @@ export const questionHandlers = HttpApiBuilder.group(InstanceHttpApi, "question"
       params: { requestID: QuestionID }
       payload: Question.Reply
     }) {
-      // kilocode_change start - map missing Question requests to the declared transport error
       yield* svc
         .reply({
           requestID: ctx.params.requestID,
           answers: ctx.payload.answers,
         })
-        .pipe(Effect.mapError(() => new HttpApiError.NotFound({})))
-      // kilocode_change end
+        .pipe(
+          Effect.catchTag("Question.NotFoundError", (error) =>
+            Effect.fail(
+              new QuestionNotFoundError({
+                requestID: String(error.requestID),
+                message: `Question request not found: ${error.requestID}`,
+              }),
+            ),
+          ),
+        )
       return true
     })
 
     const reject = Effect.fn("QuestionHttpApi.reject")(function* (ctx: { params: { requestID: QuestionID } }) {
-      // kilocode_change start - map missing Question requests to the declared transport error
-      yield* svc.reject(ctx.params.requestID).pipe(Effect.mapError(() => new HttpApiError.NotFound({})))
-      // kilocode_change end
+      yield* svc.reject(ctx.params.requestID).pipe(
+        Effect.catchTag("Question.NotFoundError", (error) =>
+          Effect.fail(
+            new QuestionNotFoundError({
+              requestID: String(error.requestID),
+              message: `Question request not found: ${error.requestID}`,
+            }),
+          ),
+        ),
+      )
       return true
     })
 

@@ -8,5 +8,5 @@ import { sessionHandlers } from "./v2/session"
 
 export const v2Handlers = Layer.mergeAll(sessionHandlers, messageHandlers, modelHandlers, providerHandlers).pipe(
   Layer.provide(v2LocationLayer),
-  Layer.provide(SessionV2.defaultLayer),
+  Layer.provide(SessionV2.layer), // kilocode_change - use the application EventV2Bridge
 )

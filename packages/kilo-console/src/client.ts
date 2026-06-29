@@ -11,6 +11,7 @@ import type {
   GlobalHealthResponse,
   GlobalEvent,
   KiloEmbeddingModelCatalog,
+  KiloProfileResponse,
   LspStatusResponse,
   McpStatusResponse,
   Pty as PtyInfo,
@@ -41,6 +42,8 @@ export type Query = {
 }
 
 export type ProjectQuery = Pick<Query, "url" | "dir">
+
+export type KiloProfileData = KiloProfileResponse
 
 export type ProjectItem = KiloProject
 export type RecentProjectItem = ProjectItem & {
@@ -208,6 +211,11 @@ function model(input: unknown) {
   const index = input.indexOf("/")
   if (index <= 0 || index >= input.length - 1) return undefined
   return { provider: input.slice(0, index), model: input.slice(index + 1) }
+}
+
+function directory(input: ProjectQuery) {
+  const dir = value(input.dir)
+  return dir ? { directory: dir } : undefined
 }
 
 function title(input: string) {
@@ -405,6 +413,42 @@ export async function load(input: Query): Promise<Snapshot> {
 
 export async function loadEmbeddingModels(input: Query): Promise<KiloEmbeddingModelCatalog> {
   return demand("Kilo embedding models", await client(input).indexing.models())
+}
+
+export async function loadKiloProfile(input: ProjectQuery): Promise<KiloProfileData> {
+  const sdk = client(input)
+  const result = await sdk.kilo.profile(directory(input))
+  return demand("Kilo profile", result)
+}
+
+export async function setKiloOrganization(input: ProjectQuery, organizationId: string | null) {
+  const sdk = client(input)
+  const result = await sdk.kilo.organization.set({ ...directory(input), organizationId })
+  demand("Switch Kilo account", result)
+  await sdk.global.dispose()
+}
+
+export async function logoutKilo(input: ProjectQuery) {
+  const sdk = client(input)
+  const result = await sdk.auth.remove({ providerID: "kilo" })
+  demand("Log out of Kilo", result)
+  await sdk.global.dispose()
+}
+
+export async function startKiloLogin(input: ProjectQuery): Promise<ProviderAuthAuthorization> {
+  const sdk = client(input)
+  const result = await sdk.provider.oauth.authorize({ ...directory(input), providerID: "kilo", method: 0 })
+  return demand("Start Kilo login", result)
+}
+
+export async function completeKiloLogin(input: ProjectQuery, signal?: AbortSignal) {
+  const sdk = client(input)
+  const result = await sdk.provider.oauth.callback(
+    { ...directory(input), providerID: "kilo", method: 0 },
+    signal ? { signal } : undefined,
+  )
+  demand("Complete Kilo login", result)
+  await sdk.global.dispose()
 }
 
 export async function loadProjects(input: ProjectQuery): Promise<ProjectItem[]> {

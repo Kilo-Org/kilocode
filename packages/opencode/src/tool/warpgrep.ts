@@ -61,8 +61,9 @@ export const CodebaseSearchTool = Tool.define(
               "Codebase search unavailable: free period ended. Set MORPH_API_KEY to continue. Get your key at https://www.morphllm.com/"
             if (isAuthOrRateLimit) {
               yield* Effect.promise(() =>
+                // kilocode_change start
                 Bus.publish(Instance.current, TuiEvent.ToastShow, {
-                  // kilocode_change
+                  // kilocode_change end
                   title: "Codebase Search Unavailable",
                   message: "Free period has ended. Set MORPH_API_KEY to continue. Get your key at morphllm.com",
                   variant: "error",

@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.serialization.json.JsonNull
@@ -92,6 +93,7 @@ class KiloBackendAppService private constructor(
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
+        private const val READY_TIMEOUT_MS = 5_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -221,6 +223,25 @@ class KiloBackendAppService private constructor(
         }
     }
 
+    suspend fun awaitReady(timeoutMs: Long = READY_TIMEOUT_MS) {
+        when (_appState.value) {
+            is KiloAppState.Ready -> return
+            is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+            is KiloAppState.Loading,
+            KiloAppState.Connecting -> {
+                val state = withTimeoutOrNull(timeoutMs) {
+                    appState.first { it !is KiloAppState.Loading && it !is KiloAppState.Connecting }
+                }
+                when (state) {
+                    is KiloAppState.Ready -> return
+                    is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+                    else -> throw IllegalStateException("Kilo backend is not ready")
+                }
+            }
+            else -> throw IllegalStateException("Kilo backend is not ready")
+        }
+    }
+
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppState {
         val http = connection.apiClient ?: throw IllegalStateException("Not connected")
         val current = _appState.value as? KiloAppState.Ready ?: throw IllegalStateException("Kilo backend is not ready")
@@ -257,7 +278,7 @@ class KiloBackendAppService private constructor(
     private suspend fun reconnect() {
         mutex.withLock {
             val current = _appState.value
-            if (current is KiloAppState.Ready || current is KiloAppState.Connecting || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
+            if (current is KiloAppState.Ready || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
                 log.info("reconnect: already ${current::class.simpleName} — skipping")
                 return
             }
@@ -398,6 +419,10 @@ class KiloBackendAppService private constructor(
                             warnings = warns,
                         )
                     )
+                    log.info(
+                        "Application snapshot: profile=${if (prof != null) "loaded" else "not_logged_in"} " +
+                            "warnings=${warns.size} notifications=${notifs.size} ${configSummary(cfg)}",
+                    )
                     log.info("Application started — config, profile, notifications loaded")
                 } catch (e: TimeoutCancellationException) {
                     val err = LoadError(
@@ -417,6 +442,7 @@ class KiloBackendAppService private constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    ensureActive()
                     log.warn("Application start failed: ${e.message}")
                     captureLoad("Backend Load Failed", start, mapOf(
                         "errorCount" to errors.size.toString(),
@@ -616,6 +642,11 @@ class KiloBackendAppService private constructor(
     private fun warning(warn: ConfigWarning): String {
         val detail = warn.detail?.let { " detail=$it" } ?: ""
         return "${warn.path}: ${warn.message}$detail"
+    }
+
+    private fun configSummary(cfg: Config): String {
+        val text = cfg.toString()
+        return "configChars=${text.length} configHash=${text.hashCode().toUInt().toString(16)}"
     }
 
     private suspend fun restartConnection(reason: String) {

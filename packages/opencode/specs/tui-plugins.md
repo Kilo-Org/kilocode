@@ -195,8 +195,8 @@ npm plugins can declare a version compatibility range in `package.json` using th
 - Alias: `kilo plug <module>`.
 - `-g` / `--global` writes into the global config dir.
 - Local installs resolve target dir inside `patchPluginConfig`.
-- For local scope, path is `<worktree>/.opencode` only when VCS is git and `worktree !== "/"`; otherwise `<directory>/.opencode`.
-- Root-worktree fallback (`worktree === "/"` uses `<directory>/.opencode`) is covered by regression tests.
+- For local scope, path is `<worktree>/.kilo` only when VCS is git and `worktree !== "/"`; otherwise `<directory>/.kilo`.
+- Root-worktree fallback (`worktree === "/"` uses `<directory>/.kilo`) is covered by regression tests.
 - `patchPluginConfig` applies all detected targets (`server` and/or `tui`) in one call.
 - `patchPluginConfig` returns structured result unions (`ok`, `code`, fields by error kind) instead of custom thrown errors.
 - `patchPluginConfig` serializes per-target config writes with `Flock.acquire(...)`.
@@ -213,7 +213,7 @@ npm plugins can declare a version compatibility range in `package.json` using th
 - There is no uninstall, list, or update CLI command for external plugins.
 - Local file plugins are configured directly in `tui.json`.
 
-When `plugin` entries exist in a writable `.opencode` dir or `KILO_CONFIG_DIR`, Kilo installs `@kilocode/plugin` into that dir and writes:
+When `plugin` entries exist in a writable `.kilo` or legacy `.kilocode` directory, or `KILO_CONFIG_DIR`, Kilo installs `@kilocode/plugin` into that directory and writes:
 
 - `package.json`
 - `bun.lock`
@@ -230,6 +230,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 - `api.attention.notify(input)`
 - `api.keys.formatSequence(parts)`, `formatBindings(bindings)`
 - `api.keymap`
+- `api.mode.current()`, `api.mode.push(mode)`
 - `api.route.register(routes)` / `api.route.navigate(name, params?)` / `api.route.current`
 - `api.ui.Dialog`, `DialogAlert`, `DialogConfirm`, `DialogPrompt`, `DialogSelect`, `Slot`, `Prompt`, `ui.toast`, `ui.dialog`
 - `api.tuiConfig`
@@ -255,6 +256,68 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 - Disposers returned by `api.keymap` registrations and `acquireResource(...)` are automatically cleaned up when the plugin deactivates. You do not need to add those disposers to `api.lifecycle.onDispose(...)` yourself.
 - Built-in which-key shortcuts are resolved from flat `keybinds` command ids such as `which_key_toggle`, not plugin options.
 
+#### Mode-aware layers
+
+Kilo registers a `mode` layer field on the host keymap. Plugins can use it to keep bindings active only in the relevant UI state.
+
+Built-in modes:
+
+- `base`: normal app, route, and prompt interaction.
+- `modal`: host dialog stack is open, including dialogs rendered through `api.ui.dialog` and `api.ui.Dialog*` components.
+- `autocomplete`: host prompt autocomplete is open.
+- `api.mode.current()` returns the active top mode, or `base` when no pushed mode is active.
+
+Example: register a command and shortcut that are active only in normal app mode:
+
+```tsx
+api.keymap.registerLayer({
+  mode: "base",
+  commands: [
+    {
+      name: "demo.open",
+      title: "Demo",
+      category: "Plugin",
+      namespace: "palette",
+      run() {
+        api.route.navigate("demo")
+      },
+    },
+  ],
+  bindings: [{ key: "ctrl+shift+m", cmd: "demo.open", desc: "Open demo" }],
+})
+```
+
+Layers without `mode` are not mode-gated and can remain active while dialogs or autocomplete are open. Use that only for intentionally global commands or low-level keymap extensions.
+
+Plugins that own a full-screen route or modal-like UI can temporarily push a plugin-specific mode with `api.mode.push(...)`. Use a plugin-scoped mode name. The returned disposer pops that specific stack entry and is idempotent, so popping an older mode while a newer mode is on top leaves the newer mode active.
+
+```tsx
+import { onCleanup } from "solid-js"
+
+api.route.register([
+  {
+    name: "demo",
+    render: () => {
+      const popMode = api.mode.push("acme.demo")
+      onCleanup(popMode)
+
+      return (
+        <box>
+          <text>demo</text>
+        </box>
+      )
+    },
+  },
+])
+
+api.keymap.registerLayer({
+  mode: "acme.demo",
+  bindings: [{ key: "escape", cmd: () => api.route.navigate("home"), desc: "Close demo" }],
+})
+```
+
+Mode pushes are automatically tracked by the plugin runtime. If a plugin is disabled, fails during activation, or the TUI shuts down before the plugin calls the disposer, Kilo pops the plugin's pushed modes during plugin cleanup. Calling the disposer yourself is still recommended for component lifetimes; cleanup remains idempotent.
+
 ### Keys
 
 - `api.keys` exposes host-formatted shortcut display helpers for plugin UI.
@@ -265,7 +328,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 ### Attention
 
 - `api.attention.notify({ title?, message, notification?, sound? })` requests user attention while keeping terminal focus, notifications, and audio owned by the host.
-- `message` is required; `title` defaults to `"opencode"`; `notification` defaults to enabled with `when: "blurred"`; `sound` defaults to enabled with `when: "always"`.
+- `message` is required; `title` defaults to `"Kilo"`; `notification` defaults to enabled with `when: "blurred"`; `sound` defaults to enabled with `when: "always"`.
 - `when: "always"` requests delivery regardless of terminal focus state.
 - `when: "focused"` only requests delivery after the terminal is known focused; `when: "blurred"` only requests delivery after the terminal is known blurred.
 - Example: `notification: { when: "blurred" }, sound: { name: "question", when: "always" }` plays sound while focused but only triggers system notifications when blurred.
@@ -350,7 +413,7 @@ Theme install behavior:
 - If the theme name already exists, install is skipped unless plugin metadata state is `updated`.
 - On `updated`, host skips rewrite when tracked `mtime`/`size` is unchanged.
 - When a theme already exists and state is not `updated`, host can still persist theme metadata when destination already exists.
-- Local plugins persist installed themes under the local `.opencode/themes` area near the plugin config source.
+- Local plugins persist installed themes under `.kilo/themes`, or under `themes` beside a config source in `.kilo` or legacy `.kilocode`.
 - Global plugins persist installed themes under the global `themes` dir.
 - Invalid or unreadable theme files are ignored.
 
@@ -475,7 +538,4 @@ The plugin manager is exposed as a command with title `Plugins` and value `plugi
 
 ## Current in-repo examples
 
-- Local smoke plugin: `.opencode/plugins/tui-smoke.tsx`
-- Local vim plugin: `.opencode/plugins/tui-vim.tsx`
-- Local smoke config: `.opencode/tui.json`
-- Local smoke theme: `.opencode/plugins/smoke-theme.json`
+The upstream `.opencode` smoke fixtures remain in the repository for OpenCode compatibility, but Kilo does not auto-load them. Kilo-local examples must live under `.kilo` or legacy `.kilocode`.

@@ -95,7 +95,7 @@ function inline(directory: string, root: string, hooks: IndexingWorker.Hooks): I
     async dispose() {
       progress.dispose()
       telemetry.dispose()
-      manager.dispose()
+      await manager.dispose()
     },
   }
 }
@@ -490,7 +490,11 @@ describe("indexing startup degradation", () => {
           expect(init).toHaveBeenCalled()
           expect(KiloIndexing.ready()).toBe(false)
           expect(await KiloIndexing.available()).toBe(false)
-          expect(await KiloIndexing.search("boot failure")).toEqual([])
+          const search = KiloIndexing.search("boot failure")
+          const pending = await Promise.race([search.then(() => false), Promise.resolve(true)])
+          expect(pending).toBe(true)
+          gate.resolve({ requiresRestart: false })
+          expect(await search).toEqual([])
         },
       })
     } finally {

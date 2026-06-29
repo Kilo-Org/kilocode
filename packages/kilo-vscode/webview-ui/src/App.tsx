@@ -19,6 +19,7 @@ import { ConfigProvider } from "./context/config"
 import { DisplayProvider } from "./context/display"
 import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
+import { AgentRequirementsProvider } from "./context/agent-requirements"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
@@ -82,7 +83,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   })
 
   const providerData = createMemo(() => ({
-    all: Object.values(prov.providers()) as unknown as any[],
+    all: new Map(Object.entries(prov.providers())),
     connected: prov.connected(),
     default: prov.defaults(),
   }))
@@ -149,6 +150,35 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openContent", content, language })
   }
 
+  // File existence validation for code span candidates
+  const pending = new Map<string, (existing: string[]) => void>()
+  const counter = { n: 0 }
+  const validateFiles = (paths: string[]): Promise<string[]> => {
+    const id = `vf-${++counter.n}`
+    return new Promise((resolve) => {
+      pending.set(id, resolve)
+      vscode.postMessage({ type: "validateFiles", id, paths })
+      setTimeout(() => {
+        if (pending.has(id)) {
+          pending.delete(id)
+          resolve([])
+        }
+      }, 3000)
+    })
+  }
+  const handler = (event: MessageEvent) => {
+    const msg = event.data
+    if (msg?.type === "validateFilesResult" && msg.id) {
+      const cb = pending.get(msg.id)
+      if (cb) {
+        pending.delete(msg.id)
+        cb(msg.existing ?? [])
+      }
+    }
+  }
+  onMount(() => window.addEventListener("message", handler))
+  onCleanup(() => window.removeEventListener("message", handler))
+
   const directory = () => {
     const dir = server.workspaceDirectory()
     if (!dir) return ""
@@ -167,6 +197,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onOpenDiff={openDiff}
       onOpenUrl={openUrl}
       onOpenContent={openContent}
+      onValidateFiles={validateFiles}
     >
       {props.children}
     </DataProvider>
@@ -201,6 +232,7 @@ const AppContent: Component = () => {
   // legacy-migration: state-driven flag independent of currentView to avoid
   // race conditions with SettingsEditorProvider's navigate messages.
   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
+  const [migrationSource, setMigrationSource] = createSignal<"legacy" | "roo">("legacy")
   const session = useSession()
   const server = useServer()
   const vscode = useVSCode()
@@ -278,6 +310,7 @@ const AppContent: Component = () => {
       // legacy-migration: state-driven migration wizard
       if (message?.type === "migrationState") {
         console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
+        setMigrationSource(message.source)
         setMigrationNeeded(message.needed)
       }
     }
@@ -338,9 +371,9 @@ const AppContent: Component = () => {
               <Settings
                 tab={settingsTab()}
                 onTabChange={setSettingsTab}
-                onMigrateClick={() => {
+                onMigrationClick={(source) => {
+                  setMigrationSource(source)
                   setMigrationNeeded(true)
-                  vscode.postMessage({ type: "requestLegacyMigrationData" })
                 }}
               />
             </Match>
@@ -350,7 +383,11 @@ const AppContent: Component = () => {
           </Switch>
         }
       >
-        <MigrationWizard onBack={() => setMigrationNeeded(false)} onComplete={() => setMigrationNeeded(false)} />
+        <MigrationWizard
+          source={migrationSource()}
+          onBack={() => setMigrationNeeded(false)}
+          onComplete={() => setMigrationNeeded(false)}
+        />
       </Show>
       {/* legacy-migration end */}
     </div>
@@ -378,11 +415,13 @@ const App: Component = () => {
                                 <KiloEmbeddingModelsProvider>
                                   <NotificationsProvider>
                                     <SessionProvider>
-                                      <FeedbackProvider>
-                                        <DataBridge>
-                                          <AppContent />
-                                        </DataBridge>
-                                      </FeedbackProvider>
+                                      <AgentRequirementsProvider>
+                                        <FeedbackProvider>
+                                          <DataBridge>
+                                            <AppContent />
+                                          </DataBridge>
+                                        </FeedbackProvider>
+                                      </AgentRequirementsProvider>
                                     </SessionProvider>
                                   </NotificationsProvider>
                                 </KiloEmbeddingModelsProvider>

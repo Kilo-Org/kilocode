@@ -11,9 +11,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "BYOK ผ่าน Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": "",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "แนะนำ",
-  "dialog.provider.kilo.note": "เข้าถึงโมเดล AI มากกว่า 500 รายการ",
+  // Provider settings translations
+  "settings.providers.group.recommended": "แนะนำ",
+  "settings.providers.note.kilo": "เข้าถึงโมเดล AI มากกว่า 500 รายการ",
+  "settings.providers.note.opencode": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
+  "settings.providers.note.anthropic": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
+  "settings.providers.note.deepseek": "โมเดล DeepSeek สำหรับงานใช้เหตุผลและเขียนโค้ด",
+  "settings.providers.note.copilot": "โมเดล Claude สำหรับช่วยเขียนโค้ด",
+  "settings.providers.note.openai": "โมเดล GPT และ Codex พร้อมคีย์ API หรือการเข้าสู่ระบบ ChatGPT",
+  "settings.providers.note.google": "โมเดล Gemini สำหรับคำตอบที่รวดเร็วและเป็นโครงสร้าง",
+  "settings.providers.note.openrouter": "เข้าถึงโมเดลที่รองรับทั้งหมดจากผู้ให้บริการเดียว",
+  "settings.providers.note.vercel": "เข้าถึงโมเดล AI แบบรวมศูนย์พร้อมการกำหนดเส้นทางอัจฉริยะ",
 
   // Reasoning block label
   "ui.permission.run": "เรียกใช้",
@@ -34,6 +42,25 @@ export const dict = {
   "marketplace.install.scope": "ขอบเขต",
   "marketplace.install.scope.project": "โปรเจกต์",
   "marketplace.install.scope.global": "โกลบอล",
+  "marketplace.install.scope.project.description":
+    "เฉพาะโปรเจกต์นี้ ไฟล์ที่ติดตั้งสามารถเพิ่มลงในระบบควบคุมเวอร์ชันและแชร์กับทีมของคุณได้",
+  "marketplace.install.scope.global.description":
+    "ทุกโปรเจกต์ในเครื่องนี้ จัดเก็บไว้ในการกำหนดค่าผู้ใช้ของคุณ",
+  "marketplace.install.destination": "ปลายทางการติดตั้ง",
+  "marketplace.install.about.mcp":
+    "เซิร์ฟเวอร์ MCP เพิ่มเครื่องมือให้ Kilo สำหรับทำงานกับบริการภายนอกหรือโปรแกรมในเครื่อง",
+  "marketplace.install.about.agent": "เอเจนต์เพิ่มบทบาทที่นำกลับมาใช้ใหม่ได้พร้อมคำสั่งและสิทธิ์ของตนเอง",
+  "marketplace.install.about.skill":
+    "ทักษะเพิ่มคำสั่งและทรัพยากรเฉพาะงานที่ Kilo สามารถโหลดได้เมื่อจำเป็น",
+  "marketplace.install.mcp.warning":
+    "เซิร์ฟเวอร์ MCP สามารถเรียกใช้คำสั่งในเครื่องหรือเชื่อมต่อกับบริการภายนอกได้ Kilo จะขออนุญาตก่อนใช้เครื่องมือ เว้นแต่สิทธิ์ของคุณจะอนุญาตโดยอัตโนมัติ",
+  "marketplace.install.project.warning":
+    "ไฟล์โปรเจกต์อาจถูกเพิ่มลงในระบบควบคุมเวอร์ชัน อย่าเก็บข้อมูลลับไว้ที่นี่ เว้นแต่การกำหนดค่าจะอ้างอิงตัวแปรสภาพแวดล้อม",
+  "marketplace.install.learnMore": "เรียนรู้วิธีการติดตั้งจาก Marketplace",
+  "marketplace.install.learnMcp": "เรียนรู้เพิ่มเติมเกี่ยวกับ MCP",
+  "marketplace.install.installedAt": "ติดตั้งไปยัง {{path}} แล้ว",
+  "marketplace.intro": "ติดตั้งเอเจนต์ ทักษะ และเครื่องมือ MCP ที่นำกลับมาใช้ใหม่ได้สำหรับหนึ่งโปรเจกต์หรือทุกโปรเจกต์",
+  "marketplace.intro.learnMore": "เกี่ยวกับ Marketplace",
   "marketplace.install.prerequisites": "ข้อกำหนดเบื้องต้น",
   "marketplace.install.installing": "กำลังติดตั้ง...",
   "marketplace.install.cancel": "ยกเลิก",
@@ -51,7 +78,9 @@ export const dict = {
   "marketplace.search": "ค้นหา...",
   "marketplace.filter.all": "รายการทั้งหมด",
   "marketplace.filter.notInstalled": "ยังไม่ได้ติดตั้ง",
+  "marketplace.filter.relevant": "เกี่ยวข้องกับพื้นที่ทำงานของฉัน",
   "marketplace.empty": "ไม่พบรายการ",
+  "marketplace.empty.relevant": "ไม่พบรายการในมาร์เก็ตเพลสที่เกี่ยวข้องกับพื้นที่ทำงานนี้",
   "marketplace.badge.mcpServer": "เซิร์ฟเวอร์ MCP",
   "marketplace.badge.mode": "โหมด",
   "marketplace.card.by": "โดย {{author}}",

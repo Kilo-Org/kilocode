@@ -56,8 +56,10 @@ class ModelPicker : PickerButton() {
         val providerName: String,
         val recommendedIndex: Double? = null,
         val free: Boolean = false,
+        val byok: Boolean = false,
         val variants: List<String> = emptyList(),
         val attachment: Boolean = false,
+        val mayTrainOnYourPrompts: Boolean = false,
     ) {
         val key: String get() = "$provider/$id"
 
@@ -126,13 +128,18 @@ class ModelPicker : PickerButton() {
             return
         }
         val item = selected ?: if (allowEmpty) null else items.firstOrNull()
-        text = if (item == null && allowEmpty) "$emptyText ▾" else "${ModelText.sanitize(item?.display ?: items.first().display)} ▾"
+        text = if (item == null && allowEmpty) "$emptyText ▾" else "${ModelText.buttonLabel(item ?: items.first())} ▾"
         icon = if (item?.let(ModelText::collectsData) == true) ModelPickerRenderer.DATA_COLLECTED else null
         horizontalTextPosition = SwingConstants.LEFT
         iconTextGap = JBUI.CurrentTheme.ActionsList.elementIconGap()
         toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollectedTooltip() else KiloBundle.message("model.picker.tooltip")
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+    }
+
+    fun open() {
+        if (!isEnabled || (items.isEmpty() && !allowEmpty)) return
+        showPopup()
     }
 
     private fun showPopup() {
@@ -452,6 +459,14 @@ internal object ModelText {
         return Parts(null, text)
     }
 
+    fun buttonLabel(item: ModelPicker.Item): String {
+        val part = parts(item).model
+        if (item.provider == "kilo") return part
+        val provider = item.providerName.trim()
+        if (provider.isEmpty()) return part
+        return "$provider / $part"
+    }
+
     fun small(item: ModelPicker.Item): Boolean = item.provider == "kilo" && item.id in small
 
     fun providerSort(id: String): Int = if (id == "kilo") 0 else 1
@@ -465,7 +480,7 @@ internal object ModelText {
 
     fun freeLabel(): String = KiloBundle.message("model.picker.free")
 
-    fun collectsData(item: ModelPicker.Item): Boolean = item.free && item.provider == "kilo"
+    fun collectsData(item: ModelPicker.Item): Boolean = item.mayTrainOnYourPrompts
 
     fun freeBg(): JBColor = JBColor.namedColor("Kilo.ModelPicker.freeBadgeBackground", JBColor(0x95D6AC, 0x7FCA99))
 }

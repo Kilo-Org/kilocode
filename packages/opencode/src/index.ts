@@ -58,6 +58,8 @@ process.on("uncaughtException", (e) => {
 
 const args = hideBin(process.argv)
 
+if (await KiloCli.runner()) process.exit() // kilocode_change - run persistent process guardians before CLI bootstrap
+
 function show(out: string) {
   const text = out.trimStart()
   if (!text.startsWith("opencode ")) {

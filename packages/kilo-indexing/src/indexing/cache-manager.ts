@@ -16,6 +16,7 @@ export class CacheManager implements ICacheManager {
   private readonly cachePath: string
   private fileHashes: Record<string, string> = {}
   private saveTimer: ReturnType<typeof setTimeout> | undefined
+  private saveTask = Promise.resolve()
 
   constructor(
     private readonly cacheDirectory: string,
@@ -36,28 +37,36 @@ export class CacheManager implements ICacheManager {
 
   private scheduleSave(): void {
     if (this.saveTimer) clearTimeout(this.saveTimer)
-    this.saveTimer = setTimeout(() => this.performSave(), 1500)
+    this.saveTimer = setTimeout(() => {
+      void this.flush().catch((err) => log.error("failed to save cache", { err }))
+    }, 1500)
   }
 
   private async performSave(): Promise<void> {
-    try {
-      await fs.mkdir(path.dirname(this.cachePath), { recursive: true })
-      const tmp = `${this.cachePath}.tmp`
-      await fs.writeFile(tmp, JSON.stringify(this.fileHashes), "utf-8")
-      await fs.rename(tmp, this.cachePath)
-    } catch (err) {
+    await fs.mkdir(path.dirname(this.cachePath), { recursive: true })
+    const tmp = `${this.cachePath}.tmp`
+    await fs.writeFile(tmp, JSON.stringify(this.fileHashes), "utf-8")
+    await fs.rename(tmp, this.cachePath)
+  }
+
+  async flush(): Promise<void> {
+    if (this.saveTimer) clearTimeout(this.saveTimer)
+    this.saveTimer = undefined
+    const task = this.saveTask.then(() => this.performSave())
+    this.saveTask = task.catch((err) => {
       log.error("failed to save cache", { err })
-    }
+    })
+    await task
+  }
+
+  seedHashes(hashes: Readonly<Record<string, string>>): void {
+    this.fileHashes = { ...hashes }
+    this.scheduleSave()
   }
 
   async clearCacheFile(): Promise<void> {
-    try {
-      this.fileHashes = {}
-      await fs.mkdir(path.dirname(this.cachePath), { recursive: true })
-      await fs.writeFile(this.cachePath, "{}", "utf-8")
-    } catch (err) {
-      log.error("failed to clear cache file", { err })
-    }
+    this.fileHashes = {}
+    await this.flush()
   }
 
   getHash(filePath: string): string | undefined {
@@ -76,5 +85,17 @@ export class CacheManager implements ICacheManager {
 
   getAllHashes(): Record<string, string> {
     return { ...this.fileHashes }
+  }
+
+  signature(): string {
+    const entries = Object.entries(this.fileHashes).sort(([left], [right]) => left.localeCompare(right))
+    return createHash("sha256").update(JSON.stringify(entries)).digest("hex")
+  }
+
+  async stamp(): Promise<string | undefined> {
+    return fs
+      .stat(this.cachePath)
+      .then((value) => `${value.mtimeMs}:${value.ctimeMs}:${value.size}`)
+      .catch(() => undefined)
   }
 }

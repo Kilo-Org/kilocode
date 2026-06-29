@@ -70,6 +70,9 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      - name: Install dependencies
+        run: bun install
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:

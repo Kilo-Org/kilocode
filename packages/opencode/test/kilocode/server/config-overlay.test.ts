@@ -7,6 +7,7 @@ import { Config } from "../../../src/config/config"
 import { KilocodeConfigOverlay } from "../../../src/kilocode/config/overlay"
 import { Permission } from "../../../src/permission"
 import { PtyPaths } from "../../../src/server/routes/instance/httpapi/groups/pty"
+import { Filesystem } from "../../../src/util/filesystem"
 import { resetDatabase } from "../../fixture/db"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
@@ -91,6 +92,58 @@ describe("config overlay routes", () => {
     expect(Object.hasOwn(patched, "prototype")).toBe(false)
   })
 
+  test("prefers .kilo over legacy .kilocode and ignores .opencode in project overlays", async () => {
+    await using project = await tmpdir()
+    const entries = [
+      {
+        root: ".opencode",
+        source: "opencode",
+        value: { username: "opencode", model: "test/opencode", small_model: "test/opencode" },
+      },
+      {
+        root: ".kilocode",
+        source: "kilocode",
+        value: { username: "kilocode", model: "test/kilocode" },
+      },
+      {
+        root: ".kilo",
+        source: "kilo",
+        value: { username: "kilo" },
+      },
+    ] as const
+
+    for (const item of entries) {
+      const dir = path.join(project.path, item.root)
+      await Filesystem.write(path.join(dir, "kilo.json"), JSON.stringify(item.value))
+      await Filesystem.write(
+        path.join(dir, "agent", "shared.md"),
+        `---\ndescription: ${item.source} agent\nmode: subagent\n---\n${item.source} agent prompt`,
+      )
+    }
+    await Filesystem.write(
+      path.join(project.path, ".opencode", "agent", "opencode-only.md"),
+      "---\ndescription: opencode-only agent\nmode: subagent\n---\nopencode-only agent prompt",
+    )
+
+    const body = await KilocodeConfigOverlay.resolve({
+      directory: project.path,
+      scope: "project",
+      effective: {},
+      global: {},
+      sources: [],
+    })
+
+    expect(body.project.username).toBe("kilo")
+    expect(body.project.model).toBe("test/kilocode")
+    expect(body.project.small_model).toBeUndefined()
+    expect(body.project.agent?.shared).toMatchObject({
+      description: "kilo agent",
+      prompt: "kilo agent prompt",
+    })
+    expect(body.project.agent?.["opencode-only"]).toBeUndefined()
+    expect(body.targets.project).toBe(path.join(project.path, ".kilo", "kilo.json"))
+  })
+
   test.serial("marks global values inherited in project scope", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
@@ -110,6 +163,21 @@ describe("config overlay routes", () => {
     expect(body.collections.mcp.find((item) => item.key === "shared")).toMatchObject({
       source: "global",
       inherited: true,
+    })
+  })
+
+  test.serial("resolves prompt-training model visibility across scopes", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ config: { hide_prompt_training_models: false } })
+    await setGlobal(global.path, { hide_prompt_training_models: true })
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(body.fields.hide_prompt_training_models).toMatchObject({
+      source: "project",
+      inherited: false,
+      overridden: true,
+      value: false,
     })
   })
 

@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { CacheManager } from "../../../src/indexing/cache-manager"
 import { CodeIndexManager } from "../../../src/indexing/manager"
 import type { IndexingConfigInput } from "../../../src/indexing/config-manager"
 import type { IndexingTelemetryEvent, IndexingTelemetryTrigger } from "../../../src/indexing/interfaces/telemetry"
@@ -76,6 +77,59 @@ function createStartError(location = "orchestrator:startIndexing"): IndexingTele
 }
 
 describe("CodeIndexManager", () => {
+  test("falls back when the shared baseline is not ready", async () => {
+    const mgr = new CodeIndexManager("/tmp/worktree", "/tmp/cache", "/tmp/main")
+    let closed = 0
+    const data = mgr as unknown as {
+      createBaseline(factory: { createVectorStore(): unknown }): Promise<{ store?: unknown }>
+    }
+    const baseline = await data.createBaseline({
+      createVectorStore() {
+        return {
+          async openExisting() {
+            throw new Error("baseline rebuilding")
+          },
+          async close() {
+            closed += 1
+          },
+        }
+      },
+    })
+
+    expect(baseline.store).toBeUndefined()
+    expect(closed).toBe(1)
+  })
+
+  test("throttles unchanged baseline cache checks between searches", async () => {
+    const mgr = new CodeIndexManager("/tmp/worktree", "/tmp/cache", "/tmp/main")
+    const data = createData(mgr) as Data & {
+      _baselineStamp: string
+      _baselineSigned: number
+      _orchestrator: { state: string }
+      _searchService: { searchIndex(): Promise<[]> }
+    }
+    data._baselineStamp = "same"
+    data._baselineSigned = Date.now()
+    data._orchestrator = { state: "Indexed" }
+    data._searchService = {
+      async searchIndex() {
+        return []
+      },
+    }
+    const stamp = spyOn(CacheManager.prototype, "stamp").mockResolvedValue("same")
+    const initialize = spyOn(CacheManager.prototype, "initialize").mockResolvedValue()
+
+    try {
+      await mgr.searchIndex("first")
+      await mgr.searchIndex("second")
+      expect(stamp).toHaveBeenCalledTimes(1)
+      expect(initialize).not.toHaveBeenCalled()
+    } finally {
+      stamp.mockRestore()
+      initialize.mockRestore()
+    }
+  })
+
   test("returns standby state before services are initialized", () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
     const data = mgr as unknown as {
@@ -315,6 +369,30 @@ describe("CodeIndexManager", () => {
     expect(calls).toBe(1)
   })
 
+  test("schedules auto-recovery for watcher failures", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    let calls = 0
+
+    data._recreateServices = async () => {
+      data._orchestrator = {
+        state: "Standby",
+        stopWatcher() {},
+        async startIndexing() {
+          calls += 1
+          this.state = "Indexed"
+          data._stateManager.setSystemState("Indexed", "done")
+        },
+      }
+      data._searchService = {}
+    }
+
+    data.handleTelemetry(createStartError("orchestrator:watcher"))
+    await data._retryTask
+
+    expect(calls).toBe(1)
+  })
+
   test("ignores non-orchestrator telemetry errors for auto-recovery", async () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
     const data = createData(mgr)
@@ -393,30 +471,24 @@ describe("CodeIndexManager", () => {
     expect(mgr.getCurrentStatus().systemStatus).toBe("Indexed")
   })
 
-  test("dispose calls cancelIndexing on orchestrator", () => {
+  test("dispose waits for orchestrator shutdown", async () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
-    let cancel = 0
-    let stop = 0
+    let shutdown = 0
     const data = mgr as unknown as {
       _orchestrator?: {
-        stopWatcher(): void
-        cancelIndexing(): void
+        shutdown(): Promise<void>
       }
     }
 
     data._orchestrator = {
-      stopWatcher() {
-        stop += 1
-      },
-      cancelIndexing() {
-        cancel += 1
+      async shutdown() {
+        shutdown += 1
       },
     }
 
-    mgr.dispose()
+    await mgr.dispose()
 
-    expect(cancel).toBe(1)
-    expect(stop).toBe(0)
+    expect(shutdown).toBe(1)
   })
 
   test("dispose during service recreation cancels the recreated orchestrator", async () => {
@@ -456,7 +528,7 @@ describe("CodeIndexManager", () => {
 
     const init = mgr.initialize(createInput({ openAiKey: "sk-test" }))
     await new Promise((resolve) => setTimeout(resolve, 0))
-    mgr.dispose()
+    await mgr.dispose()
     gate.resolve()
     await init
 
@@ -484,7 +556,7 @@ describe("CodeIndexManager", () => {
 
     const task = data.handleTelemetry(createStartError())
     await new Promise((resolve) => setTimeout(resolve, 0))
-    mgr.dispose()
+    await mgr.dispose()
     gate.resolve()
     await data._retryTask
 

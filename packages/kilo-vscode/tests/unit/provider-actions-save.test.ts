@@ -54,6 +54,9 @@ function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged
         }),
         auth: async () => ({ data: {} }),
       },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
+      },
       global: {
         config: {
           get: async () => ({ data: existing }),
@@ -435,6 +438,9 @@ describe("fetchProviderData", () => {
         }),
         auth: async () => ({ data: {} }),
       },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
+      },
     } as unknown as Parameters<typeof fetchProviderData>[0]
 
     const result = await fetchProviderData(client, "/tmp")
@@ -442,6 +448,50 @@ describe("fetchProviderData", () => {
 
     expect(result.authStates).toEqual({ "groq-test": "api" })
     expect("key" in item).toBe(false)
+  })
+
+  it("uses local Kilo auth status instead of profile availability", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [{ id: "kilo", name: "Kilo Gateway", source: "custom", env: [], models: {} }],
+            connected: ["kilo"],
+            default: { kilo: "kilo-auto/frontier" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: true, type: "oauth" } }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.authStates).toEqual({ kilo: "oauth" })
+  })
+
+  it("does not infer Kilo speech access without stored Gateway auth", async () => {
+    const client = {
+      provider: {
+        list: async () => ({
+          data: {
+            all: [{ id: "kilo", name: "Kilo Gateway", source: "config", key: "configured", env: [], models: {} }],
+            connected: ["kilo"],
+            default: { kilo: "kilo-auto/frontier" },
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
+      },
+    } as unknown as Parameters<typeof fetchProviderData>[0]
+
+    const result = await fetchProviderData(client, "/tmp")
+
+    expect(result.authStates).toEqual({})
   })
 
   it("retains stripped keys for providers with a configured baseURL", async () => {
@@ -473,6 +523,9 @@ describe("fetchProviderData", () => {
           },
         }),
         auth: async () => ({ data: {} }),
+      },
+      kilo: {
+        authStatus: async () => ({ data: { authenticated: false } }),
       },
     } as unknown as Parameters<typeof fetchProviderData>[0]
 

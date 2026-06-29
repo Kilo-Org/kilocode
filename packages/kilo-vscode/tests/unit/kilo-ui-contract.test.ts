@@ -23,6 +23,14 @@ const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/bas
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
 const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
+const KILO_MESSAGE_HIGHLIGHT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-highlight.ts")
+const KILO_MESSAGE_PART_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.css")
+const SHELL_ROLLING_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/shell-rolling-results.tsx")
+const ASSISTANT_MESSAGE_FILE = path.join(
+  MONOREPO_ROOT,
+  "packages/kilo-vscode/webview-ui/src/components/chat/AssistantMessage.tsx",
+)
+const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
 
 function check(code: string): { ok: boolean; output: string } {
   const result = Bun.spawnSync(["bun", "--conditions=browser", "-e", code], {
@@ -185,7 +193,7 @@ describe("Write and apply_patch patch rendering contracts (source)", () => {
   })
 })
 
-describe("Bash tool syntax highlighting and section labels (source)", () => {
+describe("Bash tool static terminal preview (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
   const block =
     src.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
@@ -194,25 +202,39 @@ describe("Bash tool syntax highlighting and section labels (source)", () => {
     expect(block).toContain("BashHighlightedOutput")
   })
 
-  it("BashHighlightedOutput uses shellscript grammar for commands without $ prefix", () => {
-    // The command should be highlighted as shellscript, but the $ prompt must
-    // NOT be inside the highlighted code (it breaks Shiki's parse context)
-    expect(src).toMatch(/data-lang="shellscript">\$\{escapeHtml\(cmd\)\}/)
-    expect(src).not.toMatch(/data-lang="shellscript">\$\s/)
+  it("does not animate expanded bash details", () => {
+    expect(block).toMatch(/allowPendingToggle\s+trigger=/)
+    expect(block).not.toMatch(/allowPendingToggle\s+animated/)
   })
 
-  it("BashHighlightedOutput uses log grammar for output", () => {
-    expect(src).toMatch(/data-lang="log"/)
+  it("BashHighlightedOutput syntax highlights the command next to the prompt", () => {
+    expect(src).toContain('data-slot="bash-terminal" data-kind="command"')
+    expect(src).toContain('data-slot="bash-prompt"')
+    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={cmdRef}')
+    expect(src).toContain('data-lang="shellscript"')
+    expect(src).toContain("escapeHtml(cmd)")
   })
 
-  it("BashHighlightedOutput renders section labels matching MCP tool pattern", () => {
-    // Must use the same data-slot as MCP tools for consistent styling
-    expect(src).toMatch(/data-slot="mcp-section-label".*shell\.command/)
-    expect(src).toMatch(/data-slot="mcp-section-label".*shell\.output/)
+  it("BashHighlightedOutput syntax highlights log output", () => {
+    expect(src).toContain('data-slot="bash-terminal" data-kind="output"')
+    expect(src).toContain('data-slot="bash-section-code" data-scrollable ref={outRef}')
+    expect(src).toContain('data-lang="log"')
+    expect(src).toContain("escapeHtml(out)")
   })
 
-  it("BashHighlightedOutput has edge-to-edge divider between sections", () => {
-    expect(src).toContain('data-slot="bash-divider"')
+  it("BashHighlightedOutput highlights only while expanded", () => {
+    expect(src).toContain("if (!props.active) return")
+    expect(block).toContain("active={open()}")
+  })
+
+  it("BashHighlightedOutput keeps command and output in separate terminal containers", () => {
+    const slots = src.match(/data-slot="bash-terminal"/g) ?? []
+    expect(slots).toHaveLength(2)
+  })
+
+  it("BashHighlightedOutput does not render shell section labels or a divider", () => {
+    expect(src).not.toMatch(/data-slot="mcp-section-label".*shell\./)
+    expect(src).not.toContain('data-slot="bash-divider"')
   })
 
   it("BashHighlightedOutput supports openContent for opening output in editor", () => {
@@ -232,18 +254,37 @@ describe("Bash tool syntax highlighting and section labels (source)", () => {
   })
 })
 
+describe("Expanded tool motion and typography (source)", () => {
+  it("animates completed rolling shell details", () => {
+    const src = fs.readFileSync(SHELL_ROLLING_FILE, "utf-8")
+    expect(src).toContain("useCollapsible({")
+    expect(src).toContain("content: () => contentRef")
+    expect(src).toContain("body: () => bodyRef")
+  })
+
+  it("uses the assistant markdown line-height ratio for reasoning output", () => {
+    const css = fs.readFileSync(KILO_MESSAGE_PART_CSS_FILE, "utf-8")
+    const block = css.match(
+      /html\[data-theme="kilo-vscode"\] \[data-component="reasoning-part"\][\s\S]*?(?=@keyframes reasoning-pulse)/,
+    )?.[0]
+    expect(block).toMatch(/\[data-component="markdown"\]\s*\{[^}]*line-height:\s*160%;/)
+  })
+})
+
 describe("HighlightedText @mention regex fallback and click handler (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const helper = fs.readFileSync(KILO_MESSAGE_HIGHLIGHT_FILE, "utf-8")
 
   it("detects @path patterns via regex when source offsets are missing", () => {
-    // detectMentions is the regex fallback for when the backend doesn't
-    // populate FilePart.source.text.{start,end}
-    expect(src).toContain("detectMentions")
-    expect(src).toMatch(/MENTION_RE/)
+    // detect is the regex fallback for when the backend doesn't populate FilePart.source.text.{start,end}
+    expect(src).toContain("buildHighlightedTextSegments")
+    expect(helper).toMatch(/MENTION_RE/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
   })
 
   it("prefers source offsets over regex when both are available", () => {
-    expect(src).toMatch(/offset\.length\s*>\s*0\s*\?/)
+    expect(helper).toMatch(/const refs = \[/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
   })
 
   it("file mention spans are clickable via data.openFile", () => {
@@ -255,10 +296,44 @@ describe("HighlightedText @mention regex fallback and click handler (source)", (
     expect(src).toMatch(/segment\.text\.replace\(\/\^@\//)
   })
 
-  it("escapeHtml is imported from shared util, not duplicated", () => {
-    expect(src).toMatch(/import.*escapeHtml.*from.*util\/escape-html/)
-    // Must NOT contain a local function definition
+  it("does not duplicate HTML escaping helpers", () => {
     expect(src).not.toMatch(/function escapeHtml/)
+  })
+})
+
+describe("AssistantMessage visible row contract (source)", () => {
+  const src = fs.readFileSync(ASSISTANT_MESSAGE_FILE, "utf-8")
+
+  it("filters suppressed tools that have no visible renderer", () => {
+    expect(src).toContain('state.status === "completed" && !!ToolRegistry.render(tool)')
+  })
+
+  it("filters pending questions until their dock request exists", () => {
+    expect(src).toContain('part.state.status !== "pending" && part.state.status !== "running"')
+    expect(src).toContain('matchToolRequest(part, "question", session.questions())')
+  })
+
+  it("filters completed synthetic text and redaction-only reasoning", () => {
+    expect(src).toContain('part.type === "text" && part.synthetic && props.message.time.completed')
+    expect(src).toContain('.text?.replace("[REDACTED]", "").trim()')
+  })
+
+  it("uses the plan exit card only when plan metadata is renderable", () => {
+    expect(src).toContain("if (!planExitInfo(part)) return")
+  })
+})
+
+describe("Assistant transcript spacing contract (source)", () => {
+  const css = fs.readFileSync(CHAT_LAYOUT_FILE, "utf-8")
+
+  it("uses a 6px gap between virtualized assistant rows", () => {
+    expect(css).toMatch(/\.vscode-session-turn\[data-row="assistant"\]\s*\{\s*padding-bottom: 6px;/)
+  })
+
+  it("removes spacing from assistant rows without visible content", () => {
+    expect(css).toMatch(
+      /\.vscode-session-turn\[data-row="assistant"\]:has\(> \.vscode-session-turn-assistant:empty\)\s*\{\s*padding-bottom: 0;/,
+    )
   })
 })
 
@@ -287,7 +362,7 @@ describe("Collapsed deferred tool details contract (source)", () => {
 
   it("uses an explicit details hint before touching deferred children", () => {
     expect(basic).toContain("hasDetails?: boolean")
-    expect(basic).toContain("props.hasDetails ?? !!props.children")
+    expect(basic).toContain("props.hasDetails ?? !!hasChildren()")
     expect(basic).toMatch(/<Show when=\{!props\.defer \|\| ready\(\)\}>\{props\.children\}<\/Show>/)
   })
 

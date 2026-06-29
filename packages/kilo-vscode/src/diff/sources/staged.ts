@@ -2,15 +2,20 @@ import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
 import { generatedLike } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { imageMime, loadImage } from "../shared/image"
+import { resolveInside } from "../shared/path"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 import {
+  blobOid,
   blobSize,
   INDEX_REF,
   MAX_DETAIL_BYTES,
   parseNameStatus,
   parseNumstat,
+  parseRawOids,
   showBlob,
+  showBlobBytes,
   summarize,
   type FileEntry,
 } from "./git-status"
@@ -22,6 +27,11 @@ export const STAGED_DESCRIPTOR: DiffSourceDescriptor = {
   type: "staged",
   group: "Git",
   capabilities: { revert: false, comments: true },
+}
+
+function stamp(entry: FileEntry, before: string, after: string): FileEntry {
+  if (!imageMime(entry.file)) return entry
+  return { ...entry, stamp: `${entry.status}:${before}:${after}` }
 }
 
 /**
@@ -37,24 +47,36 @@ export function createStagedDiffSource(): DiffSource {
   const root = (): string | undefined => getWorkspaceRoot()
 
   const listEntries = async (dir: string): Promise<FileEntry[]> => {
-    const [nameStatus, numstat] = await Promise.all([
+    const [nameStatus, numstat, raw] = await Promise.all([
       git.execGit(["-c", "core.quotepath=false", "diff", "--cached", "--name-status", "--no-renames", "HEAD"], dir),
       git.execGit(["-c", "core.quotepath=false", "diff", "--cached", "--numstat", "--no-renames", "HEAD"], dir),
+      git.execGit(
+        ["-c", "core.quotepath=false", "diff", "--cached", "--raw", "--abbrev=64", "--no-renames", "HEAD"],
+        dir,
+      ),
     ])
     if (nameStatus.code !== 0) {
       log("git diff --cached --name-status failed", { code: nameStatus.code, stderr: nameStatus.stderr.trim() })
       return []
     }
     const counts = parseNumstat(numstat.code === 0 ? numstat.stdout : "")
-    const items = parseNameStatus(nameStatus.stdout)
-    return items.map((item) => ({
-      file: item.file,
-      status: item.status,
-      additions: counts.get(item.file)?.additions ?? 0,
-      deletions: counts.get(item.file)?.deletions ?? 0,
-      tracked: true,
-      binary: counts.get(item.file)?.binary ?? false,
-    }))
+    const refs = parseRawOids(raw.code === 0 ? raw.stdout : "")
+    return parseNameStatus(nameStatus.stdout).map((item) => {
+      const ref = refs.get(item.file)
+      const entry = {
+        file: item.file,
+        status: item.status,
+        additions: counts.get(item.file)?.additions ?? 0,
+        deletions: counts.get(item.file)?.deletions ?? 0,
+        tracked: true,
+        binary: counts.get(item.file)?.binary ?? false,
+      }
+      return stamp(
+        entry,
+        item.status === "added" ? "missing" : (ref?.before ?? "missing"),
+        item.status === "deleted" ? "missing" : (ref?.after ?? "missing"),
+      )
+    })
   }
 
   return {
@@ -73,7 +95,7 @@ export function createStagedDiffSource(): DiffSource {
 
     async fetchFile(file: string): Promise<DiffFile | null> {
       const dir = root()
-      if (!dir || !file) return null
+      if (!dir || !file || !resolveInside(dir, file)) return null
 
       // Resolve the entry for this single file so we know its status. Reading
       // both refs blindly would still work, but knowing the status lets us
@@ -81,10 +103,23 @@ export function createStagedDiffSource(): DiffSource {
       const entry = await fileEntry(git, dir, file, log)
       if (!entry) return null
 
-      if (entry.binary) return summarize(entry)
-
+      const mime = imageMime(file)
+      if (entry.binary && !mime) return summarize(entry)
       const beforeBytes = entry.status === "added" ? 0 : await blobSize(git, dir, "HEAD", file)
       const afterBytes = entry.status === "deleted" ? 0 : await blobSize(git, dir, INDEX_REF, file)
+      if (mime) {
+        const image = await loadImage(
+          file,
+          entry.status === "added"
+            ? undefined
+            : { bytes: beforeBytes, read: () => showBlobBytes(git, dir, "HEAD", file) },
+          entry.status === "deleted"
+            ? undefined
+            : { bytes: afterBytes, read: () => showBlobBytes(git, dir, INDEX_REF, file) },
+        )
+        return { ...summarize(entry), summarized: false, image }
+      }
+
       if (beforeBytes > MAX_DETAIL_BYTES || afterBytes > MAX_DETAIL_BYTES) {
         log("Staged detail skipped: file too large", { file, beforeBytes, afterBytes, cap: MAX_DETAIL_BYTES })
         return summarize(entry)
@@ -110,7 +145,7 @@ export function createStagedDiffSource(): DiffSource {
         tracked: true,
         generatedLike: generatedLike(file),
         summarized,
-        stamp: `${entry.status}:${entry.additions}:${entry.deletions}`,
+        stamp: entry.stamp ?? `${entry.status}:${entry.additions}:${entry.deletions}`,
       }
     },
 
@@ -144,7 +179,7 @@ async function fileEntry(
     dir,
   )
   const stats = parseNumstat(counts.code === 0 ? counts.stdout : "")
-  return {
+  const entry = {
     file: item.file,
     status: item.status,
     additions: stats.get(item.file)?.additions ?? 0,
@@ -152,4 +187,10 @@ async function fileEntry(
     tracked: true,
     binary: stats.get(item.file)?.binary ?? false,
   }
+  if (!imageMime(item.file)) return entry
+  const [before, after] = await Promise.all([
+    item.status === "added" ? "missing" : blobOid(git, dir, "HEAD", item.file),
+    item.status === "deleted" ? "missing" : blobOid(git, dir, INDEX_REF, item.file),
+  ])
+  return stamp(entry, before, after)
 }

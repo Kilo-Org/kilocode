@@ -71,11 +71,12 @@ export namespace KilocodeConfigOverlay {
   }
 
   const files = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
-  const dirs = [".kilo", ".kilocode", ".opencode"] as const
+  const dirs = [".kilocode", ".kilo"] as const
 
   const fieldPaths = [
     ["model"],
     ["small_model"],
+    ["hide_prompt_training_models"],
     ["default_agent"],
     ["snapshot"],
     ["share"],
@@ -123,7 +124,7 @@ export namespace KilocodeConfigOverlay {
   }
 
   export async function projectTarget(input: { directory: string; worktree?: string }) {
-    const found = await Filesystem.findUp([...dirs], input.directory, input.worktree)
+    const found = await Filesystem.findUp(dirs.toReversed(), input.directory, input.worktree)
     const roots = await Filesystem.findUp([...files], input.directory, input.worktree)
     const candidates = [...found.flatMap((dir) => files.map((file) => path.join(dir, file))), ...roots]
     return candidates.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
@@ -181,12 +182,7 @@ export namespace KilocodeConfigOverlay {
   }
 
   function globalDirs() {
-    return [
-      Global.Path.config,
-      path.join(Global.Path.home, ".kilocode"),
-      path.join(Global.Path.home, ".kilo"),
-      path.join(Global.Path.home, ".opencode"),
-    ]
+    return [Global.Path.config, path.join(Global.Path.home, ".kilocode"), path.join(Global.Path.home, ".kilo")]
   }
 
   async function withAgents(input: Config.Info, dirs: string[]): Promise<Config.Info> {

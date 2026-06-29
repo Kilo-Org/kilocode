@@ -105,7 +105,6 @@ function stubOps(opts?: {
         }
         return rep
       }),
-    loop: (input) => Effect.succeed(reply({ sessionID: input.sessionID, parts: [] }, opts?.text ?? "done")),
   }
 }
 // kilocode_change end
@@ -251,7 +250,7 @@ describe("tool.task", () => {
       expect(kids).toHaveLength(1)
       expect(kids[0]?.id).toBe(child.id)
       expect(result.metadata.sessionId).toBe(child.id)
-      expect(result.output).toContain(`task_id: ${child.id}`)
+      expect(result.output).toContain(`<task id="${child.id}" state="completed">`)
       expect(seen?.sessionID).toBe(child.id)
     }),
   )
@@ -357,7 +356,6 @@ describe("tool.task", () => {
             ready.resolve(input)
             return cancelled.promise
           }).pipe(Effect.as(reply(input, "cancelled"))),
-        loop: (input) => Effect.succeed(reply({ sessionID: input.sessionID, parts: [] }, "done")),
       }
 
       const fiber = yield* def
@@ -421,7 +419,7 @@ describe("tool.task", () => {
       expect(kids).toHaveLength(1)
       expect(kids[0]?.id).toBe(result.metadata.sessionId)
       expect(result.metadata.sessionId).not.toBe("ses_missing")
-      expect(result.output).toContain(`task_id: ${result.metadata.sessionId}`)
+      expect(result.output).toContain(`<task id="${result.metadata.sessionId}" state="completed">`)
       expect(seen?.sessionID).toBe(result.metadata.sessionId)
     }),
   )
@@ -531,7 +529,6 @@ describe("tool.task", () => {
               },
             }
           }),
-        loop: (input) => Effect.succeed(reply({ sessionID: input.sessionID, parts: [] }, "done")),
       }
 
       const exit = yield* def
@@ -622,7 +619,7 @@ describe("tool.task", () => {
 
       const job = yield* jobs.get(result.metadata.sessionId)
       expect(result.metadata.background).toBe(true)
-      expect(result.output).toContain("state: running")
+      expect(result.output).toContain(`state="running"`)
       expect(job?.status).toBe("running")
     }),
   )
@@ -695,10 +692,9 @@ describe("tool.task", () => {
     }),
   )
 
-  background.instance("background task completion does not wait for the parent resume loop", () =>
+  background.instance("background task completion does not wait for the parent async prompt", () =>
     Effect.gen(function* () {
       const jobs = yield* BackgroundJob.Service
-      const sessions = yield* Session.Service
       const { chat, assistant } = yield* seed()
       const tool = yield* TaskTool
       const def = yield* tool.init()
@@ -719,27 +715,7 @@ describe("tool.task", () => {
             promptOps: {
               ...stubOps({ text: "background done" }),
               prompt: (input) =>
-                input.noReply
-                  ? Effect.gen(function* () {
-                      const user = yield* sessions.updateMessage({
-                        id: input.messageID ?? MessageID.ascending(),
-                        role: "user",
-                        sessionID: input.sessionID,
-                        agent: input.agent ?? "build",
-                        model: input.model ?? ref,
-                        time: { created: Date.now() },
-                      })
-                      const parts = input.parts.map((part) => ({
-                        ...part,
-                        id: part.id ?? PartID.ascending(),
-                        messageID: user.id,
-                        sessionID: input.sessionID,
-                      }))
-                      yield* Effect.forEach(parts, (part) => sessions.updatePart(part), { discard: true })
-                      return { info: user, parts }
-                    })
-                  : Effect.succeed(reply(input, "background done")),
-              loop: () => Effect.never,
+                input.sessionID === chat.id ? Effect.never : Effect.succeed(reply(input, "background done")),
             } satisfies TaskPromptOps,
           },
           messages: [],
@@ -1081,7 +1057,6 @@ describe("tool.task cost propagation", () => {
               abort.abort()
               return yield* Effect.interrupt
             }),
-          loop: (input) => Effect.succeed(reply({ sessionID: input.sessionID, parts: [] }, "done")),
         }
 
         yield* def

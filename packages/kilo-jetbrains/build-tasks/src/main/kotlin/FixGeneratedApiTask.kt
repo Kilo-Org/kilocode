@@ -25,6 +25,8 @@ import java.io.File
  *     Replaced with `kotlinx.serialization.json.JsonElement`.
  * 10. JsonElement query parameters — anyOf query params generate empty
  *     `if (param != null) {}` blocks. Emit the primitive JSON text instead.
+ * 11. Missing model imports — references to models the generator did not emit
+ *     are replaced with JsonElement.
  */
 abstract class FixGeneratedApiTask : DefaultTask() {
     @get:OutputDirectory
@@ -35,6 +37,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
         val root = generated.get().asFile
         fixEmptyWrappers(root)
         fixAnyOfUnionWrappers(root)
+        fixMissingModels(root)
         fixJsonElementQueryParams(root)
         root.walkTopDown().filter { it.extension == "kt" }.forEach { fix(it) }
     }
@@ -140,6 +143,26 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             "${pad}if ($name != null) {\n${pad}    put(\"$name\", listOf($name.toString()))\n$pad}"
         }
         if (fixed != text) api.writeText(fixed)
+    }
+
+    private fun fixMissingModels(root: File) {
+        val models = File(root, "ai/kilocode/jetbrains/api/model")
+        if (!models.isDirectory) return
+
+        val imports = Regex("""import ai\.kilocode\.jetbrains\.api\.model\.(\w+)\n""")
+        root.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
+            val missing = mutableSetOf<String>()
+            val text = imports.replace(file.readText()) { m ->
+                val name = m.groupValues[1]
+                if (File(models, "$name.kt").isFile) return@replace m.value
+                missing.add(name)
+                ""
+            }
+            val fixed = missing.fold(text) { acc, name ->
+                acc.replace(Regex("""\b$name\b"""), "kotlinx.serialization.json.JsonElement")
+            }
+            if (fixed != text || missing.isNotEmpty()) file.writeText(fixed)
+        }
     }
 
     private fun fix(file: File) {

@@ -2,7 +2,58 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "连接 Anaconda Desktop",
+  "provider.anaconda.title.manage": "管理 Anaconda Desktop",
+  "provider.anaconda.status.checking": "正在检查 Anaconda Desktop…",
+  "provider.anaconda.status.opening": "正在打开 Anaconda Desktop…",
+  "provider.anaconda.status.syncing": "正在刷新提供商模型…",
+  "provider.anaconda.status.ready": "准备连接",
+  "provider.anaconda.status.waiting": "正在等待 Desktop",
+  "provider.anaconda.status.attention": "需要处理",
+  "provider.anaconda.status.unavailable": "不可用",
+  "provider.anaconda.state.unsupported": "{{platform}} 不支持 Anaconda Desktop。",
+  "provider.anaconda.state.notInstalled":
+    "请在此设备上安装 Anaconda Desktop，然后返回此处。Kilo 不会为你运行安装程序。",
+  "provider.anaconda.state.notRunning": "请打开 Anaconda Desktop，完成设置并登录，然后选择“再次检查”。",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop 设置不完整。请打开 Desktop，完成设置，并在需要时重新启动它。",
+  "provider.anaconda.state.signedOut": "请打开 Anaconda Desktop 并登录，然后再连接 Kilo。",
+  "provider.anaconda.state.unauthorized":
+    "Kilo 无法访问 Anaconda Desktop。请打开 Desktop，重新登录，并在需要时重新启动它。",
+  "provider.anaconda.state.unavailable": "Anaconda Desktop 尚未响应。请打开它并等待应用程序完成启动。",
+  "provider.anaconda.state.noModel":
+    "请在 Anaconda Desktop 中下载一个文本生成模型。请尽可能选择支持工具调用的模型，然后启动其服务器。",
+  "provider.anaconda.state.noServer_one":
+    "有 1 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
+  "provider.anaconda.state.noServer_other":
+    "有 {{count}} 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
+  "provider.anaconda.state.unhealthy":
+    "当前推理服务器尚不健康。请在 Anaconda Desktop 中检查它，并在需要时重新启动服务器。",
+  "provider.anaconda.state.ready": "Kilo 找到了一个健康的本地文本生成服务器，可以导入其当前的连接设置。",
+  "provider.anaconda.server": "当前推理服务器",
+  "provider.anaconda.context": "上下文窗口",
+  "provider.anaconda.contextValue": "{{count}} 个 token",
+  "provider.anaconda.tools": "工具调用",
+  "provider.anaconda.tools.supported": "支持",
+  "provider.anaconda.tools.unsupported": "未启用",
+  "provider.anaconda.tools.unknown": "未知",
+  "provider.anaconda.warning.title": "工具支持有限",
+  "provider.anaconda.warning.description":
+    "此服务器未确认支持工具调用。编码智能体的操作可能会失败或不可用。仅在你接受这些限制时才继续。",
+  "provider.anaconda.action.download": "下载 Anaconda Desktop",
+  "provider.anaconda.action.open": "打开 Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "再次检查",
+  "provider.anaconda.action.continue": "仍然继续",
+  "provider.anaconda.action.manage": "管理 / 刷新",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop 已刷新",
+  "provider.anaconda.toast.refreshed.description": "当前本地服务器和模型在 Kilo 中已是最新。",
+  "settings.providers.note.anacondaDesktop": "运行由 Anaconda Desktop 在本地提供的模型。",
+  "settings.providers.tag.local": "本地",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "建议",
   "command.category.view": "视图",
   "command.category.project": "项目",
@@ -98,6 +149,30 @@ export const dict = {
   "command.session.unshare.description": "停止分享此会话",
   "command.session.export": "导出会话记录",
 
+  "agentRequirements.skill.installed": "已安装",
+  "agentRequirements.skill.checkFailed": "技能检查失败",
+  "agentRequirements.skill.missing": "未安装",
+  "agentRequirements.mcp.connected": "已连接",
+  "agentRequirements.mcp.checkFailed": "MCP 检查失败",
+  "agentRequirements.mcp.missing": "未连接",
+  "agentRequirements.extension.installed": "已安装",
+  "agentRequirements.extension.checkFailed": "VS Code 扩展检查失败",
+  "agentRequirements.extension.missing": "未安装",
+  "agentRequirements.extension.description": "在 VS Code 中安装缺少的扩展。",
+  "agentRequirements.group.skills": "技能",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "VS Code 扩展",
+  "agentRequirements.blocked.title": "{{agent}} 代理前置要求",
+  "agentRequirements.blocked.description": "此代理需要以下工具后才能运行。",
+  "agentRequirements.prompt.blocked": "请先完成所需检查，然后再使用此代理",
+  "agentRequirements.action.openMarketplace": "打开 Marketplace",
+  "agentRequirements.error.unknownAgent": "找不到所选代理。",
+  "agentRequirements.error.malformedDeclaration": "此代理的要求声明无效。",
+  "agentRequirements.error.discoveryFailed": "Kilo 无法检查可用技能。",
+  "agentRequirements.error.mcpStatusFailed": "Kilo 无法检查 MCP 服务器状态。",
+  "agentRequirements.error.scopeMismatch": "此代理要求检查已不再有效。",
+  "agentRequirements.error.requestFailed": "Kilo 无法检查代理要求。",
+
   "palette.search.placeholder": "搜索文件、命令和会话",
   "palette.empty": "未找到结果",
   "palette.group.commands": "命令",
@@ -105,17 +180,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "搜索提供商",
   "dialog.provider.empty": "未找到提供商",
-  "dialog.provider.group.popular": "热门",
   "dialog.provider.group.other": "其他",
   "dialog.provider.tag.recommended": "推荐",
-  "dialog.provider.anthropic.note": "使用 Claude Pro/Max 或 API 密钥连接",
-  "dialog.provider.deepseek.note": "用于推理和编程任务的 DeepSeek 模型",
-  "dialog.provider.openai.note": "使用 ChatGPT Pro/Plus 或 API 密钥连接",
-  "dialog.provider.copilot.note": "使用 Copilot 或 API 密钥连接",
-  "dialog.provider.opencode.note": "使用 OpenCode Zen 或 API 密钥连接",
-  "dialog.provider.google.note": "使用 Google 账号或 API 密钥连接",
-  "dialog.provider.openrouter.note": "使用 OpenRouter 账号或 API 密钥连接",
-  "dialog.provider.vercel.note": "使用 Vercel 账号或 API 密钥连接",
 
   "dialog.model.select.title": "选择模型",
   "dialog.model.search.placeholder": "搜索模型",
@@ -183,6 +249,7 @@ export const dict = {
   "model.tag.free": "免费",
   "model.tag.dataCollected": "数据可能会用于训练",
   "model.tag.latest": "最新",
+  "model.group.auto": "自动模型",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
   "model.group.collapse": "折叠 {{group}}",
@@ -211,6 +278,7 @@ export const dict = {
   "model.preview.label.average": "预估平均成本",
   "model.preview.label.context": "上下文",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "模型选择",
   "model.preview.label.completion": "完成率",
   "model.preview.label.costAttempt": "成本 / 次尝试",
   "model.preview.value.notSupported": "不支持",
@@ -293,6 +361,22 @@ export const dict = {
   "prompt.action.resetModel": "重置模型为默认值",
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
+  "prompt.action.sandbox.enable": "启用沙盒",
+  "prompt.action.sandbox.disable": "禁用沙盒",
+  "prompt.action.sandbox.enabled": "沙盒已启用。代理 shell 命令被限制在项目和 Kilo 目录内。",
+  "prompt.action.sandbox.disabled": "沙盒已禁用。点击以将代理 shell 命令的写入限制在项目和 Kilo 目录内。",
+  "prompt.action.sandbox.status.enabled": "沙盒已启用",
+  "prompt.action.sandbox.status.disabled": "沙盒已禁用",
+  "prompt.action.sandbox.filesystem": "文件系统",
+  "prompt.action.sandbox.network": "网络",
+  "prompt.action.sandbox.filesystem.restricted": "受限",
+  "prompt.action.sandbox.network.blocked": "已阻止",
+  "prompt.action.sandbox.network.allowed": "允许",
+  "prompt.action.sandbox.unrestricted": "不受限",
+  "prompt.action.sandbox.description.enabled": "写入仅限项目和 Kilo 目录。",
+  "prompt.action.sandbox.description.disabled": "点击以限制文件系统写入和网络访问。",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "点击以限制文件系统写入。根据你的沙盒设置，网络访问仍然允许。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
   "speechToText.tooltip.stop": "停止捕获音频",
@@ -781,6 +865,9 @@ export const dict = {
   "settings.indexing.title": "索引",
   "settings.indexing.enable.title": "启用索引",
   "settings.indexing.enable.description": "打开或关闭语义代码库索引。",
+  "settings.indexing.showButton.title": "索引关闭时显示按钮",
+  "settings.indexing.showButton.description":
+    "索引关闭时，在提示词下方显示索引按钮。如果该按钮已隐藏，请打开“设置 > 索引”以启用索引。",
   "settings.indexing.globalEnable.title": "全局启用",
   "settings.indexing.globalEnable.description": "为每个工作区启用索引。",
   "settings.indexing.projectEnable.title": "为此项目启用",
@@ -847,16 +934,16 @@ export const dict = {
   "settings.providers.tag.customProvider": "自定义提供商",
   "settings.providers.connected.environmentDescription": "从您的环境变量连接",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登录",
-  "settings.providers.custom.description": "通过基础 URL 添加 OpenAI 兼容的提供商。",
+  "settings.providers.custom.description": "通过基础 URL 添加自定义提供商。",
   "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description": "task-tool 子代理的默认模型和推理工作量。留空以继承调用代理的模型。",
   "settings.models.hidePromptTraining.title": "隐藏使用提示词训练的模型",
   "settings.models.hidePromptTraining.description": "隐藏提供商可能会使用您的提示词进行训练的 Kilo Gateway 模型。",
   "settings.providers.modeModels": "按模式选择模型",
-  "settings.providers.custom.note": "通过 Base URL 添加 OpenAI 兼容提供商。",
+  "settings.providers.custom.note": "通过 Base URL 添加自定义提供商。",
   "settings.providers.modeModels.description": "为特定模式覆盖默认模型。如果未设置，将使用全局默认模型。",
   "provider.custom.title": "自定义提供商",
-  "provider.custom.description.prefix": "配置 OpenAI 兼容的提供商。请参阅",
+  "provider.custom.description.prefix": "配置自定义提供商。请参阅",
   "provider.custom.description.link": "提供商配置文档",
   "provider.custom.description.suffix": "。",
   "provider.custom.field.providerID.label": "提供商 ID",
@@ -1206,6 +1293,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "此操作仅将 VS Code 扩展专属设置重置为默认值。与 CLI 共享的设置（如模式和自动审批规则）存储在 CLI 配置中，不会被重置。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有设置",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "设置迁移",
   "settings.aboutKiloCode.settingsTransfer.description": "导出或导入设置，以便在 VS Code 实例之间传输。",
   "settings.aboutKiloCode.exportSettings": "导出",
@@ -1286,12 +1374,18 @@ export const dict = {
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
   "settings.experimental.speechToText.title": "语音转文本",
   "settings.experimental.speechToText.description": "通过 Kilo Gateway 使用您的 Kilo 帐户在提示词字段中启用语音输入。",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "启用并登录 Kilo 提供商以使用 Speech to Text。Speech to Text 目前仅支持通过 Kilo Gateway 使用。",
-  "settings.experimental.speechToTextModel.title": "语音转文本模型",
-  "settings.experimental.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
+  "settings.models.speechToTextModel.title": "语音转文本模型",
+  "settings.models.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
+  "settings.experimental.nativeNotebookTools.title": "原生笔记本工具",
+  "settings.experimental.nativeNotebookTools.description": "启用用于读取、编辑和执行 VS Code 笔记本的实验性工具",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
+  "settings.sandboxing.title": "沙盒",
+  "settings.sandboxing.network.title": "限制网络访问",
+  "settings.sandboxing.network.description":
+    "阻止模型发起的命令和 HTTP 工具进行出站网络访问。本地 MCP 服务器和插件钩子不受此限制。提供商和模型推理流量仍然可用。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1412,6 +1506,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
+  "settings.experimental.sandbox.title": "沙盒",
+  "settings.experimental.sandbox.description":
+    "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
   "settings.autoApprove.description":
     "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",
@@ -1498,6 +1595,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "旧版迁移",
   "settings.aboutKiloCode.legacyMigration.description":
     "从旧版 Kilo Code 安装迁移设置，包括提供商 API 密钥和默认模型。",
+  "settings.aboutKiloCode.rooImport.description": "从 Roo Code 安装导入对话历史记录。",
+  "settings.aboutKiloCode.rooImport.button": "从 Roo Code 导入会话",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code 新功能",

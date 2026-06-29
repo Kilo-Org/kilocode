@@ -44,6 +44,7 @@ internal class SessionScroll(
     internal val bar: JScrollBar get() = component.verticalScrollBar
     internal val jump: JBLabel
     val view: JComponent? get() = component.viewport.view as? JComponent
+    var onScroll: (() -> Unit)? = null
 
     private var style = SessionEditorStyle.current()
     private var tail = true
@@ -322,6 +323,7 @@ internal class SessionScroll(
         val moved = bar.value != value
         val down = bar.value > value
         syncValue()
+        if (moved) onScroll?.invoke()
         if (auto || opening) {
             updateJump()
             return

@@ -41,7 +41,7 @@ const config = {
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
   ADD_TAGS: ["svg", "path"],
-  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns"],
+  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns", "target"],
 }
 
 const iconPaths = {
@@ -264,8 +264,9 @@ export function Markdown(
       key: local.cacheKey,
       streaming: local.streaming ?? false,
     }),
+    // kilocode_change start
     async (src): Promise<Rendered> => {
-      // kilocode_change
+      // kilocode_change end
       if (isServer) return { content: fallback(src.text), blocks: [] } // kilocode_change
       if (!src.text) return { content: "", blocks: [] } // kilocode_change
 

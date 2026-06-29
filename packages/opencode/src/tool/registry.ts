@@ -11,7 +11,6 @@ import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
 import { ReadTool } from "./read"
 import { TaskTool } from "./task"
-import { TaskStatusTool } from "./task_status"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
@@ -28,9 +27,11 @@ import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
+import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { RepoCloneTool } from "./repo_clone"
 import { RepoOverviewTool } from "./repo_overview"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { RepositoryCache } from "@/reference/repository-cache"
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
@@ -38,13 +39,14 @@ import { ApplyPatchTool } from "./apply_patch"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
-import { Effect, Layer, Context } from "effect"
-import { FetchHttpClient, HttpClient } from "effect/unstable/http"
+import { Effect, Layer, Context, Option } from "effect" // kilocode_change
+import { HttpClient } from "effect/unstable/http" // kilocode_change
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Ripgrep } from "../file/ripgrep"
 import { Format } from "../format"
 import { InstanceState } from "@/effect/instance-state"
+import { EffectBridge } from "@/effect/bridge"
 import { Question } from "../question"
 import { Todo } from "../session/todo"
 import { LSP } from "@/lsp/lsp"
@@ -59,6 +61,7 @@ import { SessionStatus } from "@/session/status" // kilocode_change
 import { Reference } from "@/reference/reference"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import * as ToolNetwork from "@/kilocode/sandbox/network" // kilocode_change
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -98,10 +101,11 @@ export const layer: Layer.Layer<
   | Agent.Service
   | Skill.Service
   | Session.Service
-  | SessionStatus.Service
+  | SessionStatus.Service // kilocode_change
   | BackgroundJob.Service
   | Provider.Service
   | Git.Service
+  | RepositoryCache.Service
   | Reference.Service
   | LSP.Service
   | Instruction.Service
@@ -128,7 +132,6 @@ export const layer: Layer.Layer<
 
     const invalid = yield* InvalidTool
     const task = yield* TaskTool
-    const taskStatus = yield* TaskStatusTool
     const read = yield* ReadTool
     const question = yield* QuestionTool
     const todo = yield* TodoWriteTool
@@ -148,7 +151,8 @@ export const layer: Layer.Layer<
     const agent = yield* Agent.Service
     // kilocode_change start
     const suggesttool = yield* SuggestTool
-    const kiloToolInfos = yield* KiloToolRegistry.infos()
+    const notebook = Option.getOrUndefined(yield* Effect.serviceOption(Notebook.Service))
+    const kiloToolInfos = yield* KiloToolRegistry.infos(notebook)
     // kilocode_change end
 
     const state = yield* InstanceState.make<State>(
@@ -158,9 +162,12 @@ export const layer: Layer.Layer<
         function fromPlugin(id: string, def: ToolDefinition): Tool.Def {
           // Plugin tools still expose Zod args publicly; keep that compatibility
           // boxed at the registry boundary and give the LLM the original JSON Schema.
-          const entries = Object.entries(def.args)
+          // Normalize missing args to `{}` once — pre-1.14.49 the code was
+          // `z.object(def.args)` and Zod silently tolerated undefined (#27451, #27630).
+          const args = def.args ?? {}
+          const entries = Object.entries(args)
           const allZod = entries.every((entry) => isZodType(entry[1]))
-          const zodParams = allZod ? z.object(def.args) : undefined
+          const zodParams = allZod ? z.object(args) : undefined
           const jsonSchema = zodParams ? zodJsonSchema(zodParams) : legacyJsonSchema(entries)
           const parameters = zodParams
             ? Schema.declare<unknown>((u): u is unknown => zodParams.safeParse(u).success)
@@ -172,9 +179,12 @@ export const layer: Layer.Layer<
             description: def.description,
             execute: (args, toolCtx) =>
               Effect.gen(function* () {
+                // Bridge the host's Effect-based `ask` into a Promise-returning
+                // function for the plugin to make sure context persists
+                const bridge = yield* EffectBridge.make()
                 const pluginCtx: PluginToolContext = {
                   ...toolCtx,
-                  ask: (req) => toolCtx.ask(req),
+                  ask: (req) => bridge.promise(toolCtx.ask(req)),
                   directory: ctx.directory,
                   worktree: ctx.worktree,
                 }
@@ -230,7 +240,11 @@ export const layer: Layer.Layer<
           }
         }
 
-        const cfg = yield* config.get() // kilocode_change: capture for KiloToolRegistry.extra
+        // kilocode_change start
+        const cfg = yield* config.get()
+        const global = yield* config.getGlobal()
+        const indexing = KiloToolRegistry.indexing(cfg, global)
+        // kilocode_change end
         const questionEnabled = ["app", "cli", "desktop", "vscode"].includes(flags.client) || flags.enableQuestionTool // kilocode_change: add vscode client
 
         const tool = yield* Effect.all({
@@ -242,7 +256,6 @@ export const layer: Layer.Layer<
           edit: Tool.init(edit),
           write: Tool.init(writetool),
           task: Tool.init(task),
-          task_status: Tool.init(taskStatus),
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
@@ -256,7 +269,13 @@ export const layer: Layer.Layer<
           suggest: Tool.init(suggesttool), // kilocode_change
         })
 
-        const kilo = yield* KiloToolRegistry.build(kiloToolInfos, { agent: agents, truncate }) // kilocode_change
+        // kilocode_change start
+        const kilo = yield* KiloToolRegistry.build(kiloToolInfos, {
+          agent: agents,
+          truncate,
+          indexing: indexing ?? false,
+        })
+        // kilocode_change end
 
         return {
           custom,
@@ -272,7 +291,6 @@ export const layer: Layer.Layer<
               tool.edit,
               tool.write,
               tool.task,
-              ...(flags.experimentalBackgroundSubagents ? [tool.task_status] : []),
               tool.fetch,
               tool.todo,
               tool.search,
@@ -295,7 +313,7 @@ export const layer: Layer.Layer<
 
     const all: Interface["all"] = Effect.fn("ToolRegistry.all")(function* () {
       const s = yield* InstanceState.get(state)
-      return [...s.builtin, ...s.custom] as Tool.Def[]
+      return [...s.builtin.map(ToolNetwork.builtin), ...s.custom] as Tool.Def[] // kilocode_change
     })
 
     const ids: Interface["ids"] = Effect.fn("ToolRegistry.ids")(function* () {
@@ -368,7 +386,8 @@ export const layer: Layer.Layer<
             output.parameters === tool.parameters || output.jsonSchema !== tool.jsonSchema
               ? output.jsonSchema
               : undefined
-          return {
+          // kilocode_change start
+          const result = {
             id: tool.id,
             description: [
               output.description,
@@ -382,6 +401,8 @@ export const layer: Layer.Layer<
             execute: tool.execute,
             formatValidationError: tool.formatValidationError,
           }
+          return ToolNetwork.isBuiltin(tool) ? ToolNetwork.builtin(result) : result
+          // kilocode_change end
         }),
         { concurrency: "unbounded" },
       )
@@ -407,22 +428,35 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Skill.defaultLayer),
         Layer.provide(Agent.defaultLayer),
         Layer.provide(Session.defaultLayer),
-        Layer.provide(Layer.mergeAll(SessionStatus.defaultLayer, BackgroundJob.defaultLayer)),
+        Layer.provide(BackgroundJob.defaultLayer),
         Layer.provide(Provider.defaultLayer),
-        Layer.provide(Git.defaultLayer),
+        Layer.provide(Layer.mergeAll(Git.defaultLayer, RepositoryCache.defaultLayer)),
         Layer.provide(Reference.defaultLayer),
         Layer.provide(LSP.defaultLayer),
         Layer.provide(Instruction.defaultLayer),
         Layer.provide(AppFileSystem.defaultLayer),
         Layer.provide(Bus.layer),
-        Layer.provide(FetchHttpClient.layer),
+        Layer.provide(ToolNetwork.httpLayer), // kilocode_change
         Layer.provide(Format.defaultLayer),
         Layer.provide(CrossSpawnSpawner.defaultLayer),
-        Layer.provide(Ripgrep.defaultLayer),
+        // kilocode_change start
+        Layer.provide(
+          Ripgrep.layer.pipe(
+            Layer.provide(ToolNetwork.httpLayer),
+            Layer.provide(AppFileSystem.defaultLayer),
+            Layer.provide(CrossSpawnSpawner.defaultLayer),
+          ),
+        ),
+        // kilocode_change end
         Layer.provide(Truncate.defaultLayer),
       )
       // kilocode_change start - provide Kilo-owned registry dependencies
-      .pipe(Layer.provide(Command.defaultLayer), Layer.provide(RuntimeFlags.defaultLayer)),
+      .pipe(
+        Layer.provide(Command.defaultLayer),
+        Layer.provide(Notebook.defaultLayer),
+        Layer.provide(RuntimeFlags.defaultLayer),
+        Layer.provide(SessionStatus.defaultLayer),
+      ),
   // kilocode_change end
 )
 

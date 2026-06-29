@@ -1,8 +1,9 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { getMigrationErrorMessage } from "../errors/migration-error"
-import type { MigrationSessionInfo, MigrationSessionProgress, MigrationSessionSelection } from "../legacy-types"
+import type { MigrationSessionProgress, MigrationSessionSelection } from "../legacy-types"
 import { createSessionID } from "./lib/ids"
+import type { SessionSource } from "../task-store"
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import { parseSession } from "./parser"
 
@@ -30,19 +31,19 @@ export async function migrate(
   input: MigrationSessionSelection,
   context: vscode.ExtensionContext,
   client: KiloClient,
-  meta?: {
-    session: MigrationSessionInfo
-    index: number
-    total: number
-  },
   onProgress?: ProgressCallback,
+  resolved?: SessionSource,
 ): Promise<Result> {
-  const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
   const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
-  const item = items.find((item) => item.id === input.id)
+  const source = resolved ?? {
+    id: input.id,
+    dir: vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath,
+    item: items.find((item) => item.id === input.id),
+  }
+  const key = source.namespace ? `${source.namespace}:${source.id}` : source.id
 
   const progress = (next: Progress) => {
-    if (!meta || !onProgress) return
+    if (!onProgress) return
     onProgress(next)
   }
 
@@ -68,12 +69,12 @@ export async function migrate(
 
   try {
     if (!input.force) {
-      const result = await client.session.get({ sessionID: createSessionID(input.id) })
+      const result = await client.session.get({ sessionID: createSessionID(key) })
       if (result.data) return skip()
     }
 
     progress({ phase: "preparing" })
-    const payload = await parseSession(input.id, dir, item)
+    const payload = await parseSession(source.id, source.dir, source.item, undefined, key)
     progress({ phase: "storing" })
     const project = await client.kilocode.sessionImport.project(payload.project, { throwOnError: true })
     const projectID = project.data?.id ?? payload.project.id

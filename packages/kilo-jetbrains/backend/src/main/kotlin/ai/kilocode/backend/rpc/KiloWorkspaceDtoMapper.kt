@@ -74,10 +74,12 @@ internal object KiloWorkspaceDtoMapper {
         temperature = m.temperature,
         toolCall = m.toolCall,
         free = m.free,
+        byok = m.byok,
         status = m.status,
         recommendedIndex = m.recommendedIndex,
         variants = m.variants,
         limit = m.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+        mayTrainOnYourPrompts = m.mayTrainOnYourPrompts,
     )
 
     private fun agent(a: AgentInfo) = AgentDto(

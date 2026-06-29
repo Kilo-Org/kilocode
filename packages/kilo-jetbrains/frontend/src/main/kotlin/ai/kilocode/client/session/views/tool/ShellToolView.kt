@@ -13,6 +13,8 @@ import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
 import ai.kilocode.client.ui.md.MdViewFactory
 import ai.kilocode.client.ui.md.hybrid.MdTerminal
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
@@ -26,10 +28,10 @@ import javax.swing.ScrollPaneConstants
 
 class ShellToolView(
     tool: Tool,
-    selection: SessionSelection? = null,
+    private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool),
     private val holder: ShellHolder = ShellHolder(tool, selection),
-) : SecondarySessionPartView(parts.header, { holder.body().panel }) {
+) : SecondarySessionPartView(parts.header, { holder.body().panel }), UiDataProvider {
 
     override val contentId: String = tool.id
 
@@ -42,6 +44,12 @@ class ShellToolView(
         applyStyle(style)
         sync()
     }
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        selection?.provideCopy(sink) { holder.shell?.markdown() ?: fallbackText() }
+    }
+
+    private fun fallbackText() = ShellContent(item).body
 
     @RequiresEdt
     override fun expand(): Boolean {

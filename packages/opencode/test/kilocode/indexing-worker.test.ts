@@ -25,7 +25,59 @@ test("runs indexing engine requests in its worker", async () => {
   expect(failures).toEqual([])
 })
 
-test("reuses enabled workers across provider initialization errors", async () => {
+test("routes multiple directories through the shared indexing worker", async () => {
+  await using first = await tmpdir()
+  await using second = await tmpdir()
+  const failures: unknown[] = []
+  const create = (directory: string) =>
+    IndexingWorker.create(directory, directory, {
+      status() {},
+      telemetry() {},
+      warning() {},
+      log() {},
+      failure(err) {
+        failures.push(err)
+      },
+    })
+  const left = create(first.path)
+  const right = create(second.path)
+
+  try {
+    const statuses = await Promise.all([
+      left.init({ enabled: false, embedderProvider: "openai" }),
+      right.init({ enabled: false, embedderProvider: "openai" }),
+    ])
+    expect(statuses.map((status) => status.state)).toEqual(["Disabled", "Disabled"])
+  } finally {
+    await Promise.all([left.dispose(), right.dispose()])
+  }
+
+  expect(failures).toEqual([])
+})
+
+test("allows same-directory recreation while disposal is pending", async () => {
+  await using tmp = await tmpdir()
+  const hooks = {
+    status() {},
+    telemetry() {},
+    warning() {},
+    log() {},
+    failure() {},
+  }
+  const first = IndexingWorker.create(tmp.path, tmp.path, hooks)
+  await first.init({ enabled: false, embedderProvider: "openai" })
+
+  const disposing = first.dispose()
+  const second = IndexingWorker.create(tmp.path, tmp.path, hooks)
+  const status = await second.init({ enabled: false, embedderProvider: "openai" })
+  await disposing
+  await second.dispose()
+
+  expect(second).not.toBe(first)
+  expect(status.state).toBe("Disabled")
+})
+
+test("releases enabled workers after provider initialization errors", async () => {
   await using tmp = await tmpdir()
   const drivers = new Set<IndexingWorker.Driver>()
 
@@ -77,6 +129,6 @@ test("reuses enabled workers across provider initialization errors", async () =>
   await engine.dispose()
 
   expect(status.state).toBe("Disabled")
-  expect(drivers.has(engine)).toBe(true)
-  expect(drivers.size).toBe(1)
+  expect(drivers.has(engine)).toBe(false)
+  expect(drivers.size).toBe(3)
 })

@@ -53,6 +53,17 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.freeUsageExceeded": "Gratis gebruik overschreden",
   "ui.sessionTurn.error.addCredits": "Credits toevoegen",
 
+  // kilocode_change start - complete upstream usage-exceeded translations
+  "dialog.usageExceeded.freeTier.title": "Gratis limiet bereikt",
+  "dialog.usageExceeded.freeTier.description":
+    "Abonneer je op Kilo Go voor betrouwbare toegang tot de beste open-sourcemodellen, vanaf $5 per maand.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Abonneren",
+  "dialog.usageExceeded.accountRateLimit.title": "Go-limiet bereikt",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Gebruikslimiet bereikt. Schakel gebruik vanuit je beschikbare saldo in om dit model nu te blijven gebruiken",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Instellingen openen",
+  // kilocode_change end
+
   "ui.sessionTurn.status.delegating": "Werk delegeren",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",

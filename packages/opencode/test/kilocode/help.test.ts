@@ -24,6 +24,8 @@ import { PluginCommand } from "../../src/cli/cmd/plug"
 import { DbCommand } from "../../src/cli/cmd/db"
 import { HelpCommand } from "../../src/kilocode/help-command"
 import { ProfileCommand } from "../../src/kilocode/cli/cmd/profile"
+import { DaemonCommand } from "../../src/kilocode/cli/cmd/daemon"
+import { KiloConsoleCommand } from "../../src/kilocode/cli/cmd/console"
 
 // Stand-in for TuiThreadCommand — the real one imports @opentui/solid which
 // doesn't resolve in the test environment. Only command/describe matter here.
@@ -72,6 +74,8 @@ const commands = [
   ConfigCLICommand,
   PluginCommand,
   ProfileCommand,
+  DaemonCommand,
+  KiloConsoleCommand,
   HelpCommand,
   CompletionStub,
 ] as any[]
@@ -119,6 +123,20 @@ describe("kilo help <command>", () => {
     const output = await generateHelp({ command: "auth", format: "md", commands })
     expect(output).not.toContain("## kilo run")
     expect(output).not.toContain("## kilo debug")
+  })
+
+  test("documents console stop and foreground mode", async () => {
+    const output = await generateHelp({ command: "console", format: "md", commands })
+    expect(output).toContain("kilo console stop")
+    expect(output).toContain("--foreground")
+    expect(output).toContain("-f")
+  })
+
+  test("documents daemon foreground mode", async () => {
+    const output = await generateHelp({ command: "daemon", format: "md", commands })
+    expect(output).toContain("kilo daemon start")
+    expect(output).toContain("--foreground")
+    expect(output).toContain("-f")
   })
 })
 
@@ -198,8 +216,10 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
   test("registers the local Kilo Console instead of the upstream account console", async () => {
     const index = await file(INDEX)
     const setup = await file(SETUP)
+    const barrel = await file(BARREL)
     expect(setup).toContain("KiloConsoleCommand")
     expect(index).not.toContain(".command(ConsoleCommand)")
+    expect(barrel).not.toContain('from "../cli/cmd/account"')
   })
 
   test("every .command() in index.ts has an entry in the commands array", async () => {
@@ -238,11 +258,10 @@ describe("Kilo CLI customizations are wired into index.ts", () => {
     const entries = [...body.matchAll(/\b(\w+Command)\b/g)].map((m) => m[1]!)
 
     // Not registered as a bare `.command(Ident)`:
-    //  ConsoleCommand    - replaced by KiloConsoleCommand
     //  CompletionCommand - provided by yargs `.completion(...)`
     //  HelpCommand       - registered via createHelpCommand(() => cli)
     //  (DevSetup/DevAlias enter the array via `...dev`, so they aren't scraped here)
-    const except = new Set(["ConsoleCommand", "CompletionCommand", "HelpCommand"])
+    const except = new Set(["CompletionCommand", "HelpCommand"])
     const missing = entries.filter((name) => !except.has(name) && !registered.has(name))
     expect(missing).toEqual([])
   })

@@ -13,6 +13,7 @@ import { Plugin } from "../../src/plugin"
 import { Provider } from "../../src/provider/provider"
 import { Skill } from "../../src/skill"
 import { Truncate } from "../../src/tool/truncate"
+import { MCP } from "../../src/mcp" // kilocode_change
 
 const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   Agent.layer.pipe(
@@ -21,6 +22,7 @@ const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
     Layer.provide(Auth.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Skill.defaultLayer),
+    Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
     Layer.provide(RuntimeFlags.layer(flags)),
   )
 
@@ -597,7 +599,7 @@ it.instance(
   () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const skillDir = path.join(test.directory, ".opencode", "skill", "perm-skill")
+      const skillDir = path.join(test.directory, ".kilo", "skill", "perm-skill") // kilocode_change
       yield* Effect.promise(() =>
         Bun.write(
           path.join(skillDir, "SKILL.md"),

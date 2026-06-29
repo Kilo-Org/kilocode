@@ -8,17 +8,20 @@
   background: var(--card);
 }
 
-.kilo-console .ui-card:has(.console-diff-select[open]) {
+.kilo-console .ui-card:has(.console-diff-select[open]),
+.kilo-console .ui-card:has(.title-icon-select[open]) {
   position: relative;
   z-index: 40;
   overflow: visible;
 }
 
-.kilo-console .console-diff-select[open] {
+.kilo-console .console-diff-select[open],
+.kilo-console .title-icon-select[open] {
   z-index: 41;
 }
 
-.kilo-console .console-diff-select .models-select-menu {
+.kilo-console .console-diff-select .models-select-menu,
+.kilo-console .title-icon-select .models-select-menu {
   z-index: 42;
 }
 

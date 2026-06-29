@@ -1,9 +1,13 @@
 package ai.kilocode.client.ui.md
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.test.CopyProviderSink
 import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.ui.ConsoleViewContentType
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.HighlighterColors
 import com.intellij.openapi.editor.colors.CodeInsightColors
@@ -15,6 +19,7 @@ import com.intellij.openapi.fileTypes.FileTypeRegistry
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.UnknownFileType
 import com.intellij.openapi.editor.markup.TextAttributes
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.EditorTextField
@@ -28,6 +33,7 @@ import java.awt.Font
 import javax.swing.Box
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
+import java.awt.datatransfer.DataFlavor
 
 @Suppress("UnstableApiUsage")
 class MdViewHybridTest : BasePlatformTestCase() {
@@ -791,6 +797,33 @@ class MdViewHybridTest : BasePlatformTestCase() {
         view.simulateLink("https://example.com")
 
         assertEquals("https://example.com", received.single().href)
+    }
+
+    fun `test markdown root and code child expose selection copy provider`() {
+        Disposer.dispose(view)
+        disposed = true
+        val selection = SessionSelection()
+        val local = MdViewFactory.hybrid(selection = selection)
+        try {
+            local.set("```text\nalpha code\n```")
+            val field = (local.component as JPanel).components
+                .filterIsInstance<JBScrollPane>()
+                .mapNotNull { it.viewport.view as? EditorTextField }
+                .single()
+            field.getEditor(true)!!.selectionModel.setSelection(0, 5)
+
+            val root = CopyProviderSink()
+            (local.component as UiDataProvider).uiDataSnapshot(root)
+            val child = CopyProviderSink()
+            (field as UiDataProvider).uiDataSnapshot(child)
+            child.copy!!.performCopy(DataContext.EMPTY_CONTEXT)
+
+            assertNotNull(root.copy)
+            assertEquals("alpha", CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor))
+        } finally {
+            Disposer.dispose(local)
+            selection.dispose()
+        }
     }
 
     private fun scrolls(): List<JBScrollPane> = (view.component as JPanel).components.filterIsInstance<JBScrollPane>()

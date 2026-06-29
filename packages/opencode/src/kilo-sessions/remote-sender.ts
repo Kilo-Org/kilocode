@@ -75,7 +75,7 @@ export namespace RemoteSender {
     provide?: Provide
     permission?: {
       readonly list: () => Promise<ReadonlyArray<Permission.Request>>
-      readonly reply: (input: Permission.ReplyInput) => Promise<boolean>
+      readonly reply: (input: Permission.ReplyInput) => Promise<void>
     }
     question?: {
       readonly list: () => Promise<ReadonlyArray<Question.Request>>

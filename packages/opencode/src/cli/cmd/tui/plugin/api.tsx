@@ -165,7 +165,11 @@ function stateApi(sync: ReturnType<typeof useSync>): TuiPluginApi["state"] {
       },
       // kilocode_change start
       processes(sessionID) {
-        return sync.data.background_process[sessionID] ?? []
+        const own = sync.data.background_process[sessionID] ?? []
+        const persistent = Object.values(sync.data.background_process)
+          .flat()
+          .filter((item) => item.lifetime === "persistent" && item.sessionID !== sessionID)
+        return [...own, ...persistent].toSorted((a, b) => a.id.localeCompare(b.id))
       },
       // kilocode_change end
       messages(sessionID) {
@@ -228,6 +232,14 @@ export function createTuiApi(input: Input): TuiPluginApi {
       },
     },
     keymap: input.keymap,
+    mode: {
+      current() {
+        return Keymap.getOpencodeModeStack(input.keymap).current()
+      },
+      push(mode) {
+        return Keymap.getOpencodeModeStack(input.keymap).push(mode)
+      },
+    },
     route: {
       register(list) {
         return routeRegister(input.routes, list, input.bump)
@@ -278,7 +290,6 @@ export function createTuiApi(input: Input): TuiPluginApi {
         return (
           <Prompt
             sessionID={props.sessionID}
-            workspaceID={props.workspaceID}
             visible={props.visible}
             disabled={props.disabled}
             onSubmit={props.onSubmit}
