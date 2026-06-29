@@ -64,6 +64,8 @@ const preview: Preview = {
         icon: "browser",
         items: [
           { value: "dark-modern", title: "Dark Modern (default)" },
+          { value: "2026-dark", title: "2026 Dark" },
+          { value: "2026-light", title: "2026 Light" },
           { value: "dark-plus", title: "Dark+" },
           { value: "dark-vs", title: "Dark (Visual Studio)" },
           { value: "light-modern", title: "Light Modern" },
@@ -72,6 +74,7 @@ const preview: Preview = {
           { value: "hc-black", title: "High Contrast" },
           { value: "hc-light", title: "High Contrast Light" },
           { value: "monokai", title: "Monokai" },
+          { value: "monokai-dimmed", title: "Monokai Dimmed" },
           { value: "solarized-dark", title: "Solarized Dark" },
           { value: "solarized-light", title: "Solarized Light" },
           { value: "red", title: "Red" },

@@ -6,9 +6,12 @@ import {
   type SelectedLineRange,
 } from "@pierre/diffs"
 import { ComponentProps } from "solid-js"
-import { createDefaultOptions as defaults, styleVariables } from "@opencode-ai/ui/pierre"
+import { createDefaultOptions as defaults, styleVariables as styles } from "@opencode-ai/ui/pierre"
 
-export { styleVariables }
+export const styleVariables = {
+  ...styles,
+  "--diffs-font-size": "var(--diffs-code-font-size, var(--font-size-small))",
+}
 
 // Character matching fragments inserted identifiers when they share letters with
 // existing symbols. Word-alt keeps those logical additions visually intact.
@@ -17,6 +20,12 @@ export const LINE_DIFF_TYPE = "word-alt" as const
 // Pierre 1.1 treats its changed-line override properties as tint targets. Apply
 // Kilo semantic surfaces at the computed row level so host diff colors stay final.
 const css = `
+:host([data-color-scheme='light']) {
+  color-scheme: light;
+}
+:host([data-color-scheme='dark']) {
+  color-scheme: dark;
+}
 [data-diff][data-background] [data-line][data-line-type='change-addition'] {
   --diffs-computed-diff-line-bg: var(--surface-diff-add-base, var(--diffs-bg-addition));
   --diffs-computed-selected-line-bg: var(--surface-diff-add-base, var(--diffs-bg-addition));
@@ -33,12 +42,18 @@ const css = `
   --diffs-computed-diff-line-bg: var(--surface-diff-delete-weaker, var(--diffs-bg-deletion-number));
   --diffs-computed-selected-line-bg: var(--surface-diff-delete-weaker, var(--diffs-bg-deletion-number));
 }
+:is([data-line], [data-column-number])[data-line-type='change-addition'],
+:is([data-line], [data-column-number])[data-line-type='change-deletion'] {
+  outline: 1px solid var(--border-contrast, transparent);
+  outline-offset: -1px;
+}
 `
 
 export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) {
   const opts = defaults<T>(style)
   return {
     ...opts,
+    diffIndicators: "classic" as const,
     lineDiffType: LINE_DIFF_TYPE,
     unsafeCSS: `${opts.unsafeCSS}\n${css}`,
   }

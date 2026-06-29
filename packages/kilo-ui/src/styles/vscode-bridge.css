@@ -11,9 +11,6 @@
  */
 
 html[data-theme="kilo-vscode"] {
-  /* Let VS Code control the color scheme instead of the OS preference */
-  color-scheme: normal;
-
   /* ===== Backgrounds ===== */
   --background-base: var(--vscode-editor-background);
   --background-weak: var(--vscode-sideBar-background, var(--vscode-editor-background));
@@ -75,23 +72,31 @@ html[data-theme="kilo-vscode"] {
   --surface-info-weak: var(--vscode-editorMarkerNavigationInfo-headerBackground);
   --surface-info-strong: var(--vscode-charts-blue);
 
-  /* Diff surfaces */
+  /* Diff surfaces use VS Code's semantic hues at predictable strengths. Theme
+     background tokens vary from transparent to opaque, which otherwise makes
+     the code or the changed words disappear in some built-in themes. */
   --surface-diff-unchanged-base: var(--vscode-editor-background);
   --surface-diff-skip-base: var(
     --vscode-diffEditor-unchangedRegionBackground,
     var(--vscode-diffEditor-unchangedCodeBackground, var(--vscode-editor-background))
   );
-  --surface-diff-add-base: var(--vscode-diffEditor-insertedLineBackground);
-  --surface-diff-add-weak: var(--vscode-diffEditor-insertedTextBackground);
-  --surface-diff-add-weaker: var(
-    --vscode-diffEditorGutter-insertedLineBackground,
-    var(--vscode-diffEditor-insertedLineBackground)
+  --surface-diff-add-base: color-mix(in srgb, var(--vscode-editor-background, #1e1e1e) 85%, var(--syntax-diff-add));
+  --surface-diff-add-weaker: color-mix(in srgb, var(--vscode-editor-background, #1e1e1e) 75%, var(--syntax-diff-add));
+  --surface-diff-add-weak: color-mix(in srgb, var(--vscode-editor-background, #1e1e1e) 70%, var(--syntax-diff-add));
+  --surface-diff-delete-base: color-mix(
+    in srgb,
+    var(--vscode-editor-background, #1e1e1e) 90%,
+    var(--syntax-diff-delete)
   );
-  --surface-diff-delete-base: var(--vscode-diffEditor-removedLineBackground);
-  --surface-diff-delete-weak: var(--vscode-diffEditor-removedTextBackground);
-  --surface-diff-delete-weaker: var(
-    --vscode-diffEditorGutter-removedLineBackground,
-    var(--vscode-diffEditor-removedLineBackground)
+  --surface-diff-delete-weaker: color-mix(
+    in srgb,
+    var(--vscode-editor-background, #1e1e1e) 75%,
+    var(--syntax-diff-delete)
+  );
+  --surface-diff-delete-weak: color-mix(
+    in srgb,
+    var(--vscode-editor-background, #1e1e1e) 70%,
+    var(--syntax-diff-delete)
   );
 
   /* ===== Inputs ===== */
@@ -278,34 +283,53 @@ html[data-theme="kilo-vscode"] {
   --icon-agent-build-base: var(--vscode-charts-blue);
 
   /* ===== Syntax highlighting ===== */
-  --syntax-comment: var(--vscode-descriptionForeground);
-  --syntax-regexp: var(--vscode-foreground);
-  --syntax-string: var(--vscode-debugTokenExpression-string, var(--vscode-foreground));
-  --syntax-keyword: var(--vscode-textLink-foreground);
-  --syntax-primitive: var(--vscode-debugTokenExpression-number);
-  --syntax-operator: var(--vscode-foreground);
-  --syntax-variable: var(--vscode-editor-foreground);
-  --syntax-property: var(--vscode-debugTokenExpression-name);
-  --syntax-type: var(--vscode-debugTokenExpression-type);
-  --syntax-constant: var(--vscode-charts-blue);
-  --syntax-punctuation: var(--vscode-foreground);
-  --syntax-object: var(--vscode-editor-foreground);
-  --syntax-success: var(--vscode-charts-green);
-  --syntax-warning: var(--vscode-charts-yellow);
-  --syntax-critical: var(--vscode-errorForeground, var(--vscode-charts-red));
-  --syntax-info: var(--vscode-charts-blue);
-  --syntax-diff-add: var(--vscode-gitDecoration-addedResourceForeground);
-  --syntax-diff-delete: var(--vscode-gitDecoration-deletedResourceForeground);
-  --syntax-diff-unknown: var(--vscode-charts-red);
+  /* Use the active theme's own token hues directly. VS Code does not expose its
+     TextMate palette to webviews, so these mirror the closest exposed tokens,
+     keeping each theme's natural color and lightness rather than recoloring it.
+     Per-token fallbacks rescue themes that omit a token instead of collapsing
+     several roles onto the same foreground. */
+  --syntax-comment: var(--vscode-descriptionForeground, light-dark(#57606a, #8b949e));
+  --syntax-regexp: var(--vscode-debugTokenExpression-string, light-dark(#0a3069, #a5d6ff));
+  --syntax-string: var(--vscode-debugTokenExpression-string, light-dark(#0a3069, #a5d6ff));
+  --syntax-keyword: var(--vscode-textLink-foreground, light-dark(#cf222e, #ff7b72));
+  --syntax-primitive: var(--vscode-debugTokenExpression-number, light-dark(#098658, #79c0ff));
+  --syntax-operator: var(--vscode-foreground, light-dark(#1f2328, #e6edf3));
+  --syntax-variable: var(--vscode-editor-foreground, light-dark(#1f2328, #e6edf3));
+  --syntax-property: var(--vscode-debugTokenExpression-name, light-dark(#0550ae, #79c0ff));
+  --syntax-type: var(--vscode-debugTokenExpression-type, light-dark(#267f99, #4ec9b0));
+  --syntax-constant: var(--vscode-charts-blue, light-dark(#0550ae, #79c0ff));
+  --syntax-punctuation: var(--vscode-foreground, light-dark(#1f2328, #e6edf3));
+  --syntax-object: var(--vscode-editor-foreground, light-dark(#1f2328, #e6edf3));
+  --syntax-success: var(--vscode-charts-green, light-dark(#116329, #7ee787));
+  --syntax-warning: var(--vscode-charts-yellow, light-dark(#7d4e00, #e3b341));
+  --syntax-critical: var(--vscode-errorForeground, var(--vscode-charts-red, light-dark(#cf222e, #ff7b72)));
+  --syntax-info: var(--vscode-charts-blue, light-dark(#0550ae, #79c0ff));
+  --syntax-diff-add: var(
+    --vscode-gitDecoration-addedResourceForeground,
+    var(--vscode-charts-green, light-dark(#116329, #7ee787))
+  );
+  --syntax-diff-delete: var(
+    --vscode-gitDecoration-deletedResourceForeground,
+    var(--vscode-charts-red, light-dark(#cf222e, #ff7b72))
+  );
+  --syntax-diff-unknown: var(
+    --vscode-gitDecoration-modifiedResourceForeground,
+    var(--vscode-charts-yellow, light-dark(#7d4e00, #e3b341))
+  );
+  /* kilo-diff-theme references --syntax-unknown; alias it so it resolves. */
+  --syntax-unknown: var(--syntax-diff-unknown);
 
   /* ===== Pierre diff engine (theme its CSS vars to VS Code editor colors) ===== */
   --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
   --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
+  --diffs-code-font-size: max(12px, var(--vscode-editor-font-size, 12px));
   --diffs-bg-separator-override: var(--surface-diff-skip-base);
   --diffs-fg-number-override: var(
     --vscode-diffEditor-unchangedRegionForeground,
     var(--vscode-editorLineNumber-foreground, var(--vscode-descriptionForeground))
   );
+  --diffs-fg-number-addition-override: var(--diffs-fg-number-override);
+  --diffs-fg-number-deletion-override: var(--diffs-fg-number-override);
   --diffs-bg-addition-emphasis-override: var(--surface-diff-add-weak);
   --diffs-bg-deletion-emphasis-override: var(--surface-diff-delete-weak);
 

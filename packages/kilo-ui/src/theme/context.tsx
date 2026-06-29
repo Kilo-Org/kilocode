@@ -1,6 +1,5 @@
-// Copy of @opencode-ai/ui/theme/context.tsx with two changes:
-// 1. Imports DEFAULT_THEMES from our local default-themes (which includes Kilo themes)
-// 2. Default theme changed from "oc-1" to "kilo"
+// Copy of @opencode-ai/ui/theme/context.tsx with Kilo themes, defaults, and
+// VS Code host-theme synchronization.
 import { onMount, onCleanup, createEffect } from "solid-js"
 import { createStore } from "solid-js/store"
 import type { DesktopTheme } from "@opencode-ai/ui/theme/types"
@@ -30,8 +29,17 @@ function ensureThemeStyleElement(): HTMLStyleElement {
   return element
 }
 
+export function getVscodeMode(classes: Pick<DOMTokenList, "contains">): "light" | "dark" | undefined {
+  if (classes.contains("vscode-high-contrast-light") || classes.contains("vscode-light")) return "light"
+  if (classes.contains("vscode-high-contrast") || classes.contains("vscode-dark")) return "dark"
+  return undefined
+}
+
 function getSystemMode(): "light" | "dark" {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  return (
+    getVscodeMode(document.body.classList) ??
+    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+  )
 }
 
 function applyThemeCss(theme: DesktopTheme, themeId: string, mode: "light" | "dark") {
@@ -83,27 +91,31 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       previewScheme: null as ColorScheme | null,
     })
 
+    const vscode = props.defaultTheme === "kilo-vscode"
+
     onMount(() => {
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
       const handler = () => {
-        if (store.colorScheme === "system") {
-          setStore("mode", getSystemMode())
-        }
+        if (vscode || store.colorScheme === "system") setStore("mode", getSystemMode())
       }
+      const observer = new MutationObserver(handler)
       mediaQuery.addEventListener("change", handler)
-      onCleanup(() => mediaQuery.removeEventListener("change", handler))
+      observer.observe(document.body, { attributes: true, attributeFilter: ["class"] })
+      onCleanup(() => {
+        mediaQuery.removeEventListener("change", handler)
+        observer.disconnect()
+      })
 
       const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME_ID)
       const savedScheme = localStorage.getItem(STORAGE_KEYS.COLOR_SCHEME) as ColorScheme | null
-      if (savedTheme && store.themes[savedTheme]) {
+      if (!vscode && savedTheme && store.themes[savedTheme]) {
         setStore("themeId", savedTheme)
       }
-      if (savedScheme) {
+      if (!vscode && savedScheme) {
         setStore("colorScheme", savedScheme)
-        if (savedScheme !== "system") {
-          setStore("mode", savedScheme)
-        }
+        if (savedScheme !== "system") setStore("mode", savedScheme)
       }
+      handler()
       const currentTheme = store.themes[store.themeId]
       if (currentTheme) {
         cacheThemeVariants(currentTheme, store.themeId)
@@ -131,7 +143,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     const setColorScheme = (scheme: ColorScheme) => {
       setStore("colorScheme", scheme)
       localStorage.setItem(STORAGE_KEYS.COLOR_SCHEME, scheme)
-      setStore("mode", scheme === "system" ? getSystemMode() : scheme)
+      setStore("mode", vscode || scheme === "system" ? getSystemMode() : scheme)
     }
 
     return {

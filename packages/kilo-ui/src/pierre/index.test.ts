@@ -6,4 +6,17 @@ describe("Pierre diff options", () => {
     expect(createDefaultOptions("unified").lineDiffType).toBe("word-alt")
     expect(createDefaultOptions("split").lineDiffType).toBe("word-alt")
   })
+
+  test("uses readable change indicators and final semantic surfaces", () => {
+    const opts = createDefaultOptions("unified")
+
+    expect(opts.diffIndicators).toBe("classic")
+    expect(opts.unsafeCSS).toContain(":host([data-color-scheme='light'])")
+    expect(opts.unsafeCSS).toContain(":host([data-color-scheme='dark'])")
+    expect(opts.unsafeCSS).toContain("--surface-diff-add-base")
+    expect(opts.unsafeCSS).toContain("--surface-diff-add-weaker")
+    expect(opts.unsafeCSS).toContain("--surface-diff-delete-base")
+    expect(opts.unsafeCSS).toContain("--surface-diff-delete-weaker")
+    expect(opts.unsafeCSS).toContain("outline: 1px solid var(--border-contrast, transparent)")
+  })
 })
