@@ -27,6 +27,7 @@ const forbidden: { pattern: string; reason: string; allow?: string[] }[] = [
     allow: [
       "AGENTS.md",
       "README.md",
+      "translations/", // translated READMEs mirror the README.md fork-lineage reference
       ".opencode/glossary/",
       "packages/kilo-vscode/AGENTS.md",
       "packages/kilo-docs/source-links.md",
