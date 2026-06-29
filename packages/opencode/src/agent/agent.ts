@@ -35,6 +35,7 @@ export type RequirementBlockedError = InstanceType<typeof AgentRequirements.Bloc
 export const Info = Schema.Struct({
   name: Schema.String,
   displayName: Schema.optional(Schema.String), // kilocode_change - human-readable name for org modes
+  source: Schema.optional(Schema.String), // kilocode_change - origin marker (organization | global | project)
   description: Schema.optional(Schema.String),
   deprecated: Schema.optional(Schema.Boolean), // kilocode_change
   mode: Schema.Literals(["subagent", "primary", "all"]),
@@ -334,7 +335,11 @@ export const layer = Layer.effect(
           item.hidden = value.hidden ?? item.hidden
           item.name = value.name ?? item.name
           item.steps = value.steps ?? item.steps
-          item.requirements = value.requirements ?? item.requirements // kilocode_change
+          // kilocode_change start - carry metadata as typed fields, never as provider options
+          item.displayName = value.displayName ?? item.displayName
+          item.source = value.source ?? item.source
+          item.requirements = value.requirements ?? item.requirements
+          // kilocode_change end
           item.options = mergeDeep(item.options, value.options ?? {})
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
           KiloAgent.processConfigItem(item) // kilocode_change - populate displayName from options
