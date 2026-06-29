@@ -120,7 +120,23 @@ export async function getClawStatus(auth: AuthStore) {
 
   const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
   if (!response.ok) throw new GatewayError(await response.text(), response.status)
-  return response.json()
+  return normalizeClawStatus(await response.json())
+}
+
+function normalizeTime(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return new Date(value).toISOString()
+  return value
+}
+
+export function normalizeClawStatus(input: unknown) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return input
+
+  const data = input as Record<string, unknown>
+  return {
+    ...data,
+    ...("lastStartedAt" in data ? { lastStartedAt: normalizeTime(data.lastStartedAt) } : {}),
+    ...("lastStoppedAt" in data ? { lastStoppedAt: normalizeTime(data.lastStoppedAt) } : {}),
+  }
 }
 
 export async function getClawChatCredentials(auth: AuthStore): Promise<ClawChatCredentials> {
