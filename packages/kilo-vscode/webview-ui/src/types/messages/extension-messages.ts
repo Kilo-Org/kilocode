@@ -202,6 +202,11 @@ export interface SessionModelUsageLoadedMessage {
   data?: SessionModelUsage
 }
 
+export interface SessionModelUsageChangedMessage {
+  type: "sessionModelUsageChanged"
+  sessionID: string
+}
+
 export interface MessageCreatedMessage {
   type: "messageCreated"
   message: Message
@@ -1051,6 +1056,7 @@ export type ExtensionMessage =
   | MessageRemovedMessage
   | MessagesLoadedMessage
   | SessionModelUsageLoadedMessage
+  | SessionModelUsageChangedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage

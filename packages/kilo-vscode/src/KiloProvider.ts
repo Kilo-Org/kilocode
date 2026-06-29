@@ -359,6 +359,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private promptRecoveryQueued = false
   private promptRecovery: Promise<void> | null = null
   private trackedSessionIds: Set<string> = new Set()
+  private modelUsageSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
   private readonly checkpoints = new Map<string, Promise<void>>()
   private readonly sessionCreations = new Map<string, Promise<{ sid: string; dir: string }>>()
@@ -1714,6 +1715,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .getClientAsync(directory)
       .then((client) => client.kilocode.sessionModelUsage({ sessionID, directory }, { throwOnError: true }))
       .then((response) => {
+        this.modelUsageSessionIds = new Set(response.data.sessionIDs)
         this.postMessage({ type: "sessionModelUsageLoaded", sessionID, requestID, data: response.data })
       })
       .catch((error: unknown) => {
@@ -3509,6 +3511,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private postModelUsageChanged(event: ProviderEvent, sessionID: string | undefined): boolean {
+    if (!sessionID || this.trackedSessionIds.has(sessionID)) return false
+    if (!this.modelUsageSessionIds.has(sessionID)) return false
+    const changed =
+      event.type === "message.removed" ||
+      event.type === "message.part.removed" ||
+      event.type === "session.deleted" ||
+      (event.type === "message.part.updated" && event.properties.part.type === "step-finish")
+    if (!changed) return false
+    if (event.type === "session.deleted") this.modelUsageSessionIds.delete(sessionID)
+    this.postMessage({ type: "sessionModelUsageChanged", sessionID })
+    return true
+  }
+
   /**
    * Handle SSE events from the CLI backend.
    * Filters events by project ID and tracked session IDs so each webview only sees its own sessions.
@@ -3575,6 +3591,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Events with sessionID → only forward if this webview tracks that session
     // message.part.* events are always session-scoped; drop if session unknown.
     if (!sessionID && isSessionScopedPartEvent(event.type)) return
+    if (this.postModelUsageChanged(event, sessionID)) return
     if (event.type !== "indexing.status" && sessionID && !this.trackedSessionIds.has(sessionID)) {
       return
     }
@@ -3627,6 +3644,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "session.deleted") {
       const sid = event.properties.sessionID
       this.trackedSessionIds.delete(sid)
+      this.modelUsageSessionIds.delete(sid)
       this.sessionDirectories.delete(sid)
       this.connectionService.pruneSession(sid)
     }

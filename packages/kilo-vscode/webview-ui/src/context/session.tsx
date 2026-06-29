@@ -1018,6 +1018,10 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function refreshModelUsageForMessage(message: ExtensionMessage) {
+    if (message.type === "sessionModelUsageChanged") {
+      if (modelUsageRelated(message.sessionID)) queueModelUsageRefresh()
+      return
+    }
     if (message.type === "partUpdated") {
       if (message.part.type === "step-finish" && modelUsageRelated(message.sessionID)) queueModelUsageRefresh()
       return
