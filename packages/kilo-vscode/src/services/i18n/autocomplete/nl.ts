@@ -40,8 +40,8 @@ export const dict = {
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot uitschakelen",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Automatisch aanvullen uitschakelen",
   "kilocode:autocomplete.creditsExhausted.message":
-    "Kilo Code automatisch aanvullen is gepauzeerd omdat je account geen resterende credits heeft. Voeg credits toe om automatisch aanvullen te hervatten.",
+    "Kilo Code Autocomplete has been paused. Possible causes: your Kilo account has no remaining credits, or your configured API key (BYOK) has reached its quota limit. Add Kilo credits or check your API key configuration to resume autocomplete.",
   "kilocode:autocomplete.creditsExhausted.addCredits": "Credits toevoegen",
   "kilocode:autocomplete.authError.message":
-    "Kilo Code automatisch aanvullen is gepauzeerd vanwege een authenticatiefout. Meld je opnieuw aan.",
+    "Kilo Code Autocomplete has been paused due to an authentication issue. Possible causes: you are not signed in to Kilo, or your API key (BYOK) is invalid or missing. Please sign in again or check your provider API key settings.",
 }
