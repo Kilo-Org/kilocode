@@ -43,7 +43,8 @@ const bundles: Record<string, Record<string, string>> = {
   zht,
 }
 
-export function resolveLocale(lang: string): string {
+export function resolveLocale(lang: string | undefined): string {
+  if (!lang) return "en"
   const lower = lang.toLowerCase()
   if (lower.startsWith("zh")) {
     if (lower === "zht") return "zht"
@@ -59,13 +60,23 @@ export function resolveLocale(lang: string): string {
   return "en"
 }
 
+export function selectedLocale(vscode: typeof import("vscode")): string {
+  const cfg = vscode.workspace.getConfiguration("kilo-code")
+  const lang = cfg.get<string>("language")
+  return resolveLocale(lang || vscode.env.language)
+}
+
 function load(): Record<string, string> {
   const vscode = require("vscode") as typeof import("vscode")
-  const locale = resolveLocale(vscode.env.language)
+  const locale = selectedLocale(vscode)
   return { ...en, ...(bundles[locale] ?? {}) }
 }
 
-const translations: Record<string, string> = load()
+let translations: Record<string, string> = load()
+
+export function reload(): void {
+  translations = load()
+}
 
 export function t(key: keyof typeof enDict | string, vars?: Record<string, string | number>): string {
   let text = translations[key] ?? key

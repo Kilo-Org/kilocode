@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { resolveLocale, t } from "../../src/services/i18n"
+import { resolveLocale, selectedLocale, t } from "../../src/services/i18n"
 
 describe("extension host i18n", () => {
   it("returns translated string for known key", () => {
@@ -75,5 +75,31 @@ describe("extension host i18n", () => {
 
   it("falls back to English for unsupported locales", () => {
     expect(resolveLocale("sv-SE")).toBe("en")
+  })
+
+  it("prefers Kilo language setting over VS Code language", () => {
+    const vscode = {
+      env: { language: "en" },
+      workspace: {
+        getConfiguration: () => ({
+          get: () => "nl",
+        }),
+      },
+    } as unknown as typeof import("vscode")
+
+    expect(selectedLocale(vscode)).toBe("nl")
+  })
+
+  it("uses VS Code language when Kilo language setting is automatic", () => {
+    const vscode = {
+      env: { language: "nl" },
+      workspace: {
+        getConfiguration: () => ({
+          get: () => undefined,
+        }),
+      },
+    } as unknown as typeof import("vscode")
+
+    expect(selectedLocale(vscode)).toBe("nl")
   })
 })

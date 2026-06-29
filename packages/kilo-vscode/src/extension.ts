@@ -25,6 +25,7 @@ import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 import { createNotebookBridge } from "./services/notebook"
+import { reload as reloadI18n } from "./services/i18n"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -102,6 +103,14 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.env.onDidChangeTelemetryEnabled((enabled) => {
       telemetry.setEnabled(enabled)
+    }),
+  )
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kilo-code.language")) {
+        reloadI18n()
+      }
     }),
   )
 
