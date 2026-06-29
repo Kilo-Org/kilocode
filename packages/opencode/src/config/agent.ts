@@ -17,6 +17,7 @@ import { Bus } from "@/bus"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
+import { Requirements } from "@/kilocode/agent-requirements"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
@@ -69,6 +70,7 @@ const AgentSchema = Schema.StructWithRest(
     // kilocode_change end
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
     permission: Schema.optional(ConfigPermission.Info),
+    requirements: Schema.optional(Requirements), // kilocode_change
   }),
   [Schema.Record(Schema.String, Schema.Any)],
 )
@@ -92,6 +94,7 @@ const KNOWN_KEYS = new Set([
   "permission",
   "disable",
   "tools",
+  "requirements", // kilocode_change
 ])
 
 // Post-parse normalisation:
