@@ -1,3 +1,11 @@
+export type SandboxDefaultState = {
+  desired: boolean
+  enabled: boolean
+  available: boolean
+  reason?: string
+  revision: number
+}
+
 export type SandboxState = {
   sessionID: string
   enabled: boolean
@@ -15,6 +23,13 @@ export function applySandboxState(current: SandboxState | undefined, next: Sandb
   if (same && current.version === next.version && current.revision > next.revision) return current
   if (!same && current.revision > next.revision) return current
   return next
+}
+
+export function applySandboxStates(current: Record<string, SandboxState>, next: SandboxState) {
+  const previous = current[next.sessionID]
+  const state = applySandboxState(previous, next)
+  if (state === previous) return current
+  return { ...current, [next.sessionID]: state }
 }
 
 export function fileName(path: string): string {

@@ -4,6 +4,7 @@ import path from "path"
 import { array, check, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
+import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
 
 function directory(ctx: ScenarioContext) {
   if (!ctx.directory) throw new Error("scenario needs a project directory")
@@ -33,6 +34,7 @@ const edit = {
 }
 
 export const kiloScenarios: Scenario[] = [
+  ...anacondaDesktopScenarios,
   http.protected.get("/background-process", "backgroundProcess.list").json(200, array),
   http.protected
     .get("/background-process/{processID}", "backgroundProcess.get")
@@ -189,6 +191,10 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "missing network reject should remain a no-op success")),
+  http.protected.get("/sandbox/support", "sandbox.support").json(200, (body) => {
+    object(body)
+    check(typeof body.available === "boolean", "sandbox support should report backend availability")
+  }),
   http.protected
     .get("/session/{sessionID}/sandbox", "sandbox.status")
     .seeded((ctx) => ctx.session({ title: "Sandbox status" }))
@@ -256,6 +262,19 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
+    .seeded((ctx) => ctx.session({ title: "Model usage" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/model-usage", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.models)
+      object(body.totals)
+      check(body.models.length === 0, "a new session should have no model usage")
+    }),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
@@ -264,6 +283,19 @@ export const kiloScenarios: Scenario[] = [
         yield* Effect.promise(() => rm(body, { force: true }))
       }),
     ),
+  http.protected
+    .get("/kilocode/agent/requirements", "kilocode.agentRequirements")
+    .at((ctx) => ({ path: "/kilocode/agent/requirements?agent=httpapi-agent", headers: ctx.headers() }))
+    .json(200, (body, ctx) => {
+      object(body)
+      check(body.agent === "httpapi-agent", "agent requirements should echo the requested agent")
+      check(body.directory === ctx.directory, "agent requirements should use the routed workspace directory")
+      check(body.enabled === false, "agent requirements should report disabled when the experiment is off")
+      check(body.state === "disabled", "agent requirements should return the disabled state")
+      array(body.skills)
+      array(body.mcps)
+      array(body.vscode_extensions)
+    }),
   http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .mutating()

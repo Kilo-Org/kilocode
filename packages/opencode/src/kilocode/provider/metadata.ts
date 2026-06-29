@@ -16,9 +16,10 @@ const notes: Record<string, string> = {
   google: "settings.providers.note.google",
   openrouter: "settings.providers.note.openrouter",
   vercel: "settings.providers.note.vercel",
+  "anaconda-desktop": "settings.providers.note.anacondaDesktop",
 }
 
-const order = ["kilo", "anthropic", "deepseek", "openai", "google", "openrouter", "vercel"] as const
+const order = ["kilo", "anthropic", "deepseek", "openai", "google", "anaconda-desktop", "openrouter", "vercel"] as const
 
 const priority = new Map<string, number>(order.map((id, index) => [id, index]))
 

@@ -8,6 +8,7 @@ import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
+import { MarketplaceNotifier } from "./services/marketplace/notifier"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
@@ -23,6 +24,7 @@ import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
+import { createNotebookBridge } from "./services/notebook"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -49,6 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
@@ -268,6 +271,13 @@ export function activate(context: vscode.ExtensionContext) {
   settingsEditorProvider.setRemoteService(remoteService)
   const marketplacePanelProvider = new MarketplacePanelProvider(context.extensionUri, connectionService, context)
   context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
+
+  // Surface a discardable notification when a marketplace item matches the workspace.
+  const marketplaceNotifier = new MarketplaceNotifier(connectionService, context, (item) =>
+    marketplacePanelProvider.openInstall(item),
+  )
+  context.subscriptions.push(marketplaceNotifier)
+  marketplaceNotifier.start()
 
   // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
   const subAgentViewerProvider = new SubAgentViewerProvider(context.extensionUri, connectionService, context)
@@ -541,6 +551,7 @@ export function activate(context: vscode.ExtensionContext) {
       attention.dispose()
       browserAutomationService.dispose()
       provider.dispose()
+      notebookBridge.dispose()
       connectionService.dispose()
     },
   })

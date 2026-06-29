@@ -79,6 +79,7 @@ const mockVscode = {
     visibleNotebookEditors: [],
     tabGroups: { all: [] },
     showTextDocument: async () => {},
+    showInformationMessage: async () => undefined,
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
     createOutputChannel: () => ({

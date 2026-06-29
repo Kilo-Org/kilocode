@@ -9,7 +9,9 @@ import {
   hasKiloSandboxWorker,
   hasTreeSitterResources,
   kiloSandboxWorkerForBinary,
+  sanitizeSandboxResources,
 } from "../src/services/cli-backend/cli-resources"
+import { currentBwrapTarget, ensureBwrapForTarget } from "./bwrap-helper"
 import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
@@ -183,6 +185,13 @@ async function bundleKiloSandboxWorker() {
   await Bun.write(kiloSandboxWorkerForBinary(targetBinPath), result.outputs[0])
 }
 
+async function ensureLocalHelpers() {
+  await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
+  if (process.env.KILO_SKIP_BUNDLED_BWRAP === "1") return
+  if (await sanitizeSandboxResources(targetBinDir, true)) return
+  await ensureBwrapForTarget(currentBwrapTarget())
+}
+
 async function writeSourceWrapper() {
   if (process.platform === "win32") {
     throw new Error("Compiled CLI build failed and source wrapper fallback is not supported on Windows.")
@@ -202,7 +211,7 @@ async function writeSourceWrapper() {
   )
   chmodSync(targetBinPath, 0o755)
   await bundleKiloSandboxWorker()
-  await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
+  await ensureLocalHelpers()
 
   const hash = await cliSourceHash()
   if (hash) await Bun.write(versionFile, hash + "\n")
@@ -224,7 +233,7 @@ async function main() {
     log(
       `CLI binary already present at ${relative(kiloVscodeDir, targetBinPath)} (${Math.round(st.size / 1024 / 1024)}MB). Use --force to rebuild.`,
     )
-    await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
+    await ensureLocalHelpers()
     return
   }
 
@@ -257,7 +266,7 @@ async function main() {
   await copySandboxResources(sourceBinPath, targetBinPath)
   await copyKiloSandboxWorker(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)
-  await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
+  await ensureLocalHelpers()
 
   const hash = await cliSourceHash()
   if (hash) await Bun.write(versionFile, hash + "\n")

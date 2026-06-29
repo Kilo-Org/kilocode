@@ -45,6 +45,7 @@ export interface ToolDeps {
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
   setup: (dir: string, branch?: string, id?: string) => Promise<void>
   createSessionInWorktree: (dir: string, branch: string, id?: string) => Promise<Session | null>
+  sessionMetadata: (client: KiloClient, dir: string) => Promise<Record<string, unknown>>
   registerWorktreeSession: (sid: string, dir: string) => void
   notifyReady: (sid: string, result: CreateWorktreeResult, wid?: string) => void
   push: () => void
@@ -126,7 +127,11 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
     return false
   }
   const target = wt?.path ?? root
-  const { data } = await client.session.create({ directory: target, platform: PLATFORM }, { throwOnError: true })
+  const metadata = await deps.sessionMetadata(client, target)
+  const { data } = await client.session.create(
+    { directory: target, platform: PLATFORM, metadata },
+    { throwOnError: true },
+  )
   const session = data
   state.addSession(session.id, wt?.id ?? null)
   if (wt) deps.registerWorktreeSession(session.id, wt.path)

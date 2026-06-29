@@ -1,4 +1,57 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "เชื่อมต่อ Anaconda Desktop",
+  "provider.anaconda.title.manage": "จัดการ Anaconda Desktop",
+  "provider.anaconda.status.checking": "กำลังตรวจสอบ Anaconda Desktop...",
+  "provider.anaconda.status.opening": "กำลังเปิด Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "กำลังรีเฟรชโมเดลของผู้ให้บริการ...",
+  "provider.anaconda.status.ready": "พร้อมเชื่อมต่อ",
+  "provider.anaconda.status.waiting": "กำลังรอ Desktop",
+  "provider.anaconda.status.attention": "ต้องการการดำเนินการ",
+  "provider.anaconda.status.unavailable": "ไม่พร้อมใช้งาน",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop ไม่รองรับบน {{platform}}",
+  "provider.anaconda.state.notInstalled":
+    "ติดตั้ง Anaconda Desktop บนเครื่องนี้ แล้วกลับมาที่นี่ Kilo จะไม่เรียกใช้ตัวติดตั้งให้คุณ",
+  "provider.anaconda.state.notRunning":
+    "เปิด Anaconda Desktop ตั้งค่าให้เสร็จและลงชื่อเข้าใช้ แล้วเลือกตรวจสอบอีกครั้ง",
+  "provider.anaconda.state.invalidConfig":
+    "การตั้งค่า Anaconda Desktop ยังไม่สมบูรณ์ เปิด Desktop ตั้งค่าให้เสร็จ และรีสตาร์ทหากจำเป็น",
+  "provider.anaconda.state.signedOut": "เปิด Anaconda Desktop และลงชื่อเข้าใช้ก่อนเชื่อมต่อ Kilo",
+  "provider.anaconda.state.unauthorized":
+    "Kilo ไม่สามารถเข้าถึง Anaconda Desktop ได้ เปิด Desktop ลงชื่อเข้าใช้อีกครั้ง และรีสตาร์ทหากจำเป็น",
+  "provider.anaconda.state.unavailable": "Anaconda Desktop ยังไม่ตอบสนอง เปิดและรอให้แอปพลิเคชันเริ่มทำงานเสร็จ",
+  "provider.anaconda.state.noModel":
+    "ใน Anaconda Desktop ดาวน์โหลดโมเดลสร้างข้อความ เลือกโมเดลที่รองรับการเรียกใช้เครื่องมือเมื่อเป็นไปได้ แล้วเริ่มเซิร์ฟเวอร์ของโมเดลนั้น",
+  "provider.anaconda.state.noServer_one":
+    "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ 1 โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
+  "provider.anaconda.state.noServer_other":
+    "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ {{count}} โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
+  "provider.anaconda.state.unhealthy":
+    "เซิร์ฟเวอร์การอนุมานที่ใช้งานอยู่ยังไม่พร้อมใช้งาน ตรวจสอบใน Anaconda Desktop และรีสตาร์ทเซิร์ฟเวอร์หากจำเป็น",
+  "provider.anaconda.state.ready":
+    "Kilo พบเซิร์ฟเวอร์สร้างข้อความในเครื่องที่พร้อมใช้งาน และสามารถนำเข้าการตั้งค่าการเชื่อมต่อปัจจุบันได้",
+  "provider.anaconda.server": "เซิร์ฟเวอร์การอนุมานที่ใช้งานอยู่",
+  "provider.anaconda.context": "หน้าต่างบริบท",
+  "provider.anaconda.contextValue": "{{count}} โทเค็น",
+  "provider.anaconda.tools": "การเรียกใช้เครื่องมือ",
+  "provider.anaconda.tools.supported": "รองรับ",
+  "provider.anaconda.tools.unsupported": "ไม่ได้เปิดใช้งาน",
+  "provider.anaconda.tools.unknown": "ไม่ทราบ",
+  "provider.anaconda.warning.title": "การรองรับเครื่องมือมีข้อจำกัด",
+  "provider.anaconda.warning.description":
+    "เซิร์ฟเวอร์นี้ไม่ยืนยันการเรียกใช้เครื่องมือ การทำงานของเอเจนต์เขียนโค้ดอาจล้มเหลวหรือไม่พร้อมใช้งาน ดำเนินการต่อเฉพาะเมื่อคุณยอมรับข้อจำกัดเหล่านี้",
+  "provider.anaconda.action.download": "ดาวน์โหลด Anaconda Desktop",
+  "provider.anaconda.action.open": "เปิด Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "ตรวจสอบอีกครั้ง",
+  "provider.anaconda.action.continue": "ดำเนินการต่อ",
+  "provider.anaconda.action.manage": "จัดการ / รีเฟรช",
+  "provider.anaconda.toast.refreshed.title": "รีเฟรช Anaconda Desktop แล้ว",
+  "provider.anaconda.toast.refreshed.description": "เซิร์ฟเวอร์ในเครื่องและโมเดลที่ใช้งานอยู่เป็นปัจจุบันใน Kilo แล้ว",
+  "settings.providers.note.anacondaDesktop": "เรียกใช้โมเดลที่ให้บริการในเครื่องโดย Anaconda Desktop",
+  "settings.providers.tag.local": "ในเครื่อง",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "แนะนำ",
   "command.category.view": "มุมมอง",
   "command.category.project": "โปรเจกต์",
@@ -94,6 +147,30 @@ export const dict = {
   "command.session.unshare.description": "หยุดการแชร์เซสชันนี้",
   "command.session.export": "ส่งออกบันทึกเซสชัน",
 
+  "agentRequirements.skill.installed": "ติดตั้งแล้ว",
+  "agentRequirements.skill.checkFailed": "การตรวจสอบสกิลล้มเหลว",
+  "agentRequirements.skill.missing": "ยังไม่ได้ติดตั้ง",
+  "agentRequirements.mcp.connected": "เชื่อมต่อแล้ว",
+  "agentRequirements.mcp.checkFailed": "การตรวจสอบ MCP ล้มเหลว",
+  "agentRequirements.mcp.missing": "ยังไม่ได้เชื่อมต่อ",
+  "agentRequirements.extension.installed": "ติดตั้งแล้ว",
+  "agentRequirements.extension.checkFailed": "การตรวจสอบส่วนขยาย VS Code ล้มเหลว",
+  "agentRequirements.extension.missing": "ยังไม่ได้ติดตั้ง",
+  "agentRequirements.extension.description": "ติดตั้งส่วนขยายที่ขาดหายใน VS Code",
+  "agentRequirements.group.skills": "สกิล",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "ส่วนขยาย VS Code",
+  "agentRequirements.blocked.title": "ข้อกำหนดเบื้องต้นของเอเจนต์ {{agent}}",
+  "agentRequirements.blocked.description": "เอเจนต์นี้ต้องใช้เครื่องมือต่อไปนี้ก่อนจึงจะทำงานได้",
+  "agentRequirements.prompt.blocked": "ทำการตรวจสอบที่จำเป็นให้เสร็จก่อนเพื่อใช้เอเจนต์นี้",
+  "agentRequirements.action.openMarketplace": "เปิด Marketplace",
+  "agentRequirements.error.unknownAgent": "ไม่พบเอเจนต์ที่เลือก",
+  "agentRequirements.error.malformedDeclaration": "เอเจนต์นี้มีการประกาศข้อกำหนดที่ไม่ถูกต้อง",
+  "agentRequirements.error.discoveryFailed": "Kilo ไม่สามารถตรวจสอบสกิลที่มีอยู่ได้",
+  "agentRequirements.error.mcpStatusFailed": "Kilo ไม่สามารถตรวจสอบสถานะเซิร์ฟเวอร์ MCP ได้",
+  "agentRequirements.error.scopeMismatch": "การตรวจสอบข้อกำหนดของเอเจนต์นี้ไม่ทำงานอีกต่อไป",
+  "agentRequirements.error.requestFailed": "Kilo ไม่สามารถตรวจสอบข้อกำหนดของเอเจนต์ได้",
+
   "palette.search.placeholder": "ค้นหาไฟล์ คำสั่ง และเซสชัน",
   "palette.empty": "ไม่พบผลลัพธ์",
   "palette.group.commands": "คำสั่ง",
@@ -174,6 +251,7 @@ export const dict = {
   "model.tag.free": "ฟรี",
   "model.tag.dataCollected": "ข้อมูลอาจถูกนำไปใช้ในการฝึก",
   "model.tag.latest": "ล่าสุด",
+  "model.group.auto": "โมเดลอัตโนมัติ",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
   "model.group.collapse": "ย่อ {{group}}",
@@ -201,6 +279,7 @@ export const dict = {
   "model.preview.label.average": "ต้นทุนเฉลี่ยโดยประมาณ",
   "model.preview.label.context": "บริบท",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "ตัวเลือกโมเดล",
   "model.preview.label.completion": "ความสำเร็จ",
   "model.preview.label.costAttempt": "ค่าใช้จ่าย / ครั้ง",
   "model.preview.value.notSupported": "ไม่รองรับ",
@@ -291,6 +370,18 @@ export const dict = {
     "เปิดใช้งาน sandbox แล้ว คำสั่ง shell ของ agent ถูกจำกัดไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
   "prompt.action.sandbox.disabled":
     "ปิดใช้งาน sandbox อยู่ คลิกเพื่อจำกัดการเขียนคำสั่ง shell ของ agent ไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.status.enabled": "เปิด sandbox แล้ว",
+  "prompt.action.sandbox.status.disabled": "ปิด sandbox แล้ว",
+  "prompt.action.sandbox.filesystem": "ระบบไฟล์",
+  "prompt.action.sandbox.network": "เครือข่าย",
+  "prompt.action.sandbox.filesystem.restricted": "จำกัด",
+  "prompt.action.sandbox.network.blocked": "บล็อก",
+  "prompt.action.sandbox.network.allowed": "อนุญาต",
+  "prompt.action.sandbox.unrestricted": "ไม่จำกัด",
+  "prompt.action.sandbox.description.enabled": "เขียนได้เฉพาะในโฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.description.disabled": "คลิกเพื่อจำกัดการเขียนในระบบไฟล์และการเข้าถึงเครือข่าย",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
   "speechToText.tooltip.stop": "หยุดจับเสียง",
@@ -1222,6 +1313,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "การดำเนินการนี้จะรีเซ็ตเฉพาะการตั้งค่าเฉพาะของส่วนขยาย VS Code กลับเป็นค่าเริ่มต้นเท่านั้น การตั้งค่าที่ใช้ร่วมกับ CLI เช่น โหมดและกฎการอนุมัติอัตโนมัติ จะถูกเก็บไว้ในการกำหนดค่า CLI และจะไม่ถูกรีเซ็ต",
   "settings.aboutKiloCode.resetSettings.button": "รีเซ็ตการตั้งค่าทั้งหมด",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "ถ่ายโอนการตั้งค่า",
   "settings.aboutKiloCode.settingsTransfer.description":
     "ส่งออกหรือนำเข้าการตั้งค่าเพื่อถ่ายโอนระหว่างอินสแตนซ์ VS Code",
@@ -1310,6 +1402,9 @@ export const dict = {
     "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text ปัจจุบัน Speech to Text รองรับเฉพาะกับ Kilo Gateway เท่านั้น",
   "settings.models.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
   "settings.models.speechToTextModel.description": "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
+  "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
+  "settings.experimental.nativeNotebookTools.description":
+    "เปิดใช้งานเครื่องมือทดลองสำหรับการอ่าน แก้ไข และเรียกใช้โน้ตบุ๊ก VS Code",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
