@@ -108,3 +108,28 @@ export const ModelSelectorSelectedFavorite: Story = {
     )
   },
 }
+
+const LARGE_MODELS: EnrichedModel[] = Array.from({ length: 600 }, (_, i) => {
+  const id = String(i).padStart(3, "0")
+  const provider = `provider-${i % 12}`
+  return {
+    id: `model-${id}`,
+    name: `Model ${id}`,
+    providerID: provider,
+    providerName: `Provider ${i % 12}`,
+  }
+})
+
+export const ModelSelectorLargeCatalog: Story = {
+  name: "ModelSelector — large catalog",
+  render: () => (
+    <StoryProviders>
+      <ModelSelectorBase
+        value={{ providerID: "provider-0", modelID: "model-300" }}
+        models={LARGE_MODELS}
+        placement="bottom-start"
+        onSelect={() => {}}
+      />
+    </StoryProviders>
+  ),
+}
