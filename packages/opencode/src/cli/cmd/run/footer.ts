@@ -570,9 +570,11 @@ export class RunFooter implements FooterApi {
         ? this.base + PERMISSION_ROWS
         : type === "question"
           ? this.base + QUESTION_ROWS
-          : type === "interactive_terminal" // kilocode_change
+          // kilocode_change start
+          : type === "interactive_terminal"
             ? this.base + RUN_INTERACTIVE_TERMINAL_ROWS
             : this.promptRoute.type === "command"
+          // kilocode_change end
             ? 1 + COMMAND_ROWS
             : this.promptRoute.type === "model"
               ? 1 + MODEL_ROWS

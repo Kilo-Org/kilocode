@@ -1409,10 +1409,11 @@ export function Session() {
                 </For>
               </scrollbox>
               <box flexShrink={0}>
-                {/* kilocode_change - the terminal owns the input area while active */}
+                {/* kilocode_change start - the terminal owns the input area while active */}
                 <Show when={!terminal() && permissions().length > 0}>
                   <PermissionPrompt request={permissions()[0]} />
                 </Show>
+                {/* kilocode_change end */}
                 {/* kilocode_change start */}
                 <Show when={terminal()} keyed>
                   {(value) => <TerminalPrompt sessionID={value.info.sessionID} terminalID={value.info.id} />}

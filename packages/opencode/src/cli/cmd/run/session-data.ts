@@ -217,16 +217,16 @@ function out(data: SessionData, commits: SessionCommit[], footer?: FooterOutput)
   }
 }
 
+// kilocode_change start
 export function pickBlockerView(input: {
   permission?: PermissionRequest
   question?: QuestionRequest
-  terminal?: RunInteractiveTerminalSnapshot // kilocode_change
+  terminal?: RunInteractiveTerminalSnapshot
 }): FooterView {
-  // kilocode_change start
   if (input.terminal) {
     return { type: "interactive_terminal", terminal: input.terminal }
   }
-  // kilocode_change end
+// kilocode_change end
 
   if (input.permission) {
     return { type: "permission", request: input.permission }
