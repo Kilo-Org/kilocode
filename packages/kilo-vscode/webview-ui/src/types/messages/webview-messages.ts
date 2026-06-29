@@ -7,6 +7,7 @@ import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -210,6 +211,7 @@ export interface OpenConfigFileRequest {
 
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
+  directory?: string
 }
 
 export interface OpenAgentManagerRequest {
@@ -226,6 +228,14 @@ export interface RequestAgentsMessage {
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
+}
+
+export interface RequestAgentRequirementsMessage {
+  type: "requestAgentRequirements"
+  agent: string
+  directory: string
+  sessionID?: string
+  force?: boolean
 }
 
 export interface RequestCommandsMessage {
@@ -1165,6 +1175,7 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
+  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage
@@ -1305,6 +1316,7 @@ export type WebviewMessage =
   | AuthorizeProviderOAuthMessage
   | CompleteProviderOAuthMessage
   | DisconnectProviderMessage
+  | AnacondaDesktopWebviewMessage
   | SaveCustomProviderMessage
   | FetchCustomProviderModelsMessage
   | PersistRecentsRequest

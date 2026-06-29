@@ -448,6 +448,30 @@ export type ApiError = {
   }
 }
 
+export type AgentRequirementError = {
+  name: "AgentRequirementError"
+  data: {
+    message: string
+    agent: string
+    directory: string
+    state: "blocked" | "error"
+    skills: Array<{
+      name: string
+      status: "ready" | "missing" | "error"
+      message?: string
+    }>
+    mcps: Array<{
+      name: string
+      status: "ready" | "missing" | "error"
+      message?: string
+    }>
+    vscode_extensions: Array<{
+      name: string
+      id: string
+    }>
+  }
+}
+
 export type Todo = {
   /**
    * Brief description of the task
@@ -1277,6 +1301,14 @@ export type AgentConfig = {
   steps?: number
   maxSteps?: number
   permission?: PermissionConfig
+  requirements?: {
+    skills?: Array<string>
+    mcps?: Array<string>
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
+  }
   [key: string]:
     | unknown
     | string
@@ -1301,6 +1333,14 @@ export type AgentConfig = {
     | "info"
     | number
     | PermissionConfig
+    | {
+        skills?: Array<string>
+        mcps?: Array<string>
+        vscode_extensions?: Array<{
+          name: string
+          id: string
+        }>
+      }
     | undefined
 }
 
@@ -1610,6 +1650,7 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
+    agent_requirements?: boolean
     native_notebook_tools?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
@@ -1711,6 +1752,9 @@ export type Model = {
   terminalBench?: {
     overallScore: number
     avgAttemptCostUsd: number
+  }
+  autoRouting?: {
+    models: Array<string>
   }
   ai_sdk_provider?: "alibaba" | "anthropic" | "mistral" | "openai" | "openai-compatible" | "openrouter"
 }
@@ -1992,6 +2036,14 @@ export type Agent = {
   prompt?: string
   options: {
     [key: string]: unknown
+  }
+  requirements?: {
+    skills?: Array<string>
+    mcps?: Array<string>
+    vscode_extensions?: Array<{
+      name: string
+      id: string
+    }>
   }
   steps?: number
 }
@@ -2491,6 +2543,31 @@ export type EffectHttpApiErrorServiceUnavailable = {
   _tag: "ServiceUnavailable"
 }
 
+export type AgentRequirementResult = {
+  agent: string
+  directory: string
+  enabled: boolean
+  state: "disabled" | "ready" | "blocked" | "error"
+  skills: Array<{
+    name: string
+    status: "ready" | "missing" | "error"
+    message?: string
+  }>
+  mcps: Array<{
+    name: string
+    status: "ready" | "missing" | "error"
+    message?: string
+  }>
+  vscode_extensions: Array<{
+    name: string
+    id: string
+  }>
+  error?: {
+    code: "unknown_agent" | "malformed_declaration" | "discovery_failed" | "mcp_status_failed"
+    message: string
+  }
+}
+
 export type NotebookOutput = {
   mime: string
   text?: string
@@ -2589,6 +2666,66 @@ export type NotebookFailure = {
    * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
    */
   currentRevision?: string
+}
+
+export type AnacondaDesktopStatus =
+  | {
+      type: "unsupported-platform"
+      platform: string
+    }
+  | {
+      type: "not-installed"
+      downloadURL: string
+    }
+  | {
+      type: "not-running"
+    }
+  | {
+      type: "invalid-config"
+      reason: "missing" | "malformed" | "missing-key" | "invalid-port"
+    }
+  | {
+      type: "signed-out"
+    }
+  | {
+      type: "management-unauthorized"
+    }
+  | {
+      type: "management-unavailable"
+      reason: "timeout" | "unexpected-response"
+    }
+  | {
+      type: "no-downloaded-model"
+    }
+  | {
+      type: "no-running-server"
+      downloadedModels: number
+    }
+  | {
+      type: "inference-unhealthy"
+      serverID: string
+    }
+  | {
+      type: "ready"
+      serverID: string
+      serverName?: string
+      models: Array<{
+        id: string
+        name: string
+      }>
+      context: number
+      toolcall: "supported" | "unsupported" | "unknown"
+    }
+
+export type AnacondaDesktopConflictError = {
+  code: "unsupported-platform" | "not-installed" | "not-ready" | "acknowledgement-required"
+  message: string
+  status?: AnacondaDesktopStatus
+}
+
+export type AnacondaDesktopOperationError = {
+  operation: "open" | "sync"
+  message: string
 }
 
 export type KilocodeSessionImportResult = {
@@ -3420,6 +3557,7 @@ export type EventSessionError = {
       | StructuredOutputError
       | ContextOverflowError
       | ApiError
+      | AgentRequirementError
   }
 }
 
@@ -10682,6 +10820,36 @@ export type KilocodeHeapSnapshotResponses = {
 
 export type KilocodeHeapSnapshotResponse = KilocodeHeapSnapshotResponses[keyof KilocodeHeapSnapshotResponses]
 
+export type KilocodeAgentRequirementsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    agent: string
+  }
+  url: "/kilocode/agent/requirements"
+}
+
+export type KilocodeAgentRequirementsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeAgentRequirementsError = KilocodeAgentRequirementsErrors[keyof KilocodeAgentRequirementsErrors]
+
+export type KilocodeAgentRequirementsResponses = {
+  /**
+   * Agent requirement status
+   */
+  200: AgentRequirementResult
+}
+
+export type KilocodeAgentRequirementsResponse =
+  KilocodeAgentRequirementsResponses[keyof KilocodeAgentRequirementsResponses]
+
 export type KilocodeRemoveSkillData = {
   body?: {
     location: string
@@ -10841,6 +11009,182 @@ export type KilocodeNotebookRejectResponses = {
 }
 
 export type KilocodeNotebookRejectResponse = KilocodeNotebookRejectResponses[keyof KilocodeNotebookRejectResponses]
+
+export type KilocodeSessionModelUsageData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/model-usage"
+}
+
+export type KilocodeSessionModelUsageErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeSessionModelUsageError = KilocodeSessionModelUsageErrors[keyof KilocodeSessionModelUsageErrors]
+
+export type KilocodeSessionModelUsageResponses = {
+  /**
+   * Model usage for a session tree
+   */
+  200: {
+    totals: {
+      steps: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+    }
+    models: Array<{
+      providerID: string
+      modelID: string
+      steps: number
+      cost: number
+      tokens: {
+        input: number
+        output: number
+        reasoning: number
+        cache: {
+          read: number
+          write: number
+        }
+      }
+    }>
+  }
+}
+
+export type KilocodeSessionModelUsageResponse =
+  KilocodeSessionModelUsageResponses[keyof KilocodeSessionModelUsageResponses]
+
+export type AnacondaDesktopStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/status"
+}
+
+export type AnacondaDesktopStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AnacondaDesktopStatusError = AnacondaDesktopStatusErrors[keyof AnacondaDesktopStatusErrors]
+
+export type AnacondaDesktopStatusResponses = {
+  /**
+   * Anaconda Desktop setup status
+   */
+  200: AnacondaDesktopStatus
+}
+
+export type AnacondaDesktopStatusResponse = AnacondaDesktopStatusResponses[keyof AnacondaDesktopStatusResponses]
+
+export type AnacondaDesktopOpenData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/open"
+}
+
+export type AnacondaDesktopOpenErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * AnacondaDesktopConflictError
+   */
+  409: AnacondaDesktopConflictError
+  /**
+   * AnacondaDesktopOperationError
+   */
+  500: AnacondaDesktopOperationError
+}
+
+export type AnacondaDesktopOpenError = AnacondaDesktopOpenErrors[keyof AnacondaDesktopOpenErrors]
+
+export type AnacondaDesktopOpenResponses = {
+  /**
+   * Anaconda Desktop opened
+   */
+  200: true
+}
+
+export type AnacondaDesktopOpenResponse = AnacondaDesktopOpenResponses[keyof AnacondaDesktopOpenResponses]
+
+export type AnacondaDesktopSyncData = {
+  body?: {
+    acknowledgeToolLimitations?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/anaconda-desktop/sync"
+}
+
+export type AnacondaDesktopSyncErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * AnacondaDesktopConflictError
+   */
+  409: AnacondaDesktopConflictError
+  /**
+   * AnacondaDesktopOperationError
+   */
+  500: AnacondaDesktopOperationError
+}
+
+export type AnacondaDesktopSyncError = AnacondaDesktopSyncErrors[keyof AnacondaDesktopSyncErrors]
+
+export type AnacondaDesktopSyncResponses = {
+  /**
+   * Anaconda Desktop connection synchronized
+   */
+  200: {
+    type: "ready"
+    serverID: string
+    serverName?: string
+    models: Array<{
+      id: string
+      name: string
+    }>
+    context: number
+    toolcall: "supported" | "unsupported" | "unknown"
+  }
+}
+
+export type AnacondaDesktopSyncResponse = AnacondaDesktopSyncResponses[keyof AnacondaDesktopSyncResponses]
 
 export type NetworkListData = {
   body?: never

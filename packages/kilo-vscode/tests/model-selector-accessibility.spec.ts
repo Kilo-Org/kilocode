@@ -28,23 +28,56 @@ test("model selector exposes combobox relationships and active option movement",
   await expect(combobox).toHaveAccessibleDescription("Choose the model used for code review tasks.")
   await expect(alpha.locator("button")).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Add to favorites: Alpha" })).toBeVisible()
+  await expect(page.locator(".model-selector-group-label").nth(0)).toContainText("Auto Models")
+  await expect(page.locator(".model-selector-group-label").nth(1)).toContainText("Recommended")
+  const auto = page.getByRole("treeitem", { name: /Kilo Auto Efficient/ })
+  await expect(auto).toBeVisible()
+  await expect(auto.locator(".model-selector-auto-icon")).toHaveAttribute(
+    "aria-label",
+    "Routes each request to the cheapest model that gets the job done, based on continuously benchmarked accuracy and cost.",
+  )
+  await expect(page.getByRole("treeitem", { name: "Omega" })).toBeVisible()
 
   await combobox.press("ArrowDown")
   await expect(combobox).toBeFocused()
   await expect(combobox).toHaveAttribute("aria-activedescendant", await bravo.getAttribute("id"))
 
-  const expand = page.getByRole("button", { name: "Expand" })
-  const controls = await expand.getAttribute("aria-controls")
-  const preview = page.locator(`[id="${controls}"]`)
-  await expect(expand).toHaveAttribute("aria-expanded", "false")
-  await expect(preview).toHaveAttribute("aria-hidden", "true")
-  await expect(preview.locator("button, a, [tabindex]")).toHaveCount(0)
-  await expand.click()
   const collapse = page.getByRole("button", { name: "Collapse", exact: true })
-  await expect(collapse).toHaveAttribute("aria-controls", controls!)
+  const controls = await collapse.getAttribute("aria-controls")
+  const preview = page.locator(`[id="${controls}"]`)
   await expect(collapse).toHaveAttribute("aria-expanded", "true")
   await expect(preview).toHaveAttribute("aria-hidden", "false")
   await expect(preview.getByRole("button", { name: "Add to favorites" })).toBeVisible()
+  const listBeforePreview = await tree.evaluate((el, id) => {
+    const node = document.getElementById(id!)
+    return !!node && !!(el.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING)
+  }, controls)
+  const treeBox = await tree.boundingBox()
+  const previewBox = await preview.boundingBox()
+  expect(listBeforePreview).toBe(true)
+  expect(previewBox!.y).toBeLessThan(treeBox!.y)
+  await collapse.click()
+  const expand = page.getByRole("button", { name: "Expand" })
+  await expect(expand).toHaveAttribute("aria-controls", controls!)
+  await expect(expand).toHaveAttribute("aria-expanded", "false")
+  await expect(preview).toHaveAttribute("aria-hidden", "true")
+  await expect(preview.locator("button, a, [tabindex]")).toHaveCount(0)
+})
+
+test("auto efficient details show server description and model choices", async ({ page }) => {
+  await load(page, "shared--model-selector-accessible")
+
+  await page.getByRole("button", { name: "Review model: Alpha" }).click()
+  await page.getByRole("treeitem", { name: /Kilo Auto Efficient/ }).click()
+
+  const preview = page.locator(".model-selector-preview")
+  await expect(preview).toContainText(
+    "Routes each request to the cheapest model that gets the job done, based on continuously benchmarked accuracy and cost.",
+  )
+  await expect(preview).toContainText("Model choices")
+  await expect(preview).toContainText("google/gemini-2.5-flash")
+  await expect(preview).toContainText("anthropic/claude-sonnet-4.6")
+  await expect(preview).not.toContainText("openai/gpt-5.5")
 })
 
 test("typing a provider initial moves the active descendant to matching results", async ({ page }) => {
@@ -65,7 +98,7 @@ test("provider groups collapse, expand, and skip their model rows", async ({ pag
 
   await page.getByRole("button", { name: "Review model: Alpha" }).click()
   const combobox = page.getByRole("combobox", { name: "Review model: Alpha. Search models" })
-  const kilo = page.getByRole("treeitem", { name: "Kilo" })
+  const kilo = page.getByRole("treeitem", { name: "Kilo", exact: true })
   const nvidia = page.getByRole("treeitem", { name: "NVIDIA" })
 
   await combobox.press("ArrowDown")
@@ -120,7 +153,10 @@ test("expanded preview waits for explicit pointer selection", async ({ page }) =
   await load(page, "shared--model-selector-accessible")
 
   await page.getByRole("button", { name: "Review model: Alpha" }).click()
-  await page.getByRole("button", { name: "Expand" }).click()
+  await expect(page.locator(".model-selector-preview")).toContainText("Alpha")
+  await page.getByRole("treeitem", { name: "Bravo" }).hover()
+  await page.waitForTimeout(250)
+  await expect(page.locator(".model-selector-preview")).toContainText("Alpha")
   await page.getByRole("treeitem", { name: "Bravo" }).click()
 
   await expect(page.getByTestId("model-selector-value")).toHaveText("alpha")
@@ -145,6 +181,24 @@ test("selected favorite remains selected when its duplicate group is collapsed",
   await expect(alpha).toHaveCount(1)
   await expect(alpha).toHaveAttribute("aria-selected", "true")
   await expect(combobox).toHaveAttribute("aria-activedescendant", await favorites.getAttribute("id"))
+})
+
+test("large catalogs keep the rendered tree bounded and navigate to distant models", async ({ page }) => {
+  await load(page, "shared--model-selector-large-catalog")
+
+  await page.getByRole("button", { name: "Select model: Provider 0 / Model 300" }).click()
+  const combobox = page.getByRole("combobox", { name: "Select model: Provider 0 / Model 300. Search models" })
+  const tree = page.getByRole("tree", { name: "Select model" })
+
+  // The window mounts before we measure it, yet stays far smaller than the catalog.
+  await expect.poll(() => tree.getByRole("treeitem").count()).toBeGreaterThan(0)
+  await expect.poll(() => tree.getByRole("treeitem").count()).toBeLessThan(50)
+
+  // Reaching a distant model scrolls it into the mounted window and activates it.
+  await combobox.fill("Model 599")
+  const last = page.getByRole("treeitem", { name: "Model 599" })
+  await expect(last).toBeVisible()
+  await expect(combobox).toHaveAttribute("aria-activedescendant", await last.getAttribute("id"))
 })
 
 test("Enter selects the active option and Escape restores selector focus", async ({ page }) => {
@@ -214,6 +268,35 @@ test("settings and mode editing expose distinct model field purposes", async ({ 
   await expect(page.getByRole("button", { name: /Model Override:/ })).toHaveAccessibleDescription(
     "Override the default model for this agent",
   )
+})
+
+test("mode picker focuses the selected mode as it opens", async ({ page }) => {
+  await load(page, "prompt-input--default-420")
+
+  await page.getByRole("button", { name: "Code", exact: true }).click()
+  await expect(page.locator(".mode-switcher-item.selected")).toBeFocused()
+})
+
+test("variant picker focuses the selected effort as it opens", async ({ page }) => {
+  await load(page, "prompt-input--with-thinking-420")
+
+  await page.getByRole("button", { name: "Medium", exact: true }).click()
+  await expect(page.locator(".thinking-selector-item.selected")).toBeFocused()
+})
+
+test("slash mode picker Escape returns focus to the prompt", async ({ page }) => {
+  await load(page, "prompt-input--default-420")
+
+  const prompt = page.locator("textarea.prompt-input")
+  await prompt.evaluate((el) => el.setAttribute("aria-disabled", "false"))
+  await prompt.fill("/agents")
+  await prompt.press("Enter")
+
+  const selected = page.locator(".mode-switcher-item.selected")
+  await expect(selected).toBeFocused()
+  await selected.press("Escape")
+
+  await expect(prompt).toBeFocused()
 })
 
 test("chat picker Escape returns focus to the prompt", async ({ page }) => {

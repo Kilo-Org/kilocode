@@ -8,6 +8,12 @@ import type {
   AgentBuilderSaveErrors,
   AgentBuilderSaveResponses,
   AgentPartInput,
+  AnacondaDesktopOpenErrors,
+  AnacondaDesktopOpenResponses,
+  AnacondaDesktopStatusErrors,
+  AnacondaDesktopStatusResponses,
+  AnacondaDesktopSyncErrors,
+  AnacondaDesktopSyncResponses,
   AppAgentsErrors,
   AppAgentsResponses,
   AppLogErrors,
@@ -140,6 +146,8 @@ import type {
   KiloCloudSessionImportResponses,
   KiloCloudSessionsErrors,
   KiloCloudSessionsResponses,
+  KilocodeAgentRequirementsErrors,
+  KilocodeAgentRequirementsResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
   KilocodeNotebookListErrors,
@@ -160,6 +168,8 @@ import type {
   KilocodeSessionImportProjectResponses,
   KilocodeSessionImportSessionErrors,
   KilocodeSessionImportSessionResponses,
+  KilocodeSessionModelUsageErrors,
+  KilocodeSessionModelUsageResponses,
   KiloEditErrors,
   KiloEditResponses,
   KiloFimErrors,
@@ -7481,6 +7491,42 @@ export class SessionImport extends HeyApiClient {
 
 export class Kilocode extends HeyApiClient {
   /**
+   * Check agent requirements
+   *
+   * Check whether the selected agent's requirements are available in the request directory.
+   */
+  public agentRequirements<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      agent: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "agent" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeAgentRequirementsResponses,
+      KilocodeAgentRequirementsErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/agent/requirements",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
    * Remove a skill
    *
    * Remove a skill by deleting its manifest from disk and clearing it from cache.
@@ -7558,6 +7604,42 @@ export class Kilocode extends HeyApiClient {
     )
   }
 
+  /**
+   * Get session model usage
+   *
+   * Get token usage and direct cost by model for the complete top-level session tree.
+   */
+  public sessionModelUsage<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeSessionModelUsageResponses,
+      KilocodeSessionModelUsageErrors,
+      ThrowOnError
+    >({
+      url: "/session/{sessionID}/model-usage",
+      ...options,
+      ...params,
+    })
+  }
+
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
@@ -7571,6 +7653,113 @@ export class Kilocode extends HeyApiClient {
   private _sessionImport?: SessionImport
   get sessionImport(): SessionImport {
     return (this._sessionImport ??= new SessionImport({ client: this.client }))
+  }
+}
+
+export class AnacondaDesktop extends HeyApiClient {
+  /**
+   * Get Anaconda Desktop setup status
+   *
+   * Discover the locally installed Anaconda Desktop and its active inference server.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      AnacondaDesktopStatusResponses,
+      AnacondaDesktopStatusErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/anaconda-desktop/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Open Anaconda Desktop
+   *
+   * Open the locally installed Anaconda Desktop application.
+   */
+  public open<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AnacondaDesktopOpenResponses, AnacondaDesktopOpenErrors, ThrowOnError>(
+      {
+        url: "/kilocode/anaconda-desktop/open",
+        ...options,
+        ...params,
+      },
+    )
+  }
+
+  /**
+   * Synchronize Anaconda Desktop provider
+   *
+   * Discover the active local inference server and replace Kilo provider authentication metadata.
+   */
+  public sync<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      acknowledgeToolLimitations?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "acknowledgeToolLimitations" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<AnacondaDesktopSyncResponses, AnacondaDesktopSyncErrors, ThrowOnError>(
+      {
+        url: "/kilocode/anaconda-desktop/sync",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
   }
 }
 
@@ -8219,6 +8408,11 @@ export class KiloClient extends HeyApiClient {
   private _kilocode?: Kilocode
   get kilocode(): Kilocode {
     return (this._kilocode ??= new Kilocode({ client: this.client }))
+  }
+
+  private _anacondaDesktop?: AnacondaDesktop
+  get anacondaDesktop(): AnacondaDesktop {
+    return (this._anacondaDesktop ??= new AnacondaDesktop({ client: this.client }))
   }
 
   private _network?: Network

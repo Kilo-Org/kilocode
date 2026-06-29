@@ -25,6 +25,13 @@ export function applySandboxState(current: SandboxState | undefined, next: Sandb
   return next
 }
 
+export function applySandboxStates(current: Record<string, SandboxState>, next: SandboxState) {
+  const previous = current[next.sessionID]
+  const state = applySandboxState(previous, next)
+  if (state === previous) return current
+  return { ...current, [next.sessionID]: state }
+}
+
 export function fileName(path: string): string {
   const normalized = path.replaceAll("\\", "/").replace(/\/+$/, "")
   return normalized.split("/").pop() ?? normalized

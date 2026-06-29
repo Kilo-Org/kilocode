@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Poveži Anaconda Desktop",
+  "provider.anaconda.title.manage": "Upravljaj Anaconda Desktopom",
+  "provider.anaconda.status.checking": "Provjeravanje Anaconda Desktopa...",
+  "provider.anaconda.status.opening": "Otvaranje Anaconda Desktopa...",
+  "provider.anaconda.status.syncing": "Osvježavanje modela provajdera...",
+  "provider.anaconda.status.ready": "Spremno za povezivanje",
+  "provider.anaconda.status.waiting": "Čekanje na Desktop",
+  "provider.anaconda.status.attention": "Potrebna pažnja",
+  "provider.anaconda.status.unavailable": "Nedostupno",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop nije podržan na {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Instalirajte Anaconda Desktop na ovom računaru, zatim se vratite ovdje. Kilo ne pokreće instalacijski program umjesto vas.",
+  "provider.anaconda.state.notRunning":
+    "Otvorite Anaconda Desktop, dovršite postavljanje i prijavite se, zatim odaberite Provjeri ponovo.",
+  "provider.anaconda.state.invalidConfig":
+    "Postavljanje Anaconda Desktopa nije dovršeno. Otvorite Desktop, dovršite postavljanje i ponovo ga pokrenite ako je potrebno.",
+  "provider.anaconda.state.signedOut": "Otvorite Anaconda Desktop i prijavite se prije povezivanja Kila.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo nije mogao pristupiti Anaconda Desktopu. Otvorite Desktop, ponovo se prijavite i ponovo ga pokrenite ako je potrebno.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop još ne odgovara. Otvorite ga i sačekajte da se aplikacija u potpunosti pokrene.",
+  "provider.anaconda.state.noModel":
+    "U Anaconda Desktopu preuzmite model za generisanje teksta. Odaberite onaj s pozivanjem alata kad je moguće, zatim pokrenite njegov server.",
+  "provider.anaconda.state.noServer_one":
+    "Dostupan je 1 preuzeti model za generisanje teksta. U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
+  "provider.anaconda.state.noServer_other":
+    "Preuzeti modeli za generisanje teksta dostupni su (ukupno: {{count}}). U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
+  "provider.anaconda.state.unhealthy":
+    "Aktivni server za zaključivanje još nije ispravan. Provjerite ga u Anaconda Desktopu i ponovo pokrenite server ako je potrebno.",
+  "provider.anaconda.state.ready":
+    "Kilo je pronašao ispravan lokalni server za generisanje teksta i može uvesti njegove trenutne postavke veze.",
+  "provider.anaconda.server": "Aktivni server za zaključivanje",
+  "provider.anaconda.context": "Kontekstni prozor",
+  "provider.anaconda.contextValue": "{{count}} tokena",
+  "provider.anaconda.tools": "Pozivanje alata",
+  "provider.anaconda.tools.supported": "Podržano",
+  "provider.anaconda.tools.unsupported": "Nije omogućeno",
+  "provider.anaconda.tools.unknown": "Nepoznato",
+  "provider.anaconda.warning.title": "Podrška za alate je ograničena",
+  "provider.anaconda.warning.description":
+    "Ovaj server ne potvrđuje pozivanje alata. Radnje agenta za kodiranje mogu biti neuspješne ili nedostupne. Nastavite samo ako prihvatate ova ograničenja.",
+  "provider.anaconda.action.download": "Preuzmi Anaconda Desktop",
+  "provider.anaconda.action.open": "Otvori Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Provjeri ponovo",
+  "provider.anaconda.action.continue": "Ipak nastavi",
+  "provider.anaconda.action.manage": "Upravljaj / Osvježi",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop osvježen",
+  "provider.anaconda.toast.refreshed.description": "Aktivni lokalni server i modeli su ažurirani u Kilu.",
+  "settings.providers.note.anacondaDesktop": "Pokrenite model koji lokalno poslužuje Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokalno",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Predloženo",
   "command.category.view": "Prikaz",
   "command.category.project": "Projekat",
@@ -94,6 +148,30 @@ export const dict = {
   "command.session.unshare.description": "Zaustavi dijeljenje ove sesije",
   "command.session.export": "Izvezi transkript sesije",
 
+  "agentRequirements.skill.installed": "Instalirano",
+  "agentRequirements.skill.checkFailed": "Provjera vještine nije uspjela",
+  "agentRequirements.skill.missing": "Nije instalirano",
+  "agentRequirements.mcp.connected": "Povezano",
+  "agentRequirements.mcp.checkFailed": "Provjera MCP-a nije uspjela",
+  "agentRequirements.mcp.missing": "Nije povezano",
+  "agentRequirements.extension.installed": "Instalirano",
+  "agentRequirements.extension.checkFailed": "Provjera VS Code ekstenzije nije uspjela",
+  "agentRequirements.extension.missing": "Nije instalirano",
+  "agentRequirements.extension.description": "Instalirajte nedostajuće ekstenzije u VS Code.",
+  "agentRequirements.group.skills": "Vještine",
+  "agentRequirements.group.mcps": "MCP-ovi",
+  "agentRequirements.group.extensions": "VS Code ekstenzije",
+  "agentRequirements.blocked.title": "Preduslovi za agenta {{agent}}",
+  "agentRequirements.blocked.description": "Ovom agentu su potrebni sljedeći alati prije pokretanja.",
+  "agentRequirements.prompt.blocked": "Prvo dovršite potrebne provjere da biste koristili ovog agenta",
+  "agentRequirements.action.openMarketplace": "Otvori Marketplace",
+  "agentRequirements.error.unknownAgent": "Odabrani agent nije pronađen.",
+  "agentRequirements.error.malformedDeclaration": "Ovaj agent ima neispravnu deklaraciju zahtjeva.",
+  "agentRequirements.error.discoveryFailed": "Kilo nije mogao provjeriti dostupne vještine.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo nije mogao provjeriti status MCP servera.",
+  "agentRequirements.error.scopeMismatch": "Ova provjera zahtjeva agenta više nije aktivna.",
+  "agentRequirements.error.requestFailed": "Kilo nije mogao provjeriti zahtjeve agenta.",
+
   "palette.search.placeholder": "Pretraži datoteke, komande i sesije",
   "palette.empty": "Nema rezultata",
   "palette.group.commands": "Komande",
@@ -175,6 +253,7 @@ export const dict = {
   "model.tag.free": "Besplatno",
   "model.tag.dataCollected": "Podaci se mogu koristiti za obuku",
   "model.tag.latest": "Najnovije",
+  "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
   "model.group.collapse": "Sakrij {{group}}",
@@ -202,6 +281,7 @@ export const dict = {
   "model.preview.label.average": "Procj. prosječni trošak",
   "model.preview.label.context": "Kontekst",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Izbori modela",
   "model.preview.label.completion": "Završetak",
   "model.preview.label.costAttempt": "Trošak / pokušaj",
   "model.preview.value.notSupported": "Nije podržano",
