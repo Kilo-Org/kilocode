@@ -401,6 +401,7 @@ class KiloConnectionService(
         healthJob?.cancel()
         processJob?.cancel()
         reconnectJob?.cancel()
+        timeoutJob?.cancel()
         eventJob.cancel()
         queue.close()
         close()
