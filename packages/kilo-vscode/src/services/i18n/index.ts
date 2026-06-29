@@ -72,13 +72,8 @@ function load(): Record<string, string> {
   return { ...en, ...(bundles[locale] ?? {}) }
 }
 
-let translations: Record<string, string> = load()
-
-export function reload(): void {
-  translations = load()
-}
-
 export function t(key: keyof typeof enDict | string, vars?: Record<string, string | number>): string {
+  const translations = load()
   let text = translations[key] ?? key
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
