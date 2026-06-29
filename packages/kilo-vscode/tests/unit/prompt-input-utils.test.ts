@@ -11,6 +11,7 @@ import {
   isQuestioning,
   isPathMention,
   applySandboxState,
+  applySandboxStates,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("applySandboxState", () => {
@@ -42,6 +43,17 @@ describe("applySandboxState", () => {
     expect(applySandboxState(state(true, 5), state(false, 6, "ses_1", "/worktree"))).toEqual(
       state(false, 6, "ses_1", "/worktree"),
     )
+  })
+
+  it("caches independently ordered statuses for worktree switching", () => {
+    const first = applySandboxStates({}, state(true, 5, "ses_1"))
+    const second = applySandboxStates(first, state(false, 1, "ses_2"))
+
+    expect(second).toEqual({
+      ses_1: state(true, 5, "ses_1"),
+      ses_2: state(false, 1, "ses_2"),
+    })
+    expect(applySandboxStates(second, state(false, 4, "ses_1"))).toBe(second)
   })
 })
 

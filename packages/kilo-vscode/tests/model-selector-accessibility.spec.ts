@@ -183,6 +183,24 @@ test("selected favorite remains selected when its duplicate group is collapsed",
   await expect(combobox).toHaveAttribute("aria-activedescendant", await favorites.getAttribute("id"))
 })
 
+test("large catalogs keep the rendered tree bounded and navigate to distant models", async ({ page }) => {
+  await load(page, "shared--model-selector-large-catalog")
+
+  await page.getByRole("button", { name: "Select model: Provider 0 / Model 300" }).click()
+  const combobox = page.getByRole("combobox", { name: "Select model: Provider 0 / Model 300. Search models" })
+  const tree = page.getByRole("tree", { name: "Select model" })
+
+  // The window mounts before we measure it, yet stays far smaller than the catalog.
+  await expect.poll(() => tree.getByRole("treeitem").count()).toBeGreaterThan(0)
+  await expect.poll(() => tree.getByRole("treeitem").count()).toBeLessThan(50)
+
+  // Reaching a distant model scrolls it into the mounted window and activates it.
+  await combobox.fill("Model 599")
+  const last = page.getByRole("treeitem", { name: "Model 599" })
+  await expect(last).toBeVisible()
+  await expect(combobox).toHaveAttribute("aria-activedescendant", await last.getAttribute("id"))
+})
+
 test("Enter selects the active option and Escape restores selector focus", async ({ page }) => {
   await load(page, "shared--model-selector-accessible")
 
@@ -250,6 +268,35 @@ test("settings and mode editing expose distinct model field purposes", async ({ 
   await expect(page.getByRole("button", { name: /Model Override:/ })).toHaveAccessibleDescription(
     "Override the default model for this agent",
   )
+})
+
+test("mode picker focuses the selected mode as it opens", async ({ page }) => {
+  await load(page, "prompt-input--default-420")
+
+  await page.getByRole("button", { name: "Code", exact: true }).click()
+  await expect(page.locator(".mode-switcher-item.selected")).toBeFocused()
+})
+
+test("variant picker focuses the selected effort as it opens", async ({ page }) => {
+  await load(page, "prompt-input--with-thinking-420")
+
+  await page.getByRole("button", { name: "Medium", exact: true }).click()
+  await expect(page.locator(".thinking-selector-item.selected")).toBeFocused()
+})
+
+test("slash mode picker Escape returns focus to the prompt", async ({ page }) => {
+  await load(page, "prompt-input--default-420")
+
+  const prompt = page.locator("textarea.prompt-input")
+  await prompt.evaluate((el) => el.setAttribute("aria-disabled", "false"))
+  await prompt.fill("/agents")
+  await prompt.press("Enter")
+
+  const selected = page.locator(".mode-switcher-item.selected")
+  await expect(selected).toBeFocused()
+  await selected.press("Escape")
+
+  await expect(prompt).toBeFocused()
 })
 
 test("chat picker Escape returns focus to the prompt", async ({ page }) => {
