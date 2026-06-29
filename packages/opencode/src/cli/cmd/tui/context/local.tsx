@@ -208,7 +208,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         })
 
       const args = useArgs()
-      const fallbackModel = createMemo(() => {
+      // kilocode_change start - keep explicit CLI model ahead of persisted per-agent picks
+      const arg = createMemo(() => {
         if (args.model) {
           const { providerID, modelID } = parseModel(args.model)
           if (isModelValid({ providerID, modelID })) {
@@ -218,6 +219,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             }
           }
         }
+      })
+      // kilocode_change end
+
+      const fallbackModel = createMemo(() => {
+        const value = arg() // kilocode_change
+        if (value) return value
 
         if (sync.data.config.model) {
           const { providerID, modelID } = parseModel(sync.data.config.model)
@@ -254,6 +261,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         return (
           getFirstValidModel(
             () => a && modelStore.override[key(a.name)],
+            arg,
             () => a && a.model,
             () => a && modelStore.model[a.name],
             fallbackModel,
