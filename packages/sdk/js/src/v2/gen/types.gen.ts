@@ -3322,6 +3322,11 @@ export type EventKilocodeAgentManagerStart = {
       prompt?: string
       name?: string
       branchName?: string
+      model?: {
+        providerID: string
+        modelID: string
+      }
+      variant?: string
     }>
   }
 }
