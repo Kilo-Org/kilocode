@@ -1,14 +1,59 @@
-import { anacondaDesktopDict, dict as en } from "./en"
+import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
-export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "再次檢查",
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "連接 Anaconda Desktop",
+  "provider.anaconda.title.manage": "管理 Anaconda Desktop",
+  "provider.anaconda.status.checking": "正在檢查 Anaconda Desktop...",
+  "provider.anaconda.status.opening": "正在開啟 Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "正在重新整理供應商模型...",
+  "provider.anaconda.status.ready": "已準備好連接",
+  "provider.anaconda.status.waiting": "正在等待 Desktop",
+  "provider.anaconda.status.attention": "需要注意",
+  "provider.anaconda.status.unavailable": "無法使用",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop 不支援 {{platform}}。",
+  "provider.anaconda.state.notInstalled":
+    "請在此機器上安裝 Anaconda Desktop，然後返回此處。Kilo 不會為您執行安裝程式。",
+  "provider.anaconda.state.notRunning": "請開啟 Anaconda Desktop，完成設定並登入，然後選擇再次檢查。",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop 設定尚未完成。請開啟 Desktop，完成設定，並在需要時重新啟動它。",
+  "provider.anaconda.state.signedOut": "請開啟 Anaconda Desktop 並登入，然後再連接 Kilo。",
+  "provider.anaconda.state.unauthorized":
+    "Kilo 無法存取 Anaconda Desktop。請開啟 Desktop，重新登入，並在需要時重新啟動它。",
+  "provider.anaconda.state.unavailable": "Anaconda Desktop 尚未回應。請開啟它並等待應用程式完成啟動。",
+  "provider.anaconda.state.noModel":
+    "請在 Anaconda Desktop 中下載一個文字生成模型。可能的話請選擇支援工具呼叫的模型，然後啟動其伺服器。",
   "provider.anaconda.state.noServer_one":
     "有 1 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
   "provider.anaconda.state.noServer_other":
     "有 {{count}} 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
+  "provider.anaconda.state.unhealthy":
+    "使用中的推論伺服器尚未正常運作。請在 Anaconda Desktop 中檢查它，並在需要時重新啟動伺服器。",
+  "provider.anaconda.state.ready": "Kilo 找到了一個正常運作的本機文字生成伺服器，並可匯入其目前的連接設定。",
+  "provider.anaconda.server": "使用中的推論伺服器",
+  "provider.anaconda.context": "上下文視窗",
+  "provider.anaconda.contextValue": "{{count}} 個權杖",
+  "provider.anaconda.tools": "工具呼叫",
+  "provider.anaconda.tools.supported": "支援",
+  "provider.anaconda.tools.unsupported": "未啟用",
+  "provider.anaconda.tools.unknown": "未知",
+  "provider.anaconda.warning.title": "工具支援有限",
+  "provider.anaconda.warning.description":
+    "此伺服器未確認支援工具呼叫。編碼代理程式的動作可能會失敗或無法使用。只有在您接受這些限制的情況下才繼續。",
+  "provider.anaconda.action.download": "下載 Anaconda Desktop",
+  "provider.anaconda.action.open": "開啟 Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "再次檢查",
+  "provider.anaconda.action.continue": "仍要繼續",
+  "provider.anaconda.action.manage": "管理 / 重新整理",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop 已重新整理",
+  "provider.anaconda.toast.refreshed.description": "使用中的本機伺服器與模型在 Kilo 中已是最新狀態。",
+  "settings.providers.note.anacondaDesktop": "執行由 Anaconda Desktop 在本機提供的模型。",
+  "settings.providers.tag.local": "本機",
+} as const
+
+export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "建議",
   "command.category.view": "檢視",
   "command.category.project": "專案",
