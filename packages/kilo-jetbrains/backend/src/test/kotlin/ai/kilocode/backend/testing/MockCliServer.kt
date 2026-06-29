@@ -157,7 +157,9 @@ class MockCliServer : AutoCloseable {
     /** Reset all request counters. */
     fun resetCounts() { counts.clear() }
 
-    private val executor = Executors.newVirtualThreadPerTaskExecutor()
+    private val executor = Executors.newThreadPerTaskExecutor(
+        Thread.ofVirtual().name("mock-cli-", 0).factory(),
+    )
     private val closed = AtomicBoolean(false)
 
     private var server: ServerSocket? = null
