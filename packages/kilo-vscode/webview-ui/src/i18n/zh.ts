@@ -1,14 +1,57 @@
-import { anacondaDesktopDict, dict as en } from "./en"
+import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "再次检查",
+  "provider.anaconda.title.connect": "连接 Anaconda Desktop",
+  "provider.anaconda.title.manage": "管理 Anaconda Desktop",
+  "provider.anaconda.status.checking": "正在检查 Anaconda Desktop...",
+  "provider.anaconda.status.opening": "正在打开 Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "正在刷新提供商模型...",
+  "provider.anaconda.status.ready": "准备连接",
+  "provider.anaconda.status.waiting": "等待 Desktop",
+  "provider.anaconda.status.attention": "需要注意",
+  "provider.anaconda.status.unavailable": "不可用",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop 不支持 {{platform}}。",
+  "provider.anaconda.state.notInstalled":
+    "请在此计算机上安装 Anaconda Desktop，然后返回此处。Kilo 不会替您运行安装程序。",
+  "provider.anaconda.state.notRunning": "打开 Anaconda Desktop，完成设置并登录，然后选择再次检查。",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop 设置不完整。请打开 Desktop，完成设置，并在需要时重启。",
+  "provider.anaconda.state.signedOut": "连接 Kilo 之前，请打开 Anaconda Desktop 并登录。",
+  "provider.anaconda.state.unauthorized":
+    "Kilo 无法访问 Anaconda Desktop。请打开 Desktop，重新登录，并在需要时重启。",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop 尚未响应。请打开它并等待应用程序完成启动。",
+  "provider.anaconda.state.noModel":
+    "在 Anaconda Desktop 中下载一个文本生成模型。尽可能选择支持工具调用的模型，然后启动其服务器。",
   "provider.anaconda.state.noServer_one":
     "有 1 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
   "provider.anaconda.state.noServer_other":
     "有 {{count}} 个已下载的文本生成模型可用。请在 Anaconda Desktop 中启动一个模型服务器。强烈建议使用支持工具调用的模型。",
+  "provider.anaconda.state.unhealthy":
+    "当前推理服务器尚未健康。请在 Anaconda Desktop 中检查，并在需要时重启服务器。",
+  "provider.anaconda.state.ready":
+    "Kilo 找到了一个健康的本地文本生成服务器，可以导入其当前的连接设置。",
+  "provider.anaconda.server": "当前推理服务器",
+  "provider.anaconda.context": "上下文窗口",
+  "provider.anaconda.contextValue": "{{count}} 个令牌",
+  "provider.anaconda.tools": "工具调用",
+  "provider.anaconda.tools.supported": "已支持",
+  "provider.anaconda.tools.unsupported": "未启用",
+  "provider.anaconda.tools.unknown": "未知",
+  "provider.anaconda.warning.title": "工具支持受限",
+  "provider.anaconda.warning.description":
+    "此服务器不确认工具调用。编码代理操作可能失败或不可用。仅在接受这些限制时才继续。",
+  "provider.anaconda.action.download": "下载 Anaconda Desktop",
+  "provider.anaconda.action.open": "打开 Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "再次检查",
+  "provider.anaconda.action.continue": "仍然继续",
+  "provider.anaconda.action.manage": "管理 / 刷新",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop 已刷新",
+  "provider.anaconda.toast.refreshed.description": "当前本地服务器和模型在 Kilo 中已是最新状态。",
+  "settings.providers.note.anacondaDesktop": "运行由 Anaconda Desktop 在本地提供的模型。",
+  "settings.providers.tag.local": "本地",
   "command.category.suggested": "建议",
   "command.category.view": "视图",
   "command.category.project": "项目",

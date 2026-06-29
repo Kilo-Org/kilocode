@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Sprawdź ponownie",
+  "provider.anaconda.title.connect": "Połącz Anaconda Desktop",
+  "provider.anaconda.title.manage": "Zarządzaj Anaconda Desktop",
+  "provider.anaconda.status.checking": "Sprawdzanie Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Otwieranie Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Odświeżanie modeli dostawcy...",
+  "provider.anaconda.status.ready": "Gotowy do połączenia",
+  "provider.anaconda.status.waiting": "Oczekiwanie na Desktop",
+  "provider.anaconda.status.attention": "Wymaga uwagi",
+  "provider.anaconda.status.unavailable": "Niedostępny",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop nie jest obsługiwany na platformie {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Zainstaluj Anaconda Desktop na tym komputerze, a następnie wróć tutaj. Kilo nie uruchamia instalatora za Ciebie.",
+  "provider.anaconda.state.notRunning":
+    "Otwórz Anaconda Desktop, ukończ konfigurację i zaloguj się, a następnie wybierz Sprawdź ponownie.",
+  "provider.anaconda.state.invalidConfig":
+    "Konfiguracja Anaconda Desktop jest niekompletna. Otwórz Desktop, ukończ konfigurację i uruchom ponownie, jeśli to konieczne.",
+  "provider.anaconda.state.signedOut": "Otwórz Anaconda Desktop i zaloguj się przed połączeniem Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo nie mogło uzyskać dostępu do Anaconda Desktop. Otwórz Desktop, zaloguj się ponownie i uruchom ponownie, jeśli to konieczne.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop jeszcze nie odpowiada. Otwórz go i poczekaj, aż aplikacja zakończy uruchamianie.",
+  "provider.anaconda.state.noModel":
+    "W Anaconda Desktop pobierz model generowania tekstu. Jeśli to możliwe, wybierz model z obsługą wywołań narzędzi, a następnie uruchom jego serwer.",
   "provider.anaconda.state.noServer_one":
     "Dostępny jest 1 pobrany model generowania tekstu. W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
   "provider.anaconda.state.noServer_other":
     "Dostępne są pobrane modele generowania tekstu (łącznie: {{count}}). W Anaconda Desktop uruchom serwer modelu. Zdecydowanie zalecamy modele obsługujące wywoływanie narzędzi.",
+  "provider.anaconda.state.unhealthy":
+    "Aktywny serwer wnioskowania nie jest jeszcze sprawny. Sprawdź go w Anaconda Desktop i uruchom ponownie serwer, jeśli to konieczne.",
+  "provider.anaconda.state.ready":
+    "Kilo znalazło sprawny lokalny serwer generowania tekstu i może zaimportować jego bieżące ustawienia połączenia.",
+  "provider.anaconda.server": "Aktywny serwer wnioskowania",
+  "provider.anaconda.context": "Okno kontekstowe",
+  "provider.anaconda.contextValue": "{{count}} tokenów",
+  "provider.anaconda.tools": "Wywołania narzędzi",
+  "provider.anaconda.tools.supported": "Obsługiwane",
+  "provider.anaconda.tools.unsupported": "Nie włączone",
+  "provider.anaconda.tools.unknown": "Nieznane",
+  "provider.anaconda.warning.title": "Obsługa narzędzi jest ograniczona",
+  "provider.anaconda.warning.description":
+    "Ten serwer nie potwierdza wywołań narzędzi. Działania agenta kodowania mogą się nie powieść lub być niedostępne. Kontynuuj tylko jeśli akceptujesz te ograniczenia.",
+  "provider.anaconda.action.download": "Pobierz Anaconda Desktop",
+  "provider.anaconda.action.open": "Otwórz Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Sprawdź ponownie",
+  "provider.anaconda.action.continue": "Kontynuuj mimo to",
+  "provider.anaconda.action.manage": "Zarządzaj / Odśwież",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop odświeżony",
+  "provider.anaconda.toast.refreshed.description": "Aktywny lokalny serwer i modele są aktualne w Kilo.",
+  "settings.providers.note.anacondaDesktop": "Uruchom model serwowany lokalnie przez Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokalny",
   "command.category.suggested": "Sugerowane",
   "command.category.view": "Widok",
   "command.category.project": "Projekt",

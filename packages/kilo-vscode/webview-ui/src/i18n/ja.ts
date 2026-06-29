@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "再確認",
+  "provider.anaconda.title.connect": "Anaconda Desktop に接続",
+  "provider.anaconda.title.manage": "Anaconda Desktop を管理",
+  "provider.anaconda.status.checking": "Anaconda Desktop を確認中...",
+  "provider.anaconda.status.opening": "Anaconda Desktop を開いています...",
+  "provider.anaconda.status.syncing": "プロバイダーモデルを更新中...",
+  "provider.anaconda.status.ready": "接続準備完了",
+  "provider.anaconda.status.waiting": "Desktop を待機中",
+  "provider.anaconda.status.attention": "注意が必要",
+  "provider.anaconda.status.unavailable": "利用不可",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop は {{platform}} ではサポートされていません。",
+  "provider.anaconda.state.notInstalled":
+    "このマシンに Anaconda Desktop をインストールしてからここに戻ってください。Kilo はインストーラーを代わりに実行しません。",
+  "provider.anaconda.state.notRunning":
+    "Anaconda Desktop を開き、セットアップを完了してサインインしてから、「再確認」を選択してください。",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop のセットアップが不完全です。Desktop を開き、セットアップを完了し、必要であれば再起動してください。",
+  "provider.anaconda.state.signedOut": "Kilo を接続する前に Anaconda Desktop を開いてサインインしてください。",
+  "provider.anaconda.state.unauthorized":
+    "Kilo が Anaconda Desktop にアクセスできませんでした。Desktop を開き、再度サインインし、必要であれば再起動してください。",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop がまだ応答していません。開いてアプリケーションの起動が完了するまでお待ちください。",
+  "provider.anaconda.state.noModel":
+    "Anaconda Desktop でテキスト生成モデルをダウンロードしてください。可能であればツール呼び出し対応のモデルを選択し、そのサーバーを起動してください。",
   "provider.anaconda.state.noServer_one":
     "ダウンロード済みのテキスト生成モデルが1つ利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
   "provider.anaconda.state.noServer_other":
     "ダウンロード済みのテキスト生成モデルが{{count}}個利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
+  "provider.anaconda.state.unhealthy":
+    "アクティブな推論サーバーがまだ正常な状態ではありません。Anaconda Desktop で確認し、必要であればサーバーを再起動してください。",
+  "provider.anaconda.state.ready":
+    "Kilo は正常なローカルテキスト生成サーバーを見つけ、現在の接続設定をインポートできます。",
+  "provider.anaconda.server": "アクティブな推論サーバー",
+  "provider.anaconda.context": "コンテキストウィンドウ",
+  "provider.anaconda.contextValue": "{{count}} トークン",
+  "provider.anaconda.tools": "ツール呼び出し",
+  "provider.anaconda.tools.supported": "サポート済み",
+  "provider.anaconda.tools.unsupported": "無効",
+  "provider.anaconda.tools.unknown": "不明",
+  "provider.anaconda.warning.title": "ツールのサポートが制限されています",
+  "provider.anaconda.warning.description":
+    "このサーバーはツール呼び出しを確認していません。コーディングエージェントのアクションが失敗したり、利用できない場合があります。これらの制限を許容する場合のみ続行してください。",
+  "provider.anaconda.action.download": "Anaconda Desktop をダウンロード",
+  "provider.anaconda.action.open": "Anaconda Desktop を開く",
+  "provider.anaconda.action.checkAgain": "再確認",
+  "provider.anaconda.action.continue": "それでも続行",
+  "provider.anaconda.action.manage": "管理 / 更新",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop を更新しました",
+  "provider.anaconda.toast.refreshed.description": "アクティブなローカルサーバーとモデルが Kilo で最新の状態になりました。",
+  "settings.providers.note.anacondaDesktop": "Anaconda Desktop によってローカルで提供されるモデルを実行します。",
+  "settings.providers.tag.local": "ローカル",
   "command.category.suggested": "おすすめ",
   "command.category.view": "表示",
   "command.category.project": "プロジェクト",

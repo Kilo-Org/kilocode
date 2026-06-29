@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Provjeri ponovo",
+  "provider.anaconda.title.connect": "Poveži Anaconda Desktop",
+  "provider.anaconda.title.manage": "Upravljaj Anaconda Desktopom",
+  "provider.anaconda.status.checking": "Provjera Anaconda Desktopa...",
+  "provider.anaconda.status.opening": "Otvaranje Anaconda Desktopa...",
+  "provider.anaconda.status.syncing": "Osvježavanje modela provajdera...",
+  "provider.anaconda.status.ready": "Spreman za povezivanje",
+  "provider.anaconda.status.waiting": "Čekanje na Desktop",
+  "provider.anaconda.status.attention": "Potrebna pažnja",
+  "provider.anaconda.status.unavailable": "Nedostupan",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop nije podržan na {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Instalirajte Anaconda Desktop na ovom računaru, zatim se vratite ovdje. Kilo ne pokreće instaler umjesto vas.",
+  "provider.anaconda.state.notRunning":
+    "Otvorite Anaconda Desktop, dovršite postavljanje i prijavite se, zatim odaberite Provjeri ponovo.",
+  "provider.anaconda.state.invalidConfig":
+    "Postavljanje Anaconda Desktopa nije završeno. Otvorite Desktop, dovršite postavljanje i ponovo ga pokrenite ako je potrebno.",
+  "provider.anaconda.state.signedOut": "Otvorite Anaconda Desktop i prijavite se prije povezivanja Kila.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo nije mogao pristupiti Anaconda Desktopu. Otvorite Desktop, ponovo se prijavite i ponovo ga pokrenite ako je potrebno.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop još ne odgovara. Otvorite ga i pričekajte da aplikacija završi pokretanje.",
+  "provider.anaconda.state.noModel":
+    "U Anaconda Desktopu preuzmite model za generisanje teksta. Odaberite onaj s podrškom za pozivanje alata ako je moguće, zatim pokrenite njegov server.",
   "provider.anaconda.state.noServer_one":
     "Dostupan je 1 preuzeti model za generisanje teksta. U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
   "provider.anaconda.state.noServer_other":
     "Preuzeti modeli za generisanje teksta dostupni su (ukupno: {{count}}). U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
+  "provider.anaconda.state.unhealthy":
+    "Aktivni server za zaključivanje još nije u zdravom stanju. Provjerite ga u Anaconda Desktopu i ponovo pokrenite server ako je potrebno.",
+  "provider.anaconda.state.ready":
+    "Kilo je pronašao zdravi lokalni server za generisanje teksta i može uvesti njegove trenutne postavke veze.",
+  "provider.anaconda.server": "Aktivni server za zaključivanje",
+  "provider.anaconda.context": "Kontekstni prozor",
+  "provider.anaconda.contextValue": "{{count}} tokena",
+  "provider.anaconda.tools": "Pozivanje alata",
+  "provider.anaconda.tools.supported": "Podržano",
+  "provider.anaconda.tools.unsupported": "Nije aktivirano",
+  "provider.anaconda.tools.unknown": "Nepoznato",
+  "provider.anaconda.warning.title": "Podrška za alate je ograničena",
+  "provider.anaconda.warning.description":
+    "Ovaj server ne potvrđuje pozivanje alata. Radnje agenta za kodiranje mogu zakazati ili biti nedostupne. Nastavite samo ako prihvatate ova ograničenja.",
+  "provider.anaconda.action.download": "Preuzmi Anaconda Desktop",
+  "provider.anaconda.action.open": "Otvori Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Provjeri ponovo",
+  "provider.anaconda.action.continue": "Svejedno nastavi",
+  "provider.anaconda.action.manage": "Upravljaj / Osvježi",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop osvježen",
+  "provider.anaconda.toast.refreshed.description": "Aktivni lokalni server i modeli su ažurni u Kilu.",
+  "settings.providers.note.anacondaDesktop": "Pokreni model koji lokalno pruža Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokalno",
   "command.category.suggested": "Predloženo",
   "command.category.view": "Prikaz",
   "command.category.project": "Projekat",

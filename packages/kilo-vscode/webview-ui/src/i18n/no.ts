@@ -1,13 +1,57 @@
-import { anacondaDesktopDict, dict as en } from "./en"
+import { dict as en } from "./en"
 type Keys = keyof typeof en
 
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Sjekk igjen",
+  "provider.anaconda.title.connect": "Koble til Anaconda Desktop",
+  "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
+  "provider.anaconda.status.checking": "Sjekker Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Åpner Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Oppdaterer leverandørmodeller...",
+  "provider.anaconda.status.ready": "Klar til å koble til",
+  "provider.anaconda.status.waiting": "Venter på Desktop",
+  "provider.anaconda.status.attention": "Krever oppmerksomhet",
+  "provider.anaconda.status.unavailable": "Utilgjengelig",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop støttes ikke på {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installer Anaconda Desktop på denne maskinen og kom tilbake hit. Kilo kjører ikke installasjonsprogrammet for deg.",
+  "provider.anaconda.state.notRunning":
+    "Åpne Anaconda Desktop, fullfør oppsett og logg inn, og velg deretter Sjekk igjen.",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop-oppsettet er ufullstendig. Åpne Desktop, fullfør oppsettet og start det på nytt om nødvendig.",
+  "provider.anaconda.state.signedOut": "Åpne Anaconda Desktop og logg inn før du kobler til Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo fikk ikke tilgang til Anaconda Desktop. Åpne Desktop, logg inn igjen og start det på nytt om nødvendig.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop svarer ikke ennå. Åpne det og vent til programmet er ferdig med å starte.",
+  "provider.anaconda.state.noModel":
+    "Last ned en tekstgenereringsmodell i Anaconda Desktop. Velg en med verktøykall hvis mulig, og start deretter serveren.",
   "provider.anaconda.state.noServer_one":
     "1 nedlastet tekstgenereringsmodell er tilgjengelig. Start en modellserver i Anaconda Desktop. Modeller med støtte for verktøykall anbefales på det sterkeste.",
   "provider.anaconda.state.noServer_other":
     "{{count}} nedlastede tekstgenereringsmodeller er tilgjengelige. Start en modellserver i Anaconda Desktop. Modeller med støtte for verktøykall anbefales på det sterkeste.",
+  "provider.anaconda.state.unhealthy":
+    "Den aktive inferansetjeneren er ikke sunn ennå. Sjekk den i Anaconda Desktop og start serveren på nytt om nødvendig.",
+  "provider.anaconda.state.ready":
+    "Kilo fant en sunn lokal tekstgenereringstjener og kan importere de gjeldende tilkoblingsinnstillingene.",
+  "provider.anaconda.server": "Aktiv inferansetjener",
+  "provider.anaconda.context": "Kontekstvindu",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Verktøykall",
+  "provider.anaconda.tools.supported": "Støttet",
+  "provider.anaconda.tools.unsupported": "Ikke aktivert",
+  "provider.anaconda.tools.unknown": "Ukjent",
+  "provider.anaconda.warning.title": "Verktøystøtte er begrenset",
+  "provider.anaconda.warning.description":
+    "Denne tjeneren bekrefter ikke verktøykall. Handlinger fra kodingsagenten kan mislykkes eller være utilgjengelige. Fortsett bare hvis du godtar disse begrensningene.",
+  "provider.anaconda.action.download": "Last ned Anaconda Desktop",
+  "provider.anaconda.action.open": "Åpne Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Sjekk igjen",
+  "provider.anaconda.action.continue": "Fortsett uansett",
+  "provider.anaconda.action.manage": "Administrer / Oppdater",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop oppdatert",
+  "provider.anaconda.toast.refreshed.description": "Den aktive lokale tjeneren og modellene er oppdaterte i Kilo.",
+  "settings.providers.note.anacondaDesktop": "Kjør en modell levert lokalt av Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokal",
   "command.category.suggested": "Foreslått",
   "command.category.view": "Visning",
   "command.category.project": "Prosjekt",
