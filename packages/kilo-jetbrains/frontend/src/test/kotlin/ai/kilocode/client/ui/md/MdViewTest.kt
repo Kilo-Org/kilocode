@@ -1,6 +1,14 @@
 package ai.kilocode.client.ui.md
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.HighlighterColors
+import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.colors.EditorColors
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.editor.markup.TextAttributes
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Color
 import java.awt.Font
@@ -19,6 +27,14 @@ class MdViewTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         view = MdViewFactory.html()
+    }
+
+    override fun tearDown() {
+        try {
+            if (this::view.isInitialized) Disposer.dispose(view)
+        } finally {
+            super.tearDown()
+        }
     }
 
     // ---- set ----
@@ -219,6 +235,45 @@ class MdViewTest : BasePlatformTestCase() {
 
         assertTrue(view.overrideSheet().contains(style.editorFamily))
         assertTrue(view.overrideSheet().contains("${style.editorSize}pt"))
+    }
+
+    fun `test override sheet includes markdown role color rules`() {
+        val sheet = view.overrideSheet()
+
+        assertTrue(sheet.contains("h1, h2, h3, h4, h5, h6"))
+        assertTrue(sheet.contains("strong, b"))
+        assertTrue(sheet.contains("em, i"))
+        assertTrue(sheet.contains("ul, ol"))
+        assertTrue(sheet.contains("li { color:"))
+        assertTrue(sheet.contains("blockquote"))
+        assertTrue(sheet.contains("th, td"))
+        assertTrue(sheet.contains("th { color:"))
+        assertTrue(sheet.contains("hr {"))
+        assertTrue(sheet.contains("pre code"))
+    }
+
+    fun `test override sheet separates table and code block borders`() {
+        view.tableBorder = Color(0x12, 0x34, 0x56)
+        val sheet = view.overrideSheet()
+        val pre = sheet.substringAfter("pre {").substringBefore("} pre code")
+        val cells = sheet.substringAfter("th, td {").substringBefore("}")
+
+        assertTrue(cells.contains("#123456"))
+        assertFalse(pre.contains("#123456"))
+        assertTrue(pre.contains("border-color:"))
+    }
+
+    fun `test applyStyle derives markdown colors from editor scheme`() {
+        val style = customStyle()
+
+        view.applyStyle(style)
+        val sheet = view.overrideSheet()
+
+        assertTrue(sheet.contains("a { color: #778899"))
+        assertTrue(sheet.contains("code { background: #112233; color: #aabbcc"))
+        assertTrue(sheet.contains("pre { background: #445566; color: #ddeeff; border-color: #223344"))
+        assertTrue(sheet.contains("blockquote { border-left-color: #223344; color: #334455"))
+        assertTrue(sheet.contains("th, td { border-color: #223344"))
     }
 
     // ---- style overrides appear in override sheet when set ----
@@ -431,6 +486,32 @@ class MdViewTest : BasePlatformTestCase() {
         view.foreground = Color.RED
         view.resetStyles()
         assertTrue(view.html().contains("<strong>"))
+    }
+
+    private fun customStyle(): SessionEditorStyle {
+        val scheme = EditorColorsManager.getInstance().globalScheme.clone() as EditorColorsScheme
+        scheme.setAttributes(
+            HighlighterColors.TEXT,
+            TextAttributes(Color(0x10, 0x20, 0x30), Color(0x01, 0x02, 0x03), null, null, Font.PLAIN),
+        )
+        scheme.setAttributes(
+            DefaultLanguageHighlighterColors.DOC_COMMENT,
+            TextAttributes(Color(0x33, 0x44, 0x55), null, null, null, Font.PLAIN),
+        )
+        scheme.setAttributes(
+            DefaultLanguageHighlighterColors.DOC_CODE_INLINE,
+            TextAttributes(Color(0xAA, 0xBB, 0xCC), Color(0x11, 0x22, 0x33), null, null, Font.PLAIN),
+        )
+        scheme.setAttributes(
+            DefaultLanguageHighlighterColors.DOC_CODE_BLOCK,
+            TextAttributes(Color(0xDD, 0xEE, 0xFF), Color(0x44, 0x55, 0x66), null, null, Font.PLAIN),
+        )
+        scheme.setAttributes(
+            CodeInsightColors.HYPERLINK_ATTRIBUTES,
+            TextAttributes(Color(0x77, 0x88, 0x99), null, null, null, Font.PLAIN),
+        )
+        scheme.setColor(EditorColors.PREVIEW_BORDER_COLOR, Color(0x22, 0x33, 0x44))
+        return SessionEditorStyle.create(scheme = scheme, family = "Courier New", size = 21)
     }
 
 }

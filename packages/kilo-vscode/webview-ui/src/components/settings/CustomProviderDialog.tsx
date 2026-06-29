@@ -3,6 +3,7 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -12,14 +13,20 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
-import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
+import type { ExtensionMessage, ProviderAuthState, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
 import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
+import {
+  CUSTOM_PROVIDER_PACKAGE,
+  isCustomProviderPackage,
+  type CustomProviderPackage,
+} from "../../../../src/shared/provider-model"
 import { ModelCard } from "./CustomProviderModelCard"
 import type {
   ChatTemplateArgsValue,
   EnableThinkingValue,
   ModelEntry,
+  OutputEffortValue,
   ReasoningEffortValue,
   ThinkingTypeValue,
   VariantEntry,
@@ -28,6 +35,12 @@ import { validateCustomProvider } from "./CustomProviderValidation"
 import type { FormErrors, FormState, HeaderRow } from "./CustomProviderValidation"
 const DEBOUNCE_MS = 500
 const SEARCH_DEBOUNCE_MS = 150
+
+const PACKAGE_OPTIONS: Array<{ value: CustomProviderPackage; label: string }> = [
+  { value: "@ai-sdk/openai-compatible", label: "OpenAI Compatible" },
+  { value: "@ai-sdk/openai", label: "OpenAI Responses" },
+  { value: "@ai-sdk/anthropic", label: "Anthropic Messages" },
+]
 
 /** Subsequence fuzzy match — "gpt4o" matches "gpt-4o-mini". */
 function fuzzy(query: string, target: string) {
@@ -41,15 +54,80 @@ function fuzzy(query: string, target: string) {
 }
 
 type FetchedModel = { id: string; name: string }
+type RawModel = { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>> }
+
+function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEntry {
+  return {
+    name,
+    enableThinking: typeof cfg.enable_thinking === "boolean" ? cfg.enable_thinking : undefined,
+    thinking:
+      typeof cfg.thinking === "object" && cfg.thinking !== null
+        ? ((cfg.thinking as { type?: string }).type as ThinkingTypeValue)
+        : undefined,
+    splitReasoning: typeof cfg.reasoning_split === "boolean" ? cfg.reasoning_split : undefined,
+    reasoningEffort:
+      typeof cfg.reasoningEffort === "string" ? (cfg.reasoningEffort as ReasoningEffortValue) : undefined,
+    outputEffort: typeof cfg.effort === "string" ? (cfg.effort as OutputEffortValue) : undefined,
+    chatTemplateArgs:
+      typeof cfg.chat_template_args === "object" && cfg.chat_template_args !== null
+        ? ((cfg.chat_template_args as { enable_thinking?: boolean }).enable_thinking as ChatTemplateArgsValue)
+        : undefined,
+  }
+}
+
+function initModels(cfg: ProviderConfig | undefined): ModelEntry[] {
+  if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [] }]
+  const entries = Object.entries(cfg.models)
+  if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [] }]
+  return entries.map(([id, model]) => {
+    const raw = model as RawModel
+    return {
+      id,
+      name: raw.name ?? id,
+      reasoning: raw.reasoning ?? false,
+      variants: Object.entries(raw.variants ?? {}).map(parseVariant),
+    }
+  })
+}
+
+function initHeaders(cfg: ProviderConfig | undefined): HeaderRow[] {
+  const opts = cfg?.options as { headers?: Record<string, string> } | undefined
+  const headers = opts?.headers
+  if (!headers || typeof headers !== "object") return [{ key: "", value: "" }]
+  const entries = Object.entries(headers)
+  if (entries.length === 0) return [{ key: "", value: "" }]
+  return entries.map(([key, value]) => ({ key, value }))
+}
+
+type ExistingProvider = {
+  providerID: string
+  name: string
+  config: ProviderConfig
+}
+
+function resolveAuth(existing: ExistingProvider | undefined, states: Record<string, ProviderAuthState>) {
+  if (!existing || existing.config.env?.length) return
+  return states[existing.providerID]
+}
+
+function initForm(existing: ExistingProvider | undefined, auth: ProviderAuthState | undefined): FormState {
+  const npm = existing?.config?.npm
+  return {
+    providerID: existing?.providerID ?? "",
+    name: existing?.name ?? "",
+    npm: isCustomProviderPackage(npm) ? npm : CUSTOM_PROVIDER_PACKAGE,
+    baseURL: (existing?.config?.options as { baseURL?: string } | undefined)?.baseURL ?? "",
+    apiKey: resolveCustomProviderKey(auth),
+    models: initModels(existing?.config),
+    headers: initHeaders(existing?.config),
+    saving: false,
+  }
+}
 
 export interface CustomProviderDialogProps {
   onBack?: () => void
   /** When set, the dialog opens in edit mode with pre-filled values. */
-  existing?: {
-    providerID: string
-    name: string
-    config: ProviderConfig
-  }
+  existing?: ExistingProvider
 }
 
 const CustomProviderDialog = (props: CustomProviderDialogProps) => {
@@ -63,60 +141,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   const editing = () => !!props.existing
 
-  function initModels(): ModelEntry[] {
-    const cfg = props.existing?.config
-    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [] }]
-    const entries = Object.entries(cfg.models)
-    if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [] }]
-    return entries.map(([id, m]) => {
-      const raw = m as { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>> }
-      const variants: VariantEntry[] = Object.entries(raw?.variants ?? {}).map(([vname, vcfg]) => ({
-        name: vname,
-        enableThinking: typeof vcfg.enable_thinking === "boolean" ? (vcfg.enable_thinking as boolean) : undefined,
-        thinking:
-          typeof vcfg.thinking === "object" && vcfg.thinking !== null
-            ? ((vcfg.thinking as { type?: string }).type as ThinkingTypeValue)
-            : undefined,
-        reasoningEffort:
-          typeof vcfg.reasoningEffort === "string" ? (vcfg.reasoningEffort as ReasoningEffortValue) : undefined,
-        chatTemplateArgs:
-          typeof vcfg.chat_template_args === "object" && vcfg.chat_template_args !== null
-            ? ((vcfg.chat_template_args as { enable_thinking?: boolean }).enable_thinking as ChatTemplateArgsValue)
-            : undefined,
-      }))
-      return {
-        id,
-        name: raw?.name ?? id,
-        reasoning: raw?.reasoning ?? false,
-        variants,
-      }
-    })
-  }
-
-  function initHeaders(): HeaderRow[] {
-    const opts = props.existing?.config?.options as { headers?: Record<string, string> } | undefined
-    const headers = opts?.headers
-    if (!headers || typeof headers !== "object") return [{ key: "", value: "" }]
-    const entries = Object.entries(headers)
-    if (entries.length === 0) return [{ key: "", value: "" }]
-    return entries.map(([key, value]) => ({ key, value }))
-  }
-
-  const auth = props.existing?.config?.env?.length
-    ? undefined
-    : props.existing
-      ? provider.authStates()[props.existing.providerID]
-      : undefined
-
-  const [form, setForm] = createStore<FormState>({
-    providerID: props.existing?.providerID ?? "",
-    name: props.existing?.name ?? "",
-    baseURL: (props.existing?.config?.options as { baseURL?: string } | undefined)?.baseURL ?? "",
-    apiKey: resolveCustomProviderKey(auth),
-    models: initModels(),
-    headers: initHeaders(),
-    saving: false,
-  })
+  const auth = resolveAuth(props.existing, provider.authStates())
+  const [form, setForm] = createStore<FormState>(initForm(props.existing, auth))
 
   const [errors, setErrors] = createStore<FormErrors>({
     providerID: undefined,
@@ -160,11 +186,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   // SolidJS store proxies track at the property level — any store write
   // (including setForm("models", ...)) invalidates effects that read from
   // the same store, causing unwanted re-runs that wipe the model picker.
+  const [fetchPackage, setFetchPackage] = createSignal(form.npm)
   const [fetchURL, setFetchURL] = createSignal(form.baseURL)
   const [fetchKey, setFetchKey] = createSignal("")
   let fetchVersion = 0
 
   createEffect(() => {
+    const npm = fetchPackage()
     const url = fetchURL()
     const key = fetchKey()
     void key // subscribe to key changes without using the value here
@@ -175,7 +203,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     setFetchStatus(undefined)
     setSearch("")
 
-    if (!/^https?:\/\//.test(url.trim())) return
+    if (npm === "@ai-sdk/anthropic" || !/^https?:\/\//.test(url.trim())) return
 
     fetchVersion++
     const version = fetchVersion
@@ -195,6 +223,12 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     const raw = fetchKey().trim()
     const env = raw.match(/^\{env:([^}]+)\}$/)?.[1]?.trim()
     const apiKey = raw && !env ? raw : undefined
+    // When editing an existing provider with the key field untouched, the
+    // webview has no key to send — keys are stripped before provider data
+    // reaches it. Send the providerID so the extension can authenticate the
+    // fetch with the stored key (#10139). Anything typed into the field
+    // (a key or {env:VAR} syntax) takes precedence.
+    const providerID = !raw && props.existing ? props.existing.providerID : undefined
     const existing = new Set(form.models.map((m) => m.id.trim()).filter(Boolean))
 
     const hdrs = form.headers
@@ -253,6 +287,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       requestId: rid,
       baseURL: url,
       apiKey,
+      providerID,
       headers,
     })
   }
@@ -301,8 +336,18 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
     )
     setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(picked.length) }))
-    setFetchedModels(undefined)
-    setSearch("")
+
+    // Keep the picker open with the un-picked models so the user can keep adding.
+    // Only close the picker when every fetched model has been added.
+    const pickedIds = new Set(picked.map((m) => m.id))
+    const remaining = models.filter((m) => !pickedIds.has(m.id))
+    if (remaining.length === 0) {
+      setFetchedModels(undefined)
+      setSearch("")
+    } else {
+      setFetchedModels(remaining)
+      setSelected(new Set<string>())
+    }
   }
 
   function cancelFetch() {
@@ -347,7 +392,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       name: "",
       enableThinking: undefined,
       thinking: undefined,
+      splitReasoning: undefined,
       reasoningEffort: undefined,
+      outputEffort: undefined,
       chatTemplateArgs: undefined,
     }
     setForm("models", mi, "variants", (v) => [...v, blank])
@@ -483,6 +530,30 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               validationState={errors.name ? "invalid" : undefined}
               error={errors.name}
             />
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+              <label
+                style={{
+                  "font-size": "var(--kilo-font-size-12)",
+                  "font-weight": "500",
+                  color: "var(--text-weak-base)",
+                }}
+              >
+                {language.t("provider.custom.field.package.label")}
+              </label>
+              <Select
+                options={PACKAGE_OPTIONS}
+                current={PACKAGE_OPTIONS.find((option) => option.value === form.npm)}
+                value={(option) => option.value}
+                label={(option) => option.label}
+                onSelect={(option) => {
+                  if (!option) return
+                  setForm("npm", option.value)
+                  setFetchPackage(option.value)
+                }}
+                variant="secondary"
+                triggerVariant="settings"
+              />
+            </div>
             <TextField
               label={language.t("provider.custom.field.baseURL.label")}
               placeholder={language.t("provider.custom.field.baseURL.placeholder")}
@@ -544,9 +615,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                     setForm("models", i(), "variants", vi, "enableThinking", val)
                   }
                   onChangeVariantThinking={(vi, val) => setForm("models", i(), "variants", vi, "thinking", val)}
+                  onChangeVariantSplitReasoning={(vi, val) =>
+                    setForm("models", i(), "variants", vi, "splitReasoning", val)
+                  }
                   onChangeVariantReasoningEffort={(vi, val) =>
                     setForm("models", i(), "variants", vi, "reasoningEffort", val)
                   }
+                  onChangeVariantOutputEffort={(vi, val) => setForm("models", i(), "variants", vi, "outputEffort", val)}
                   onChangeVariantChatTemplateArgs={(vi, val) =>
                     setForm("models", i(), "variants", vi, "chatTemplateArgs", val)
                   }

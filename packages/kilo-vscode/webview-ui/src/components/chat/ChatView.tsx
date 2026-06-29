@@ -332,6 +332,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             suggestions={standaloneSuggestions}
             readonly={props.readonly}
             emptyState={props.emptyState}
+            announce={isSidebar()}
           />
         </div>
       </div>

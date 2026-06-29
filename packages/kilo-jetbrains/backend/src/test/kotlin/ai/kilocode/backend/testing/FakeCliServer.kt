@@ -13,6 +13,10 @@ import ai.kilocode.backend.cli.CliServer
 class FakeCliServer(private val mock: MockCliServer) : CliServer {
 
     override var forceExtract = false
+    var stopCount = 0
+        private set
+    var disposeCount = 0
+        private set
 
     override fun process(): Process? = null
 
@@ -23,11 +27,13 @@ class FakeCliServer(private val mock: MockCliServer) : CliServer {
 
     /** Shutdown the server socket but keep the mock alive for restart. */
     override fun stop() {
+        stopCount++
         mock.shutdown()
     }
 
     /** Final cleanup. */
     override fun dispose() {
+        disposeCount++
         mock.close()
     }
 }

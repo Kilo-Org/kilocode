@@ -1,8 +1,62 @@
 import { dict as en } from "./en"
 
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop 연결",
+  "provider.anaconda.title.manage": "Anaconda Desktop 관리",
+  "provider.anaconda.status.checking": "Anaconda Desktop 확인 중...",
+  "provider.anaconda.status.opening": "Anaconda Desktop 여는 중...",
+  "provider.anaconda.status.syncing": "공급자 모델 새로 고치는 중...",
+  "provider.anaconda.status.ready": "연결할 준비됨",
+  "provider.anaconda.status.waiting": "Desktop 대기 중",
+  "provider.anaconda.status.attention": "주의 필요",
+  "provider.anaconda.status.unavailable": "사용할 수 없음",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop은 {{platform}}에서 지원되지 않습니다.",
+  "provider.anaconda.state.notInstalled":
+    "이 컴퓨터에 Anaconda Desktop을 설치한 후 여기로 돌아오세요. Kilo는 설치 프로그램을 대신 실행하지 않습니다.",
+  "provider.anaconda.state.notRunning":
+    "Anaconda Desktop을 열고 설정을 완료한 후 로그인한 다음 다시 확인을 선택하세요.",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop 설정이 완료되지 않았습니다. Desktop을 열고 설정을 완료한 후 필요하면 다시 시작하세요.",
+  "provider.anaconda.state.signedOut": "Kilo를 연결하기 전에 Anaconda Desktop을 열고 로그인하세요.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo가 Anaconda Desktop에 접근할 수 없습니다. Desktop을 열고 다시 로그인한 후 필요하면 다시 시작하세요.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop이 아직 응답하지 않습니다. 열어서 애플리케이션이 완전히 시작될 때까지 기다리세요.",
+  "provider.anaconda.state.noModel":
+    "Anaconda Desktop에서 텍스트 생성 모델을 다운로드하세요. 가능하면 도구 호출을 지원하는 모델을 선택한 후 서버를 시작하세요.",
+  "provider.anaconda.state.noServer_one":
+    "다운로드된 텍스트 생성 모델 1개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.noServer_other":
+    "다운로드된 텍스트 생성 모델 {{count}}개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.unhealthy":
+    "활성 추론 서버가 아직 정상이 아닙니다. Anaconda Desktop에서 확인하고 필요하면 서버를 다시 시작하세요.",
+  "provider.anaconda.state.ready":
+    "Kilo가 정상적인 로컬 텍스트 생성 서버를 찾았으며 현재 연결 설정을 가져올 수 있습니다.",
+  "provider.anaconda.server": "활성 추론 서버",
+  "provider.anaconda.context": "컨텍스트 창",
+  "provider.anaconda.contextValue": "{{count}} 토큰",
+  "provider.anaconda.tools": "도구 호출",
+  "provider.anaconda.tools.supported": "지원됨",
+  "provider.anaconda.tools.unsupported": "사용 안 함",
+  "provider.anaconda.tools.unknown": "알 수 없음",
+  "provider.anaconda.warning.title": "도구 지원이 제한적입니다",
+  "provider.anaconda.warning.description":
+    "이 서버는 도구 호출을 확인하지 않습니다. 코딩 에이전트 작업이 실패하거나 사용할 수 없을 수 있습니다. 이러한 제한을 감수하는 경우에만 계속하세요.",
+  "provider.anaconda.action.download": "Anaconda Desktop 다운로드",
+  "provider.anaconda.action.open": "Anaconda Desktop 열기",
+  "provider.anaconda.action.checkAgain": "다시 확인",
+  "provider.anaconda.action.continue": "계속하기",
+  "provider.anaconda.action.manage": "관리 / 새로 고침",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop 새로 고침됨",
+  "provider.anaconda.toast.refreshed.description": "활성 로컬 서버와 모델이 Kilo에서 최신 상태입니다.",
+  "settings.providers.note.anacondaDesktop": "Anaconda Desktop이 로컬에서 제공하는 모델을 실행합니다.",
+  "settings.providers.tag.local": "로컬",
+} as const
+
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "추천",
   "command.category.view": "보기",
   "command.category.project": "프로젝트",
@@ -105,17 +159,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "공급자 검색",
   "dialog.provider.empty": "공급자 없음",
-  "dialog.provider.group.popular": "인기",
   "dialog.provider.group.other": "기타",
   "dialog.provider.tag.recommended": "추천",
-  "dialog.provider.opencode.note": "Claude, GPT, Gemini 등 엄선된 모델",
-  "dialog.provider.anthropic.note": "Claude Pro/Max 또는 API 키로 연결",
-  "dialog.provider.deepseek.note": "추론 및 코딩 작업을 위한 DeepSeek 모델",
-  "dialog.provider.openai.note": "ChatGPT Pro/Plus 또는 API 키로 연결",
-  "dialog.provider.google.note": "빠르고 구조화된 응답을 위한 Gemini 모델",
-  "dialog.provider.openrouter.note": "하나의 공급자에서 모든 지원 모델에 액세스",
-  "dialog.provider.vercel.note": "스마트 라우팅으로 AI 모델에 통합 액세스",
-  "dialog.provider.copilot.note": "Copilot 또는 API 키로 연결",
 
   "dialog.model.select.title": "모델 선택",
   "dialog.model.search.placeholder": "모델 검색",
@@ -186,6 +231,7 @@ export const dict = {
   "model.tag.free": "무료",
   "model.tag.dataCollected": "데이터가 학습에 사용될 수 있습니다",
   "model.tag.latest": "최신",
+  "model.group.auto": "자동 모델",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
   "model.group.collapse": "{{group}} 접기",
@@ -214,6 +260,7 @@ export const dict = {
   "model.preview.label.average": "예상 평균 비용",
   "model.preview.label.context": "컨텍스트",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "모델 선택지",
   "model.preview.label.completion": "완료율",
   "model.preview.label.costAttempt": "시도당 비용",
   "model.preview.value.notSupported": "미지원",
@@ -295,6 +342,24 @@ export const dict = {
   "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
+  "prompt.action.sandbox.enable": "샌드박스 활성화",
+  "prompt.action.sandbox.disable": "샌드박스 비활성화",
+  "prompt.action.sandbox.enabled":
+    "샌드박스가 활성화되어 있습니다. 에이전트 셸 명령은 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.disabled":
+    "샌드박스가 비활성화되어 있습니다. 클릭하여 에이전트 셸 명령 쓰기를 프로젝트 및 Kilo 디렉터리로 제한합니다.",
+  "prompt.action.sandbox.status.enabled": "샌드박스 활성화됨",
+  "prompt.action.sandbox.status.disabled": "샌드박스 비활성화됨",
+  "prompt.action.sandbox.filesystem": "파일 시스템",
+  "prompt.action.sandbox.network": "네트워크",
+  "prompt.action.sandbox.filesystem.restricted": "제한됨",
+  "prompt.action.sandbox.network.blocked": "차단됨",
+  "prompt.action.sandbox.network.allowed": "허용됨",
+  "prompt.action.sandbox.unrestricted": "제한 없음",
+  "prompt.action.sandbox.description.enabled": "쓰기는 프로젝트 및 Kilo 디렉터리로 제한됩니다.",
+  "prompt.action.sandbox.description.disabled": "클릭하면 파일 시스템 쓰기와 네트워크 액세스를 제한합니다.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "클릭하면 파일 시스템 쓰기를 제한합니다. 샌드박스 설정에 따라 네트워크 액세스는 계속 허용됩니다.",
 
   "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
   "speechToText.tooltip.stop": "음성 캡처 중지",
@@ -525,6 +590,8 @@ export const dict = {
   "notification.permission.titleSubagent": "권한 필요 (서브에이전트)",
   "notification.permission.description": "{{projectName}}의 {{sessionTitle}}에서 권한이 필요합니다",
   "ui.permission.manageAutoApprove": "자동 승인 규칙 관리",
+  "ui.permission.doomLoop.prompt": "{{tool}} 도구에서 잠재적인 반복 실행이 감지되었습니다. 계속 실행하시겠습니까?",
+  "ui.permission.doomLoop.rule": "{{tool}} 호출 계속",
   "ui.permission.rule.addToAllowed": "허용 목록에 추가",
   "ui.permission.rule.removeFromAllowed": "허용 목록에서 제거",
   "ui.permission.rule.addToDenied": "거부 목록에 추가",
@@ -823,16 +890,19 @@ export const dict = {
   "settings.providers.tag.customProvider": "사용자 정의 공급자",
   "settings.providers.connected.environmentDescription": "환경 변수에서 연결됨",
   "settings.providers.action.signInChatGPT": "ChatGPT로 로그인",
-  "settings.providers.custom.description": "기본 URL로 OpenAI 호환 공급자를 추가합니다.",
+  "settings.providers.custom.description": "기본 URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
     "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
+  "settings.models.hidePromptTraining.title": "프롬프트를 학습에 사용하는 모델 숨기기",
+  "settings.models.hidePromptTraining.description":
+    "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
   "settings.providers.modeModels": "모드별 모델",
-  "settings.providers.custom.note": "Base URL로 OpenAI 호환 공급자를 추가합니다.",
+  "settings.providers.custom.note": "Base URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.modeModels.description":
     "특정 모드의 기본 모델을 재정의합니다. 설정하지 않으면 전역 기본 모델이 사용됩니다.",
   "provider.custom.title": "사용자 정의 공급자",
-  "provider.custom.description.prefix": "OpenAI 호환 공급자를 구성합니다. ",
+  "provider.custom.description.prefix": "사용자 정의 공급자를 구성합니다. ",
   "provider.custom.description.link": "공급자 구성 문서",
   "provider.custom.description.suffix": "를 참조하세요.",
   "provider.custom.field.providerID.label": "공급자 ID",
@@ -840,6 +910,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "소문자, 숫자, 하이픈 또는 밑줄",
   "provider.custom.field.name.label": "표시 이름",
   "provider.custom.field.name.placeholder": "내 AI 공급자",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "기본 URL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "API 키",
@@ -865,6 +936,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label": "채팅 템플릿 인수로 사고 활성화 (예: Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
   "provider.custom.models.variants.chatTemplateArgs.true": "true",
@@ -877,6 +953,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "모델 제거",
   "provider.custom.models.add": "모델 추가",
   "provider.custom.models.fetch": "모델 가져오기",
@@ -1113,6 +1196,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",
   "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
+  "settings.indexing.showButton.title": "인덱싱이 꺼져 있을 때 버튼 표시",
+  "settings.indexing.showButton.description":
+    "인덱싱이 꺼져 있는 동안 프롬프트 아래에 인덱싱 버튼을 표시합니다. 버튼이 숨겨져 있는 경우 설정 > 인덱싱을 열어 인덱싱을 활성화하세요.",
   "settings.indexing.enable.title": "인덱싱 활성화",
   "settings.indexing.globalEnable.title": "전역으로 활성화",
   "settings.indexing.globalEnable.description": "모든 작업 영역에 대해 인덱싱을 활성화합니다.",
@@ -1207,6 +1293,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "이 기능은 VS Code 확장 프로그램 전용 설정만 기본값으로 초기화합니다. 모드 및 자동 승인 규칙과 같이 CLI와 공유되는 설정은 CLI 구성에 저장되며 초기화되지 않습니다.",
   "settings.aboutKiloCode.resetSettings.button": "모든 설정 초기화",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "설정 이전",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code 인스턴스 간에 설정을 전송하려면 내보내기 또는 가져오기하세요.",
@@ -1261,6 +1348,10 @@ export const dict = {
   "settings.notifications.errors.title": "오류",
   "settings.notifications.errors.description": "오류 발생 시 알림 표시",
   "settings.notifications.sounds": "소리",
+  "settings.notifications.enable.title": "소리 알림 활성화",
+  "settings.notifications.enable.description":
+    "세션이 완료되거나 오류가 발생하거나 사용자 입력이 필요할 때 소리를 재생합니다",
+  "settings.notifications.testSound": "테스트",
   "settings.notifications.agentSound.title": "에이전트 완료 소리",
   "settings.notifications.agentSound.description": "에이전트 완료 시 재생할 소리",
   "settings.notifications.permSound.title": "권한 요청 소리",
@@ -1268,6 +1359,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "오류 소리",
   "settings.notifications.errorSound.description": "오류 발생 시 재생할 소리",
   "settings.notifications.sound.default": "기본값",
+  "settings.notifications.sound.system": "시스템",
+  "settings.notifications.sound.description":
+    "기본값은 완료, 입력, 오류에 서로 다른 소리를 사용합니다. 다른 옵션에서는 모든 이벤트에 동일한 소리를 사용합니다.",
   "settings.notifications.sound.none": "없음",
   "settings.experimental.share.title": "공유 모드",
   "settings.experimental.share.description": "세션 공유 동작 방식",
@@ -1285,12 +1379,19 @@ export const dict = {
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
   "settings.experimental.speechToText.description":
     "Kilo Gateway를 통해 Kilo 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
-  "settings.experimental.speechToTextModel.title": "음성 텍스트 변환 모델",
-  "settings.experimental.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
+  "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
+  "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
+  "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
+  "settings.experimental.nativeNotebookTools.description":
+    "VS Code 노트북을 읽고, 편집하고, 실행하는 실험적 도구를 활성화합니다",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
+  "settings.sandboxing.title": "샌드박스",
+  "settings.sandboxing.network.title": "네트워크 액세스 제한",
+  "settings.sandboxing.network.description":
+    "모델이 실행한 명령과 HTTP 도구의 아웃바운드 네트워크 액세스를 차단합니다. 로컬 MCP 서버와 플러그인 훅에는 이 제한이 적용되지 않습니다. 공급자 및 모델 추론 트래픽은 계속 사용할 수 있습니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
@@ -1420,6 +1521,9 @@ export const dict = {
     "구성된 사용자 정의 명령이 없습니다. opencode.json에 명령을 추가하면 여기에 표시됩니다.",
   "settings.agentBehaviour.workflows.detail.description": "설명",
   "settings.agentBehaviour.workflows.detail.template": "템플릿",
+  "settings.experimental.sandbox.title": "샌드박스",
+  "settings.experimental.sandbox.description":
+    "에이전트 셸 명령을 프로젝트 및 Kilo 상태 디렉터리에 대한 쓰기를 제한하는 OS 수준의 샌드박스 내에서 실행",
 
   "settings.autoApprove.description":
     "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
@@ -1474,10 +1578,6 @@ export const dict = {
 
   "settings.display.username.title": "사용자 이름",
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
-  "settings.display.layout.title": "레이아웃",
-  "settings.display.layout.description": "채팅 인터페이스의 레이아웃 모드",
-  "settings.display.layout.auto": "자동",
-  "settings.display.layout.stretch": "늘리기",
   "settings.display.fontSize.title": "글꼴 크기",
   "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
   "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
@@ -1487,6 +1587,10 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "코드 편집 블록",
+  "settings.display.codeEdit.description": "코드 편집 블록과 차이점 블록을 처음부터 펼칠지 접을지 선택합니다.",
+  "settings.display.codeEdit.expanded": "펼침",
+  "settings.display.codeEdit.collapsed": "접힘",
   "settings.providers.defaultModel.title": "기본 모델",
   "settings.providers.defaultModel.description": "대화의 기본 모델",
   "settings.providers.smallModel.title": "소형 모델",
@@ -1511,6 +1615,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "레거시 마이그레이션",
   "settings.aboutKiloCode.legacyMigration.description":
     "공급자 API 키 및 기본 모델을 포함하여 이전 Kilo Code 설치에서 설정을 마이그레이션합니다.",
+  "settings.aboutKiloCode.rooImport.description": "Roo Code 설치에서 대화 기록을 가져옵니다.",
+  "settings.aboutKiloCode.rooImport.button": "Roo Code에서 세션 가져오기",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code의 새로운 기능",

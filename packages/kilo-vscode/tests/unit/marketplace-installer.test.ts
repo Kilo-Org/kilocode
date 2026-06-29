@@ -55,6 +55,7 @@ describe("MarketplaceInstaller MCP format normalization", () => {
       id: "memory",
       name: "Memory",
       description: "test",
+      category: "development",
       url: "https://example.com",
       content: JSON.stringify({
         command: "npx",
@@ -81,6 +82,7 @@ describe("MarketplaceInstaller MCP format normalization", () => {
       id: "myremote",
       name: "Remote",
       description: "test",
+      category: "development",
       url: "https://example.com",
       content: JSON.stringify({
         type: "sse",
@@ -105,6 +107,7 @@ describe("MarketplaceInstaller MCP format normalization", () => {
       id: "already",
       name: "Already Done",
       description: "test",
+      category: "development",
       url: "https://example.com",
       content: JSON.stringify({
         type: "local",
@@ -153,6 +156,7 @@ describe("MarketplaceInstaller skills", () => {
           id: "test-mcp",
           name: "Test MCP",
           description: "test",
+          category: "development",
           url: "https://example.com",
           content: "{}",
         },
@@ -164,6 +168,7 @@ describe("MarketplaceInstaller skills", () => {
           id: "test-agent",
           name: "Test Agent",
           description: "test",
+          category: "development",
           content: { mode: "all", description: "test", prompt: "test" },
         },
         "project",

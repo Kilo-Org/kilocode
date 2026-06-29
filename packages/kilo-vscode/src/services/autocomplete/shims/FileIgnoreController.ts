@@ -23,7 +23,6 @@ function toPosix(filePath: string): string {
 export class FileIgnoreController {
   private workspacePath: string
   private ignoreInstance: Ignore = ignore()
-  private loadedContents: Array<{ file: string; content: string }> = []
   private readonly realpathCache = new Map<string, string>()
 
   constructor(workspacePath?: string) {
@@ -32,7 +31,6 @@ export class FileIgnoreController {
 
   async initialize(): Promise<void> {
     this.ignoreInstance = ignore()
-    this.loadedContents = []
     this.realpathCache.clear()
 
     if (!this.workspacePath) {
@@ -48,7 +46,6 @@ export class FileIgnoreController {
       if (kilocodeignoreContent.trim()) {
         this.ignoreInstance.add(kilocodeignoreContent)
         this.ignoreInstance.add(KILOCODEIGNORE)
-        this.loadedContents.push({ file: KILOCODEIGNORE, content: kilocodeignoreContent })
         return
       }
     }
@@ -59,7 +56,6 @@ export class FileIgnoreController {
       const gitignoreContent = fs.readFileSync(gitignorePath, "utf-8")
       if (gitignoreContent.trim()) {
         this.ignoreInstance.add(gitignoreContent)
-        this.loadedContents.push({ file: GITIGNORE, content: gitignoreContent })
       }
     }
 
@@ -127,31 +123,7 @@ export class FileIgnoreController {
     return !this.ignoreInstance.ignores(relative)
   }
 
-  /**
-   * Filter a list of candidate paths to those allowed.
-   * When no workspace path was provided, returns an empty array.
-   */
-  filterPaths(paths: string[]): string[] {
-    if (!this.workspacePath) {
-      return []
-    }
-    return paths.filter((candidate) => this.validateAccess(candidate))
-  }
-
-  /**
-   * Returns user-facing instructions explaining why access is restricted.
-   */
-  getInstructions(): string | undefined {
-    if (this.loadedContents.length === 0) {
-      return undefined
-    }
-
-    const sections = this.loadedContents.map(({ file, content }) => `# ${file}\n\n${content.trimEnd()}`)
-    return sections.join("\n\n")
-  }
-
   dispose(): void {
-    this.loadedContents = []
     this.realpathCache.clear()
     this.ignoreInstance = ignore()
   }

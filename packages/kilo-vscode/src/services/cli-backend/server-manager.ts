@@ -4,7 +4,7 @@ import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
-import { resolveTreeSitterEnv } from "./cli-resources"
+import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
 
@@ -94,6 +94,10 @@ export class ServerManager {
       const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
       fs.mkdirSync(spawnCwd, { recursive: true })
       const indexingEnv = resolveIndexingEnv(folders)
+      const localCli =
+        this.context.extensionMode === vscode.ExtensionMode.Development ||
+        fs.existsSync(path.join(this.context.extensionPath, "bin", ".cli-version"))
+      const bwrapEnv = process.env.KILO_BWRAP_PATH ? {} : resolveLocalBwrapEnv(this.context.extensionPath, localCli)
       // TLS / corporate-proxy support:
       //   - Default NODE_USE_SYSTEM_CA=1 so the bundled Bun CLI trusts the OS
       //     trust store (Windows cert store, macOS keychain, Linux /etc/ssl).
@@ -141,6 +145,7 @@ export class ServerManager {
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...resolveTreeSitterEnv(this.context.extensionPath),
+          ...bwrapEnv,
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,

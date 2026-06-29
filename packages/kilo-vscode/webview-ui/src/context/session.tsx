@@ -57,6 +57,7 @@ import {
   buildCostBreakdown,
   buildSessionToolParts,
   childID,
+  reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
   upsertSessionToolPart,
@@ -368,7 +369,11 @@ export const SessionProvider: ParentComponent = (props) => {
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [allAgents, setAllAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
-  const [pendingKiloModel, setPendingKiloModel] = createSignal<{ modelID: string; after: number } | null>(null)
+  const [pendingKiloModel, setPendingKiloModel] = createSignal<{
+    modelID?: string
+    agent?: string
+    after: number
+  } | null>(null)
   const [catalog, setCatalog] = createSignal(0)
 
   // Skills loaded from the CLI backend
@@ -598,9 +603,10 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   }
 
-  function selectKiloModel(modelID: string) {
-    setPendingKiloModel({ modelID, after: catalog() })
-    vscode.postMessage({ type: "requestProviders" })
+  function selectKiloModel(modelID?: string, agent?: string) {
+    if (!modelID && !agent) return
+    setPendingKiloModel({ ...(modelID && { modelID }), ...(agent && { agent }), after: catalog() })
+    if (modelID) vscode.postMessage({ type: "requestProviders" })
   }
 
   const unsubKiloModel = vscode.onMessage((message: ExtensionMessage) => {
@@ -608,19 +614,24 @@ export const SessionProvider: ParentComponent = (props) => {
       setCatalog((value) => value + 1)
       return
     }
-    if (message.type === "selectKiloModel") selectKiloModel(message.modelID)
+    if (message.type === "selectKiloModel") selectKiloModel(message.modelID, message.agent)
   })
   onCleanup(unsubKiloModel)
 
   createEffect(() => {
     const pending = pendingKiloModel()
-    if (!pending || agents().length === 0 || catalog() <= pending.after) return
+    if (!pending || agents().length === 0 || (pending.modelID && catalog() <= pending.after)) return
     setPendingKiloModel(null)
-    if (!provider.providers()[KILO_PROVIDER_ID]?.models[pending.modelID]) {
+    if (pending.modelID && !provider.providers()[KILO_PROVIDER_ID]?.models[pending.modelID]) {
       console.warn("[Kilo New] Ignoring unavailable Kilo catalog model:", pending.modelID)
       return
     }
-    selectModel(KILO_PROVIDER_ID, pending.modelID)
+    if (pending.agent && !agentNames().has(pending.agent)) {
+      console.warn("[Kilo New] Ignoring unavailable Kilo agent:", pending.agent)
+      return
+    }
+    if (pending.agent) selectAgent(pending.agent)
+    if (pending.modelID) selectModel(KILO_PROVIDER_ID, pending.modelID)
   })
 
   function promptAgent(sessionID?: string) {
@@ -1280,12 +1291,16 @@ export const SessionProvider: ParentComponent = (props) => {
     return true
   }
 
+  function setTools(sessionID: string, tools: ToolPart[]) {
+    setStore("toolParts", sessionID, reconcileSessionToolParts(tools))
+  }
+
   function rebuildToolParts(sessionID: string, messages: Message[], parts?: Record<string, Part[]>) {
     const tools = buildSessionToolParts(
       messages,
       (msg) => parts?.[msg.id] ?? store.parts[msg.id] ?? stash.peek(msg.id) ?? msg.parts,
     )
-    setStore("toolParts", sessionID, tools)
+    setTools(sessionID, tools)
   }
 
   function messageParts(messages: Message[]): Record<string, Part[]> {
@@ -1300,16 +1315,17 @@ export const SessionProvider: ParentComponent = (props) => {
     const sid = sessionID ?? part.sessionID
     if (!sid) return
     if (part.type !== "tool") return
-    setStore("toolParts", sid, (tools = []) => upsertSessionToolPart(tools, part, { id: messageID, sessionID: sid }))
+    const tools = upsertSessionToolPart(store.toolParts[sid] ?? [], part, { id: messageID, sessionID: sid })
+    setTools(sid, tools)
   }
 
   function dropToolPart(sessionID: string | undefined, partID: string) {
     if (!sessionID) return
-    setStore("toolParts", sessionID, (tools = []) => removeSessionToolPart(tools, partID))
+    setTools(sessionID, removeSessionToolPart(store.toolParts[sessionID] ?? [], partID))
   }
 
   function dropMessageTools(sessionID: string, messageID: string) {
-    setStore("toolParts", sessionID, (tools = []) => removeSessionToolPartsForMessage(tools, messageID))
+    setTools(sessionID, removeSessionToolPartsForMessage(store.toolParts[sessionID] ?? [], messageID))
   }
 
   function handleMessagesLoaded(
@@ -2540,8 +2556,10 @@ export const SessionProvider: ParentComponent = (props) => {
   const userMessages = createMemo(() => messages().filter((m) => m.role === "user"))
 
   function visible(sessionID: string) {
-    return filterVisibleMessages(store.messages[sessionID] ?? [], store.sessions[sessionID]?.revert?.messageID, (msg) =>
-      getParts(msg.id),
+    return filterVisibleMessages(
+      store.messages[sessionID] ?? [],
+      store.sessions[sessionID]?.revert ?? undefined,
+      (msg) => getParts(msg.id),
     )
   }
 

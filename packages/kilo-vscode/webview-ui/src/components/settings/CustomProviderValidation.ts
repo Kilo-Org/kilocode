@@ -1,3 +1,4 @@
+import type { CustomProviderPackage } from "../../../../src/shared/provider-model"
 import type { ModelEntry, VariantEntry } from "./CustomProviderModelCard"
 
 type Translator = (key: string, params?: Record<string, string>) => string
@@ -10,6 +11,7 @@ export type HeaderRow = {
 export type FormState = {
   providerID: string
   name: string
+  npm: CustomProviderPackage
   baseURL: string
   apiKey: string
   models: ModelEntry[]
@@ -42,7 +44,7 @@ type ValidateResult = {
     name: string
     key: string | undefined
     config: {
-      npm: string
+      npm: CustomProviderPackage
       name: string
       env?: string[]
       options: { baseURL: string; headers?: Record<string, string> }
@@ -52,7 +54,6 @@ type ValidateResult = {
 }
 
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
-const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
 
 function checkVariant(v: VariantEntry, seen: Set<string>, t: Translator) {
   const n = v.name.trim()
@@ -106,7 +107,9 @@ function serializeVariant(v: VariantEntry): [string, Record<string, unknown>] {
   const cfg: Record<string, unknown> = {}
   if (v.enableThinking !== undefined) cfg.enable_thinking = v.enableThinking
   if (v.thinking !== undefined) cfg.thinking = { type: v.thinking }
+  if (v.splitReasoning !== undefined) cfg.reasoning_split = v.splitReasoning
   if (v.reasoningEffort !== undefined) cfg.reasoningEffort = v.reasoningEffort
+  if (v.outputEffort !== undefined) cfg.effort = v.outputEffort
   if (v.chatTemplateArgs !== undefined) cfg.chat_template_args = { enable_thinking: v.chatTemplateArgs }
   return [v.name.trim(), cfg]
 }
@@ -189,7 +192,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
       name,
       key,
       config: {
-        npm: OPENAI_COMPATIBLE,
+        npm: input.form.npm,
         name,
         ...resolveEnv(rawEnv, savedEnv),
         options,

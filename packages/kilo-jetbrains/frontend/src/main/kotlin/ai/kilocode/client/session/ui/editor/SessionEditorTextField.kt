@@ -1,11 +1,27 @@
 package ai.kilocode.client.session.ui.editor
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.SendPromptContext
+import ai.kilocode.client.session.ui.selection.SessionSelection
+import com.intellij.ide.actions.UndoRedoAction
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.PlatformCoreDataKeys
+import com.intellij.openapi.command.undo.UndoManager
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.TextEditor
+import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider
 import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.openapi.fileTypes.PlainTextLanguage
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.LanguageTextField
+import com.intellij.util.textCompletion.TextCompletionProvider
+import com.intellij.util.textCompletion.TextCompletionUtil
 
 /**
  * A session-scoped [EditorTextField] for plain-text input.
@@ -22,11 +38,74 @@ import com.intellij.ui.EditorTextField
  * wrapping here.
  */
 internal open class SessionEditorTextField(
-    project: Project,
+    private val project: Project,
     private val ctx: SendPromptContext? = null,
-) : EditorTextField(project, PlainTextFileType.INSTANCE) {
+    completion: TextCompletionProvider? = null,
+    private val selection: SessionSelection? = null,
+) : EditorTextField(
+    completion?.let {
+        LanguageTextField.createDocument(
+            "",
+            PlainTextLanguage.INSTANCE,
+            project,
+            TextCompletionUtil.DocumentWithCompletionCreator(it, true),
+        )
+    },
+    project,
+    PlainTextFileType.INSTANCE,
+) {
+    private val undo = action(KiloBundle.message("session.editor.undo"), true)
+    private val redo = action(KiloBundle.message("session.editor.redo"), false)
+
+    init {
+        addSettingsProvider(::install)
+    }
+
     override fun uiDataSnapshot(sink: DataSink) {
         super.uiDataSnapshot(sink)
+        selection?.provideCopy(sink) { text }
         ctx?.let { sink.set(PromptDataKeys.SEND, it) }
+        file()?.let { sink.set(PlatformCoreDataKeys.FILE_EDITOR, it) }
+    }
+
+    private fun install(editor: Editor) {
+        editor.contentComponent.putClientProperty(UndoRedoAction.IGNORE_SWING_UNDO_MANAGER, true)
+        // Workaround: global $Undo/$Redo can miss the synthetic FileEditor for this embedded
+        // EditorTextField. Bind the shortcuts locally until the platform data context targets it reliably.
+        val manager = ActionManager.getInstance()
+        manager.getAction(IdeActions.ACTION_UNDO)?.shortcutSet?.let {
+            undo.registerCustomShortcutSet(it, editor.contentComponent)
+        }
+        manager.getAction(IdeActions.ACTION_REDO)?.shortcutSet?.let {
+            redo.registerCustomShortcutSet(it, editor.contentComponent)
+        }
+    }
+
+    private fun action(text: String, undo: Boolean) = object : DumbAwareAction(text) {
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = available(undo)
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            if (project.isDisposed) return
+            val file = file() ?: return
+            val manager = UndoManager.getInstance(project)
+            if (undo) {
+                if (manager.isUndoAvailable(file)) manager.undo(file)
+                return
+            }
+            if (manager.isRedoAvailable(file)) manager.redo(file)
+        }
+    }
+
+    private fun available(undo: Boolean): Boolean {
+        if (project.isDisposed) return false
+        val file = file() ?: return false
+        val manager = UndoManager.getInstance(project)
+        return if (undo) manager.isUndoAvailable(file) else manager.isRedoAvailable(file)
+    }
+
+    private fun file(): TextEditor? {
+        return getEditor(false)?.let(TextEditorProvider.getInstance()::getTextEditor)
     }
 }

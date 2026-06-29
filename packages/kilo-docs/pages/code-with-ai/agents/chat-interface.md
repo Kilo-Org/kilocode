@@ -82,6 +82,12 @@ Run `/export` in chat, or open a local session's **History** context menu and ch
 
 Kilo builds the export from the complete local session history, not only the messages currently loaded in the chat view.
 
+**Renaming sessions:**
+
+Double-click the current session title at the top of the chat to edit it inline. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
+
+You can also rename local sessions from **History** using the edit button or the session's context menu.
+
 {% /tab %}
 {% tab label="CLI" %}
 

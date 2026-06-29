@@ -40,8 +40,13 @@ data class SessionEditorStyle(
 ) {
     /** Apply this snapshot to embedded IntelliJ editor components used by session UI. */
     fun applyToEditor(editor: EditorEx) {
-        editor.setColorsScheme(editorScheme)
-        editor.setFontSize(editorSize)
+        try {
+            if (editor.isDisposed) return
+            editor.setColorsScheme(editorScheme)
+            editor.setFontSize(editorSize)
+        } catch (err: RuntimeException) {
+            if (err.javaClass.name != "com.intellij.openapi.util.TraceableDisposable\$DisposalException") throw err
+        }
     }
 
     companion object {

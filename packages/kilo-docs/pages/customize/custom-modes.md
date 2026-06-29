@@ -5,7 +5,7 @@ description: "Create and configure custom modes in Kilo Code"
 
 # Custom Modes
 
-Kilo Code allows you to create **custom modes** (also called **agents**) to tailor Kilo's behavior to specific tasks or workflows. Custom modes can be either **global** (available across all projects) or **project-specific** (defined within a single project).
+Kilo Code allows you to create **custom modes** (also called **agents**) to tailor Kilo's behavior to specific tasks or workflows. Custom modes can be **global** (available across all projects), **project-specific** (defined within a single project), or **organization-managed** (provided by your Kilo organization).
 
 {% callout type="info" %}
 The current VS Code extension (built on the Kilo CLI) uses **agent Markdown files** to define custom modes. The legacy extension used `custom_modes.yaml` / `.kilocodemodes`. See the tabs below for the relevant approach.
@@ -17,6 +17,19 @@ The current VS Code extension (built on the Kilo CLI) uses **agent Markdown file
 - **Safety:** Restrict a mode's access to sensitive files or commands. For example, a "Review Mode" could be limited to read-only operations
 - **Experimentation:** Safely experiment with different prompts and configurations without affecting other modes
 - **Team Collaboration:** Share custom modes with your team to standardize workflows
+- **Organization Consistency:** Use organization-managed agents/custom modes so members share the same behavior for common workflows
+
+## Organization-Managed Custom Modes
+
+If your Kilo organization provides custom modes, Kilo adds them to your local experience as organization-sourced agents/custom modes. They appear alongside built-in and personal agents so members can select them directly where Kilo shows user-selectable agents or modes.
+
+Organization-managed modes are controlled at the organization level:
+
+- An organization-managed mode can use the same name as a built-in agent. When it does, the organization-provided definition takes precedence for members of that organization.
+- Individual members cannot remove organization-managed modes from their local agent list. Changes need to be made in the organization-managed definition.
+- Organization-managed modes are useful for shared prompts, instructions, and tool access expectations that should stay consistent across a team.
+
+For organization members, contact the person or team that manages Kilo for your organization if an organization mode appears unexpectedly, needs different instructions, or needs different tool access. For admins and support teams, keep the purpose and owner of each organization custom mode clear so members know when to use it and where to request changes.
 
 {% tabs %}
 {% tab label="VSCode" %}

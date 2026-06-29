@@ -3,7 +3,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { makeRuntime } from "@/effect/run-service"
 import { Identifier } from "@/id/id"
-import { Instance, type InstanceContext } from "@/project/instance"
+import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@/shell/shell"
 import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
@@ -194,7 +194,7 @@ export namespace BackgroundProcess {
 
   function emit(active: Active) {
     Instance.restore(active.ctx, () => {
-      void Bus.publish(Event.Updated, { info: clone(active.info) }).catch((err) => {
+      void Bus.publish(active.ctx, Event.Updated, { info: clone(active.info) }).catch((err) => {
         log.warn("failed to publish process update", { err, id: active.info.id })
       })
     })
@@ -452,9 +452,11 @@ export namespace BackgroundProcess {
     active.resolve = undefined
     if (opts.silent) return
     await Instance.restore(active.ctx, () =>
-      Bus.publish(Event.Deleted, { sessionID: active.info.sessionID, processID: active.info.id }).catch((err) => {
-        log.warn("failed to publish process deletion", { err, id: active.info.id })
-      }),
+      Bus.publish(active.ctx, Event.Deleted, { sessionID: active.info.sessionID, processID: active.info.id }).catch(
+        (err) => {
+          log.warn("failed to publish process deletion", { err, id: active.info.id })
+        },
+      ),
     )
   }
 

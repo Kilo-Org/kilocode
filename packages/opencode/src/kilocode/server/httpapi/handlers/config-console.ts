@@ -79,8 +79,9 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         return yield* config.get()
       }
       if (body.scope === "global") {
-        const result = yield* config.updateGlobal(patch)
-        if (result.changed) {
+        const hot = Object.keys(patch).every((key) => key === "console")
+        const result = yield* config.updateGlobal(patch, hot ? { dispose: false } : undefined)
+        if (result.changed && !hot) {
           yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
             Effect.catchCause(() => Effect.void),
           )

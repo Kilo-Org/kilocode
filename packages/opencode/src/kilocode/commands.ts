@@ -8,7 +8,6 @@ import { AttachCommand } from "../cli/cmd/tui/attach"
 import { RunCommand } from "../cli/cmd/run"
 import { GenerateCommand } from "../cli/cmd/generate"
 import { DebugCommand } from "../cli/cmd/debug"
-import { ConsoleCommand } from "../cli/cmd/account"
 import { ProvidersCommand } from "../cli/cmd/providers" // kilocode_change — upstream renamed auth → providers
 import { AgentCommand } from "../cli/cmd/agent"
 import { UpgradeCommand } from "../cli/cmd/upgrade"
@@ -56,7 +55,6 @@ export const commands = [
   RunCommand,
   GenerateCommand,
   DebugCommand,
-  ConsoleCommand,
   ProvidersCommand, // kilocode_change — upstream renamed AuthCommand → ProvidersCommand
   AgentCommand,
   UpgradeCommand,

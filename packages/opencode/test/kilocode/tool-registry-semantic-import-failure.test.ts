@@ -5,6 +5,7 @@ import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
 import { Agent } from "../../src/agent/agent"
 import * as Truncate from "../../src/tool/truncate"
 import type * as Tool from "../../src/tool/tool"
+import { provideTestInstance, tmpdir } from "../fixture/fixture"
 
 const logger = Log.create({ service: "kilocode-tool-registry" })
 const deps = { agent: {} as Agent.Interface, truncate: {} as Truncate.Interface }
@@ -14,19 +15,25 @@ describe("kilocode tool registry semantic tool import failure", () => {
     const err = new Error("semantic tool import failed")
     const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
+    await using tmp = await tmpdir({ git: true })
+
     try {
-      const result = await Effect.runPromise(
-        KiloToolRegistry.build(infos(), deps, {
-          indexing: async () => ({
-            KiloIndexing: {
-              ready: () => true,
-            },
-          }),
-          semantic: async () => {
-            throw err
-          },
-        }),
-      )
+      const result = await provideTestInstance({
+        directory: tmp.path,
+        fn: () =>
+          Effect.runPromise(
+            KiloToolRegistry.build(infos(), deps, {
+              indexing: async () => ({
+                KiloIndexing: {
+                  ready: () => true,
+                },
+              }),
+              semantic: async () => {
+                throw err
+              },
+            }),
+          ),
+      })
 
       expect(result.semantic).toBeUndefined()
       expect(result.recall.id).toBe("recall")
@@ -44,6 +51,9 @@ function infos() {
     recall: info("recall"),
     manager: info("agent_manager"),
     process: info("background_process"),
+    notebookRead: info("notebook_read"),
+    notebookEdit: info("notebook_edit"),
+    notebookExecute: info("notebook_execute"),
   }
 }
 

@@ -76,6 +76,7 @@
   }
 
   .kilo-console .models-context-filter,
+  .kilo-console .models-privacy-filter-group,
   .kilo-console .models-capabilities-filter {
     flex: 1 1 auto;
     min-width: 0;

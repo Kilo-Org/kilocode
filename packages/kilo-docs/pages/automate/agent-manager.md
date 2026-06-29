@@ -136,6 +136,12 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Use session history to reopen local sessions or preview cloud sessions
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
+### Renaming Worktrees
+
+Double-click a worktree name to edit its label inline. You can also right-click the worktree and choose **Rename**. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
+
+Renaming a worktree changes only the label shown in Agent Manager. It does not rename the underlying git branch.
+
 ## Starting Sessions From Chat
 
 Kilo can start Agent Manager sessions from chat with the `agent_manager` tool. It is available by default only in the VS Code extension because Agent Manager is an extension feature.
@@ -168,7 +174,7 @@ Sections let you group worktrees into collapsible, color-coded folders in the si
 
 Multi-version worktrees (created via Multi-Version Mode) are moved together — assigning one version to a section moves all versions in the group.
 
-### Renaming
+### Renaming Sections
 
 Right-click the section header and select **Rename Section**. An inline text field appears — type the new name and press `Enter` to confirm or `Escape` to cancel.
 

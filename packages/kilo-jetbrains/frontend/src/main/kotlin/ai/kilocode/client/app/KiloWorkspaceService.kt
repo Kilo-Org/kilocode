@@ -4,6 +4,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
@@ -13,6 +14,7 @@ import com.intellij.openapi.components.Service
 import ai.kilocode.log.KiloLog
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
@@ -126,6 +128,26 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
+    suspend fun searchFiles(directory: String, query: String, limit: Int = 50): FileSearchResultDto {
+        return try {
+            call { searchFiles(directory, query, limit) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("workspace file search failed for directory=$directory query=$query", e)
+            FileSearchResultDto()
+        }
+    }
+
+    suspend fun gitChanges(directory: String): String? {
+        return try {
+            call { gitChanges(directory) }
+        } catch (e: Exception) {
+            LOG.warn("git changes lookup failed for directory=$directory", e)
+            null
+        }
+    }
+
     suspend fun openPath(directory: String, path: String): Boolean {
         val match = files(directory, path).firstOrNull() ?: return false
         return try {
@@ -181,4 +203,5 @@ class KiloWorkspaceService internal constructor(
             done(ok)
         }
     }
+
 }

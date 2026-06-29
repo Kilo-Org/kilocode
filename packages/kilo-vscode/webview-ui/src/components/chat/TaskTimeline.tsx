@@ -20,7 +20,7 @@ export interface TimelineBar {
 }
 
 function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBar[] {
-  const result: Part[] = []
+  const result: { msg: Message; part: Part }[] = []
 
   for (const msg of messages) {
     if (msg.role === "user") continue
@@ -28,14 +28,14 @@ function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBa
     if (!ps) continue
     for (const p of ps) {
       if (p.type === "step-start") continue
-      result.push(p)
+      result.push({ msg, part: p })
     }
   }
 
-  const sz = sizes(result)
-  return result.map((p, i) => ({
-    bg: color(p),
-    tip: label(p),
+  const sz = sizes(result.map((item) => item.part))
+  return result.map((item, i) => ({
+    bg: color(item.part),
+    tip: label(item.part, item.msg),
     width: sz[i]!.width,
     height: sz[i]!.height,
     idx: i,

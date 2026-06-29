@@ -1,5 +1,5 @@
 import { afterEach, describe, expect } from "bun:test"
-import { ConfigProvider, Effect, Layer } from "effect"
+import { ConfigProvider, Deferred, Effect, Layer } from "effect"
 import type * as Scope from "effect/Scope"
 import { HttpRouter } from "effect/unstable/http"
 import { ChildProcessSpawner } from "effect/unstable/process"
@@ -22,7 +22,8 @@ import { TestLLMServer } from "../lib/llm-server"
 import path from "path"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance, tmpdirScoped } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
+import { testProviderConfig } from "../lib/test-provider"
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const it = testEffect(
@@ -99,39 +100,6 @@ function authorization(username: string, password: string) {
   return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
 }
 
-function providerConfig(url: string) {
-  return {
-    formatter: false,
-    lsp: false,
-    provider: {
-      test: {
-        name: "Test",
-        id: "test",
-        env: [],
-        npm: "@ai-sdk/openai-compatible",
-        models: {
-          "test-model": {
-            id: "test-model",
-            name: "Test Model",
-            attachment: false,
-            reasoning: false,
-            temperature: false,
-            tool_call: true,
-            release_date: "2025-01-01",
-            limit: { context: 100000, output: 10000 },
-            cost: { input: 0, output: 0 },
-            options: {},
-          },
-        },
-        options: {
-          apiKey: "test-key",
-          baseURL: url,
-        },
-      },
-    },
-  }
-}
-
 function call<T>(request: () => Promise<T>) {
   return Effect.promise(request)
 }
@@ -203,6 +171,15 @@ function firstPartText(value: unknown) {
   return record(array(record(value).parts)[0]).text
 }
 
+// kilocode_change start
+function texts(value: unknown) {
+  return array(value)
+    .flatMap((item) => array(record(item).parts))
+    .map((part) => record(part).text)
+    .filter((text): text is string => typeof text === "string")
+}
+// kilocode_change end
+
 function sessionTitles(value: unknown) {
   return array(value)
     .map((item) => record(item).title)
@@ -265,7 +242,7 @@ function withProject<A, E, E2 = never>(
 ) {
   return Effect.gen(function* () {
     const directory = yield* tmpdirScoped({
-      git: options.git ?? true,
+      git: options.git ?? false,
       config: { formatter: false, lsp: false, ...options.config },
     })
     yield* options.setup?.(directory) ?? Effect.void
@@ -283,7 +260,7 @@ function withStandardProject<A, E>(
 function withFakeLlm<A, E>(serverPath: ServerPath, run: (input: LlmProjectFixture) => Effect.Effect<A, E, TestScope>) {
   return Effect.gen(function* () {
     const llm = yield* TestLLMServer
-    return yield* withProject(serverPath, { config: providerConfig(llm.url) }, (input) => run({ ...input, llm }))
+    return yield* withProject(serverPath, { config: testProviderConfig(llm.url) }, (input) => run({ ...input, llm }))
   }).pipe(Effect.provide(TestLLMServer.layer))
 }
 
@@ -297,7 +274,7 @@ function withFakeLlmProject<A, E>(
     return yield* withProject(
       serverPath,
       {
-        config: providerConfig(llm.url),
+        config: testProviderConfig(llm.url),
         setup: options.setup,
       },
       (input) => run({ ...input, llm }),
@@ -518,7 +495,7 @@ describe("HttpApi SDK", () => {
   )
 
   serverPathParity("matches generated SDK instance read routes", (serverPath) =>
-    withStandardProject(serverPath, ({ sdk, directory }) =>
+    withProject(serverPath, { git: true, setup: writeStandardFiles }, ({ sdk, directory }) =>
       Effect.gen(function* () {
         const project = yield* capture(() => sdk.project.current())
         const projects = yield* capture(() => sdk.project.list())
@@ -563,6 +540,7 @@ describe("HttpApi SDK", () => {
           foundFile: JSON.stringify(findFiles.data).includes("hello.txt"),
           foundText: JSON.stringify(findText.data ?? null).includes("sdk-parity"),
           listedFile: JSON.stringify(files.data).includes("hello.txt"),
+          vcs: { hasBranch: typeof record(vcs.data).branch === "string" },
         }
       }),
     ),
@@ -673,6 +651,70 @@ describe("HttpApi SDK", () => {
     ),
   )
 
+  // Regression: SyncEvent must publish on the same ProjectBus the /event handler
+  // subscribes to, AND the /event stream must forward handler ALS/context into the
+  // body-pump fiber. Drives the full SDK → /event → Session.updatePart → sync.run →
+  // bus.publish → SDK subscriber path. Goes red if either the publisher uses a
+  // different bus instance (Bug 2 / pre-#27825) or the stream loses context (Bug 1 /
+  // pre-#27425).
+  serverPathParity("streams sync-backed part updates to /event subscribers", (serverPath) =>
+    withStandardProject(serverPath, ({ sdk, directory }) =>
+      Effect.gen(function* () {
+        const session = yield* capture(() => sdk.session.create({ title: "sync-backed part event" }))
+        const sessionID = String(record(session.data).id)
+        const seeded = yield* seedMessage(directory, sessionID)
+
+        const controller = new AbortController()
+        yield* Effect.addFinalizer(() => Effect.sync(() => controller.abort()))
+        const events = yield* call(() => sdk.event.subscribe(undefined, { signal: controller.signal }))
+        yield* Effect.addFinalizer(() =>
+          call(async () => void (await events.stream.return?.(undefined))).pipe(Effect.ignore),
+        )
+
+        const ready = yield* Deferred.make<void>()
+        const received = yield* Deferred.make<unknown>()
+
+        yield* call(async () => {
+          for await (const event of events.stream) {
+            const payload = record(event).payload ?? event
+            const type = record(payload).type
+            if (type === "server.connected") {
+              Deferred.doneUnsafe(ready, Effect.void)
+              continue
+            }
+            if (type === MessageV2.Event.PartUpdated.type) {
+              Deferred.doneUnsafe(received, Effect.succeed(payload))
+              return
+            }
+          }
+        }).pipe(Effect.forkScoped)
+
+        yield* awaitWithTimeout(Deferred.await(ready), "timed out waiting for /event server.connected", "2 seconds")
+
+        const updated = yield* capture(() =>
+          sdk.part.update({
+            sessionID,
+            messageID: seeded.message.id,
+            partID: seeded.part.id,
+            part: { ...seeded.part, text: "updated via sync" } as NonNullable<
+              Parameters<Sdk["part"]["update"]>[0]["part"]
+            >,
+          }),
+        )
+        expect(updated.status).toBe(200)
+
+        const event = yield* awaitWithTimeout(
+          Deferred.await(received),
+          "timed out waiting for message.part.updated bus payload over /event",
+          "5 seconds",
+        )
+        const properties = record(record(event).properties)
+        expect(record(properties.part)).toMatchObject({ id: seeded.part.id, type: "text" })
+        return { type: record(event).type, partType: record(properties.part).type }
+      }),
+    ),
+  )
+
   serverPathParity("matches generated SDK prompt no-reply routes", (serverPath) =>
     withStandardProject(serverPath, ({ sdk }) =>
       Effect.gen(function* () {
@@ -686,6 +728,7 @@ describe("HttpApi SDK", () => {
             parts: [{ type: "text", text: "hello" }],
           }),
         )
+        // kilocode_change start
         const asyncPrompt = yield* capture(() =>
           sdk.session.promptAsync({
             sessionID,
@@ -694,18 +737,20 @@ describe("HttpApi SDK", () => {
             parts: [{ type: "text", text: "async hello" }],
           }),
         )
-        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
+        const messages = yield* pollWithTimeout(
+          capture(() => sdk.session.messages({ sessionID })).pipe(
+            Effect.map((messages) => (texts(messages.data).includes("async hello") ? messages : undefined)),
+          ),
+          "async no-reply prompt message was not persisted",
+        )
 
         return {
           statuses: statuses({ session, prompt, asyncPrompt, messages }),
           promptRole: record(record(prompt.data).info).role,
           messageCount: array(messages.data).length,
-          messageTexts: array(messages.data)
-            .flatMap((item) => array(record(item).parts))
-            .map((part) => record(part).text)
-            .filter((text): text is string => typeof text === "string")
-            .sort(),
+          messageTexts: texts(messages.data).sort(),
         }
+        // kilocode_change end
       }),
     ),
   )
@@ -947,7 +992,7 @@ describe("HttpApi SDK", () => {
   )
 
   serverPathParity("matches generated SDK project git initialization", (serverPath) =>
-    withProject(serverPath, { git: false }, ({ sdk, directory }) =>
+    withProject(serverPath, {}, ({ sdk, directory }) =>
       Effect.gen(function* () {
         const before = yield* capture(() => sdk.project.current())
         const init = yield* capture(() => sdk.project.initGit())

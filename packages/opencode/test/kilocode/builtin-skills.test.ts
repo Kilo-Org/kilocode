@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import path from "path"
 import { Skill } from "../../src/skill"
+import * as KiloSkill from "../../src/kilocode/skill-remove"
 import { BUILTIN_SKILLS } from "../../src/kilocode/skills/builtin"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
@@ -36,6 +37,18 @@ it.instance(
       expect(item!.name).toBe("kilo-config")
       expect(item!.location).toBe(Skill.BUILTIN_LOCATION)
       expect(item!.content).toContain("kilo")
+    }),
+  { git: true },
+)
+
+it.instance(
+  "kilo-config is protected from removal",
+  () =>
+    Effect.gen(function* () {
+      const skill = yield* Skill.Service
+      const item = yield* skill.get("kilo-config")
+      expect(item).toBeDefined()
+      expect(KiloSkill.builtin(item!.location)).toBe(true)
     }),
   { git: true },
 )

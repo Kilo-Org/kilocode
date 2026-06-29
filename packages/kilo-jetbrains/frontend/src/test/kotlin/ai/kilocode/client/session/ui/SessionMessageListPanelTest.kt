@@ -15,6 +15,8 @@ import ai.kilocode.client.session.views.PlanExitView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
+import ai.kilocode.client.session.views.MessageToolbar
+import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
@@ -26,12 +28,15 @@ import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
+import java.awt.Point
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import javax.swing.border.Border
 
 /**
@@ -172,6 +177,65 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(mv.part("p1") is TextView)
     }
 
+    fun `test user prompt text part gets copy toolbar`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+
+        val view = panel.findMessage("u1")!!.part("p1") as TextView
+        val message = panel.findMessage("u1")!!
+        assertNotNull(find<MessageToolbar>(message))
+        assertFalse(view.hasCopyToolbar())
+        assertEquals(BorderLayout.LINE_END, message.promptToolbarAlignment())
+        assertFalse(message.paintsPromptToolbar())
+
+        message.setPromptHovered(true)
+
+        assertTrue(message.paintsPromptToolbar())
+
+        message.setPromptHovered(false)
+
+        assertFalse(message.paintsPromptToolbar())
+    }
+
+    fun `test latest non blank assistant text part gets copy toolbar`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "first"))
+        model.updateContent("a1", part("p2", "a1", "text", text = "second"))
+
+        val first = panel.findMessage("a1")!!.part("p1") as TextView
+        val second = panel.findMessage("a1")!!.part("p2") as TextView
+
+        assertFalse(first.hasCopyToolbar())
+        assertTrue(second.hasCopyToolbar())
+    }
+
+    fun `test assistant copy toolbar moves back when latest text is removed`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "first"))
+        model.updateContent("a1", part("p2", "a1", "text", text = "second"))
+        val first = panel.findMessage("a1")!!.part("p1") as TextView
+
+        model.removeContent("a1", "p2")
+
+        assertTrue(first.hasCopyToolbar())
+    }
+
+    fun `test assistant copy target spans newest assistant message in turn`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("a2", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "first"))
+        model.updateContent("a2", part("p2", "a2", "text", text = "second"))
+
+        val first = panel.findMessage("a1")!!.part("p1") as TextView
+        val second = panel.findMessage("a2")!!.part("p2") as TextView
+
+        assertFalse(first.hasCopyToolbar())
+        assertTrue(second.hasCopyToolbar())
+    }
+
     fun `test text markdown link uses panel url opener`() {
         val urls = mutableListOf<String>()
         val item = SessionMessageListPanel(model, parent, openFile = openFile, openUrl = { urls.add(it) })
@@ -205,8 +269,68 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         assertSame(tv, mv.part("p1"))
         assertSame(comp, tv.md.component)
+        assertSame(tv.copyButton(), (mv.part("p1") as TextView).copyButton())
         assertSame(first, comp.components.first())
         assertEquals("first\n\nsecond more", tv.markdown())
+    }
+
+    fun `test streaming assistant text keeps copy toolbar stable and bounded`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "start"))
+        val mv = panel.findMessage("a1")!!
+        val tv = mv.part("p1") as TextView
+        val comp = tv.md.component
+        val btn = tv.copyButton()
+        val count = count(tv)
+
+        repeat(200) { model.appendDelta("a1", "p1", " token$it") }
+
+        assertSame(tv, mv.part("p1"))
+        assertSame(comp, tv.md.component)
+        assertSame(btn, tv.copyButton())
+        assertEquals(count, count(tv))
+        assertTrue(tv.hasCopyToolbar())
+    }
+
+    fun `test streaming new assistant text updates copy target without rebuilding previous text`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "first"))
+        val first = panel.findMessage("a1")!!.part("p1") as TextView
+        val comp = first.md.component
+        val button = first.copyButton()
+
+        model.appendDelta("a1", "p2", "second")
+
+        val second = panel.findMessage("a1")!!.part("p2") as TextView
+        assertSame(first, panel.findMessage("a1")!!.part("p1"))
+        assertSame(comp, first.md.component)
+        assertSame(button, first.copyButton())
+        assertFalse(first.hasCopyToolbar())
+        assertTrue(second.hasCopyToolbar())
+    }
+
+    fun `test prompt box paints at wrapped prompt coordinates`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("file1", "u1", "file", text = null))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+        val message = panel.findMessage("u1")!!
+        message.setSize(400, message.preferredSize.height)
+        message.doLayout()
+        layout(message)
+        val box = promptBox(message)
+        val point = SwingUtilities.convertPoint(box, Point(), message)
+        assertTrue("prompt box should be below attachment", point.y > 0)
+
+        val image = BufferedImage(message.width, message.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        message.paint(graphics)
+        graphics.dispose()
+
+        val line = SessionUiStyle.View.Outline.color().rgb
+        assertEquals(line, Color(image.getRGB(point.x + box.width / 2, point.y), true).rgb)
+        assertFalse(line == Color(image.getRGB(point.x + box.width / 2, 0), true).rgb)
     }
 
     fun `test created ContentDelta is not double applied`() {
@@ -683,5 +807,29 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
         assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
         assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
+    }
+
+    private fun count(root: Component): Int {
+        if (root !is Container) return 1
+        return 1 + root.components.sumOf(::count)
+    }
+
+    private fun layout(root: Container) {
+        root.doLayout()
+        for (child in root.components) if (child is Container) layout(child)
+    }
+
+    private fun promptBox(root: MessageView): Component {
+        return components(root).first { it.parent != root && it is JPanel && it.componentCount == 1 && it.components.single() is TextView }
+    }
+
+    private fun components(root: Component): List<Component> {
+        val out = mutableListOf<Component>()
+        fun visit(node: Component) {
+            out.add(node)
+            if (node is Container) node.components.forEach(::visit)
+        }
+        visit(root)
+        return out
     }
 }

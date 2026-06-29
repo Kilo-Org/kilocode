@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Подключить Anaconda Desktop",
+  "provider.anaconda.title.manage": "Управление Anaconda Desktop",
+  "provider.anaconda.status.checking": "Проверка Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Открытие Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Обновление моделей провайдера...",
+  "provider.anaconda.status.ready": "Готово к подключению",
+  "provider.anaconda.status.waiting": "Ожидание Desktop",
+  "provider.anaconda.status.attention": "Требуется внимание",
+  "provider.anaconda.status.unavailable": "Недоступно",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop не поддерживается на {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Установите Anaconda Desktop на этом компьютере, затем вернитесь сюда. Kilo не запускает установщик за вас.",
+  "provider.anaconda.state.notRunning":
+    "Откройте Anaconda Desktop, завершите настройку и войдите в систему, затем выберите «Проверить снова».",
+  "provider.anaconda.state.invalidConfig":
+    "Настройка Anaconda Desktop не завершена. Откройте Desktop, завершите настройку и при необходимости перезапустите его.",
+  "provider.anaconda.state.signedOut": "Откройте Anaconda Desktop и войдите в систему перед подключением Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo не удалось получить доступ к Anaconda Desktop. Откройте Desktop, войдите снова и при необходимости перезапустите его.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop пока не отвечает. Откройте его и дождитесь завершения запуска приложения.",
+  "provider.anaconda.state.noModel":
+    "В Anaconda Desktop загрузите модель генерации текста. По возможности выберите модель с поддержкой вызова инструментов, затем запустите её сервер.",
+  "provider.anaconda.state.noServer_one":
+    "Доступна 1 загруженная модель генерации текста. Запустите сервер модели в Anaconda Desktop. Настоятельно рекомендуется использовать модели с поддержкой вызова инструментов.",
+  "provider.anaconda.state.noServer_other":
+    "Доступно загруженных моделей генерации текста: {{count}}. Запустите сервер модели в Anaconda Desktop. Настоятельно рекомендуется использовать модели с поддержкой вызова инструментов.",
+  "provider.anaconda.state.unhealthy":
+    "Активный сервер вывода пока не работает исправно. Проверьте его в Anaconda Desktop и при необходимости перезапустите сервер.",
+  "provider.anaconda.state.ready":
+    "Kilo обнаружил исправный локальный сервер генерации текста и может импортировать его текущие настройки подключения.",
+  "provider.anaconda.server": "Активный сервер вывода",
+  "provider.anaconda.context": "Контекстное окно",
+  "provider.anaconda.contextValue": "{{count}} токенов",
+  "provider.anaconda.tools": "Вызов инструментов",
+  "provider.anaconda.tools.supported": "Поддерживается",
+  "provider.anaconda.tools.unsupported": "Не включено",
+  "provider.anaconda.tools.unknown": "Неизвестно",
+  "provider.anaconda.warning.title": "Поддержка инструментов ограничена",
+  "provider.anaconda.warning.description":
+    "Этот сервер не подтверждает вызов инструментов. Действия агента-программиста могут завершаться сбоем или быть недоступными. Продолжайте только если вы принимаете эти ограничения.",
+  "provider.anaconda.action.download": "Скачать Anaconda Desktop",
+  "provider.anaconda.action.open": "Открыть Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Проверить снова",
+  "provider.anaconda.action.continue": "Всё равно продолжить",
+  "provider.anaconda.action.manage": "Управление / Обновить",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop обновлён",
+  "provider.anaconda.toast.refreshed.description": "Активный локальный сервер и модели актуальны в Kilo.",
+  "settings.providers.note.anacondaDesktop": "Запустите модель, обслуживаемую локально через Anaconda Desktop.",
+  "settings.providers.tag.local": "Локально",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Предложено",
   "command.category.view": "Просмотр",
   "command.category.project": "Проект",
@@ -101,17 +155,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Поиск провайдеров",
   "dialog.provider.empty": "Провайдеры не найдены",
-  "dialog.provider.group.popular": "Популярные",
   "dialog.provider.group.other": "Другие",
   "dialog.provider.tag.recommended": "Рекомендуемые",
-  "dialog.provider.opencode.note": "Отобранные модели, включая Claude, GPT, Gemini и другие",
-  "dialog.provider.anthropic.note": "Подключитесь с помощью Claude Pro/Max или API ключа",
-  "dialog.provider.deepseek.note": "Модели DeepSeek для задач рассуждения и программирования",
-  "dialog.provider.openai.note": "Подключитесь с помощью ChatGPT Pro/Plus или API ключа",
-  "dialog.provider.google.note": "Модели Gemini для быстрых структурированных ответов",
-  "dialog.provider.openrouter.note": "Доступ ко всем поддерживаемым моделям через одного провайдера",
-  "dialog.provider.vercel.note": "Единый доступ к AI-моделям с интеллектуальной маршрутизацией",
-  "dialog.provider.copilot.note": "Подключитесь с помощью Copilot или API ключа",
 
   "dialog.model.select.title": "Выбрать модель",
   "dialog.model.search.placeholder": "Поиск моделей",
@@ -183,6 +228,7 @@ export const dict = {
   "model.tag.free": "Бесплатно",
   "model.tag.dataCollected": "Данные могут использоваться для обучения",
   "model.tag.latest": "Последняя",
+  "model.group.auto": "Автоматические модели",
   "model.group.recommended": "Рекомендуемые",
   "model.group.favorites": "Избранное",
   "model.group.collapse": "Свернуть {{group}}",
@@ -210,6 +256,7 @@ export const dict = {
   "model.preview.label.average": "Средняя стоимость",
   "model.preview.label.context": "Контекст",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Варианты моделей",
   "model.preview.label.completion": "Выполнение",
   "model.preview.label.costAttempt": "Стоимость / попытка",
   "model.preview.value.notSupported": "Не поддерживается",
@@ -294,6 +341,23 @@ export const dict = {
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
+  "prompt.action.sandbox.enable": "Включить песочницу",
+  "prompt.action.sandbox.disable": "Отключить песочницу",
+  "prompt.action.sandbox.enabled": "Песочница включена. Команды оболочки агента ограничены каталогами проекта и Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Песочница отключена. Нажмите, чтобы ограничить запись команд оболочки агента каталогами проекта и Kilo.",
+  "prompt.action.sandbox.status.enabled": "Песочница включена",
+  "prompt.action.sandbox.status.disabled": "Песочница отключена",
+  "prompt.action.sandbox.filesystem": "Файловая система",
+  "prompt.action.sandbox.network": "Сеть",
+  "prompt.action.sandbox.filesystem.restricted": "Ограничена",
+  "prompt.action.sandbox.network.blocked": "Заблокирована",
+  "prompt.action.sandbox.network.allowed": "Разрешена",
+  "prompt.action.sandbox.unrestricted": "Без ограничений",
+  "prompt.action.sandbox.description.enabled": "Запись разрешена только в каталогах проекта и Kilo.",
+  "prompt.action.sandbox.description.disabled": "Нажмите, чтобы ограничить запись в файловую систему и доступ к сети.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
   "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
   "speechToText.tooltip.stop": "Остановить захват звука",
@@ -529,6 +593,9 @@ export const dict = {
   "notification.permission.titleSubagent": "Требуется разрешение (субагент)",
   "notification.permission.description": "{{sessionTitle}} в {{projectName}} требуется разрешение",
   "ui.permission.manageAutoApprove": "Управление правилами автоодобрения",
+  "ui.permission.doomLoop.prompt":
+    "Обнаружен потенциальный цикл при работе инструмента {{tool}}. Продолжить выполнение?",
+  "ui.permission.doomLoop.rule": "Продолжать вызовы {{tool}}",
   "ui.permission.rule.addToAllowed": "Добавить в список разрешённых",
   "ui.permission.rule.removeFromAllowed": "Убрать из списка разрешённых",
   "ui.permission.rule.addToDenied": "Добавить в список запрещённых",
@@ -799,6 +866,9 @@ export const dict = {
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
   "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
+  "settings.indexing.showButton.title": "Показывать кнопку, когда индексация отключена",
+  "settings.indexing.showButton.description":
+    "Показывать кнопку индексации под полем ввода, пока индексация отключена. Если кнопка скрыта, откройте «Настройки > Индексация», чтобы включить индексацию.",
   "settings.indexing.globalEnable.title": "Включить глобально",
   "settings.indexing.globalEnable.description": "Включить индексирование для каждого рабочего пространства.",
   "settings.indexing.projectEnable.title": "Включить для этого проекта",
@@ -868,16 +938,19 @@ export const dict = {
   "settings.providers.tag.customProvider": "Пользовательский провайдер",
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
-  "settings.providers.custom.description": "Добавьте OpenAI-совместимый провайдер по базовому URL.",
+  "settings.providers.custom.description": "Добавьте пользовательский провайдер по базовому URL.",
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель по умолчанию и уровень рассуждения для субагентов task-tool. Оставьте пустым, чтобы унаследовать модель вызывающего агента.",
+  "settings.models.hidePromptTraining.title": "Скрывать модели, обучающиеся на запросах",
+  "settings.models.hidePromptTraining.description":
+    "Скрывать модели Kilo Gateway, поставщики которых могут использовать ваши запросы для обучения.",
   "settings.providers.modeModels": "Модель для режима",
-  "settings.providers.custom.note": "Добавьте OpenAI-совместимого провайдера по базовому URL.",
+  "settings.providers.custom.note": "Добавьте пользовательского провайдера по базовому URL.",
   "settings.providers.modeModels.description":
     "Переопределите модель по умолчанию для определённых режимов. Если не задано, используется глобальная модель по умолчанию.",
   "provider.custom.title": "Пользовательский провайдер",
-  "provider.custom.description.prefix": "Настройте провайдер, совместимый с OpenAI. См. ",
+  "provider.custom.description.prefix": "Настройте пользовательский провайдер. См. ",
   "provider.custom.description.link": "документацию по настройке провайдера",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "ID провайдера",
@@ -885,6 +958,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Строчные буквы, цифры, дефисы или подчёркивания",
   "provider.custom.field.name.label": "Отображаемое имя",
   "provider.custom.field.name.placeholder": "Мой AI-провайдер",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Базовый URL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "API-ключ",
@@ -911,6 +985,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Включить размышление через аргументы шаблона чата (напр. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -924,6 +1003,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Удалить модель",
   "provider.custom.models.add": "Добавить модель",
   "provider.custom.models.fetch": "Получить модели",
@@ -1222,6 +1308,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Это сбрасывает только настройки, специфичные для расширения VS Code, до значений по умолчанию. Настройки, общие с CLI, такие как режимы и правила автоматического утверждения, хранятся в конфигурации CLI и не будут сброшены.",
   "settings.aboutKiloCode.resetSettings.button": "Сбросить все настройки",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Перенос настроек",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Экспортируйте или импортируйте настройки для переноса между экземплярами VS Code.",
@@ -1277,6 +1364,10 @@ export const dict = {
   "settings.notifications.errors.title": "Ошибки",
   "settings.notifications.errors.description": "Показать уведомление при ошибках",
   "settings.notifications.sounds": "Звуки",
+  "settings.notifications.enable.title": "Включить звуковые уведомления",
+  "settings.notifications.enable.description":
+    "Воспроизводить звуки при завершении сеансов, возникновении ошибки или необходимости вашего участия",
+  "settings.notifications.testSound": "Тест",
   "settings.notifications.agentSound.title": "Звук завершения агента",
   "settings.notifications.agentSound.description": "Звук при завершении агента",
   "settings.notifications.permSound.title": "Звук запроса разрешений",
@@ -1284,6 +1375,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Звук ошибки",
   "settings.notifications.errorSound.description": "Звук при ошибках",
   "settings.notifications.sound.default": "По умолчанию",
+  "settings.notifications.sound.system": "Системный",
+  "settings.notifications.sound.description":
+    "По умолчанию для завершения, запроса вашего участия и ошибок используются разные звуки. В остальных вариантах для всех событий используется один и тот же звук.",
   "settings.notifications.sound.none": "Нет",
   "settings.experimental.share.title": "Режим обмена",
   "settings.experimental.share.description": "Поведение обмена сессиями",
@@ -1301,13 +1395,19 @@ export const dict = {
   "settings.experimental.speechToText.title": "Речь в текст",
   "settings.experimental.speechToText.description":
     "Включите голосовой ввод в полях запросов, используя вашу учетную запись Kilo через Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text. В настоящее время Speech to Text поддерживается только с Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Модель речи в текст",
-  "settings.experimental.speechToTextModel.description":
-    "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
+  "settings.models.speechToTextModel.title": "Модель речи в текст",
+  "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
+  "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
+  "settings.experimental.nativeNotebookTools.description":
+    "Включить экспериментальные инструменты для чтения, редактирования и выполнения блокнотов VS Code",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
+  "settings.sandboxing.title": "Изоляция в песочнице",
+  "settings.sandboxing.network.title": "Ограничить доступ к сети",
+  "settings.sandboxing.network.description":
+    "Блокировать исходящий доступ к сети для команд, инициированных моделью, и HTTP-инструментов. Локальные серверы MCP и хуки плагинов не подпадают под это ограничение. Трафик к провайдерам и моделям для инференса остаётся доступным.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1440,6 +1540,9 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
+  "settings.experimental.sandbox.title": "Песочница",
+  "settings.experimental.sandbox.description":
+    "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":
     "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
@@ -1502,10 +1605,6 @@ export const dict = {
 
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",
-  "settings.display.layout.title": "Макет",
-  "settings.display.layout.description": "Режим макета для интерфейса чата",
-  "settings.display.layout.auto": "Авто",
-  "settings.display.layout.stretch": "Растянуть",
   "settings.display.fontSize.title": "Размер шрифта",
   "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
@@ -1515,6 +1614,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Блоки изменений кода",
+  "settings.display.codeEdit.description":
+    "Выберите, будут ли блоки изменений кода и различий изначально развёрнуты или свёрнуты.",
+  "settings.display.codeEdit.expanded": "Развёрнуты",
+  "settings.display.codeEdit.collapsed": "Свёрнуты",
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",
   "settings.providers.smallModel.title": "Малая модель",
@@ -1539,6 +1643,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
   "settings.aboutKiloCode.legacyMigration.description":
     "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
+  "settings.aboutKiloCode.rooImport.description": "Импорт истории переписки из установки Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Импортировать сеансы из Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Что нового в Kilo Code",

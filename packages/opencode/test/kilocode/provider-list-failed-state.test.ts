@@ -7,7 +7,7 @@
 import { beforeEach, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
-import type { ModelsDev } from "@opencode-ai/core/models"
+import type { ModelsDev } from "@opencode-ai/core/models-dev"
 import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })

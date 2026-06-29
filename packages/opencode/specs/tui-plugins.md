@@ -18,7 +18,7 @@ Example:
 
 ```json
 {
-  "$schema": "https://opencode.ai/tui.json",
+  "$schema": "https://app.kilo.ai/tui.json",
   "theme": "smoke-theme",
   "leader_timeout": 2000,
   "keybinds": {
@@ -35,7 +35,7 @@ Example:
     "notifications": true,
     "sound": true,
     "volume": 0.4,
-    "sound_pack": "opencode.default",
+    "sound_pack": "kilo.default",
     "sounds": {
       "error": "/Users/me/sounds/error.mp3"
     }
@@ -184,15 +184,15 @@ npm plugins can declare a version compatibility range in `package.json` using th
 }
 ```
 
-- The value is a semver range checked against the running OpenCode version.
+- The value is a semver range checked against the running Kilo version.
 - If the range is not satisfied, the plugin is skipped with a warning and a session error.
 - If `engines.opencode` is absent, no check is performed (backward compatible).
 - File plugins are never checked; only npm package plugins are validated.
 
 - Install flow is shared by CLI and TUI in `src/plugin/install.ts`.
 - Shared helpers are `installPlugin`, `readPluginManifest`, and `patchPluginConfig`.
-- `opencode plugin <module>` and TUI install both run install → manifest read → config patch.
-- Alias: `opencode plug <module>`.
+- `kilo plugin <module>` and TUI install both run install → manifest read → config patch.
+- Alias: `kilo plug <module>`.
 - `-g` / `--global` writes into the global config dir.
 - Local installs resolve target dir inside `patchPluginConfig`.
 - For local scope, path is `<worktree>/.opencode` only when VCS is git and `worktree !== "/"`; otherwise `<directory>/.opencode`.
@@ -213,7 +213,7 @@ npm plugins can declare a version compatibility range in `package.json` using th
 - There is no uninstall, list, or update CLI command for external plugins.
 - Local file plugins are configured directly in `tui.json`.
 
-When `plugin` entries exist in a writable `.opencode` dir or `KILO_CONFIG_DIR`, OpenCode installs `@kilocode/plugin` into that dir and writes:
+When `plugin` entries exist in a writable `.opencode` dir or `KILO_CONFIG_DIR`, Kilo installs `@kilocode/plugin` into that dir and writes:
 
 - `package.json`
 - `bun.lock`
@@ -230,6 +230,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 - `api.attention.notify(input)`
 - `api.keys.formatSequence(parts)`, `formatBindings(bindings)`
 - `api.keymap`
+- `api.mode.current()`, `api.mode.push(mode)`
 - `api.route.register(routes)` / `api.route.navigate(name, params?)` / `api.route.current`
 - `api.ui.Dialog`, `DialogAlert`, `DialogConfirm`, `DialogPrompt`, `DialogSelect`, `Slot`, `Prompt`, `ui.toast`, `ui.dialog`
 - `api.tuiConfig`
@@ -246,7 +247,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 ### Keymap
 
 - `api.keymap` exposes the raw `Keymap<Renderable, KeyEvent>` instance from the host.
-- The host already installs the default OpenTUI bundle (`default keys`, metadata fields, and enabled fields) plus OpenCode's comma bindings, leader token, base layout fallback, pending-sequence helpers, and managed textarea layer.
+- The host already installs the default OpenTUI bundle (`default keys`, metadata fields, and enabled fields) plus Kilo's comma bindings, leader token, base layout fallback, pending-sequence helpers, and managed textarea layer.
 - Register commands with `api.keymap.registerLayer({ commands: [...] })`.
 - Register key bindings with `bindings: [{ key, cmd, desc }]` in the same layer or a separate layer.
 - Use `api.keymap.acquireResource(...)` for shared plugin addon setup that should ref-count against the host keymap.
@@ -254,6 +255,68 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 - Use `api.keymap.dispatchCommand(name)` for user-style execution semantics and `api.keymap.runCommand(name)` only for forced programmatic execution.
 - Disposers returned by `api.keymap` registrations and `acquireResource(...)` are automatically cleaned up when the plugin deactivates. You do not need to add those disposers to `api.lifecycle.onDispose(...)` yourself.
 - Built-in which-key shortcuts are resolved from flat `keybinds` command ids such as `which_key_toggle`, not plugin options.
+
+#### Mode-aware layers
+
+Kilo registers a `mode` layer field on the host keymap. Plugins can use it to keep bindings active only in the relevant UI state.
+
+Built-in modes:
+
+- `base`: normal app, route, and prompt interaction.
+- `modal`: host dialog stack is open, including dialogs rendered through `api.ui.dialog` and `api.ui.Dialog*` components.
+- `autocomplete`: host prompt autocomplete is open.
+- `api.mode.current()` returns the active top mode, or `base` when no pushed mode is active.
+
+Example: register a command and shortcut that are active only in normal app mode:
+
+```tsx
+api.keymap.registerLayer({
+  mode: "base",
+  commands: [
+    {
+      name: "demo.open",
+      title: "Demo",
+      category: "Plugin",
+      namespace: "palette",
+      run() {
+        api.route.navigate("demo")
+      },
+    },
+  ],
+  bindings: [{ key: "ctrl+shift+m", cmd: "demo.open", desc: "Open demo" }],
+})
+```
+
+Layers without `mode` are not mode-gated and can remain active while dialogs or autocomplete are open. Use that only for intentionally global commands or low-level keymap extensions.
+
+Plugins that own a full-screen route or modal-like UI can temporarily push a plugin-specific mode with `api.mode.push(...)`. Use a plugin-scoped mode name. The returned disposer pops that specific stack entry and is idempotent, so popping an older mode while a newer mode is on top leaves the newer mode active.
+
+```tsx
+import { onCleanup } from "solid-js"
+
+api.route.register([
+  {
+    name: "demo",
+    render: () => {
+      const popMode = api.mode.push("acme.demo")
+      onCleanup(popMode)
+
+      return (
+        <box>
+          <text>demo</text>
+        </box>
+      )
+    },
+  },
+])
+
+api.keymap.registerLayer({
+  mode: "acme.demo",
+  bindings: [{ key: "escape", cmd: () => api.route.navigate("home"), desc: "Close demo" }],
+})
+```
+
+Mode pushes are automatically tracked by the plugin runtime. If a plugin is disabled, fails during activation, or the TUI shuts down before the plugin calls the disposer, Kilo pops the plugin's pushed modes during plugin cleanup. Calling the disposer yourself is still recommended for component lifetimes; cleanup remains idempotent.
 
 ### Keys
 
@@ -265,7 +328,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 ### Attention
 
 - `api.attention.notify({ title?, message, notification?, sound? })` requests user attention while keeping terminal focus, notifications, and audio owned by the host.
-- `message` is required; `title` defaults to `"opencode"`; `notification` defaults to enabled with `when: "blurred"`; `sound` defaults to enabled with `when: "always"`.
+- `message` is required; `title` defaults to `"Kilo"`; `notification` defaults to enabled with `when: "blurred"`; `sound` defaults to enabled with `when: "always"`.
 - `when: "always"` requests delivery regardless of terminal focus state.
 - `when: "focused"` only requests delivery after the terminal is known focused; `when: "blurred"` only requests delivery after the terminal is known blurred.
 - Example: `notification: { when: "blurred" }, sound: { name: "question", when: "always" }` plays sound while focused but only triggers system notifications when blurred.
@@ -275,7 +338,7 @@ Top-level API groups exposed to `tui(api, options, meta)`:
 - `api.attention.soundboard.registerPack({ id, name?, sounds })` registers a sound pack and returns a disposer. Relative paths resolve from the plugin root and are cleaned up on plugin deactivation.
 - `api.attention.soundboard.activate(id, { persist })` selects the active pack. `persist: true` writes the selected pack id to TUI KV state, not `tui.json`.
 - `api.attention.soundboard.current()` and `list()` expose the active/registered packs for plugin UX.
-- Config `attention.sounds` overrides active-pack sounds by slot. Failed loads fall back to the active pack and then `opencode.default`.
+- Config `attention.sounds` overrides active-pack sounds by slot. Failed loads fall back to the active pack and then `kilo.default`.
 - The host strips ANSI/control characters and collapses newlines before sending text to the terminal notification API.
 - Terminal and OS settings decide whether a requested notification is visibly displayed.
 - Prefer privacy-safe messages such as `"A question needs your input"`; avoid full commands, paths, prompts, errors, secrets, or file contents unless the plugin intentionally exposes them.

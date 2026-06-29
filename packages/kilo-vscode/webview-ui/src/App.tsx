@@ -82,7 +82,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   })
 
   const providerData = createMemo(() => ({
-    all: Object.values(prov.providers()) as unknown as any[],
+    all: new Map(Object.entries(prov.providers())),
     connected: prov.connected(),
     default: prov.defaults(),
   }))
@@ -231,6 +231,7 @@ const AppContent: Component = () => {
   // legacy-migration: state-driven flag independent of currentView to avoid
   // race conditions with SettingsEditorProvider's navigate messages.
   const [migrationNeeded, setMigrationNeeded] = createSignal(false)
+  const [migrationSource, setMigrationSource] = createSignal<"legacy" | "roo">("legacy")
   const session = useSession()
   const server = useServer()
   const vscode = useVSCode()
@@ -308,6 +309,7 @@ const AppContent: Component = () => {
       // legacy-migration: state-driven migration wizard
       if (message?.type === "migrationState") {
         console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
+        setMigrationSource(message.source)
         setMigrationNeeded(message.needed)
       }
     }
@@ -368,9 +370,9 @@ const AppContent: Component = () => {
               <Settings
                 tab={settingsTab()}
                 onTabChange={setSettingsTab}
-                onMigrateClick={() => {
+                onMigrationClick={(source) => {
+                  setMigrationSource(source)
                   setMigrationNeeded(true)
-                  vscode.postMessage({ type: "requestLegacyMigrationData" })
                 }}
               />
             </Match>
@@ -380,7 +382,11 @@ const AppContent: Component = () => {
           </Switch>
         }
       >
-        <MigrationWizard onBack={() => setMigrationNeeded(false)} onComplete={() => setMigrationNeeded(false)} />
+        <MigrationWizard
+          source={migrationSource()}
+          onBack={() => setMigrationNeeded(false)}
+          onComplete={() => setMigrationNeeded(false)}
+        />
       </Show>
       {/* legacy-migration end */}
     </div>

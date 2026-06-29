@@ -10,12 +10,14 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.todo.TodoListPanel
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.IconLoader
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -42,8 +44,6 @@ class SessionHeaderPanel(
 
     companion object {
         private val COMPRESS_ICON: Icon = IconLoader.getIcon("/icons/compress.svg", SessionHeaderPanel::class.java)
-        private val CHEVRON_ICON: Icon = IconLoader.getIcon("/icons/chevron-down.svg", SessionHeaderPanel::class.java)
-        private val CHEVRON_UP_ICON: Icon = RotatedIcon(CHEVRON_ICON)
         private val UP_ICON: Icon = IconLoader.getIcon("/icons/arrow-up.svg", SessionHeaderPanel::class.java)
         private val DOWN_ICON: Icon = IconLoader.getIcon("/icons/arrow-down-to-line.svg", SessionHeaderPanel::class.java)
         private const val TOUCH_BEGIN = 2
@@ -60,15 +60,20 @@ class SessionHeaderPanel(
     private val todoList = TodoListPanel()
     private val compact = HoverIcon().apply {
         icon = COMPRESS_ICON
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
         toolTipText = KiloBundle.message("session.header.compact.description")
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
     }
-    private val expand = HoverIcon().apply {
-        icon = CHEVRON_ICON
+    private val expand = JBLabel().apply {
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
         toolTipText = KiloBundle.message("session.header.expand")
         accessibleContext.accessibleName = KiloBundle.message("session.header.expand")
-        addActionListener { toggle() }
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(event: MouseEvent) {
+                toggle()
+            }
+        })
     }
     private val timeline = TimelinePanel()
     private val viewport = JViewport().apply {
@@ -97,16 +102,18 @@ class SessionHeaderPanel(
         iconTextGap = UiStyle.Gap.xs()
     }
     private val top = BorderLayoutPanel()
-    private val right = JPanel(FlowLayout(FlowLayout.RIGHT, UiStyle.Gap.md(), 0)).apply {
-        isOpaque = false
-        add(cost)
-        add(context)
-        add(compact)
-        add(expand)
+    private val center = BorderLayoutPanel().apply {
+        border = JBUI.Borders.empty(0, UiStyle.Gap.md(), 0, 0)
     }
+    private val right = Stack.horizontal()
+        .next(cost)
+        .gap(UiStyle.Gap.xl())
+        .next(context)
+        .gap(UiStyle.Gap.sm())
+        .next(compact)
     private val tokens = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.pad(), 0, UiStyle.Gap.pad())
         add(tokenTitle)
         add(Box.createHorizontalStrut(UiStyle.Gap.md()))
         add(input)
@@ -134,20 +141,28 @@ class SessionHeaderPanel(
     private val body = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
+        border = JBUI.Borders.empty(
+            UiStyle.Gap.sm(),
+            UiStyle.Gap.xl(),
+            UiStyle.Gap.md(),
+            UiStyle.Gap.xl(),
+        )
         add(viewport)
         add(tokens)
         add(bar)
         add(todoBox)
     }
     private var style = SessionEditorStyle.current()
+    private var costValue = ""
 
     init {
         isOpaque = true
         updateUI()
 
-        top.add(title, BorderLayout.CENTER)
-        top.add(right, BorderLayout.EAST)
+        center.add(title, BorderLayout.CENTER)
+        center.add(right, BorderLayout.EAST)
+        top.add(expand, BorderLayout.WEST)
+        top.add(center, BorderLayout.CENTER)
         add(top, BorderLayout.NORTH)
         timeline.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(event: MouseEvent) {
@@ -208,10 +223,12 @@ class SessionHeaderPanel(
     override fun updateUI() {
         super.updateUI()
         border = JBUI.Borders.compound(
-            JBUI.Borders.customLine(JBUI.CurrentTheme.ToolWindow.borderColor(), 1, 0, 1, 0),
-            JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad(), UiStyle.Gap.sm(), UiStyle.Gap.pad()),
+            JBUI.Borders.customLine(separator(), 0, 0, 1, 0),
+            JBUI.Borders.empty(),
         )
     }
+
+    private fun separator() = JBColor.namedColor("EditorTabs.underTabsBorderColor", JBUI.CurrentTheme.EditorTabs.borderColor())
 
     fun update(header: SessionHeaderSnapshot) {
         val before = isVisible
@@ -227,7 +244,7 @@ class SessionHeaderPanel(
 
         syncExpanded(expanded())
 
-        set(cost, money(header.cost))
+        setCost(money(header.cost))
         set(context, contextText(header.context))
         context.toolTipText = contextTip(header.context)
         setTokens(header.tokens)
@@ -247,6 +264,10 @@ class SessionHeaderPanel(
         background = style.editorBackground
         foreground = style.editorForeground
         top.background = style.editorBackground
+        top.isOpaque = true
+        top.border = JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.md(), UiStyle.Gap.sm())
+        center.background = style.editorBackground
+        center.isOpaque = true
         right.background = style.editorBackground
         tokens.background = style.editorBackground
         todoRow.background = style.editorBackground
@@ -257,6 +278,7 @@ class SessionHeaderPanel(
         title.foreground = style.editorForeground
         cost.font = style.regularFont
         cost.foreground = style.editorForeground
+        cost.icon = null
         context.font = style.regularFont
         context.foreground = style.editorForeground
         todos.font = style.smallFont
@@ -279,7 +301,9 @@ class SessionHeaderPanel(
 
     internal fun titleText(): String = title.text
 
-    internal fun costText(): String = cost.text
+    internal fun costText(): String = costValue
+
+    internal fun costTip() = cost.toolTipText
 
     internal fun contextText(): String = context.text
 
@@ -392,6 +416,16 @@ class SessionHeaderPanel(
         tokens.isVisible = total > 0
     }
 
+    private fun setCost(value: String?) {
+        costValue = value.orEmpty()
+        cost.text = costValue
+        cost.icon = null
+        val tip = costValue.takeIf { it.isNotBlank() }?.let { KiloBundle.message("session.header.cost.tooltip", it) }
+        cost.toolTipText = tip
+        cost.accessibleContext.accessibleName = tip
+        cost.isVisible = costValue.isNotBlank()
+    }
+
     private fun syncTodos(items: List<TodoDto>) {
         val total = items.size
         val done = items.count { it.status == "completed" }
@@ -447,7 +481,10 @@ class SessionHeaderPanel(
 
     private fun collapse(): Boolean {
         val attached = body.parent === this
-        if (!attached) return false
+        if (!attached) {
+            setExpand(false)
+            return false
+        }
         remove(body)
         setExpand(false)
         return attached
@@ -455,7 +492,8 @@ class SessionHeaderPanel(
 
     private fun setExpand(expanded: Boolean) {
         val key = if (expanded) "session.header.collapse" else "session.header.expand"
-        expand.icon = if (expanded) CHEVRON_UP_ICON else CHEVRON_ICON
+        expand.text = ""
+        expand.icon = if (expanded) AllIcons.General.ChevronDown else AllIcons.General.ChevronRight
         expand.toolTipText = KiloBundle.message(key)
         expand.accessibleContext.accessibleName = KiloBundle.message(key)
     }

@@ -17,7 +17,7 @@ import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
 import { CUSTOM_PROVIDER_ID, isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
 import { disabledProviderOptions, providersWithKiloFallback, visibleConnectedIds } from "./provider-visibility"
-import { KILO_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE } from "../../../../src/shared/provider-model"
+import { isCustomProviderPackage, KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import { createProviderAction } from "../../utils/provider-action"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
@@ -35,7 +35,7 @@ const ProvidersTab: Component = () => {
 
   onCleanup(action.dispose)
 
-  const kiloLoggedIn = createMemo(() => !!server.profileData())
+  const kiloLoggedIn = createMemo(() => !!provider.authStates()[KILO_PROVIDER_ID])
 
   const connectedProviders = createMemo(() => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())
@@ -53,10 +53,7 @@ const ProvidersTab: Component = () => {
     return sortProviders(
       all.filter(
         (item) =>
-          item.id !== KILO_PROVIDER_ID &&
-          isPopularProvider(item.id) &&
-          !connected.has(item.id) &&
-          !disabled.has(item.id),
+          item.id !== KILO_PROVIDER_ID && isPopularProvider(item) && !connected.has(item.id) && !disabled.has(item.id),
       ),
     )
   })
@@ -74,12 +71,13 @@ const ProvidersTab: Component = () => {
   }
 
   function sourceTag(item: Provider) {
+    if (item.id === "anaconda-desktop") return language.t("settings.providers.tag.local")
     const current = source(item)
     if (current === "env") return language.t("settings.providers.tag.environment")
     if (current === "api") return language.t("provider.connect.method.apiKey")
     if (current === "config") {
       const cfg = config().provider?.[item.id]
-      if (cfg?.npm === "@ai-sdk/openai-compatible") return language.t("settings.providers.tag.custom")
+      if (isCustomProviderPackage(cfg?.npm)) return language.t("settings.providers.tag.custom")
       return language.t("settings.providers.tag.config")
     }
     if (item.id === "openai" && current === "custom") return language.t("settings.providers.tag.chatgpt")
@@ -93,7 +91,7 @@ const ProvidersTab: Component = () => {
 
   function isCustom(item: Provider) {
     const cfg = config().provider?.[item.id]
-    return cfg?.npm === CUSTOM_PROVIDER_PACKAGE
+    return isCustomProviderPackage(cfg?.npm)
   }
 
   function editProvider(item: Provider) {
@@ -174,7 +172,7 @@ const ProvidersTab: Component = () => {
               padding: "12px 0",
             }}
           >
-            <ProviderIcon id="synthetic" width={20} height={20} />
+            <ProviderIcon id={providerIcon(KILO_PROVIDER_ID)} width={20} height={20} />
             <span
               style={{
                 "font-size": "var(--kilo-font-size-14)",
@@ -232,7 +230,7 @@ const ProvidersTab: Component = () => {
                 }}
               >
                 <div style={{ display: "flex", "align-items": "center", gap: "12px", "min-width": 0 }}>
-                  <ProviderIcon id={providerIcon(item.id)} width={20} height={20} />
+                  <ProviderIcon id={providerIcon(item)} width={20} height={20} />
                   <span
                     style={{
                       "font-size": "var(--kilo-font-size-14)",
@@ -264,6 +262,11 @@ const ProvidersTab: Component = () => {
                       {language.t("settings.providers.action.signInChatGPT")}
                     </Button>
                   </Show>
+                  <Show when={item.id === "anaconda-desktop"}>
+                    <Button size="large" variant="ghost" onClick={() => connectProvider(item)}>
+                      {language.t("provider.anaconda.action.manage")}
+                    </Button>
+                  </Show>
                   <Show when={canDisconnect(item)}>
                     <Show when={isCustom(item)}>
                       <Button size="large" variant="ghost" onClick={() => editProvider(item)}>
@@ -288,7 +291,7 @@ const ProvidersTab: Component = () => {
       <Card>
         <For each={popularProviders()}>
           {(item) => {
-            const noteKey = providerNoteKey(item.id)
+            const noteKey = providerNoteKey(item)
             return (
               <div
                 style={{
@@ -304,7 +307,7 @@ const ProvidersTab: Component = () => {
               >
                 <div style={{ display: "flex", "flex-direction": "column", "min-width": 0 }}>
                   <div style={{ display: "flex", "align-items": "center", gap: "12px" }}>
-                    <ProviderIcon id={providerIcon(item.id)} width={20} height={20} />
+                    <ProviderIcon id={providerIcon(item)} width={20} height={20} />
                     <span
                       style={{
                         "font-size": "var(--kilo-font-size-14)",

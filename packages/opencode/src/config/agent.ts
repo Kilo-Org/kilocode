@@ -1,11 +1,9 @@
 export * as ConfigAgent from "./agent"
 
-import path from "path" // kilocode_change
-import { Exit, Schema, SchemaGetter } from "effect"
-import { Bus } from "@/bus"
+import path from "path"
+import { Schema, SchemaGetter } from "effect"
 import { PositiveInt } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { configEntryNameFromPath } from "./entry-name"
 import { ConfigError } from "./error"
@@ -15,6 +13,8 @@ import { ConfigParse } from "./parse"
 import { ConfigPermission } from "./permission"
 import { ConfigVariable } from "./variable" // kilocode_change
 // kilocode_change start
+import { Bus } from "@/bus"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
 // kilocode_change end
@@ -138,30 +138,22 @@ export async function load(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load agent", { agent: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 
-    // kilocode_change start
-    const patterns = [
-      "/.kilo/agent/",
-      "/.kilo/agents/",
-      "/.kilocode/agent/",
-      "/.kilocode/agents/",
-      "/.opencode/agent/",
-      "/.opencode/agents/",
-      "/agent/",
-      "/agents/",
-    ]
-    // kilocode_change end
-    const name = configEntryNameFromPath(item, patterns)
+    const name = configEntryNameFromPath(path.relative(dir, item), ["agent/", "agents/"])
 
     // kilocode_change start - substitute agent prompt variables relative to the agent file
     const prompt = await ConfigVariable.substitute({
@@ -210,19 +202,23 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load mode", { mode: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 
     const config = {
-      name: configEntryNameFromPath(item, []),
+      name: configEntryNameFromPath(path.relative(dir, item), ["mode/", "modes/"]),
       ...md.data,
       prompt: md.content.trim(),
     }

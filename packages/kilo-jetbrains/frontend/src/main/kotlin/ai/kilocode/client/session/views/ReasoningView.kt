@@ -317,7 +317,7 @@ class ReasoningBody(
 
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
     val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = UiStyle.Colors.weak() }
-    val icon = JBLabel(SessionViewIcons.eye).apply { foreground = UiStyle.Colors.weak() }
+    val icon = JBLabel(SessionViewIcons.brain).apply { foreground = UiStyle.Colors.weak() }
     val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
         add(icon, BorderLayout.WEST)

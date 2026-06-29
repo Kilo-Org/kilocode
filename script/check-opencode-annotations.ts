@@ -50,6 +50,7 @@ const EXEMPT_SCOPES = [
   "script/check-opencode-annotations.ts",
   "packages/script/tests/check-opencode-annotations.test.ts",
   ".github/workflows/check-opencode-annotations.yml",
+  ".github/workflows/watch-opencode-releases.yml",
 ]
 
 const args = process.argv.slice(2)

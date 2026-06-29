@@ -64,7 +64,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 |---|---|---|
 | **OpenAI** | API key | Default model: `text-embedding-3-small`. `text-embedding-3-large` for higher accuracy. |
 | **Ollama** | Local base URL | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | Base URL + API key | For self-hosted or third-party OpenAI-compatible endpoints. |
+| **OpenAI-Compatible** | Base URL + optional API key | For self-hosted or third-party OpenAI-compatible endpoints, including unauthenticated local servers. |
 | **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
 | **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
 | **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
@@ -143,7 +143,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
 |---|---|---|---|
 | **OpenAI** | `openai` | `{ apiKey }` | Default: `text-embedding-3-small`. |
 | **Ollama** | `ollama` | `{ baseUrl }` | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey }` | For self-hosted or third-party endpoints. |
+| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey? }` | For self-hosted or third-party endpoints, including unauthenticated local servers. |
 | **Gemini** | `gemini` | `{ apiKey }` | Supports `gemini-embedding-001`. |
 | **Mistral** | `mistral` | `{ apiKey }` | Use a [La Plateforme](https://console.mistral.ai/api-keys/) key — the Codestral-specific keys from the [autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) don't work for embeddings. |
 | **Vercel AI Gateway** | `vercel-ai-gateway` | `{ apiKey }` | Routes through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |

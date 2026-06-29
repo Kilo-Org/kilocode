@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/kiloclaw/tools",
+    destination: "/docs/kiloclaw/development-tools",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/contributing/cline-to-kilo-migration",
     destination: "/docs/contributing",
     basePath: false,
@@ -607,7 +613,13 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/managed-indexing",
-    destination: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/customize/context/codebase-indexing",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/customize/context/codebase-indexing",
     basePath: false,
     permanent: true,
   },

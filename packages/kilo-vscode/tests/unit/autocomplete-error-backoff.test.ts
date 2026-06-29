@@ -81,7 +81,6 @@ describe("ErrorBackoff", () => {
   })
 
   it("is not fatal initially", () => {
-    expect(backoff.isFatal()).toBe(false)
     expect(backoff.getFatalStatus()).toBeNull()
   })
 
@@ -89,21 +88,18 @@ describe("ErrorBackoff", () => {
     it("blocks after a 402 error", () => {
       backoff.failure(new Error("SSE failed: 402 Payment Required"))
       expect(backoff.blocked()).toBe(true)
-      expect(backoff.isFatal()).toBe(true)
       expect(backoff.getFatalStatus()).toBe(402)
     })
 
     it("blocks after a 401 error", () => {
       backoff.failure(new Error("SSE failed: 401 Unauthorized"))
       expect(backoff.blocked()).toBe(true)
-      expect(backoff.isFatal()).toBe(true)
       expect(backoff.getFatalStatus()).toBe(401)
     })
 
     it("blocks after a 403 error", () => {
       backoff.failure(new Error("SSE failed: 403 Forbidden"))
       expect(backoff.blocked()).toBe(true)
-      expect(backoff.isFatal()).toBe(true)
       expect(backoff.getFatalStatus()).toBe(403)
     })
 
@@ -168,7 +164,6 @@ describe("ErrorBackoff", () => {
 
       backoff.reset()
       expect(backoff.blocked()).toBe(false)
-      expect(backoff.isFatal()).toBe(false)
       expect(backoff.getFatalStatus()).toBeNull()
     })
 
@@ -178,7 +173,6 @@ describe("ErrorBackoff", () => {
 
       backoff.success()
       expect(backoff.blocked()).toBe(false)
-      expect(backoff.isFatal()).toBe(false)
     })
   })
 
@@ -232,7 +226,6 @@ describe("ErrorBackoff", () => {
     it("fatal error overrides retriable backoff", () => {
       backoff.failure(new Error("SSE failed: 500 Internal Server Error"))
       backoff.failure(new Error("SSE failed: 402 Payment Required"))
-      expect(backoff.isFatal()).toBe(true)
       expect(backoff.blocked()).toBe(true)
     })
 
@@ -244,7 +237,6 @@ describe("ErrorBackoff", () => {
 
       backoff.success()
       expect(backoff.blocked()).toBe(false)
-      expect(backoff.isFatal()).toBe(false)
     })
   })
 })

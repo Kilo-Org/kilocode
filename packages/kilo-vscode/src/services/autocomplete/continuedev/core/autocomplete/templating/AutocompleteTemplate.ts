@@ -5,7 +5,7 @@
 
 import { CompletionOptions } from "../../index.js"
 import { getLastNUriRelativePathParts, getShortestUniqueRelativeUriPaths } from "../../util/uri.js"
-import { AutocompleteSnippet, AutocompleteSnippetType } from "../types.js"
+import { AutocompleteSnippet } from "../types.js"
 
 type TemplateRenderer = (
   prefix: string,
@@ -49,13 +49,7 @@ const codestralMultifileFimTemplate: AutocompleteTemplate = {
     )
 
     const otherFiles = snippets
-      .map((snippet, i) => {
-        if (snippet.type === AutocompleteSnippetType.Diff) {
-          return snippet.content
-        }
-
-        return `+++++ ${getFileName(relativePaths[i])} \n${snippet.content}`
-      })
+      .map((snippet, i) => `+++++ ${getFileName(relativePaths[i])} \n${snippet.content}`)
       .join("\n\n")
 
     return [`${otherFiles}\n\n+++++ ${getFileName(relativePaths[relativePaths.length - 1])}\n${prefix}`, suffix]
@@ -93,13 +87,7 @@ const mercuryMultifileFimTemplate: AutocompleteTemplate = {
     )
 
     const otherFiles = snippets
-      .map((snippet, i) => {
-        if (snippet.type === AutocompleteSnippetType.Diff) {
-          return snippet.content
-        }
-
-        return `<|file_sep|>${getFileName(relativePaths[i])} \n${snippet.content}`
-      })
+      .map((snippet, i) => `<|file_sep|>${getFileName(relativePaths[i])} \n${snippet.content}`)
       .join("\n\n")
 
     return [

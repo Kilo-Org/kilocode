@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.serialization.json.JsonNull
@@ -92,6 +93,7 @@ class KiloBackendAppService private constructor(
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
+        private const val READY_TIMEOUT_MS = 5_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -110,6 +112,7 @@ class KiloBackendAppService private constructor(
     private var watcher: Job? = null
     private var eventWatcher: Job? = null
     private var loader: Job? = null
+    private var closed = false
     private val loadLock = Any()
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
@@ -156,6 +159,12 @@ class KiloBackendAppService private constructor(
         mutex.withLock {
             clear()
             connection.reinstall()
+        }
+    }
+
+    suspend fun shutdownForUnload() {
+        mutex.withLock {
+            shutdown()
         }
     }
 
@@ -210,6 +219,25 @@ class KiloBackendAppService private constructor(
         when (_appState.value) {
             is KiloAppState.Ready -> return
             is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+            else -> throw IllegalStateException("Kilo backend is not ready")
+        }
+    }
+
+    suspend fun awaitReady(timeoutMs: Long = READY_TIMEOUT_MS) {
+        when (_appState.value) {
+            is KiloAppState.Ready -> return
+            is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+            is KiloAppState.Loading,
+            KiloAppState.Connecting -> {
+                val state = withTimeoutOrNull(timeoutMs) {
+                    appState.first { it !is KiloAppState.Loading && it !is KiloAppState.Connecting }
+                }
+                when (state) {
+                    is KiloAppState.Ready -> return
+                    is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+                    else -> throw IllegalStateException("Kilo backend is not ready")
+                }
+            }
             else -> throw IllegalStateException("Kilo backend is not ready")
         }
     }
@@ -390,6 +418,10 @@ class KiloBackendAppService private constructor(
                             notifications = notifs,
                             warnings = warns,
                         )
+                    )
+                    log.info(
+                        "Application snapshot: profile=${if (prof != null) "loaded" else "not_logged_in"} " +
+                            "warnings=${warns.size} notifications=${notifs.size} ${configSummary(cfg)}",
                     )
                     log.info("Application started — config, profile, notifications loaded")
                 } catch (e: TimeoutCancellationException) {
@@ -611,6 +643,11 @@ class KiloBackendAppService private constructor(
         return "${warn.path}: ${warn.message}$detail"
     }
 
+    private fun configSummary(cfg: Config): String {
+        val text = cfg.toString()
+        return "configChars=${text.length} configHash=${text.hashCode().toUInt().toString(16)}"
+    }
+
     private suspend fun restartConnection(reason: String) {
         clear()
         connection.restart()
@@ -806,6 +843,12 @@ class KiloBackendAppService private constructor(
     }
 
     override fun dispose() {
+        shutdown()
+    }
+
+    private fun shutdown() {
+        if (closed) return
+        closed = true
         watcher?.cancel()
         watcher = null
         clear()

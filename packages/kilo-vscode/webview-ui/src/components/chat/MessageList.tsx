@@ -42,7 +42,13 @@ import {
   stableMessageTurns,
   type MessageTurn,
 } from "../../context/session-queue"
-import { partitionRows, transcriptRows, type TranscriptRow } from "../../context/transcript-rows"
+import {
+  partitionRows,
+  retainTurn,
+  transcriptRows,
+  type TranscriptHold,
+  type TranscriptRow,
+} from "../../context/transcript-rows"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 interface MessageListProps {
@@ -57,6 +63,8 @@ interface MessageListProps {
   readonly?: boolean
   /** Optionally replace the standard welcome content while the conversation is empty. */
   emptyState?: () => JSX.Element
+  /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
+  announce?: boolean
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -67,6 +75,19 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
   })
+  const [announcement, setAnnouncement] = createSignal("")
+  createEffect(
+    (prev: { sid?: string; working: boolean }) => {
+      const sid = session.currentSessionID()
+      const working = session.status() !== "idle"
+      if (working && (!prev.working || prev.sid !== sid)) setAnnouncement(language.t("session.status.working"))
+      if (!working && prev.working && prev.sid === sid) {
+        setAnnouncement(language.t("settings.agentBehaviour.editMode.save"))
+      }
+      return { sid, working }
+    },
+    { sid: undefined, working: false },
+  )
 
   // Explicit output-producing actions resume auto-scroll before appending.
   const onResumeAutoScroll = () => autoScroll.resume()
@@ -85,14 +106,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
   const [layout, setLayout] = createSignal("")
 
-  const boundary = () => session.revert()?.messageID
+  const revert = () => session.revert() ?? undefined
   const turns = createMemo((prev: MessageTurn[] | undefined) =>
     stableMessageTurns(
-      messageTurns(session.messages(), boundary(), (msg) => session.getParts(msg.id)),
+      messageTurns(session.messages(), revert(), (msg) => session.getParts(msg.id)),
       prev,
     ),
   )
-  const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
+  const isEmpty = () => turns().length === 0 && !session.loading() && !revert()
 
   const activeUserID = createMemo(() =>
     getActiveUserMessageID(session.messages(), session.statusInfo(), (msg) => session.getParts(msg.id)),
@@ -109,25 +130,17 @@ export const MessageList: Component<MessageListProps> = (props) => {
         queued: queuedIDs(),
         live: new Set(active ? [active] : []),
         hidden: session.isErrorHidden,
+        revert: revert(),
       },
       prev,
     )
   })
-  const [held, setHeld] = createSignal<{ sid: string; turn: string }>()
+  const [held, setHeld] = createSignal<TranscriptHold>()
   createEffect(() => {
     const id = activeUserID()
     const sid = session.currentSessionID()
     const paused = autoScroll.userScrolled()
-    if (!sid || (!id && !paused)) {
-      setHeld(undefined)
-      return
-    }
-    if (!id) return
-    if (!paused) {
-      setHeld({ sid, turn: id })
-      return
-    }
-    setHeld((prev) => (prev?.sid === sid ? prev : { sid, turn: id }))
+    setHeld((prev) => retainTurn(prev, sid, id, paused))
   })
   const direct = createMemo(() => {
     const item = held()
@@ -140,6 +153,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // Virtua continues to own completed history and stable live chunks, but not
   // the growing assistant suffix whose measurements would produce visible jumps.
   const partition = createMemo(() => partitionRows(rows(), direct()))
+  const tail = createMemo(() => partition().direct.map((row) => row.key))
+  const lookup = createMemo(() => new Map(partition().direct.map((row) => [row.key, row])))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
   const measurement = createMemo(() => {
@@ -261,13 +276,25 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   return (
     <div class="message-list-container">
+      <Show when={props.announce === false}>
+        <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {announcement()}
+        </div>
+      </Show>
       <Show when={isEmpty()}>
         <div class="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
           <KiloNotifications />
         </div>
       </Show>
-      <div ref={setScrollRef} onScroll={handleScroll} class="message-list" role="log" aria-live="polite">
+      <div
+        ref={setScrollRef}
+        onScroll={handleScroll}
+        class="message-list"
+        role={props.announce === false ? undefined : "log"}
+        aria-live={props.announce === false ? undefined : "polite"}
+        aria-busy={props.announce === false && session.status() !== "idle" ? "true" : undefined}
+      >
         <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : "message-list-content"}>
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
@@ -322,12 +349,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     )}
                   </Virtualizer>
                 </Show>
-                <For each={partition().direct}>
-                  {(row) => <TranscriptRowView row={row} onForkMessage={props.onForkMessage} />}
+                <For each={tail()}>
+                  {(key) => <TranscriptRowView row={lookup().get(key)!} onForkMessage={props.onForkMessage} />}
                 </For>
               </div>
             </Show>
-            <Show when={boundary()}>
+            <Show when={revert()}>
               <RevertBanner />
             </Show>
             <For each={partition().queued}>{(row) => <TranscriptRowView row={row} />}</For>

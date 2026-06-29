@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/favicon"
+export * from "@opencode-ai/ui/favicon"

@@ -13,6 +13,7 @@ import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ContentBlock, ExecApprovalDecision, Message } from "../lib/types"
 import { useKiloClawLanguage } from "../context/language"
+import { isEnterKeyCommitNotIme } from "../../src/utils/ime-enter"
 
 const ULID_TIME_LEN = 10
 const ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -254,7 +255,7 @@ export function MessageBubble(props: MessageBubbleProps) {
                     value={editText()}
                     onInput={(e) => setEditText(e.currentTarget.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
+                      if (isEnterKeyCommitNotIme(e) && !e.shiftKey) {
                         e.preventDefault()
                         saveEdit()
                       } else if (e.key === "Escape") {

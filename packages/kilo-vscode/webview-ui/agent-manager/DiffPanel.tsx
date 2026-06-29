@@ -57,6 +57,7 @@ import { DiffEndMarker } from "../diff-viewer/DiffEndMarker"
 import { VirtualDiffList } from "../diff-viewer/VirtualDiffList"
 import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
+import { ImageDiffView } from "../diff-viewer/ImageDiffView"
 import { createDiffRows, diffToken } from "../diff-viewer/diff-state"
 
 // --- Data model ---
@@ -75,6 +76,7 @@ interface DiffPanelProps {
   onCommentsChange: (comments: ReviewComment[]) => void
   composer?: ReviewComposer
   onSendAll?: () => void
+  onSendClick?: () => void
   onClose: () => void
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
@@ -91,7 +93,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const provider = useProvider()
   const { config } = useConfig()
   const speech = useSpeechToText(vscode, server, { t })
-  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
@@ -247,6 +249,15 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     ),
   )
 
+  const request = (diff: WorktreeFileDiff) => {
+    if (!props.onRequestDiff || props.loadingFiles?.has(diff.file)) return
+    if (!isDiffExpandable(diff) || diff.summarized !== true) return
+    const value = diffToken(diff)
+    if (requested.get(diff.file) === value) return
+    requested.set(diff.file, value)
+    props.onRequestDiff(diff.file)
+  }
+
   createEffect(
     on(
       () => [open(), props.diffs] as const,
@@ -255,15 +266,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         for (const file of requested.keys()) {
           if (!files.has(file)) requested.delete(file)
         }
-        if (!props.onRequestDiff) return
         for (const file of next) {
-          if (props.loadingFiles?.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
-          if (!diff || !isDiffExpandable(diff) || diff.summarized !== true) continue
-          const value = diffToken(diff)
-          if (requested.get(file) === value) continue
-          requested.set(file, value)
-          props.onRequestDiff(file)
+          if (!diff || diff.kind === "image") continue
+          request(diff)
         }
       },
       { defer: true },
@@ -439,6 +445,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     props.onSendAll?.()
   }
 
+  const sendAllClick = () => {
+    props.onSendClick?.()
+    sendAllToChat()
+  }
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key !== "Enter") return
     if (!(e.metaKey || e.ctrlKey)) return
@@ -559,6 +570,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
+                createEffect(() => {
+                  if (diff.kind === "image" && open().includes(diff.file)) request(diff)
+                })
+
                 return (
                   <Accordion.Item
                     value={diff.file}
@@ -600,6 +615,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                               </span>
                             </Show>
                             <DiffChanges changes={diff} />
+                            <Show when={diff.kind === "image"}>
+                              <span class="am-diff-summary-pill">{t("agentManager.review.image")}</span>
+                            </Show>
                             <Show when={isLargeCollapsed()}>
                               <span class="am-diff-large-pill">{t("agentManager.review.largeFileCollapsed")}</span>
                             </Show>
@@ -681,36 +699,43 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                           }
                         >
                           <Show
-                            when={props.markdownRender && isMarkdownFile(diff.file)}
+                            when={diff.kind === "image"}
                             fallback={
-                              <Diff<AnnotationMeta>
-                                before={{ name: diff.file, contents: diff.before }}
-                                after={{ name: diff.file, contents: diff.after }}
-                                patch={diff.patch}
-                                diffStyle={props.diffStyle ?? "unified"}
-                                virtualized={shouldVirtualizeDiff(diff)}
-                                annotations={annotationsForFile(diff.file)}
-                                renderAnnotation={buildAnnotation}
-                                enableGutterUtility={true}
-                                onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                                onLineNumberClick={(event) => {
-                                  if (event.annotationSide === "deletions") return
-                                  props.onOpenFile?.(diff.file, event.lineNumber)
-                                }}
-                              />
+                              <Show
+                                when={props.markdownRender && isMarkdownFile(diff.file)}
+                                fallback={
+                                  <Diff<AnnotationMeta>
+                                    before={{ name: diff.file, contents: diff.before }}
+                                    after={{ name: diff.file, contents: diff.after }}
+                                    patch={diff.patch}
+                                    diffStyle={props.diffStyle ?? "unified"}
+                                    virtualized={shouldVirtualizeDiff(diff)}
+                                    annotations={annotationsForFile(diff.file)}
+                                    renderAnnotation={buildAnnotation}
+                                    enableGutterUtility={true}
+                                    onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                                    onLineNumberClick={(event) => {
+                                      if (event.annotationSide === "deletions") return
+                                      props.onOpenFile?.(diff.file, event.lineNumber)
+                                    }}
+                                  />
+                                }
+                              >
+                                <MarkdownDiffView
+                                  diff={diff}
+                                  annotations={annotationsForFile(diff.file)}
+                                  renderAnnotation={buildAnnotation}
+                                  enableGutterUtility={true}
+                                  onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                                  onLineNumberClick={(event) => {
+                                    if (event.annotationSide === "deletions") return
+                                    props.onOpenFile?.(diff.file, event.lineNumber)
+                                  }}
+                                />
+                              </Show>
                             }
                           >
-                            <MarkdownDiffView
-                              diff={diff}
-                              annotations={annotationsForFile(diff.file)}
-                              renderAnnotation={buildAnnotation}
-                              enableGutterUtility={true}
-                              onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                              onLineNumberClick={(event) => {
-                                if (event.annotationSide === "deletions") return
-                                props.onOpenFile?.(diff.file, event.lineNumber)
-                              }}
-                            />
+                            <ImageDiffView diff={diff} />
                           </Show>
                         </Show>
                       </Show>
@@ -731,7 +756,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
               {comments().length} comment{comments().length !== 1 ? "s" : ""}
             </span>
             <TooltipKeybind title={t("agentManager.review.sendAllToChat")} keybind={sendAllKeybind()} placement="top">
-              <Button variant="primary" size="small" onClick={sendAllToChat}>
+              <Button variant="primary" size="small" onClick={sendAllClick}>
                 {t("agentManager.review.sendAllToChat")}
               </Button>
             </TooltipKeybind>

@@ -18,7 +18,7 @@ import { ProviderContext } from "../context/provider"
 import { flattenModels, findModel as _findModel } from "../context/provider-utils"
 import { ConfigProvider, ConfigContext } from "../context/config"
 import { DisplayProvider } from "../context/display"
-import { DataProvider } from "@kilocode/kilo-ui/context/data"
+import { DataProvider, type OpenDiffFn, type OpenFileFn } from "@kilocode/kilo-ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
@@ -41,6 +41,7 @@ import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { resolveTemplate } from "../context/language-utils"
 import type {
   Config,
+  FeatureFlags,
   KilocodeNotification,
   PermissionRequest,
   ProviderAuthState,
@@ -117,7 +118,7 @@ export const defaultMockData = {
   part: {} as Record<string, any[]>,
   permission: {} as Record<string, any[]>,
   question: {},
-  provider: { all: [], connected: false, default: {} },
+  provider: { all: new Map(), connected: [], default: {} },
 }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +181,6 @@ export function mockSessionValue(overrides?: {
     setCurrentSessionID: noop,
     sessions: () => [],
     status: () => status,
-    submitting: () => false,
     statusInfo: () => ({ type: status }),
     closeReason: () => overrides?.closeReason,
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
@@ -188,6 +188,9 @@ export function mockSessionValue(overrides?: {
     loading: () => false,
     loadingOlderMessages: () => false,
     hasOlderMessages: () => false,
+    submitting: () => false,
+    draftSessionID: () => undefined,
+    setDraftSessionID: noop,
     messageMutation: () => undefined,
     messages: () => [],
     visibleMessages: () => [],
@@ -196,6 +199,8 @@ export function mockSessionValue(overrides?: {
     allParts: () => ({}),
     allStatusMap: () => ({}),
     getParts: () => [],
+    getSessionToolParts: () => [],
+    getSessionToolCount: () => 0,
     isErrorHidden: () => false,
     hydrateParts: noop,
     todos: () => [],
@@ -256,6 +261,7 @@ export function mockSessionValue(overrides?: {
     deleteSession: noop,
     renameSession: noop,
     syncSession: noop,
+    exportSessionTranscript: noop,
     cloudPreviewId: () => null,
     selectCloudSession: noop,
   }
@@ -275,11 +281,14 @@ interface StoryProvidersProps {
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
   config?: Config
+  features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
   onConfigChange?: (config: Config) => void
   onGlobalConfigChange?: (config: Config) => void
   onProjectConfigChange?: (config: Config) => void
+  onOpenDiff?: OpenDiffFn
+  onOpenFile?: OpenFileFn
   kiloAuth?: boolean
   /** When true, renders children without the default 12px padding wrapper */
   noPadding?: boolean
@@ -288,6 +297,7 @@ interface StoryProvidersProps {
 /** Wraps children with either a mock ConfigContext (when config prop is given) or the real ConfigProvider. */
 const ConfigWrapper: ParentComponent<{
   config?: Config
+  features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
   onConfigChange?: (config: Config) => void
@@ -307,7 +317,8 @@ const ConfigWrapper: ParentComponent<{
       }
 
       return {
-        indexing: hasIndexingPlugin(config.plugin ?? []),
+        indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
+        sandboxControls: props.features?.sandboxControls ?? false,
       }
     })
 
@@ -381,6 +392,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
         <FeedbackProvider>
           <ConfigWrapper
             config={props.config}
+            features={props.features}
             globalConfig={props.globalConfig}
             projectConfig={props.projectConfig}
             onConfigChange={props.onConfigChange}
@@ -403,7 +415,12 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                         <SessionContext.Provider value={session as any}>
                           <IndexingProvider>
                             <KiloEmbeddingModelsProvider>
-                              <DataProvider data={data()} directory="/project/">
+                              <DataProvider
+                                data={data()}
+                                directory="/project/"
+                                onOpenDiff={props.onOpenDiff}
+                                onOpenFile={props.onOpenFile}
+                              >
                                 <DiffComponentProvider component={Diff}>
                                   <CodeComponentProvider component={Code}>
                                     <FileComponentProvider component={File}>

@@ -8,6 +8,8 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
@@ -19,7 +21,7 @@ class ToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, mode = ToolBodyMode.EDITOR),
-) : SecondarySessionPartView(parts.header, { parts.scroll(tool) }) {
+) : SecondarySessionPartView(parts.header, { parts.scroll(tool) }), UiDataProvider {
 
     override val contentId: String = tool.id
 
@@ -33,6 +35,12 @@ class ToolView(
         applyStyle(style)
         sync()
     }
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        selection?.provideCopy(sink) { parts.content?.text ?: fallbackText() }
+    }
+
+    private fun fallbackText() = listOf(commandText(), outputText()).filter { it.isNotBlank() }.joinToString("\n\n")
 
     @RequiresEdt
     override fun expand(): Boolean {

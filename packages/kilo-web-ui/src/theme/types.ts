@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/theme/types"
+export * from "@opencode-ai/ui/theme/types"

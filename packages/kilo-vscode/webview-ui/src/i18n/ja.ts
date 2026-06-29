@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop に接続",
+  "provider.anaconda.title.manage": "Anaconda Desktop を管理",
+  "provider.anaconda.status.checking": "Anaconda Desktop を確認しています...",
+  "provider.anaconda.status.opening": "Anaconda Desktop を開いています...",
+  "provider.anaconda.status.syncing": "プロバイダーのモデルを更新しています...",
+  "provider.anaconda.status.ready": "接続の準備ができました",
+  "provider.anaconda.status.waiting": "Desktop を待機しています",
+  "provider.anaconda.status.attention": "対応が必要です",
+  "provider.anaconda.status.unavailable": "利用できません",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop は {{platform}} ではサポートされていません。",
+  "provider.anaconda.state.notInstalled":
+    "このマシンに Anaconda Desktop をインストールしてから、ここに戻ってください。Kilo はインストーラーを実行しません。",
+  "provider.anaconda.state.notRunning":
+    "Anaconda Desktop を開いてセットアップを完了しサインインしてから、再確認を選択してください。",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop のセットアップが完了していません。Desktop を開いてセットアップを完了し、必要に応じて再起動してください。",
+  "provider.anaconda.state.signedOut": "Kilo を接続する前に、Anaconda Desktop を開いてサインインしてください。",
+  "provider.anaconda.state.unauthorized":
+    "Kilo は Anaconda Desktop にアクセスできませんでした。Desktop を開いて再度サインインし、必要に応じて再起動してください。",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop はまだ応答していません。開いてアプリケーションの起動が完了するまでお待ちください。",
+  "provider.anaconda.state.noModel":
+    "Anaconda Desktop で、テキスト生成モデルをダウンロードしてください。可能であればツール呼び出しに対応したモデルを選び、そのサーバーを起動してください。",
+  "provider.anaconda.state.noServer_one":
+    "ダウンロード済みのテキスト生成モデルが1つ利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
+  "provider.anaconda.state.noServer_other":
+    "ダウンロード済みのテキスト生成モデルが{{count}}個利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
+  "provider.anaconda.state.unhealthy":
+    "アクティブな推論サーバーはまだ正常ではありません。Anaconda Desktop で確認し、必要に応じてサーバーを再起動してください。",
+  "provider.anaconda.state.ready":
+    "Kilo は正常なローカルのテキスト生成サーバーを見つけ、現在の接続設定をインポートできます。",
+  "provider.anaconda.server": "アクティブな推論サーバー",
+  "provider.anaconda.context": "コンテキストウィンドウ",
+  "provider.anaconda.contextValue": "{{count}} トークン",
+  "provider.anaconda.tools": "ツール呼び出し",
+  "provider.anaconda.tools.supported": "対応",
+  "provider.anaconda.tools.unsupported": "無効",
+  "provider.anaconda.tools.unknown": "不明",
+  "provider.anaconda.warning.title": "ツールのサポートは限定的です",
+  "provider.anaconda.warning.description":
+    "このサーバーはツール呼び出しを確認できません。コーディングエージェントの操作が失敗したり利用できなかったりする場合があります。これらの制限を受け入れる場合のみ続行してください。",
+  "provider.anaconda.action.download": "Anaconda Desktop をダウンロード",
+  "provider.anaconda.action.open": "Anaconda Desktop を開く",
+  "provider.anaconda.action.checkAgain": "再確認",
+  "provider.anaconda.action.continue": "このまま続行",
+  "provider.anaconda.action.manage": "管理 / 更新",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop を更新しました",
+  "provider.anaconda.toast.refreshed.description": "アクティブなローカルサーバーとモデルが Kilo で最新になりました。",
+  "settings.providers.note.anacondaDesktop": "Anaconda Desktop によってローカルで提供されるモデルを実行します。",
+  "settings.providers.tag.local": "ローカル",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "おすすめ",
   "command.category.view": "表示",
   "command.category.project": "プロジェクト",
@@ -101,17 +155,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "プロバイダーを検索",
   "dialog.provider.empty": "プロバイダーが見つかりません",
-  "dialog.provider.group.popular": "人気",
   "dialog.provider.group.other": "その他",
   "dialog.provider.tag.recommended": "推奨",
-  "dialog.provider.opencode.note": "Claude、GPT、Geminiなどの厳選されたモデル",
-  "dialog.provider.anthropic.note": "Claude Pro/MaxまたはAPIキーで接続",
-  "dialog.provider.deepseek.note": "推論とコーディングタスク向けのDeepSeekモデル",
-  "dialog.provider.openai.note": "ChatGPT Pro/PlusまたはAPIキーで接続",
-  "dialog.provider.google.note": "高速で構造化された応答のためのGeminiモデル",
-  "dialog.provider.openrouter.note": "1つのプロバイダーからすべてのモデルにアクセス",
-  "dialog.provider.vercel.note": "スマートルーティングによるAIモデルへの統合アクセス",
-  "dialog.provider.copilot.note": "CopilotまたはAPIキーで接続",
 
   "dialog.model.select.title": "モデルを選択",
   "dialog.model.search.placeholder": "モデルを検索",
@@ -182,6 +227,7 @@ export const dict = {
   "model.tag.free": "無料",
   "model.tag.dataCollected": "データがトレーニングに使用される場合があります",
   "model.tag.latest": "最新",
+  "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
   "model.group.collapse": "{{group}} を折りたたむ",
@@ -210,6 +256,7 @@ export const dict = {
   "model.preview.label.average": "推定平均コスト",
   "model.preview.label.context": "コンテキスト",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "モデルの選択肢",
   "model.preview.label.completion": "完了率",
   "model.preview.label.costAttempt": "試行あたりのコスト",
   "model.preview.value.notSupported": "未対応",
@@ -293,6 +340,25 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
+  "prompt.action.sandbox.enable": "サンドボックスを有効化",
+  "prompt.action.sandbox.disable": "サンドボックスを無効化",
+  "prompt.action.sandbox.enabled":
+    "サンドボックスが有効です。エージェントのシェルコマンドは、プロジェクトおよびKiloディレクトリに制限されています。",
+  "prompt.action.sandbox.disabled":
+    "サンドボックスが無効です。クリックしてエージェントのシェルコマンドの書き込みをプロジェクトおよびKiloディレクトリに制限します。",
+  "prompt.action.sandbox.status.enabled": "サンドボックス有効",
+  "prompt.action.sandbox.status.disabled": "サンドボックス無効",
+  "prompt.action.sandbox.filesystem": "ファイルシステム",
+  "prompt.action.sandbox.network": "ネットワーク",
+  "prompt.action.sandbox.filesystem.restricted": "制限あり",
+  "prompt.action.sandbox.network.blocked": "ブロック",
+  "prompt.action.sandbox.network.allowed": "許可",
+  "prompt.action.sandbox.unrestricted": "制限なし",
+  "prompt.action.sandbox.description.enabled": "書き込みはプロジェクトおよびKiloディレクトリ内に制限されます。",
+  "prompt.action.sandbox.description.disabled":
+    "クリックすると、ファイルシステムへの書き込みとネットワークアクセスを制限します。",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
@@ -524,6 +590,8 @@ export const dict = {
   "notification.permission.titleSubagent": "権限が必要です（サブエージェント）",
   "notification.permission.description": "{{projectName}} の {{sessionTitle}} が権限を必要としています",
   "ui.permission.manageAutoApprove": "自動承認ルールを管理",
+  "ui.permission.doomLoop.prompt": "{{tool}} ツールでループの可能性が検出されました。実行を続行しますか？",
+  "ui.permission.doomLoop.rule": "{{tool}} の呼び出しを続行",
   "ui.permission.rule.addToAllowed": "許可リストに追加",
   "ui.permission.rule.removeFromAllowed": "許可リストから削除",
   "ui.permission.rule.addToDenied": "拒否リストに追加",
@@ -794,6 +862,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "ベクトル次元",
   "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
+  "settings.indexing.showButton.title": "インデックス作成がオフのときにボタンを表示",
+  "settings.indexing.showButton.description":
+    "インデックス作成がオフの間、プロンプトの下にインデックス作成ボタンを表示します。ボタンが非表示の場合は、設定 > インデックス作成を開いてインデックス作成を有効にしてください。",
   "settings.indexing.enable.title": "インデックスを有効にする",
   "settings.indexing.globalEnable.title": "グローバルで有効にする",
   "settings.indexing.globalEnable.description": "すべてのワークスペースでインデックス作成を有効にします。",
@@ -861,16 +932,19 @@ export const dict = {
   "settings.providers.tag.customProvider": "カスタムプロバイダー",
   "settings.providers.connected.environmentDescription": "環境変数から接続されています",
   "settings.providers.action.signInChatGPT": "ChatGPT でサインイン",
-  "settings.providers.custom.description": "ベースURLでOpenAI互換プロバイダーを追加します。",
+  "settings.providers.custom.description": "ベース URL でカスタムプロバイダーを追加します。",
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
     "task-tool サブエージェントのデフォルトモデルと推論の労力。呼び出し元のエージェントのモデルを継承する場合は未設定のままにしてください。",
+  "settings.models.hidePromptTraining.title": "プロンプトを学習に使用するモデルを非表示",
+  "settings.models.hidePromptTraining.description":
+    "プロバイダーがプロンプトを学習に使用する可能性のある Kilo Gateway モデルを非表示にします。",
   "settings.providers.modeModels": "モードごとのモデル",
-  "settings.providers.custom.note": "Base URL で OpenAI 互換プロバイダーを追加します。",
+  "settings.providers.custom.note": "Base URL でカスタムプロバイダーを追加します。",
   "settings.providers.modeModels.description":
     "特定のモードのデフォルトモデルを上書きします。設定されていない場合、グローバルデフォルトモデルが使用されます。",
   "provider.custom.title": "カスタムプロバイダー",
-  "provider.custom.description.prefix": "OpenAI互換プロバイダーを設定します。",
+  "provider.custom.description.prefix": "カスタムプロバイダーを設定します。",
   "provider.custom.description.link": "プロバイダー設定ドキュメント",
   "provider.custom.description.suffix": "を参照してください。",
   "provider.custom.field.providerID.label": "プロバイダーID",
@@ -878,6 +952,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "小文字、数字、ハイフン、アンダースコア",
   "provider.custom.field.name.label": "表示名",
   "provider.custom.field.name.placeholder": "マイAIプロバイダー",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "ベースURL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "APIキー",
@@ -903,6 +978,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label": "チャットテンプレート引数で思考を有効化 (例: Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
   "provider.custom.models.variants.chatTemplateArgs.true": "true",
@@ -915,6 +995,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "モデルを削除",
   "provider.custom.models.add": "モデルを追加",
   "provider.custom.models.fetch": "モデルを取得",
@@ -1211,6 +1298,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "これはVS Code拡張機能固有の設定のみをデフォルト値にリセットします。モードや自動承認ルールなど、CLIと共有される設定はCLI設定ファイルに保存されており、リセットされません。",
   "settings.aboutKiloCode.resetSettings.button": "すべての設定をリセット",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "設定の移行",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code インスタンス間で設定を転送するには、エクスポートまたはインポートしてください。",
@@ -1267,6 +1355,10 @@ export const dict = {
   "settings.notifications.errors.title": "エラー",
   "settings.notifications.errors.description": "エラー発生時に通知を表示",
   "settings.notifications.sounds": "サウンド",
+  "settings.notifications.enable.title": "サウンド通知を有効にする",
+  "settings.notifications.enable.description":
+    "セッションの完了時、エラーの発生時、またはユーザー入力が必要なときにサウンドを再生します",
+  "settings.notifications.testSound": "テスト",
   "settings.notifications.agentSound.title": "エージェント完了サウンド",
   "settings.notifications.agentSound.description": "エージェント完了時に再生するサウンド",
   "settings.notifications.permSound.title": "権限リクエストサウンド",
@@ -1274,6 +1366,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "エラーサウンド",
   "settings.notifications.errorSound.description": "エラー発生時に再生するサウンド",
   "settings.notifications.sound.default": "デフォルト",
+  "settings.notifications.sound.system": "システム",
+  "settings.notifications.sound.description":
+    "デフォルトでは、完了、入力、エラーにそれぞれ異なるサウンドが使用されます。その他の選択肢では、すべてのイベントに同じサウンドが使用されます。",
   "settings.notifications.sound.none": "なし",
   "settings.experimental.share.title": "共有モード",
   "settings.experimental.share.description": "セッション共有の動作",
@@ -1291,12 +1386,19 @@ export const dict = {
   "settings.experimental.speechToText.title": "音声認識",
   "settings.experimental.speechToText.description":
     "Kilo Gateway経由でKiloアカウントを使用して、プロンプトフィールドでの音声入力を有効にします。",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Speech to Text を使用するには、Kilo プロバイダーを有効にしてサインインしてください。現在、Speech to Text は Kilo Gateway でのみサポートされています。",
-  "settings.experimental.speechToTextModel.title": "音声認識モデル",
-  "settings.experimental.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
+  "settings.models.speechToTextModel.title": "音声認識モデル",
+  "settings.models.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
+  "settings.experimental.nativeNotebookTools.title": "ネイティブノートブックツール",
+  "settings.experimental.nativeNotebookTools.description":
+    "VS Codeノートブックの読み取り、編集、実行を行う実験的なツールを有効にします",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
+  "settings.sandboxing.title": "サンドボックス化",
+  "settings.sandboxing.network.title": "ネットワークアクセスを制限",
+  "settings.sandboxing.network.description":
+    "モデルから発行されたコマンドと HTTP ツールによる外部ネットワークアクセスをブロックします。ローカル MCP サーバーとプラグインフックは、この制限の対象外です。プロバイダーおよびモデルへの推論通信は引き続き利用できます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1430,6 +1532,9 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
+  "settings.experimental.sandbox.title": "サンドボックス",
+  "settings.experimental.sandbox.description":
+    "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
 
   "settings.autoApprove.description":
     "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",
@@ -1489,10 +1594,6 @@ export const dict = {
 
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
-  "settings.display.layout.title": "レイアウト",
-  "settings.display.layout.description": "チャットインターフェースのレイアウトモード",
-  "settings.display.layout.auto": "自動",
-  "settings.display.layout.stretch": "ストレッチ",
   "settings.display.fontSize.title": "フォントサイズ",
   "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
@@ -1502,6 +1603,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "コード編集ブロック",
+  "settings.display.codeEdit.description":
+    "コード編集ブロックと差分ブロックを最初から展開するか折りたたむかを選択します。",
+  "settings.display.codeEdit.expanded": "展開",
+  "settings.display.codeEdit.collapsed": "折りたたみ",
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",
   "settings.providers.smallModel.title": "小型モデル",
@@ -1526,6 +1632,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "レガシー移行",
   "settings.aboutKiloCode.legacyMigration.description":
     "プロバイダーのAPIキーやデフォルトモデルなど、以前にインストールしたKilo Codeから設定を移行します。",
+  "settings.aboutKiloCode.rooImport.description": "インストールしたRoo Codeから会話履歴を移行します。",
+  "settings.aboutKiloCode.rooImport.button": "Roo Codeからセッションをインポート",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Codeの新機能",

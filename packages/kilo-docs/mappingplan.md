@@ -113,7 +113,6 @@
 | New Item | Existing Page(s) |
 |---|---|
 | Deploy | `advanced-usage/deploy` |
-| Managed Indexing | `advanced-usage/managed-indexing` |
 | Security Reviews | `contributing/architecture/security-reviews` (move out of contributing) |
 
 ---

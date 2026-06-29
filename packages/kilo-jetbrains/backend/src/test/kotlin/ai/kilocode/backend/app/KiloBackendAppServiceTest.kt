@@ -55,6 +55,28 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `shutdown for unload clears runtime and disposes server once`() = runBlocking {
+        val server = FakeCliServer(mock)
+        val svc = KiloBackendAppService.create(scope, server, log)
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        svc.shutdownForUnload()
+        svc.shutdownForUnload()
+        svc.dispose()
+
+        assertEquals(KiloAppState.Disconnected, svc.appState.value)
+        assertNull(svc.profile)
+        assertNull(svc.config)
+        assertTrue(svc.notifications.isEmpty())
+        assertTrue(svc.warnings.isEmpty())
+        assertEquals(1, server.disposeCount)
+    }
+
+    @Test
     fun `config is loaded`() = runBlocking {
         mock.config = """{"model":"claude-4","username":"testuser"}"""
         val svc = create()

@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/dock-surface"
+export * from "@opencode-ai/ui/dock-surface"

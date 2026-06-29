@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.3.45",
+  "version": "7.3.54",
   "name": "@opencode-ai/http-recorder",
   "type": "module",
   "license": "MIT",
@@ -22,5 +22,6 @@
   "dependencies": {
     "@effect/platform-node": "catalog:",
     "effect": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

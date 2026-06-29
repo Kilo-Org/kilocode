@@ -28,6 +28,26 @@ describe("unwrapError", () => {
     const json = JSON.stringify({ message: "connection refused" })
     expect(unwrapError(`Error: ${json}`)).toBe("connection refused")
   })
+
+  it("formats empty provider rate-limit errors", () => {
+    const body = {
+      type: "error",
+      sequence_number: 2,
+      error: { type: "tokens", code: "rate_limit_exceeded", message: "", param: null },
+    }
+    const input = JSON.stringify({ message: JSON.stringify(body) })
+
+    expect(unwrapError(input)).toBe("Provider rate limit exceeded. Please try again shortly.")
+  })
+
+  it("preserves provider details when a rate-limit message is present", () => {
+    const input = JSON.stringify({
+      type: "error",
+      error: { type: "tokens", code: "rate_limit_exceeded", message: "Try again in 30 seconds." },
+    })
+
+    expect(unwrapError(input)).toBe("tokens: Try again in 30 seconds.")
+  })
 })
 
 describe("parseAssistantError", () => {

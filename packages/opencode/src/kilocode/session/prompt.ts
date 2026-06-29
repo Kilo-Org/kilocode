@@ -7,7 +7,7 @@ import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
@@ -20,7 +20,7 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
-import PROMPT_PLAN from "@/session/prompt/plan.txt"
+import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
@@ -67,18 +67,18 @@ export namespace KiloSessionPrompt {
     question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
-    const ask = InstanceState.bind(PlanFollowup.ask)
+    const ask = Instance.bind(PlanFollowup.ask)
     const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
       // Keep the request in the listener-local Question service so HTTP replies can resolve it.
       question: {
-        ask: InstanceState.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
+        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
           Effect.runPromise(input.question.ask(request)),
         ),
-        list: InstanceState.bind(() => Effect.runPromise(input.question.list())),
-        reject: InstanceState.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
+        list: Instance.bind(() => Effect.runPromise(input.question.list())),
+        reject: Instance.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
           Effect.runPromise(input.question.reject(requestID)),
         ),
       },
@@ -279,39 +279,26 @@ export namespace KiloSessionPrompt {
       })
 
     // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
-    const ctx = InstanceState.bind(() => Instance.current)()
+    const ctx = Instance.bind(() => Instance.current)()
     const plan = Session.plan(input.session, ctx)
 
-    if (mode(input.agent.name) === "plan") {
-      add(
-        [
-          PROMPT_PLAN,
-          "",
-          "## Plan File",
-          "Use the plan path specified by the user or project instructions when present and permissions allow it.",
-          "If none is specified, create a plan in .kilo/plans/ using a concise kebab-case filename based on the plan details.",
-          "Do not choose .kilo/plans/ when instructions specify an allowed plan path such as .plans/.",
-          "You may write/edit plan Markdown files only. Do not edit source files.",
-          "When finalizing, call plan_exit with the path of the plan file you wrote.",
-        ].join("\n"),
-      )
-      return
-    }
+    if (mode(input.agent.name) === "plan") add(NATIVE_PLAN_PROMPT)
 
     const file = input.messages ? PlanFile.latest(input.messages) : undefined
     const saved = PlanFile.resolve(file, ctx)
     const target = saved ?? plan
+    const time = input.session.time.created
     const dir = path.dirname(target)
-    if (saved && !(await Filesystem.exists(target))) await ensurePlanDir(dir)
+    if (!saved || !(await Filesystem.exists(target))) await ensurePlanDir(dir)
 
     const info = saved
       ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
-      : `Use the plan path specified by the user or project instructions when present and permissions allow it. If none is specified, create a plan in ${dir} using a concise kebab-case filename based on the plan details.`
+      : `Use any exact plan file path from user or project instructions unchanged. If only a directory is specified, create the plan there; otherwise create it in ${dir}. For generated filenames, use ${time}-<concise-kebab-case-suffix>.md, choosing the suffix from the plan details, for example ${time}-database-cache-plan.md.`
     const body = [
       "## Plan File",
       info,
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
-      "Project/user instructions about plan location (for example .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
       'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
     ].join("\n")
     add(`<system-reminder>\n${body}\n</system-reminder>`)

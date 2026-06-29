@@ -14,8 +14,10 @@ import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Provider } from "../../src/provider/provider"
+import { Permission } from "../../src/permission"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import * as SandboxPolicy from "../../src/kilocode/sandbox/policy"
 import { Truncate } from "../../src/tool/truncate"
 import { ToolRegistry } from "../../src/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
@@ -112,7 +114,6 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void 
     cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     prompt,
-    loop: (input) => prompt({ sessionID: input.sessionID, parts: [] }),
   }
 }
 
@@ -232,16 +233,94 @@ describe("Kilo task nesting", () => {
     ])
   })
 
+  it.live("preserves a custom subagent bash policy while inheriting parent denials", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const agents = yield* Agent.Service
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+
+          const result = yield* def.execute(
+            {
+              description: "validate ansible",
+              prompt: "run ansible-lint --version",
+              subagent_type: "validator",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps: stubOps() },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          const child = yield* sessions.get(result.metadata.sessionId)
+          const validator = yield* agents.get("validator")
+          expect(validator).toBeDefined()
+          if (!validator) return
+
+          expect(Permission.evaluate("bash", "ansible-lint --version", validator.permission).action).toBe("allow")
+          expect(Permission.evaluate("bash", "rm -rf build", validator.permission).action).toBe("deny")
+
+          const effective = Permission.merge(
+            validator.permission,
+            KiloSessionPrompt.guardPermissions({ agent: validator, session: child }),
+          )
+          expect(child.permission).not.toContainEqual({ permission: "bash", pattern: "*", action: "ask" })
+          expect(child.permission).toContainEqual({ permission: "bash", pattern: "rm -rf *", action: "deny" })
+          expect({
+            allowed: Permission.evaluate("bash", "ansible-lint --version", effective).action,
+            denied: Permission.evaluate("bash", "rm -rf build", effective).action,
+          }).toEqual({ allowed: "allow", denied: "deny" })
+        }),
+      {
+        config: {
+          permission: {
+            bash: {
+              "*": "ask",
+              "git -c *": "allow",
+              "echo *": "allow",
+              "rm -rf *": "deny",
+            },
+          },
+          agent: {
+            validator: {
+              mode: "subagent",
+              permission: {
+                bash: {
+                  "*": "deny",
+                  "*ansible-lint*": "allow",
+                },
+              },
+            },
+          },
+        },
+      },
+    ),
+  )
+
   it.live("refreshes inherited restrictions when resuming a task child", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const { chat, assistant } = yield* seed()
+        const support = yield* SandboxPolicy.status(chat.id)
         yield* sessions.setPermission({
           sessionID: chat.id,
           permission: [{ permission: "bash", pattern: "*", action: "deny" }],
         })
         const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+        if (support.available) {
+          yield* SandboxPolicy.toggle(child.id)
+          expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(false)
+        }
         const tool = yield* TaskTool
         const def = yield* tool.init()
 
@@ -267,6 +346,7 @@ describe("Kilo task nesting", () => {
 
         yield* exec()
         const first = yield* sessions.get(child.id)
+        if (support.available) expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
         const count = first.permission?.filter((rule) => rule.permission === "bash").length
         yield* exec()
 

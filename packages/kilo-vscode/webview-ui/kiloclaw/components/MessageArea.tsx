@@ -10,6 +10,7 @@ import { useKiloClawLanguage } from "../context/language"
 import { MessageBubble } from "./MessageBubble"
 import { computeBotDisplay, useNowTicker } from "./botStatus"
 import type { Message } from "../lib/types"
+import { isEnterKeyCommitNotIme } from "../../src/utils/ime-enter"
 
 export function MessageArea() {
   const claw = useClaw()
@@ -150,7 +151,7 @@ export function MessageArea() {
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (isEnterKeyCommitNotIme(e) && !e.shiftKey) {
       e.preventDefault()
       submit()
     }

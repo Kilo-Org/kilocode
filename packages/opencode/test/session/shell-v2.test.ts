@@ -2,9 +2,9 @@
 import { describe, expect, test } from "bun:test"
 import * as DateTime from "effect/DateTime"
 import { SessionID } from "../../src/session/schema"
-import { EventV2 } from "../../src/v2/event"
-import { SessionEvent } from "../../src/v2/session-event"
-import { SessionMessageUpdater } from "../../src/v2/session-message-updater"
+import { EventV2 } from "@opencode-ai/core/event"
+import { SessionEvent } from "@opencode-ai/core/session-event"
+import { SessionMessageUpdater } from "@opencode-ai/core/session-message-updater"
 
 describe("v2 shell event correlation", () => {
   test("an unmatched end is ignored before a matching start and end complete one record", () => {

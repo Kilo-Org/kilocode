@@ -285,7 +285,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
     }
 
     private fun syncArrow() {
-        arrow.icon = if (isExpanded()) SessionViewIcons.chevronDown else SessionViewIcons.chevronRight
+        arrow.icon = if (isExpanded()) SessionViewIcons.chevronExpanded else SessionViewIcons.chevronCollapsed
     }
 
     override fun setHovered(value: Boolean) {

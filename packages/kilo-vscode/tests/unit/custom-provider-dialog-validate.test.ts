@@ -9,6 +9,7 @@ function base(): FormState {
   return {
     providerID: "my-provider",
     name: "My Provider",
+    npm: "@ai-sdk/openai-compatible",
     baseURL: "https://example.com/v1",
     apiKey: "",
     models: [{ id: "model-1", name: "Model One", reasoning: false, variants: [] }],
@@ -28,6 +29,13 @@ function args(form: FormState) {
 }
 
 describe("validateCustomProvider – variant name validation", () => {
+  it("persists the selected provider package", () => {
+    const form = base()
+    form.npm = "@ai-sdk/openai"
+
+    expect(validateCustomProvider(args(form)).result?.config.npm).toBe("@ai-sdk/openai")
+  })
+
   it("allows reconnecting a disabled provider id", () => {
     const form = base()
     const out = validateCustomProvider({
@@ -56,6 +64,8 @@ describe("validateCustomProvider – variant name validation", () => {
         name: "fast",
         enableThinking: undefined,
         thinking: undefined,
+        splitReasoning: undefined,
+        outputEffort: undefined,
         reasoningEffort: undefined,
         chatTemplateArgs: undefined,
       },
@@ -73,6 +83,8 @@ describe("validateCustomProvider – variant name validation", () => {
         name: "",
         enableThinking: undefined,
         thinking: undefined,
+        splitReasoning: undefined,
+        outputEffort: undefined,
         reasoningEffort: undefined,
         chatTemplateArgs: undefined,
       },
@@ -90,6 +102,8 @@ describe("validateCustomProvider – variant name validation", () => {
         name: "   ",
         enableThinking: undefined,
         thinking: undefined,
+        splitReasoning: undefined,
+        outputEffort: undefined,
         reasoningEffort: undefined,
         chatTemplateArgs: undefined,
       },
@@ -107,6 +121,8 @@ describe("validateCustomProvider – variant name validation", () => {
         name: "fast",
         enableThinking: undefined,
         thinking: undefined,
+        splitReasoning: undefined,
+        outputEffort: undefined,
         reasoningEffort: undefined,
         chatTemplateArgs: undefined,
       },
@@ -114,6 +130,8 @@ describe("validateCustomProvider – variant name validation", () => {
         name: "fast",
         enableThinking: undefined,
         thinking: undefined,
+        splitReasoning: undefined,
+        outputEffort: undefined,
         reasoningEffort: undefined,
         chatTemplateArgs: undefined,
       },
@@ -131,6 +149,8 @@ describe("validateCustomProvider – variant name validation", () => {
         name: "",
         enableThinking: undefined,
         thinking: undefined,
+        splitReasoning: undefined,
+        outputEffort: undefined,
         reasoningEffort: undefined,
         chatTemplateArgs: undefined,
       },
@@ -148,11 +168,27 @@ describe("validateCustomProvider – variant name validation", () => {
     const form = base()
     form.models[0].reasoning = true
     form.models[0].variants = [
-      { name: "eco", enableThinking: true, thinking: undefined, reasoningEffort: "low", chatTemplateArgs: undefined },
+      {
+        name: "eco",
+        enableThinking: true,
+        thinking: "adaptive",
+        splitReasoning: false,
+        outputEffort: "max",
+        reasoningEffort: "low",
+        chatTemplateArgs: undefined,
+      },
     ]
     const out = validateCustomProvider(args(form))
     expect(out.result).toBeDefined()
     const saved = out.result!.config.models["model-1"] as Record<string, unknown>
-    expect(saved.variants).toEqual({ eco: { enable_thinking: true, reasoningEffort: "low" } })
+    expect(saved.variants).toEqual({
+      eco: {
+        enable_thinking: true,
+        thinking: { type: "adaptive" },
+        reasoning_split: false,
+        effort: "max",
+        reasoningEffort: "low",
+      },
+    })
   })
 })

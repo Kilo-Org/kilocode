@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/spinner"
+export * from "@opencode-ai/ui/spinner"

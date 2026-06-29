@@ -41,6 +41,7 @@ class SessionModel {
 
     private val entries = LinkedHashMap<String, Message>()
     private val turnEntries = LinkedHashMap<String, Turn>()
+    private val hiddenText = mutableSetOf<Pair<String, String>>()
 
     var app: KiloAppStateDto = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
     var version: String? = null
@@ -140,6 +141,7 @@ class SessionModel {
     @RequiresEdt
     fun removeMessage(id: String) {
         if (entries.remove(id) == null) return
+        hiddenText.removeAll { it.first == id }
         fire(SessionModelEvent.MessageRemoved(id))
         regroup()
         updateHeader()
@@ -147,6 +149,7 @@ class SessionModel {
 
     @RequiresEdt
     fun removeContent(messageId: String, contentId: String) {
+        hiddenText.remove(messageId to contentId)
         val msg = entries[messageId] ?: return
         if (msg.parts.remove(contentId) == null) return
         fire(SessionModelEvent.ContentRemoved(messageId, contentId))
@@ -157,7 +160,21 @@ class SessionModel {
     fun updateContent(messageId: String, dto: PartDto) {
         if (dto.type in SILENT_PART_TYPES) return
         val msg = entries[messageId] ?: return
+        val key = messageId to dto.id
+        if (hiddenSynthetic(msg, dto)) {
+            hiddenText.add(key)
+            if (msg.parts.remove(dto.id) != null) {
+                fire(SessionModelEvent.ContentRemoved(messageId, dto.id))
+                updateHeader()
+            }
+            return
+        }
+        hiddenText.remove(key)
         val existing = msg.parts[dto.id]
+        if (empty(dto)) {
+            if (existing is Text) removeContent(messageId, dto.id)
+            return
+        }
         if (existing != null) {
             updateExisting(messageId, existing, dto)
             return
@@ -171,6 +188,7 @@ class SessionModel {
     @RequiresEdt
     fun appendDelta(messageId: String, contentId: String, delta: String) {
         val msg = entries[messageId] ?: return
+        if (hiddenText.contains(messageId to contentId)) return
         val existing = msg.parts[contentId]
         val created = existing == null
         if (existing != null) {
@@ -234,6 +252,7 @@ class SessionModel {
     @RequiresEdt
     fun loadHistory(history: List<MessageWithPartsDto>) {
         entries.clear()
+        hiddenText.clear()
         session = null
         state = SessionState.Idle
         diff = emptyList()
@@ -243,6 +262,11 @@ class SessionModel {
             val item = Message(msg.info)
             for (part in msg.parts) {
                 if (part.type in SILENT_PART_TYPES) continue
+                if (hiddenSynthetic(item, part)) {
+                    hiddenText.add(msg.info.id to part.id)
+                    continue
+                }
+                if (empty(part)) continue
                 val content = fromDto(part, part.text)
                 item.parts[content.id] = content
             }
@@ -257,6 +281,7 @@ class SessionModel {
     fun clear() {
         entries.clear()
         turnEntries.clear()
+        hiddenText.clear()
         session = null
         state = SessionState.Idle
         diff = emptyList()
@@ -373,6 +398,12 @@ class SessionModel {
                 existing.content.append(text)
                 existing.done = dto.time?.end != null || dto.time == null
             }
+            is FileAttachment -> {
+                existing.mime = dto.mime ?: "application/octet-stream"
+                existing.url = dto.url ?: ""
+                existing.filename = dto.filename
+                existing.source = dto.source
+            }
             is Tool -> {
                 existing.kind = toolKind(dto.tool)
                 existing.state = parseToolState(dto.state)
@@ -398,6 +429,11 @@ class SessionModel {
         updateHeader()
     }
 
+    private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
+
+    private fun hiddenSynthetic(msg: Message, dto: PartDto) =
+        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true
+
     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
         val content = text ?: dto.text
         return when (dto.type) {
@@ -407,6 +443,12 @@ class SessionModel {
             "reasoning" -> Reasoning(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
                 done = dto.time?.end != null || dto.time == null
+            }
+            "file" -> FileAttachment(dto.id).apply {
+                mime = dto.mime ?: "application/octet-stream"
+                url = dto.url ?: ""
+                filename = dto.filename
+                source = dto.source
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
                 state = parseToolState(dto.state)
@@ -566,8 +608,11 @@ data class ModelItem(
     val providerName: String,
     val recommendedIndex: Double?,
     val free: Boolean,
+    val byok: Boolean = false,
     val variants: List<String>,
     val limit: ModelLimitItem?,
+    val attachment: Boolean = false,
+    val mayTrainOnYourPrompts: Boolean = false,
 ) {
     val key: String get() = "$provider/$id"
 }
@@ -602,6 +647,7 @@ private fun parseModelKey(value: String): Pair<String, String>? {
 private fun Content.timelineTitle(): String = when (this) {
     is Text -> "Text"
     is Reasoning -> "Reasoning"
+    is FileAttachment -> filename?.takeIf { it.isNotBlank() } ?: "File"
     is Tool -> fileActionTitle() ?: title?.takeIf { it.isNotBlank() } ?: name
     is Compaction -> "Compaction"
     is StepFinish -> "Step finish"
@@ -635,6 +681,7 @@ private fun tail(path: String): String {
 private fun Content.weight(): Int = when (this) {
     is Text -> content.length / 200 + 1
     is Reasoning -> content.length / 200 + 1
+    is FileAttachment -> 1
     is Tool -> listOf(input.size, output?.length?.div(400) ?: 0, error?.length?.div(200) ?: 0).sum() + 1
     is Compaction -> 2
     is StepFinish -> tokens?.stepWeight() ?: 1
@@ -661,6 +708,7 @@ private fun renderMessage(msg: Message): List<String> {
                 out.add("reasoning#${part.id} done=${part.done}:")
                 out.addAll(renderText(part.content))
             }
+            is FileAttachment -> out.add("file#${part.id} ${part.mime} ${part.filename ?: tail(part.url)}")
             is Tool -> out.add(renderTool(part))
             is Compaction -> out.add("compaction#${part.id}")
             is StepFinish -> out.add("step-finish#${part.id}")

@@ -13,7 +13,7 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 6px 0;
+  padding: 0;
   font-family: var(--font-family-sans);
   font-size: var(--kilo-font-size-13);
   line-height: var(--line-height-large);

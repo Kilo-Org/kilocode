@@ -3,7 +3,7 @@
 import { Global } from "@opencode-ai/core/global"
 import { staticEnvLines, type EditorContext } from "@/kilocode/editor-context"
 import type { Provider } from "@/provider/provider"
-import type { InstanceContext } from "@/project/instance"
+import type { InstanceContext } from "@/project/instance-context"
 
 export namespace KilocodeSystemPrompt {
   export function environment(input: { ctx: InstanceContext; model: Provider.Model; editor?: EditorContext }) {

@@ -6,6 +6,7 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.UIManager
 
@@ -130,6 +131,8 @@ object UiStyle {
 
         fun infoOverlayBorder(): Color = JBUI.CurrentTheme.NotificationInfo.borderColor()
 
+        fun actionHoverBackground(): Color = JBUI.CurrentTheme.ActionButton.hoverBackground()
+
         fun errorOverlayBackground(): Color = JBUI.CurrentTheme.NotificationError.backgroundColor()
 
         fun errorOverlayForeground(): Color = JBUI.CurrentTheme.NotificationError.foregroundColor()
@@ -196,6 +199,36 @@ object UiStyle {
     object Components {
         fun transparent(vararg components: JComponent) {
             components.forEach { it.isOpaque = false }
+        }
+
+        fun actionForeground(enabled: Boolean): Color = if (enabled) {
+            UIManager.getColor("Button.foreground") ?: UIUtil.getLabelForeground()
+        } else {
+            UIManager.getColor("Button.disabledText") ?: UIUtil.getContextHelpForeground()
+        }
+
+        fun actionBackground(): Color = UIManager.getColor("Button.background") ?: UIUtil.getPanelBackground()
+
+        fun actionBorder() = JBUI.Borders.compound(
+            JBUI.Borders.customLine(UIUtil.getBoundsColor()),
+            JBUI.Borders.empty(Gap.sm(), Gap.pad()),
+        )
+
+        fun actionLabel(component: JComponent, enabled: Boolean = component.isEnabled) {
+            component.foreground = actionForeground(enabled)
+            component.background = actionBackground()
+            component.border = actionBorder()
+            component.isOpaque = true
+        }
+
+        fun actionButton(button: AbstractButton) {
+            button.foreground = actionForeground(button.isEnabled)
+            button.background = actionBackground()
+            button.border = actionBorder()
+            button.isOpaque = true
+            button.isBorderPainted = true
+            button.isContentAreaFilled = false
+            button.isFocusPainted = false
         }
     }
 }

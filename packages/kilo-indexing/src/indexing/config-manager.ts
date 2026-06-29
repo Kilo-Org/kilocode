@@ -57,7 +57,7 @@ export class CodeIndexConfigManager {
   private kiloOptions?: { apiKey: string; baseUrl?: string; organizationId?: string }
   private openAiOptions?: { apiKey: string }
   private ollamaOptions?: { baseUrl: string; modelId?: string }
-  private openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
+  private openAiCompatibleOptions?: { baseUrl: string; apiKey?: string }
   private geminiOptions?: { apiKey: string }
   private mistralOptions?: { apiKey: string }
   private vercelAiGatewayOptions?: { apiKey: string }
@@ -112,10 +112,9 @@ export class CodeIndexConfigManager {
     this.openAiOptions = input.openAiKey ? { apiKey: input.openAiKey } : undefined
     const url = input.ollamaBaseUrl ?? (input.embedderProvider === "ollama" ? "http://localhost:11434" : undefined)
     this.ollamaOptions = url ? { baseUrl: url, modelId: input.modelId } : undefined
-    this.openAiCompatibleOptions =
-      input.openAiCompatibleBaseUrl && input.openAiCompatibleApiKey
-        ? { baseUrl: input.openAiCompatibleBaseUrl, apiKey: input.openAiCompatibleApiKey }
-        : undefined
+    this.openAiCompatibleOptions = input.openAiCompatibleBaseUrl
+      ? { baseUrl: input.openAiCompatibleBaseUrl, apiKey: input.openAiCompatibleApiKey?.trim() || undefined }
+      : undefined
     this.geminiOptions = input.geminiApiKey ? { apiKey: input.geminiApiKey } : undefined
     this.mistralOptions = input.mistralApiKey ? { apiKey: input.mistralApiKey } : undefined
     this.vercelAiGatewayOptions = input.vercelAiGatewayApiKey ? { apiKey: input.vercelAiGatewayApiKey } : undefined
@@ -168,8 +167,7 @@ export class CodeIndexConfigManager {
       return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
     if (provider === "openai") return !!(this.openAiOptions?.apiKey && hasStore)
     if (provider === "ollama") return !!(this.ollamaOptions?.baseUrl && hasStore)
-    if (provider === "openai-compatible")
-      return !!(this.openAiCompatibleOptions?.baseUrl && this.openAiCompatibleOptions?.apiKey && hasStore)
+    if (provider === "openai-compatible") return !!(this.openAiCompatibleOptions?.baseUrl && hasStore)
     if (provider === "gemini") return !!(this.geminiOptions?.apiKey && hasStore)
     if (provider === "mistral") return !!(this.mistralOptions?.apiKey && hasStore)
     if (provider === "vercel-ai-gateway") return !!(this.vercelAiGatewayOptions?.apiKey && hasStore)

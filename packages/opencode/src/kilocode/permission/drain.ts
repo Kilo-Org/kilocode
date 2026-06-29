@@ -2,6 +2,7 @@ import { Bus } from "@/bus"
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { Instance } from "@/kilocode/instance"
 
 interface PendingEntry {
   info: Permission.Request
@@ -39,14 +40,14 @@ export function drainCovered(
       if (!denied && !allowed) continue
       pending.delete(id)
       if (denied) {
-        void Bus.publish(Permission.Event.Replied, {
+        void Bus.publish(Instance.current, Permission.Event.Replied, {
           sessionID: entry.info.sessionID,
           requestID: entry.info.id,
           reply: "reject",
         })
         yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
       } else {
-        void Bus.publish(Permission.Event.Replied, {
+        void Bus.publish(Instance.current, Permission.Event.Replied, {
           sessionID: entry.info.sessionID,
           requestID: entry.info.id,
           reply: "always",

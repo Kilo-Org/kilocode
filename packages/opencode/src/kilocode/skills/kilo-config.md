@@ -303,8 +303,8 @@ Custom themes: place JSON files in `~/.config/kilo/themes/` or `.kilo/themes/`.
 | Compact/summarize | `<leader>c` | `/compact`, `/summarize` |
 | Undo message | `<leader>u` | `/undo` |
 | Redo | `<leader>r` | `/redo` |
-| Copy last response | `<leader>y` | — |
-| Copy transcript | — | `/copy` |
+| Copy last response | `<leader>y` | `/copy` |
+| Copy transcript | — | `/copy-session` |
 
 ### Agent & Model
 

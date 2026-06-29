@@ -1,0 +1,480 @@
+.kilo-console .profile-page,
+.kilo-console .profile-login-page {
+  display: grid;
+  gap: 1rem;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.kilo-console .profile-login-page {
+  max-width: 34rem;
+}
+
+.kilo-console .profile-shell.disconnected {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.kilo-console .profile-header,
+.kilo-console .profile-login-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+  padding-bottom: 0.5rem;
+}
+
+.kilo-console .profile-login-header {
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+
+.kilo-console .profile-header h1,
+.kilo-console .profile-login-header h1 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.kilo-console .profile-header p:not(.eyebrow),
+.kilo-console .profile-login-header p:not(.eyebrow) {
+  max-width: 42rem;
+  margin: 0.625rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.kilo-console .profile-actions,
+.kilo-console .profile-card-actions,
+.kilo-console .profile-login-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.kilo-console .profile-primary-link {
+  text-decoration: none;
+}
+
+.kilo-console .profile-connect-card {
+  display: grid;
+  min-height: 18rem;
+  place-items: center;
+  align-content: center;
+  gap: 1.25rem;
+  text-align: center;
+}
+
+.kilo-console .profile-connect-mark {
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--primary) 32%, transparent), transparent),
+    color-mix(in oklab, var(--muted) 70%, transparent);
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.kilo-console .profile-connect-copy {
+  display: grid;
+  max-width: 28rem;
+  gap: 0.625rem;
+}
+
+.kilo-console .profile-connect-copy h1,
+.kilo-console .profile-connect-copy p {
+  margin: 0;
+}
+
+.kilo-console .profile-connect-copy h1 {
+  color: var(--foreground);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.kilo-console .profile-connect-copy p:not(.eyebrow) {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.kilo-console .profile-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--input-base);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.45;
+  padding: 0.25rem 0.625rem;
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.kilo-console .profile-link-button:hover,
+.kilo-console .profile-link-button:focus-visible {
+  border-color: var(--ring);
+  background: var(--muted);
+  color: var(--foreground);
+  outline: 0;
+}
+
+.kilo-console .profile-banner {
+  margin-bottom: 0;
+}
+
+.kilo-console .profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kilo-console .profile-card {
+  gap: 0.875rem;
+}
+
+.kilo-console .profile-wide-card {
+  grid-column: 1 / -1;
+}
+
+.kilo-console .profile-account-card,
+.kilo-console .profile-balance-card {
+  min-height: 10rem;
+}
+
+.kilo-console .profile-account-head {
+  display: flex;
+  gap: 0.875rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.kilo-console .profile-avatar,
+.kilo-console .profile-org-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--primary) 28%, transparent), transparent),
+    color-mix(in oklab, var(--muted) 70%, transparent);
+  color: var(--foreground);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.kilo-console .profile-avatar {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+}
+
+.kilo-console .profile-org-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+}
+
+.kilo-console .profile-account-text {
+  display: grid;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.kilo-console .profile-account-text strong,
+.kilo-console .profile-card-head h2,
+.kilo-console .profile-login-state strong,
+.kilo-console .profile-login-step strong {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.kilo-console .profile-account-text span,
+.kilo-console .profile-login-state p,
+.kilo-console .profile-login-step > span,
+.kilo-console .profile-login-waiting {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.kilo-console .profile-account-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .profile-meta-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--muted) 35%, transparent);
+  padding: 0.75rem;
+}
+
+.kilo-console .profile-meta-row span,
+.kilo-console .profile-card-label {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kilo-console .profile-meta-row strong {
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.kilo-console .profile-balance-card strong {
+  color: var(--foreground);
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.95;
+}
+
+.kilo-console .profile-balance-card p,
+.kilo-console .profile-login-state p {
+  margin: 0;
+}
+
+.kilo-console .profile-card-head {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.kilo-console .profile-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0 0.625rem;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.kilo-console .profile-org-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kilo-console .profile-org-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  min-height: 3.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.75rem;
+  text-align: left;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.kilo-console .profile-org-row:hover,
+.kilo-console .profile-org-row:focus-visible,
+.kilo-console .profile-org-row.active {
+  border-color: var(--ring);
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+  outline: 0;
+}
+
+.kilo-console .profile-org-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.kilo-console .profile-org-body {
+  display: grid;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.kilo-console .profile-org-body strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .profile-org-body span,
+.kilo-console .profile-org-state {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.kilo-console .profile-org-state {
+  font-weight: 600;
+}
+
+.kilo-console .profile-login-card {
+  min-height: 18rem;
+}
+
+.kilo-console .profile-login-state,
+.kilo-console .profile-login-flow,
+.kilo-console .profile-login-step {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.kilo-console .profile-login-state {
+  place-items: center;
+  min-height: 14rem;
+  text-align: center;
+}
+
+.kilo-console .profile-login-state.error strong {
+  color: var(--destructive);
+}
+
+.kilo-console .profile-login-state.success strong {
+  color: var(--success, var(--primary));
+}
+
+.kilo-console .profile-login-step {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--muted) 25%, transparent);
+  padding: 1rem;
+}
+
+.kilo-console .profile-login-url {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.kilo-console .profile-login-url span {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--input-base);
+  color: var(--foreground);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kilo-console .profile-login-code {
+  display: grid;
+  gap: 0.25rem;
+  place-items: center;
+  border: 1px solid var(--ring);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--primary) 12%, var(--input-base));
+  color: var(--foreground);
+  cursor: pointer;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 1rem;
+}
+
+.kilo-console .profile-login-code small {
+  color: var(--muted-foreground);
+  font-family: var(--font-family-sans, system-ui, sans-serif);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.kilo-console .profile-login-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.kilo-console .profile-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid color-mix(in oklab, var(--muted-foreground) 30%, transparent);
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: profile-spin 900ms linear infinite;
+}
+
+@keyframes profile-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .kilo-console .profile-header,
+  .kilo-console .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kilo-console .profile-actions,
+  .kilo-console .profile-card-actions,
+  .kilo-console .profile-login-actions {
+    justify-content: flex-start;
+  }
+
+  .kilo-console .profile-login-url {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .kilo-console .profile-org-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .kilo-console .profile-org-state {
+    grid-column: 2;
+  }
+
+  .kilo-console .profile-login-code {
+    font-size: 1.5rem;
+  }
+}

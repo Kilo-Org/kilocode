@@ -1,4 +1,57 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "توصيل Anaconda Desktop",
+  "provider.anaconda.title.manage": "إدارة Anaconda Desktop",
+  "provider.anaconda.status.checking": "جارٍ التحقق من Anaconda Desktop...",
+  "provider.anaconda.status.opening": "جارٍ فتح Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "جارٍ تحديث نماذج الموفر...",
+  "provider.anaconda.status.ready": "جاهز للتوصيل",
+  "provider.anaconda.status.waiting": "في انتظار Desktop",
+  "provider.anaconda.status.attention": "يحتاج إلى انتباه",
+  "provider.anaconda.status.unavailable": "غير متوفر",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop غير مدعوم على {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "ثبّت Anaconda Desktop على هذا الجهاز، ثم عُد إلى هنا. لا يقوم Kilo بتشغيل المثبّت نيابةً عنك.",
+  "provider.anaconda.state.notRunning": "افتح Anaconda Desktop، وأكمل الإعداد وسجّل الدخول، ثم اختر تحقق مرة أخرى.",
+  "provider.anaconda.state.invalidConfig":
+    "إعداد Anaconda Desktop غير مكتمل. افتح Desktop، وأكمل الإعداد، وأعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.signedOut": "افتح Anaconda Desktop وسجّل الدخول قبل توصيل Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "تعذّر على Kilo الوصول إلى Anaconda Desktop. افتح Desktop، وسجّل الدخول مرة أخرى، وأعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.unavailable":
+    "لا يستجيب Anaconda Desktop بعد. افتحه وانتظر حتى ينتهي التطبيق من بدء التشغيل.",
+  "provider.anaconda.state.noModel":
+    "في Anaconda Desktop، نزّل نموذجًا لتوليد النصوص. اختر نموذجًا يدعم استدعاء الأدوات إن أمكن، ثم شغّل خادمه.",
+  "provider.anaconda.state.noServer_one":
+    "يتوفر نموذج واحد مُنزّل لتوليد النصوص. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.noServer_other":
+    "تتوفر نماذج مُنزّلة لتوليد النصوص، وعددها {{count}}. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.unhealthy":
+    "خادم الاستدلال النشط ليس في حالة سليمة بعد. تحقق منه في Anaconda Desktop وأعد تشغيل الخادم إذا لزم الأمر.",
+  "provider.anaconda.state.ready":
+    "عثر Kilo على خادم محلي سليم لتوليد النصوص ويمكنه استيراد إعدادات الاتصال الحالية الخاصة به.",
+  "provider.anaconda.server": "خادم الاستدلال النشط",
+  "provider.anaconda.context": "نافذة السياق",
+  "provider.anaconda.contextValue": "{{count}} رمز",
+  "provider.anaconda.tools": "استدعاء الأدوات",
+  "provider.anaconda.tools.supported": "مدعوم",
+  "provider.anaconda.tools.unsupported": "غير مُفعّل",
+  "provider.anaconda.tools.unknown": "غير معروف",
+  "provider.anaconda.warning.title": "دعم الأدوات محدود",
+  "provider.anaconda.warning.description":
+    "لا يؤكد هذا الخادم استدعاء الأدوات. قد تفشل إجراءات وكيل البرمجة أو تكون غير متوفرة. تابع فقط إذا قبلت هذه القيود.",
+  "provider.anaconda.action.download": "تنزيل Anaconda Desktop",
+  "provider.anaconda.action.open": "فتح Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "تحقق مرة أخرى",
+  "provider.anaconda.action.continue": "تابع على أي حال",
+  "provider.anaconda.action.manage": "إدارة / تحديث",
+  "provider.anaconda.toast.refreshed.title": "تم تحديث Anaconda Desktop",
+  "provider.anaconda.toast.refreshed.description": "الخادم المحلي النشط والنماذج محدّثة في Kilo.",
+  "settings.providers.note.anacondaDesktop": "شغّل نموذجًا يُقدّم محليًا بواسطة Anaconda Desktop.",
+  "settings.providers.tag.local": "محلي",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "مقترح",
   "command.category.view": "عرض",
   "command.category.project": "مشروع",
@@ -101,17 +154,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "البحث عن موفرين",
   "dialog.provider.empty": "لم يتم العثور على موفرين",
-  "dialog.provider.group.popular": "شائع",
   "dialog.provider.group.other": "آخر",
   "dialog.provider.tag.recommended": "موصى به",
-  "dialog.provider.opencode.note": "نماذج مختارة تشمل Claude وGPT وGemini والمزيد",
-  "dialog.provider.anthropic.note": "اتصل باستخدام Claude Pro/Max أو مفتاح API",
-  "dialog.provider.deepseek.note": "نماذج DeepSeek لمهام الاستدلال والبرمجة",
-  "dialog.provider.openai.note": "اتصل باستخدام ChatGPT Pro/Plus أو مفتاح API",
-  "dialog.provider.google.note": "نماذج Gemini للاستجابات السريعة والمنظمة",
-  "dialog.provider.openrouter.note": "الوصول إلى جميع النماذج المدعومة من موفر واحد",
-  "dialog.provider.vercel.note": "وصول موحد إلى نماذج الذكاء الاصطناعي مع توجيه ذكي",
-  "dialog.provider.copilot.note": "اتصل باستخدام Copilot أو مفتاح API",
 
   "dialog.model.select.title": "تحديد نموذج",
   "dialog.model.search.placeholder": "البحث عن نماذج",
@@ -182,6 +226,7 @@ export const dict = {
   "model.tag.free": "مجاني",
   "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
   "model.tag.latest": "الأحدث",
+  "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
   "model.group.collapse": "طي {{group}}",
@@ -209,6 +254,7 @@ export const dict = {
   "model.preview.label.average": "متوسط التكلفة التقديرية",
   "model.preview.label.context": "السياق",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "خيارات النماذج",
   "model.preview.label.completion": "الإكمال",
   "model.preview.label.costAttempt": "التكلفة / المحاولة",
   "model.preview.value.notSupported": "غير مدعوم",
@@ -292,6 +338,23 @@ export const dict = {
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
+  "prompt.action.sandbox.enable": "تفعيل sandbox",
+  "prompt.action.sandbox.disable": "تعطيل sandbox",
+  "prompt.action.sandbox.enabled": "sandbox مُفعّل. أوامر shell الخاصة بالوكيل مقتصرة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.disabled":
+    "sandbox مُعطّل. انقر لتقييد كتابة أوامر shell الخاصة بالوكيل على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.status.enabled": "العزل مُفعّل",
+  "prompt.action.sandbox.status.disabled": "العزل مُعطّل",
+  "prompt.action.sandbox.filesystem": "نظام الملفات",
+  "prompt.action.sandbox.network": "الشبكة",
+  "prompt.action.sandbox.filesystem.restricted": "مقيّد",
+  "prompt.action.sandbox.network.blocked": "محظورة",
+  "prompt.action.sandbox.network.allowed": "مسموح بها",
+  "prompt.action.sandbox.unrestricted": "غير مقيّد",
+  "prompt.action.sandbox.description.enabled": "تقتصر عمليات الكتابة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.description.disabled": "انقر لتقييد الكتابة في نظام الملفات والوصول إلى الشبكة.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
@@ -522,6 +585,8 @@ export const dict = {
   "notification.permission.titleSubagent": "مطلوب إذن (وكيل فرعي)",
   "notification.permission.description": "{{sessionTitle}} في {{projectName}} يحتاج إلى إذن",
   "ui.permission.manageAutoApprove": "إدارة قواعد الموافقة التلقائية",
+  "ui.permission.doomLoop.prompt": "تم اكتشاف حلقة محتملة في أداة {{tool}}. هل تريد متابعة التشغيل؟",
+  "ui.permission.doomLoop.rule": "متابعة استدعاءات {{tool}}",
   "ui.permission.rule.addToAllowed": "أضف إلى قائمة المسموح",
   "ui.permission.rule.removeFromAllowed": "أزل من قائمة المسموح",
   "ui.permission.rule.addToDenied": "أضف إلى قائمة المرفوض",
@@ -818,16 +883,19 @@ export const dict = {
   "settings.providers.tag.customProvider": "مزود مخصص",
   "settings.providers.connected.environmentDescription": "متصل من متغيرات البيئة الخاصة بك",
   "settings.providers.action.signInChatGPT": "تسجيل الدخول باستخدام ChatGPT",
-  "settings.providers.custom.description": "أضف مزوداً متوافقاً مع OpenAI عبر عنوان URL الأساسي.",
+  "settings.providers.custom.description": "أضف مزودًا مخصصًا عبر عنوان URL الأساسي.",
   "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
     "النموذج الافتراضي وجهد التفكير للوكلاء الفرعيين لـ task-tool. اتركه فارغًا ليرث نموذج الوكيل المستدعي.",
+  "settings.models.hidePromptTraining.title": "إخفاء النماذج التي تدرّب على المطالبات",
+  "settings.models.hidePromptTraining.description":
+    "إخفاء نماذج Kilo Gateway التي قد يستخدم مزودوها مطالباتك لأغراض التدريب.",
   "settings.providers.modeModels": "نموذج لكل وضع",
-  "settings.providers.custom.note": "أضف موفرًا متوافقًا مع OpenAI عبر عنوان URL الأساسي.",
+  "settings.providers.custom.note": "أضف مزودًا مخصصًا عبر عنوان URL الأساسي.",
   "settings.providers.modeModels.description":
     "تجاوز النموذج الافتراضي لأوضاع محددة. إذا لم يتم التعيين، يتم استخدام النموذج الافتراضي العام.",
   "provider.custom.title": "مزود مخصص",
-  "provider.custom.description.prefix": "قم بتكوين مزود متوافق مع OpenAI. انظر ",
+  "provider.custom.description.prefix": "قم بتكوين مزود مخصص. انظر ",
   "provider.custom.description.link": "وثائق تكوين المزود",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "معرف المزود",
@@ -835,6 +903,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "أحرف صغيرة وأرقام وواصلات أو شرطات سفلية",
   "provider.custom.field.name.label": "الاسم المعروض",
   "provider.custom.field.name.placeholder": "مزود الذكاء الاصطناعي",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "عنوان URL الأساسي",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "مفتاح API",
@@ -860,6 +929,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label": "تفعيل التفكير عبر وسائط قالب الدردشة (مثل Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
   "provider.custom.models.variants.chatTemplateArgs.true": "true",
@@ -872,6 +946,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "إزالة النموذج",
   "provider.custom.models.add": "إضافة نموذج",
   "provider.custom.models.fetch": "جلب النماذج",
@@ -1101,6 +1182,9 @@ export const dict = {
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
   "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
+  "settings.indexing.showButton.title": "إظهار الزر عند تعطيل الفهرسة",
+  "settings.indexing.showButton.description":
+    "إظهار زر الفهرسة أسفل حقل الإدخال عندما تكون الفهرسة معطلة. إذا كان الزر مخفيًا، فافتح الإعدادات > الفهرسة لتفعيل الفهرسة.",
   "settings.indexing.globalEnable.title": "تمكين عام",
   "settings.indexing.globalEnable.description": "تمكين الفهرسة لكل مساحة عمل.",
   "settings.indexing.projectEnable.title": "تمكين لهذا المشروع",
@@ -1198,6 +1282,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "يؤدي هذا إلى إعادة تعيين الإعدادات الخاصة بامتداد VS Code فقط إلى قيمها الافتراضية. الإعدادات المشتركة مع CLI، مثل الأوضاع وقواعد الموافقة التلقائية، مخزّنة في تكوين CLI ولن تتأثر.",
   "settings.aboutKiloCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "نقل الإعدادات",
   "settings.aboutKiloCode.settingsTransfer.description": "تصدير أو استيراد إعداداتك لنقلها بين نُسخ VS Code.",
   "settings.aboutKiloCode.exportSettings": "تصدير",
@@ -1250,6 +1335,9 @@ export const dict = {
   "settings.notifications.errors.title": "أخطاء",
   "settings.notifications.errors.description": "إظهار إشعار عند الأخطاء",
   "settings.notifications.sounds": "أصوات",
+  "settings.notifications.enable.title": "تمكين الإشعارات الصوتية",
+  "settings.notifications.enable.description": "تشغيل أصوات عند اكتمال الجلسات أو حدوث خطأ أو الحاجة إلى ردّك",
+  "settings.notifications.testSound": "اختبار",
   "settings.notifications.agentSound.title": "صوت إكمال الوكيل",
   "settings.notifications.agentSound.description": "الصوت عند إكمال الوكيل",
   "settings.notifications.permSound.title": "صوت طلب الأذونات",
@@ -1257,6 +1345,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "صوت الخطأ",
   "settings.notifications.errorSound.description": "الصوت عند الأخطاء",
   "settings.notifications.sound.default": "افتراضي",
+  "settings.notifications.sound.system": "النظام",
+  "settings.notifications.sound.description":
+    "يستخدم الخيار الافتراضي أصواتًا مختلفة عند الاكتمال أو الحاجة إلى ردّك أو حدوث خطأ. تستخدم الخيارات الأخرى صوتًا واحدًا لجميع الأحداث.",
   "settings.notifications.sound.none": "بدون",
   "settings.experimental.share.title": "وضع المشاركة",
   "settings.experimental.share.description": "سلوك مشاركة الجلسة",
@@ -1274,12 +1365,19 @@ export const dict = {
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
   "settings.experimental.speechToText.description":
     "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
-  "settings.experimental.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
+  "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
+  "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
+  "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
+  "settings.experimental.nativeNotebookTools.description":
+    "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
+  "settings.sandboxing.title": "العزل",
+  "settings.sandboxing.network.title": "تقييد الوصول إلى الشبكة",
+  "settings.sandboxing.network.description":
+    "احظر الوصول الصادر إلى الشبكة من الأوامر الصادرة عن النموذج وأدوات HTTP. تعمل خوادم MCP المحلية وخطافات المكونات الإضافية خارج هذا التقييد. تظل حركة مرور استدلال الموفّر والنموذج متاحة.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1410,6 +1508,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
     "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
@@ -1466,10 +1567,6 @@ export const dict = {
 
   "settings.display.username.title": "اسم المستخدم",
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
-  "settings.display.layout.title": "التخطيط",
-  "settings.display.layout.description": "وضع التخطيط لواجهة الدردشة",
-  "settings.display.layout.auto": "تلقائي",
-  "settings.display.layout.stretch": "تمديد",
   "settings.display.fontSize.title": "حجم الخط",
   "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
@@ -1479,6 +1576,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "كتل تعديلات التعليمات البرمجية",
+  "settings.display.codeEdit.description":
+    "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
+  "settings.display.codeEdit.expanded": "موسّعة",
+  "settings.display.codeEdit.collapsed": "مطوية",
   "settings.providers.defaultModel.title": "النموذج الافتراضي",
   "settings.providers.defaultModel.description": "النموذج الأساسي للمحادثات",
   "settings.providers.smallModel.title": "نموذج صغير",
@@ -1504,6 +1606,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
   "settings.aboutKiloCode.legacyMigration.description":
     "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
+  "settings.aboutKiloCode.rooImport.description": "استيراد سجل المحادثات من تثبيت Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "استيراد الجلسات من Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "ما الجديد في Kilo Code",

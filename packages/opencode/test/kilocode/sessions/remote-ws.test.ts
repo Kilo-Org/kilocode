@@ -109,6 +109,48 @@ describe("RemoteWS", () => {
     expect(parsed.sessions).toEqual([{ id: "s1", status: "active", title: "Test" }])
   })
 
+  test("serializes concurrent heartbeat snapshots", async () => {
+    server = createServer()
+    const connecting = server.waitForConnect()
+    const firstMessage = server.waitForMessage()
+    const secondMessage = server.waitForMessage()
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let calls = 0
+    let active = 0
+    let max = 0
+
+    conn = RemoteWS.connect({
+      url: server.url,
+      getToken: async () => "tok",
+      getSessions: async () => {
+        const call = ++calls
+        active += 1
+        max = Math.max(max, active)
+        if (call === 1) await gate
+        active -= 1
+        return { sessions: [{ id: `s${call}`, status: "active" as const, title: `Session ${call}` }] }
+      },
+      log: nolog(),
+      heartbeat: 60_000,
+    })
+
+    await connecting
+    await settled()
+    const first = conn.heartbeat()
+    const second = conn.heartbeat()
+    await Bun.sleep(10)
+    expect(calls).toBe(1)
+
+    release()
+    await Promise.all([first, second])
+    expect(max).toBe(1)
+    expect(JSON.parse(await firstMessage).sessions[0].id).toBe("s1")
+    expect(JSON.parse(await secondMessage).sessions[0].id).toBe("s2")
+  })
+
   test("buffers when disconnected, flushes on reconnect", async () => {
     server = createServer()
     const connecting = server.waitForConnect()

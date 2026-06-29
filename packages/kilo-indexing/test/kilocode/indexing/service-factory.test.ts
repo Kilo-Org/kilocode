@@ -29,6 +29,16 @@ describe("CodeIndexServiceFactory", () => {
     setOpenAIConstructorHook(undefined)
   })
 
+  test("creates an OpenAI-compatible embedder without an API key", () => {
+    const factory = createFactory({
+      embedderProvider: "openai-compatible",
+      openAiKey: undefined,
+      openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+    })
+
+    expect(factory.createEmbedder().embedderInfo).toEqual({ name: "openai-compatible" })
+  })
+
   test("uses default LanceDB directory when config is unset", () => {
     const factory = createFactory({ vectorStoreProvider: "lancedb", lancedbVectorStoreDirectory: undefined })
 

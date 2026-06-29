@@ -2,7 +2,7 @@
   display: grid;
   grid-template-columns:
     13.75rem minmax(24rem, 1fr)
-    clamp(250px, var(--project-info-width, 300px), min(800px, calc(100vw - 37.75rem)));
+    clamp(250px, var(--project-info-width, 300px), var(--project-info-max, min(800px, calc(100vw - 37.75rem))));
   height: 100%;
   min-height: 0;
   overflow: hidden;

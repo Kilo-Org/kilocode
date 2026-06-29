@@ -1,4 +1,57 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "เชื่อมต่อ Anaconda Desktop",
+  "provider.anaconda.title.manage": "จัดการ Anaconda Desktop",
+  "provider.anaconda.status.checking": "กำลังตรวจสอบ Anaconda Desktop...",
+  "provider.anaconda.status.opening": "กำลังเปิด Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "กำลังรีเฟรชโมเดลของผู้ให้บริการ...",
+  "provider.anaconda.status.ready": "พร้อมเชื่อมต่อ",
+  "provider.anaconda.status.waiting": "กำลังรอ Desktop",
+  "provider.anaconda.status.attention": "ต้องการการดำเนินการ",
+  "provider.anaconda.status.unavailable": "ไม่พร้อมใช้งาน",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop ไม่รองรับบน {{platform}}",
+  "provider.anaconda.state.notInstalled":
+    "ติดตั้ง Anaconda Desktop บนเครื่องนี้ แล้วกลับมาที่นี่ Kilo จะไม่เรียกใช้ตัวติดตั้งให้คุณ",
+  "provider.anaconda.state.notRunning":
+    "เปิด Anaconda Desktop ตั้งค่าให้เสร็จและลงชื่อเข้าใช้ แล้วเลือกตรวจสอบอีกครั้ง",
+  "provider.anaconda.state.invalidConfig":
+    "การตั้งค่า Anaconda Desktop ยังไม่สมบูรณ์ เปิด Desktop ตั้งค่าให้เสร็จ และรีสตาร์ทหากจำเป็น",
+  "provider.anaconda.state.signedOut": "เปิด Anaconda Desktop และลงชื่อเข้าใช้ก่อนเชื่อมต่อ Kilo",
+  "provider.anaconda.state.unauthorized":
+    "Kilo ไม่สามารถเข้าถึง Anaconda Desktop ได้ เปิด Desktop ลงชื่อเข้าใช้อีกครั้ง และรีสตาร์ทหากจำเป็น",
+  "provider.anaconda.state.unavailable": "Anaconda Desktop ยังไม่ตอบสนอง เปิดและรอให้แอปพลิเคชันเริ่มทำงานเสร็จ",
+  "provider.anaconda.state.noModel":
+    "ใน Anaconda Desktop ดาวน์โหลดโมเดลสร้างข้อความ เลือกโมเดลที่รองรับการเรียกใช้เครื่องมือเมื่อเป็นไปได้ แล้วเริ่มเซิร์ฟเวอร์ของโมเดลนั้น",
+  "provider.anaconda.state.noServer_one":
+    "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ 1 โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
+  "provider.anaconda.state.noServer_other":
+    "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ {{count}} โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
+  "provider.anaconda.state.unhealthy":
+    "เซิร์ฟเวอร์การอนุมานที่ใช้งานอยู่ยังไม่พร้อมใช้งาน ตรวจสอบใน Anaconda Desktop และรีสตาร์ทเซิร์ฟเวอร์หากจำเป็น",
+  "provider.anaconda.state.ready":
+    "Kilo พบเซิร์ฟเวอร์สร้างข้อความในเครื่องที่พร้อมใช้งาน และสามารถนำเข้าการตั้งค่าการเชื่อมต่อปัจจุบันได้",
+  "provider.anaconda.server": "เซิร์ฟเวอร์การอนุมานที่ใช้งานอยู่",
+  "provider.anaconda.context": "หน้าต่างบริบท",
+  "provider.anaconda.contextValue": "{{count}} โทเค็น",
+  "provider.anaconda.tools": "การเรียกใช้เครื่องมือ",
+  "provider.anaconda.tools.supported": "รองรับ",
+  "provider.anaconda.tools.unsupported": "ไม่ได้เปิดใช้งาน",
+  "provider.anaconda.tools.unknown": "ไม่ทราบ",
+  "provider.anaconda.warning.title": "การรองรับเครื่องมือมีข้อจำกัด",
+  "provider.anaconda.warning.description":
+    "เซิร์ฟเวอร์นี้ไม่ยืนยันการเรียกใช้เครื่องมือ การทำงานของเอเจนต์เขียนโค้ดอาจล้มเหลวหรือไม่พร้อมใช้งาน ดำเนินการต่อเฉพาะเมื่อคุณยอมรับข้อจำกัดเหล่านี้",
+  "provider.anaconda.action.download": "ดาวน์โหลด Anaconda Desktop",
+  "provider.anaconda.action.open": "เปิด Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "ตรวจสอบอีกครั้ง",
+  "provider.anaconda.action.continue": "ดำเนินการต่อ",
+  "provider.anaconda.action.manage": "จัดการ / รีเฟรช",
+  "provider.anaconda.toast.refreshed.title": "รีเฟรช Anaconda Desktop แล้ว",
+  "provider.anaconda.toast.refreshed.description": "เซิร์ฟเวอร์ในเครื่องและโมเดลที่ใช้งานอยู่เป็นปัจจุบันใน Kilo แล้ว",
+  "settings.providers.note.anacondaDesktop": "เรียกใช้โมเดลที่ให้บริการในเครื่องโดย Anaconda Desktop",
+  "settings.providers.tag.local": "ในเครื่อง",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "แนะนำ",
   "command.category.view": "มุมมอง",
   "command.category.project": "โปรเจกต์",
@@ -101,17 +154,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "ค้นหาผู้ให้บริการ",
   "dialog.provider.empty": "ไม่พบผู้ให้บริการ",
-  "dialog.provider.group.popular": "ยอดนิยม",
   "dialog.provider.group.other": "อื่น ๆ",
   "dialog.provider.tag.recommended": "แนะนำ",
-  "dialog.provider.opencode.note": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
-  "dialog.provider.anthropic.note": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
-  "dialog.provider.deepseek.note": "โมเดล DeepSeek สำหรับงานการให้เหตุผลและการเขียนโค้ด",
-  "dialog.provider.copilot.note": "โมเดล Claude สำหรับการช่วยเหลือในการเขียนโค้ด",
-  "dialog.provider.openai.note": "โมเดล GPT สำหรับงาน AI ทั่วไปที่รวดเร็วและมีความสามารถ",
-  "dialog.provider.google.note": "โมเดล Gemini สำหรับการตอบสนองที่รวดเร็วและมีโครงสร้าง",
-  "dialog.provider.openrouter.note": "เข้าถึงโมเดลที่รองรับทั้งหมดจากผู้ให้บริการเดียว",
-  "dialog.provider.vercel.note": "การเข้าถึงโมเดล AI แบบรวมด้วยการกำหนดเส้นทางอัจฉริยะ",
 
   "dialog.model.select.title": "เลือกโมเดล",
   "dialog.model.search.placeholder": "ค้นหาโมเดล",
@@ -183,6 +227,7 @@ export const dict = {
   "model.tag.free": "ฟรี",
   "model.tag.dataCollected": "ข้อมูลอาจถูกนำไปใช้ในการฝึก",
   "model.tag.latest": "ล่าสุด",
+  "model.group.auto": "โมเดลอัตโนมัติ",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
   "model.group.collapse": "ย่อ {{group}}",
@@ -210,6 +255,7 @@ export const dict = {
   "model.preview.label.average": "ต้นทุนเฉลี่ยโดยประมาณ",
   "model.preview.label.context": "บริบท",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "ตัวเลือกโมเดล",
   "model.preview.label.completion": "ความสำเร็จ",
   "model.preview.label.costAttempt": "ค่าใช้จ่าย / ครั้ง",
   "model.preview.value.notSupported": "ไม่รองรับ",
@@ -294,6 +340,24 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
+  "prompt.action.sandbox.enable": "เปิดใช้งาน sandbox",
+  "prompt.action.sandbox.disable": "ปิดใช้งาน sandbox",
+  "prompt.action.sandbox.enabled":
+    "เปิดใช้งาน sandbox แล้ว คำสั่ง shell ของ agent ถูกจำกัดไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.disabled":
+    "ปิดใช้งาน sandbox อยู่ คลิกเพื่อจำกัดการเขียนคำสั่ง shell ของ agent ไว้ที่โฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.status.enabled": "เปิด sandbox แล้ว",
+  "prompt.action.sandbox.status.disabled": "ปิด sandbox แล้ว",
+  "prompt.action.sandbox.filesystem": "ระบบไฟล์",
+  "prompt.action.sandbox.network": "เครือข่าย",
+  "prompt.action.sandbox.filesystem.restricted": "จำกัด",
+  "prompt.action.sandbox.network.blocked": "บล็อก",
+  "prompt.action.sandbox.network.allowed": "อนุญาต",
+  "prompt.action.sandbox.unrestricted": "ไม่จำกัด",
+  "prompt.action.sandbox.description.enabled": "เขียนได้เฉพาะในโฟลเดอร์โปรเจ็กต์และ Kilo",
+  "prompt.action.sandbox.description.disabled": "คลิกเพื่อจำกัดการเขียนในระบบไฟล์และการเข้าถึงเครือข่าย",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
   "speechToText.tooltip.stop": "หยุดจับเสียง",
@@ -524,6 +588,8 @@ export const dict = {
   "notification.permission.titleSubagent": "ต้องการสิทธิ์ (ตัวแทนย่อย)",
   "notification.permission.description": "{{sessionTitle}} ใน {{projectName}} ต้องการสิทธิ์",
   "ui.permission.manageAutoApprove": "จัดการกฎการอนุมัติอัตโนมัติ",
+  "ui.permission.doomLoop.prompt": "ตรวจพบการวนซ้ำที่อาจเกิดขึ้นในเครื่องมือ {{tool}} ต้องการดำเนินการต่อหรือไม่",
+  "ui.permission.doomLoop.rule": "เรียกใช้ {{tool}} ต่อไป",
   "ui.permission.rule.addToAllowed": "เพิ่มไปยังรายการที่อนุญาต",
   "ui.permission.rule.removeFromAllowed": "นำออกจากรายการที่อนุญาต",
   "ui.permission.rule.addToDenied": "เพิ่มไปยังรายการที่ถูกปฏิเสธ",
@@ -790,6 +856,9 @@ export const dict = {
   "settings.indexing.title": "การสร้างดัชนี",
   "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
   "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมาย",
+  "settings.indexing.showButton.title": "แสดงปุ่มเมื่อปิดการสร้างดัชนี",
+  "settings.indexing.showButton.description":
+    "แสดงปุ่มการสร้างดัชนีใต้ช่องพรอมต์ขณะปิดการสร้างดัชนี หากซ่อนปุ่มไว้ ให้เปิด การตั้งค่า > การสร้างดัชนี เพื่อเปิดใช้การสร้างดัชนี",
   "settings.indexing.globalEnable.title": "เปิดใช้งานแบบโกลบอล",
   "settings.indexing.globalEnable.description": "เปิดใช้งานการทำดัชนีสำหรับทุกพื้นที่ทำงาน",
   "settings.indexing.projectEnable.title": "เปิดใช้งานสำหรับโปรเจกต์นี้",
@@ -857,16 +926,18 @@ export const dict = {
   "settings.providers.tag.customProvider": "ผู้ให้บริการที่กำหนดเอง",
   "settings.providers.connected.environmentDescription": "เชื่อมต่อจากตัวแปรสภาพแวดล้อมของคุณ",
   "settings.providers.action.signInChatGPT": "ลงชื่อเข้าใช้ด้วย ChatGPT",
-  "settings.providers.custom.description": "เพิ่มผู้ให้บริการที่เข้ากันได้กับ OpenAI ด้วย URL พื้นฐาน",
+  "settings.providers.custom.description": "เพิ่มผู้ให้บริการแบบกำหนดเองด้วย URL พื้นฐาน",
   "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
   "settings.providers.subagentModel.description":
     "โมเดลเริ่มต้นและระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ task-tool ปล่อยว่างไว้เพื่อรับค่าโมเดลจากตัวแทนที่เรียก",
+  "settings.models.hidePromptTraining.title": "ซ่อนโมเดลที่ใช้พรอมต์ในการฝึก",
+  "settings.models.hidePromptTraining.description": "ซ่อนโมเดล Kilo Gateway ที่ผู้ให้บริการอาจใช้พรอมต์ของคุณในการฝึก",
   "settings.providers.modeModels": "โมเดลต่อโหมด",
-  "settings.providers.custom.note": "เพิ่มผู้ให้บริการที่รองรับ OpenAI ด้วย Base URL",
+  "settings.providers.custom.note": "เพิ่มผู้ให้บริการแบบกำหนดเองด้วย Base URL",
   "settings.providers.modeModels.description":
     "แทนที่โมเดลเริ่มต้นสำหรับโหมดที่กำหนด หากไม่ได้ตั้งค่า จะใช้โมเดลเริ่มต้นทั่วไป",
   "provider.custom.title": "ผู้ให้บริการที่กำหนดเอง",
-  "provider.custom.description.prefix": "กำหนดค่าผู้ให้บริการที่เข้ากันได้กับ OpenAI ดู",
+  "provider.custom.description.prefix": "กำหนดค่าผู้ให้บริการแบบกำหนดเอง ดู",
   "provider.custom.description.link": "เอกสารการกำหนดค่าผู้ให้บริการ",
   "provider.custom.description.suffix": "",
   "provider.custom.field.providerID.label": "ID ผู้ให้บริการ",
@@ -874,6 +945,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "ตัวอักษรพิมพ์เล็ก ตัวเลข ขีดกลาง หรือขีดล่าง",
   "provider.custom.field.name.label": "ชื่อที่แสดง",
   "provider.custom.field.name.placeholder": "ผู้ให้บริการ AI ของฉัน",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "URL พื้นฐาน",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "คีย์ API",
@@ -899,6 +971,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "เปิดใช้งานการคิดผ่านอาร์กิวเมนต์เทมเพลตแชท (เช่น Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -912,6 +989,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
   "provider.custom.models.fetch": "ดึงโมเดล",
@@ -1205,6 +1289,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "การดำเนินการนี้จะรีเซ็ตเฉพาะการตั้งค่าเฉพาะของส่วนขยาย VS Code กลับเป็นค่าเริ่มต้นเท่านั้น การตั้งค่าที่ใช้ร่วมกับ CLI เช่น โหมดและกฎการอนุมัติอัตโนมัติ จะถูกเก็บไว้ในการกำหนดค่า CLI และจะไม่ถูกรีเซ็ต",
   "settings.aboutKiloCode.resetSettings.button": "รีเซ็ตการตั้งค่าทั้งหมด",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "ถ่ายโอนการตั้งค่า",
   "settings.aboutKiloCode.settingsTransfer.description":
     "ส่งออกหรือนำเข้าการตั้งค่าเพื่อถ่ายโอนระหว่างอินสแตนซ์ VS Code",
@@ -1258,6 +1343,10 @@ export const dict = {
   "settings.notifications.errors.title": "ข้อผิดพลาด",
   "settings.notifications.errors.description": "แสดงการแจ้งเตือนเมื่อเกิดข้อผิดพลาด",
   "settings.notifications.sounds": "เสียง",
+  "settings.notifications.enable.title": "เปิดใช้การแจ้งเตือนด้วยเสียง",
+  "settings.notifications.enable.description":
+    "เล่นเสียงเมื่อเซสชันเสร็จสิ้น เกิดข้อผิดพลาด หรือต้องการให้คุณป้อนข้อมูล",
+  "settings.notifications.testSound": "ทดสอบ",
   "settings.notifications.agentSound.title": "เสียงเอเจนต์เสร็จสิ้น",
   "settings.notifications.agentSound.description": "เสียงเมื่อเอเจนต์ทำงานเสร็จ",
   "settings.notifications.permSound.title": "เสียงคำขออนุญาต",
@@ -1265,6 +1354,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "เสียงข้อผิดพลาด",
   "settings.notifications.errorSound.description": "เสียงเมื่อเกิดข้อผิดพลาด",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
+  "settings.notifications.sound.system": "ระบบ",
+  "settings.notifications.sound.description":
+    "ค่าเริ่มต้นจะใช้เสียงที่แตกต่างกันสำหรับการเสร็จสิ้น การป้อนข้อมูล และข้อผิดพลาด ส่วนตัวเลือกอื่นจะใช้เสียงเดียวสำหรับทุกเหตุการณ์",
   "settings.notifications.sound.none": "ไม่มี",
   "settings.experimental.share.title": "โหมดแชร์",
   "settings.experimental.share.description": "พฤติกรรมการแชร์เซสชัน",
@@ -1282,13 +1374,19 @@ export const dict = {
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
   "settings.experimental.speechToText.description":
     "เปิดใช้งานการป้อนข้อมูลด้วยเสียงในช่องพรอมต์โดยใช้บัญชี Kilo ของคุณผ่าน Kilo Gateway",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "เปิดใช้งานและลงชื่อเข้าใช้ผู้ให้บริการ Kilo เพื่อใช้ Speech to Text ปัจจุบัน Speech to Text รองรับเฉพาะกับ Kilo Gateway เท่านั้น",
-  "settings.experimental.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
-  "settings.experimental.speechToTextModel.description":
-    "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
+  "settings.models.speechToTextModel.title": "โมเดลแปลงเสียงเป็นข้อความ",
+  "settings.models.speechToTextModel.description": "เลือกโมเดลการถอดเสียง Kilo Gateway สำหรับการป้อนข้อมูลด้วยเสียง",
+  "settings.experimental.nativeNotebookTools.title": "เครื่องมือโน้ตบุ๊กดั้งเดิม",
+  "settings.experimental.nativeNotebookTools.description":
+    "เปิดใช้งานเครื่องมือทดลองสำหรับการอ่าน แก้ไข และเรียกใช้โน้ตบุ๊ก VS Code",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
+  "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
+  "settings.sandboxing.network.title": "จำกัดการเข้าถึงเครือข่าย",
+  "settings.sandboxing.network.description":
+    "บล็อกการเข้าถึงเครือข่ายขาออกจากคำสั่งที่มาจากโมเดลและเครื่องมือ HTTP เซิร์ฟเวอร์ MCP ภายในเครื่องและฮุกของปลั๊กอินทำงานอยู่นอกข้อจำกัดนี้ การรับส่งข้อมูลสำหรับการอนุมานของผู้ให้บริการและโมเดลยังคงใช้งานได้",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1419,6 +1517,9 @@ export const dict = {
     "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
 
   "settings.autoApprove.description":
     "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน doom_loop และ external_directory ค่าเริ่มต้นคือถาม",
@@ -1474,10 +1575,6 @@ export const dict = {
 
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
-  "settings.display.layout.title": "เค้าโครง",
-  "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
-  "settings.display.layout.auto": "อัตโนมัติ",
-  "settings.display.layout.stretch": "ยืด",
   "settings.display.fontSize.title": "ขนาดฟอนต์",
   "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
@@ -1487,6 +1584,10 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "บล็อกการแก้ไขโค้ด",
+  "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
+  "settings.display.codeEdit.expanded": "ขยาย",
+  "settings.display.codeEdit.collapsed": "ยุบ",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",
@@ -1511,6 +1612,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "การย้ายข้อมูลจากเวอร์ชันดั้งเดิม",
   "settings.aboutKiloCode.legacyMigration.description":
     "ย้ายการตั้งค่าจากการติดตั้ง Kilo Code ก่อนหน้านี้ รวมถึงคีย์ API ของผู้ให้บริการและโมเดลเริ่มต้น",
+  "settings.aboutKiloCode.rooImport.description": "นำเข้าประวัติการสนทนาจากการติดตั้ง Roo Code",
+  "settings.aboutKiloCode.rooImport.button": "นำเข้าเซสชันจาก Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "มีอะไรใหม่ใน Kilo Code",

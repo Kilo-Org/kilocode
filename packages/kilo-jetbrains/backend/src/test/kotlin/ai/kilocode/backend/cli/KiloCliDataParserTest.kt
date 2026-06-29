@@ -10,6 +10,8 @@ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Nested
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -160,6 +163,143 @@ class KiloCliDataParserTest {
             assertEquals("part_1", result.part.id)
             assertEquals("text", result.part.type)
             assertEquals("Hello", result.part.text)
+        }
+
+        @Test
+        fun `parseChatEvent - file part preserves metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "file_1",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "file",
+                        "mime": "image/png",
+                        "url": "file:///tmp/a.png",
+                        "filename": "a.png"
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.PartUpdated)
+            assertEquals("file", result.part.type)
+            assertEquals("image/png", result.part.mime)
+            assertEquals("file:///tmp/a.png", result.part.url)
+            assertEquals("a.png", result.part.filename)
+        }
+
+        @Test
+        fun `parseChatEvent - part preserves synthetic flag and source metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "file_1",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "file",
+                        "mime": "text/plain",
+                        "url": "file:///tmp/a.kt",
+                        "filename": "a.kt",
+                        "synthetic": true,
+                        "source": {
+                            "type": "file",
+                            "path": "src/a.kt",
+                            "text": { "value": "@src/a.kt", "start": 4, "end": 13 }
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.PartUpdated)
+            assertEquals(true, result.part.synthetic)
+            assertEquals("file", result.part.source?.type)
+            assertEquals("src/a.kt", result.part.source?.path)
+            assertEquals("@src/a.kt", result.part.source?.text?.value)
+            assertEquals(4.0, result.part.source?.text?.start)
+            assertEquals(13.0, result.part.source?.text?.end)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - user part updated sanitizes text`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val events = norm.parse("message.part.updated", partUpdated(
+                "m1",
+                "p1",
+                "text",
+                "before\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\nafter",
+            ))
+
+            val event = events!!.single() as ChatEventDto.PartUpdated
+            assertEquals("before\nafter", event.part.text)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - assistant part updated preserves text`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "assistant"))
+            val payload = "Called the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}"
+
+            val events = norm.parse("message.part.updated", partUpdated("m1", "p1", "text", payload))
+
+            val event = events!!.single() as ChatEventDto.PartUpdated
+            assertEquals(payload, event.part.text)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - user text deltas append normally`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val first = norm.parse("message.part.delta", partDelta("m1", "p1", "hello"))
+            val second = norm.parse("message.part.delta", partDelta("m1", "p1", " world"))
+
+            assertEquals("hello", (first!!.single() as ChatEventDto.PartDelta).delta)
+            assertEquals(" world", (second!!.single() as ChatEventDto.PartDelta).delta)
+        }
+
+        @Test
+        fun `ChatEventNormalizer - split generated payload delta is suppressed`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val first = norm.parse("message.part.delta", partDelta("m1", "p1", "hello\n"))
+            val second = norm.parse(
+                "message.part.delta",
+                partDelta("m1", "p1", "Called the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}"),
+            )
+
+            assertEquals("hello\n", (first!!.single() as ChatEventDto.PartDelta).delta)
+            val event = second!!.single() as ChatEventDto.PartUpdated
+            assertEquals("hello", event.part.text)
+            assertFalse(event.part.text!!.contains("Read tool"))
+            assertFalse(event.part.text!!.contains("/tmp/a.kt"))
+        }
+
+        @Test
+        fun `ChatEventNormalizer - partial noisy line is replaced when identified`() {
+            val norm = KiloCliDataParser.ChatEventNormalizer()
+            norm.parse("message.updated", messageUpdated("m1", "user"))
+
+            val first = norm.parse("message.part.delta", partDelta("m1", "p1", "before\nCalled the Read"))
+            val second = norm.parse(
+                "message.part.delta",
+                partDelta("m1", "p1", " tool with the following input: {\"path\":\"/tmp/a.kt\"}\nafter"),
+            )
+
+            assertEquals("before\nCalled the Read", (first!!.single() as ChatEventDto.PartDelta).delta)
+            val event = second!!.single() as ChatEventDto.PartUpdated
+            assertEquals("before\nafter", event.part.text)
         }
 
         @Test
@@ -422,6 +562,32 @@ class KiloCliDataParserTest {
             assertEquals("Unauthorized", result.error?.message)
             assertEquals(401, result.error?.statusCode)
             assertEquals("""{"error":{"code":"PAID_MODEL_AUTH_REQUIRED"}}""", result.error?.responseBody)
+        }
+
+        @Test
+        fun `parseChatEvent - session error preserves nested named error details`() {
+            val data = globalEvent("""
+                "type": "session.error",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "error": {
+                        "name": "UnknownError",
+                        "data": {
+                            "message": "Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'",
+                            "ref": "err_123"
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("session.error", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.Error)
+            assertEquals("ses_1", result.sessionID)
+            assertEquals("UnknownError", result.error?.type)
+            assertEquals("Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'", result.error?.message)
+            assertEquals(listOf("message", "ref"), result.error?.dataKeys)
+            assertEquals("err_123", result.error?.ref)
         }
 
         @Test
@@ -983,6 +1149,53 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseMessages - sanitizes user text read payloads only`() {
+            val raw = """[
+                {
+                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "parts": [
+                        { "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "before\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/user.kt\"}\nafter" },
+                        { "id": "f1", "sessionID": "s1", "messageID": "m1", "type": "file", "filename": "a.png", "url": "file:///tmp/a.png" },
+                        { "id": "t1", "sessionID": "s1", "messageID": "m1", "type": "tool", "tool": "read", "state": { "input": { "filePath": "/tmp/tool.kt" } } }
+                    ]
+                },
+                {
+                    "info": { "id": "m2", "sessionID": "s1", "role": "assistant", "time": { "created": 2.0 } },
+                    "parts": [{ "id": "p2", "sessionID": "s1", "messageID": "m2", "type": "text", "text": "Called the Read tool with the following input: {\"filePath\":\"/tmp/assistant.kt\"}" }]
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw)
+
+            assertEquals("before\nafter", result[0].parts[0].text)
+            assertEquals("a.png", result[0].parts[1].filename)
+            assertEquals("/tmp/tool.kt", result[0].parts[2].input["filePath"])
+            assertEquals(
+                "Called the Read tool with the following input: {\"filePath\":\"/tmp/assistant.kt\"}",
+                result[1].parts[0].text,
+            )
+        }
+
+        @Test
+        fun `parseMessages - preserves synthetic and source metadata`() {
+            val raw = """[
+                {
+                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "parts": [
+                        { "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "hidden", "synthetic": true },
+                        { "id": "f1", "sessionID": "s1", "messageID": "m1", "type": "file", "mime": "text/plain", "url": "file:///tmp/a.kt", "source": { "type": "file", "path": "src/a.kt", "text": { "value": "@src/a.kt", "start": 0, "end": 9 } } }
+                    ]
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw).single()
+
+            assertEquals(true, result.parts[0].synthetic)
+            assertEquals("src/a.kt", result.parts[1].source?.path)
+            assertEquals("@src/a.kt", result.parts[1].source?.text?.value)
+        }
+
+        @Test
         fun `parseMessages - message with tool parts`() {
             val raw = """[{
                 "info": { "id": "m1", "sessionID": "s1", "role": "assistant", "time": { "created": 1.0 } },
@@ -1124,6 +1337,9 @@ class KiloCliDataParserTest {
                             },
                             "limit": {"context": 200000, "input": 100000, "output": 16000},
                             "status": "active",
+                            "isFree": false,
+                            "hasUserByokAvailable": true,
+                            "mayTrainOnYourPrompts": true,
                             "recommendedIndex": 2,
                             "variants": {"high": {}, "low": {}, "medium": {}},
                             "options": {}, "headers": {}
@@ -1143,6 +1359,9 @@ class KiloCliDataParserTest {
             assertTrue(model.temperature)
             assertTrue(model.toolCall)
             assertEquals("active", model.status)
+            assertFalse(model.free)
+            assertTrue(model.byok)
+            assertTrue(model.mayTrainOnYourPrompts)
             assertEquals(2.0, model.recommendedIndex)
             assertEquals(200000L, model.limit?.context)
             assertEquals(100000L, model.limit?.input)
@@ -1178,6 +1397,58 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseProviderSettingsProviders - preserves provider metadata and unknown fields`() {
+            val raw = """{
+                "all": [{
+                    "id": "openai",
+                    "name": "OpenAI",
+                    "description": "Build with OpenAI models",
+                    "source": "api",
+                    "metadata": {
+                        "noteKey": "settings.providers.note.openai",
+                        "icon": "openai",
+                        "priority": 3,
+                        "extra": true
+                    },
+                    "unknown": "ok",
+                    "models": {
+                        "gpt-5": {
+                            "name": "GPT-5",
+                            "capabilities": {},
+                            "mayTrainOnYourPrompts": true
+                        }
+                    }
+                }],
+                "default": {"code":"openai/gpt-5"},
+                "connected": ["openai"]
+            }"""
+
+            val result = KiloCliDataParser.parseProviderSettingsProviders(raw)
+            val provider = result.first.single()
+
+            assertEquals("settings.providers.note.openai", provider.metadata?.noteKey)
+            assertEquals("Build with OpenAI models", provider.description)
+            assertEquals("openai", provider.metadata?.icon)
+            assertEquals(3, provider.metadata?.priority)
+            assertTrue(provider.models.getValue("gpt-5").mayTrainOnYourPrompts)
+            assertEquals(listOf("openai"), result.second)
+            assertEquals(mapOf("code" to "openai/gpt-5"), result.third)
+        }
+
+        @Test
+        fun `parseProviderSettingsProviders - malformed metadata becomes null`() {
+            val raw = """{
+                "all": [{"id":"p","name":"P","source":"api","metadata":"bad","models":{}}],
+                "default": {},
+                "connected": []
+            }"""
+
+            val provider = KiloCliDataParser.parseProviderSettingsProviders(raw).first.single()
+
+            assertNull(provider.metadata)
+        }
+
+        @Test
         fun `parseProviders - model boolean capabilities default to false`() {
             val raw = """{
                 "all": [{
@@ -1193,6 +1464,7 @@ class KiloCliDataParserTest {
             assertEquals(false, model.reasoning)
             assertEquals(false, model.temperature)
             assertEquals(false, model.toolCall)
+            assertFalse(model.mayTrainOnYourPrompts)
             assertNull(model.limit)
         }
 
@@ -1208,6 +1480,33 @@ class KiloCliDataParserTest {
             assertFailsWith<Exception> {
                 KiloCliDataParser.parseProviders("""[1,2,3]""")
             }
+        }
+
+        @Test
+        fun `parseProviderAuth - maps structured select options`() {
+            val raw = """{
+                "azure": [{
+                    "type": "api",
+                    "label": "API key",
+                    "prompts": [{
+                        "type": "select",
+                        "key": "endpointType",
+                        "message": "Select Azure endpoint configuration",
+                        "options": [
+                            {"label": "Resource name", "value": "resourceName", "hint": "Build the endpoint"},
+                            {"label": "Full endpoint URL", "value": "baseURL"}
+                        ]
+                    }]
+                }]
+            }"""
+
+            val prompt = KiloCliDataParser.parseProviderAuth(raw).getValue("azure").single().prompts.single()
+
+            assertEquals("Select Azure endpoint configuration", prompt.label)
+            assertEquals("Resource name", prompt.options[0].label)
+            assertEquals("resourceName", prompt.options[0].value)
+            assertEquals("Full endpoint URL", prompt.options[1].label)
+            assertEquals("baseURL", prompt.options[1].value)
         }
 
         // ---- parseCommands ----
@@ -1344,6 +1643,13 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `buildProviderOAuthJson - numeric method index`() {
+            val result = KiloCliDataParser.buildProviderOAuthJson("0", mapOf("deploymentType" to "github.com"))
+
+            assertEquals("""{"method":0,"inputs":{"deploymentType":"github.com"}}""", result)
+        }
+
+        @Test
         fun `buildPromptJson - with agent`() {
             val prompt = PromptDto(
                 parts = listOf(PromptPartDto("text", "Hi")),
@@ -1368,6 +1674,128 @@ class KiloCliDataParserTest {
             val prompt = PromptDto(parts = listOf(PromptPartDto("text", "line1\nline2\t\"quoted\"")))
             val result = KiloCliDataParser.buildPromptJson(prompt)
             assertTrue(result.contains("""line1\nline2\t\"quoted\""""))
+        }
+
+        @Test
+        fun `buildPromptJson - mixed text and file parts`() {
+            val prompt = PromptDto(
+                parts = listOf(
+                    PromptPartDto(type = "text", text = "see this"),
+                    PromptPartDto(type = "file", mime = "image/png", url = "file:///tmp/a.png", filename = "a.png"),
+                )
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"text","text":"see this"},{"type":"file","mime":"image/png","url":"file:///tmp/a.png","filename":"a.png"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - file only omits optional filename`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto(type = "file", mime = "application/pdf", url = "file:///tmp/a.pdf"))
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"application/pdf","url":"file:///tmp/a.pdf"}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - escapes file metadata`() {
+            val prompt = PromptDto(
+                parts = listOf(PromptPartDto(type = "file", mime = "text/plain", url = "file:///tmp/a%20b.txt", filename = "a \"b\".txt"))
+            )
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertTrue(result.contains(""""filename":"a \"b\".txt""""), result)
+        }
+
+        @Test
+        fun `buildPromptJson - file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///tmp/a.kt",
+                filename = "a.kt",
+                source = PartSourceDto(
+                    type = "file",
+                    path = "src/a.kt",
+                    text = PartSourceTextDto("@src/a.kt", 4.0, 13.0),
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"text/plain","url":"file:///tmp/a.kt","filename":"a.kt","source":{"type":"file","text":{"value":"@src/a.kt","start":4.0,"end":13.0},"path":"src/a.kt"}}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - data file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "data:text/plain;charset=utf-8,diff%20content",
+                filename = "git-changes.txt",
+                source = PartSourceDto(
+                    type = "file",
+                    text = PartSourceTextDto("@git-changes", 7.0, 19.0),
+                    path = "git-changes",
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"text/plain","url":"data:text/plain;charset=utf-8,diff%20content","filename":"git-changes.txt","source":{"type":"file","text":{"value":"@git-changes","start":7.0,"end":19.0},"path":"git-changes"}}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCommandJson - file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///tmp/a.kt",
+                source = PartSourceDto(
+                    type = "file",
+                    path = "src/a.kt",
+                    text = PartSourceTextDto("@src/a.kt", 0.0, 9.0),
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildCommandJson("review", "", prompt)
+
+            assertTrue(result.contains(""""source":{"type":"file","text":{"value":"@src/a.kt","start":0.0,"end":9.0},"path":"src/a.kt"}"""), result)
+        }
+
+        @Test
+        fun `buildCommandJson - includes agent variant model and arguments`() {
+            val prompt = PromptDto(
+                parts = emptyList(),
+                agent = "code",
+                variant = "high",
+                providerID = "kilo",
+                modelID = "gpt-5",
+            )
+
+            val result = KiloCliDataParser.buildCommandJson("review", "src/", prompt)
+
+            assertEquals(
+                """{"command":"review","arguments":"src/","agent":"code","variant":"high","model":"kilo/gpt-5"}""",
+                result,
+            )
         }
 
         // ---- buildSummarizeJson ----
@@ -1716,6 +2144,34 @@ class KiloCliDataParserTest {
         assertNull(result[0].message)
     }
 
+    @Test
+    fun `sanitizeUserPromptText - removes read payload lines`() {
+        val text = "before\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\nafter"
+
+        assertEquals("before\nafter", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    @Test
+    fun `sanitizeUserPromptText - handles read case variants and path key`() {
+        val text = "before\nCalled the READ tool with the following input: {\"path\":\"/tmp/a.kt\"}\nafter"
+
+        assertEquals("before\nafter", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    @Test
+    fun `sanitizeUserPromptText - preserves ordinary prose without path key`() {
+        val text = "Called the Read tool with the following input: please inspect the file"
+
+        assertEquals(text, KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
+    @Test
+    fun `sanitizeUserPromptText - collapses only blanks introduced by payload removal`() {
+        val text = "before\n\nCalled the Read tool with the following input: {\"filePath\":\"/tmp/a.kt\"}\n\nafter\n\n\nkeep"
+
+        assertEquals("before\n\nafter\n\n\nkeep", KiloCliDataParser.sanitizeUserPromptText(text))
+    }
+
     // ================================================================
     // Helpers
     // ================================================================
@@ -1723,4 +2179,44 @@ class KiloCliDataParserTest {
     /** Wrap payload content in a GlobalEvent structure. */
     private fun globalEvent(payload: String): String =
         """{"directory":"/tmp","payload":{$payload}}"""
+
+    private fun messageUpdated(id: String, role: String): String = globalEvent("""
+        "type": "message.updated",
+        "properties": {
+            "sessionID": "s1",
+            "info": { "id": "$id", "sessionID": "s1", "role": "$role", "time": { "created": 1.0 } }
+        }
+    """)
+
+    private fun partUpdated(mid: String, pid: String, type: String, text: String): String = globalEvent("""
+        "type": "message.part.updated",
+        "properties": {
+            "sessionID": "s1",
+            "part": { "id": "$pid", "sessionID": "s1", "messageID": "$mid", "type": "$type", "text": ${escape(text)} }
+        }
+    """)
+
+    private fun partDelta(mid: String, pid: String, delta: String): String = globalEvent("""
+        "type": "message.part.delta",
+        "properties": {
+            "sessionID": "s1",
+            "messageID": "$mid",
+            "partID": "$pid",
+            "field": "text",
+            "delta": ${escape(delta)}
+        }
+    """)
+
+    private fun escape(text: String) = buildString {
+        append('"')
+        for (ch in text) {
+            when (ch) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\n' -> append("\\n")
+                else -> append(ch)
+            }
+        }
+        append('"')
+    }
 }

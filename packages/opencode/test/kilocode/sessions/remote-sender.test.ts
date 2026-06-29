@@ -54,7 +54,7 @@ const nolog = {
 function permissions(items: Permission.Request[] = []) {
   return {
     list: async () => items,
-    reply: async () => true,
+    reply: async () => {},
   }
 }
 
@@ -515,7 +515,6 @@ describe("RemoteSender", () => {
         list: async () => [],
         reply: async (input) => {
           calls.push(input)
-          return true
         },
       },
     })

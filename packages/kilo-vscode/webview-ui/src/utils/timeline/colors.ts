@@ -6,7 +6,7 @@
  * taskTimelineColorPalette from messageColors.ts.
  */
 
-import type { Part, ToolPart } from "../../types/messages"
+import type { Message, Part, ToolPart } from "../../types/messages"
 
 // ── Color palette (VS Code CSS variables) ────────────────────────────
 // These mirror the legacy extension's taskTimelineColorPalette exactly.
@@ -71,7 +71,11 @@ export function color(part: Part): TimelineColor {
 
 // ── Label for tooltip ────────────────────────────────────────────────
 
-export function label(part: Part): string {
+function auto(msg?: Message) {
+  return msg?.providerID === "kilo" && msg.modelID?.startsWith("kilo-auto/")
+}
+
+export function label(part: Part, msg?: Message): string {
   switch (part.type) {
     case "text":
       return "Text"
@@ -84,7 +88,7 @@ export function label(part: Part): string {
     case "step-start":
       return "Step start"
     case "step-finish":
-      return "Step finish"
+      return auto(msg) && part.model?.modelID ? `Step finish · ${part.model.modelID}` : "Step finish"
     default:
       return "Unknown"
   }

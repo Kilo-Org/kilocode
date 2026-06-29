@@ -7,8 +7,8 @@ import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
-import { Instance } from "../../src/project/instance"
-import { WithInstance } from "../../src/project/with-instance"
+import { Instance } from "../../src/kilocode/instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
@@ -90,7 +90,7 @@ const savedKey = `${saved.providerID}/${saved.modelID}`
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
   await fs.rm(statePath, { force: true }).catch(() => {})
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       await fs.rm(statePath, { force: true }).catch(() => {})
@@ -724,12 +724,12 @@ describe("plan follow-up", () => {
 
       const dir = other.path
 
-      const seeded = await WithInstance.provide({
+      const seeded = await provideTestInstance({
         directory: dir,
         fn: async () => seed({ text: "1. Add API\n2. Add tests" }),
       })
 
-      const before = await WithInstance.provide({
+      const before = await provideTestInstance({
         directory: dir,
         fn: async () => sessions(),
       })
@@ -750,7 +750,7 @@ describe("plan follow-up", () => {
       })
 
       await expect(pending).resolves.toBe("break")
-      const after = await WithInstance.provide({
+      const after = await provideTestInstance({
         directory: dir,
         fn: async () => sessions(),
       })
@@ -764,7 +764,7 @@ describe("plan follow-up", () => {
       expect(next?.parentID).toBeUndefined()
 
       if (next) {
-        const planPath = await WithInstance.provide({
+        const planPath = await provideTestInstance({
           directory: dir,
           fn: async () => Session.plan(await store.get(seeded.sessionID), Instance.current),
         })

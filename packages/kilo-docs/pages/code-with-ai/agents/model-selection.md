@@ -60,7 +60,7 @@ While the specifics change constantly, some principles stay consistent:
 
 ## Free and Budget Model Picks
 
-You don't need a paid API key to use Kilo Code productively. The fastest way to start for free is [Auto Model Free](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`), which routes to the best available free models automatically. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for the full zero-cost setup.
+You don't need a paid API key to use Kilo Code productively. For the lowest cost on paid work, [Auto Efficient](/docs/code-with-ai/agents/auto-model#tiers) (`kilo-auto/efficient`) routes each request to the cheapest model proven accurate enough for that task. The fastest way to start for free is [Auto Model Free](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`), which routes to the best available free models automatically. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for the full zero-cost setup.
 
 If you prefer to pick models yourself, type `free` in the model picker to filter by free models, or browse the full list at [kilo.ai/models](https://kilo.ai/models).
 
@@ -141,6 +141,67 @@ The model selection is remembered per mode across sessions.
 {% /tabs %}
 
 For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
+
+## Selecting a Model or Agent via a Link (VS Code)
+
+The VS Code extension supports a `vscode://` protocol handler that lets you open VS Code and automatically select a model, an agent, or both — no manual picker interaction required. This is useful for sharing model recommendations, launching a specific model tier from a web page, or switching quickly to a preferred agent.
+
+### URL Format
+
+Include at least one of the `model` or `agent` parameters:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?model=<modelID>
+vscode://kilocode.kilo-code/kilocode/switch?agent=<agentName>
+vscode://kilocode.kilo-code/kilocode/switch?model=<modelID>&agent=<agentName>
+```
+
+Replace `<modelID>` with a Kilo Gateway model ID such as `kilo-auto/free`. Replace `<agentName>` with a visible primary agent ID such as `code` or `plan`, rather than its display name.
+
+### Example: Auto Free
+
+To open Kilo Code and switch to the [Auto Free](/docs/code-with-ai/agents/auto-model) tier (`kilo-auto/free`), use:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?model=kilo-auto%2Ffree
+```
+
+To switch only to Plan and use its normal model selection, specify the agent without a model:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?agent=plan
+```
+
+To select both at the same time, include both parameters:
+
+```
+vscode://kilocode.kilo-code/kilocode/switch?model=kilo-auto%2Ffree&agent=plan
+```
+
+{% callout type="tip" %}
+URL-encode the `/` in model IDs as `%2F` when embedding this URL in HTML links or other contexts where bare slashes may be misinterpreted.
+{% /callout %}
+
+### How It Works
+
+- **VS Code open**: the Kilo sidebar is focused and the linked selection is applied to the active session immediately.
+- **VS Code closed**: VS Code launches, then applies the selection once the extension is ready.
+- When `model` is provided, it must identify a model in the current Kilo Gateway catalog. Invalid or unavailable models cause the deep link to be ignored.
+- When `agent` is provided, it must identify a visible primary agent. Invalid or unavailable agents cause the deep link to be ignored.
+- An agent-only link uses the model that would normally be selected for that agent. When both parameters are present, the agent is selected first so the linked model applies to it.
+- The selection follows the same precedence as using the pickers: it updates the active session, or the next session when no session is active. It does **not** change your configured defaults in settings.
+
+### Sharing and Embedding
+
+You can embed these links in a web page:
+
+```html
+<a href="vscode://kilocode.kilo-code/kilocode/switch?model=kilo-auto%2Ffree&amp;agent=plan">
+  Open Kilo Code with Auto Free in Plan
+</a>
+```
+
+Or share as a plain URL that users can paste into their browser's address bar.
 
 ## Stay Current
 

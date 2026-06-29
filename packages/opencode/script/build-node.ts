@@ -11,7 +11,7 @@ const dir = path.resolve(__dirname, "..")
 
 process.chdir(dir)
 
-await import("./generate.ts")
+const generated = await import("./generate.ts")
 
 // Load migrations from migration directories
 const migrationDirs = (
@@ -45,13 +45,15 @@ console.log(`Loaded ${migrations.length} migrations`)
 
 await Bun.build({
   target: "node",
-  entrypoints: ["./src/node.ts"],
+  entrypoints: ["./src/node.ts", "../kilo-sandbox/src/kilo-sandbox-mutation-worker.ts"], // kilocode_change
   outdir: "./dist/node",
   format: "esm",
   sourcemap: "linked",
   external: ["jsonc-parser", "@lydell/node-pty"],
   define: {
     KILO_MIGRATIONS: JSON.stringify(migrations),
+    KILO_MODELS_DEV: generated.modelsData,
+    KILO_SANDBOX_MUTATION_WORKER_PATH: `'./kilo-sandbox-mutation-worker.js'`, // kilocode_change
     KILO_CHANNEL: `'${Script.channel}'`,
   },
   files: {

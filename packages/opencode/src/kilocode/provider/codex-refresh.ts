@@ -1,4 +1,4 @@
-import type { PluginInput } from "@kilocode/plugin"
+import { Flock } from "@opencode-ai/core/util/flock"
 
 export class CodexAuthExpiredError extends Error {
   constructor(
@@ -25,14 +25,24 @@ type Tokens = {
 }
 
 type Input = {
-  input: PluginInput
+  input: {
+    client: {
+      auth: {
+        set: (input: { path: { id: string }; body: Auth }) => Promise<unknown>
+      }
+    }
+  }
   getAuth: () => Promise<unknown>
   auth: Auth
-  refresh: (refresh: string) => Promise<Tokens>
+  refresh: (refresh: string, signal: AbortSignal) => Promise<Tokens>
   account: (tokens: Tokens) => string | undefined
+  lock?: Flock.Options
+  timeout?: number
 }
 
 const pending = new Map<string, Promise<Auth>>()
+const lock = "codex-auth-refresh:openai"
+const timeout = 30_000
 
 function valid(auth: Auth) {
   return auth.access && auth.expires > Date.now()
@@ -59,43 +69,53 @@ function recoverable(err: unknown) {
 }
 
 export async function refreshCodexAuth(input: Input) {
-  const inflight = pending.get(input.auth.refresh)
+  const token = input.auth.refresh
+  const inflight = pending.get(token)
   if (inflight) {
     const next = await inflight
     assign(input.auth, next)
     return next
   }
 
-  const promise = (async () => {
-    const fresh = await input.getAuth()
-    const current = oauth(fresh)
-    if (current && valid(current)) return current
+  const promise = Flock.withLock(
+    lock,
+    async () => {
+      const fresh = await input.getAuth()
+      const current = oauth(fresh)
+      if (current && valid(current)) return current
 
-    try {
-      const base = current && current.refresh !== input.auth.refresh ? current : input.auth
-      const tokens = await input.refresh(base.refresh)
-      const id = input.account(tokens) || base.accountId
-      const next = {
-        type: "oauth" as const,
-        refresh: tokens.refresh_token,
-        access: tokens.access_token,
-        expires: Date.now() + (tokens.expires_in ?? 3600) * 1000,
-        ...(id && { accountId: id }),
+      try {
+        const base = current && current.refresh !== token ? current : input.auth
+        const controller = new AbortController()
+        const timer = setTimeout(
+          () => controller.abort(new DOMException("The operation timed out.", "TimeoutError")),
+          input.timeout ?? timeout,
+        )
+        const tokens = await input.refresh(base.refresh, controller.signal).finally(() => clearTimeout(timer))
+        const id = input.account(tokens) || base.accountId
+        const next = {
+          type: "oauth" as const,
+          refresh: tokens.refresh_token,
+          access: tokens.access_token,
+          expires: Date.now() + (tokens.expires_in ?? 3600) * 1000,
+          ...(id && { accountId: id }),
+        }
+        await input.input.client.auth.set({ path: { id: "openai" }, body: next })
+        return next
+      } catch (err) {
+        if (!recoverable(err)) throw err
+
+        const latest = await input.getAuth()
+        const next = oauth(latest)
+        if (next && usable(next, token)) return next
+
+        throw new CodexAuthExpiredError()
       }
-      await input.input.client.auth.set({ path: { id: "openai" }, body: next })
-      return next
-    } catch (err) {
-      if (!recoverable(err)) throw err
+    },
+    input.lock,
+  ).finally(() => pending.delete(token))
 
-      const latest = await input.getAuth()
-      const next = oauth(latest)
-      if (next && usable(next, input.auth.refresh)) return next
-
-      throw new CodexAuthExpiredError()
-    }
-  })().finally(() => pending.delete(input.auth.refresh))
-
-  pending.set(input.auth.refresh, promise)
+  pending.set(token, promise)
   const next = await promise
   assign(input.auth, next)
   return next

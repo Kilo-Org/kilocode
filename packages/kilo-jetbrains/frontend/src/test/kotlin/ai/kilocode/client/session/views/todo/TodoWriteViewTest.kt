@@ -5,10 +5,13 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.views.base.PrimarySessionPartView
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
 import java.awt.Color
+import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class TodoWriteViewTest : BasePlatformTestCase() {
@@ -55,6 +58,14 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals(style.editorForeground, view.rowForeground(1))
     }
 
+    fun `test todo header title subtitle gap uses standard medium gap`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("Next", "pending", "medium"))
+        })
+
+        assertEquals(UiStyle.Gap.md(), centerGap(view))
+    }
+
     fun `test compact view renders hidden labels and visible rows`() {
         val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
             it.todos = listOf(
@@ -92,6 +103,13 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertTrue(view.labelText().contains("1/1"))
         assertTrue(view.rowChecked(0))
         assertTrue(view.rowText(0).contains("New"))
+    }
+
+    private fun centerGap(view: TodoWriteView): Int {
+        val row = view.components.filterIsInstance<JPanel>().first()
+        val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+        val center = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+        return (center.layout as BorderLayout).hgap
     }
 
     private fun tool(name: String, state: ToolExecState) = Tool("p1", name, toolKind(name)).also { it.state = state }
