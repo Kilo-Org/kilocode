@@ -284,6 +284,19 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .get("/kilocode/agent/requirements", "kilocode.agentRequirements")
+    .at((ctx) => ({ path: "/kilocode/agent/requirements?agent=httpapi-agent", headers: ctx.headers() }))
+    .json(200, (body, ctx) => {
+      object(body)
+      check(body.agent === "httpapi-agent", "agent requirements should echo the requested agent")
+      check(body.directory === ctx.directory, "agent requirements should use the routed workspace directory")
+      check(body.enabled === false, "agent requirements should report disabled when the experiment is off")
+      check(body.state === "disabled", "agent requirements should return the disabled state")
+      array(body.skills)
+      array(body.mcps)
+      array(body.vscode_extensions)
+    }),
+  http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .mutating()
     .preserveDatabase()
@@ -291,10 +304,10 @@ export const kiloScenarios: Scenario[] = [
       Effect.gen(function* () {
         const location = yield* file(
           ctx,
-          ".opencode/skill/httpapi-remove/SKILL.md",
+          ".kilo/skill/httpapi-remove/SKILL.md",
           "---\nname: httpapi-remove\ndescription: HTTP API removal fixture.\n---\n# HTTP API remove\n",
         )
-        const sentinel = yield* file(ctx, ".opencode/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
+        const sentinel = yield* file(ctx, ".kilo/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
         return { location, sentinel }
       }),
     )
@@ -319,9 +332,7 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .mutating()
-    .seeded((ctx) =>
-      file(ctx, ".opencode/agent/httpapi-remove.md", "---\ndescription: HTTP API remove\n---\nRemove me.\n"),
-    )
+    .seeded((ctx) => file(ctx, ".kilo/agent/httpapi-remove.md", "---\ndescription: HTTP API remove\n---\nRemove me.\n"))
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-remove" } }))
     .jsonEffect(200, (body, ctx) =>
       Effect.gen(function* () {

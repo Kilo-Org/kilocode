@@ -14654,6 +14654,68 @@
         ]
       }
     },
+    "/kilocode/agent/requirements": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.agentRequirements",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "agent",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent requirement status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRequirementResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Check whether the selected agent's requirements are available in the request directory.",
+        "summary": "Check agent requirements",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.agentRequirements({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/skill/remove": {
       "post": {
         "tags": ["kilocode"],
@@ -18797,6 +18859,99 @@
         "required": ["name", "data"],
         "additionalProperties": false
       },
+      "AgentRequirementError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["AgentRequirementError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "agent": {
+                "type": "string"
+              },
+              "directory": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["blocked", "error"]
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["ready", "missing", "error"]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["name", "status"],
+                  "additionalProperties": false
+                }
+              },
+              "mcps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["ready", "missing", "error"]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["name", "status"],
+                  "additionalProperties": false
+                }
+              },
+              "vscode_extensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "\\S"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                    }
+                  },
+                  "required": ["name", "id"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["message", "agent", "directory", "state", "skills", "mcps", "vscode_extensions"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "Todo": {
         "type": "object",
         "properties": {
@@ -21342,6 +21497,58 @@
           },
           "permission": {
             "$ref": "#/components/schemas/PermissionConfig"
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "mcps": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "vscode_extensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "\\S"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                    }
+                  },
+                  "required": ["name", "id"],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": {}
@@ -22239,6 +22446,9 @@
                 "type": "boolean"
               },
               "codebase_search": {
+                "type": "boolean"
+              },
+              "agent_requirements": {
                 "type": "boolean"
               },
               "native_notebook_tools": {
@@ -23395,6 +23605,58 @@
           },
           "options": {
             "type": "object"
+          },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "mcps": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "vscode_extensions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "\\S"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                    }
+                  },
+                  "required": ["name", "id"],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "additionalProperties": false
           },
           "steps": {
             "type": "number"
@@ -24937,6 +25199,102 @@
           }
         },
         "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "AgentRequirementResult": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["disabled", "ready", "blocked", "error"]
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["ready", "missing", "error"]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["name", "status"],
+              "additionalProperties": false
+            }
+          },
+          "mcps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["ready", "missing", "error"]
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": ["name", "status"],
+              "additionalProperties": false
+            }
+          },
+          "vscode_extensions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "\\S"
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                }
+              },
+              "required": ["name", "id"],
+              "additionalProperties": false
+            }
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["unknown_agent", "malformed_declaration", "discovery_failed", "mcp_status_failed"]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["agent", "directory", "enabled", "state", "skills", "mcps", "vscode_extensions"],
         "additionalProperties": false
       },
       "NotebookOutput": {
@@ -28146,6 +28504,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/APIError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentRequirementError"
                   }
                 ]
               }

@@ -143,6 +143,12 @@ export interface OpenContentRequest {
   language?: string
 }
 
+export interface ValidateFilesRequest {
+  type: "validateFiles"
+  id: string
+  paths: string[]
+}
+
 export interface CancelLoginRequest {
   type: "cancelLogin"
 }
@@ -211,6 +217,7 @@ export interface OpenConfigFileRequest {
 
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
+  directory?: string
 }
 
 export interface OpenAgentManagerRequest {
@@ -227,6 +234,14 @@ export interface RequestAgentsMessage {
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
+}
+
+export interface RequestAgentRequirementsMessage {
+  type: "requestAgentRequirements"
+  agent: string
+  directory: string
+  sessionID?: string
+  force?: boolean
 }
 
 export interface RequestCommandsMessage {
@@ -1158,6 +1173,7 @@ export type WebviewMessage =
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
   | OpenFileRequest
+  | ValidateFilesRequest
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
@@ -1166,6 +1182,7 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
+  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage

@@ -5,9 +5,11 @@ import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/midd
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
+  WorkspaceRoutingQueryFields,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
 import { AnacondaDesktopApi } from "./anaconda-desktop"
+import { Result as AgentRequirementResult } from "@/kilocode/agent-requirements"
 import {
   Failure as NotebookFailure,
   Request as NotebookRequest,
@@ -27,11 +29,16 @@ export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
 })
 
+export const AgentRequirementQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  agent: Schema.String,
+})
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
 
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
+  agentRequirements: `${root}/agent/requirements`,
   removeSkill: `${root}/skill/remove`,
   removeAgent: `${root}/agent/remove`,
   notebookList: `${root}/notebook`,
@@ -53,6 +60,16 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.heap.snapshot",
             summary: "Write heap snapshot",
             description: "Write a heap snapshot for the CLI process to the log directory.",
+          }),
+        ),
+        HttpApiEndpoint.get("agentRequirements", KilocodePaths.agentRequirements, {
+          query: AgentRequirementQuery,
+          success: described(AgentRequirementResult, "Agent requirement status"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.agentRequirements",
+            summary: "Check agent requirements",
+            description: "Check whether the selected agent's requirements are available in the request directory.",
           }),
         ),
         HttpApiEndpoint.post("removeSkill", KilocodePaths.removeSkill, {
