@@ -104,7 +104,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
                           {count(model.tokens.reasoning)}
                         </div>
                         <div class="task-header-usage-meta">
-                          Cache R {count(model.tokens.cache.read)} · W {count(model.tokens.cache.write)} · Rate{" "}
+                          Cache R {count(model.tokens.cache.read)} · W {count(model.tokens.cache.write)} · Hit Rate{" "}
                           {rate(model)}
                         </div>
                       </div>
