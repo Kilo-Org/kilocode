@@ -12,13 +12,16 @@ import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -41,10 +44,13 @@ class KiloBackendWorkspaceTest {
 
     @AfterTest
     fun tearDown() {
-        apps.forEach { it.dispose() }
-        apps.clear()
-        scope.cancel()
-        mock.close()
+        runBlocking {
+            apps.forEach { it.dispose() }
+            apps.clear()
+            scope.cancel()
+            mock.close()
+            withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
+        }
     }
 
     private fun setup(): KiloBackendAppService =
@@ -466,7 +472,7 @@ class KiloBackendWorkspaceTest {
         mock.skills = SKILLS_JSON
 
         val app = setup()
-        ready(app)
+        val initial = ready(app)
 
         // Change providers response then fire disposed event
         mock.providers = """{
@@ -482,26 +488,16 @@ class KiloBackendWorkspaceTest {
             "connected": ["openai"]
         }"""
 
-        mock.awaitSseConnection()
-        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
-
-        // global.disposed triggers full app reload which restarts the
-        // workspace manager (stop + start), clearing all cached workspaces.
-        // Wait for app to reach Ready again after reload.
-        withTimeout(15_000) {
-            // App may briefly leave Ready during reload
-            while (true) {
-                val state = app.appState.value
-                if (state is KiloAppState.Ready) {
-                    delay(300)
-                    if (app.appState.value is KiloAppState.Ready) break
-                }
-                delay(100)
-            }
+        assertTrue(mock.awaitSseConnection())
+        val reload = async(start = CoroutineStart.UNDISPATCHED) {
+            app.appState.drop(1).first { it is KiloAppState.Ready }
         }
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        withTimeout(15_000) { reload.await() }
 
         // Get a fresh workspace — old one was stopped during reload
         val ws = app.workspaces.get("/test/project")
+        assertTrue(ws !== initial)
         withTimeout(15_000) {
             ws.state.first { it is KiloWorkspaceState.Ready }
         }

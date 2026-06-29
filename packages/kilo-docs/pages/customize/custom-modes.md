@@ -76,7 +76,7 @@ Create `.md` files in any of these directories:
 ```
 .kilo/agents/my-agent.md
 .kilo/agent/my-agent.md
-.opencode/agents/my-agent.md
+.kilocode/agents/my-agent.md
 ```
 
 For global agents, place files in your global config directory:
@@ -191,7 +191,7 @@ Agent configurations merge from lowest to highest priority:
 1. Built-in (native) agent defaults
 2. Global config (`~/.config/kilo/kilo.jsonc`)
 3. Project config (`kilo.jsonc` at project root)
-4. `.kilo/` / `.opencode/` directory configs and agent `.md` files
+4. `.kilo/` / legacy `.kilocode/` directory configs and agent `.md` files
 5. Environment variable overrides (`KILO_CONFIG_CONTENT`)
 
 When the same agent name appears at multiple levels, properties are merged (not replaced wholesale), so you can override just a model or temperature without redefining the entire agent.
@@ -312,7 +312,7 @@ Create `.md` files in any of these directories:
 ```
 .kilo/agents/my-agent.md
 .kilo/agent/my-agent.md
-.opencode/agents/my-agent.md
+.kilocode/agents/my-agent.md
 ```
 
 For global agents, place files in your global config directory:
@@ -427,7 +427,7 @@ Agent configurations merge from lowest to highest priority:
 1. Built-in (native) agent defaults
 2. Global config (`~/.config/kilo/kilo.jsonc`)
 3. Project config (`kilo.jsonc` at project root)
-4. `.kilo/` / `.opencode/` directory configs and agent `.md` files
+4. `.kilo/` / legacy `.kilocode/` directory configs and agent `.md` files
 5. Environment variable overrides (`KILO_CONFIG_CONTENT`)
 
 When the same agent name appears at multiple levels, properties are merged (not replaced wholesale), so you can override just a model or temperature without redefining the entire agent.
@@ -707,7 +707,7 @@ Focus on:
 
 ### Common Issues
 
-- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.kilo/agents/`, `.kilo/agent/`, `.opencode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
+- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.kilo/agents/`, `.kilo/agent/`, `.kilocode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
 - **Permission errors:** Permission rules are evaluated last-match-wins. If an agent can't use a tool you expect, check that an `allow` rule appears after any `deny` rules for that permission.
 - **YAML frontmatter parse errors:** Ensure the frontmatter block starts and ends with `---` on its own line. Validate that YAML keys match expected property names (e.g., `top_p` not `topP`).
 - **Agent overrides not working:** Config merges from global to project level. If a global config sets a property, your project config can override it, but both must use the same agent name.
@@ -724,7 +724,7 @@ Focus on:
 
 ### Common Issues
 
-- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.kilo/agents/`, `.kilo/agent/`, `.opencode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
+- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.kilo/agents/`, `.kilo/agent/`, `.kilocode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
 - **Permission errors:** Permission rules are evaluated last-match-wins. If an agent can't use a tool you expect, check that an `allow` rule appears after any `deny` rules for that permission.
 - **YAML frontmatter parse errors:** Ensure the frontmatter block starts and ends with `---` on its own line. Validate that YAML keys match expected property names (e.g., `top_p` not `topP`).
 - **Agent overrides not working:** Config merges from global to project level. If a global config sets a property, your project config can override it, but both must use the same agent name.
