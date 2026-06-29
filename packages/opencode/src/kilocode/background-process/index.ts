@@ -1145,7 +1145,7 @@ export namespace BackgroundProcess {
                 active.proc?.removeAllListeners()
                 active.proc?.stdout?.destroy()
                 active.proc?.stderr?.destroy()
-                await save(current, active, { disposed: true })
+                await save(current, active, { create: !terminal(active.info.status), disposed: true })
               }),
             )
             current.processes.clear()
