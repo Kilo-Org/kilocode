@@ -413,6 +413,96 @@ describe("agent config", () => {
   })
 })
 
+describe("project config directory precedence", () => {
+  test("prefers .kilo over legacy .kilocode and ignores .opencode", async () => {
+    await using tmp = await tmpdir()
+    const entries = [
+      {
+        root: ".opencode",
+        source: "opencode",
+        config: {
+          username: "opencode",
+          model: "test/opencode",
+          small_model: "test/opencode",
+        },
+        names: ["shared", "legacy", "opencode-only"],
+      },
+      {
+        root: ".kilocode",
+        source: "kilocode",
+        config: {
+          username: "kilocode",
+          model: "test/kilocode",
+        },
+        names: ["shared", "legacy"],
+      },
+      {
+        root: ".kilo",
+        source: "kilo",
+        config: {
+          username: "kilo",
+        },
+        names: ["shared"],
+      },
+    ] as const
+
+    for (const item of entries) {
+      const dir = path.join(tmp.path, item.root)
+      await writeConfig(dir, {
+        $schema: "https://app.kilo.ai/config.json",
+        ...item.config,
+      })
+      for (const name of item.names) {
+        await Filesystem.write(
+          path.join(dir, "command", `${name}.md`),
+          `---\ndescription: ${item.source} command\n---\n${item.source} command template`,
+        )
+        await Filesystem.write(
+          path.join(dir, "agent", `${name}.md`),
+          `---\ndescription: ${item.source} agent\nmode: subagent\n---\n${item.source} agent prompt`,
+        )
+      }
+      await Filesystem.write(path.join(dir, "plugin", `${item.source}.ts`), "export default {}")
+    }
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+
+        expect(config.username).toBe("kilo")
+        expect(config.model).toBe("test/kilocode")
+        expect(config.small_model).toBeUndefined()
+
+        expect(config.command?.shared).toMatchObject({
+          description: "kilo command",
+          template: "kilo command template",
+        })
+        expect(config.command?.legacy).toMatchObject({
+          description: "kilocode command",
+          template: "kilocode command template",
+        })
+        expect(config.command?.["opencode-only"]).toBeUndefined()
+
+        expect(config.agent?.shared).toMatchObject({
+          description: "kilo agent",
+          prompt: "kilo agent prompt",
+        })
+        expect(config.agent?.legacy).toMatchObject({
+          description: "kilocode agent",
+          prompt: "kilocode agent prompt",
+        })
+        expect(config.agent?.["opencode-only"]).toBeUndefined()
+
+        const plugins = JSON.stringify(config.plugin)
+        expect(plugins).toContain("kilocode.ts")
+        expect(plugins).toContain("kilo.ts")
+        expect(plugins).not.toContain("opencode.ts")
+      },
+    })
+  })
+})
+
 describe("linked worktree config", () => {
   test("uses primary config directories as local fallbacks", async () => {
     await using primary = await tmpdir({ git: true })
@@ -449,6 +539,10 @@ describe("linked worktree config", () => {
     try {
       await Bun.write(path.join(directory, "placeholder"), "")
       await Bun.write(
+        path.join(primary.path, "packages", ".opencode", "kilo.jsonc"),
+        JSON.stringify({ snapshot: true, autoupdate: false, share: "auto", default_agent: "opencode-only" }),
+      )
+      await Bun.write(
         path.join(primary.path, "packages", ".kilocode", "kilo.jsonc"),
         JSON.stringify({ snapshot: true, autoupdate: "notify", share: "disabled" }),
       )
@@ -460,6 +554,7 @@ describe("linked worktree config", () => {
       expect(config.snapshot).toBe(false)
       expect(config.autoupdate).toBe("notify")
       expect(config.share).toBe("manual")
+      expect(config.default_agent).toBeUndefined()
     } finally {
       await $`git worktree remove --force ${worktree}`.cwd(primary.path).quiet().nothrow()
     }
