@@ -1822,6 +1822,8 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!current) return false
     const ids = store.modelUsage[current]?.data?.sessionIDs
     if (ids?.includes(sessionID) || (!!parentID && ids?.includes(parentID))) return true
+    const family = sessionFamily(current)
+    if (family.has(sessionID) || (!!parentID && family.has(parentID))) return true
     return isSameSessionTree(current, sessionID, (id) => store.sessions[id], parentID)
   }
 
