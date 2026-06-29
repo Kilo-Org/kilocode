@@ -116,6 +116,25 @@ import { dict as cliUk } from "../../src/services/cli-backend/i18n/uk"
 import { dict as cliIt } from "../../src/services/cli-backend/i18n/it"
 
 import { dict as acEn } from "../../src/services/autocomplete/i18n/en"
+import { dict as acZh } from "../../src/services/autocomplete/i18n/zh"
+import { dict as acZht } from "../../src/services/autocomplete/i18n/zht"
+import { dict as acDe } from "../../src/services/autocomplete/i18n/de"
+import { dict as acEs } from "../../src/services/autocomplete/i18n/es"
+import { dict as acFr } from "../../src/services/autocomplete/i18n/fr"
+import { dict as acDa } from "../../src/services/autocomplete/i18n/da"
+import { dict as acJa } from "../../src/services/autocomplete/i18n/ja"
+import { dict as acKo } from "../../src/services/autocomplete/i18n/ko"
+import { dict as acPl } from "../../src/services/autocomplete/i18n/pl"
+import { dict as acRu } from "../../src/services/autocomplete/i18n/ru"
+import { dict as acAr } from "../../src/services/autocomplete/i18n/ar"
+import { dict as acNo } from "../../src/services/autocomplete/i18n/no"
+import { dict as acBr } from "../../src/services/autocomplete/i18n/br"
+import { dict as acTh } from "../../src/services/autocomplete/i18n/th"
+import { dict as acBs } from "../../src/services/autocomplete/i18n/bs"
+import { dict as acTr } from "../../src/services/autocomplete/i18n/tr"
+import { dict as acNl } from "../../src/services/autocomplete/i18n/nl"
+import { dict as acUk } from "../../src/services/autocomplete/i18n/uk"
+import { dict as acIt } from "../../src/services/autocomplete/i18n/it"
 
 // ── Locale maps ─────────────────────────────────────────────────────────────
 
@@ -211,6 +230,29 @@ const cliLocales: Record<string, Record<string, string>> = {
   nl: cliNl,
   uk: cliUk,
   it: cliIt,
+}
+
+const acLocales: Record<string, Record<string, string>> = {
+  en: acEn,
+  zh: acZh,
+  zht: acZht,
+  de: acDe,
+  es: acEs,
+  fr: acFr,
+  da: acDa,
+  ja: acJa,
+  ko: acKo,
+  pl: acPl,
+  ru: acRu,
+  ar: acAr,
+  no: acNo,
+  br: acBr,
+  th: acTh,
+  bs: acBs,
+  tr: acTr,
+  nl: acNl,
+  uk: acUk,
+  it: acIt,
 }
 
 // Merge webview dictionaries in the same priority order as language.tsx
@@ -435,6 +477,17 @@ describe("i18n locale completeness — every English key exists in all locales",
       expect(
         missing,
         `Found ${missing.length} missing cli-backend translation(s):\n${formatLocaleReport(missing)}`,
+      ).toEqual([])
+    }
+    expect(missing).toEqual([])
+  })
+
+  it("autocomplete: every English key has a translation in all locales", () => {
+    const missing = findMissingLocaleKeys(acEn, acLocales)
+    if (missing.length > 0) {
+      expect(
+        missing,
+        `Found ${missing.length} missing autocomplete translation(s):\n${formatLocaleReport(missing)}`,
       ).toEqual([])
     }
     expect(missing).toEqual([])

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { t } from "../../src/services/autocomplete/shims/i18n"
+import { resolveLocale, t } from "../../src/services/autocomplete/shims/i18n"
 
 describe("t()", () => {
   it("returns translated string for known key", () => {
@@ -62,5 +62,18 @@ describe("t()", () => {
     const result = t("kilocode:autocomplete.statusBar.enabled", {})
     expect(typeof result).toBe("string")
     expect(result).not.toContain("{{")
+  })
+
+  it("resolves supported locale variants", () => {
+    expect(resolveLocale("de-DE")).toBe("de")
+    expect(resolveLocale("pt-BR")).toBe("br")
+    expect(resolveLocale("nb-NO")).toBe("no")
+    expect(resolveLocale("zh-CN")).toBe("zh")
+    expect(resolveLocale("zh-Hant")).toBe("zht")
+    expect(resolveLocale("zh-TW")).toBe("zht")
+  })
+
+  it("falls back to English for unsupported locales", () => {
+    expect(resolveLocale("sv-SE")).toBe("en")
   })
 })

@@ -1,0 +1,47 @@
+export const dict = {
+  "kilocode:autocomplete.statusBar.enabled": "$(kilo-logo) Automatisch aanvullen",
+  "kilocode:autocomplete.statusBar.snoozed": "gesluimerd",
+  "kilocode:autocomplete.statusBar.warning": "$(warning) Automatisch aanvullen",
+  "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code automatisch aanvullen",
+  "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code automatisch aanvullen (uitgeschakeld)",
+  "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
+    "**Geen model voor automatisch aanvullen geconfigureerd**\n\nVoeg een profiel toe met een van deze ondersteunde providers om automatisch aanvullen in te schakelen: {{providers}}.\n\n[Instellingen openen]({{command}})",
+  "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Totale sessiekosten:",
+  "kilocode:autocomplete.statusBar.tooltip.provider": "Provider:",
+  "kilocode:autocomplete.statusBar.tooltip.model": "Model:",
+  "kilocode:autocomplete.statusBar.tooltip.profile": "Profiel: ",
+  "kilocode:autocomplete.statusBar.tooltip.defaultProfile": "Standaard",
+  "kilocode:autocomplete.statusBar.tooltip.completionSummary":
+    "{{count}} aanvullingen uitgevoerd tussen {{startTime}} en {{endTime}}, voor totale kosten van {{cost}}.",
+  "kilocode:autocomplete.statusBar.tooltip.providerInfo":
+    "Automatische aanvullingen geleverd door {{model}} via {{provider}}.",
+  "kilocode:autocomplete.statusBar.cost.zero": "$0.00",
+  "kilocode:autocomplete.statusBar.cost.lessThanCent": "<$0.01",
+  "kilocode:autocomplete.toggleMessage": "Kilo Code automatisch aanvullen {{status}}",
+  "kilocode:autocomplete.progress.title": "Kilo Code",
+  "kilocode:autocomplete.progress.analyzing": "Je code wordt geanalyseerd...",
+  "kilocode:autocomplete.progress.generating": "Voorgestelde bewerkingen worden gegenereerd...",
+  "kilocode:autocomplete.progress.processing": "Voorgestelde bewerkingen worden verwerkt...",
+  "kilocode:autocomplete.progress.showing": "Voorgestelde bewerkingen worden weergegeven...",
+  "kilocode:autocomplete.input.title": "Kilo Code: Snelle taak",
+  "kilocode:autocomplete.input.placeholder": "bijv. 'refactor deze functie zodat deze efficiënter is'",
+  "kilocode:autocomplete.commands.generateSuggestions": "Kilo Code: Voorgestelde bewerkingen genereren",
+  "kilocode:autocomplete.commands.displaySuggestions": "Voorgestelde bewerkingen weergeven",
+  "kilocode:autocomplete.commands.cancelSuggestions": "Voorgestelde bewerkingen annuleren",
+  "kilocode:autocomplete.commands.applyCurrentSuggestion": "Huidige voorgestelde bewerking toepassen",
+  "kilocode:autocomplete.commands.applyAllSuggestions": "Alle voorgestelde bewerkingen toepassen",
+  "kilocode:autocomplete.commands.category": "Kilo Code",
+  "kilocode:autocomplete.codeAction.title": "Kilo Code: Voorgestelde bewerkingen",
+  "kilocode:autocomplete.chatParticipant.fullName": "Kilo Code-agent",
+  "kilocode:autocomplete.chatParticipant.name": "Agent",
+  "kilocode:autocomplete.chatParticipant.description": "Ik kan helpen met snelle taken en voorgestelde bewerkingen.",
+  "kilocode:autocomplete.incompatibilityExtensionPopup.message":
+    "Kilo Code automatisch aanvullen wordt geblokkeerd door een conflict met GitHub Copilot. Schakel de inline suggesties van Copilot uit om dit op te lossen.",
+  "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot uitschakelen",
+  "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Automatisch aanvullen uitschakelen",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code automatisch aanvullen is gepauzeerd omdat je account geen resterende credits heeft. Voeg credits toe om automatisch aanvullen te hervatten.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Credits toevoegen",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code automatisch aanvullen is gepauzeerd vanwege een authenticatiefout. Meld je opnieuw aan.",
+}
