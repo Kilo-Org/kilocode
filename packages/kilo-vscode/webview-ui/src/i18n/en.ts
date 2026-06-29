@@ -1,4 +1,4 @@
-export const anacondaDesktopDict = {
+export const dict = {
   "provider.anaconda.title.connect": "Connect Anaconda Desktop",
   "provider.anaconda.title.manage": "Manage Anaconda Desktop",
   "provider.anaconda.status.checking": "Checking Anaconda Desktop...",
@@ -48,10 +48,6 @@ export const anacondaDesktopDict = {
   "provider.anaconda.toast.refreshed.description": "The active local server and models are up to date in Kilo.",
   "settings.providers.note.anacondaDesktop": "Run a model served locally by Anaconda Desktop.",
   "settings.providers.tag.local": "Local",
-} as const
-
-export const dict = {
-  ...anacondaDesktopDict,
   "command.category.suggested": "Suggested",
   "command.category.view": "View",
   "command.category.project": "Project",

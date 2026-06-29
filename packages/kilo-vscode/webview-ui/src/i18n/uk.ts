@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Перевірити ще раз",
+  "provider.anaconda.title.connect": "Підключити Anaconda Desktop",
+  "provider.anaconda.title.manage": "Керування Anaconda Desktop",
+  "provider.anaconda.status.checking": "Перевірка Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Відкриття Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Оновлення моделей провайдера...",
+  "provider.anaconda.status.ready": "Готово до підключення",
+  "provider.anaconda.status.waiting": "Очікування Desktop",
+  "provider.anaconda.status.attention": "Потребує уваги",
+  "provider.anaconda.status.unavailable": "Недоступно",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop не підтримується на {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Встановіть Anaconda Desktop на цей комп'ютер, а потім поверніться сюди. Kilo не запустить інсталятор за вас.",
+  "provider.anaconda.state.notRunning":
+    "Відкрийте Anaconda Desktop, завершіть налаштування та увійдіть в систему, а потім виберіть Перевірити знову.",
+  "provider.anaconda.state.invalidConfig":
+    "Налаштування Anaconda Desktop не завершено. Відкрийте Desktop, завершіть налаштування і перезапустіть при необхідності.",
+  "provider.anaconda.state.signedOut": "Відкрийте Anaconda Desktop і увійдіть в систему перед підключенням Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo не зміг отримати доступ до Anaconda Desktop. Відкрийте Desktop, увійдіть знову і перезапустіть при необхідності.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop ще не відповідає. Відкрийте його і зачекайте, поки програма завершить запуск.",
+  "provider.anaconda.state.noModel":
+    "В Anaconda Desktop завантажте модель генерації тексту. Якщо можливо, виберіть таку з підтримкою виклику інструментів, а потім запустіть її сервер.",
   "provider.anaconda.state.noServer_one":
     "Доступна 1 завантажена модель генерації тексту. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
   "provider.anaconda.state.noServer_other":
     "Доступно завантажених моделей генерації тексту: {{count}}. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.unhealthy":
+    "Активний сервер виводу ще не у порядку. Перевірте його в Anaconda Desktop і перезапустіть сервер при необхідності.",
+  "provider.anaconda.state.ready":
+    "Kilo знайшов справний локальний сервер генерації тексту і може імпортувати його поточні налаштування підключення.",
+  "provider.anaconda.server": "Активний сервер виводу",
+  "provider.anaconda.context": "Вікно контексту",
+  "provider.anaconda.contextValue": "{{count}} токенів",
+  "provider.anaconda.tools": "Виклик інструментів",
+  "provider.anaconda.tools.supported": "Підтримується",
+  "provider.anaconda.tools.unsupported": "Не ввімкнено",
+  "provider.anaconda.tools.unknown": "Невідомо",
+  "provider.anaconda.warning.title": "Підтримка інструментів обмежена",
+  "provider.anaconda.warning.description":
+    "Цей сервер не підтверджує виклик інструментів. Дії агента кодування можуть завершуватися помилкою або бути недоступними. Продовжуйте лише якщо ви приймаєте ці обмеження.",
+  "provider.anaconda.action.download": "Завантажити Anaconda Desktop",
+  "provider.anaconda.action.open": "Відкрити Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Перевірити знову",
+  "provider.anaconda.action.continue": "Продовжити в будь-якому разі",
+  "provider.anaconda.action.manage": "Керування / Оновлення",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop оновлено",
+  "provider.anaconda.toast.refreshed.description": "Активний локальний сервер та моделі актуальні в Kilo.",
+  "settings.providers.note.anacondaDesktop": "Запустіть модель, яку обслуговує локально Anaconda Desktop.",
+  "settings.providers.tag.local": "Локальний",
   "command.category.suggested": "Запропоновані",
   "command.category.view": "Вигляд",
   "command.category.project": "Проєкт",

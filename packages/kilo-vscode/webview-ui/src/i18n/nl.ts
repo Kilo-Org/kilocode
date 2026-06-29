@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Opnieuw controleren",
+  "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
+  "provider.anaconda.title.manage": "Anaconda Desktop beheren",
+  "provider.anaconda.status.checking": "Anaconda Desktop controleren...",
+  "provider.anaconda.status.opening": "Anaconda Desktop openen...",
+  "provider.anaconda.status.syncing": "Providermodellen vernieuwen...",
+  "provider.anaconda.status.ready": "Klaar om te verbinden",
+  "provider.anaconda.status.waiting": "Wachten op Desktop",
+  "provider.anaconda.status.attention": "Vereist aandacht",
+  "provider.anaconda.status.unavailable": "Niet beschikbaar",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop wordt niet ondersteund op {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installeer Anaconda Desktop op dit apparaat en keer dan hier terug. Kilo voert het installatieprogramma niet voor u uit.",
+  "provider.anaconda.state.notRunning":
+    "Open Anaconda Desktop, voltooi de installatie en meld u aan. Kies vervolgens Opnieuw controleren.",
+  "provider.anaconda.state.invalidConfig":
+    "De Anaconda Desktop-installatie is onvolledig. Open Desktop, voltooi de installatie en start het opnieuw op indien nodig.",
+  "provider.anaconda.state.signedOut": "Open Anaconda Desktop en meld u aan voordat u Kilo verbindt.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo had geen toegang tot Anaconda Desktop. Open Desktop, meld u opnieuw aan en start het opnieuw op indien nodig.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop reageert nog niet. Open het en wacht tot de toepassing klaar is met opstarten.",
+  "provider.anaconda.state.noModel":
+    "Download in Anaconda Desktop een tekstgeneratiemodel. Kies indien mogelijk een model met ondersteuning voor toolaanroepen en start vervolgens de server.",
   "provider.anaconda.state.noServer_one":
     "Er is 1 gedownload tekstgeneratiemodel beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
   "provider.anaconda.state.noServer_other":
     "Er zijn {{count}} gedownloade tekstgeneratiemodellen beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
+  "provider.anaconda.state.unhealthy":
+    "De actieve inferentieserver is nog niet gezond. Controleer dit in Anaconda Desktop en start de server opnieuw op indien nodig.",
+  "provider.anaconda.state.ready":
+    "Kilo heeft een gezonde lokale tekstgeneratieserver gevonden en kan de huidige verbindingsinstellingen importeren.",
+  "provider.anaconda.server": "Actieve inferentieserver",
+  "provider.anaconda.context": "Contextvenster",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Toolaanroepen",
+  "provider.anaconda.tools.supported": "Ondersteund",
+  "provider.anaconda.tools.unsupported": "Niet ingeschakeld",
+  "provider.anaconda.tools.unknown": "Onbekend",
+  "provider.anaconda.warning.title": "Toolondersteuning is beperkt",
+  "provider.anaconda.warning.description":
+    "Deze server bevestigt toolaanroepen niet. Acties van de coderingagent kunnen mislukken of niet beschikbaar zijn. Ga alleen door als u deze beperkingen accepteert.",
+  "provider.anaconda.action.download": "Anaconda Desktop downloaden",
+  "provider.anaconda.action.open": "Anaconda Desktop openen",
+  "provider.anaconda.action.checkAgain": "Opnieuw controleren",
+  "provider.anaconda.action.continue": "Toch doorgaan",
+  "provider.anaconda.action.manage": "Beheren / Vernieuwen",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop vernieuwd",
+  "provider.anaconda.toast.refreshed.description": "De actieve lokale server en modellen zijn up-to-date in Kilo.",
+  "settings.providers.note.anacondaDesktop": "Voer een model uit dat lokaal wordt geserveerd door Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokaal",
   "command.category.suggested": "Voorgesteld",
   "command.category.view": "Weergave",
   "command.category.project": "Project",

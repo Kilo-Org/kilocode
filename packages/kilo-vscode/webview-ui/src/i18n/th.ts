@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "ตรวจสอบอีกครั้ง",
+  "provider.anaconda.title.connect": "เชื่อมต่อ Anaconda Desktop",
+  "provider.anaconda.title.manage": "จัดการ Anaconda Desktop",
+  "provider.anaconda.status.checking": "กำลังตรวจสอบ Anaconda Desktop...",
+  "provider.anaconda.status.opening": "กำลังเปิด Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "กำลังรีเฟรชโมเดลของผู้ให้บริการ...",
+  "provider.anaconda.status.ready": "พร้อมเชื่อมต่อ",
+  "provider.anaconda.status.waiting": "รอ Desktop",
+  "provider.anaconda.status.attention": "ต้องการความสนใจ",
+  "provider.anaconda.status.unavailable": "ไม่พร้อมใช้งาน",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop ไม่รองรับบน {{platform}}",
+  "provider.anaconda.state.notInstalled":
+    "ติดตั้ง Anaconda Desktop บนเครื่องนี้ แล้วกลับมาที่นี่ Kilo จะไม่รันตัวติดตั้งให้คุณ",
+  "provider.anaconda.state.notRunning":
+    "เปิด Anaconda Desktop ทำการตั้งค่าให้เสร็จและลงชื่อเข้าใช้ จากนั้นเลือก ตรวจสอบอีกครั้ง",
+  "provider.anaconda.state.invalidConfig":
+    "การตั้งค่า Anaconda Desktop ไม่สมบูรณ์ เปิด Desktop ทำการตั้งค่าให้เสร็จ และรีสตาร์ทหากจำเป็น",
+  "provider.anaconda.state.signedOut": "เปิด Anaconda Desktop และลงชื่อเข้าใช้ก่อนเชื่อมต่อ Kilo",
+  "provider.anaconda.state.unauthorized":
+    "Kilo ไม่สามารถเข้าถึง Anaconda Desktop ได้ เปิด Desktop ลงชื่อเข้าใช้อีกครั้ง และรีสตาร์ทหากจำเป็น",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop ยังไม่ตอบสนอง เปิดและรอให้แอปพลิเคชันเริ่มทำงานเสร็จสมบูรณ์",
+  "provider.anaconda.state.noModel":
+    "ใน Anaconda Desktop ดาวน์โหลดโมเดลสร้างข้อความ เลือกโมเดลที่รองรับการเรียกใช้เครื่องมือหากเป็นไปได้ แล้วเริ่มเซิร์ฟเวอร์",
   "provider.anaconda.state.noServer_one":
     "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ 1 โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
   "provider.anaconda.state.noServer_other":
     "มีโมเดลสร้างข้อความที่ดาวน์โหลดไว้แล้วพร้อมใช้งานอยู่ {{count}} โมเดล โปรดเริ่มเซิร์ฟเวอร์โมเดลใน Anaconda Desktop ขอแนะนำอย่างยิ่งให้ใช้โมเดลที่รองรับการเรียกใช้เครื่องมือ",
+  "provider.anaconda.state.unhealthy":
+    "เซิร์ฟเวอร์การอนุมานที่ใช้งานอยู่ยังไม่แข็งแรง ตรวจสอบใน Anaconda Desktop และรีสตาร์ทเซิร์ฟเวอร์หากจำเป็น",
+  "provider.anaconda.state.ready":
+    "Kilo พบเซิร์ฟเวอร์สร้างข้อความในเครื่องที่แข็งแรง และสามารถนำเข้าการตั้งค่าการเชื่อมต่อปัจจุบันได้",
+  "provider.anaconda.server": "เซิร์ฟเวอร์การอนุมานที่ใช้งานอยู่",
+  "provider.anaconda.context": "หน้าต่างบริบท",
+  "provider.anaconda.contextValue": "{{count}} โทเคน",
+  "provider.anaconda.tools": "การเรียกใช้เครื่องมือ",
+  "provider.anaconda.tools.supported": "รองรับ",
+  "provider.anaconda.tools.unsupported": "ไม่ได้เปิดใช้งาน",
+  "provider.anaconda.tools.unknown": "ไม่ทราบ",
+  "provider.anaconda.warning.title": "การรองรับเครื่องมือมีจำกัด",
+  "provider.anaconda.warning.description":
+    "เซิร์ฟเวอร์นี้ไม่ยืนยันการเรียกใช้เครื่องมือ การดำเนินการของตัวแทนการเขียนโค้ดอาจล้มเหลวหรือไม่พร้อมใช้งาน ดำเนินการต่อเฉพาะในกรณีที่ยอมรับข้อจำกัดเหล่านี้",
+  "provider.anaconda.action.download": "ดาวน์โหลด Anaconda Desktop",
+  "provider.anaconda.action.open": "เปิด Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "ตรวจสอบอีกครั้ง",
+  "provider.anaconda.action.continue": "ดำเนินการต่อไปต่อไป",
+  "provider.anaconda.action.manage": "จัดการ / รีเฟรช",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop รีเฟรชแล้ว",
+  "provider.anaconda.toast.refreshed.description": "เซิร์ฟเวอร์ในเครื่องที่ใช้งานอยู่และโมเดลต่างๆ เป็นปัจจุบันใน Kilo",
+  "settings.providers.note.anacondaDesktop": "รันโมเดลที่ให้บริการในเครื่องโดย Anaconda Desktop",
+  "settings.providers.tag.local": "ในเครื่อง",
   "command.category.suggested": "แนะนำ",
   "command.category.view": "มุมมอง",
   "command.category.project": "โปรเจกต์",

@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "تحقق مرة أخرى",
+  "provider.anaconda.title.connect": "الاتصال بـ Anaconda Desktop",
+  "provider.anaconda.title.manage": "إدارة Anaconda Desktop",
+  "provider.anaconda.status.checking": "جارٍ التحقق من Anaconda Desktop...",
+  "provider.anaconda.status.opening": "جارٍ فتح Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "جارٍ تحديث نماذج الموفر...",
+  "provider.anaconda.status.ready": "جاهز للاتصال",
+  "provider.anaconda.status.waiting": "في انتظار Desktop",
+  "provider.anaconda.status.attention": "يحتاج إلى انتباه",
+  "provider.anaconda.status.unavailable": "غير متاح",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop غير مدعوم على {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "قم بتثبيت Anaconda Desktop على هذا الجهاز، ثم عد إلى هنا. لا يُشغّل Kilo برنامج التثبيت نيابةً عنك.",
+  "provider.anaconda.state.notRunning":
+    "افتح Anaconda Desktop، وأكمل الإعداد وسجّل الدخول، ثم اختر التحقق مرة أخرى.",
+  "provider.anaconda.state.invalidConfig":
+    "إعداد Anaconda Desktop غير مكتمل. افتح Desktop، وأكمل الإعداد، ثم أعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.signedOut": "افتح Anaconda Desktop وسجّل الدخول قبل توصيل Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "تعذّر على Kilo الوصول إلى Anaconda Desktop. افتح Desktop، وسجّل الدخول مجدداً، ثم أعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.unavailable":
+    "لم يستجب Anaconda Desktop بعد. افتحه وانتظر حتى ينتهي التطبيق من البدء.",
+  "provider.anaconda.state.noModel":
+    "في Anaconda Desktop، قم بتنزيل نموذج لتوليد النصوص. اختر نموذجاً يدعم استدعاء الأدوات إن أمكن، ثم شغّل خادمه.",
   "provider.anaconda.state.noServer_one":
     "يتوفر نموذج واحد مُنزّل لتوليد النصوص. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
   "provider.anaconda.state.noServer_other":
     "تتوفر نماذج مُنزّلة لتوليد النصوص، وعددها {{count}}. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.unhealthy":
+    "خادم الاستدلال النشط غير سليم بعد. تحقق منه في Anaconda Desktop وأعد تشغيل الخادم إذا لزم الأمر.",
+  "provider.anaconda.state.ready":
+    "عثر Kilo على خادم محلي سليم لتوليد النصوص ويمكنه استيراد إعدادات الاتصال الحالية.",
+  "provider.anaconda.server": "خادم الاستدلال النشط",
+  "provider.anaconda.context": "نافذة السياق",
+  "provider.anaconda.contextValue": "{{count}} رمزاً",
+  "provider.anaconda.tools": "استدعاء الأدوات",
+  "provider.anaconda.tools.supported": "مدعوم",
+  "provider.anaconda.tools.unsupported": "غير مفعّل",
+  "provider.anaconda.tools.unknown": "غير معروف",
+  "provider.anaconda.warning.title": "دعم الأدوات محدود",
+  "provider.anaconda.warning.description":
+    "هذا الخادم لا يؤكد استدعاء الأدوات. قد تفشل إجراءات وكيل البرمجة أو تكون غير متاحة. تابع فقط إذا قبلت هذه القيود.",
+  "provider.anaconda.action.download": "تنزيل Anaconda Desktop",
+  "provider.anaconda.action.open": "فتح Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "تحقق مرة أخرى",
+  "provider.anaconda.action.continue": "تابع على أي حال",
+  "provider.anaconda.action.manage": "إدارة / تحديث",
+  "provider.anaconda.toast.refreshed.title": "تم تحديث Anaconda Desktop",
+  "provider.anaconda.toast.refreshed.description": "الخادم المحلي النشط والنماذج محدّثة في Kilo.",
+  "settings.providers.note.anacondaDesktop": "تشغيل نموذج محلياً عبر Anaconda Desktop.",
+  "settings.providers.tag.local": "محلي",
   "command.category.suggested": "مقترح",
   "command.category.view": "عرض",
   "command.category.project": "مشروع",

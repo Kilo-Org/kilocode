@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Tjek igen",
+  "provider.anaconda.title.connect": "Forbind Anaconda Desktop",
+  "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
+  "provider.anaconda.status.checking": "Tjekker Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Åbner Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Opdaterer udbydermodeller...",
+  "provider.anaconda.status.ready": "Klar til at forbinde",
+  "provider.anaconda.status.waiting": "Venter på Desktop",
+  "provider.anaconda.status.attention": "Kræver opmærksomhed",
+  "provider.anaconda.status.unavailable": "Utilgængelig",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop understøttes ikke på {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installer Anaconda Desktop på denne maskine, og vend derefter tilbage her. Kilo kører ikke installationsprogrammet for dig.",
+  "provider.anaconda.state.notRunning":
+    "Åbn Anaconda Desktop, afslut opsætningen og log ind, og vælg derefter Tjek igen.",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop-opsætningen er ufuldstændig. Åbn Desktop, afslut opsætningen, og genstart den om nødvendigt.",
+  "provider.anaconda.state.signedOut": "Åbn Anaconda Desktop og log ind, inden du forbinder Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo kunne ikke tilgå Anaconda Desktop. Åbn Desktop, log ind igen, og genstart den om nødvendigt.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop svarer ikke endnu. Åbn den og vent på, at programmet er færdig med at starte.",
+  "provider.anaconda.state.noModel":
+    "Download en tekstgenereringsmodel i Anaconda Desktop. Vælg en med understøttelse af værktøjskald, hvis muligt, og start derefter dens server.",
   "provider.anaconda.state.noServer_one":
     "Der er 1 downloadet tekstgenereringsmodel tilgængelig. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
   "provider.anaconda.state.noServer_other":
     "Der er {{count}} downloadede tekstgenereringsmodeller tilgængelige. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
+  "provider.anaconda.state.unhealthy":
+    "Den aktive inferensserver er endnu ikke sund. Tjek den i Anaconda Desktop, og genstart serveren om nødvendigt.",
+  "provider.anaconda.state.ready":
+    "Kilo har fundet en sund lokal tekstgenereringsserver og kan importere dens nuværende forbindelsesindstillinger.",
+  "provider.anaconda.server": "Aktiv inferensserver",
+  "provider.anaconda.context": "Kontekstvindue",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Værktøjskald",
+  "provider.anaconda.tools.supported": "Understøttet",
+  "provider.anaconda.tools.unsupported": "Ikke aktiveret",
+  "provider.anaconda.tools.unknown": "Ukendt",
+  "provider.anaconda.warning.title": "Understøttelse af værktøjer er begrænset",
+  "provider.anaconda.warning.description":
+    "Denne server bekræfter ikke værktøjskald. Kodningsagent-handlinger kan fejle eller være utilgængelige. Fortsæt kun, hvis du accepterer disse begrænsninger.",
+  "provider.anaconda.action.download": "Download Anaconda Desktop",
+  "provider.anaconda.action.open": "Åbn Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Tjek igen",
+  "provider.anaconda.action.continue": "Fortsæt alligevel",
+  "provider.anaconda.action.manage": "Administrer / Opdater",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop opdateret",
+  "provider.anaconda.toast.refreshed.description": "Den aktive lokale server og modeller er opdaterede i Kilo.",
+  "settings.providers.note.anacondaDesktop": "Kør en model der serveres lokalt af Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokal",
   "command.category.suggested": "Foreslået",
   "command.category.view": "Vis",
   "command.category.project": "Projekt",

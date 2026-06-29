@@ -1,12 +1,54 @@
-import { anacondaDesktopDict } from "./en"
-
 export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Verificar novamente",
+  "provider.anaconda.title.connect": "Conectar ao Anaconda Desktop",
+  "provider.anaconda.title.manage": "Gerenciar Anaconda Desktop",
+  "provider.anaconda.status.checking": "Verificando Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Abrindo Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Atualizando modelos do provedor...",
+  "provider.anaconda.status.ready": "Pronto para conectar",
+  "provider.anaconda.status.waiting": "Aguardando Desktop",
+  "provider.anaconda.status.attention": "Requer atenção",
+  "provider.anaconda.status.unavailable": "Indisponível",
+  "provider.anaconda.state.unsupported": "O Anaconda Desktop não é compatível com {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Instale o Anaconda Desktop nesta máquina e retorne aqui. O Kilo não executa o instalador por você.",
+  "provider.anaconda.state.notRunning":
+    "Abra o Anaconda Desktop, conclua a configuração e faça login, depois escolha Verificar novamente.",
+  "provider.anaconda.state.invalidConfig":
+    "A configuração do Anaconda Desktop está incompleta. Abra o Desktop, conclua a configuração e reinicie-o se necessário.",
+  "provider.anaconda.state.signedOut": "Abra o Anaconda Desktop e faça login antes de conectar o Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "O Kilo não conseguiu acessar o Anaconda Desktop. Abra o Desktop, faça login novamente e reinicie-o se necessário.",
+  "provider.anaconda.state.unavailable":
+    "O Anaconda Desktop ainda não está respondendo. Abra-o e aguarde o aplicativo terminar de iniciar.",
+  "provider.anaconda.state.noModel":
+    "No Anaconda Desktop, baixe um modelo de geração de texto. Escolha um com suporte a chamadas de ferramentas quando possível, depois inicie seu servidor.",
   "provider.anaconda.state.noServer_one":
     "Há 1 modelo de geração de texto baixado disponível. No Anaconda Desktop, inicie um servidor de modelo. Modelos com suporte a chamadas de ferramentas são altamente recomendados.",
   "provider.anaconda.state.noServer_other":
     "Há {{count}} modelos de geração de texto baixados disponíveis. No Anaconda Desktop, inicie um servidor de modelo. Modelos com suporte a chamadas de ferramentas são altamente recomendados.",
+  "provider.anaconda.state.unhealthy":
+    "O servidor de inferência ativo ainda não está saudável. Verifique-o no Anaconda Desktop e reinicie o servidor se necessário.",
+  "provider.anaconda.state.ready":
+    "O Kilo encontrou um servidor local de geração de texto saudável e pode importar suas configurações de conexão atuais.",
+  "provider.anaconda.server": "Servidor de inferência ativo",
+  "provider.anaconda.context": "Janela de contexto",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Chamada de ferramentas",
+  "provider.anaconda.tools.supported": "Compatível",
+  "provider.anaconda.tools.unsupported": "Não habilitado",
+  "provider.anaconda.tools.unknown": "Desconhecido",
+  "provider.anaconda.warning.title": "Suporte a ferramentas é limitado",
+  "provider.anaconda.warning.description":
+    "Este servidor não confirma a chamada de ferramentas. Ações do agente de codificação podem falhar ou estar indisponíveis. Continue apenas se aceitar estas limitações.",
+  "provider.anaconda.action.download": "Baixar Anaconda Desktop",
+  "provider.anaconda.action.open": "Abrir Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Verificar novamente",
+  "provider.anaconda.action.continue": "Continuar mesmo assim",
+  "provider.anaconda.action.manage": "Gerenciar / Atualizar",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop atualizado",
+  "provider.anaconda.toast.refreshed.description": "O servidor local ativo e os modelos estão atualizados no Kilo.",
+  "settings.providers.note.anacondaDesktop": "Execute um modelo servido localmente pelo Anaconda Desktop.",
+  "settings.providers.tag.local": "Local",
   "command.category.suggested": "Sugerido",
   "command.category.view": "Visualizar",
   "command.category.project": "Projeto",
