@@ -2,6 +2,7 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.rpc.appStateDto
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
@@ -15,7 +16,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -51,6 +54,38 @@ class KiloBackendAppServiceTest {
             "App startup timed out in ${svc.appState.value}; logs=${log.messages}",
         )
         return assertIs<KiloAppState.Ready>(state, "App startup failed in $state; logs=${log.messages}")
+    }
+
+    private class StallingServer(private val mock: MockCliServer) : CliServer {
+        override var forceExtract = false
+        private val starts = AtomicInteger()
+        private var srv: ServerSocket? = null
+
+        val count: Int get() = starts.get()
+
+        override fun process(): Process? = null
+
+        override suspend fun init(): CliServer.State {
+            if (starts.getAndIncrement() == 0) {
+                val socket = ServerSocket(0)
+                srv = socket
+                return CliServer.State.Ready(socket.localPort, mock.password)
+            }
+            return CliServer.State.Ready(mock.start(), mock.password)
+        }
+
+        override fun exited(proc: Process) {}
+
+        override fun stop() {
+            srv?.close()
+            srv = null
+            mock.shutdown()
+        }
+
+        override fun dispose() {
+            stop()
+            mock.close()
+        }
     }
 
     @Test
@@ -646,6 +681,19 @@ class KiloBackendAppServiceTest {
             svc.appState.first { it is KiloAppState.Ready }
         }
 
+        assertIs<KiloAppState.Ready>(svc.appState.value)
+    }
+
+    @Test
+    fun `startup SSE timeout reconnects from Connecting`() = runBlocking {
+        val server = StallingServer(mock)
+        val svc = KiloBackendAppService.create(scope, server, log)
+        svc.connect()
+
+        ready(svc)
+
+        assertTrue(server.count >= 2)
+        assertTrue(log.messages.any { it.contains("SSE: connection timed out") })
         assertIs<KiloAppState.Ready>(svc.appState.value)
     }
 

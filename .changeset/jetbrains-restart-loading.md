@@ -2,4 +2,4 @@
 "@kilocode/kilo-jetbrains": patch
 ---
 
-Prevent stale startup errors from surfacing after restarting the JetBrains backend while it is still loading.
+Recover the JetBrains backend when startup or restart loading is interrupted by stale connection failures.
