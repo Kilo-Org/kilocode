@@ -1,13 +1,15 @@
 import { Effect } from "effect"
+import { ConfigRulesDetector, Runtime, type Composition, type ConfigRules, type Detector } from "@openguardrails/core"
 import * as Config from "@/config/config"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
 import type { MessageV2 } from "@/session/message-v2"
 import { isSafeAllowlisted } from "./allowlist"
-import { resolvePolicy } from "./prompt"
-import { ownModelProvider } from "./provider/own-model"
-import { httpProvider } from "./provider/http"
+import { resolveJudgePolicy } from "./prompt"
 import { buildTranscript, projectToolInput } from "./transcript"
+import { buildGuardEvent } from "./ogr/event"
+import { OwnModelJudge } from "./ogr/judge"
+import { DEFAULT_COMPOSITION, DEFAULT_RULES } from "./ogr/rules"
 import type { ClassifierDecision } from "./types"
 
 // kilocode_change start — LLM command-approval classifier (issue #9138)
@@ -45,10 +47,17 @@ function parseModel(s: string): [ProviderID, ModelID] {
  * Decide whether a would-auto-approve tool call should proceed, be blocked
  * (deny-and-continue), or be escalated to the human (`ask`).
  *
+ * The decision is produced by **OpenGuardrails (OGR)**: the call becomes a
+ * GuardEvent, runs through the OGR Runtime composing a deterministic
+ * `ConfigRulesDetector` with an `OwnModelJudge` (the user's own model as a
+ * guardrail), and the composed Verdict maps to the gate decision. There is no
+ * bespoke backend enum — "local vs hosted" and "use my own model" are just which
+ * OGR detectors are configured.
+ *
  * Returns `undefined` when the classifier is disabled or the tool is on the
  * safe allowlist — the caller then proceeds exactly as today (no gating).
  *
- * Fails CLOSED: any backend error / unparseable response → `ask`.
+ * Fails CLOSED: any error / OGR-unavailable / unparseable response → `ask`.
  *
  * Requires `Config` + `Provider`; the call site runs this through the request
  * EffectBridge so the captured context provides them (the thunk stays R=never).
@@ -65,8 +74,6 @@ export const evaluate = Effect.fn("Classifier.evaluate")(function* (input: {
   if (!cfg?.enabled) return undefined
   if (isSafeAllowlisted(input.tool)) return undefined
 
-  const backend = cfg.backend ?? "own"
-
   // Counter state, reset on a new user turn.
   const sid = input.sessionID
   const lu = lastUserId(input.messages)
@@ -77,29 +84,10 @@ export const evaluate = Effect.fn("Classifier.evaluate")(function* (input: {
     c.total = 0
   }
 
-  const policy = resolvePolicy(cfg)
-  const classifierInput = {
-    transcript: buildTranscript(input.messages),
-    action: { tool: input.tool, input: projectToolInput(input.tool, input.toolInput) },
-    policy,
-  }
-
   const verdict = yield* Effect.gen(function* () {
-    // http: POST the contract to a user-configured classifier service.
-    if (backend === "http") {
-      if (!cfg.endpoint) {
-        // No endpoint to call → fail closed (the caller escalates to a human).
-        return {
-          shouldBlock: true,
-          unavailable: true,
-          reason: "classifier backend 'http' requires an endpoint",
-          model: "http",
-        }
-      }
-      const p = httpProvider({ endpoint: cfg.endpoint, apiKey: cfg.apiKey })
-      return yield* Effect.promise(() => p.classify(classifierInput, input.abort))
-    }
-    // own: the user's configured model via the AI SDK.
+    // Resolve the model that backs the OGR judge: the configured classifier
+    // model, else the agent's own model. Inside the catch so a missing model
+    // fails closed (→ require_approval → human ask) rather than throwing.
     const provider = yield* Provider.Service
     let model: Provider.Model
     if (cfg.model) {
@@ -109,35 +97,51 @@ export const evaluate = Effect.fn("Classifier.evaluate")(function* (input: {
       model = input.fallbackModel
     }
     const language = yield* provider.getLanguage(model)
-    const p = ownModelProvider(language, `${model.providerID}/${model.id}`)
-    return yield* Effect.promise(() => p.classify(classifierInput, input.abort))
+    const label = `${model.providerID}/${model.id}`
+    const detectors: Detector[] = [
+      new ConfigRulesDetector((cfg.rules as ConfigRules | undefined) ?? DEFAULT_RULES),
+      new OwnModelJudge(language, label, input.abort),
+    ]
+    const runtime = new Runtime(detectors, {
+      composition: (cfg.composition as Composition | undefined) ?? DEFAULT_COMPOSITION,
+    })
+    const event = buildGuardEvent({
+      tool: input.tool,
+      action: { tool: input.tool, input: projectToolInput(input.tool, input.toolInput) },
+      transcript: buildTranscript(input.messages),
+      judgePolicy: resolveJudgePolicy(cfg),
+      sessionId: sid,
+    })
+    return yield* Effect.promise(() => runtime.evaluate(event))
   }).pipe(
+    // OGR-unavailable / any error → fail closed (the caller escalates to a human).
     Effect.catch((e) =>
       Effect.succeed({
-        shouldBlock: true,
-        unavailable: true,
-        reason: e instanceof Error ? e.message : String(e),
-        model: backend,
+        decision: "require_approval" as const,
+        reasons: [e instanceof Error ? e.message : String(e)],
       }),
     ),
   )
 
-  if (verdict.unavailable) {
+  const reason = verdict.reasons.join("; ") || "blocked by the OGR command-approval policy"
+
+  if (verdict.decision === "allow") {
+    c.consecutive = 0
     counters.set(sid, c)
-    return ask(verdict.reason ?? "classifier unavailable")
+    return ALLOW
   }
-  if (verdict.shouldBlock) {
+  if (verdict.decision === "block") {
     c.consecutive += 1
     c.total += 1
     counters.set(sid, c)
     if (c.consecutive >= MAX_CONSECUTIVE_DENIALS || c.total >= MAX_TOTAL_DENIALS) {
       return ask("Repeated classifier denials this turn — escalating to you for review.")
     }
-    return block(verdict.reason ?? "blocked by the command-approval classifier")
+    return block(reason)
   }
-  c.consecutive = 0
+  // require_approval / redact / modify → ask the human (don't count as a denial).
   counters.set(sid, c)
-  return ALLOW
+  return ask(reason)
 })
 
 // kilocode_change end

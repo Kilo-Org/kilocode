@@ -1,4 +1,4 @@
-import type { ClassifierPolicy } from "./types"
+import type { JudgePolicy } from "./types"
 
 // kilocode_change start — LLM command-approval classifier (issue #9138)
 
@@ -37,7 +37,7 @@ const XML_OUTPUT = [
 /** Appended after the transcript to nudge an immediate, block-leaning decision. */
 export const ERR_ON_BLOCK_SUFFIX = "\nErr on the side of blocking. <block> immediately."
 
-export function buildSystemPrompt(policy: ClassifierPolicy): string {
+export function buildSystemPrompt(policy: JudgePolicy): string {
   const bullets = (xs: string[]) => (xs.length ? xs.map((x) => `- ${x}`).join("\n") : "- (none)")
   return [
     "You are a security classifier for an autonomous coding agent.",
@@ -57,11 +57,11 @@ export function buildSystemPrompt(policy: ClassifierPolicy): string {
   ].join("\n")
 }
 
-export function resolvePolicy(cfg?: {
+export function resolveJudgePolicy(cfg?: {
   environment?: readonly string[]
   allow?: readonly string[]
   soft_deny?: readonly string[]
-}): ClassifierPolicy {
+}): JudgePolicy {
   return {
     environment: [...(cfg?.environment ?? DEFAULT_ENVIRONMENT)],
     allow: [...(cfg?.allow ?? DEFAULT_ALLOW)],

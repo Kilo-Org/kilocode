@@ -4,40 +4,24 @@ import { ConfigModelID } from "./model-id"
 // kilocode_change start — LLM command-approval classifier (issue #9138)
 
 /**
- * Which backend evaluates gated tool calls.
- * - `own`: the user's configured model (default; zero extra dependency).
- * - `http`: a user-configured HTTP service implementing the classifier
- *   contract (a self-hosted model, a local endpoint, or a hosted guardrails
- *   API). Vendor-agnostic — the URL and auth come from `endpoint`/`apiKey`.
- */
-export const Backend = Schema.Literals(["own", "http"]).annotate({
-  identifier: "ClassifierBackend",
-})
-export type Backend = Schema.Schema.Type<typeof Backend>
-
-/**
  * `classifier` config block — sibling of `permission`. Gates what would
  * otherwise auto-approve; never overrides an explicit user `deny`/`ask`.
- * Modeled on Claude Code "auto mode" (two-stage, reasoning-blind, fail-closed).
+ * Modeled on Claude Code "auto mode" (reasoning-blind, fail-closed).
+ *
+ * The decision is produced by OpenGuardrails (OGR): the gated call becomes a
+ * GuardEvent, run through the OGR Runtime composing a deterministic
+ * `config_rules` detector with an LLM judge backed by the user's own model. There
+ * is no backend enum — "local vs hosted" / "use my own model" is just which OGR
+ * detectors are configured. To point the judge at a different model, set `model`;
+ * to add deterministic regex rules or change how verdicts merge, set `rules` /
+ * `composition` (the OGR policy).
  */
 export const Info = Schema.Struct({
   enabled: Schema.optional(Schema.Boolean).annotate({
-    description: "Enable the LLM command-approval classifier. Off by default.",
-  }),
-  backend: Schema.optional(Backend).annotate({
-    description: "Which classifier backend to use. Defaults to 'own' (the user's configured model).",
+    description: "Enable the OGR command-approval classifier. Off by default.",
   }),
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
-    description: "Model for backend='own', e.g. 'anthropic/claude-haiku-4-5'. Defaults to the small/main model.",
-  }),
-  endpoint: Schema.optional(Schema.String).annotate({
-    description: "Full URL the classifier contract is POSTed to. Required for backend='http' (e.g. http://localhost:8000/classify).",
-  }),
-  apiKey: Schema.optional(Schema.String).annotate({
-    description: "Bearer token for backend='http', sent as 'Authorization: Bearer <key>'. Supports ${ENV_VAR} expansion.",
-  }),
-  twoStage: Schema.optional(Schema.Boolean).annotate({
-    description: "Run a fast single-token pass, then a chain-of-thought pass only on blocks. backend='own' only.",
+    description: "Model backing the OGR LLM judge, e.g. 'anthropic/claude-haiku-4-5'. Defaults to the agent's own model.",
   }),
   environment: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Prose descriptions of trusted infrastructure. Anything outside is treated as exfiltration risk.",
@@ -47,6 +31,12 @@ export const Info = Schema.Struct({
   }),
   soft_deny: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Block rules. Replacing this replaces the whole list (copy-default-then-edit).",
+  }),
+  rules: Schema.optional(Schema.Unknown).annotate({
+    description: "OGR config_rules (deterministic regex layer): { command_rules, egress_allowlist, secret_env_markers }. Defaults to the bundled rules.",
+  }),
+  composition: Schema.optional(Schema.Unknown).annotate({
+    description: "OGR composition: how detector verdicts merge per category (deny-wins / quorum). Defaults to deny-wins, fail-closed for security.*.",
   }),
 }).annotate({ identifier: "ClassifierConfig" })
 export type Info = Schema.Schema.Type<typeof Info>

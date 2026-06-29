@@ -1,7 +1,11 @@
 // kilocode_change start — LLM command-approval classifier (issue #9138)
 
-/** The three customizable policy slots (Claude Code "auto mode" model). */
-export interface ClassifierPolicy {
+/**
+ * The LLM judge's policy slots (Claude Code "auto mode" model). These are part
+ * of the OGR policy the gate enforces — they parameterize the `OwnModelJudge`
+ * OGR detector. The deterministic regex layer lives in the OGR `config_rules`.
+ */
+export interface JudgePolicy {
   /** Prose descriptions of trusted infrastructure. */
   environment: string[]
   /** Exceptions to the block rules. */
@@ -21,38 +25,11 @@ export interface ClassifierAction {
   input: unknown
 }
 
-export interface ClassifierInput {
-  transcript: TranscriptEntry[]
-  action: ClassifierAction
-  policy: ClassifierPolicy
-}
-
-export interface ClassifierVerdict {
-  /** True → block (deny-and-continue). False → allow silently. */
-  shouldBlock: boolean
-  /** Reason surfaced to the agent on a block. */
-  reason?: string
-  /**
-   * True when the backend could not produce a decision (API/model error,
-   * timeout, unparseable). Callers MUST fail closed (fall back to `ask`),
-   * diverging from the legacy gatekeeper which approved on error.
-   */
-  unavailable?: boolean
-  /** Identifier of the model/backend that produced the verdict. */
-  model: string
-  durationMs?: number
-}
-
-/** A backend that evaluates whether a gated tool call should be blocked. */
-export interface ClassifierProvider {
-  classify(input: ClassifierInput, signal: AbortSignal): Promise<ClassifierVerdict>
-}
-
 /**
  * What the permission gate should do with a would-auto-approve call.
  * `allow` → proceed silently. `block` → deny-and-continue (tool error).
- * `ask` → fall back to a human prompt (fail-closed, or escalation backstop).
- * Structurally matches `Permission.ClassifierDecision`.
+ * `ask` → fall back to a human prompt (OGR `require_approval`, fail-closed,
+ * or the escalation backstop). Structurally matches `Permission.ClassifierDecision`.
  */
 export type ClassifierDecision =
   | { kind: "allow" }
