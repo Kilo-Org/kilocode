@@ -278,7 +278,7 @@ class KiloBackendAppService private constructor(
     private suspend fun reconnect() {
         mutex.withLock {
             val current = _appState.value
-            if (current is KiloAppState.Ready || current is KiloAppState.Connecting || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
+            if (current is KiloAppState.Ready || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
                 log.info("reconnect: already ${current::class.simpleName} — skipping")
                 return
             }
@@ -442,6 +442,7 @@ class KiloBackendAppService private constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    ensureActive()
                     log.warn("Application start failed: ${e.message}")
                     captureLoad("Backend Load Failed", start, mapOf(
                         "errorCount" to errors.size.toString(),
