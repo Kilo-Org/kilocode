@@ -143,6 +143,12 @@ export interface OpenContentRequest {
   language?: string
 }
 
+export interface ValidateFilesRequest {
+  type: "validateFiles"
+  id: string
+  paths: string[]
+}
+
 export interface CancelLoginRequest {
   type: "cancelLogin"
 }
@@ -1167,6 +1173,7 @@ export type WebviewMessage =
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
   | OpenFileRequest
+  | ValidateFilesRequest
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
