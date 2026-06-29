@@ -90,19 +90,6 @@ describe("extension host i18n", () => {
     expect(selectedLocale(vscode)).toBe("de")
   })
 
-  it("falls back to legacy Kilo language setting", () => {
-    const vscode = {
-      env: { language: "en" },
-      workspace: {
-        getConfiguration: (section: string) => ({
-          get: () => (section === "kilo-code" ? "nl" : undefined),
-        }),
-      },
-    } as unknown as typeof import("vscode")
-
-    expect(selectedLocale(vscode)).toBe("nl")
-  })
-
   it("uses VS Code language when Kilo language setting is automatic", () => {
     const vscode = {
       env: { language: "nl" },

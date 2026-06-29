@@ -61,9 +61,8 @@ export function resolveLocale(lang: string | undefined): string {
 }
 
 export function selectedLocale(vscode: typeof import("vscode")): string {
-  const cfg = vscode.workspace.getConfiguration("kilo-code")
-  const next = vscode.workspace.getConfiguration("kilo-code.new")
-  const lang = next.get<string>("language") || cfg.get<string>("language")
+  const cfg = vscode.workspace.getConfiguration("kilo-code.new")
+  const lang = cfg.get<string>("language")
   return resolveLocale(lang || vscode.env.language)
 }
 

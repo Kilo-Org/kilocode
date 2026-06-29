@@ -181,7 +181,7 @@ export class AutocompleteServiceManager {
     )
 
     this.config = vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("kilo-code.language") || event.affectsConfiguration("kilo-code.new.language")) {
+      if (event.affectsConfiguration("kilo-code.new.language")) {
         this.updateStatusBar()
       }
     })

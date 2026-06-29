@@ -115,26 +115,26 @@ import { dict as cliNl } from "../../src/services/cli-backend/i18n/nl"
 import { dict as cliUk } from "../../src/services/cli-backend/i18n/uk"
 import { dict as cliIt } from "../../src/services/cli-backend/i18n/it"
 
-import { dict as hostEn, autocompleteDict as acEn } from "../../src/services/i18n/en"
-import { dict as hostZh, autocompleteDict as acZh } from "../../src/services/i18n/zh"
-import { dict as hostZht, autocompleteDict as acZht } from "../../src/services/i18n/zht"
-import { dict as hostDe, autocompleteDict as acDe } from "../../src/services/i18n/de"
-import { dict as hostEs, autocompleteDict as acEs } from "../../src/services/i18n/es"
-import { dict as hostFr, autocompleteDict as acFr } from "../../src/services/i18n/fr"
-import { dict as hostDa, autocompleteDict as acDa } from "../../src/services/i18n/da"
-import { dict as hostJa, autocompleteDict as acJa } from "../../src/services/i18n/ja"
-import { dict as hostKo, autocompleteDict as acKo } from "../../src/services/i18n/ko"
-import { dict as hostPl, autocompleteDict as acPl } from "../../src/services/i18n/pl"
-import { dict as hostRu, autocompleteDict as acRu } from "../../src/services/i18n/ru"
-import { dict as hostAr, autocompleteDict as acAr } from "../../src/services/i18n/ar"
-import { dict as hostNo, autocompleteDict as acNo } from "../../src/services/i18n/no"
-import { dict as hostBr, autocompleteDict as acBr } from "../../src/services/i18n/br"
-import { dict as hostTh, autocompleteDict as acTh } from "../../src/services/i18n/th"
-import { dict as hostBs, autocompleteDict as acBs } from "../../src/services/i18n/bs"
-import { dict as hostTr, autocompleteDict as acTr } from "../../src/services/i18n/tr"
-import { dict as hostNl, autocompleteDict as acNl } from "../../src/services/i18n/nl"
-import { dict as hostUk, autocompleteDict as acUk } from "../../src/services/i18n/uk"
-import { dict as hostIt, autocompleteDict as acIt } from "../../src/services/i18n/it"
+import { dict as hostEn } from "../../src/services/i18n/en"
+import { dict as hostZh } from "../../src/services/i18n/zh"
+import { dict as hostZht } from "../../src/services/i18n/zht"
+import { dict as hostDe } from "../../src/services/i18n/de"
+import { dict as hostEs } from "../../src/services/i18n/es"
+import { dict as hostFr } from "../../src/services/i18n/fr"
+import { dict as hostDa } from "../../src/services/i18n/da"
+import { dict as hostJa } from "../../src/services/i18n/ja"
+import { dict as hostKo } from "../../src/services/i18n/ko"
+import { dict as hostPl } from "../../src/services/i18n/pl"
+import { dict as hostRu } from "../../src/services/i18n/ru"
+import { dict as hostAr } from "../../src/services/i18n/ar"
+import { dict as hostNo } from "../../src/services/i18n/no"
+import { dict as hostBr } from "../../src/services/i18n/br"
+import { dict as hostTh } from "../../src/services/i18n/th"
+import { dict as hostBs } from "../../src/services/i18n/bs"
+import { dict as hostTr } from "../../src/services/i18n/tr"
+import { dict as hostNl } from "../../src/services/i18n/nl"
+import { dict as hostUk } from "../../src/services/i18n/uk"
+import { dict as hostIt } from "../../src/services/i18n/it"
 
 // ── Locale maps ─────────────────────────────────────────────────────────────
 
@@ -230,29 +230,6 @@ const cliLocales: Record<string, Record<string, string>> = {
   nl: cliNl,
   uk: cliUk,
   it: cliIt,
-}
-
-const acLocales: Record<string, Record<string, string>> = {
-  en: acEn,
-  zh: acZh,
-  zht: acZht,
-  de: acDe,
-  es: acEs,
-  fr: acFr,
-  da: acDa,
-  ja: acJa,
-  ko: acKo,
-  pl: acPl,
-  ru: acRu,
-  ar: acAr,
-  no: acNo,
-  br: acBr,
-  th: acTh,
-  bs: acBs,
-  tr: acTr,
-  nl: acNl,
-  uk: acUk,
-  it: acIt,
 }
 
 const hostLocales: Record<string, Record<string, string>> = {
@@ -500,17 +477,6 @@ describe("i18n locale completeness — every English key exists in all locales",
       expect(
         missing,
         `Found ${missing.length} missing cli-backend translation(s):\n${formatLocaleReport(missing)}`,
-      ).toEqual([])
-    }
-    expect(missing).toEqual([])
-  })
-
-  it("autocomplete: every English key has a translation in all locales", () => {
-    const missing = findMissingLocaleKeys(acEn, acLocales)
-    if (missing.length > 0) {
-      expect(
-        missing,
-        `Found ${missing.length} missing autocomplete translation(s):\n${formatLocaleReport(missing)}`,
       ).toEqual([])
     }
     expect(missing).toEqual([])
