@@ -1,0 +1,1580 @@
+diff --git a/.changeset/name-agent-manager-branches.md b/.changeset/name-agent-manager-branches.md
+new file mode 100644
+index 00000000000..4876fe037cd
+--- /dev/null
++++ b/.changeset/name-agent-manager-branches.md
+@@ -0,0 +1,5 @@
++---
++"kilo-code": minor
++---
++
++Automatically give Agent Manager branches task-focused names once the conversation establishes a clear workstream, with optional prefixes and a setting to disable automatic naming.
+diff --git a/packages/kilo-vscode/package.json b/packages/kilo-vscode/package.json
+index 0b3c113edb1..1e12e4ae903 100644
+--- a/packages/kilo-vscode/package.json
++++ b/packages/kilo-vscode/package.json
+@@ -924,6 +924,18 @@
+           "default": false,
+           "description": "Enable chat textarea autocomplete"
+         },
++        "kilo-code.new.agentManager.autoBranchNaming": {
++          "type": "boolean",
++          "default": true,
++          "scope": "application",
++          "description": "Automatically name new Agent Manager branches when the conversation describes a clear task. Explicitly named and published branches are never renamed."
++        },
++        "kilo-code.new.agentManager.branchPrefix": {
++          "type": "string",
++          "default": "",
++          "scope": "application",
++          "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
++        },
+         "kilo-code.new.indexing.showButtonWhenDisabled": {
+           "type": "boolean",
+           "default": true,
+diff --git a/packages/kilo-vscode/src/agent-manager/AgentManagerProvider.ts b/packages/kilo-vscode/src/agent-manager/AgentManagerProvider.ts
+index 1696870cba5..22e6102526f 100644
+--- a/packages/kilo-vscode/src/agent-manager/AgentManagerProvider.ts
++++ b/packages/kilo-vscode/src/agent-manager/AgentManagerProvider.ts
+@@ -14,6 +14,7 @@ import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type Work
+ import { PRStatusBridge } from "./pr-status-bridge"
+ import { GitOps } from "./GitOps"
+ import { versionedName } from "./branch-name"
++import { BranchNamingController } from "./branch-naming"
+ import { classifyWorktreeError } from "./git-import"
+ import { SetupScriptService } from "./SetupScriptService"
+ import { SetupScriptRunner } from "./SetupScriptRunner"
+@@ -71,6 +72,7 @@ export class AgentManagerProvider implements Disposable {
+   private prBridge!: PRStatusBridge
+   private gitOps: GitOps
+   private diffs: WorktreeDiffController
++  private naming: BranchNamingController
+   private staleWorktreeIds = new Set<string>()
+   private toolRequests = new Set<string>()
+   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
+@@ -128,6 +130,14 @@ export class AgentManagerProvider implements Disposable {
+     })
+     const semaphore = new Semaphore(3)
+     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
++    this.naming = new BranchNamingController({
++      state: () => this.getStateManager(),
++      manager: () => this.getWorktreeManager(),
++      client: (dir) => this.connectionService.getClientAsync(dir),
++      settings: () => this.host.autoBranchNaming(),
++      push: () => this.pushState(),
++      log: (msg) => this.log(msg),
++    })
+     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
+     this.diffs = new WorktreeDiffController({
+       getState: () => this.getStateManager(),
+@@ -346,6 +356,7 @@ export class AgentManagerProvider implements Disposable {
+     msg = await this.contextMessage(msg)
+     const m = msg as unknown as AgentManagerInMessage
+     if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)
++    this.onBranchPrompt(m)
+ 
+     const worktree = await this.onWorktreeMessage(m)
+     if (worktree !== undefined) return worktree
+@@ -366,6 +377,21 @@ export class AgentManagerProvider implements Disposable {
+     return msg
+   }
+ 
++  private onBranchPrompt(m: AgentManagerInMessage): void {
++    if (m.type === "questionReply") {
++      const sessionID = m.sessionID ?? this.activeSessionId
++      const text = m.answers.flat().join("\n").trim()
++      if (sessionID && text) this.naming.prompt({ sessionID, text })
++      return
++    }
++    if (m.type !== "sendMessage" && m.type !== "sendCommand") return
++    const sessionID = m.sessionID ?? m.draftID ?? this.activeSessionId
++    if (!sessionID) return
++    const text = m.type === "sendMessage" ? m.text.trim() : `/${m.command} ${m.arguments}`.trim()
++    if (!text) return
++    this.naming.prompt({ sessionID, text, providerID: m.providerID, modelID: m.modelID })
++  }
++
+   private async contextMessage(msg: Record<string, unknown>): Promise<Record<string, unknown>> {
+     if (msg.type !== "requestGitChangesContext") return msg
+     const ctx = typeof msg.agentManagerContext === "string" ? msg.agentManagerContext : undefined
+@@ -783,6 +809,7 @@ export class AgentManagerProvider implements Disposable {
+       remote: result.remote,
+       groupId: opts?.groupId,
+       label: opts?.label,
++      branchOwned: !opts?.existingBranch,
+     })
+ 
+     // Push state immediately so the sidebar shows the new worktree with a loading indicator
+@@ -1010,6 +1037,7 @@ export class AgentManagerProvider implements Disposable {
+ 
+     const state = this.getStateManager()!
+     state.addSession(session.id, created.worktree.id)
++    if (!branchName && this.host.autoBranchNaming().enabled) state.armAutoName(created.worktree.id, session.id)
+     this.registerWorktreeSession(session.id, created.result.path)
+     // Push state before registerSession so the webview's sessionCreated handler
+     // sees the worktree mapping and routes the session to the worktree tab.
+@@ -1047,12 +1075,13 @@ export class AgentManagerProvider implements Disposable {
+     for (const s of orphaned) this.panel?.sessions.clearSessionDirectory(s.id)
+     this.pushState()
+     // Disk removal after state is clean — pollers no longer reference this worktree.
++    const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
+     try {
+-      await manager.removeWorktree(worktree.path, worktree.originalBranch ?? worktree.branch)
++      await manager.removeWorktree(worktree.path, branch)
+     } catch (error) {
+       this.log(`Failed to remove worktree from disk: ${error}`)
+     }
+-    this.log(`Deleted worktree ${worktreeId} (${worktree.originalBranch ?? worktree.branch})`)
++    this.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
+     return null
+   }
+ 
+@@ -1318,6 +1347,9 @@ export class AgentManagerProvider implements Disposable {
+ 
+       const state = this.getStateManager()!
+       state.addSession(session.id, wt.worktree.id)
++      if (!branchName && !worktreeName && this.host.autoBranchNaming().enabled) {
++        state.armAutoName(wt.worktree.id, session.id)
++      }
+ 
+       // Sandbox must match the user's choice before this session is exposed or
+       // receives its initial prompt. A failed reconciliation aborts this version.
+@@ -1877,6 +1909,7 @@ export class AgentManagerProvider implements Disposable {
+     this.connectionService.unregisterFocused("agent-manager")
+     this.connectionService.registerOpen("agent-manager", [])
+     this.diffs.stop()
++    this.naming.dispose()
+     this.statsPoller.stop()
+     this.gitOps.dispose()
+     this.prBridge.poller.stop()
+diff --git a/packages/kilo-vscode/src/agent-manager/WorktreeManager.ts b/packages/kilo-vscode/src/agent-manager/WorktreeManager.ts
+index 2dac4738c93..f879e48163a 100644
+--- a/packages/kilo-vscode/src/agent-manager/WorktreeManager.ts
++++ b/packages/kilo-vscode/src/agent-manager/WorktreeManager.ts
+@@ -153,6 +153,11 @@ export class WorktreeManager {
+     return this.withGitLock(() => this.createWorktreeImpl(params))
+   }
+ 
++  async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
++    await this.ensureMigrated()
++    return this.withGitLock(() => this.renameBranchImpl(worktreePath, current, requested))
++  }
++
+   private async ensureGitAvailable(): Promise<void> {
+     try {
+       await execWithShellEnv("git", ["--version"])
+@@ -272,6 +277,42 @@ export class WorktreeManager {
+     }
+   }
+ 
++  private async renameBranchImpl(worktreePath: string, current: string, requested: string): Promise<string> {
++    if (!this.isManagedPath(worktreePath)) throw new Error("Worktree is not managed by Agent Manager")
++
++    const git = simpleGit(worktreePath)
++    const actual = (await git.revparse(["--abbrev-ref", "HEAD"])).trim()
++    if (actual === "HEAD" || actual !== current) throw new Error("Branch changed before automatic naming")
++
++    const upstream = (
++      await this.git.raw(["for-each-ref", "--format=%(upstream:short)", `refs/heads/${current}`])
++    ).trim()
++    if (upstream) throw new Error("Branch already has an upstream")
++
++    const remotes = (await this.git.raw(["for-each-ref", "--format=%(refname:short)", "refs/remotes"])).split("\n")
++    if (remotes.some((ref) => ref.endsWith(`/${current}`))) throw new Error("Branch already exists on a remote")
++
++    const base = requested.trim()
++    if (!base || base === current) throw new Error("Generated branch name is unchanged")
++    await this.git.raw(["check-ref-format", "--branch", base])
++
++    const locals = new Set((await this.git.branch()).all)
++    const remoteNames = new Set(remotes.filter(Boolean).map((ref) => ref.replace(/^[^/]+\//, "")))
++    const available = (name: string) => !locals.has(name) && !remoteNames.has(name)
++    const branch = available(base)
++      ? base
++      : (() => {
++          for (let suffix = 2; ; suffix++) {
++            const name = `${base}-${suffix}`
++            if (available(name)) return name
++          }
++        })()
++
++    await git.raw(["branch", "-m", current, branch])
++    this.log(`Renamed branch: ${current} -> ${branch}`)
++    return branch
++  }
++
+   private async prepareWorktreePath(worktreePath: string, reuse: boolean): Promise<void> {
+     if (!fs.existsSync(worktreePath)) return
+     if (!reuse) throw new Error(`Worktree path already exists: ${worktreePath}`)
+diff --git a/packages/kilo-vscode/src/agent-manager/WorktreeStateManager.ts b/packages/kilo-vscode/src/agent-manager/WorktreeStateManager.ts
+index 352932fde03..f90c7309a26 100644
+--- a/packages/kilo-vscode/src/agent-manager/WorktreeStateManager.ts
++++ b/packages/kilo-vscode/src/agent-manager/WorktreeStateManager.ts
+@@ -32,9 +32,12 @@ export interface Worktree {
+   prUrl?: string
+   /** Cached PR state for correct badge color on reload (open/merged/closed/draft). */
+   prState?: string
+-  /** Original branch created with the worktree, used for cleanup on deletion.
+-   *  Set automatically when `branch` is updated via live sync. */
++  /** Original branch created with the worktree, used for cleanup after a manual branch change. */
+   originalBranch?: string
++  /** Whether Agent Manager created and may safely clean up this branch. Undefined preserves legacy behavior. */
++  branchOwned?: boolean
++  /** Initial session whose prompts may name this placeholder branch once. */
++  autoNameSessionId?: string
+   /** Section this worktree belongs to, or undefined for ungrouped. */
+   sectionId?: string
+ }
+@@ -176,6 +179,7 @@ export class WorktreeStateManager {
+     remote?: string
+     groupId?: string
+     label?: string
++    branchOwned?: boolean
+   }): Worktree {
+     const id = generateId("wt")
+     const wt: Worktree = {
+@@ -188,6 +192,7 @@ export class WorktreeStateManager {
+     if (params.remote) wt.remote = params.remote
+     if (params.groupId) wt.groupId = params.groupId
+     if (params.label) wt.label = params.label
++    if (params.branchOwned !== undefined) wt.branchOwned = params.branchOwned
+     this.worktrees.set(id, wt)
+     this.setNormalizedWorktreeOrder(this.worktreeOrder)
+     this.log(
+@@ -225,9 +230,35 @@ export class WorktreeStateManager {
+   updateWorktreeBranch(id: string, branch: string): boolean {
+     const wt = this.worktrees.get(id)
+     if (!wt || wt.branch === branch) return false
+-    if (!wt.originalBranch) wt.originalBranch = wt.branch
++    if (!wt.originalBranch && wt.branchOwned !== false) wt.originalBranch = wt.branch
+     this.log(`Updated worktree ${id} branch: ${wt.branch} → ${branch}`)
+     wt.branch = branch
++    wt.autoNameSessionId = undefined
++    void this.save()
++    return true
++  }
++
++  armAutoName(id: string, sessionId: string): void {
++    const wt = this.worktrees.get(id)
++    if (!wt || wt.branchOwned !== true) return
++    wt.autoNameSessionId = sessionId
++    void this.save()
++  }
++
++  clearAutoName(id: string): void {
++    const wt = this.worktrees.get(id)
++    if (!wt?.autoNameSessionId) return
++    wt.autoNameSessionId = undefined
++    void this.save()
++  }
++
++  renameOwnedBranch(id: string, current: string, branch: string): boolean {
++    const wt = this.worktrees.get(id)
++    if (!wt || wt.branch !== current || wt.branchOwned !== true) return false
++    wt.branch = branch
++    wt.originalBranch = undefined
++    wt.autoNameSessionId = undefined
++    this.log(`Automatically renamed worktree ${id} branch: ${current} → ${branch}`)
+     void this.save()
+     return true
+   }
+@@ -276,6 +307,10 @@ export class WorktreeStateManager {
+   addSession(sessionId: string, worktreeId: string | null): ManagedSession {
+     const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString() }
+     this.sessions.set(sessionId, session)
++    const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
++    if (worktree?.autoNameSessionId && worktreeId && this.getSessions(worktreeId).length > 1) {
++      worktree.autoNameSessionId = undefined
++    }
+     this.log(`Added session ${sessionId} to worktree ${worktreeId ?? "local"}`)
+     void this.save()
+     return session
+@@ -285,7 +320,11 @@ export class WorktreeStateManager {
+   moveSession(sessionId: string, worktreeId: string | null): void {
+     const session = this.sessions.get(sessionId)
+     if (!session) return
++    const previous = session.worktreeId ? this.worktrees.get(session.worktreeId) : undefined
++    if (previous?.autoNameSessionId === sessionId) previous.autoNameSessionId = undefined
+     session.worktreeId = worktreeId
++    const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
++    if (worktree?.autoNameSessionId) worktree.autoNameSessionId = undefined
+     this.log(`Moved session ${sessionId} to ${worktreeId ?? "local"}`)
+     void this.save()
+   }
+diff --git a/packages/kilo-vscode/src/agent-manager/__tests__/AgentManagerProvider.spec.ts b/packages/kilo-vscode/src/agent-manager/__tests__/AgentManagerProvider.spec.ts
+index 1e3b91664a6..05352e380a7 100644
+--- a/packages/kilo-vscode/src/agent-manager/__tests__/AgentManagerProvider.spec.ts
++++ b/packages/kilo-vscode/src/agent-manager/__tests__/AgentManagerProvider.spec.ts
+@@ -70,6 +70,7 @@ function createMockHost(): Host {
+   return {
+     openPanel: vi.fn(),
+     workspacePath: () => "/repo",
++    autoBranchNaming: () => ({ enabled: true, prefix: "" }),
+     showError: vi.fn(),
+     openDocument: vi.fn().mockResolvedValue(undefined),
+     openFile: vi.fn(),
+@@ -100,6 +101,8 @@ function createHarness() {
+     panel: { sessions: { registerSession: ReturnType<typeof vi.fn> } } | undefined
+     prBridge: { handleMessage: ReturnType<typeof vi.fn> }
+     activeSessionId: string | undefined
++    naming: { prompt: ReturnType<typeof vi.fn> }
++    terminalRouter: { handle: ReturnType<typeof vi.fn> }
+     stateReady: Promise<void> | undefined
+     contextTarget: ReturnType<typeof vi.fn>
+     createWorktreeOnDisk: ReturnType<typeof vi.fn>
+@@ -109,7 +112,7 @@ function createHarness() {
+     registerWorktreeSession: ReturnType<typeof vi.fn>
+     notifyWorktreeReady: ReturnType<typeof vi.fn>
+     log: ReturnType<typeof vi.fn>
+-    onCreateWorktree: () => Promise<null>
++    onCreateWorktree: (baseBranch?: string, branchName?: string) => Promise<null>
+     onMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+   }
+ 
+@@ -121,12 +124,14 @@ function createHarness() {
+   }
+   manager.prBridge = { handleMessage: vi.fn().mockReturnValue(false) }
+   manager.activeSessionId = undefined
++  manager.naming = { prompt: vi.fn() }
++  manager.terminalRouter = { handle: vi.fn().mockReturnValue(false) }
+   manager.stateReady = Promise.resolve()
+   manager.contextTarget = vi.fn()
+   manager.createWorktreeOnDisk = vi.fn()
+   manager.runSetupScriptForWorktree = vi.fn().mockResolvedValue(undefined)
+   manager.createSessionInWorktree = vi.fn()
+-  manager.getStateManager = vi.fn().mockReturnValue({ addSession: vi.fn() })
++  manager.getStateManager = vi.fn().mockReturnValue({ addSession: vi.fn(), armAutoName: vi.fn() })
+   manager.registerWorktreeSession = vi.fn()
+   manager.notifyWorktreeReady = vi.fn()
+   manager.log = vi.fn()
+@@ -142,7 +147,7 @@ describe("AgentManagerProvider worktree creation", () => {
+       result: { path: "/repo/.kilo/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
+     }
+     const session = { id: "session-1" }
+-    const state = { addSession: vi.fn() }
++    const state = { addSession: vi.fn(), armAutoName: vi.fn() }
+ 
+     manager.createWorktreeOnDisk.mockResolvedValue(created)
+     manager.createSessionInWorktree.mockResolvedValue(session)
+@@ -151,9 +156,25 @@ describe("AgentManagerProvider worktree creation", () => {
+     await manager.onCreateWorktree()
+ 
+     expect(state.addSession).toHaveBeenCalledWith("session-1", "wt-1")
++    expect(state.armAutoName).toHaveBeenCalledWith("wt-1", "session-1")
+     expect(manager.panel!.sessions.registerSession).toHaveBeenCalledWith(session)
+   })
+ 
++  it("does not arm automatic naming for a custom branch", async () => {
++    const manager = createHarness()
++    const state = { addSession: vi.fn(), armAutoName: vi.fn() }
++    manager.createWorktreeOnDisk.mockResolvedValue({
++      worktree: { id: "wt-1" },
++      result: { path: "/repo/.kilo/worktrees/custom", branch: "my-custom-branch", parentBranch: "main" },
++    })
++    manager.createSessionInWorktree.mockResolvedValue({ id: "session-1" })
++    manager.getStateManager.mockReturnValue(state)
++
++    await manager.onCreateWorktree(undefined, "my-custom-branch")
++
++    expect(state.armAutoName).not.toHaveBeenCalled()
++  })
++
+   // Regression for #8983: notifyWorktreeReady must push agentManager.state before
+   // registerSession posts sessionCreated. Reverse order makes the webview route the
+   // new worktree session into the Local tab.
+@@ -164,7 +185,7 @@ describe("AgentManagerProvider worktree creation", () => {
+       result: { path: "/repo/.kilo/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
+     })
+     manager.createSessionInWorktree.mockResolvedValue({ id: "session-1" })
+-    manager.getStateManager.mockReturnValue({ addSession: vi.fn() })
++    manager.getStateManager.mockReturnValue({ addSession: vi.fn(), armAutoName: vi.fn() })
+ 
+     await manager.onCreateWorktree()
+ 
+@@ -183,7 +204,7 @@ describe("AgentManagerProvider worktree creation", () => {
+       result: { path: "/repo/.kilo/worktrees/wt-2", branch: "feature/wt-2", parentBranch: "main" },
+     })
+     manager.createSessionInWorktree.mockResolvedValue({ id: "session-2" })
+-    manager.getStateManager.mockReturnValue({ addSession: vi.fn() })
++    manager.getStateManager.mockReturnValue({ addSession: vi.fn(), armAutoName: vi.fn() })
+ 
+     const pending = manager.onCreateWorktree()
+     await Promise.resolve()
+@@ -227,6 +248,28 @@ describe("AgentManagerProvider worktree creation", () => {
+       draftID: "draft-1",
+       contextDirectory: "/repo/.kilo/worktrees/wt-1",
+     })
++    expect(manager.naming.prompt).toHaveBeenCalledWith({
++      sessionID: "draft-1",
++      text: "continue",
++      providerID: undefined,
++      modelID: undefined,
++    })
++  })
++
++  it("retries branch naming when the user answers a clarification", async () => {
++    const manager = createHarness()
++    manager.activeSessionId = "session-wt"
++
++    await manager.onMessage({
++      type: "questionReply",
++      requestID: "question-1",
++      answers: [["Node.js", "Use JWT"]],
++    })
++
++    expect(manager.naming.prompt).toHaveBeenCalledWith({
++      sessionID: "session-wt",
++      text: "Node.js\nUse JWT",
++    })
+   })
+ 
+   it.each([{ type: "requestSandboxDefault" }, { type: "setSandboxDefault", enabled: false, requestID: "request-1" }])(
+diff --git a/packages/kilo-vscode/src/agent-manager/branch-name.ts b/packages/kilo-vscode/src/agent-manager/branch-name.ts
+index dbc9bc17679..d931a2cf9f7 100644
+--- a/packages/kilo-vscode/src/agent-manager/branch-name.ts
++++ b/packages/kilo-vscode/src/agent-manager/branch-name.ts
+@@ -16,6 +16,16 @@ export function sanitizeBranchName(name: string, maxLength = 50): string {
+     .replace(/-+/g, "-")
+ }
+ 
++export function semanticBranchName(title: string, prefix = "", maxLength = 50): string {
++  const parts = prefix
++    .split("/")
++    .map((part) => sanitizeBranchName(part))
++    .filter(Boolean)
++  const head = parts.length > 0 ? `${parts.join("/")}/` : ""
++  const slug = sanitizeBranchName(title, Math.max(0, maxLength - head.length))
++  return slug ? `${head}${slug}` : ""
++}
++
+ /**
+  * Generate a natural two-word branch name (e.g. "ambitious-keyboard") using
+  * the friendly-words package.  Checks `existingBranches` to avoid collisions,
+diff --git a/packages/kilo-vscode/src/agent-manager/branch-naming.ts b/packages/kilo-vscode/src/agent-manager/branch-naming.ts
+new file mode 100644
+index 00000000000..aaef5bec9db
+--- /dev/null
++++ b/packages/kilo-vscode/src/agent-manager/branch-naming.ts
+@@ -0,0 +1,115 @@
++import { semanticBranchName } from "./branch-name"
++import type { WorktreeStateManager } from "./WorktreeStateManager"
++
++interface Prompt {
++  sessionID: string
++  text: string
++  providerID?: string
++  modelID?: string
++}
++
++interface Client {
++  branchName: {
++    generate: (
++      parameters: {
++        directory: string
++        sessionID: string
++        prompt: string
++        providerID?: string
++        modelID?: string
++      },
++      options: { throwOnError: true; signal: AbortSignal },
++    ) => Promise<{ data: { branch: string | null } }>
++  }
++}
++
++interface Manager {
++  renameBranch: (path: string, current: string, branch: string) => Promise<string>
++}
++
++interface Deps {
++  state: () => WorktreeStateManager | undefined
++  manager: () => Manager | undefined
++  client: (dir: string) => Promise<Client>
++  settings: () => { enabled: boolean; prefix: string }
++  push: () => void
++  log: (msg: string) => void
++}
++
++export class BranchNamingController {
++  private readonly revisions = new Map<string, number>()
++  private readonly requests = new Map<string, AbortController>()
++
++  constructor(private readonly deps: Deps) {}
++
++  prompt(input: Prompt): void {
++    const state = this.deps.state()
++    const session = state?.getSession(input.sessionID)
++    const worktree = session?.worktreeId ? state?.getWorktree(session.worktreeId) : undefined
++    if (!state || !worktree || worktree.autoNameSessionId !== input.sessionID) return
++    if (!this.deps.settings().enabled) {
++      state.clearAutoName(worktree.id)
++      return
++    }
++    if (state.getSessions(worktree.id).length !== 1 || worktree.prNumber || worktree.prUrl) {
++      state.clearAutoName(worktree.id)
++      return
++    }
++
++    const revision = (this.revisions.get(worktree.id) ?? 0) + 1
++    this.revisions.set(worktree.id, revision)
++    this.requests.get(worktree.id)?.abort()
++    const request = new AbortController()
++    this.requests.set(worktree.id, request)
++    void this.generate(worktree.id, input, revision, request)
++  }
++
++  dispose(): void {
++    for (const request of this.requests.values()) request.abort()
++    this.requests.clear()
++  }
++
++  private async generate(id: string, input: Prompt, revision: number, request: AbortController): Promise<void> {
++    const initial = this.deps.state()?.getWorktree(id)
++    if (!initial) return
++
++    try {
++      const client = await this.deps.client(initial.path)
++      const { data } = await client.branchName.generate(
++        {
++          directory: initial.path,
++          sessionID: input.sessionID,
++          prompt: input.text,
++          providerID: input.providerID,
++          modelID: input.modelID,
++        },
++        { throwOnError: true, signal: request.signal },
++      )
++      if (!data.branch || request.signal.aborted || this.revisions.get(id) !== revision) return
++      await this.rename(id, input.sessionID, data.branch)
++    } catch (error) {
++      if (request.signal.aborted) return
++      this.deps.log(`Skipped automatic branch naming: ${error}`)
++    } finally {
++      if (this.requests.get(id) === request) this.requests.delete(id)
++    }
++  }
++
++  private async rename(id: string, sessionID: string, generated: string): Promise<void> {
++    const state = this.deps.state()
++    const manager = this.deps.manager()
++    const worktree = state?.getWorktree(id)
++    const cfg = this.deps.settings()
++    if (!state || !manager || !worktree || !cfg.enabled) return
++    if (worktree.autoNameSessionId !== sessionID || worktree.branchOwned !== true) return
++    if (state.getSessions(id).length !== 1 || worktree.prNumber || worktree.prUrl) return
++
++    const branch = semanticBranchName(generated, cfg.prefix)
++    if (!branch) return
++    const current = worktree.branch
++    const renamed = await manager.renameBranch(worktree.path, current, branch)
++    if (!state.renameOwnedBranch(id, current, renamed)) return
++    this.deps.push()
++    this.deps.log(`Automatically named branch from session ${sessionID}: ${renamed}`)
++  }
++}
+diff --git a/packages/kilo-vscode/src/agent-manager/host.ts b/packages/kilo-vscode/src/agent-manager/host.ts
+index 079b610f590..2d9b4f6bf4c 100644
+--- a/packages/kilo-vscode/src/agent-manager/host.ts
++++ b/packages/kilo-vscode/src/agent-manager/host.ts
+@@ -99,6 +99,9 @@ export interface Host {
+   /** Get the workspace/project root path. */
+   workspacePath(): string | undefined
+ 
++  /** Read the user's automatic branch naming preferences. */
++  autoBranchNaming(): { enabled: boolean; prefix: string }
++
+   /** Show an error notification. */
+   showError(msg: string): void
+ 
+diff --git a/packages/kilo-vscode/src/agent-manager/types.ts b/packages/kilo-vscode/src/agent-manager/types.ts
+index 3fda920167d..be27299f280 100644
+--- a/packages/kilo-vscode/src/agent-manager/types.ts
++++ b/packages/kilo-vscode/src/agent-manager/types.ts
+@@ -641,6 +641,13 @@ interface SendCommandIn {
+   contextDirectory?: string
+ }
+ 
++interface QuestionReplyIn {
++  type: "questionReply"
++  requestID: string
++  sessionID?: string
++  answers: string[][]
++}
++
+ interface RequestSandboxDefaultIn {
+   type: "requestSandboxDefault"
+   agentManagerContext?: string
+@@ -808,6 +815,7 @@ export type AgentManagerInMessage =
+   | LoadMessagesIn
+   | SendMessageIn
+   | SendCommandIn
++  | QuestionReplyIn
+   | RequestSandboxDefaultIn
+   | SetSandboxDefaultIn
+   | ToggleSandboxIn
+diff --git a/packages/kilo-vscode/src/agent-manager/vscode-host.ts b/packages/kilo-vscode/src/agent-manager/vscode-host.ts
+index 8517fc4a0a4..79d88218790 100644
+--- a/packages/kilo-vscode/src/agent-manager/vscode-host.ts
++++ b/packages/kilo-vscode/src/agent-manager/vscode-host.ts
+@@ -167,6 +167,14 @@ export class VscodeHost implements Host {
+     return getWorkspaceRoot()
+   }
+ 
++  autoBranchNaming(): { enabled: boolean; prefix: string } {
++    const cfg = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
++    return {
++      enabled: cfg.get("autoBranchNaming", true),
++      prefix: cfg.get("branchPrefix", ""),
++    }
++  }
++
+   showError(msg: string): void {
+     void vscode.window.showErrorMessage(msg)
+   }
+diff --git a/packages/kilo-vscode/src/agent-manager/worktree-importer.ts b/packages/kilo-vscode/src/agent-manager/worktree-importer.ts
+index eee61c96ce9..cfa3d1ab96c 100644
+--- a/packages/kilo-vscode/src/agent-manager/worktree-importer.ts
++++ b/packages/kilo-vscode/src/agent-manager/worktree-importer.ts
+@@ -97,6 +97,7 @@ export class WorktreeImporter {
+         path: result.path,
+         parentBranch: result.parentBranch,
+         remote: result.remote,
++        branchOwned: false,
+       })
+       this.host.push()
+ 
+@@ -149,6 +150,7 @@ export class WorktreeImporter {
+         path: result.path,
+         parentBranch: result.parentBranch,
+         remote: result.remote,
++        branchOwned: false,
+       })
+       this.host.push()
+ 
+@@ -211,7 +213,7 @@ export class WorktreeImporter {
+       }
+ 
+       const base = await manager.resolveBaseBranch()
+-      worktree = state.addWorktree({ branch, path, parentBranch: base.branch, remote: base.remote })
++      worktree = state.addWorktree({ branch, path, parentBranch: base.branch, remote: base.remote, branchOwned: false })
+       this.host.push()
+ 
+       const session = await this.host.session(path, branch, worktree.id)
+@@ -287,6 +289,7 @@ export class WorktreeImporter {
+             path: external.path,
+             parentBranch: base.branch,
+             remote: base.remote,
++            branchOwned: false,
+           })
+           const session = await this.host.session(external.path, external.branch, worktree.id)
+           if (session) {
+diff --git a/packages/kilo-vscode/tests/unit/branch-naming.test.ts b/packages/kilo-vscode/tests/unit/branch-naming.test.ts
+new file mode 100644
+index 00000000000..c1dd5ba439f
+--- /dev/null
++++ b/packages/kilo-vscode/tests/unit/branch-naming.test.ts
+@@ -0,0 +1,176 @@
++import { afterEach, beforeEach, describe, expect, it } from "bun:test"
++import * as fs from "fs"
++import * as os from "os"
++import * as path from "path"
++import { BranchNamingController } from "../../src/agent-manager/branch-naming"
++import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
++
++function deferred<T>() {
++  const result = Promise.withResolvers<T>()
++  return result
++}
++
++async function settle() {
++  await new Promise((resolve) => setTimeout(resolve, 20))
++}
++
++describe("BranchNamingController", () => {
++  let root: string
++  let state: WorktreeStateManager
++
++  beforeEach(() => {
++    root = fs.mkdtempSync(path.join(os.tmpdir(), "branch-naming-test-"))
++    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
++    state = new WorktreeStateManager(root, () => {})
++  })
++
++  afterEach(async () => {
++    await state.flush()
++    fs.rmSync(root, { recursive: true, force: true })
++  })
++
++  it("keeps the placeholder armed when the conversation is not clear yet", async () => {
++    const wt = state.addWorktree({
++      branch: "quiet-river",
++      path: "/tmp/quiet-river",
++      parentBranch: "main",
++      branchOwned: true,
++    })
++    state.addSession("session-1", wt.id)
++    state.armAutoName(wt.id, "session-1")
++    const renamed: string[] = []
++    const naming = new BranchNamingController({
++      state: () => state,
++      manager: () => ({
++        renameBranch: async (_path, _current, branch) => {
++          renamed.push(branch)
++          return branch
++        },
++      }),
++      client: async () => ({ branchName: { generate: async () => ({ data: { branch: null } }) } }),
++      settings: () => ({ enabled: true, prefix: "" }),
++      push: () => {},
++      log: () => {},
++    })
++
++    naming.prompt({ sessionID: "session-1", text: "hi" })
++    await settle()
++
++    expect(renamed).toEqual([])
++    expect(state.getWorktree(wt.id)?.autoNameSessionId).toBe("session-1")
++  })
++
++  it("renames once when a later message establishes the task and applies the user prefix", async () => {
++    const wt = state.addWorktree({
++      branch: "quiet-river",
++      path: "/tmp/quiet-river",
++      parentBranch: "main",
++      branchOwned: true,
++    })
++    state.addSession("session-1", wt.id)
++    state.armAutoName(wt.id, "session-1")
++    const prompts: string[] = []
++    const naming = new BranchNamingController({
++      state: () => state,
++      manager: () => ({ renameBranch: async (_path, _current, branch) => branch }),
++      client: async () => ({
++        branchName: {
++          generate: async (input) => {
++            prompts.push(input.prompt)
++            return { data: { branch: input.prompt === "hi" ? null : "fix-token-refresh-race" } }
++          },
++        },
++      }),
++      settings: () => ({ enabled: true, prefix: "Marius / Features" }),
++      push: () => {},
++      log: () => {},
++    })
++
++    naming.prompt({ sessionID: "session-1", text: "hi" })
++    await settle()
++    naming.prompt({ sessionID: "session-1", text: "Fix the token refresh race" })
++    await settle()
++
++    expect(prompts).toEqual(["hi", "Fix the token refresh race"])
++    expect(state.getWorktree(wt.id)).toMatchObject({
++      branch: "marius/features/fix-token-refresh-race",
++      autoNameSessionId: undefined,
++    })
++  })
++
++  it("does not touch an explicitly named branch", async () => {
++    const wt = state.addWorktree({
++      branch: "my-custom-branch",
++      path: "/tmp/custom",
++      parentBranch: "main",
++      branchOwned: true,
++    })
++    state.addSession("session-1", wt.id)
++    let requests = 0
++    const naming = new BranchNamingController({
++      state: () => state,
++      manager: () => ({ renameBranch: async (_path, _current, branch) => branch }),
++      client: async () => ({
++        branchName: {
++          generate: async () => {
++            requests += 1
++            return { data: { branch: "replace-custom-name" } }
++          },
++        },
++      }),
++      settings: () => ({ enabled: true, prefix: "" }),
++      push: () => {},
++      log: () => {},
++    })
++
++    naming.prompt({ sessionID: "session-1", text: "Implement auth" })
++    await settle()
++
++    expect(requests).toBe(0)
++    expect(state.getWorktree(wt.id)?.branch).toBe("my-custom-branch")
++  })
++
++  it("ignores an older result after a newer user message", async () => {
++    const wt = state.addWorktree({
++      branch: "quiet-river",
++      path: "/tmp/quiet-river",
++      parentBranch: "main",
++      branchOwned: true,
++    })
++    state.addSession("session-1", wt.id)
++    state.armAutoName(wt.id, "session-1")
++    const first = deferred<{ data: { branch: string | null } }>()
++    const renamed: string[] = []
++    let requests = 0
++    const naming = new BranchNamingController({
++      state: () => state,
++      manager: () => ({
++        renameBranch: async (_path, _current, branch) => {
++          renamed.push(branch)
++          return branch
++        },
++      }),
++      client: async () => ({
++        branchName: {
++          generate: async () => {
++            requests += 1
++            if (requests === 1) return first.promise
++            return { data: { branch: "fix-final-task" } }
++          },
++        },
++      }),
++      settings: () => ({ enabled: true, prefix: "" }),
++      push: () => {},
++      log: () => {},
++    })
++
++    naming.prompt({ sessionID: "session-1", text: "Explore some options" })
++    await Promise.resolve()
++    naming.prompt({ sessionID: "session-1", text: "Fix the final task" })
++    await settle()
++    first.resolve({ data: { branch: "explore-old-options" } })
++    await settle()
++
++    expect(renamed).toEqual(["fix-final-task"])
++  })
++})
+diff --git a/packages/kilo-vscode/tests/unit/worktree-manager.test.ts b/packages/kilo-vscode/tests/unit/worktree-manager.test.ts
+index f43ce5676c4..9569a571fae 100644
+--- a/packages/kilo-vscode/tests/unit/worktree-manager.test.ts
++++ b/packages/kilo-vscode/tests/unit/worktree-manager.test.ts
+@@ -4,7 +4,12 @@ import path from "node:path"
+ import fs from "node:fs/promises"
+ import { existsSync } from "node:fs"
+ import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
+-import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
++import {
++  generateBranchName,
++  sanitizeBranchName,
++  semanticBranchName,
++  versionedName,
++} from "../../src/agent-manager/branch-name"
+ import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
+ import simpleGit from "simple-git"
+ 
+@@ -115,6 +120,24 @@ describe("generateBranchName", () => {
+ // sanitizeBranchName
+ // ---------------------------------------------------------------------------
+ 
++describe("semanticBranchName", () => {
++  it("creates a branch slug from a generated session title", () => {
++    expect(semanticBranchName("Fix token refresh race")).toBe("fix-token-refresh-race")
++  })
++
++  it("normalizes a user prefix and keeps branch separators", () => {
++    expect(semanticBranchName("Add billing alerts", "marius/features/")).toBe("marius/features/add-billing-alerts")
++  })
++
++  it("reserves the length limit for the prefix", () => {
++    expect(semanticBranchName("a".repeat(100), "team/").length).toBeLessThanOrEqual(50)
++  })
++
++  it("returns empty when the title has no usable characters", () => {
++    expect(semanticBranchName("修复登录")).toBe("")
++  })
++})
++
+ describe("sanitizeBranchName", () => {
+   it("replaces spaces with hyphens", () => {
+     expect(sanitizeBranchName("model comparison")).toBe("model-comparison")
+@@ -718,6 +741,47 @@ describe("WorktreeManager.ensureGitExclude", () => {
+   })
+ })
+ 
++// ---------------------------------------------------------------------------
++// WorktreeManager -- automatic branch rename
++// ---------------------------------------------------------------------------
++
++describe("WorktreeManager.renameBranch", () => {
++  it("renames a local-only branch without moving or cleaning the worktree", async () => {
++    const root = await createTempRepo()
++    const mgr = createManager(root)
++    const created = await mgr.createWorktree({ branchName: "quiet-river" })
++    await fs.writeFile(path.join(created.path, "draft.txt"), "keep me")
++
++    const branch = await mgr.renameBranch(created.path, created.branch, "fix-token-refresh")
++
++    expect(branch).toBe("fix-token-refresh")
++    expect((await simpleGit(created.path).revparse(["--abbrev-ref", "HEAD"])).trim()).toBe(branch)
++    expect(await fs.readFile(path.join(created.path, "draft.txt"), "utf-8")).toBe("keep me")
++    expect((await simpleGit(root).branch()).all).not.toContain(created.branch)
++  })
++
++  it("suffixes a generated name that already exists", async () => {
++    const root = await createTempRepo()
++    const mgr = createManager(root)
++    const created = await mgr.createWorktree({ branchName: "quiet-river" })
++    await simpleGit(root).branch(["fix-auth"])
++
++    expect(await mgr.renameBranch(created.path, created.branch, "fix-auth")).toBe("fix-auth-2")
++  })
++
++  it("does not rename a branch that exists on a remote", async () => {
++    const root = await createTempRepo()
++    const mgr = createManager(root)
++    const created = await mgr.createWorktree({ branchName: "quiet-river" })
++    const hash = (await simpleGit(root).revparse(["HEAD"])).trim()
++    await simpleGit(root).raw(["update-ref", `refs/remotes/origin/${created.branch}`, hash])
++
++    await expect(mgr.renameBranch(created.path, created.branch, "fix-auth")).rejects.toThrow(
++      "already exists on a remote",
++    )
++  })
++})
++
+ // ---------------------------------------------------------------------------
+ // WorktreeManager -- branch name collision retry
+ // ---------------------------------------------------------------------------
+diff --git a/packages/kilo-vscode/tests/unit/worktree-state-manager.test.ts b/packages/kilo-vscode/tests/unit/worktree-state-manager.test.ts
+index af5dde5456f..7f2dc5a5bfd 100644
+--- a/packages/kilo-vscode/tests/unit/worktree-state-manager.test.ts
++++ b/packages/kilo-vscode/tests/unit/worktree-state-manager.test.ts
+@@ -60,6 +60,67 @@ describe("WorktreeStateManager", () => {
+     it("returns empty array when removing nonexistent worktree", () => {
+       expect(manager.removeWorktree("nonexistent")).toHaveLength(0)
+     })
++
++    it("tracks one automatic rename without changing branch ownership", () => {
++      const wt = manager.addWorktree({
++        branch: "quiet-river",
++        path: "/tmp/wt",
++        parentBranch: "main",
++        branchOwned: true,
++      })
++      manager.addSession("session-1", wt.id)
++      manager.armAutoName(wt.id, "session-1")
++
++      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBe("session-1")
++      expect(manager.renameOwnedBranch(wt.id, "quiet-river", "fix-token-refresh")).toBe(true)
++      expect(manager.getWorktree(wt.id)).toMatchObject({
++        branch: "fix-token-refresh",
++        branchOwned: true,
++        autoNameSessionId: undefined,
++        originalBranch: undefined,
++      })
++    })
++
++    it("treats an observed branch change as manual and cancels automatic naming", () => {
++      const wt = manager.addWorktree({
++        branch: "quiet-river",
++        path: "/tmp/wt",
++        parentBranch: "main",
++        branchOwned: true,
++      })
++      manager.armAutoName(wt.id, "session-1")
++
++      expect(manager.updateWorktreeBranch(wt.id, "my-manual-name")).toBe(true)
++      expect(manager.getWorktree(wt.id)).toMatchObject({
++        branch: "my-manual-name",
++        originalBranch: "quiet-river",
++        autoNameSessionId: undefined,
++      })
++    })
++
++    it("cancels automatic naming when a worktree gains another session", () => {
++      const wt = manager.addWorktree({
++        branch: "quiet-river",
++        path: "/tmp/wt",
++        parentBranch: "main",
++        branchOwned: true,
++      })
++      manager.addSession("session-1", wt.id)
++      manager.armAutoName(wt.id, "session-1")
++      manager.addSession("session-2", wt.id)
++      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBeUndefined()
++    })
++
++    it("never arms imported branches for automatic naming", () => {
++      const wt = manager.addWorktree({
++        branch: "existing-feature",
++        path: "/tmp/wt",
++        parentBranch: "main",
++        branchOwned: false,
++      })
++      manager.armAutoName(wt.id, "session-1")
++      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBeUndefined()
++    })
+   })
+ 
+   describe("session CRUD", () => {
+diff --git a/packages/opencode/src/kilocode/branch-name.ts b/packages/opencode/src/kilocode/branch-name.ts
+new file mode 100644
+index 00000000000..0008a8e7c2b
+--- /dev/null
++++ b/packages/opencode/src/kilocode/branch-name.ts
+@@ -0,0 +1,107 @@
++import { Agent } from "@/agent/agent"
++import { Identifier } from "@/id/id"
++import { KiloLLM } from "@/kilocode/session/llm"
++import { ModelID, ProviderID } from "@/provider/schema"
++import { Provider } from "@/provider/provider"
++import { LLM } from "@/session/llm"
++import { MessageV2 } from "@/session/message-v2"
++import { MessageID, SessionID } from "@/session/schema"
++import { Effect } from "effect"
++
++const LIMIT = 4
++const CHARS = 1_000
++
++const PROMPT = `Generate a Git branch name for the coherent engineering workstream described by the user's messages.
++
++Return exactly one line:
++- a lowercase kebab-case branch slug with 2-6 words, or
++- null when there is not yet a clear, stable workstream
++
++Return null for greetings, acknowledgements, capability questions, casual conversation, vague requests, unresolved brainstorming, or messages that only select an option without enough preceding context.
++A concrete implementation, investigation, planning, documentation, or research task is a valid workstream.
++Name the durable goal or outcome, not a tentative implementation detail. Prefer an action and object, such as fix-token-refresh-race or research-branch-naming.
++Do not include a prefix, ticket number, explanation, quotes, markdown, or punctuation other than hyphens.`
++
++function text(message: MessageV2.WithParts) {
++  return message.parts
++    .filter((part): part is MessageV2.TextPart => part.type === "text" && !part.synthetic && !part.ignored)
++    .map((part) => part.text)
++    .join("\n")
++    .trim()
++}
++
++export function messages(history: MessageV2.WithParts[], latest: string) {
++  const prior = history
++    .filter((message) => message.info.role === "user")
++    .map(text)
++    .filter(Boolean)
++  const prompt = latest.trim()
++  const all = prior.at(-1) === prompt || !prompt ? prior : [...prior, prompt]
++  return all.slice(-LIMIT).map((message) => message.slice(0, CHARS))
++}
++
++export function parse(value: string) {
++  const line = value
++    .replace(/<think>[\s\S]*?<\/think>\s*/g, "")
++    .replace(/^```(?:json|text)?\s*/i, "")
++    .replace(/```$/i, "")
++    .trim()
++    .split("\n")[0]
++    ?.trim()
++    .replace(/^['"`]|['"`]$/g, "")
++    .toLowerCase()
++  if (!line || line === "null") return null
++  if (!/^[a-z0-9]+(?:-[a-z0-9]+){1,5}$/.test(line)) return null
++  return line.slice(0, 50).replace(/-+$/g, "") || null
++}
++
++export const generate = Effect.fn("BranchName.generate")(function* (input: {
++  sessionID: SessionID
++  messages: string[]
++  providerID?: ProviderID
++  modelID?: ModelID
++}) {
++  if (input.messages.length === 0) return null
++
++  const provider = yield* Provider.Service
++  const llm = yield* LLM.Service
++  const ref =
++    input.providerID && input.modelID
++      ? { providerID: input.providerID, modelID: input.modelID }
++      : yield* provider.defaultModel()
++  const model =
++    (yield* provider.getSmallModel(ref.providerID)) ?? (yield* provider.getModel(ref.providerID, ref.modelID))
++  const sid = SessionID.make(Identifier.ascending("session"))
++  const agent: Agent.Info = {
++    name: "branch-name",
++    mode: "primary",
++    hidden: true,
++    options: {},
++    permission: [],
++    prompt: PROMPT,
++    temperature: 0.1,
++  }
++  const user: MessageV2.User = {
++    id: MessageID.ascending(),
++    sessionID: sid,
++    role: "user",
++    time: { created: Date.now() },
++    agent: agent.name,
++    model: { providerID: model.providerID, modelID: model.id },
++  }
++  const body = input.messages.map((message, index) => `${index + 1}. ${message}`).join("\n\n")
++  const result = yield* KiloLLM.text(
++    llm.stream({
++      agent,
++      user,
++      tools: {},
++      model,
++      small: true,
++      messages: [{ role: "user", content: `User messages, oldest to newest:\n\n${body}` }],
++      sessionID: `branch-name:${input.sessionID}`,
++      system: [],
++      retries: 1,
++    }),
++  )
++  return parse(result)
++})
+diff --git a/packages/opencode/src/kilocode/server/httpapi/groups/branch-name.ts b/packages/opencode/src/kilocode/server/httpapi/groups/branch-name.ts
+new file mode 100644
+index 00000000000..68c84cf9db4
+--- /dev/null
++++ b/packages/opencode/src/kilocode/server/httpapi/groups/branch-name.ts
+@@ -0,0 +1,58 @@
++import { ModelID, ProviderID } from "@/provider/schema"
++import { SessionID } from "@/session/schema"
++import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
++import { InstanceContextMiddleware } from "@/server/routes/instance/httpapi/middleware/instance-context"
++import {
++  WorkspaceRoutingMiddleware,
++  WorkspaceRoutingQuery,
++} from "@/server/routes/instance/httpapi/middleware/workspace-routing"
++import { described } from "@/server/routes/instance/httpapi/groups/metadata"
++import { Schema } from "effect"
++import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
++
++const root = "/branch-name"
++
++export const BranchNamePayload = Schema.Struct({
++  sessionID: SessionID,
++  prompt: Schema.String,
++  providerID: Schema.optional(ProviderID),
++  modelID: Schema.optional(ModelID),
++})
++
++const BranchNameResponse = Schema.Struct({
++  branch: Schema.NullOr(Schema.String),
++})
++
++export const BranchNameApi = HttpApi.make("branch-name")
++  .add(
++    HttpApiGroup.make("branch-name")
++      .add(
++        HttpApiEndpoint.post("generate", root, {
++          query: WorkspaceRoutingQuery,
++          payload: BranchNamePayload,
++          success: described(BranchNameResponse, "Generated branch name or null when the task is not clear yet"),
++        }).annotateMerge(
++          OpenApi.annotations({
++            identifier: "branchName.generate",
++            summary: "Generate branch name",
++            description: "Generate a task-focused branch name from the current conversation.",
++          }),
++        ),
++      )
++      .annotateMerge(
++        OpenApi.annotations({
++          title: "branch-name",
++          description: "Kilo branch name routes.",
++        }),
++      )
++      .middleware(InstanceContextMiddleware)
++      .middleware(WorkspaceRoutingMiddleware)
++      .middleware(Authorization),
++  )
++  .annotateMerge(
++    OpenApi.annotations({
++      title: "kilo HttpApi",
++      version: "0.0.1",
++      description: "Kilo HttpApi surface.",
++    }),
++  )
+diff --git a/packages/opencode/src/kilocode/server/httpapi/handlers/branch-name.ts b/packages/opencode/src/kilocode/server/httpapi/handlers/branch-name.ts
+new file mode 100644
+index 00000000000..70970828041
+--- /dev/null
++++ b/packages/opencode/src/kilocode/server/httpapi/handlers/branch-name.ts
+@@ -0,0 +1,37 @@
++import * as Log from "@opencode-ai/core/util/log"
++import { generate, messages } from "@/kilocode/branch-name"
++import { Session } from "@/session/session"
++import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
++import { Cause, Effect, Option } from "effect"
++import { HttpApiBuilder } from "effect/unstable/httpapi"
++import { BranchNamePayload } from "../groups/branch-name"
++
++const log = Log.create({ service: "branch-name" })
++
++export const branchNameHandlers = HttpApiBuilder.group(InstanceHttpApi, "branch-name", (handlers) =>
++  Effect.gen(function* () {
++    const session = yield* Session.Service
++
++    const handle = Effect.fn("BranchNameHttpApi.generate")(function* (ctx: { payload: typeof BranchNamePayload.Type }) {
++      const branch = yield* Effect.gen(function* () {
++        const history = yield* session.messages({ sessionID: ctx.payload.sessionID })
++        return yield* generate({
++          sessionID: ctx.payload.sessionID,
++          messages: messages(history, ctx.payload.prompt),
++          providerID: ctx.payload.providerID,
++          modelID: ctx.payload.modelID,
++        })
++      }).pipe(
++        Effect.timeoutOption("10 seconds"),
++        Effect.map(Option.getOrNull),
++        Effect.catchCause((cause) => {
++          log.error("generation failed", { error: Cause.pretty(cause) })
++          return Effect.succeed(null)
++        }),
++      )
++      return { branch }
++    })
++
++    return handlers.handle("generate", handle)
++  }),
++)
+diff --git a/packages/opencode/src/kilocode/server/httpapi/server.ts b/packages/opencode/src/kilocode/server/httpapi/server.ts
+index 9859bd956f5..2d46c42b46d 100644
+--- a/packages/opencode/src/kilocode/server/httpapi/server.ts
++++ b/packages/opencode/src/kilocode/server/httpapi/server.ts
+@@ -10,6 +10,7 @@ import * as AnacondaDesktop from "@/kilocode/anaconda-desktop/service"
+ import { agentBuilderHandlers } from "./handlers/agent-builder"
+ import { anacondaDesktopHandlers } from "./handlers/anaconda-desktop"
+ import { backgroundProcessHandlers } from "./handlers/background-process"
++import { branchNameHandlers } from "./handlers/branch-name"
+ import { commitMessageHandlers } from "./handlers/commit-message"
+ import { configConsoleHandlers } from "./handlers/config-console"
+ import { enhancePromptHandlers } from "./handlers/enhance-prompt"
+@@ -27,6 +28,7 @@ export const provide = Layer.provide([
+   agentBuilderHandlers,
+   anacondaDesktopHandlers.pipe(Layer.provide(AnacondaDesktop.liveLayer)),
+   backgroundProcessHandlers,
++  branchNameHandlers,
+   commitMessageHandlers,
+   configConsoleHandlers,
+   enhancePromptHandlers,
+diff --git a/packages/opencode/src/server/routes/instance/httpapi/api.ts b/packages/opencode/src/server/routes/instance/httpapi/api.ts
+index d9749b63931..1c8dc9df9ac 100644
+--- a/packages/opencode/src/server/routes/instance/httpapi/api.ts
++++ b/packages/opencode/src/server/routes/instance/httpapi/api.ts
+@@ -22,6 +22,7 @@ import { WorkspaceApi } from "./groups/workspace"
+ import { V2Api } from "./groups/v2"
+ // kilocode_change start - Kilo HttpApi groups
+ import { AgentBuilderApi } from "@/kilocode/server/httpapi/groups/agent-builder"
++import { BranchNameApi } from "@/kilocode/server/httpapi/groups/branch-name"
+ import { CommitMessageApi } from "@/kilocode/server/httpapi/groups/commit-message"
+ import { BackgroundProcessApi } from "@/kilocode/server/httpapi/groups/background-process"
+ import { ConfigConsoleApi } from "@/kilocode/server/httpapi/groups/config-console"
+@@ -68,6 +69,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
+   // kilocode_change start - Kilo HttpApi groups
+   .addHttpApi(AgentBuilderApi)
+   .addHttpApi(BackgroundProcessApi)
++  .addHttpApi(BranchNameApi)
+   .addHttpApi(CommitMessageApi)
+   .addHttpApi(ConfigConsoleApi)
+   .addHttpApi(EnhancePromptApi)
+diff --git a/packages/opencode/test/kilocode/branch-name.test.ts b/packages/opencode/test/kilocode/branch-name.test.ts
+new file mode 100644
+index 00000000000..f1415362b87
+--- /dev/null
++++ b/packages/opencode/test/kilocode/branch-name.test.ts
+@@ -0,0 +1,67 @@
++import { describe, expect, test } from "bun:test"
++import { messages, parse } from "../../src/kilocode/branch-name"
++import { MessageV2 } from "../../src/session/message-v2"
++import { ModelID, ProviderID } from "../../src/provider/schema"
++import { MessageID, PartID, SessionID } from "../../src/session/schema"
++
++function user(text: string, synthetic = false): MessageV2.WithParts {
++  const sessionID = SessionID.make("ses_branch_name_test")
++  const messageID = MessageID.ascending()
++  return {
++    info: {
++      id: messageID,
++      sessionID,
++      role: "user",
++      time: { created: Date.now() },
++      agent: "code",
++      model: {
++        providerID: ProviderID.make("kilo"),
++        modelID: ModelID.make("kilo-auto/small"),
++      },
++    },
++    parts: [
++      {
++        id: PartID.ascending(),
++        sessionID,
++        messageID,
++        type: "text",
++        text,
++        synthetic,
++      },
++    ],
++  }
++}
++
++describe("branch name generation helpers", () => {
++  test("accepts a concise kebab-case task and rejects ambiguous output", () => {
++    expect(parse("fix-token-refresh-race")).toBe("fix-token-refresh-race")
++    expect(parse("null")).toBeNull()
++    expect(parse("greeting")).toBeNull()
++    expect(parse("Here is a branch: fix-auth")).toBeNull()
++  })
++
++  test("removes reasoning wrappers before parsing", () => {
++    expect(parse("<think>Choose a durable outcome</think>\nadd-health-check-endpoint")).toBe(
++      "add-health-check-endpoint",
++    )
++  })
++
++  test("uses recent real user messages and appends the pending prompt once", () => {
++    const history = [user("hi"), user("internal", true), user("Can you inspect auth?")]
++    expect(messages(history, "Fix the token refresh race")).toEqual([
++      "hi",
++      "Can you inspect auth?",
++      "Fix the token refresh race",
++    ])
++    expect(messages([...history, user("Fix the token refresh race")], "Fix the token refresh race")).toEqual([
++      "hi",
++      "Can you inspect auth?",
++      "Fix the token refresh race",
++    ])
++  })
++
++  test("keeps only the latest four user messages", () => {
++    const history = [user("one"), user("two"), user("three"), user("four"), user("five")]
++    expect(messages(history, "six")).toEqual(["three", "four", "five", "six"])
++  })
++})
+diff --git a/packages/sdk/js/src/v2/gen/sdk.gen.ts b/packages/sdk/js/src/v2/gen/sdk.gen.ts
+index 96cb8fa793d..5d43a5ec200 100644
+--- a/packages/sdk/js/src/v2/gen/sdk.gen.ts
++++ b/packages/sdk/js/src/v2/gen/sdk.gen.ts
+@@ -37,6 +37,8 @@ import type {
+   BackgroundProcessStopResponses,
+   BackgroundProcessStopSessionErrors,
+   BackgroundProcessStopSessionResponses,
++  BranchNameGenerateErrors,
++  BranchNameGenerateResponses,
+   CommandListErrors,
+   CommandListResponses,
+   CommitMessageGenerateErrors,
+@@ -6235,6 +6237,51 @@ export class BackgroundProcess extends HeyApiClient {
+   }
+ }
+ 
++export class BranchName extends HeyApiClient {
++  /**
++   * Generate branch name
++   *
++   * Generate a task-focused branch name from the current conversation.
++   */
++  public generate<ThrowOnError extends boolean = false>(
++    parameters?: {
++      directory?: string
++      workspace?: string
++      sessionID?: string
++      prompt?: string
++      providerID?: string
++      modelID?: string
++    },
++    options?: Options<never, ThrowOnError>,
++  ) {
++    const params = buildClientParams(
++      [parameters],
++      [
++        {
++          args: [
++            { in: "query", key: "directory" },
++            { in: "query", key: "workspace" },
++            { in: "body", key: "sessionID" },
++            { in: "body", key: "prompt" },
++            { in: "body", key: "providerID" },
++            { in: "body", key: "modelID" },
++          ],
++        },
++      ],
++    )
++    return (options?.client ?? this.client).post<BranchNameGenerateResponses, BranchNameGenerateErrors, ThrowOnError>({
++      url: "/branch-name",
++      ...options,
++      ...params,
++      headers: {
++        "Content-Type": "application/json",
++        ...options?.headers,
++        ...params.headers,
++      },
++    })
++  }
++}
++
+ export class CommitMessage extends HeyApiClient {
+   /**
+    * Generate commit message
+@@ -8347,6 +8394,11 @@ export class KiloClient extends HeyApiClient {
+     return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
+   }
+ 
++  private _branchName?: BranchName
++  get branchName(): BranchName {
++    return (this._branchName ??= new BranchName({ client: this.client }))
++  }
++
+   private _commitMessage?: CommitMessage
+   get commitMessage(): CommitMessage {
+     return (this._commitMessage ??= new CommitMessage({ client: this.client }))
+diff --git a/packages/sdk/js/src/v2/gen/types.gen.ts b/packages/sdk/js/src/v2/gen/types.gen.ts
+index 3278fef3015..da0db21ede5 100644
+--- a/packages/sdk/js/src/v2/gen/types.gen.ts
++++ b/packages/sdk/js/src/v2/gen/types.gen.ts
+@@ -9630,6 +9630,41 @@ export type BackgroundProcessStopSessionResponses = {
+ export type BackgroundProcessStopSessionResponse =
+   BackgroundProcessStopSessionResponses[keyof BackgroundProcessStopSessionResponses]
+ 
++export type BranchNameGenerateData = {
++  body?: {
++    sessionID: string
++    prompt: string
++    providerID?: string
++    modelID?: string
++  }
++  path?: never
++  query?: {
++    directory?: string
++    workspace?: string
++  }
++  url: "/branch-name"
++}
++
++export type BranchNameGenerateErrors = {
++  /**
++   * Bad request
++   */
++  400: BadRequestError
++}
++
++export type BranchNameGenerateError = BranchNameGenerateErrors[keyof BranchNameGenerateErrors]
++
++export type BranchNameGenerateResponses = {
++  /**
++   * Generated branch name or null when the task is not clear yet
++   */
++  200: {
++    branch: string
++  }
++}
++
++export type BranchNameGenerateResponse = BranchNameGenerateResponses[keyof BranchNameGenerateResponses]
++
+ export type CommitMessageGenerateData = {
+   body?: {
+     /**
+diff --git a/packages/sdk/openapi.json b/packages/sdk/openapi.json
+index 5b0aef6ffe5..d30053d7864 100644
+--- a/packages/sdk/openapi.json
++++ b/packages/sdk/openapi.json
+@@ -11800,6 +11800,94 @@
+         ]
+       }
+     },
++    "/branch-name": {
++      "post": {
++        "tags": ["branch-name"],
++        "operationId": "branchName.generate",
++        "parameters": [
++          {
++            "name": "directory",
++            "in": "query",
++            "schema": {
++              "type": "string"
++            },
++            "required": false
++          },
++          {
++            "name": "workspace",
++            "in": "query",
++            "schema": {
++              "type": "string"
++            },
++            "required": false
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Generated branch name or null when the task is not clear yet",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "type": "object",
++                  "properties": {
++                    "branch": {
++                      "type": "string"
++                    }
++                  },
++                  "required": ["branch"],
++                  "additionalProperties": false,
++                  "description": "Generated branch name or null when the task is not clear yet"
++                }
++              }
++            }
++          },
++          "400": {
++            "description": "Bad request",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/BadRequestError"
++                }
++              }
++            }
++          }
++        },
++        "description": "Generate a task-focused branch name from the current conversation.",
++        "summary": "Generate branch name",
++        "requestBody": {
++          "content": {
++            "application/json": {
++              "schema": {
++                "type": "object",
++                "properties": {
++                  "sessionID": {
++                    "type": "string",
++                    "pattern": "^ses"
++                  },
++                  "prompt": {
++                    "type": "string"
++                  },
++                  "providerID": {
++                    "type": "string"
++                  },
++                  "modelID": {
++                    "type": "string"
++                  }
++                },
++                "required": ["sessionID", "prompt"],
++                "additionalProperties": false
++              }
++            }
++          }
++        },
++        "x-codeSamples": [
++          {
++            "lang": "js",
++            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.branchName.generate({\n  ...\n})"
++          }
++        ]
++      }
++    },
+     "/commit-message": {
+       "post": {
+         "tags": ["commit-message"],
+@@ -32007,6 +32095,10 @@
+       "name": "background-process",
+       "description": "Kilo background process routes."
+     },
++    {
++      "name": "branch-name",
++      "description": "Kilo branch name routes."
++    },
+     {
+       "name": "commit-message",
+       "description": "Kilo commit message routes."
