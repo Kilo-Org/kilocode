@@ -1668,6 +1668,31 @@ export const dict = {
   // Session export
   "command.session.export": "Esporta trascrizione sessione",
 
+  "agentRequirements.skill.installed": "Installata",
+  "agentRequirements.skill.checkFailed": "Il controllo della skill non è riuscito",
+  "agentRequirements.skill.missing": "Non installata",
+  "agentRequirements.mcp.connected": "Connesso",
+  "agentRequirements.mcp.checkFailed": "Il controllo MCP non è riuscito",
+  "agentRequirements.mcp.missing": "Non connesso",
+  "agentRequirements.extension.installed": "Installata",
+  "agentRequirements.extension.checkFailed": "Il controllo dell’estensione VS Code non è riuscito",
+  "agentRequirements.extension.missing": "Non installata",
+  "agentRequirements.extension.description": "Installa le estensioni mancanti in VS Code.",
+  "agentRequirements.group.skills": "Skill",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "Estensioni VS Code",
+  "agentRequirements.blocked.title": "Prerequisiti dell’agente {{agent}}",
+  "agentRequirements.blocked.description":
+    "Questo agente richiede i seguenti strumenti prima di poter essere eseguito.",
+  "agentRequirements.prompt.blocked": "Completa prima i controlli richiesti per usare questo agente",
+  "agentRequirements.action.openMarketplace": "Apri Marketplace",
+  "agentRequirements.error.unknownAgent": "Impossibile trovare l’agente selezionato.",
+  "agentRequirements.error.malformedDeclaration": "Questo agente ha una dichiarazione dei requisiti non valida.",
+  "agentRequirements.error.discoveryFailed": "Kilo non ha potuto controllare le skill disponibili.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo non ha potuto controllare lo stato del server MCP.",
+  "agentRequirements.error.scopeMismatch": "Questo controllo dei requisiti dell’agente non è più attivo.",
+  "agentRequirements.error.requestFailed": "Kilo non ha potuto controllare i requisiti dell’agente.",
+
   // Model groups
   "model.group.collapse": "Comprimi {{group}}",
   "model.group.expand": "Espandi {{group}}",
