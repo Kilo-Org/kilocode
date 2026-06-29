@@ -168,7 +168,7 @@ MIT. 저작자 표시와 라이선스 고지를 유지하는 한, 상업적 사�
 <details>
 <summary>Kilo CLI는 어디에서 왔나요?</summary>
 
-Kilo CLI는 [OpenCode](https://github.com/anomalyco/opencode)의 fork이며, Kilo agentic engineering 플랫폼에서 작동하도록 강화되었습니다.
+Kilo CLI는 [OpenCode](https://github.com/Kilo-Org/kilocode)의 fork이며, Kilo agentic engineering 플랫폼에서 작동하도록 강화되었습니다.
 
 </details>
 

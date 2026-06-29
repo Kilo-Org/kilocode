@@ -168,7 +168,7 @@ MIT। attribution এবং license notice রেখে আপনি এই cod
 <details>
 <summary>Kilo CLI কোথা থেকে এসেছে?</summary>
 
-Kilo CLI হলো [OpenCode](https://github.com/anomalyco/opencode)-এর একটি fork, Kilo agentic engineering platform-এর মধ্যে কাজ করার জন্য উন্নত করা হয়েছে।
+Kilo CLI হলো [OpenCode](https://github.com/Kilo-Org/kilocode)-এর একটি fork, Kilo agentic engineering platform-এর মধ্যে কাজ করার জন্য উন্নত করা হয়েছে।
 
 </details>
 

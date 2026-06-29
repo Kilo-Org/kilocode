@@ -168,7 +168,7 @@ MIT. Μπορείτε να χρησιμοποιήσετε, να τροποποι
 <details>
 <summary>Από πού προήλθε το Kilo CLI;</summary>
 
-Το Kilo CLI είναι fork του [OpenCode](https://github.com/anomalyco/opencode), βελτιωμένο για να λειτουργεί μέσα στην Kilo agentic engineering platform.
+Το Kilo CLI είναι fork του [OpenCode](https://github.com/Kilo-Org/kilocode), βελτιωμένο για να λειτουργεί μέσα στην Kilo agentic engineering platform.
 
 </details>
 

@@ -168,7 +168,7 @@ MIT. Atıf ve lisans bildirimlerini koruduğunuz sürece bu kodu ticari olarak d
 <details>
 <summary>Kilo CLI nereden geldi?</summary>
 
-Kilo CLI, Kilo agentic engineering platformunda çalışacak şekilde geliştirilmiş bir [OpenCode](https://github.com/anomalyco/opencode) fork'udur.
+Kilo CLI, Kilo agentic engineering platformunda çalışacak şekilde geliştirilmiş bir [OpenCode](https://github.com/Kilo-Org/kilocode) fork'udur.
 
 </details>
 
