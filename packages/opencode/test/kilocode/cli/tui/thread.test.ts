@@ -1,8 +1,10 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { tmpdir } from "../../../fixture/fixture"
 import { resolveThreadDirectory } from "../../../../src/cli/cmd/tui/thread"
+import { KiloTuiThreadDaemon } from "../../../../src/kilocode/cli/cmd/tui/thread"
+import { DaemonClient } from "../../../../src/kilocode/daemon/client"
 
 describe("kilo tui thread", () => {
   test("ignores stale PWD after cwd is changed by a process wrapper", async () => {
@@ -26,6 +28,58 @@ describe("kilo tui thread", () => {
     } finally {
       if (prev === undefined) delete process.env.KILO_DEV_CWD
       else process.env.KILO_DEV_CWD = prev
+    }
+  })
+
+  test("skips local validation before importing cloud sessions", async () => {
+    await using root = await tmpdir()
+    const cloud = "ses_cloud"
+    const local = "ses_local"
+    const calls: string[] = []
+    const opened: Array<string | undefined> = []
+    using server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const route = `${request.method} ${new URL(request.url).pathname}`
+        calls.push(route)
+        if (route === "POST /kilo/cloud/session/import") return Response.json({ id: local })
+        return new Response(null, { status: 404 })
+      },
+    })
+    const url = new URL(server.url)
+    const daemon = spyOn(DaemonClient, "maybe").mockResolvedValue({
+      url: url.origin,
+      headers: {},
+      state: {
+        pid: process.pid,
+        hostname: url.hostname,
+        port: Number(url.port),
+        url: url.origin,
+        username: "kilo",
+        password: "test",
+        token: "test",
+        version: "test",
+        startedAt: new Date().toISOString(),
+        log: path.join(root.path, "daemon.log"),
+      },
+    })
+    const args = { port: 0, hostname: "127.0.0.1", mdns: false, "mdns-domain": "kilo.local", cors: [] }
+    const start: Parameters<typeof KiloTuiThreadDaemon.attach>[0]["start"] = async (input) => {
+      opened.push(input.args.sessionID)
+    }
+
+    try {
+      await KiloTuiThreadDaemon.attach({
+        args: { ...args, session: cloud, cloudFork: true },
+        cwd: root.path,
+        input: async () => undefined,
+        start,
+      })
+
+      expect(calls).toEqual(["POST /kilo/cloud/session/import"])
+      expect(opened).toEqual([local])
+    } finally {
+      daemon.mockRestore()
     }
   })
 })

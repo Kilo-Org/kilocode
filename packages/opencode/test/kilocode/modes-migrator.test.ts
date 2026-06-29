@@ -171,6 +171,30 @@ describe("ModesMigrator", () => {
     })
   })
 
+  describe("convertOrganizationMode", () => {
+    const mode = {
+      id: "11111111-1111-1111-1111-111111111111",
+      organization_id: "org-1",
+      name: "Code Review custom Agent",
+      slug: "code-review",
+      created_by: "user-1",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      config: {
+        roleDefinition: "You are a reviewer.",
+        groups: ["read"],
+      },
+    }
+
+    test("carries displayName and source as typed fields, not provider options", () => {
+      const agent = ModesMigrator.convertOrganizationMode(mode)
+      expect(agent.displayName).toBe("Code Review custom Agent")
+      expect(agent.source).toBe("organization")
+      // The metadata must never live in `options`, which is forwarded to the provider.
+      expect(agent.options).toBeUndefined()
+    })
+  })
+
   describe("readModesFile", () => {
     test("returns empty array for non-existent file", async () => {
       const modes = await ModesMigrator.readModesFile("/non/existent/path.yaml")

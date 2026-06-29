@@ -109,6 +109,11 @@
 
   [data-slot="permission-hint"] {
     font-size: var(--kilo-font-size-12);
+
+    &[data-wrap] {
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
   }
 
   [data-slot="permission-patterns"] {
@@ -316,6 +321,24 @@
     white-space: nowrap;
     min-width: 0;
     flex: 1;
+
+    &[data-wrap] {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      word-break: normal;
+    }
+  }
+
+  [data-slot="permission-rule-label"] {
+    color: var(--text-base, var(--vscode-foreground));
+  }
+
+  [data-slot="permission-rule-path"] {
+    overflow-wrap: anywhere;
   }
 
   [data-slot="permission-rule-actions"] {

@@ -6,6 +6,7 @@ import {
   getOrganizationId,
   getToken,
   importSessionToDb,
+  normalizeClawStatus,
 } from "@kilocode/kilo-gateway"
 import {
   HEADER_FEATURE,
@@ -360,7 +361,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         try: async () => {
           const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
           if (!response.ok) throw new GatewayError(await response.text(), response.status)
-          return Schema.decodeUnknownPromise(ClawStatus)(await response.json())
+          return Schema.decodeUnknownPromise(ClawStatus)(normalizeClawStatus(await response.json()))
         },
         catch: (err) => err,
       }).pipe(

@@ -1,12 +1,58 @@
-import { anacondaDesktopDict } from "./en"
-
-export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Tjek igen",
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Forbind Anaconda Desktop",
+  "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
+  "provider.anaconda.status.checking": "Tjekker Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Åbner Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Opdaterer udbydermodeller...",
+  "provider.anaconda.status.ready": "Klar til at forbinde",
+  "provider.anaconda.status.waiting": "Venter på Desktop",
+  "provider.anaconda.status.attention": "Kræver opmærksomhed",
+  "provider.anaconda.status.unavailable": "Utilgængelig",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop understøttes ikke på {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installer Anaconda Desktop på denne maskine, og vend derefter tilbage hertil. Kilo kører ikke installationsprogrammet for dig.",
+  "provider.anaconda.state.notRunning":
+    "Åbn Anaconda Desktop, færdiggør opsætningen og log ind, og vælg derefter Tjek igen.",
+  "provider.anaconda.state.invalidConfig":
+    "Opsætningen af Anaconda Desktop er ufuldstændig. Åbn Desktop, færdiggør opsætningen, og genstart den om nødvendigt.",
+  "provider.anaconda.state.signedOut": "Åbn Anaconda Desktop og log ind, før du forbinder Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo kunne ikke få adgang til Anaconda Desktop. Åbn Desktop, log ind igen, og genstart den om nødvendigt.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop svarer ikke endnu. Åbn den, og vent på, at applikationen er færdig med at starte.",
+  "provider.anaconda.state.noModel":
+    "Download en tekstgenereringsmodel i Anaconda Desktop. Vælg en med understøttelse af værktøjskald, når det er muligt, og start derefter dens server.",
   "provider.anaconda.state.noServer_one":
     "Der er 1 downloadet tekstgenereringsmodel tilgængelig. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
   "provider.anaconda.state.noServer_other":
     "Der er {{count}} downloadede tekstgenereringsmodeller tilgængelige. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
+  "provider.anaconda.state.unhealthy":
+    "Den aktive inferensserver er ikke sund endnu. Tjek den i Anaconda Desktop, og genstart serveren om nødvendigt.",
+  "provider.anaconda.state.ready":
+    "Kilo fandt en sund lokal tekstgenereringsserver og kan importere dens aktuelle forbindelsesindstillinger.",
+  "provider.anaconda.server": "Aktiv inferensserver",
+  "provider.anaconda.context": "Kontekstvindue",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Værktøjskald",
+  "provider.anaconda.tools.supported": "Understøttet",
+  "provider.anaconda.tools.unsupported": "Ikke aktiveret",
+  "provider.anaconda.tools.unknown": "Ukendt",
+  "provider.anaconda.warning.title": "Værktøjsunderstøttelse er begrænset",
+  "provider.anaconda.warning.description":
+    "Denne server bekræfter ikke værktøjskald. Handlinger fra kodningsagenten kan mislykkes eller være utilgængelige. Fortsæt kun, hvis du accepterer disse begrænsninger.",
+  "provider.anaconda.action.download": "Download Anaconda Desktop",
+  "provider.anaconda.action.open": "Åbn Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Tjek igen",
+  "provider.anaconda.action.continue": "Fortsæt alligevel",
+  "provider.anaconda.action.manage": "Administrer / Opdater",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop opdateret",
+  "provider.anaconda.toast.refreshed.description": "Den aktive lokale server og modeller er opdaterede i Kilo.",
+  "settings.providers.note.anacondaDesktop": "Kør en model, der serveres lokalt af Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokal",
+} as const
+
+export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Foreslået",
   "command.category.view": "Vis",
   "command.category.project": "Projekt",
@@ -101,6 +147,30 @@ export const dict = {
   "command.session.unshare": "Stop deling af session",
   "command.session.unshare.description": "Stop med at dele denne session",
   "command.session.export": "Eksporter sessionsudskrift",
+
+  "agentRequirements.skill.installed": "Installeret",
+  "agentRequirements.skill.checkFailed": "Skill-kontrollen mislykkedes",
+  "agentRequirements.skill.missing": "Ikke installeret",
+  "agentRequirements.mcp.connected": "Forbundet",
+  "agentRequirements.mcp.checkFailed": "MCP-kontrollen mislykkedes",
+  "agentRequirements.mcp.missing": "Ikke forbundet",
+  "agentRequirements.extension.installed": "Installeret",
+  "agentRequirements.extension.checkFailed": "Kontrollen af VS Code-udvidelsen mislykkedes",
+  "agentRequirements.extension.missing": "Ikke installeret",
+  "agentRequirements.extension.description": "Installer de manglende udvidelser i VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCP’er",
+  "agentRequirements.group.extensions": "VS Code-udvidelser",
+  "agentRequirements.blocked.title": "Forudsætninger for {{agent}}-agenten",
+  "agentRequirements.blocked.description": "Denne agent skal have følgende værktøjer, før den kan køre.",
+  "agentRequirements.prompt.blocked": "Fuldfør først de krævede kontroller for at bruge denne agent",
+  "agentRequirements.action.openMarketplace": "Åbn Marketplace",
+  "agentRequirements.error.unknownAgent": "Den valgte agent blev ikke fundet.",
+  "agentRequirements.error.malformedDeclaration": "Denne agent har en ugyldig kravdeklaration.",
+  "agentRequirements.error.discoveryFailed": "Kilo kunne ikke kontrollere de tilgængelige skills.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo kunne ikke kontrollere MCP-serverstatus.",
+  "agentRequirements.error.scopeMismatch": "Denne agentkravskontrol er ikke længere aktiv.",
+  "agentRequirements.error.requestFailed": "Kilo kunne ikke kontrollere agentkravene.",
 
   "palette.search.placeholder": "Søg i filer, kommandoer og sessioner",
   "palette.empty": "Ingen resultater fundet",

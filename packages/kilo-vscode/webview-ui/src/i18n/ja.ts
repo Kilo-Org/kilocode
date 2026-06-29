@@ -1,12 +1,58 @@
-import { anacondaDesktopDict } from "./en"
-
-export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "再確認",
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop に接続",
+  "provider.anaconda.title.manage": "Anaconda Desktop を管理",
+  "provider.anaconda.status.checking": "Anaconda Desktop を確認しています...",
+  "provider.anaconda.status.opening": "Anaconda Desktop を開いています...",
+  "provider.anaconda.status.syncing": "プロバイダーのモデルを更新しています...",
+  "provider.anaconda.status.ready": "接続の準備ができました",
+  "provider.anaconda.status.waiting": "Desktop を待機しています",
+  "provider.anaconda.status.attention": "対応が必要です",
+  "provider.anaconda.status.unavailable": "利用できません",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop は {{platform}} ではサポートされていません。",
+  "provider.anaconda.state.notInstalled":
+    "このマシンに Anaconda Desktop をインストールしてから、ここに戻ってください。Kilo はインストーラーを実行しません。",
+  "provider.anaconda.state.notRunning":
+    "Anaconda Desktop を開いてセットアップを完了しサインインしてから、再確認を選択してください。",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop のセットアップが完了していません。Desktop を開いてセットアップを完了し、必要に応じて再起動してください。",
+  "provider.anaconda.state.signedOut": "Kilo を接続する前に、Anaconda Desktop を開いてサインインしてください。",
+  "provider.anaconda.state.unauthorized":
+    "Kilo は Anaconda Desktop にアクセスできませんでした。Desktop を開いて再度サインインし、必要に応じて再起動してください。",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop はまだ応答していません。開いてアプリケーションの起動が完了するまでお待ちください。",
+  "provider.anaconda.state.noModel":
+    "Anaconda Desktop で、テキスト生成モデルをダウンロードしてください。可能であればツール呼び出しに対応したモデルを選び、そのサーバーを起動してください。",
   "provider.anaconda.state.noServer_one":
     "ダウンロード済みのテキスト生成モデルが1つ利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
   "provider.anaconda.state.noServer_other":
     "ダウンロード済みのテキスト生成モデルが{{count}}個利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
+  "provider.anaconda.state.unhealthy":
+    "アクティブな推論サーバーはまだ正常ではありません。Anaconda Desktop で確認し、必要に応じてサーバーを再起動してください。",
+  "provider.anaconda.state.ready":
+    "Kilo は正常なローカルのテキスト生成サーバーを見つけ、現在の接続設定をインポートできます。",
+  "provider.anaconda.server": "アクティブな推論サーバー",
+  "provider.anaconda.context": "コンテキストウィンドウ",
+  "provider.anaconda.contextValue": "{{count}} トークン",
+  "provider.anaconda.tools": "ツール呼び出し",
+  "provider.anaconda.tools.supported": "対応",
+  "provider.anaconda.tools.unsupported": "無効",
+  "provider.anaconda.tools.unknown": "不明",
+  "provider.anaconda.warning.title": "ツールのサポートは限定的です",
+  "provider.anaconda.warning.description":
+    "このサーバーはツール呼び出しを確認できません。コーディングエージェントの操作が失敗したり利用できなかったりする場合があります。これらの制限を受け入れる場合のみ続行してください。",
+  "provider.anaconda.action.download": "Anaconda Desktop をダウンロード",
+  "provider.anaconda.action.open": "Anaconda Desktop を開く",
+  "provider.anaconda.action.checkAgain": "再確認",
+  "provider.anaconda.action.continue": "このまま続行",
+  "provider.anaconda.action.manage": "管理 / 更新",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop を更新しました",
+  "provider.anaconda.toast.refreshed.description": "アクティブなローカルサーバーとモデルが Kilo で最新になりました。",
+  "settings.providers.note.anacondaDesktop": "Anaconda Desktop によってローカルで提供されるモデルを実行します。",
+  "settings.providers.tag.local": "ローカル",
+} as const
+
+export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "おすすめ",
   "command.category.view": "表示",
   "command.category.project": "プロジェクト",
@@ -101,6 +147,30 @@ export const dict = {
   "command.session.unshare": "セッションの共有を停止",
   "command.session.unshare.description": "このセッションの共有を停止",
   "command.session.export": "セッション記録をエクスポート",
+
+  "agentRequirements.skill.installed": "インストール済み",
+  "agentRequirements.skill.checkFailed": "スキルの確認に失敗しました",
+  "agentRequirements.skill.missing": "未インストール",
+  "agentRequirements.mcp.connected": "接続済み",
+  "agentRequirements.mcp.checkFailed": "MCP の確認に失敗しました",
+  "agentRequirements.mcp.missing": "未接続",
+  "agentRequirements.extension.installed": "インストール済み",
+  "agentRequirements.extension.checkFailed": "VS Code 拡張機能の確認に失敗しました",
+  "agentRequirements.extension.missing": "未インストール",
+  "agentRequirements.extension.description": "不足している拡張機能を VS Code にインストールしてください。",
+  "agentRequirements.group.skills": "スキル",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "VS Code 拡張機能",
+  "agentRequirements.blocked.title": "{{agent}} エージェントの前提条件",
+  "agentRequirements.blocked.description": "このエージェントを実行するには、次のツールが必要です。",
+  "agentRequirements.prompt.blocked": "このエージェントを使用するには、先に必要な確認を完了してください",
+  "agentRequirements.action.openMarketplace": "Marketplace を開く",
+  "agentRequirements.error.unknownAgent": "選択したエージェントが見つかりませんでした。",
+  "agentRequirements.error.malformedDeclaration": "このエージェントの要件宣言は無効です。",
+  "agentRequirements.error.discoveryFailed": "Kilo は利用可能なスキルを確認できませんでした。",
+  "agentRequirements.error.mcpStatusFailed": "Kilo は MCP サーバーの状態を確認できませんでした。",
+  "agentRequirements.error.scopeMismatch": "このエージェント要件の確認はもう有効ではありません。",
+  "agentRequirements.error.requestFailed": "Kilo はエージェント要件を確認できませんでした。",
 
   "palette.search.placeholder": "ファイル、コマンド、セッションを検索",
   "palette.empty": "結果が見つかりません",

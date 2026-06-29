@@ -262,7 +262,7 @@ Later sources override earlier values during instance config load:
 | 11 | macOS managed preferences |
 | 12 | Runtime flag-derived permission, tool, compaction, and plugin behavior |
 
-Global config files load from `${Global.Path.config}`. Project updates prefer existing config files found in ancestor `.kilo`, `.kilocode`, or `.opencode` directories, then existing project root config files, then create `.kilo/kilo.json`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
+Global config files load from `${Global.Path.config}`. Project updates prefer existing config files found in ancestor `.kilo` or legacy `.kilocode` directories, then existing project root config files, then create `.kilo/kilo.json`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
 
 Signed-in organization modes become normal agent configuration during load. They override migrated legacy modes and remain overridable by later config sources in table.
 

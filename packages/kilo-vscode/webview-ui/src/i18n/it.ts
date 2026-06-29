@@ -1,12 +1,58 @@
-import { anacondaDesktopDict } from "./en"
-
-export const dict = {
-  ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "Controlla di nuovo",
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Connetti Anaconda Desktop",
+  "provider.anaconda.title.manage": "Gestisci Anaconda Desktop",
+  "provider.anaconda.status.checking": "Controllo di Anaconda Desktop in corso...",
+  "provider.anaconda.status.opening": "Apertura di Anaconda Desktop in corso...",
+  "provider.anaconda.status.syncing": "Aggiornamento dei modelli del provider in corso...",
+  "provider.anaconda.status.ready": "Pronto per la connessione",
+  "provider.anaconda.status.waiting": "In attesa di Desktop",
+  "provider.anaconda.status.attention": "Richiede attenzione",
+  "provider.anaconda.status.unavailable": "Non disponibile",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop non è supportato su {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installa Anaconda Desktop su questo computer, poi torna qui. Kilo non esegue il programma di installazione per te.",
+  "provider.anaconda.state.notRunning":
+    "Apri Anaconda Desktop, completa la configurazione e accedi, poi scegli Controlla di nuovo.",
+  "provider.anaconda.state.invalidConfig":
+    "La configurazione di Anaconda Desktop è incompleta. Apri Desktop, completa la configurazione e riavvialo se necessario.",
+  "provider.anaconda.state.signedOut": "Apri Anaconda Desktop e accedi prima di connettere Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo non è riuscito ad accedere ad Anaconda Desktop. Apri Desktop, accedi di nuovo e riavvialo se necessario.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop non risponde ancora. Aprilo e attendi che l'applicazione finisca di avviarsi.",
+  "provider.anaconda.state.noModel":
+    "In Anaconda Desktop, scarica un modello di generazione del testo. Quando possibile, scegline uno con il supporto alle chiamate agli strumenti, poi avvia il suo server.",
   "provider.anaconda.state.noServer_one":
     "È disponibile 1 modello di generazione del testo scaricato. In Anaconda Desktop, avvia un server di modelli. I modelli che supportano le chiamate agli strumenti sono fortemente consigliati.",
   "provider.anaconda.state.noServer_other":
     "Sono disponibili {{count}} modelli di generazione del testo scaricati. In Anaconda Desktop, avvia un server di modelli. I modelli che supportano le chiamate agli strumenti sono fortemente consigliati.",
+  "provider.anaconda.state.unhealthy":
+    "Il server di inferenza attivo non è ancora integro. Controllalo in Anaconda Desktop e riavvia il server se necessario.",
+  "provider.anaconda.state.ready":
+    "Kilo ha trovato un server locale di generazione del testo integro e può importare le sue attuali impostazioni di connessione.",
+  "provider.anaconda.server": "Server di inferenza attivo",
+  "provider.anaconda.context": "Finestra di contesto",
+  "provider.anaconda.contextValue": "{{count}} token",
+  "provider.anaconda.tools": "Chiamata agli strumenti",
+  "provider.anaconda.tools.supported": "Supportata",
+  "provider.anaconda.tools.unsupported": "Non abilitata",
+  "provider.anaconda.tools.unknown": "Sconosciuta",
+  "provider.anaconda.warning.title": "Il supporto agli strumenti è limitato",
+  "provider.anaconda.warning.description":
+    "Questo server non conferma la chiamata agli strumenti. Le azioni dell'agente di programmazione potrebbero non riuscire o non essere disponibili. Continua solo se accetti queste limitazioni.",
+  "provider.anaconda.action.download": "Scarica Anaconda Desktop",
+  "provider.anaconda.action.open": "Apri Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Controlla di nuovo",
+  "provider.anaconda.action.continue": "Continua comunque",
+  "provider.anaconda.action.manage": "Gestisci / Aggiorna",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop aggiornato",
+  "provider.anaconda.toast.refreshed.description": "Il server locale attivo e i modelli sono aggiornati in Kilo.",
+  "settings.providers.note.anacondaDesktop": "Esegui un modello servito localmente da Anaconda Desktop.",
+  "settings.providers.tag.local": "Locale",
+} as const
+
+export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Suggeriti",
   "command.category.view": "Vista",
   "command.category.project": "Progetto",
@@ -1621,6 +1667,31 @@ export const dict = {
 
   // Session export
   "command.session.export": "Esporta trascrizione sessione",
+
+  "agentRequirements.skill.installed": "Installata",
+  "agentRequirements.skill.checkFailed": "Il controllo della skill non è riuscito",
+  "agentRequirements.skill.missing": "Non installata",
+  "agentRequirements.mcp.connected": "Connesso",
+  "agentRequirements.mcp.checkFailed": "Il controllo MCP non è riuscito",
+  "agentRequirements.mcp.missing": "Non connesso",
+  "agentRequirements.extension.installed": "Installata",
+  "agentRequirements.extension.checkFailed": "Il controllo dell’estensione VS Code non è riuscito",
+  "agentRequirements.extension.missing": "Non installata",
+  "agentRequirements.extension.description": "Installa le estensioni mancanti in VS Code.",
+  "agentRequirements.group.skills": "Skill",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "Estensioni VS Code",
+  "agentRequirements.blocked.title": "Prerequisiti dell’agente {{agent}}",
+  "agentRequirements.blocked.description":
+    "Questo agente richiede i seguenti strumenti prima di poter essere eseguito.",
+  "agentRequirements.prompt.blocked": "Completa prima i controlli richiesti per usare questo agente",
+  "agentRequirements.action.openMarketplace": "Apri Marketplace",
+  "agentRequirements.error.unknownAgent": "Impossibile trovare l’agente selezionato.",
+  "agentRequirements.error.malformedDeclaration": "Questo agente ha una dichiarazione dei requisiti non valida.",
+  "agentRequirements.error.discoveryFailed": "Kilo non ha potuto controllare le skill disponibili.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo non ha potuto controllare lo stato del server MCP.",
+  "agentRequirements.error.scopeMismatch": "Questo controllo dei requisiti dell’agente non è più attivo.",
+  "agentRequirements.error.requestFailed": "Kilo non ha potuto controllare i requisiti dell’agente.",
 
   // Model groups
   "model.group.collapse": "Comprimi {{group}}",

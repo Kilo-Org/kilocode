@@ -82,6 +82,12 @@ export interface LoadSessionsRequest {
   type: "loadSessions"
 }
 
+export interface RequestSessionModelUsageMessage {
+  type: "requestSessionModelUsage"
+  sessionID: string
+  requestID: string
+}
+
 export interface RequestCloudSessionsMessage {
   type: "requestCloudSessions"
   cursor?: string
@@ -141,6 +147,12 @@ export interface OpenContentRequest {
   type: "openContent"
   content: string
   language?: string
+}
+
+export interface ValidateFilesRequest {
+  type: "validateFiles"
+  id: string
+  paths: string[]
 }
 
 export interface CancelLoginRequest {
@@ -211,6 +223,7 @@ export interface OpenConfigFileRequest {
 
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
+  directory?: string
 }
 
 export interface OpenAgentManagerRequest {
@@ -221,12 +234,24 @@ export interface OpenAdvancedWorktreeRequest {
   type: "openAdvancedWorktree"
 }
 
+export interface OpenKiloClawRequest {
+  type: "openKiloClaw"
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
+}
+
+export interface RequestAgentRequirementsMessage {
+  type: "requestAgentRequirements"
+  agent: string
+  directory: string
+  sessionID?: string
+  force?: boolean
 }
 
 export interface RequestCommandsMessage {
@@ -943,6 +968,7 @@ export interface RequestSandboxStatusMessage {
 
 export interface RequestSandboxDefaultMessage {
   type: "requestSandboxDefault"
+  requestID?: string
   agentManagerContext?: string
   contextDirectory?: string
 }
@@ -1149,6 +1175,7 @@ export type WebviewMessage =
   | ClearSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
+  | RequestSessionModelUsageMessage
   | RequestCloudSessionsMessage
   | RequestGitRemoteUrlMessage
   | LoginRequest
@@ -1161,7 +1188,9 @@ export type WebviewMessage =
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
+  | OpenKiloClawRequest
   | OpenFileRequest
+  | ValidateFilesRequest
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
@@ -1170,6 +1199,7 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
+  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage
