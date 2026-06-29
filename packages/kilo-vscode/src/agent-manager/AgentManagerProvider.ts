@@ -803,6 +803,7 @@ export class AgentManagerProvider implements Disposable {
     worktreePath: string,
     branch: string,
     worktreeId?: string,
+    source?: { sandboxInheritanceToken?: string },
   ): Promise<Session | null> {
     let client: KiloClient
     try {
@@ -836,7 +837,16 @@ export class AgentManagerProvider implements Disposable {
       const { data: session } = await startSession(
         client,
         worktreePath,
-        () => client.session.create({ directory: worktreePath, platform: PLATFORM, metadata }, { throwOnError: true }),
+        () =>
+          client.session.create(
+            {
+              directory: worktreePath,
+              platform: PLATFORM,
+              metadata,
+              ...(source?.sandboxInheritanceToken ? { sandboxInheritanceToken: source.sandboxInheritanceToken } : {}),
+            },
+            { throwOnError: true },
+          ),
         (...args) => this.log(...args),
       )
       return session
@@ -943,7 +953,9 @@ export class AgentManagerProvider implements Disposable {
     const properties = (event as { properties?: unknown }).properties
     const req = parseToolRequest(properties)
     if (!req) return
-    if (directory) req.directory = directory
+    if (directory) {
+      req.directory = directory
+    }
     void this.startToolRequest(req)
   }
 
@@ -970,7 +982,7 @@ export class AgentManagerProvider implements Disposable {
           this.pushState()
         },
         setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-        createSessionInWorktree: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+        createSessionInWorktree: (dir, branch, id, source) => this.createSessionInWorktree(dir, branch, id, source),
         sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),

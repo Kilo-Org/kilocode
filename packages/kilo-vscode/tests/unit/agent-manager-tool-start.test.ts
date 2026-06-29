@@ -134,6 +134,29 @@ describe("agent manager tool start", () => {
     )
   })
 
+  it("passes sandbox inheritance token to local sessions", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, {
+      requestID: "am-local-source",
+      sessionID: "s-parent",
+      sandboxInheritanceToken: "si-token",
+      mode: "local",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(client.session.create).toHaveBeenCalledWith(
+      expect.objectContaining({ sandboxInheritanceToken: "si-token" }),
+      { throwOnError: true },
+    )
+  })
+
   it("starts worktree sessions through existing hooks", async () => {
     const client = {
       session: {
@@ -144,6 +167,8 @@ describe("agent manager tool start", () => {
     const c = deps({ getClient: () => client as never })
     await startFromTool(c, {
       requestID: "am-2",
+      sessionID: "s-parent",
+      sandboxInheritanceToken: "si-token",
       mode: "worktree",
       tasks: [
         {
@@ -159,7 +184,9 @@ describe("agent manager tool start", () => {
       expect.objectContaining({ branchName: "fix-one", name: "fix-one", label: "one" }),
     )
     expect(c.setup).toHaveBeenCalled()
-    expect(c.createSessionInWorktree).toHaveBeenCalled()
+    expect(c.createSessionInWorktree).toHaveBeenCalledWith("/repo/.kilo/worktrees/wt-1", "kilo/test", "wt-1", {
+      sandboxInheritanceToken: "si-token",
+    })
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
     expect(c.notifyReady).toHaveBeenCalled()
     expect(client.session.promptAsync).toHaveBeenCalledWith(

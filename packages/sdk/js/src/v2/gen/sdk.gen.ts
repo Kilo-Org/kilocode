@@ -3765,6 +3765,7 @@ export class Session2 extends HeyApiClient {
       permission?: PermissionRuleset
       platform?: string
       workspaceID?: string
+      sandboxInheritanceToken?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -3783,6 +3784,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "permission" },
             { in: "body", key: "platform" },
             { in: "body", key: "workspaceID" },
+            { in: "body", key: "sandboxInheritanceToken" },
           ],
         },
       ],

@@ -209,17 +209,19 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
   parentID: SessionID,
   sessionID: SessionID,
   fallback?: Omit<Snapshot, "version">,
+  sourceDirectory?: string,
 ) {
   const directory = yield* InstanceState.directory
+  const source = sourceDirectory ?? directory
   yield* locked(
     parentID,
     Effect.gen(function* () {
-      const stored = yield* read(directory, parentID)
+      const stored = yield* read(source, parentID)
       const parent = stored ?? (fallback && secure({ ...fallback, version: 0 }))
       if (!parent) return
       if (!stored) {
-        yield* Effect.promise(() => SandboxStore.write(directory, parentID, parent))
-        snapshots.set(key(directory, parentID), parent)
+        yield* Effect.promise(() => SandboxStore.write(source, parentID, parent))
+        snapshots.set(key(source, parentID), parent)
       }
       yield* locked(
         sessionID,

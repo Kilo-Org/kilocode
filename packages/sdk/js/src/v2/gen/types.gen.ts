@@ -3316,6 +3316,7 @@ export type EventKilocodeAgentManagerStart = {
   properties: {
     requestID: string
     sessionID: string
+    sandboxInheritanceToken?: string
     mode: "worktree" | "local"
     versions?: boolean
     tasks: Array<{
@@ -7247,6 +7248,7 @@ export type SessionCreateData = {
     permission?: PermissionRuleset
     platform?: string
     workspaceID?: string
+    sandboxInheritanceToken?: string
   }
   path?: never
   query?: {
