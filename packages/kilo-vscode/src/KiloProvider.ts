@@ -359,6 +359,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private promptRecoveryQueued = false
   private promptRecovery: Promise<void> | null = null
   private trackedSessionIds: Set<string> = new Set()
+  private modelUsageSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
   private readonly checkpoints = new Map<string, Promise<void>>()
   private readonly sessionCreations = new Map<string, Promise<{ sid: string; dir: string }>>()
@@ -1014,6 +1015,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "loadSessions":
           this.handleLoadSessions().catch((e) => console.error("[Kilo New] handleLoadSessions failed:", e))
           break
+        case "requestSessionModelUsage":
+          void this.fetchAndSendSessionModelUsage(message.sessionID, message.requestID)
+          break
         case "login": {
           const attempt = ++this.loginAttempt
           await handleLogin(this.authCtx, attempt, () => this.loginAttempt)
@@ -1036,6 +1040,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
+          break
+        case "openKiloClaw":
+          vscode.commands.executeCommand("kilo-code.new.kiloClawOpen")
           break
         case "openVSCodeSettings":
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
@@ -1167,7 +1174,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.fetchAndSendSandboxStatus(message.sessionID)
           break
         case "requestSandboxDefault":
-          await this.fetchAndSendSandboxDefault(message.contextDirectory)
+          await this.fetchAndSendSandboxDefault(message.contextDirectory, message.requestID)
           break
         case "setSandboxDefault":
           await this.handleSetSandboxDefault(message.enabled, message.requestID, message.contextDirectory)
@@ -1343,17 +1350,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "toggleFavorite": {
-          const current = validateFavorites(this.extensionContext?.globalState.get("favoriteModels"))
-          const key = `${message.providerID}/${message.modelID}`
-          const exists = current.some((f) => `${f.providerID}/${f.modelID}` === key)
-          const favorites =
-            message.action === "add" && !exists
-              ? [...current, { providerID: message.providerID, modelID: message.modelID }]
-              : message.action === "remove" && exists
-                ? current.filter((f) => `${f.providerID}/${f.modelID}` !== key)
-                : current
-          await this.extensionContext?.globalState.update("favoriteModels", favorites)
-          this.connectionService.notifyFavoritesChanged(favorites)
+          await this.toggleFavorite(message)
           break
         }
         case "requestFavorites": {
@@ -1419,6 +1416,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       storage: this.extensionContext?.globalStorageUri,
       post: (msg) => this.postMessage(msg),
     })
+  }
+
+  private async toggleFavorite(message: {
+    action: "add" | "remove"
+    providerID: string
+    modelID: string
+  }): Promise<void> {
+    const current = validateFavorites(this.extensionContext?.globalState.get("favoriteModels"))
+    const key = `${message.providerID}/${message.modelID}`
+    const exists = current.some((f) => `${f.providerID}/${f.modelID}` === key)
+    const favorites =
+      message.action === "add" && !exists
+        ? [...current, { providerID: message.providerID, modelID: message.modelID }]
+        : message.action === "remove" && exists
+          ? current.filter((f) => `${f.providerID}/${f.modelID}` !== key)
+          : current
+    await this.extensionContext?.globalState.update("favoriteModels", favorites)
+    this.connectionService.notifyFavoritesChanged(favorites)
   }
 
   /**
@@ -1703,6 +1718,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       })
       .catch((e: unknown) => console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", e))
+  }
+
+  private fetchAndSendSessionModelUsage(sessionID: string, requestID: string): Promise<void> {
+    const directory = this.getWorkspaceDirectory(sessionID)
+    return this.connectionService
+      .getClientAsync(directory)
+      .then((client) => client.kilocode.sessionModelUsage({ sessionID, directory }, { throwOnError: true }))
+      .then((response) => {
+        this.modelUsageSessionIds = new Set(response.data.sessionIDs)
+        this.postMessage({ type: "sessionModelUsageLoaded", sessionID, requestID, data: response.data })
+      })
+      .catch((error: unknown) => {
+        console.warn("[Kilo New] KiloProvider: Failed to load session model usage:", error)
+        this.postMessage({ type: "sessionModelUsageLoaded", sessionID, requestID })
+      })
   }
 
   private async handleLoadMessages(
@@ -3467,7 +3497,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               : sessionPatchToWebview(event.properties.sessionID, event.properties.info),
         }
       case "session.deleted":
-        return null
+        return {
+          type: "sessionDeleted" as const,
+          sessionID: event.properties.sessionID,
+        }
     }
   }
 
@@ -3487,6 +3520,41 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       default:
         return this.connectionService.resolveEventSessionId(event)
     }
+  }
+
+  private postModelUsageChanged(event: ProviderEvent, sessionID: string | undefined): boolean {
+    if (!sessionID || this.trackedSessionIds.has(sessionID)) return false
+    if (event.type === "session.created") {
+      const parent = event.properties.info.parentID
+      if (!parent || !this.modelUsageSessionIds.has(parent)) return false
+      this.modelUsageSessionIds.add(sessionID)
+      this.postMessage({ type: "sessionModelUsageChanged", sessionID })
+      return true
+    }
+    if (!this.modelUsageSessionIds.has(sessionID)) return false
+    if (event.type === "message.part.updated") {
+      const part = event.properties.part as {
+        type?: string
+        tool?: string
+        metadata?: { sessionId?: string }
+        state?: { metadata?: { sessionId?: string } }
+      }
+      const child = childID(part)
+      if (child && !this.modelUsageSessionIds.has(child)) {
+        this.modelUsageSessionIds.add(child)
+        this.postMessage({ type: "sessionModelUsageChanged", sessionID: child })
+        return true
+      }
+    }
+    const changed =
+      event.type === "message.removed" ||
+      event.type === "message.part.removed" ||
+      event.type === "session.deleted" ||
+      (event.type === "message.part.updated" && event.properties.part.type === "step-finish")
+    if (!changed) return false
+    if (event.type === "session.deleted") this.modelUsageSessionIds.delete(sessionID)
+    this.postMessage({ type: "sessionModelUsageChanged", sessionID })
+    return true
   }
 
   /**
@@ -3555,6 +3623,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Events with sessionID → only forward if this webview tracks that session
     // message.part.* events are always session-scoped; drop if session unknown.
     if (!sessionID && isSessionScopedPartEvent(event.type)) return
+    if (this.postModelUsageChanged(event, sessionID)) return
     if (event.type !== "indexing.status" && sessionID && !this.trackedSessionIds.has(sessionID)) {
       return
     }
@@ -3603,6 +3672,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.sessionID) {
       this.setCurrentSession(applySessionPatch(this.currentSession, event.properties.info))
       this.contextSessionID = event.properties.sessionID
+    }
+    if (event.type === "session.deleted") {
+      const sid = event.properties.sessionID
+      this.trackedSessionIds.delete(sid)
+      this.modelUsageSessionIds.delete(sid)
+      this.sessionDirectories.delete(sid)
+      this.connectionService.pruneSession(sid)
     }
 
     // Auto-adopt child sessions as soon as the task tool part reveals their ID.
