@@ -1252,6 +1252,10 @@ export const dict = {
   "profile.balance.title": "Stanje",
   "profile.balance.refresh": "Osvježi stanje",
   "profile.action.dashboard": "Kontrolna ploča",
+  "profile.action.topUp": "Dopuni",
+  "profile.pass.subscribe": "Nabavite Kilo Pass da dodate kredite i zaradite bonuse",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Obnavlja se",
   "profile.action.logout": "Odjava",
 
   "settings.section.configuration": "Konfiguracija",

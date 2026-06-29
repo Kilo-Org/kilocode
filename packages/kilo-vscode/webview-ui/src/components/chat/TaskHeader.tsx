@@ -20,6 +20,7 @@ import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
+import { BalanceChip } from "../shared/BalanceChip"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
@@ -185,6 +186,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
         <div data-slot="task-header-stats">
+          <BalanceChip />
           <Show when={cost()}>
             {(c) => (
               <Tooltip value={costTooltip()} placement="bottom">
