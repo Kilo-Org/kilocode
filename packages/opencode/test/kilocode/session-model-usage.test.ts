@@ -129,6 +129,7 @@ describe("session model usage", () => {
       })
 
       expect(yield* ModelUsage.get(child.id)).toEqual({
+        sessionIDs: [root.id, sibling.id, child.id].sort(),
         totals: {
           steps: 3,
           cost: 1.125,

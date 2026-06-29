@@ -82,6 +82,12 @@ export interface LoadSessionsRequest {
   type: "loadSessions"
 }
 
+export interface RequestSessionModelUsageMessage {
+  type: "requestSessionModelUsage"
+  sessionID: string
+  requestID: string
+}
+
 export interface RequestCloudSessionsMessage {
   type: "requestCloudSessions"
   cursor?: string
@@ -1165,6 +1171,7 @@ export type WebviewMessage =
   | ClearSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
+  | RequestSessionModelUsageMessage
   | RequestCloudSessionsMessage
   | RequestGitRemoteUrlMessage
   | LoginRequest
