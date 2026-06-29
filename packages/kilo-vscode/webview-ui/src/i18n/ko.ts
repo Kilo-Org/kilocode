@@ -1,14 +1,62 @@
-import { anacondaDesktopDict, dict as en } from "./en"
+import { dict as en } from "./en"
+
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop 연결",
+  "provider.anaconda.title.manage": "Anaconda Desktop 관리",
+  "provider.anaconda.status.checking": "Anaconda Desktop 확인 중...",
+  "provider.anaconda.status.opening": "Anaconda Desktop 여는 중...",
+  "provider.anaconda.status.syncing": "공급자 모델 새로 고치는 중...",
+  "provider.anaconda.status.ready": "연결할 준비됨",
+  "provider.anaconda.status.waiting": "Desktop 대기 중",
+  "provider.anaconda.status.attention": "주의 필요",
+  "provider.anaconda.status.unavailable": "사용할 수 없음",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop은 {{platform}}에서 지원되지 않습니다.",
+  "provider.anaconda.state.notInstalled":
+    "이 컴퓨터에 Anaconda Desktop을 설치한 후 여기로 돌아오세요. Kilo는 설치 프로그램을 대신 실행하지 않습니다.",
+  "provider.anaconda.state.notRunning":
+    "Anaconda Desktop을 열고 설정을 완료한 후 로그인한 다음 다시 확인을 선택하세요.",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop 설정이 완료되지 않았습니다. Desktop을 열고 설정을 완료한 후 필요하면 다시 시작하세요.",
+  "provider.anaconda.state.signedOut": "Kilo를 연결하기 전에 Anaconda Desktop을 열고 로그인하세요.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo가 Anaconda Desktop에 접근할 수 없습니다. Desktop을 열고 다시 로그인한 후 필요하면 다시 시작하세요.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop이 아직 응답하지 않습니다. 열어서 애플리케이션이 완전히 시작될 때까지 기다리세요.",
+  "provider.anaconda.state.noModel":
+    "Anaconda Desktop에서 텍스트 생성 모델을 다운로드하세요. 가능하면 도구 호출을 지원하는 모델을 선택한 후 서버를 시작하세요.",
+  "provider.anaconda.state.noServer_one":
+    "다운로드된 텍스트 생성 모델 1개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.noServer_other":
+    "다운로드된 텍스트 생성 모델 {{count}}개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.unhealthy":
+    "활성 추론 서버가 아직 정상이 아닙니다. Anaconda Desktop에서 확인하고 필요하면 서버를 다시 시작하세요.",
+  "provider.anaconda.state.ready":
+    "Kilo가 정상적인 로컬 텍스트 생성 서버를 찾았으며 현재 연결 설정을 가져올 수 있습니다.",
+  "provider.anaconda.server": "활성 추론 서버",
+  "provider.anaconda.context": "컨텍스트 창",
+  "provider.anaconda.contextValue": "{{count}} 토큰",
+  "provider.anaconda.tools": "도구 호출",
+  "provider.anaconda.tools.supported": "지원됨",
+  "provider.anaconda.tools.unsupported": "사용 안 함",
+  "provider.anaconda.tools.unknown": "알 수 없음",
+  "provider.anaconda.warning.title": "도구 지원이 제한적입니다",
+  "provider.anaconda.warning.description":
+    "이 서버는 도구 호출을 확인하지 않습니다. 코딩 에이전트 작업이 실패하거나 사용할 수 없을 수 있습니다. 이러한 제한을 감수하는 경우에만 계속하세요.",
+  "provider.anaconda.action.download": "Anaconda Desktop 다운로드",
+  "provider.anaconda.action.open": "Anaconda Desktop 열기",
+  "provider.anaconda.action.checkAgain": "다시 확인",
+  "provider.anaconda.action.continue": "계속하기",
+  "provider.anaconda.action.manage": "관리 / 새로 고침",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop 새로 고침됨",
+  "provider.anaconda.toast.refreshed.description": "활성 로컬 서버와 모델이 Kilo에서 최신 상태입니다.",
+  "settings.providers.note.anacondaDesktop": "Anaconda Desktop이 로컬에서 제공하는 모델을 실행합니다.",
+  "settings.providers.tag.local": "로컬",
+} as const
 
 type Keys = keyof typeof en
 
 export const dict = {
   ...anacondaDesktopDict,
-  "provider.anaconda.action.checkAgain": "다시 확인",
-  "provider.anaconda.state.noServer_one":
-    "다운로드된 텍스트 생성 모델 1개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
-  "provider.anaconda.state.noServer_other":
-    "다운로드된 텍스트 생성 모델 {{count}}개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
   "command.category.suggested": "추천",
   "command.category.view": "보기",
   "command.category.project": "프로젝트",
