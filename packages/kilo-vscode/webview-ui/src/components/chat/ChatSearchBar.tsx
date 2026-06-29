@@ -29,8 +29,8 @@ export const ChatSearchBar: Component<ChatSearchBarProps> = (props) => {
 
   const countLabel = () => {
     if (!props.query().trim()) return ""
-    if (props.count() === 0) return language.t("session.search.noResults")
-    return language.t("session.search.count", { current: props.index() + 1, total: props.count() })
+    if (props.count() === 0) return language.t("chat.search.noResults")
+    return language.t("chat.search.count", { current: props.index() + 1, total: props.count() })
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -48,14 +48,14 @@ export const ChatSearchBar: Component<ChatSearchBarProps> = (props) => {
 
   return (
     <Show when={props.open()}>
-      <div class="chat-search-bar" role="search" aria-label={language.t("session.search.label")}>
+      <div class="chat-search-bar" role="search" aria-label={language.t("chat.search.label")}>
         <Icon name="magnifying-glass" size="small" />
         <input
           ref={input}
           class="chat-search-input"
           value={props.query()}
-          placeholder={language.t("session.search.placeholder")}
-          aria-label={language.t("session.search.placeholder")}
+          placeholder={language.t("chat.search.placeholder")}
+          aria-label={language.t("chat.search.placeholder")}
           onInput={(event) => props.onQuery(event.currentTarget.value)}
           onKeyDown={onKeyDown}
         />
@@ -67,7 +67,7 @@ export const ChatSearchBar: Component<ChatSearchBarProps> = (props) => {
           class="chat-search-button"
           onClick={props.onPrevious}
           disabled={props.count() === 0}
-          aria-label={language.t("session.search.previous")}
+          aria-label={language.t("chat.search.previous")}
         >
           <Icon name="arrow-up" size="small" />
         </button>
@@ -76,7 +76,7 @@ export const ChatSearchBar: Component<ChatSearchBarProps> = (props) => {
           class="chat-search-button chat-search-button-next"
           onClick={props.onNext}
           disabled={props.count() === 0}
-          aria-label={language.t("session.search.next")}
+          aria-label={language.t("chat.search.next")}
         >
           <Icon name="arrow-up" size="small" />
         </button>
@@ -84,7 +84,7 @@ export const ChatSearchBar: Component<ChatSearchBarProps> = (props) => {
           type="button"
           class="chat-search-button"
           onClick={props.onClose}
-          aria-label={language.t("session.search.close")}
+          aria-label={language.t("chat.search.close")}
         >
           <Icon name="close-small" size="small" />
         </button>

@@ -95,7 +95,7 @@ function textFromPart(part: Part): string {
 }
 
 function textFromRow(row: TranscriptRow): string {
-  if (row.type === "diff") return row.diffs.map((diff) => JSON.stringify(diff)).join("\n")
+  if (row.type === "diff") return ""
   if (row.type === "error") return [row.error.name, JSON.stringify(row.error.data ?? {})].join("\n")
   const parts = row.parts.map(textFromPart).filter(Boolean).join("\n")
   return [
@@ -161,8 +161,13 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const [searchOpen, setSearchOpen] = createSignal(false)
   const [searchQuery, setSearchQuery] = createSignal("")
   const [searchIndex, setSearchIndex] = createSignal(0)
+  let highlightFrame: number | undefined
 
   const clearHighlights = () => {
+    if (highlightFrame !== undefined) {
+      cancelAnimationFrame(highlightFrame)
+      highlightFrame = undefined
+    }
     const highlights = (globalThis as { CSS?: { highlights?: { delete: (name: string) => void } } }).CSS?.highlights
     highlights?.delete("kilo-chat-search")
     highlights?.delete("kilo-chat-search-current")
@@ -281,8 +286,10 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const match = searchMatches()[searchIndex()]
     scrollToSearchMatch(match)
-    requestAnimationFrame(() => {
-      if (searchMatches()[searchIndex()] !== match || !match) return
+    if (highlightFrame !== undefined) cancelAnimationFrame(highlightFrame)
+    highlightFrame = requestAnimationFrame(() => {
+      highlightFrame = undefined
+      if (!searchOpen() || searchMatches()[searchIndex()] !== match || !match) return
       const row = scrollEl()?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(match.key)}"]`)
       if (row) highlightTextInRow(row, match.ordinal)
     })
