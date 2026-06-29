@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { Provider } from "@/provider/provider"
 import type { ProviderID } from "@/provider/schema"
 import { Tool } from "@/tool/tool"
