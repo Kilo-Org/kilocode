@@ -266,6 +266,19 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
+    .seeded((ctx) => ctx.session({ title: "Model usage" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/model-usage", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.models)
+      object(body.totals)
+      check(body.models.length === 0, "a new session should have no model usage")
+    }),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
@@ -274,6 +287,19 @@ export const kiloScenarios: Scenario[] = [
         yield* Effect.promise(() => rm(body, { force: true }))
       }),
     ),
+  http.protected
+    .get("/kilocode/agent/requirements", "kilocode.agentRequirements")
+    .at((ctx) => ({ path: "/kilocode/agent/requirements?agent=httpapi-agent", headers: ctx.headers() }))
+    .json(200, (body, ctx) => {
+      object(body)
+      check(body.agent === "httpapi-agent", "agent requirements should echo the requested agent")
+      check(body.directory === ctx.directory, "agent requirements should use the routed workspace directory")
+      check(body.enabled === false, "agent requirements should report disabled when the experiment is off")
+      check(body.state === "disabled", "agent requirements should return the disabled state")
+      array(body.skills)
+      array(body.mcps)
+      array(body.vscode_extensions)
+    }),
   http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .mutating()

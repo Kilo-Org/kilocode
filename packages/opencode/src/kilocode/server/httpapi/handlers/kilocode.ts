@@ -7,11 +7,13 @@ import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
-import { Notebook } from "@/kilocode/notebook/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
+import { Notebook } from "@/kilocode/notebook/service"
+import { ModelUsage } from "@/kilocode/session/model-usage"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
+import type { SessionID } from "@/session/schema"
 import { NotebookRejectPayload, NotebookReplyPayload, RemoveAgentPayload, RemoveSkillPayload } from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
@@ -24,6 +26,12 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
+    })
+
+    const agentRequirements = Effect.fn("KilocodeHttpApi.agentRequirements")(function* (ctx: {
+      query: { agent: string }
+    }) {
+      return yield* agents.requirementStatus(ctx.query.agent)
     })
 
     const removeSkill = Effect.fn("KilocodeHttpApi.removeSkill")(function* (ctx: {
@@ -77,12 +85,22 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return true
     })
 
+    const sessionModelUsage = Effect.fn("KilocodeHttpApi.sessionModelUsage")(function* (ctx: {
+      params: { sessionID: SessionID }
+    }) {
+      const usage = yield* ModelUsage.get(ctx.params.sessionID)
+      if (!usage) return yield* new HttpApiError.NotFound({})
+      return usage
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
+      .handle("agentRequirements", agentRequirements)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
       .handle("notebookList", notebookList)
       .handle("notebookReply", notebookReply)
       .handle("notebookReject", notebookReject)
+      .handle("sessionModelUsage", sessionModelUsage)
   }),
 )

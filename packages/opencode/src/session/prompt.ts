@@ -109,10 +109,18 @@ function isOrphanedInterruptedTool(part: MessageV2.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  // kilocode_change start - prompt can fail on unmet agent requirements
+  readonly prompt: (
+    input: PromptInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
   readonly loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError>
-  readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  // kilocode_change start - commands can fail on unmet agent requirements
+  readonly command: (
+    input: CommandInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -749,14 +757,15 @@ export const layer = Layer.effect(
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent
-      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!ag) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name) // kilocode_change
+        const hint = available.length ? ` Available agents: ${available.join(", ")}` : "" // kilocode_change
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
+        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
+      yield* agents.guardRequirements(ag) // kilocode_change - enforce requirements before creating a turn
 
       const current = Database.use((db) =>
         db
@@ -1877,14 +1886,15 @@ export const layer = Layer.effect(
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
 
-      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!agent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name) // kilocode_change
+        const hint = available.length ? ` Available agents: ${available.join(", ")}` : "" // kilocode_change
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
+        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
+      yield* agents.guardRequirements(agent) // kilocode_change - command agent overrides must satisfy requirements
 
       const templateParts = yield* resolvePromptParts(template)
       KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry
