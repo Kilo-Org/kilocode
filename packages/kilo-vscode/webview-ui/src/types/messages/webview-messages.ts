@@ -954,6 +954,7 @@ export interface RequestSandboxStatusMessage {
 
 export interface RequestSandboxDefaultMessage {
   type: "requestSandboxDefault"
+  requestID?: string
   agentManagerContext?: string
   contextDirectory?: string
 }
