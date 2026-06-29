@@ -1,8 +1,14 @@
-import { dict as en } from "./en"
+import { anacondaDesktopDict, dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Erneut prüfen",
+  "provider.anaconda.state.noServer_one":
+    "1 heruntergeladenes Textgenerierungsmodell ist verfügbar. Starten Sie in Anaconda Desktop einen Modellserver. Modelle mit Unterstützung für Tool-Aufrufe werden dringend empfohlen.",
+  "provider.anaconda.state.noServer_other":
+    "{{count}} heruntergeladene Textgenerierungsmodelle sind verfügbar. Starten Sie in Anaconda Desktop einen Modellserver. Modelle mit Unterstützung für Tool-Aufrufe werden dringend empfohlen.",
   "command.category.suggested": "Vorgeschlagen",
   "command.category.view": "Ansicht",
   "command.category.project": "Projekt",
@@ -178,6 +184,7 @@ export const dict = {
   "model.tag.free": "Kostenlos",
   "model.tag.dataCollected": "Daten können für das Training verwendet werden",
   "model.tag.latest": "Neueste",
+  "model.group.auto": "Automatische Modelle",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
   "model.group.collapse": "{{group}} einklappen",
@@ -206,6 +213,7 @@ export const dict = {
   "model.preview.label.average": "Geschätzte Ø-Kosten",
   "model.preview.label.context": "Kontext",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Modellauswahl",
   "model.preview.label.completion": "Abschluss",
   "model.preview.label.costAttempt": "Kosten / Versuch",
   "model.preview.value.notSupported": "Nicht unterstützt",

@@ -151,6 +151,7 @@ import {
   resolveStoredKey,
 } from "./provider-actions"
 import type { StoredProviderKey } from "./provider-actions"
+import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures } from "./features"
@@ -363,6 +364,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly sandboxTransitions = new Map<string, Promise<void>>()
   private readonly revisions = new Map<string, { id: string; seq: number }>()
   private readonly refreshes = new Map<string, number>()
+  private readonly anacondaDesktop = new AnacondaDesktopBridge()
   private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
   private sessionDirectories = new Map<string, string>() // Per-session directory overrides, such as Agent Manager worktrees.
   private readonly aborts = new SessionAbort()
@@ -1038,6 +1040,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "disconnectProvider":
         case "saveCustomProvider":
           await this.handleProviderAction(message)
+          break
+        case "anacondaDesktopStatus":
+        case "anacondaDesktopOpen":
+        case "anacondaDesktopSync":
+        case "cancelAnacondaDesktopRequest":
+          await this.anacondaDesktop.handle(message, {
+            client: this.client,
+            directory: this.getWorkspaceDirectory(),
+            post: (reply) => this.postMessage(reply),
+            refresh: () => this.fetchAndSendProviders(),
+            error: getErrorMessage,
+          })
           break
         case "fetchCustomProviderModels":
           this.handleFetchCustomProviderModels(message).catch((e) =>
@@ -3929,6 +3943,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
+    this.anacondaDesktop.dispose()
     this.aborts.clear()
     this.sessionStatusMap.clear()
     this.ignoreController?.dispose()

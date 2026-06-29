@@ -958,9 +958,9 @@ const externalDirPermission: PermissionRequest = {
   id: "perm-extdir-001",
   sessionID: SESSION_ID,
   toolName: "external_directory",
-  patterns: ["/home/user/other-project/*"],
-  always: ["/home/user/other-project/*"],
-  args: { filepath: "/home/user/other-project/config.json" },
+  patterns: ["/Users/developer/projects/kilo-bench/dashboard/app/routes/*"],
+  always: ["/Users/developer/projects/kilo-bench/dashboard/app/routes/*"],
+  args: { filepath: "/Users/developer/projects/kilo-bench/dashboard/app/routes/index.tsx" },
   tool: { messageID: ASST_MSG_ID, callID: "call-extdir-001" },
 }
 

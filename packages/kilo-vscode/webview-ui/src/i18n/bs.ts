@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Provjeri ponovo",
+  "provider.anaconda.state.noServer_one":
+    "Dostupan je 1 preuzeti model za generisanje teksta. U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
+  "provider.anaconda.state.noServer_other":
+    "Preuzeti modeli za generisanje teksta dostupni su (ukupno: {{count}}). U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
   "command.category.suggested": "Predloženo",
   "command.category.view": "Prikaz",
   "command.category.project": "Projekat",
@@ -175,6 +183,7 @@ export const dict = {
   "model.tag.free": "Besplatno",
   "model.tag.dataCollected": "Podaci se mogu koristiti za obuku",
   "model.tag.latest": "Najnovije",
+  "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
   "model.group.collapse": "Sakrij {{group}}",
@@ -202,6 +211,7 @@ export const dict = {
   "model.preview.label.average": "Procj. prosječni trošak",
   "model.preview.label.context": "Kontekst",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Izbori modela",
   "model.preview.label.completion": "Završetak",
   "model.preview.label.costAttempt": "Trošak / pokušaj",
   "model.preview.value.notSupported": "Nije podržano",

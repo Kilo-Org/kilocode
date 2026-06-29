@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "تحقق مرة أخرى",
+  "provider.anaconda.state.noServer_one":
+    "يتوفر نموذج واحد مُنزّل لتوليد النصوص. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.noServer_other":
+    "تتوفر نماذج مُنزّلة لتوليد النصوص، وعددها {{count}}. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
   "command.category.suggested": "مقترح",
   "command.category.view": "عرض",
   "command.category.project": "مشروع",
@@ -173,6 +181,7 @@ export const dict = {
   "model.tag.free": "مجاني",
   "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
   "model.tag.latest": "الأحدث",
+  "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
   "model.group.collapse": "طي {{group}}",
@@ -200,6 +209,7 @@ export const dict = {
   "model.preview.label.average": "متوسط التكلفة التقديرية",
   "model.preview.label.context": "السياق",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "خيارات النماذج",
   "model.preview.label.completion": "الإكمال",
   "model.preview.label.costAttempt": "التكلفة / المحاولة",
   "model.preview.value.notSupported": "غير مدعوم",

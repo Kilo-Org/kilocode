@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "再確認",
+  "provider.anaconda.state.noServer_one":
+    "ダウンロード済みのテキスト生成モデルが1つ利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
+  "provider.anaconda.state.noServer_other":
+    "ダウンロード済みのテキスト生成モデルが{{count}}個利用可能です。Anaconda Desktopでモデルサーバーを起動してください。ツール呼び出しに対応したモデルの使用を強く推奨します。",
   "command.category.suggested": "おすすめ",
   "command.category.view": "表示",
   "command.category.project": "プロジェクト",
@@ -173,6 +181,7 @@ export const dict = {
   "model.tag.free": "無料",
   "model.tag.dataCollected": "データがトレーニングに使用される場合があります",
   "model.tag.latest": "最新",
+  "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
   "model.group.collapse": "{{group}} を折りたたむ",
@@ -201,6 +210,7 @@ export const dict = {
   "model.preview.label.average": "推定平均コスト",
   "model.preview.label.context": "コンテキスト",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "モデルの選択肢",
   "model.preview.label.completion": "完了率",
   "model.preview.label.costAttempt": "試行あたりのコスト",
   "model.preview.value.notSupported": "未対応",

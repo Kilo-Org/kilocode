@@ -7,12 +7,15 @@ import {
   WorkspaceRoutingQuery,
 } from "@/server/routes/instance/httpapi/middleware/workspace-routing"
 import { described } from "@/server/routes/instance/httpapi/groups/metadata"
+import { AnacondaDesktopApi } from "./anaconda-desktop"
 import {
   Failure as NotebookFailure,
   Request as NotebookRequest,
   RequestID as NotebookRequestID,
   Result as NotebookResult,
 } from "@/kilocode/notebook/protocol"
+import { ModelUsage } from "@/kilocode/session/model-usage"
+import { SessionID } from "@/session/schema"
 
 const root = "/kilocode"
 
@@ -34,6 +37,7 @@ export const KilocodePaths = {
   notebookList: `${root}/notebook`,
   notebookReply: `${root}/notebook/:requestID/reply`,
   notebookReject: `${root}/notebook/:requestID/reject`,
+  sessionModelUsage: `/session/:sessionID/model-usage`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -112,6 +116,18 @@ export const KilocodeApi = HttpApi.make("kilocode")
             description: "Complete a pending native notebook request with a structured host error.",
           }),
         ),
+        HttpApiEndpoint.get("sessionModelUsage", KilocodePaths.sessionModelUsage, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          success: described(ModelUsage.Info, "Model usage for a session tree"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.sessionModelUsage",
+            summary: "Get session model usage",
+            description: "Get token usage and direct cost by model for the complete top-level session tree.",
+          }),
+        ),
       )
       .annotateMerge(
         OpenApi.annotations({
@@ -123,6 +139,7 @@ export const KilocodeApi = HttpApi.make("kilocode")
       .middleware(WorkspaceRoutingMiddleware)
       .middleware(Authorization),
   )
+  .addHttpApi(AnacondaDesktopApi)
   .annotateMerge(
     OpenApi.annotations({
       title: "kilo HttpApi",

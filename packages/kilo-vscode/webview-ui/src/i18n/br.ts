@@ -1,4 +1,12 @@
+import { anacondaDesktopDict } from "./en"
+
 export const dict = {
+  ...anacondaDesktopDict,
+  "provider.anaconda.action.checkAgain": "Verificar novamente",
+  "provider.anaconda.state.noServer_one":
+    "Há 1 modelo de geração de texto baixado disponível. No Anaconda Desktop, inicie um servidor de modelo. Modelos com suporte a chamadas de ferramentas são altamente recomendados.",
+  "provider.anaconda.state.noServer_other":
+    "Há {{count}} modelos de geração de texto baixados disponíveis. No Anaconda Desktop, inicie um servidor de modelo. Modelos com suporte a chamadas de ferramentas são altamente recomendados.",
   "command.category.suggested": "Sugerido",
   "command.category.view": "Visualizar",
   "command.category.project": "Projeto",
@@ -174,6 +182,7 @@ export const dict = {
   "model.tag.free": "Grátis",
   "model.tag.dataCollected": "Os dados podem ser usados para treinamento",
   "model.tag.latest": "Mais recente",
+  "model.group.auto": "Modelos automáticos",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
   "model.group.collapse": "Recolher {{group}}",
@@ -201,6 +210,7 @@ export const dict = {
   "model.preview.label.average": "Custo Médio Est.",
   "model.preview.label.context": "Contexto",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Opções de modelo",
   "model.preview.label.completion": "Conclusão",
   "model.preview.label.costAttempt": "Custo / tentativa",
   "model.preview.value.notSupported": "Não suportado",

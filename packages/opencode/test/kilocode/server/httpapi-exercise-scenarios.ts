@@ -4,6 +4,7 @@ import path from "path"
 import { array, check, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
+import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
 
 function directory(ctx: ScenarioContext) {
   if (!ctx.directory) throw new Error("scenario needs a project directory")
@@ -33,6 +34,7 @@ const edit = {
 }
 
 export const kiloScenarios: Scenario[] = [
+  ...anacondaDesktopScenarios,
   http.protected.get("/background-process", "backgroundProcess.list").json(200, array),
   http.protected
     .get("/background-process/{processID}", "backgroundProcess.get")
@@ -259,6 +261,19 @@ export const kiloScenarios: Scenario[] = [
     .post("/enhance-prompt", "enhancePrompt.enhance")
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
+  http.protected
+    .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
+    .seeded((ctx) => ctx.session({ title: "Model usage" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/model-usage", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.models)
+      object(body.totals)
+      check(body.models.length === 0, "a new session should have no model usage")
+    }),
   http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()

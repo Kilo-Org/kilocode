@@ -56,6 +56,10 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/ollama", children: "Ollama" },
       { href: "/ai-providers/lmstudio", children: "LM Studio" },
       { href: "/ai-providers/atomic-chat", children: "Atomic Chat" },
+      {
+        href: "/ai-providers/anaconda-desktop",
+        children: "Anaconda Desktop",
+      },
       { href: "/ai-providers/vscode-lm", children: "VS Code LM API" },
       {
         href: "/ai-providers/openai-compatible",
