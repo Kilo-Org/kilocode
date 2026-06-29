@@ -13,6 +13,8 @@ describe("test profiles", () => {
     if (!result.ok) return
     expect(result.files.length).toBeGreaterThan(50)
     expect(result.files).toContain("pty/pty-session.test.ts")
+    expect(result.files).toContain("kilocode/cli/install-artifact.test.ts")
+    expect(result.files).toContain("kilocode/sandbox/macos-confinement.test.ts")
     expect(result.files).toContain("kilocode/sessions/remote-ws.test.ts")
     expect(result.files).toContain("kilocode/sessions/remote-sender.test.ts")
   })

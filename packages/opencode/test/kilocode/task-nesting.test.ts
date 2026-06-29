@@ -11,12 +11,16 @@ import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
-import { MessageID, PartID } from "../../src/session/schema"
+import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import { BackgroundProcess } from "../../src/kilocode/background-process"
+import { Shell } from "../../src/shell/shell"
+import path from "path"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Provider } from "../../src/provider/provider"
 import { Permission } from "../../src/permission"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import * as SandboxPolicy from "../../src/kilocode/sandbox/policy"
 import { Truncate } from "../../src/tool/truncate"
 import { ToolRegistry } from "../../src/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
@@ -76,6 +80,20 @@ const seed = Effect.fn("NestedTaskToolTest.seed")(function* () {
   yield* sessions.updateMessage(assistant)
   return { chat, assistant }
 })
+
+function quote(input: string) {
+  const value = input.replaceAll("\\", "/")
+  if (process.platform === "win32") return `"${value.replaceAll('"', '""')}"`
+  return `'${value.replaceAll("'", "'\\''")}'`
+}
+
+async function script(dir: string) {
+  const file = path.join(dir, "inherited-task.mjs")
+  await Bun.write(file, "setInterval(() => {}, 1_000)\n")
+  const command = `${quote(process.execPath)} ${quote(file)}`
+  if (Shell.ps(Shell.acceptable())) return `& ${command}`
+  return command
+}
 
 function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void }): TaskPromptOps {
   const prompt = (input: SessionPrompt.PromptInput) =>
@@ -151,6 +169,59 @@ describe("Kilo task nesting", () => {
         expect(kids[0]?.parentID).toBe(chat.id)
         expect(seen?.sessionID).toBe(result.metadata.sessionId)
         expect(seen?.agent).toBe("explore")
+      }),
+    ),
+  )
+
+  it.live("transfers inherited background processes when the child run completes", () =>
+    provideTmpdirInstance((dir) =>
+      Effect.gen(function* () {
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        const command = yield* Effect.promise(() => script(dir))
+        const base = stubOps()
+        const promptOps: TaskPromptOps = {
+          ...base,
+          prompt: (input) =>
+            Effect.gen(function* () {
+              yield* Effect.promise(() =>
+                BackgroundProcess.start({
+                  sessionID: input.sessionID,
+                  parentID: chat.id,
+                  command,
+                  cwd: dir,
+                  lifetime: "parent",
+                }),
+              )
+              return yield* base.prompt(input)
+            }),
+        }
+
+        const result = yield* def.execute(
+          {
+            description: "start inherited process",
+            prompt: "start a process",
+            subagent_type: "explore",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const childID = SessionID.make(result.metadata.sessionId)
+        expect(yield* Effect.promise(() => BackgroundProcess.list({ sessionID: childID }))).toEqual([])
+        const inherited = yield* Effect.promise(() => BackgroundProcess.list({ sessionID: chat.id }))
+        expect(inherited).toHaveLength(1)
+        expect(inherited[0]?.lifetime).toBe("session")
+        yield* Effect.promise(() => BackgroundProcess.stopSession(chat.id))
       }),
     ),
   )
@@ -310,11 +381,16 @@ describe("Kilo task nesting", () => {
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const { chat, assistant } = yield* seed()
+        const support = yield* SandboxPolicy.status(chat.id)
         yield* sessions.setPermission({
           sessionID: chat.id,
           permission: [{ permission: "bash", pattern: "*", action: "deny" }],
         })
         const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+        if (support.available) {
+          yield* SandboxPolicy.toggle(child.id)
+          expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(false)
+        }
         const tool = yield* TaskTool
         const def = yield* tool.init()
 
@@ -340,6 +416,7 @@ describe("Kilo task nesting", () => {
 
         yield* exec()
         const first = yield* sessions.get(child.id)
+        if (support.available) expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
         const count = first.permission?.filter((rule) => rule.permission === "bash").length
         yield* exec()
 

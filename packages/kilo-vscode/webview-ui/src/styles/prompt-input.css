@@ -16,6 +16,18 @@
   }
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .prompt-review-comments {
   margin: 6px 6px 0;
   border: 1px solid var(--vscode-panel-border);
@@ -562,6 +574,48 @@
 
 .prompt-status-button {
   position: relative;
+}
+
+.prompt-sandbox-tooltip-content {
+  width: 260px;
+  padding: 10px 12px;
+  white-space: normal;
+}
+
+.prompt-sandbox-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-sandbox-tooltip-title {
+  color: var(--text-invert-strong);
+  font-weight: var(--font-weight-medium);
+}
+
+.prompt-sandbox-tooltip-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-invert-base);
+
+  [data-component="icon"] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.prompt-sandbox-tooltip-state {
+  color: var(--text-invert-strong);
+  font-weight: var(--font-weight-medium);
+}
+
+.prompt-sandbox-tooltip-description {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-weak-base);
+  color: var(--text-invert-base);
+  font-weight: var(--font-weight-normal);
 }
 
 .prompt-status-button--active {

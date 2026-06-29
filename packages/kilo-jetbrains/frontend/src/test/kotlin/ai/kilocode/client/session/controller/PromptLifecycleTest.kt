@@ -9,11 +9,14 @@ import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.ProviderDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
@@ -43,6 +46,51 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals("user", event.properties["source"])
         assertEquals("false", event.properties["hasExistingSession"])
         assertEquals("short", event.properties["textLength"])
+    }
+
+    fun `test prompt records aggregate mention telemetry`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller()
+        val files = listOf(
+            PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///repo/src/A.kt",
+                source = PartSourceDto("file", PartSourceTextDto("@src/A.kt", 0.0, 9.0), path = "src/A.kt"),
+            ),
+            PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///repo/src/B.kt",
+                source = PartSourceDto("file", PartSourceTextDto("@src/B.kt", 10.0, 19.0), path = "/repo/src/B.kt"),
+            ),
+            PromptPartDto(
+                type = "text",
+                text = "diff",
+                source = PartSourceDto("resource", PartSourceTextDto("@git-changes", 20.0, 32.0), path = "git-changes"),
+            ),
+        )
+
+        flush()
+        edt { m.prompt("review", files) }
+        flush()
+
+        val sent = appRpc.telemetry.single { it.event == "Conversation Send Clicked" }
+        assertEquals("true", sent.properties["hasMentions"])
+        assertEquals("3", sent.properties["mentionCount"])
+        assertEquals("2", sent.properties["fileMentionCount"])
+        assertEquals("1", sent.properties["resourceMentionCount"])
+        assertFalse(sent.properties.containsValue("@src/A.kt"))
+        assertFalse(sent.properties.containsValue("src/A.kt"))
+        assertFalse(sent.properties.containsValue("/repo/src/B.kt"))
+        val message = appRpc.telemetry.single { it.event == "Conversation Message" }
+        assertEquals("true", message.properties["hasMentions"])
+        assertEquals("3", message.properties["mentionCount"])
+        assertEquals("2", message.properties["fileMentionCount"])
+        assertEquals("1", message.properties["resourceMentionCount"])
+        assertFalse(message.properties.containsValue("@git-changes"))
+        assertFalse(message.properties.containsValue("git-changes"))
     }
 
     fun `test PermissionAsked moves state to AwaitingPermission`() {

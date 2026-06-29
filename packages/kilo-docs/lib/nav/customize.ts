@@ -5,6 +5,7 @@ export const CustomizeNav: NavSection[] = [
     title: "Customization",
     links: [
       { href: "/customize", children: "Overview" },
+      { href: "/customize/marketplace", children: "Marketplace", platform: "new" },
       {
         href: "/customize/custom-modes",
         children: "Custom Modes",
@@ -50,11 +51,6 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/context/kilocodeignore",
         children: ".kilocodeignore",
-      },
-      {
-        href: "/customize/context/large-projects",
-        children: "Large Projects",
-        platform: "legacy",
       },
     ],
   },

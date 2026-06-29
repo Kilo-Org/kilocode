@@ -1,4 +1,6 @@
+import { dirname } from "node:path"
 import { Effect } from "effect"
+import { batchMutations, enabled, ensureDirectory } from "@kilocode/sandbox"
 import type { AppFileSystem } from "@opencode-ai/core/filesystem"
 import * as Encoding from "../encoding"
 import * as Bom from "@/util/bom"
@@ -19,7 +21,16 @@ export const read = (fs: AppFileSystem.Interface, path: string) =>
   })
 
 export const write = (fs: AppFileSystem.Interface, path: string, text: string, encoding: string = Encoding.DEFAULT) =>
-  fs.writeWithDirs(path, Encoding.encode(text, encoding)).pipe(Effect.mapError(wrap))
+  Effect.gen(function* () {
+    const data = Encoding.encode(text, encoding)
+    if (!(yield* enabled)) return yield* fs.writeWithDirs(path, data)
+    yield* batchMutations(
+      Effect.gen(function* () {
+        yield* ensureDirectory(fs, dirname(path))
+        yield* fs.writeFile(path, data)
+      }),
+    )
+  }).pipe(Effect.mapError(wrap))
 
 export const sync = (fs: AppFileSystem.Interface, path: string, bom: boolean, encoding: string) =>
   Effect.gen(function* () {

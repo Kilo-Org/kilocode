@@ -15,6 +15,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -89,10 +90,26 @@ class KiloBackendChatManager(
         watcher = cs.launch {
             sse.collect { event ->
                 if (event.type in CHAT_EVENTS) {
-                    val events = normalizer.parse(event.type, event.data)
+                    val events = try {
+                        normalizer.parse(event.type, event.data)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn(
+                            "route=chat-events parse=false type=${event.type} bytes=${event.data.length} ${ChatLogSummary.body(event.data)}",
+                            e,
+                        )
+                        return@collect
+                    }
                     if (events != null) {
                         for (parsed in events) {
                             log.debug { ChatLogSummary.event(parsed) }
+                            ChatLogSummary.error(parsed)?.let { error ->
+                                log.warn(
+                                    "route=chat-events emit=true raw=${event.type} bytes=${event.data.length} " +
+                                        "subscribers=${_events.subscriptionCount.value} $error",
+                                )
+                            }
                             if (parsed is ChatEventDto.SessionStatusChanged && parsed.status.type != "busy") {
                                 log.info(
                                     "${ChatLogSummary.sid(parsed.sessionID)} kind=status route=chat-events emit=true " +
@@ -102,7 +119,7 @@ class KiloBackendChatManager(
                             _events.emit(parsed)
                         }
                     } else {
-                        log.warn("SSE parse returned null for type=${event.type} bytes=${event.data.length}")
+                        log.warn("route=chat-events parse=null type=${event.type} bytes=${event.data.length} ${ChatLogSummary.body(event.data)}")
                     }
                 }
             }
@@ -171,6 +188,7 @@ class KiloBackendChatManager(
                     val detail = raw?.takeIf { it.isNotBlank() }?.let { ": ${ChatLogSummary.body(it)}" }.orEmpty()
                     throw RuntimeException("prompt_async failed: HTTP $code$detail")
                 }
+                log.info("${ChatLogSummary.sid(id)} kind=prompt op=prompt_async accepted=true code=$code ${ChatLogSummary.prompt(prompt)}")
                 log.debug { "${ChatLogSummary.sid(id)} kind=prompt op=prompt_async ok=true code=$code" }
             }
         } catch (e: RuntimeException) {

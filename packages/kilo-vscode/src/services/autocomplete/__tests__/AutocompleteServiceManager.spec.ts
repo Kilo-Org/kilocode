@@ -251,10 +251,39 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
       await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenCalledWith(
-        { scheme: "file" },
+        [{ scheme: "file" }, { scheme: "vscode-notebook-cell" }],
         manager.inlineCompletionProvider,
       )
       expect((manager as any).inlineCompletionProviderDisposable).toBe(disposable)
+    })
+
+    it("registers classic notebook fallback when Next Edit is selected", async () => {
+      const manager = await createManager()
+
+      const primary = { dispose: vi.fn() }
+      const notebook = { dispose: vi.fn() }
+      vi.mocked(vscode.languages.registerInlineCompletionItemProvider)
+        .mockReturnValueOnce(primary as any)
+        .mockReturnValueOnce(notebook as any)
+      ;(manager as any).settings = {
+        enableAutoTrigger: true,
+        provider: "kilo",
+        model: "inception/mercury-next-edit",
+      }
+
+      await (manager as any).ensureInlineCompletionProviderRegistration()
+
+      expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenNthCalledWith(
+        1,
+        [{ scheme: "file" }],
+        manager.nextEditProvider,
+      )
+      expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenNthCalledWith(
+        2,
+        [{ scheme: "vscode-notebook-cell" }],
+        manager.inlineCompletionProvider,
+      )
+      expect((manager as any).notebookCompletionProviderDisposable).toBe(notebook)
     })
 
     it("does not register the provider when snoozed", async () => {

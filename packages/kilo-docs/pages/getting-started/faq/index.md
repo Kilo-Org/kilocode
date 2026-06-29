@@ -22,7 +22,3 @@ This section contains the most frequently asked questions.
 ## Account and Integration
 
 - [**Account and Integration**](/docs/getting-started/faq/account-and-integration) - Questions about accounts and integrations
-
-## Known Issues
-
-- [**Known Issues**](/docs/getting-started/faq/known-issues) - Known issues and limitations of Kilo Code
