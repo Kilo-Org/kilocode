@@ -40,10 +40,10 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var globalConfigDisplayPath = globalConfigPath
     var localConfigExists = true
     var globalConfigExists = true
-    val fileCalls = mutableListOf<Pair<String, String>>()
-    val searchQueries = mutableListOf<String>()
+    val fileCalls = CopyOnWriteArrayList<Pair<String, String>>()
+    val searchQueries = CopyOnWriteArrayList<String>()
     val opened = CopyOnWriteArrayList<String>()
-    val localConfigs = mutableListOf<String>()
+    val localConfigs = CopyOnWriteArrayList<String>()
     var globalConfigs = 0
     var localConfigPathCalls = 0
         private set
