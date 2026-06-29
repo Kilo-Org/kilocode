@@ -64,6 +64,38 @@ describe("MaxCostNudge cost aggregation", () => {
     expect(nudge.sessionCost(sid)).toBe(1)
   })
 
+  test("floors total from direct session cost signal", () => {
+    const nudge = new MaxCostNudge()
+
+    nudge.updateMessageCost(sid, "a1", "assistant", 2)
+
+    expect(nudge.setSessionCost(sid, 5)).toBe(5)
+    expect(nudge.setSessionCost(sid, 3)).toBe(5)
+    expect(nudge.setSessionCost(sid, Number.NaN)).toBe(5)
+    expect(nudge.sessionCost(sid)).toBe(5)
+  })
+
+  test("does not overcount when a floored message later updates", () => {
+    const nudge = new MaxCostNudge()
+
+    nudge.updateMessageCost(sid, "a1", "assistant", 2)
+    nudge.setSessionCost(sid, 5)
+    // The message's own cost catches up to the floor; total must not stack to 8.
+    nudge.updateMessageCost(sid, "a1", "assistant", 5)
+
+    expect(nudge.sessionCost(sid)).toBe(5)
+  })
+
+  test("moves message cost between sessions", () => {
+    const nudge = new MaxCostNudge()
+
+    nudge.updateMessageCost("ses_a", "m1", "assistant", 5)
+    nudge.updateMessageCost("ses_b", "m1", "assistant", 7)
+
+    expect(nudge.sessionCost("ses_a")).toBe(0)
+    expect(nudge.sessionCost("ses_b")).toBe(7)
+  })
+
   test("removes a message contribution", () => {
     const nudge = new MaxCostNudge()
     nudge.resetMessageCosts(sid, [assistant("a1", 2), assistant("a2", 3)])
@@ -107,6 +139,68 @@ describe("MaxCostNudge alerts", () => {
     nudge.setLimit(10)
     nudge.updateMessageCost(sid, "a2", "assistant", 5)
     expect(nudge.check(sid)).toEqual({ limit: 10, cost: 11 })
+  })
+
+  test("active alerts are keyed by limit", () => {
+    const nudge = new MaxCostNudge()
+
+    nudge.setLimit(5)
+    nudge.updateMessageCost(sid, "a1", "assistant", 7)
+
+    expect(nudge.check(sid)).toEqual({ limit: 5, cost: 7 })
+
+    nudge.setLimit(6)
+    expect(nudge.check(sid)).toEqual({ limit: 6, cost: 7 })
+  })
+
+  test("resolving with explicit limit acks that limit", () => {
+    const nudge = new MaxCostNudge()
+
+    nudge.setLimit(5)
+    nudge.updateMessageCost(sid, "a1", "assistant", 7)
+
+    expect(nudge.check(sid)).toEqual({ limit: 5, cost: 7 })
+    nudge.setLimit(6)
+    nudge.resolve(sid, "continue", 5)
+
+    nudge.rearm(sid)
+    expect(nudge.check(sid)).toEqual({ limit: 6, cost: 7 })
+
+    nudge.setLimit(5)
+    nudge.rearm(sid)
+    expect(nudge.check(sid)).toBeUndefined()
+  })
+
+  test("does not re-alert a limit value already seen this run", () => {
+    const nudge = new MaxCostNudge()
+    nudge.setLimit(5)
+    nudge.updateMessageCost(sid, "a1", "assistant", 7)
+
+    expect(nudge.check(sid)).toEqual({ limit: 5, cost: 7 })
+    nudge.setLimit(6)
+    expect(nudge.check(sid)).toEqual({ limit: 6, cost: 7 })
+
+    // Flipping the limit back to an already-alerted value stays silent.
+    nudge.setLimit(5)
+    expect(nudge.check(sid)).toBeUndefined()
+  })
+
+  test("continue persists per limit value across other limits", () => {
+    const nudge = new MaxCostNudge()
+    nudge.setLimit(5)
+    nudge.updateMessageCost(sid, "a1", "assistant", 7)
+    nudge.check(sid)
+    nudge.resolve(sid, "continue")
+
+    nudge.setLimit(10)
+    nudge.updateMessageCost(sid, "a2", "assistant", 5)
+    nudge.check(sid)
+    nudge.resolve(sid, "continue")
+
+    // Dropping back to an already-continued value stays silent.
+    nudge.setLimit(5)
+    nudge.rearm(sid)
+    expect(nudge.check(sid)).toBeUndefined()
   })
 
   test("rearm re-alerts after a stop and a new run", () => {

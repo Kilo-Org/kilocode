@@ -24,8 +24,9 @@ export interface MaxCostMessage {
 export class MaxCostNudge {
   readonly #msgs = new Map<string, { sid: string; cost: number }>()
   readonly #totals = new Map<string, number>()
-  readonly #alerted = new Set<string>()
-  readonly #acked = new Map<string, number>()
+  readonly #floors = new Map<string, number>()
+  readonly #alerted = new Map<string, Set<number>>() // sid -> limit values shown this run
+  readonly #acked = new Map<string, Set<number>>() // sid -> limit values continued past
 
   #limit: number | undefined
 
@@ -50,9 +51,7 @@ export class MaxCostNudge {
 
   // Rebuild a session's total from a full message snapshot (seed on load).
   resetMessageCosts(sid: string, messages: MaxCostMessage[]): number {
-    for (const [id, msg] of this.#msgs) {
-      if (msg.sid === sid) this.#msgs.delete(id)
-    }
+    this.#dropMessages(sid)
     let total = 0
     for (const msg of messages) {
       if (msg.sessionID !== sid || msg.role !== "assistant" || !Number.isFinite(msg.cost)) continue
@@ -61,18 +60,28 @@ export class MaxCostNudge {
       total += cost
     }
     this.#totals.set(sid, total)
-    return total
+    return this.sessionCost(sid)
+  }
+
+  // Floor the session total with a direct cost signal (e.g. session.cost). Monotonic.
+  setSessionCost(sid: string, value: number): number {
+    if (Number.isFinite(value)) this.#floors.set(sid, Math.max(this.#floors.get(sid) ?? 0, value))
+    return this.sessionCost(sid)
   }
 
   // Record an assistant message cost (message.updated). Returns the session total.
   updateMessageCost(sid: string, id: string, role: string | undefined, value: number | undefined): number {
     if (role === "assistant" && Number.isFinite(value)) {
-      const before = this.#msgs.get(id)?.cost ?? 0
+      const prev = this.#msgs.get(id)
+      if (prev && prev.sid !== sid) {
+        this.#totals.set(prev.sid, Math.max(0, (this.#totals.get(prev.sid) ?? 0) - prev.cost))
+      }
+      const before = prev?.sid === sid ? prev.cost : 0
       const cost = value ?? 0
       this.#msgs.set(id, { sid, cost })
       this.#totals.set(sid, Math.max(0, (this.#totals.get(sid) ?? 0) - before + cost))
     }
-    return this.#totals.get(sid) ?? 0
+    return this.sessionCost(sid)
   }
 
   // Drop a message's contribution (message.removed).
@@ -84,7 +93,7 @@ export class MaxCostNudge {
   }
 
   sessionCost(sid: string): number {
-    return this.#totals.get(sid) ?? 0
+    return Math.max(this.#totals.get(sid) ?? 0, this.#floors.get(sid) ?? 0)
   }
 
   /**
@@ -96,14 +105,14 @@ export class MaxCostNudge {
     const limit = this.#limit
     if (limit === undefined) return undefined
     const cost = this.sessionCost(sid)
-    if (cost < limit || this.#acked.get(sid) === limit || this.#alerted.has(sid)) return undefined
-    this.#alerted.add(sid)
+    if (cost < limit || this.#acked.get(sid)?.has(limit) || this.#alerted.get(sid)?.has(limit)) return undefined
+    this.#remember(this.#alerted, sid, limit)
     return { limit, cost }
   }
 
-  /** Apply the user's choice. Continue suppresses re-alerts for the current limit. */
-  resolve(sid: string, choice: MaxCostChoice): void {
-    if (choice === "continue" && this.#limit !== undefined) this.#acked.set(sid, this.#limit)
+  // Apply the user's choice. Continue suppresses re-alerts for the current limit.
+  resolve(sid: string, choice: MaxCostChoice, limit = this.#limit): void {
+    if (choice === "continue" && limit !== undefined) this.#remember(this.#acked, sid, limit)
   }
 
   // Re-arm alerts for a session that started running again.
@@ -113,11 +122,24 @@ export class MaxCostNudge {
 
   // Forget all state for a deleted session.
   onSessionDeleted(sid: string): void {
+    this.#dropMessages(sid)
+    this.#totals.delete(sid)
+    this.#floors.delete(sid)
+    this.#alerted.delete(sid)
+    this.#acked.delete(sid)
+  }
+
+  // Drop every message contribution belonging to a session.
+  #dropMessages(sid: string): void {
     for (const [id, msg] of this.#msgs) {
       if (msg.sid === sid) this.#msgs.delete(id)
     }
-    this.#totals.delete(sid)
-    this.#alerted.delete(sid)
-    this.#acked.delete(sid)
+  }
+
+  // Record a limit value seen for a session.
+  #remember(map: Map<string, Set<number>>, sid: string, limit: number): void {
+    const seen = map.get(sid)
+    if (seen) seen.add(limit)
+    else map.set(sid, new Set([limit]))
   }
 }
