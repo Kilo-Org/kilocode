@@ -954,6 +954,7 @@ export const dict = {
   "provider.custom.models.name.label": "Nazwa",
   "provider.custom.models.name.placeholder": "Nazwa wyświetlana",
   "provider.custom.models.reasoning.label": "Rozumowanie",
+  "provider.custom.models.modalities.image": "Obraz",
   "provider.custom.models.variants.label": "Warianty",
   "provider.custom.models.variants.add": "Dodaj wariant",
   "provider.custom.models.variants.remove": "Usuń wariant",

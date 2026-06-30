@@ -998,6 +998,7 @@ export const dict = {
   "provider.custom.models.name.label": "Naziv",
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.reasoning.label": "Zaključivanje",
+  "provider.custom.models.modalities.image": "Slika",
   "provider.custom.models.variants.label": "Varijante",
   "provider.custom.models.variants.add": "Dodaj varijantu",
   "provider.custom.models.variants.remove": "Ukloni varijantu",

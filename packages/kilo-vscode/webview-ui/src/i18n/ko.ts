@@ -946,6 +946,7 @@ export const dict = {
   "provider.custom.models.name.label": "이름",
   "provider.custom.models.name.placeholder": "표시 이름",
   "provider.custom.models.reasoning.label": "추론",
+  "provider.custom.models.modalities.image": "이미지",
   "provider.custom.models.variants.label": "변형",
   "provider.custom.models.variants.add": "변형 추가",
   "provider.custom.models.variants.remove": "변형 제거",

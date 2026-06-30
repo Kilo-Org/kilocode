@@ -1009,6 +1009,7 @@ export const dict = {
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Anzeigename",
   "provider.custom.models.reasoning.label": "Schlussfolgerung",
+  "provider.custom.models.modalities.image": "Bild",
   "provider.custom.models.variants.label": "Varianten",
   "provider.custom.models.variants.add": "Variante hinzufügen",
   "provider.custom.models.variants.remove": "Variante entfernen",
