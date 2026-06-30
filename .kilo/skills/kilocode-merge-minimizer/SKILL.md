@@ -97,13 +97,13 @@ registerKiloFeature(app)
 After editing shared files or marker comments, run:
 
 ```bash
-bun run script/check-opencode-annotations.ts
+bun run script/check-opencode-annotations.ts --worktree
 ```
 
 If the PR uses a non-default comparison base, pass the correct base ref:
 
 ```bash
-bun run script/check-opencode-annotations.ts --base <base-ref>
+bun run script/check-opencode-annotations.ts --worktree --base <base-ref>
 ```
 
 For stale or broad markers in one shared file, inspect the dry run before applying:
