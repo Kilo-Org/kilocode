@@ -12,7 +12,6 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Labs",
     links: [
       { href: "/ai-providers/anthropic", children: "Anthropic" },
-      { href: "/ai-providers/claude-code", children: "Claude Code" },
       { href: "/ai-providers/openai", children: "OpenAI" },
       {
         href: "/ai-providers/openai-chatgpt-plus-pro",
@@ -28,7 +27,6 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Gateways",
     links: [
       { href: "/ai-providers/openrouter", children: "OpenRouter" },
-      { href: "/ai-providers/glama", children: "Glama" },
       { href: "/ai-providers/requesty", children: "Requesty" },
       { href: "/ai-providers/unbound", children: "Unbound" },
       { href: "/ai-providers/zenmux", children: "ZenMux" },
@@ -60,7 +58,6 @@ export const AiProvidersNav: NavSection[] = [
         href: "/ai-providers/anaconda-desktop",
         children: "Anaconda Desktop",
       },
-      { href: "/ai-providers/vscode-lm", children: "VS Code LM API" },
       {
         href: "/ai-providers/openai-compatible",
         children: "OpenAI Compatible",
@@ -83,12 +80,7 @@ export const AiProvidersNav: NavSection[] = [
     title: "Special Modes",
     links: [
       { href: "/ai-providers/v0", children: "v0" },
-      { href: "/ai-providers/human-relay", children: "Human Relay" },
       { href: "/ai-providers/synthetic", children: "Synthetic Provider" },
-      {
-        href: "/ai-providers/virtual-quota-fallback",
-        children: "Virtual Quota Fallback",
-      },
     ],
   },
 ]

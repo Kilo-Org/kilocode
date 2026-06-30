@@ -211,10 +211,6 @@ There is no notification slash command or command-palette toggle. Use Kilo Conso
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
 
-{% callout type="tip" %}
-**Confused about /newtask vs /smol in the IDE?** See the [Using Agents](/docs/code-with-ai/agents/using-agents#understanding-newtask-vs-smol) documentation for details.
-{% /callout %}
-
 ## Permissions
 
 Kilo Code uses the permission config to decide whether a given action should run automatically, prompt you, or be blocked.

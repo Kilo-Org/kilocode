@@ -37,6 +37,9 @@ export type Event =
   | EventPermissionReplied
   | EventBackgroundProcessUpdated
   | EventBackgroundProcessDeleted
+  | EventInteractiveTerminalUpdated
+  | EventInteractiveTerminalData
+  | EventInteractiveTerminalDeleted
   | EventSessionTurnOpen
   | EventSessionTurnClose
   | EventSessionDiff
@@ -367,10 +370,31 @@ export type BackgroundProcessInfo = {
   description?: string
   ports: Array<number>
   status: "starting" | "running" | "ready" | "exited" | "failed" | "stopping" | "stopped"
+  lifetime: "session" | "parent" | "persistent"
   ready: boolean
   exitCode?: number
   signal?: string
   output: string
+  time: {
+    started: number
+    updated: number
+    ended?: number
+  }
+}
+
+export type InteractiveTerminalInfo = {
+  id: string
+  sessionID: string
+  pid: number
+  command: string
+  cwd: string
+  description?: string
+  status: "running" | "closed"
+  cols: number
+  rows: number
+  exitCode?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  signal?: string
+  closedBy?: "exit" | "user" | "abort"
   time: {
     started: number
     updated: number
@@ -1043,6 +1067,9 @@ export type GlobalEvent = {
     | EventPermissionReplied
     | EventBackgroundProcessUpdated
     | EventBackgroundProcessDeleted
+    | EventInteractiveTerminalUpdated
+    | EventInteractiveTerminalData
+    | EventInteractiveTerminalDeleted
     | EventSessionTurnOpen
     | EventSessionTurnClose
     | EventSessionDiff
@@ -1290,6 +1317,8 @@ export type AgentConfig = {
   disable?: boolean
   description?: string
   mode?: "subagent" | "primary" | "all"
+  displayName?: string
+  source?: string
   hidden?: boolean
   options?: {
     [key: string]: unknown
@@ -2019,6 +2048,7 @@ export type Command = {
 export type Agent = {
   name: string
   displayName?: string
+  source?: string
   description?: string
   deprecated?: boolean
   mode: "subagent" | "primary" | "all"
@@ -2535,6 +2565,21 @@ export type KiloEmbeddingModelCatalog = {
   }
 }
 
+export type InteractiveTerminalSnapshot = {
+  info: InteractiveTerminalInfo
+  output: string
+  cursor: number
+}
+
+export type InteractiveTerminalWriteInput = {
+  data: string
+}
+
+export type InteractiveTerminalResizeInput = {
+  cols: number
+  rows: number
+}
+
 export type EffectHttpApiErrorUnauthorized = {
   _tag: "Unauthorized"
 }
@@ -2736,6 +2781,26 @@ export type KilocodeSessionImportResult = {
 
 export type EffectHttpApiErrorForbidden = {
   _tag: "Forbidden"
+}
+
+export type InteractiveTerminalInfo1 = {
+  id: string
+  sessionID: string
+  pid: number
+  command: string
+  cwd: string
+  description?: string
+  status: "running" | "closed"
+  cols: number
+  rows: number
+  exitCode?: number | "NaN" | "Infinity" | "-Infinity"
+  signal?: string
+  closedBy?: "exit" | "user" | "abort"
+  time: {
+    started: number
+    updated: number
+    ended?: number
+  }
 }
 
 export type SyncEventMessageUpdated = {
@@ -3505,6 +3570,7 @@ export type EventBackgroundProcessUpdated = {
   type: "background_process.updated"
   properties: {
     info: BackgroundProcessInfo
+    scope: string
   }
 }
 
@@ -3514,6 +3580,35 @@ export type EventBackgroundProcessDeleted = {
   properties: {
     sessionID: string
     processID: string
+    scope: string
+  }
+}
+
+export type EventInteractiveTerminalUpdated = {
+  id: string
+  type: "interactive_terminal.updated"
+  properties: {
+    info: InteractiveTerminalInfo
+  }
+}
+
+export type EventInteractiveTerminalData = {
+  id: string
+  type: "interactive_terminal.data"
+  properties: {
+    terminalID: string
+    sessionID: string
+    data: string
+    cursor: number
+  }
+}
+
+export type EventInteractiveTerminalDeleted = {
+  id: string
+  type: "interactive_terminal.deleted"
+  properties: {
+    terminalID: string
+    sessionID: string
   }
 }
 
@@ -10225,6 +10320,173 @@ export type IndexingModelsResponses = {
 
 export type IndexingModelsResponse = IndexingModelsResponses[keyof IndexingModelsResponses]
 
+export type InteractiveTerminalListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/interactive-terminal"
+}
+
+export type InteractiveTerminalListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type InteractiveTerminalListError = InteractiveTerminalListErrors[keyof InteractiveTerminalListErrors]
+
+export type InteractiveTerminalListResponses = {
+  /**
+   * List of interactive terminals
+   */
+  200: Array<InteractiveTerminalSnapshot>
+}
+
+export type InteractiveTerminalListResponse = InteractiveTerminalListResponses[keyof InteractiveTerminalListResponses]
+
+export type InteractiveTerminalGetData = {
+  body?: never
+  path: {
+    terminalID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/interactive-terminal/{terminalID}"
+}
+
+export type InteractiveTerminalGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type InteractiveTerminalGetError = InteractiveTerminalGetErrors[keyof InteractiveTerminalGetErrors]
+
+export type InteractiveTerminalGetResponses = {
+  /**
+   * Interactive terminal snapshot
+   */
+  200: InteractiveTerminalSnapshot
+}
+
+export type InteractiveTerminalGetResponse = InteractiveTerminalGetResponses[keyof InteractiveTerminalGetResponses]
+
+export type InteractiveTerminalWriteData = {
+  body?: InteractiveTerminalWriteInput
+  path: {
+    terminalID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/interactive-terminal/{terminalID}/input"
+}
+
+export type InteractiveTerminalWriteErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type InteractiveTerminalWriteError = InteractiveTerminalWriteErrors[keyof InteractiveTerminalWriteErrors]
+
+export type InteractiveTerminalWriteResponses = {
+  /**
+   * Input written
+   */
+  200: boolean
+}
+
+export type InteractiveTerminalWriteResponse =
+  InteractiveTerminalWriteResponses[keyof InteractiveTerminalWriteResponses]
+
+export type InteractiveTerminalResizeData = {
+  body?: InteractiveTerminalResizeInput
+  path: {
+    terminalID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/interactive-terminal/{terminalID}/resize"
+}
+
+export type InteractiveTerminalResizeErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type InteractiveTerminalResizeError = InteractiveTerminalResizeErrors[keyof InteractiveTerminalResizeErrors]
+
+export type InteractiveTerminalResizeResponses = {
+  /**
+   * Terminal resized
+   */
+  200: boolean
+}
+
+export type InteractiveTerminalResizeResponse =
+  InteractiveTerminalResizeResponses[keyof InteractiveTerminalResizeResponses]
+
+export type InteractiveTerminalCloseData = {
+  body?: never
+  path: {
+    terminalID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/interactive-terminal/{terminalID}/close"
+}
+
+export type InteractiveTerminalCloseErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type InteractiveTerminalCloseError = InteractiveTerminalCloseErrors[keyof InteractiveTerminalCloseErrors]
+
+export type InteractiveTerminalCloseResponses = {
+  /**
+   * Terminal closed
+   */
+  200: boolean
+}
+
+export type InteractiveTerminalCloseResponse =
+  InteractiveTerminalCloseResponses[keyof InteractiveTerminalCloseResponses]
+
 export type KiloProfileData = {
   body?: never
   path?: never
@@ -11070,6 +11332,7 @@ export type KilocodeSessionModelUsageResponses = {
    * Model usage for a session tree
    */
   200: {
+    sessionIDs: Array<string>
     totals: {
       steps: number
       cost: number

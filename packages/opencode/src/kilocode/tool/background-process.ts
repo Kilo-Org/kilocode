@@ -3,6 +3,8 @@ import { Tool } from "@/tool/tool"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { containsPath } from "@/project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
+import { KiloSession } from "@/kilocode/session"
+import { SessionID } from "@/session/schema"
 import { Effect, Schema } from "effect"
 import { enabled as sandboxed } from "@kilocode/sandbox"
 import DESCRIPTION from "./background-process.txt"
@@ -22,16 +24,32 @@ export const Params = Schema.Struct({
   }),
   description: Schema.optional(Schema.String).annotate({ description: "Short label shown in the sidebar" }),
   ready: Schema.optional(BackgroundProcess.Ready).annotate({ description: "Optional readiness probe for start" }),
-}).check(
-  Schema.makeFilter((params: { action: Action; command?: string; id?: BackgroundProcess.ID }) => {
-    if (params.action === "start") {
-      if (params.command?.trim()) return undefined
-      return "command is required when action is start"
-    }
-    if (params.action === "list") return undefined
-    if (params.id) return undefined
-    return "id is required when action is status, logs, stop, or restart"
+  inherit: Schema.optional(Schema.Boolean).annotate({
+    description: "For subagents only: transfer the process to the parent session when this session ends",
   }),
+  persistent: Schema.optional(Schema.Boolean).annotate({
+    description: "Keep the process running and manageable after the session or Kilo exits",
+  }),
+}).check(
+  Schema.makeFilter(
+    (params: {
+      action: Action
+      command?: string
+      id?: BackgroundProcess.ID
+      inherit?: boolean
+      persistent?: boolean
+    }) => {
+      if (params.action === "start") {
+        if (params.inherit && params.persistent) return "inherit and persistent cannot be combined"
+        if (params.command?.trim()) return undefined
+        return "command is required when action is start"
+      }
+      if (params.inherit || params.persistent) return "inherit and persistent are only valid when action is start"
+      if (params.action === "list") return undefined
+      if (params.id) return undefined
+      return "id is required when action is status, logs, stop, or restart"
+    },
+  ),
 )
 export type Params = Schema.Schema.Type<typeof Params>
 
@@ -57,6 +75,7 @@ function format(info: BackgroundProcess.Info) {
     info.pid ? `pid: ${info.pid}` : undefined,
     `cwd: ${info.cwd}`,
     `command: ${info.command}`,
+    `lifetime: ${info.lifetime}`,
     last(info.output) ? `last_output: ${last(info.output)}` : undefined,
   ]
     .filter(Boolean)
@@ -101,7 +120,7 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
             title: "Background processes",
             output: list.length
               ? list.map(format).join("\n\n")
-              : "No background processes are running for this session.",
+              : "No background processes are available for this session.",
             metadata: { count: list.length },
           }
         }
@@ -114,7 +133,7 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
           const id = params.id
           if (!id) return invalid(params.action, "Missing id")
           const found = yield* Effect.promise(() => BackgroundProcess.get(id))
-          if (!found || found.sessionID !== ctx.sessionID) return missing(id)
+          if (!found || (found.sessionID !== ctx.sessionID && found.lifetime !== "persistent")) return missing(id)
           if (params.action === "logs") {
             const logs = yield* Effect.promise(() => BackgroundProcess.logs(id))
             if (!logs) return missing(id)
@@ -140,6 +159,9 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
 
         const command = params.command?.trim()
         if (!command) return invalid(params.action, "Missing command")
+        const parent = params.inherit ? KiloSession.resolveParent(ctx.sessionID) : undefined
+        const parentID = parent ? SessionID.make(parent) : undefined
+        if (params.inherit && !parentID) return invalid(params.action, "inherit requires a subagent session")
         const err = pattern(params.ready)
         if (err) return invalid(params.action, err)
         const inst = yield* InstanceState.context
@@ -168,6 +190,8 @@ export const BackgroundProcessTool = Tool.define<typeof Params, Meta, never, "ba
             cwd,
             description: params.description,
             ready: params.ready,
+            lifetime: params.persistent ? "persistent" : params.inherit ? "parent" : "session",
+            parentID,
           }),
         )
         return {

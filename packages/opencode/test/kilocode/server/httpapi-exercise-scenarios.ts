@@ -71,6 +71,37 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "session process stop should return true")),
+  http.protected.get("/interactive-terminal", "interactiveTerminal.list").json(200, array),
+  http.protected
+    .get("/interactive-terminal/{terminalID}", "interactiveTerminal.get")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/input", "interactiveTerminal.write")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/input", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: { data: "x" },
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/resize", "interactiveTerminal.resize")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/resize", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: { cols: 1, rows: 1 },
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/close", "interactiveTerminal.close")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/close", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
   http.protected.get("/config/warnings", "config.warnings").json(200, array),
   http.protected.get("/config/effective", "config.effective").json(200, object),
   http.protected.get("/config/model-state", "config.modelState").json(200, object),

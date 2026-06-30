@@ -11,6 +11,7 @@ import type {
   MessageLoadMode,
   SessionCloseReason,
   SessionInfo,
+  SessionModelUsage,
   SessionUpdate,
 } from "./sessions"
 import type { PermissionRequest } from "./permissions"
@@ -192,6 +193,18 @@ export interface MessagesLoadedMessage {
   cursor?: string
   hasMore?: boolean
   since?: number
+}
+
+export interface SessionModelUsageLoadedMessage {
+  type: "sessionModelUsageLoaded"
+  sessionID: string
+  requestID: string
+  data?: SessionModelUsage
+}
+
+export interface SessionModelUsageChangedMessage {
+  type: "sessionModelUsageChanged"
+  sessionID: string
 }
 
 export interface MessageCreatedMessage {
@@ -1048,6 +1061,8 @@ export type ExtensionMessage =
   | SessionDeletedMessage
   | MessageRemovedMessage
   | MessagesLoadedMessage
+  | SessionModelUsageLoadedMessage
+  | SessionModelUsageChangedMessage
   | MessageCreatedMessage
   | SessionsLoadedMessage
   | CloudSessionsLoadedMessage

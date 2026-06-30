@@ -108,7 +108,7 @@ export const ModelPreview: Component<Props> = (props) => {
                       <Show when={isAuto(model())}>
                         <Tooltip value={autoLabel()} placement="top">
                           <span class="model-preview-auto-icon" aria-label={autoLabel()}>
-                            <Icon name="branch" size="small" />
+                            <Icon name="models" size="small" />
                           </span>
                         </Tooltip>
                       </Show>

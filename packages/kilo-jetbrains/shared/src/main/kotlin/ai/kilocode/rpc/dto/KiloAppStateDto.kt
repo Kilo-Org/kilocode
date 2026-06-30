@@ -79,11 +79,20 @@ data class ProfileBalanceDto(
 )
 
 @Serializable
+data class ProfileKiloPassDto(
+    val currentPeriodBaseCreditsUsd: Double,
+    val currentPeriodUsageUsd: Double,
+    val currentPeriodBonusCreditsUsd: Double,
+    val nextBillingAt: String? = null,
+)
+
+@Serializable
 data class ProfileDto(
     val email: String,
     val name: String? = null,
     val organizations: List<ProfileOrganizationDto> = emptyList(),
     val balance: ProfileBalanceDto? = null,
+    val kiloPass: ProfileKiloPassDto? = null,
     val currentOrgId: String? = null,
 )
 

@@ -110,6 +110,7 @@ class ApiModelSerializationTest {
         val src = """{
             "profile": {"email": "user@test.com", "name": "User"},
             "balance": {"balance": 42.5},
+            "kiloPass": null,
             "currentOrgId": "org-1"
         }"""
         val obj = json.decodeFromString<KiloProfile200Response>(src)
@@ -125,6 +126,7 @@ class ApiModelSerializationTest {
         val src = """{
             "profile": {"email": "user@test.com"},
             "balance": null,
+            "kiloPass": null,
             "currentOrgId": null
         }"""
         val obj = json.decodeFromString<KiloProfile200Response>(src)
@@ -144,6 +146,7 @@ class ApiModelSerializationTest {
                 ]
             },
             "balance": null,
+            "kiloPass": null,
             "currentOrgId": "org-1"
         }"""
         val obj = json.decodeFromString<KiloProfile200Response>(src)
@@ -151,6 +154,27 @@ class ApiModelSerializationTest {
         assertEquals(2, obj.profile.organizations!!.size)
         assertEquals("Acme", obj.profile.organizations!![0].name)
         assertEquals("admin", obj.profile.organizations!![0].role)
+    }
+
+    @Test
+    fun `KiloProfile200Response with kilo pass`() {
+        val src = """{
+            "profile": {"email": "user@test.com"},
+            "balance": {"balance": 267.59},
+            "kiloPass": {
+                "currentPeriodBaseCreditsUsd": 199,
+                "currentPeriodUsageUsd": 73.27,
+                "currentPeriodBonusCreditsUsd": 99.5,
+                "nextBillingAt": "2026-07-01T00:00:00.000Z"
+            },
+            "currentOrgId": null
+        }"""
+        val obj = json.decodeFromString<KiloProfile200Response>(src)
+        assertNotNull(obj.kiloPass)
+        assertEquals(199.0, obj.kiloPass!!.currentPeriodBaseCreditsUsd)
+        assertEquals(73.27, obj.kiloPass!!.currentPeriodUsageUsd)
+        assertEquals(99.5, obj.kiloPass!!.currentPeriodBonusCreditsUsd)
+        assertEquals("2026-07-01T00:00:00.000Z", obj.kiloPass!!.nextBillingAt)
     }
 
     @Test

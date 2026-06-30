@@ -2,6 +2,8 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.settings.profile.ProfileUi
+import ai.kilocode.client.settings.profile.formatResetDate
+import ai.kilocode.client.settings.profile.formatShortBalance
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -9,6 +11,7 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.LoadProgressDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import com.intellij.openapi.application.ApplicationManager
@@ -24,11 +27,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.Component
 import java.awt.Container
+import java.awt.image.BufferedImage
+import java.util.TimeZone
 import javax.swing.AbstractButton
 import javax.swing.JComboBox
+import javax.swing.JComponent
 import javax.swing.JEditorPane
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.RepaintManager
 import javax.swing.JTextField
 import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
@@ -176,6 +183,218 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             val cardLoc = SwingUtilities.convertPoint(card.parent, card.location, panel)
             val dashLoc = SwingUtilities.convertPoint(dash.parent, dash.location, panel)
             assertTrue(dashLoc.y >= cardLoc.y + card.height)
+        }
+    }
+
+    fun `test personal profile shows kilo pass usage`() {
+        val profile = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            balance = ProfileBalanceDto(267.59),
+            kiloPass = ProfileKiloPassDto(
+                currentPeriodBaseCreditsUsd = 199.0,
+                currentPeriodUsageUsd = 73.27,
+                currentPeriodBonusCreditsUsd = 99.5,
+                nextBillingAt = "2026-07-01T00:00:00.000Z",
+            ),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+        edt { panel.update(profile, KiloAppStatusDto.READY) }
+
+        edt {
+            val t = text(panel)
+            assertTrue(t, t.contains("Kilo Pass"))
+            assertTrue(t, t.contains("$73 / $199"))
+            assertTrue(t, t.contains("Bonus"))
+            assertTrue(t, t.contains("+$99.50"))
+            assertTrue(t, t.contains("Renews"))
+            assertTrue(t, t.contains("Jul 1"))
+            assertTrue("pass meter should be visible", panelsByName(panel, "kilo.profile.passPanel").single().isVisible)
+            assertFalse(t, t.contains("Get Kilo Pass"))
+        }
+    }
+
+    fun `test kilo pass short amounts use half up rounding`() {
+        assertEquals("$3", formatShortBalance(2.5))
+        assertEquals("$2", formatShortBalance(2.49))
+    }
+
+    fun `test kilo pass hides empty bonus and invalid renewal rows`() {
+        val profile = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            balance = ProfileBalanceDto(267.59),
+            kiloPass = ProfileKiloPassDto(
+                currentPeriodBaseCreditsUsd = 199.0,
+                currentPeriodUsageUsd = 73.27,
+                currentPeriodBonusCreditsUsd = 99.5,
+                nextBillingAt = "2026-07-01T00:00:00.000Z",
+            ),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+        edt { panel.update(profile, KiloAppStatusDto.READY) }
+
+        edt {
+            val t = text(panel)
+            assertTrue(t, t.contains("Bonus"))
+            assertTrue(t, t.contains("Renews"))
+        }
+
+        val invalid = profile.copy(
+            kiloPass = profile.kiloPass?.copy(
+                currentPeriodBonusCreditsUsd = 0.0,
+                nextBillingAt = "not-a-date",
+            ),
+        )
+        edt { panel.update(invalid, KiloAppStatusDto.READY) }
+
+        edt {
+            val t = text(panel)
+            assertFalse(t, t.contains("Bonus"))
+            assertFalse(t, t.contains("Renews"))
+            assertFalse(t, t.contains("+$99.50"))
+            assertFalse(t, t.contains("Jul 1"))
+        }
+
+        val none = invalid.copy(kiloPass = invalid.kiloPass?.copy(nextBillingAt = null))
+        edt { panel.update(none, KiloAppStatusDto.READY) }
+
+        edt {
+            assertFalse(text(panel).contains("Renews"))
+        }
+    }
+
+    fun `test kilo pass meter clamps base zero and avoids noop repaint`() {
+        val profile = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            balance = ProfileBalanceDto(267.59),
+            kiloPass = ProfileKiloPassDto(
+                currentPeriodBaseCreditsUsd = 0.0,
+                currentPeriodUsageUsd = 0.0,
+                currentPeriodBonusCreditsUsd = 0.0,
+            ),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+        edt { panel.update(profile, KiloAppStatusDto.READY) }
+
+        val meter = edt { componentsByName(panel, "kilo.profile.passMeter").single() }
+        val empty = edt { paint(meter) }
+        val bg = color(empty, empty.width - 4)
+        assertEquals("empty meter should not paint fill", bg, color(empty, empty.width / 2))
+
+        val full = profile.copy(
+            kiloPass = profile.kiloPass?.copy(
+                currentPeriodBaseCreditsUsd = 100.0,
+                currentPeriodUsageUsd = 250.0,
+            ),
+        )
+        edt { panel.update(full, KiloAppStatusDto.READY) }
+
+        val filled = edt { paint(meter) }
+        assertFalse("clamped meter should fill the middle", bg == color(filled, filled.width / 2))
+        assertFalse("clamped meter should fill the right edge", bg == color(filled, filled.width - 4))
+
+        val repaint = TrackingRepaintManager(meter)
+        val old = RepaintManager.currentManager(meter)
+        try {
+            RepaintManager.setCurrentManager(repaint)
+            edt { panel.update(full, KiloAppStatusDto.READY) }
+            assertEquals(0, repaint.dirty)
+            assertEquals(0, repaint.invalid)
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
+    fun `test personal profile shows kilo pass without balance`() {
+        val profile = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            kiloPass = ProfileKiloPassDto(
+                currentPeriodBaseCreditsUsd = 199.0,
+                currentPeriodUsageUsd = 73.27,
+                currentPeriodBonusCreditsUsd = 99.5,
+                nextBillingAt = "2026-07-01T00:00:00.000Z",
+            ),
+        )
+        val updated = profile.copy(
+            kiloPass = profile.kiloPass?.copy(currentPeriodUsageUsd = 88.0),
+        )
+        rpc.fakeProfile = updated
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+        edt { panel.update(profile, KiloAppStatusDto.READY) }
+
+        edt {
+            val t = text(panel)
+            assertTrue(t, t.contains("Kilo Pass"))
+            assertTrue(t, t.contains("$73 / $199"))
+            assertTrue(t, t.contains("Jul 1"))
+            assertFalse(t, t.contains("BALANCE"))
+            assertTrue("pass panel should be visible", panelsByName(panel, "kilo.profile.passPanel").single().isVisible)
+            buttons(panel).first { it.text == "Refresh" }.doClick()
+            assertTrue(text(panel).contains("Refreshing...."))
+        }
+        flush()
+
+        edt {
+            val t = text(panel)
+            assertTrue(t, t.contains("$88 / $199"))
+            assertTrue(t, t.contains("Refresh"))
+        }
+    }
+
+    fun `test personal profile without kilo pass shows subscribe link`() {
+        val profile = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            balance = ProfileBalanceDto(10.0),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+        edt { panel.update(profile, KiloAppStatusDto.READY) }
+
+        edt {
+            val t = text(panel)
+            assertTrue(t, t.contains("Get Kilo Pass to add credits and earn bonuses"))
+            buttons(panel).first { it.text == "Dashboard" }.doClick()
+            buttons(panel).first { it.text == "Top up" }.doClick()
+            buttons(panel).first { it.text == "Get Kilo Pass to add credits and earn bonuses" }.doClick()
+        }
+
+        assertEquals(listOf("https://app.kilo.ai/profile", "https://app.kilo.ai/credits", "https://kilo.ai/pricing/kilo-pass"), urls)
+    }
+
+    fun `test kilo pass renewal date uses utc`() {
+        val zone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"))
+            assertEquals("Jul 1", formatResetDate("2026-07-01T00:00:00.000Z"))
+        } finally {
+            TimeZone.setDefault(zone)
+        }
+    }
+
+    fun `test org profile hides kilo pass`() {
+        val orgs = listOf(ProfileOrganizationDto(id = "org_1", name = "Acme", role = "ADMIN"))
+        val profile = ProfileDto(
+            email = "alice@test.com",
+            name = "Alice",
+            organizations = orgs,
+            currentOrgId = "org_1",
+            balance = ProfileBalanceDto(25.0),
+            kiloPass = ProfileKiloPassDto(
+                currentPeriodBaseCreditsUsd = 199.0,
+                currentPeriodUsageUsd = 73.27,
+                currentPeriodBonusCreditsUsd = 99.5,
+            ),
+        )
+        app._state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = profile)
+        edt { panel.update(profile, KiloAppStatusDto.READY) }
+
+        edt {
+            val t = text(panel)
+            assertFalse(t, t.contains("Kilo Pass"))
+            assertFalse(t, t.contains("Get Kilo Pass"))
         }
     }
 
@@ -828,6 +1047,13 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
     }
 
+    private fun componentsByName(root: Container, name: String): List<JComponent> = buildList {
+        for (comp in root.components) {
+            if (comp is JComponent && comp.name == name) add(comp)
+            if (comp is Container) addAll(componentsByName(comp, name))
+        }
+    }
+
     private fun panels(root: Container): List<JPanel> = buildList {
         if (root is JPanel) add(root)
         for (comp in root.components) {
@@ -883,6 +1109,21 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         }
     }
 
+    private fun paint(component: JComponent): BufferedImage {
+        val image = BufferedImage(100, 6, BufferedImage.TYPE_INT_ARGB)
+        component.setSize(image.width, image.height)
+        val g = image.createGraphics()
+        try {
+            component.paint(g)
+        } finally {
+            g.dispose()
+        }
+        return image
+    }
+
+    private fun color(image: BufferedImage, x: Int): Int =
+        image.getRGB(x, image.height / 2)
+
     private fun editorPanes(root: Container): List<JEditorPane> = buildList {
         for (comp in root.components) {
             if (!comp.isVisible) continue
@@ -911,6 +1152,21 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
                 }
             }
             if (comp is Container) collectText(comp, acc)
+        }
+    }
+
+    private class TrackingRepaintManager(private val watched: JComponent) : RepaintManager() {
+        var dirty = 0
+        var invalid = 0
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c === watched) dirty++
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent === watched) invalid++
+            super.addInvalidComponent(invalidComponent)
         }
     }
 }

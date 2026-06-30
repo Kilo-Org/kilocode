@@ -12985,6 +12985,323 @@
         ]
       }
     },
+    "/interactive-terminal": {
+      "get": {
+        "tags": ["interactive-terminal"],
+        "operationId": "interactiveTerminal.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of interactive terminals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InteractiveTerminalSnapshot"
+                  },
+                  "description": "List of interactive terminals"
+                }
+              }
+            }
+          }
+        },
+        "description": "List active human-driven terminal sessions for the current instance.",
+        "summary": "List interactive terminals",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/interactive-terminal/{terminalID}": {
+      "get": {
+        "tags": ["interactive-terminal"],
+        "operationId": "interactiveTerminal.get",
+        "parameters": [
+          {
+            "name": "terminalID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Interactive terminal snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractiveTerminalSnapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get metadata and retained output for an active interactive terminal.",
+        "summary": "Get interactive terminal",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/interactive-terminal/{terminalID}/input": {
+      "post": {
+        "tags": ["interactive-terminal"],
+        "operationId": "interactiveTerminal.write",
+        "parameters": [
+          {
+            "name": "terminalID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Input written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Input written"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Send raw keyboard input to an active interactive terminal.",
+        "summary": "Write interactive terminal input",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractiveTerminalWriteInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.write({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/interactive-terminal/{terminalID}/resize": {
+      "post": {
+        "tags": ["interactive-terminal"],
+        "operationId": "interactiveTerminal.resize",
+        "parameters": [
+          {
+            "name": "terminalID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Terminal resized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Terminal resized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Resize an active interactive terminal's PTY.",
+        "summary": "Resize interactive terminal",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractiveTerminalResizeInput"
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.resize({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/interactive-terminal/{terminalID}/close": {
+      "post": {
+        "tags": ["interactive-terminal"],
+        "operationId": "interactiveTerminal.close",
+        "parameters": [
+          {
+            "name": "terminalID",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Terminal closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Terminal closed"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Terminate an active interactive terminal and unblock its tool call.",
+        "summary": "Close interactive terminal",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.close({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/profile": {
       "get": {
         "tags": ["kilo"],
@@ -15223,6 +15540,13 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "sessionIDs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      }
+                    },
                     "totals": {
                       "type": "object",
                       "properties": {
@@ -15329,7 +15653,7 @@
                       }
                     }
                   },
-                  "required": ["totals", "models"],
+                  "required": ["sessionIDs", "totals", "models"],
                   "additionalProperties": false,
                   "description": "Model usage for a session tree"
                 }
@@ -17694,6 +18018,15 @@
             "$ref": "#/components/schemas/EventBackground_processDeleted"
           },
           {
+            "$ref": "#/components/schemas/EventInteractive_terminalUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/EventInteractive_terminalData"
+          },
+          {
+            "$ref": "#/components/schemas/EventInteractive_terminalDeleted"
+          },
+          {
             "$ref": "#/components/schemas/EventSessionTurnOpen"
           },
           {
@@ -18693,6 +19026,10 @@
             "type": "string",
             "enum": ["starting", "running", "ready", "exited", "failed", "stopping", "stopped"]
           },
+          "lifetime": {
+            "type": "string",
+            "enum": ["session", "parent", "persistent"]
+          },
           "ready": {
             "type": "boolean"
           },
@@ -18726,7 +19063,95 @@
             "additionalProperties": false
           }
         },
-        "required": ["id", "sessionID", "command", "cwd", "ports", "status", "ready", "output", "time"],
+        "required": ["id", "sessionID", "command", "cwd", "ports", "status", "lifetime", "ready", "output", "time"],
+        "additionalProperties": false
+      },
+      "InteractiveTerminalInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "pid": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["running", "closed"]
+          },
+          "cols": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "rows": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "exitCode": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity", "-Infinity", "NaN"]
+              }
+            ]
+          },
+          "signal": {
+            "type": "string"
+          },
+          "closedBy": {
+            "type": "string",
+            "enum": ["exit", "user", "abort"]
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "started": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "updated": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ended": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["started", "updated"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "sessionID", "pid", "command", "cwd", "status", "cols", "rows", "time"],
         "additionalProperties": false
       },
       "SnapshotFileDiff": {
@@ -20765,6 +21190,15 @@
               },
               {
                 "$ref": "#/components/schemas/EventBackground_processDeleted"
+              },
+              {
+                "$ref": "#/components/schemas/EventInteractive_terminalUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventInteractive_terminalData"
+              },
+              {
+                "$ref": "#/components/schemas/EventInteractive_terminalDeleted"
               },
               {
                 "$ref": "#/components/schemas/EventSessionTurnOpen"
@@ -25248,6 +25682,48 @@
         "required": ["defaultModel", "models", "aliases"],
         "additionalProperties": false
       },
+      "InteractiveTerminalSnapshot": {
+        "type": "object",
+        "properties": {
+          "info": {
+            "$ref": "#/components/schemas/InteractiveTerminalInfo"
+          },
+          "output": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["info", "output", "cursor"],
+        "additionalProperties": false
+      },
+      "InteractiveTerminalWriteInput": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string"
+          }
+        },
+        "required": ["data"],
+        "additionalProperties": false
+      },
+      "InteractiveTerminalResizeInput": {
+        "type": "object",
+        "properties": {
+          "cols": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "rows": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": ["cols", "rows"],
+        "additionalProperties": false
+      },
       "effect_HttpApiError_Unauthorized": {
         "type": "object",
         "properties": {
@@ -28424,9 +28900,12 @@
             "properties": {
               "info": {
                 "$ref": "#/components/schemas/BackgroundProcessInfo"
+              },
+              "scope": {
+                "type": "string"
               }
             },
-            "required": ["info"],
+            "required": ["info", "scope"],
             "additionalProperties": false
           }
         },
@@ -28452,9 +28931,99 @@
               },
               "processID": {
                 "type": "string"
+              },
+              "scope": {
+                "type": "string"
               }
             },
-            "required": ["sessionID", "processID"],
+            "required": ["sessionID", "processID", "scope"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventInteractive_terminalUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["interactive_terminal.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "info": {
+                "$ref": "#/components/schemas/InteractiveTerminalInfo"
+              }
+            },
+            "required": ["info"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventInteractive_terminalData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["interactive_terminal.data"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "terminalID": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "data": {
+                "type": "string"
+              },
+              "cursor": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["terminalID", "sessionID", "data", "cursor"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventInteractive_terminalDeleted": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["interactive_terminal.deleted"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "terminalID": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              }
+            },
+            "required": ["terminalID", "sessionID"],
             "additionalProperties": false
           }
         },
@@ -32468,6 +33037,10 @@
     {
       "name": "indexing",
       "description": "Kilo indexing routes."
+    },
+    {
+      "name": "interactive-terminal",
+      "description": "Kilo human-driven interactive terminal routes."
     },
     {
       "name": "kilo",

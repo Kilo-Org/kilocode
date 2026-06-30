@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.3.54",
+  "version": "7.3.63",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -28,7 +28,7 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "bun test src",
-    "test:ci": "mkdir -p .artifacts/unit && bun test src --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
+    "test:ci": "mkdir -p .artifacts/unit && bun test src --dots --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "dev": "vite",
     "generate:tailwind": "bun run script/tailwind.ts"
   },
