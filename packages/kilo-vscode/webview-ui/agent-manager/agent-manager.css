@@ -2297,8 +2297,13 @@ body.am-wt-dragging-active * {
   color: var(--text-base);
 }
 
-.am-annotation-btn:hover {
+.am-annotation-btn:hover:not(:disabled) {
   background: var(--surface-interactive-base);
+}
+
+.am-annotation-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .am-annotation-btn-submit {
@@ -2308,7 +2313,7 @@ body.am-wt-dragging-active * {
   font-weight: 500;
 }
 
-.am-annotation-btn-submit:hover {
+.am-annotation-btn-submit:hover:not(:disabled) {
   background: var(--surface-interactive-strong-hover, var(--vscode-button-hoverBackground, #0066b8));
 }
 

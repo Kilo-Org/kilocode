@@ -1,5 +1,5 @@
 import { afterEach, describe, expect } from "bun:test"
-import { Effect, Exit, Fiber, Layer } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect" // kilocode_change - Cause/Deferred for resume-hint coverage
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "@/bus"
@@ -511,6 +511,7 @@ describe("tool.task", () => {
   // kilocode_change start - terminal child assistant errors fail the task tool boundary
   it.instance("execute fails when child prompt returns assistant error", () =>
     Effect.gen(function* () {
+      const sessions = yield* Session.Service
       const { chat, assistant } = yield* seed()
       const tool = yield* TaskTool
       const def = yield* tool.init()
@@ -552,6 +553,73 @@ describe("tool.task", () => {
         .pipe(Effect.exit)
 
       expect(Exit.isFailure(exit)).toBe(true)
+
+      // the failure surfaces the resumable task_id so the parent can continue the subagent (#11620)
+      const kids = yield* sessions.children(chat.id)
+      const childId = kids[0]?.id
+      expect(childId).toBeDefined()
+      const squashed = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+      const message = squashed instanceof Error ? squashed.message : String(squashed)
+      expect(message).toContain("child prompt failed")
+      expect(message).toContain(`task_id="${childId}"`)
+      expect(message).toContain("can be resumed")
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - background subagent failures also surface the resumable task_id (#11620)
+  background.instance("background task failure injects a resumable task_id into the parent", () =>
+    Effect.gen(function* () {
+      const jobs = yield* BackgroundJob.Service
+      const { chat, assistant } = yield* seed()
+      const tool = yield* TaskTool
+      const def = yield* tool.init()
+      const injected: SessionPrompt.PromptInput[] = []
+      const parentInjected = yield* Deferred.make<void>()
+
+      const result = yield* def.execute(
+        {
+          description: "inspect bug",
+          prompt: "look into the cache key path",
+          subagent_type: "general",
+          background: true,
+        },
+        {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: {
+            promptOps: {
+              ...stubOps(),
+              prompt: (input) => {
+                // The parent-session prompt is the injected background result; capture it.
+                if (input.sessionID === chat.id) {
+                  injected.push(input)
+                  return Effect.as(Deferred.succeed(parentInjected, undefined), reply(input, "ack"))
+                }
+                return Effect.die(new Error("child prompt failed and can be resumed later"))
+              },
+            } satisfies TaskPromptOps,
+          },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
+
+      const childId = result.metadata.sessionId
+      yield* jobs.wait({ id: childId, timeout: 1_000 })
+      // The parent-session injection is forked asynchronously; wait for it before asserting.
+      yield* Deferred.await(parentInjected).pipe(Effect.timeout("1 second"))
+
+      const text = injected
+        .flatMap((input) => input.parts ?? [])
+        .map((part) => (part.type === "text" ? part.text : ""))
+        .join("\n")
+      expect(text).toContain(`state="error"`)
+      expect(text).toContain(`task_id="${childId}"`)
+      expect(text).toContain("can be resumed")
     }),
   )
   // kilocode_change end
