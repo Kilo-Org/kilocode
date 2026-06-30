@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -11,6 +12,8 @@ import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import * as Network from "@/kilocode/sandbox/network"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
+import * as SandboxState from "@/kilocode/sandbox/state"
+import { SandboxStore } from "@/kilocode/sandbox/store"
 import { SessionID } from "@/session/schema"
 import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
@@ -103,6 +106,161 @@ posix("canonicalizes a symlinked policy state root", async () => {
   }
 })
 
+test("migrates directory snapshots into one conservative session snapshot", async () => {
+  const id = SessionID.make("ses_sandbox_directory_migration")
+  const hash = (value: string) => createHash("sha256").update(value).digest("hex")
+  const folder = path.join(SandboxStore.root, hash(id))
+  await SandboxStore.dispose(id)
+  await fs.mkdir(folder, { recursive: true })
+  await fs.writeFile(
+    path.join(folder, hash("/project/first") + ".json"),
+    JSON.stringify({ enabled: false, mode: "allow", version: 7 }),
+  )
+  await fs.writeFile(
+    path.join(folder, hash("/project/second") + ".json"),
+    JSON.stringify({ enabled: false, mode: "deny", version: 2 }),
+  )
+
+  try {
+    expect(await SandboxStore.read("/project/third", id, { enabled: true, version: 9 })).toEqual({
+      enabled: true,
+      mode: "deny",
+      version: 9,
+    })
+    expect(await fs.readdir(folder)).toEqual(["snapshot.json"])
+  } finally {
+    await SandboxStore.dispose(id)
+  }
+})
+
+posix("serializes policy toggles across backend processes", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-sandbox-process-toggle-"))
+  const directory = path.join(root, "project")
+  const start = path.join(root, "start")
+  const id = SessionID.make(`ses_sandbox_process_toggle_${randomUUID()}`)
+  const worker = path.join(import.meta.dir, "fixture", "policy-toggle-worker.ts")
+  const count = 4
+  const total = count * 4
+  const helper = path.join(root, "bwrap")
+  await fs.mkdir(directory)
+  if (process.platform === "linux") {
+    await fs.writeFile(helper, "#!/bin/sh\nexit 0\n")
+    await fs.chmod(helper, 0o755)
+  }
+  await SandboxStore.write(directory, id, { enabled: true, mode: "deny", version: 0 })
+
+  const procs = Array.from({ length: count }, (_, index) => {
+    const ready = path.join(root, `ready-${index}`)
+    const input = { sessionID: id, directory, ready, start, count: 4 }
+    return {
+      ready,
+      proc: Bun.spawn([process.execPath, "--conditions=browser", worker, JSON.stringify(input)], {
+        cwd: path.join(import.meta.dir, "../../.."),
+        env: {
+          ...process.env,
+          KILO_SERVER_PASSWORD: "sandbox-test",
+          ...(process.platform === "linux" ? { KILO_BWRAP_PATH: helper } : {}),
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+        windowsHide: true,
+      }),
+    }
+  })
+
+  const wait = async (file: string) => {
+    const timeout = Date.now() + 10_000
+    while (Date.now() < timeout) {
+      if (await Bun.file(file).exists()) return
+      await Bun.sleep(10)
+    }
+    throw new Error(`Timed out waiting for ${file}`)
+  }
+
+  try {
+    await Promise.all(procs.map((item) => wait(item.ready)))
+    await fs.writeFile(start, "go")
+    await Promise.all(
+      procs.map(async (item) => {
+        const [code, stderr] = await Promise.all([item.proc.exited, new Response(item.proc.stderr).text()])
+        expect(code, stderr).toBe(0)
+      }),
+    )
+    expect(await SandboxStore.current(id)).toEqual({ enabled: true, mode: "deny", version: total })
+  } finally {
+    for (const item of procs) item.proc.kill()
+    await SandboxStore.dispose(id)
+    await fs.rm(root, { recursive: true, force: true })
+  }
+})
+
+test("preserves concurrent unrelated metadata updates across processes", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-sandbox-metadata-process-"))
+  const db = path.join(root, "kilo.db")
+  const start = path.join(root, "start")
+  const read = path.join(root, "sandbox-read")
+  const done = path.join(root, "other-done")
+  const worker = path.join(import.meta.dir, "fixture", "metadata-worker.ts")
+  const id = `ses_sandbox_metadata_process_${randomUUID()}`
+  const env = { ...process.env, KILO_DB: db }
+  const run = (mode: string) =>
+    Bun.spawnSync([process.execPath, "--conditions=browser", worker, JSON.stringify({ mode, sessionID: id })], {
+      cwd: path.join(import.meta.dir, "../../.."),
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+      windowsHide: true,
+    })
+  const setup = run("setup")
+  expect(setup.exitCode, setup.stderr.toString()).toBe(0)
+
+  const count = 200
+  const spawn = (mode: "sandbox" | "other") => {
+    const ready = path.join(root, mode)
+    return {
+      ready,
+      proc: Bun.spawn(
+        [
+          process.execPath,
+          "--conditions=browser",
+          worker,
+          JSON.stringify({ mode, sessionID: id, ready, start, count, read, done }),
+        ],
+        { cwd: path.join(import.meta.dir, "../../.."), env, stdout: "pipe", stderr: "pipe", windowsHide: true },
+      ),
+    }
+  }
+  const procs = [spawn("sandbox"), spawn("other")]
+  const wait = async (file: string) => {
+    const timeout = Date.now() + 10_000
+    while (Date.now() < timeout) {
+      if (await Bun.file(file).exists()) return
+      await Bun.sleep(10)
+    }
+    throw new Error(`Timed out waiting for ${file}`)
+  }
+
+  try {
+    await Promise.all(procs.map((item) => wait(item.ready)))
+    await fs.writeFile(start, "go")
+    await Promise.all(
+      procs.map(async (item) => {
+        const [code, stderr] = await Promise.all([item.proc.exited, new Response(item.proc.stderr).text()])
+        expect(code, stderr).toBe(0)
+      }),
+    )
+
+    const result = run("read")
+    expect(result.exitCode, result.stderr.toString()).toBe(0)
+    const metadata = JSON.parse(result.stdout.toString().trim().split("\n").at(-1)!) as Record<string, unknown>
+    expect(SandboxState.parse(metadata)).toEqual({ enabled: false, version: count - 1 })
+    expect(Object.keys(metadata.other as object)).toHaveLength(count)
+  } finally {
+    for (const item of procs) item.proc.kill()
+    await fs.rm(root, { recursive: true, force: true })
+  }
+})
+
 linux("reports configured network namespace availability", async () => {
   const root = await fs.mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "kilo-sandbox-status-"))
   const helper = path.join(root, "bwrap-no-network")
@@ -119,18 +277,25 @@ linux("reports configured network namespace availability", async () => {
   )
   await fs.chmod(helper, 0o755)
   const script = [
-    'import { Effect, Layer } from "effect"',
+    'import { Effect, Exit, Layer } from "effect"',
+    'import { Bus } from "@/bus"',
     'import { Config } from "@/config/config"',
     'import { InstanceRef } from "@/effect/instance-ref"',
+    'import * as Network from "@/kilocode/sandbox/network"',
     'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
     'import { SessionID } from "@/session/schema"',
     "const directory = process.cwd()",
     'const context = { directory, worktree: directory, project: { id: "sandbox-status", worktree: directory, vcs: "git", time: { created: 0, updated: 0 }, sandboxes: [] } }',
-    "const status = (restrict) => SandboxPolicy.status(SessionID.make(`ses_sandbox_status_${restrict}`)).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ experimental: { sandbox: true, sandbox_restrict_network: restrict } }) })), Effect.provideService(InstanceRef, context), Effect.runPromise)",
-    "const deny = await status(true)",
-    "const allow = await status(false)",
+    "const provide = (effect, restrict) => effect.pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ experimental: { sandbox: true, sandbox_restrict_network: restrict } }) })), Effect.provide(Bus.layer), Effect.provideService(InstanceRef, context), Effect.runPromise)",
+    "const denyID = SessionID.make('ses_sandbox_status_true')",
+    "const deny = await provide(SandboxPolicy.status(denyID), true)",
+    "const allow = await provide(SandboxPolicy.status(SessionID.make('ses_sandbox_status_false')), false)",
+    "const blocked = await provide(SandboxPolicy.executeTool(denyID, Network.builtin({ id: 'read' }), Effect.succeed('unsafe')).pipe(Effect.exit), true)",
+    "const toggled = await provide(SandboxPolicy.toggle(denyID), true)",
     'if (deny.available || deny.enabled || !deny.reason?.includes("Linux network sandbox")) process.exit(2)',
     "if (!allow.available || !allow.enabled) process.exit(3)",
+    "if (Exit.isSuccess(blocked)) process.exit(4)",
+    "if (toggled.enabled || toggled.version !== 1) process.exit(5)",
   ].join("\n")
 
   try {
@@ -256,6 +421,18 @@ it.instance("isolates concurrent session overrides and clears them", () =>
     yield* SandboxPolicy.retire(first, (yield* TestInstance).directory, Effect.void)
     expect((yield* SandboxPolicy.status(first)).enabled).toBe(true)
     expect((yield* SandboxPolicy.status(second)).enabled).toBe(true)
+  }),
+)
+
+it.instance("refreshes policy written by another backend", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const id = SessionID.make("ses_sandbox_external_update")
+    yield* Effect.addFinalizer(() => Effect.promise(() => SandboxStore.dispose(id)))
+    yield* SandboxPolicy.status(id)
+    yield* Effect.promise(() => SandboxStore.write(test.directory, id, { enabled: false, mode: "deny", version: 8 }))
+
+    expect(yield* SandboxPolicy.status(id)).toMatchObject({ enabled: false, version: 8 })
   }),
 )
 

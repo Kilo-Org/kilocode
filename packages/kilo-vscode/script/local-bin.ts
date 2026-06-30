@@ -3,9 +3,7 @@ import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
 import {
-  copyKiloSandboxWorker,
-  copySandboxResources,
-  copyTreeSitterResources,
+  copyCliResources,
   hasKiloSandboxWorker,
   hasTreeSitterResources,
   kiloSandboxWorkerForBinary,
@@ -262,9 +260,7 @@ async function main() {
   if (!sourceBinPath) return
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
-  await copyTreeSitterResources(sourceBinPath, targetBinPath)
-  await copySandboxResources(sourceBinPath, targetBinPath)
-  await copyKiloSandboxWorker(sourceBinPath, targetBinPath)
+  await copyCliResources(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)
   await ensureLocalHelpers()
 
