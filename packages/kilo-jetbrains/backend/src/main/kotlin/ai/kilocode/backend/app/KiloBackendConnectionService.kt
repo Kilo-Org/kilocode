@@ -82,6 +82,7 @@ class KiloConnectionService(
         private const val HEARTBEAT_TIMEOUT_MS = 15_000L
         private const val HEALTH_POLL_INTERVAL_MS = 10_000L
         private const val RECONNECT_DELAY_MS = 250L
+        private const val SSE_CONNECT_TIMEOUT_MS = 5_000L
     }
 
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -118,6 +119,7 @@ class KiloConnectionService(
     private var healthJob: Job? = null
     private var processJob: Job? = null
     private var reconnectJob: Job? = null
+    private var timeoutJob: Job? = null
 
     /**
      * Open a connection to the CLI server.
@@ -168,6 +170,7 @@ class KiloConnectionService(
         heartbeatJob?.cancel()
         healthJob?.cancel()
         processJob?.cancel()
+        timeoutJob?.cancel()
         log.info("teardown: closing SSE event source")
         source.getAndSet(null)?.cancel()
         log.info("teardown: shutting down OkHttp clients")
@@ -183,6 +186,7 @@ class KiloConnectionService(
         close()
         processJob?.cancel()
         healthJob?.cancel()
+        timeoutJob?.cancel()
 
         setState(ConnectionState.Connecting)
 
@@ -233,13 +237,25 @@ class KiloConnectionService(
         // Reset heartbeat timestamp before connecting so the watcher
         // doesn't fire against a stale timestamp from the old connection.
         lastEvent.set(System.currentTimeMillis())
-        source.set(factory.newEventSource(request, listener))
+        val src = factory.newEventSource(request, listener)
+        source.set(src)
         log.info("SSE: connecting to port $port")
+        timeoutJob?.cancel()
+        timeoutJob = cs.launch {
+            delay(SSE_CONNECT_TIMEOUT_MS)
+            if (source.get() !== src) return@launch
+            if (_state.value !is ConnectionState.Connecting) return@launch
+            log.warn("SSE: connection timed out - scheduling reconnect")
+            source.getAndSet(null)?.cancel()
+            scheduleReconnect()
+        }
     }
 
     private val listener = object : EventSourceListener() {
         override fun onOpen(src: EventSource, response: Response) {
             if (source.get() !== src) return
+            if (response.request.url.port != port) return
+            timeoutJob?.cancel()
             log.info("SSE: connected")
             setState(ConnectionState.Connected(port, password))
             lastEvent.set(System.currentTimeMillis())
@@ -261,12 +277,14 @@ class KiloConnectionService(
 
         override fun onClosed(src: EventSource) {
             if (source.get() !== src) return
+            timeoutJob?.cancel()
             log.info("SSE: stream closed — scheduling reconnect")
             scheduleReconnect()
         }
 
         override fun onFailure(src: EventSource, t: Throwable?, response: Response?) {
             if (source.get() !== src) return
+            timeoutJob?.cancel()
             val raw = response?.body?.string()?.trim()?.ifEmpty { null }
             val body = raw?.let { ChatLogSummary.body(it) }
             val detail = t?.stackTraceToString() ?: body
@@ -383,6 +401,7 @@ class KiloConnectionService(
         healthJob?.cancel()
         processJob?.cancel()
         reconnectJob?.cancel()
+        timeoutJob?.cancel()
         eventJob.cancel()
         queue.close()
         close()

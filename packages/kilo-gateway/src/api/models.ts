@@ -38,6 +38,12 @@ const openRouterModelSchema = z.object({
   isFree: z.boolean().optional(),
   mayTrainOnYourPrompts: z.boolean().optional(),
   hasUserByokAvailable: z.boolean().optional(),
+  autoRouting: z
+    .object({
+      models: z.array(z.string()),
+    })
+    .optional()
+    .catch(undefined),
   terminalBench: z
     .object({
       overallScore: z.number(),
@@ -245,6 +251,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
     isFree: model.isFree,
     mayTrainOnYourPrompts: model.mayTrainOnYourPrompts,
     hasUserByokAvailable: model.hasUserByokAvailable,
+    ...(model.autoRouting && { autoRouting: model.autoRouting }),
     ...(model.terminalBench && { terminalBench: model.terminalBench }),
     ...(inputPrice !== undefined &&
       outputPrice !== undefined && {

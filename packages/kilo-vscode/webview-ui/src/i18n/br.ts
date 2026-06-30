@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Conectar Anaconda Desktop",
+  "provider.anaconda.title.manage": "Gerenciar Anaconda Desktop",
+  "provider.anaconda.status.checking": "Verificando Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Abrindo Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Atualizando modelos do provedor...",
+  "provider.anaconda.status.ready": "Pronto para conectar",
+  "provider.anaconda.status.waiting": "Aguardando o Desktop",
+  "provider.anaconda.status.attention": "Precisa de atenção",
+  "provider.anaconda.status.unavailable": "Indisponível",
+  "provider.anaconda.state.unsupported": "O Anaconda Desktop não é compatível com {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Instale o Anaconda Desktop nesta máquina e depois volte aqui. O Kilo não executa o instalador para você.",
+  "provider.anaconda.state.notRunning":
+    "Abra o Anaconda Desktop, conclua a configuração e faça login, depois escolha Verificar novamente.",
+  "provider.anaconda.state.invalidConfig":
+    "A configuração do Anaconda Desktop está incompleta. Abra o Desktop, conclua a configuração e reinicie-o se necessário.",
+  "provider.anaconda.state.signedOut": "Abra o Anaconda Desktop e faça login antes de conectar o Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "O Kilo não conseguiu acessar o Anaconda Desktop. Abra o Desktop, faça login novamente e reinicie-o se necessário.",
+  "provider.anaconda.state.unavailable":
+    "O Anaconda Desktop ainda não está respondendo. Abra-o e aguarde o aplicativo terminar de iniciar.",
+  "provider.anaconda.state.noModel":
+    "No Anaconda Desktop, baixe um modelo de geração de texto. Escolha um com chamadas de ferramentas quando possível, depois inicie o servidor dele.",
+  "provider.anaconda.state.noServer_one":
+    "Há 1 modelo de geração de texto baixado disponível. No Anaconda Desktop, inicie um servidor de modelo. Modelos com suporte a chamadas de ferramentas são altamente recomendados.",
+  "provider.anaconda.state.noServer_other":
+    "Há {{count}} modelos de geração de texto baixados disponíveis. No Anaconda Desktop, inicie um servidor de modelo. Modelos com suporte a chamadas de ferramentas são altamente recomendados.",
+  "provider.anaconda.state.unhealthy":
+    "O servidor de inferência ativo ainda não está saudável. Verifique-o no Anaconda Desktop e reinicie o servidor se necessário.",
+  "provider.anaconda.state.ready":
+    "O Kilo encontrou um servidor local saudável de geração de texto e pode importar suas configurações de conexão atuais.",
+  "provider.anaconda.server": "Servidor de inferência ativo",
+  "provider.anaconda.context": "Janela de contexto",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Chamadas de ferramentas",
+  "provider.anaconda.tools.supported": "Compatível",
+  "provider.anaconda.tools.unsupported": "Não habilitado",
+  "provider.anaconda.tools.unknown": "Desconhecido",
+  "provider.anaconda.warning.title": "O suporte a ferramentas é limitado",
+  "provider.anaconda.warning.description":
+    "Este servidor não confirma chamadas de ferramentas. Ações do agente de código podem falhar ou ficar indisponíveis. Continue apenas se você aceitar essas limitações.",
+  "provider.anaconda.action.download": "Baixar Anaconda Desktop",
+  "provider.anaconda.action.open": "Abrir Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Verificar novamente",
+  "provider.anaconda.action.continue": "Continuar mesmo assim",
+  "provider.anaconda.action.manage": "Gerenciar / Atualizar",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop atualizado",
+  "provider.anaconda.toast.refreshed.description": "O servidor local ativo e os modelos estão atualizados no Kilo.",
+  "settings.providers.note.anacondaDesktop": "Execute um modelo servido localmente pelo Anaconda Desktop.",
+  "settings.providers.tag.local": "Local",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Sugerido",
   "command.category.view": "Visualizar",
   "command.category.project": "Projeto",
@@ -94,6 +148,30 @@ export const dict = {
   "command.session.unshare.description": "Parar de compartilhar esta sessão",
   "command.session.export": "Exportar transcrição da sessão",
 
+  "agentRequirements.skill.installed": "Instalado",
+  "agentRequirements.skill.checkFailed": "A verificação da skill falhou",
+  "agentRequirements.skill.missing": "Não instalado",
+  "agentRequirements.mcp.connected": "Conectado",
+  "agentRequirements.mcp.checkFailed": "A verificação do MCP falhou",
+  "agentRequirements.mcp.missing": "Não conectado",
+  "agentRequirements.extension.installed": "Instalada",
+  "agentRequirements.extension.checkFailed": "A verificação da extensão do VS Code falhou",
+  "agentRequirements.extension.missing": "Não instalada",
+  "agentRequirements.extension.description": "Instale as extensões ausentes no VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCPs",
+  "agentRequirements.group.extensions": "Extensões do VS Code",
+  "agentRequirements.blocked.title": "Pré-requisitos do agente {{agent}}",
+  "agentRequirements.blocked.description": "Este agente precisa das seguintes ferramentas antes de poder executar.",
+  "agentRequirements.prompt.blocked": "Conclua primeiro as verificações necessárias para usar este agente",
+  "agentRequirements.action.openMarketplace": "Abrir Marketplace",
+  "agentRequirements.error.unknownAgent": "O agente selecionado não foi encontrado.",
+  "agentRequirements.error.malformedDeclaration": "Este agente tem uma declaração de requisitos inválida.",
+  "agentRequirements.error.discoveryFailed": "O Kilo não conseguiu verificar as skills disponíveis.",
+  "agentRequirements.error.mcpStatusFailed": "O Kilo não conseguiu verificar o status do servidor MCP.",
+  "agentRequirements.error.scopeMismatch": "Esta verificação de requisitos do agente não está mais ativa.",
+  "agentRequirements.error.requestFailed": "O Kilo não conseguiu verificar os requisitos do agente.",
+
   "palette.search.placeholder": "Buscar arquivos, comandos e sessões",
   "palette.empty": "Nenhum resultado encontrado",
   "palette.group.commands": "Comandos",
@@ -174,6 +252,7 @@ export const dict = {
   "model.tag.free": "Grátis",
   "model.tag.dataCollected": "Os dados podem ser usados para treinamento",
   "model.tag.latest": "Mais recente",
+  "model.group.auto": "Modelos automáticos",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
   "model.group.collapse": "Recolher {{group}}",
@@ -201,6 +280,7 @@ export const dict = {
   "model.preview.label.average": "Custo Médio Est.",
   "model.preview.label.context": "Contexto",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Opções de modelo",
   "model.preview.label.completion": "Conclusão",
   "model.preview.label.costAttempt": "Custo / tentativa",
   "model.preview.value.notSupported": "Não suportado",

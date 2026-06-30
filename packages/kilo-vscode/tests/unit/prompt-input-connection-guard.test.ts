@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
 const path = join(__dirname, "..", "..", "webview-ui", "src", "components", "chat", "PromptInput.tsx")
-const src = readFileSync(path, "utf8")
+const buttonPath = join(__dirname, "..", "..", "webview-ui", "src", "components", "shared", "SandboxButton.tsx")
 const iconPath = join(__dirname, "..", "..", "..", "kilo-ui", "src", "components", "icon.tsx")
+const src = readFileSync(path, "utf8")
+const button = readFileSync(buttonPath, "utf8")
 const icons = readFileSync(iconPath, "utf8")
 
 describe("PromptInput connection guard", () => {
@@ -22,7 +24,7 @@ describe("PromptInput connection guard", () => {
 })
 
 describe("PromptInput sandbox toggle", () => {
-  it("toggles or creates the runtime session instead of writing config", () => {
+  it("updates the default for drafts and toggles only existing sessions", () => {
     const start = src.indexOf("const toggleSandbox = () =>")
     const end = src.indexOf("let enhanceCounter", start)
     const toggle = src.slice(start, end)
@@ -33,10 +35,14 @@ describe("PromptInput sandbox toggle", () => {
     expect(toggle).toContain("!sandboxVisible()")
     expect(toggle).toContain("if (!sessionID) saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())")
     expect(toggle).toContain('type: "toggleSandbox"')
+    expect(toggle).toContain('type: "setSandboxDefault"')
+    expect(toggle).toContain("enabled: !sandboxDefault()!.desired")
+    expect(toggle).toContain("agentManagerContext: ctx()")
     expect(toggle).toContain("sessionID,")
-    expect(toggle).toContain("draftID: props.pendingSessionID ?? session.draftSessionID()")
     expect(toggle).toContain("requestID,")
-    expect(toggle).toContain("setSandboxTarget(sessionID ?? null)")
+    expect(toggle).not.toContain("draftID:")
+    expect(toggle).toContain('setSandboxRequests((current) => ({ ...current, [sessionID ?? ""]: requestID }))')
+    expect(toggle).not.toContain("setSandboxTarget")
     expect(toggle).not.toContain('type: "updateConfig"')
   })
 
@@ -53,26 +59,53 @@ describe("PromptInput sandbox toggle", () => {
     expect(end).toBeGreaterThan(start)
     expect(save).toBeGreaterThan(-1)
     expect(move).toBeGreaterThan(save)
+    expect(created).toContain("{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls }")
   })
 
-  it("requires the enabled experiment for visibility and uses effective runtime state for the button", () => {
+  it("restores each prompt draft's textarea and highlight scroll positions", () => {
+    expect(src).toContain("const scrolls = new Map<string, number>()")
+    expect(src).toContain("const scroll = scrolls.get(key) ?? 0")
+    expect(src).toContain("textareaRef.scrollTop = scroll")
+    expect(src).toContain("if (highlightRef) highlightRef.scrollTop = scroll")
+    expect(src).toContain("scrolls.set(draftKey(), textareaRef.scrollTop)")
+    expect(src).toContain("images: imageAttach.images(),\n    scroll: textareaRef?.scrollTop")
+    expect(src).toContain("draft.text, draft.comments, draft.images, draft.scroll")
+  })
+
+  it("tracks in-flight toggles per session while switching", () => {
+    expect(src).toContain("const [sandboxRequests, setSandboxRequests] = createSignal<Record<string, string>>({})")
+    expect(src).toContain('const sandboxRequest = (sessionID?: string) => sandboxRequests()[sessionID ?? ""]')
+    expect(src).toContain("sandboxRequest(sandboxID()) !== undefined")
+    expect(src).toContain("if (current[key] !== requestID) return current")
+    expect(src).toContain("clearSandboxRequest(message.sessionID, message.requestID!)")
+    expect(src).not.toContain("setSandboxTarget")
+  })
+
+  it("keeps persisted sandbox state visible independently of the configured default", () => {
     expect(src).toContain(
-      'return features().sandboxControls && config().experimental?.sandbox === true && !id?.startsWith("cloud:")',
+      'const sandboxVisible = () => features().sandboxControls && !session.currentSessionID()?.startsWith("cloud:")',
     )
+    expect(src).not.toContain("config().experimental?.sandbox === true")
     expect(src).toContain("<Show when={sandboxVisible()}>")
     expect(src).toContain("{ action: toggleSandbox, enabled: () => sandboxVisible() && !sandboxDisabled() }")
     expect(src).toContain('if (!sandboxVisible()) hidden.add("sandbox")')
-    expect(src).toContain("onClick={toggleSandbox}")
+    expect(src).toContain("onToggle={toggleSandbox}")
     expect(src).toContain('message.type === "sandboxStatus"')
-    expect(src).toContain("message.sessionID !== sandboxID() && !matching")
-    expect(src).toContain("setSandboxState(state)")
-    expect(src).toContain("message.requestID === sandboxRequest()")
-    expect(src).toContain("const target = untrack(sandboxTarget)")
-    expect(src).toContain("if (target && target !== sessionID) clearSandboxRequest()")
-    expect(src).toContain("sandbox()?.enabled ?? (!sandboxID() && config().experimental?.sandbox === true)")
-    expect(src).toContain("aria-pressed={sandboxEnabled()}")
+    expect(src).not.toContain("message.sessionID !== sandboxID() && !matching")
+    expect(src).toContain("const next = applySandboxStates(current, message)")
+    expect(src).toContain("if (next !== current) setSandboxes(next)")
+    expect(src).toContain("message.requestID === sandboxRequest(message.sessionID)")
+    expect(src).toContain("if (message.sessionID === sandboxID())")
+    expect(src).toContain("if (message.sessionID === sandboxID()) retrySandbox(message.sessionID)")
+    expect(src).toContain("sandboxID() ? sandbox()?.enabled : sandboxDefault()?.enabled")
+    expect(src).toContain('type: "requestSandboxDefault", agentManagerContext: ctx()')
+    expect(src).toContain("<SandboxButtonBase")
+    expect(src).toContain("enabled={sandboxEnabled()}")
+    expect(src).toContain("available={sandboxReady() ? sandboxAvailable() : undefined}")
     expect(src).toContain("!sandboxReady()")
-    expect(src).toContain("if (sandboxRequest() && target === null) return")
+    expect(button).toContain("aria-pressed={props.enabled}")
+    expect(button).toContain('class={`prompt-status-button ${props.enabled ? "prompt-status-button--active" : ""}`}')
+    expect(src).toContain("if (sandboxRequest(undefined)) return")
     expect(src).not.toContain("if (state === current) return true")
   })
 
@@ -91,13 +124,14 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain(
       "const sandboxNetworkEnabled = () => config().experimental?.sandbox_restrict_network !== false",
     )
-    expect(src).toContain('<Icon name="lock" size="small" />')
     expect(src).toContain("<SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />")
-    expect(src).toContain('<Icon name="folder" size="small" />')
-    expect(src).toContain('<Icon name="globe" size="small" />')
-    expect(src).toContain("props.enabled && props.network")
-    expect(src).not.toContain('class="prompt-sandbox-network"')
-    expect(src).not.toContain('class="prompt-sandbox-icon"')
+    expect(src).toContain('tooltipClass="prompt-sandbox-tooltip-content"')
+    expect(button).toContain('<Icon name="lock" size="small" />')
+    expect(button).toContain('<Icon name="folder" size="small" />')
+    expect(button).toContain('<Icon name="globe" size="small" />')
+    expect(button).toContain("props.enabled && props.network")
+    expect(button).not.toContain('class="prompt-sandbox-network"')
+    expect(button).not.toContain('class="prompt-sandbox-icon"')
     expect(icons).toContain("globe: {")
   })
 })

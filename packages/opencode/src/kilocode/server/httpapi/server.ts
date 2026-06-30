@@ -5,13 +5,16 @@ import { compressionLayer } from "@/server/routes/instance/httpapi/middleware/co
 import { corsVaryFix } from "@/server/routes/instance/httpapi/middleware/cors-vary"
 import { errorLayer } from "@/server/routes/instance/httpapi/middleware/error"
 import { fenceLayer } from "@/server/routes/instance/httpapi/middleware/fence"
+import * as AnacondaDesktop from "@/kilocode/anaconda-desktop/service"
 
 import { agentBuilderHandlers } from "./handlers/agent-builder"
+import { anacondaDesktopHandlers } from "./handlers/anaconda-desktop"
 import { backgroundProcessHandlers } from "./handlers/background-process"
 import { commitMessageHandlers } from "./handlers/commit-message"
 import { configConsoleHandlers } from "./handlers/config-console"
 import { enhancePromptHandlers } from "./handlers/enhance-prompt"
 import { indexingHandlers } from "./handlers/indexing"
+import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
 import { networkHandlers } from "./handlers/network"
@@ -23,11 +26,13 @@ import { telemetryHandlers } from "./handlers/telemetry"
 
 export const provide = Layer.provide([
   agentBuilderHandlers,
+  anacondaDesktopHandlers.pipe(Layer.provide(AnacondaDesktop.liveLayer)),
   backgroundProcessHandlers,
   commitMessageHandlers,
   configConsoleHandlers,
   enhancePromptHandlers,
   indexingHandlers,
+  interactiveTerminalHandlers,
   kiloGatewayHandlers,
   kilocodeHandlers,
   networkHandlers,

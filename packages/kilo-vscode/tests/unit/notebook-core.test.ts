@@ -65,12 +65,22 @@ function notebook(cells: vscode.NotebookCell[], file = "/repo/book.ipynb"): vsco
 function harness(document: vscode.NotebookDocument, cells: vscode.NotebookCell[]) {
   const changes = new Set<(event: vscode.NotebookDocumentChangeEvent) => void>()
   const closes = new Set<(document: vscode.NotebookDocument) => void>()
-  const calls = { open: 0, apply: 0, command: 0, commandArgs: [] as unknown[], edit: undefined as unknown }
+  const calls = {
+    open: 0,
+    apply: 0,
+    command: 0,
+    commandArgs: [] as unknown[],
+    edit: undefined as unknown,
+    write: [] as Array<{ uri: vscode.Uri; content: Uint8Array }>,
+  }
   const deps: NotebookAdapterDeps = {
     documents: () => [document],
     open: async () => {
       calls.open++
       return document
+    },
+    write: async (uri, content) => {
+      calls.write.push({ uri, content })
     },
     apply: async (edit) => {
       calls.apply++
@@ -119,12 +129,12 @@ function harness(document: vscode.NotebookDocument, cells: vscode.NotebookCell[]
 const paths = { realpath: async (value: string) => value }
 const access = { validateAccess: mock(() => true) }
 
-function adapter(items: ReturnType<typeof cell>[], file = "/repo/book.ipynb") {
+function adapter(items: ReturnType<typeof cell>[], file = "/repo/book.ipynb", resolver = paths) {
   const cells = items.map((item) => item.value)
   const document = notebook(cells, file)
   const ctx = harness(document, cells)
   return {
-    adapter: new NotebookAdapter(access, { deps: ctx.deps, paths, timeout: 50 }),
+    adapter: new NotebookAdapter(access, { deps: ctx.deps, paths: resolver, timeout: 50 }),
     document,
     cells,
     ...ctx,
@@ -465,5 +475,66 @@ describe("notebook adapter", () => {
       "notebook.cell.cancelExecution",
       { ranges: [{ start: 0, end: 1 }], document: ctx.document.uri },
     ])
+  })
+})
+
+describe("notebook create", () => {
+  // The new file must not resolve (it does not exist), but its parent directory must.
+  const creating = {
+    realpath: async (value: string) => (value.endsWith("fresh.ipynb") ? Promise.reject(new Error("ENOENT")) : value),
+  }
+
+  it("writes a minimal empty .ipynb, opens it, and returns the initial revision", async () => {
+    const ctx = adapter([], "/repo/fresh.ipynb", creating)
+    const result = await ctx.adapter.edit({
+      directory: "/repo",
+      path: "fresh.ipynb",
+      index: 0,
+      edit: { action: "create" },
+    })
+    expect(result).toMatchObject({ operation: "edit", action: "create", path: "fresh.ipynb", index: 0 })
+    expect(result.revision).toContain("content:")
+    expect(ctx.calls.write).toHaveLength(1)
+    expect(ctx.calls.open).toBe(1)
+    const written = JSON.parse(new TextDecoder().decode(ctx.calls.write[0]!.content))
+    expect(written).toMatchObject({ cells: [], nbformat: 4 })
+  })
+
+  it("rejects creating a notebook that already exists", async () => {
+    const ctx = adapter([cell()], "/repo/book.ipynb")
+    await expect(
+      ctx.adapter.edit({ directory: "/repo", path: "book.ipynb", index: 0, edit: { action: "create" } }),
+    ).rejects.toMatchObject({ code: "already_exists", path: "book.ipynb" })
+    expect(ctx.calls.write).toHaveLength(0)
+  })
+
+  it("rejects a missing parent directory with not_found", async () => {
+    const missing = {
+      realpath: async (value: string) => (value === "/repo" ? value : Promise.reject(new Error("ENOENT"))),
+    }
+    const ctx = adapter([], "/repo/missing/fresh.ipynb", missing)
+    await expect(
+      ctx.adapter.edit({ directory: "/repo", path: "missing/fresh.ipynb", index: 0, edit: { action: "create" } }),
+    ).rejects.toMatchObject({ code: "not_found" })
+    expect(ctx.calls.write).toHaveLength(0)
+  })
+
+  it("rejects non-.ipynb create targets", async () => {
+    const ctx = adapter([], "/repo/notes.txt", creating)
+    await expect(
+      ctx.adapter.edit({ directory: "/repo", path: "notes.txt", index: 0, edit: { action: "create" } }),
+    ).rejects.toMatchObject({ code: "invalid_path" })
+    expect(ctx.calls.write).toHaveLength(0)
+  })
+
+  it("rejects create targets excluded by access rules", async () => {
+    const guard = { validateAccess: mock(() => false) }
+    const document = notebook([], "/repo/fresh.ipynb")
+    const ctx = harness(document, [])
+    const core = new NotebookAdapter(guard, { deps: ctx.deps, paths: creating, timeout: 50 })
+    await expect(
+      core.edit({ directory: "/repo", path: "fresh.ipynb", index: 0, edit: { action: "create" } }),
+    ).rejects.toMatchObject({ code: "invalid_path" })
+    expect(ctx.calls.write).toHaveLength(0)
   })
 })

@@ -30,12 +30,7 @@ export const GettingStartedNav: NavSection[] = [
         children: "Settings",
         subLinks: [
           { href: "/getting-started/settings/auto-approving-actions", children: "Auto-Approving Actions" },
-          { href: "/getting-started/settings/auto-cleanup", children: "Auto Cleanup", platform: "legacy" },
-          {
-            href: "/getting-started/settings/system-notifications",
-            children: "System Notifications",
-            platform: "legacy",
-          },
+          { href: "/getting-started/settings/sandboxing", children: "Sandboxing" },
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
@@ -54,7 +49,6 @@ export const GettingStartedNav: NavSection[] = [
           { href: "/getting-started/faq/setup-and-installation", children: "Setup and Installation" },
           { href: "/getting-started/faq/credits-and-billing", children: "Credits and Billing" },
           { href: "/getting-started/faq/account-and-integration", children: "Account and Integration" },
-          { href: "/getting-started/faq/known-issues", children: "Known Issues" },
         ],
       },
       {

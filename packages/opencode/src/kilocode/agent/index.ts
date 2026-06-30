@@ -264,14 +264,26 @@ export function preprocessConfig<T>(agentConfig: Record<string, T>): Record<stri
   return result
 }
 
-// Set displayName and deprecated from options after config item is processed.
+// Lift Kilo-internal metadata onto typed agent fields and remove it from `options`.
+// Older org modes and marketplace agents stored `displayName`/`source` inside the
+// `options` record, which is otherwise forwarded verbatim to the provider as request
+// parameters. Promoting then deleting them keeps `options` provider-clean at the source
+// (the request boundary still strips as a safety net).
 export function processConfigItem(item: {
   options: Record<string, unknown>
   displayName?: string
+  source?: string
   deprecated?: boolean
 }) {
-  if (item.options?.displayName && typeof item.options.displayName === "string") {
+  if (!item.displayName && typeof item.options?.displayName === "string") {
     item.displayName = item.options.displayName
+  }
+  if (!item.source && typeof item.options?.source === "string") {
+    item.source = item.options.source
+  }
+  if (item.options) {
+    delete item.options.displayName
+    delete item.options.source
   }
 }
 
@@ -319,6 +331,7 @@ export function patchAgents(
     {
       name: string
       displayName?: string
+      source?: string
       description?: string
       deprecated?: boolean
       mode: "subagent" | "primary" | "all"
@@ -495,7 +508,7 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
   if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
   if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents
-  if (input.agent.options?.source === "organization")
+  if (input.agent.source === "organization" || input.agent.options?.source === "organization")
     throw new RemoveError({
       name: input.name,
       message: "cannot remove organization agent — manage it from the cloud dashboard",

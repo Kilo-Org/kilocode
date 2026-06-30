@@ -72,12 +72,15 @@ const CellEdit = {
 export const EditRequest = Schema.Struct({
   ...Base,
   operation: Schema.Literal("edit"),
-  expectedRevision: Revision,
+  expectedRevision: Schema.optional(Revision).annotate({
+    description: "Required for insert, replace, and delete; omitted for create, which has no prior revision",
+  }),
   index: Index,
   edit: Schema.Union([
     Schema.Struct({ action: Schema.Literal("insert"), ...CellEdit }),
     Schema.Struct({ action: Schema.Literal("replace"), ...CellEdit }),
     Schema.Struct({ action: Schema.Literal("delete") }),
+    Schema.Struct({ action: Schema.Literal("create") }),
   ]),
 }).annotate({ identifier: "NotebookEditRequest" })
 
@@ -114,7 +117,7 @@ export const EditResult = Schema.Struct({
   requestPath: Path,
   revision: Revision,
   index: Index,
-  action: Schema.Literals(["insert", "replace", "delete"]),
+  action: Schema.Literals(["insert", "replace", "delete", "create"]),
   cell: Schema.optional(Cell),
 }).annotate({ identifier: "NotebookEditResult" })
 
@@ -141,6 +144,7 @@ export const Result = Schema.Union([ReadResult, EditResult, ExecuteResult]).anno
 export type Result = Schema.Schema.Type<typeof Result>
 
 export const ErrorCode = Schema.Literals([
+  "already_exists",
   "cancelled",
   "closed",
   "disconnected",

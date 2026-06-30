@@ -1078,7 +1078,7 @@
     "check-kilocode-change": "! grep -rIn 'kilocode_change' . ../kilo-ui/ --exclude='package.json' --exclude='*.md' --exclude-dir='node_modules' --exclude-dir='dist' | grep -v '`kilocode_change`'",
     "lint": "eslint src webview-ui",
     "test": "vscode-test",
-    "test:unit": "bun test tests/unit/",
+    "test:unit": "bun test tests/unit/ --dots",
     "rebuild-sdk": "bun run --cwd ../sdk/js build",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build -o storybook-static",

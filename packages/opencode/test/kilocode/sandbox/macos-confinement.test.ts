@@ -226,6 +226,38 @@ describe.skipIf(process.platform !== "darwin").serial("real macOS sandbox confin
     ),
   )
 
+  it.live("protects denied policy state while sibling state remains writable", () =>
+    provideTmpdirInstance((dir) =>
+      Effect.gen(function* () {
+        const proc = yield* AppProcess.Service
+        const state = path.join(dir, "state")
+        const store = path.join(dir, "policy")
+        const moved = path.join(state, "moved")
+        const sibling = path.join(state, "sibling.txt")
+        yield* Effect.promise(() => Promise.all([fs.mkdir(state), fs.mkdir(store)]))
+        const base = profile(dir)
+        const policy: Profile = {
+          ...base,
+          filesystem: {
+            ...base.filesystem,
+            allowWrite: [{ path: state, kind: "subtree" }],
+            denyWrite: [{ path: store, kind: "subtree" }],
+          },
+        }
+        const write = yield* sandbox(
+          policy,
+          proc.run(ChildProcess.make("/bin/sh", ["-c", `printf allowed > ${JSON.stringify(sibling)}`])),
+        )
+        const rename = yield* sandbox(policy, proc.run(ChildProcess.make("/bin/mv", [store, moved])))
+
+        expect(write.exitCode).toBe(0)
+        expect(rename.exitCode).not.toBe(0)
+        expect(yield* Effect.promise(() => fs.readFile(sibling, "utf8"))).toBe("allowed")
+        expect(yield* Effect.promise(() => fs.stat(store).then((entry) => entry.isDirectory()))).toBe(true)
+      }),
+    ),
+  )
+
   it.live("keeps permission approval and denial independent from confinement", () =>
     provideTmpdirInstance((dir) =>
       Effect.acquireUseRelease(

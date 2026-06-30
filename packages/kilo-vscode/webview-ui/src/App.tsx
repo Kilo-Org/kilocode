@@ -19,6 +19,7 @@ import { ConfigProvider } from "./context/config"
 import { DisplayProvider } from "./context/display"
 import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
+import { AgentRequirementsProvider } from "./context/agent-requirements"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
@@ -150,6 +151,35 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openContent", content, language })
   }
 
+  // File existence validation for code span candidates
+  const pending = new Map<string, (existing: string[]) => void>()
+  const counter = { n: 0 }
+  const validateFiles = (paths: string[]): Promise<string[]> => {
+    const id = `vf-${++counter.n}`
+    return new Promise((resolve) => {
+      pending.set(id, resolve)
+      vscode.postMessage({ type: "validateFiles", id, paths })
+      setTimeout(() => {
+        if (pending.has(id)) {
+          pending.delete(id)
+          resolve([])
+        }
+      }, 3000)
+    })
+  }
+  const handler = (event: MessageEvent) => {
+    const msg = event.data
+    if (msg?.type === "validateFilesResult" && msg.id) {
+      const cb = pending.get(msg.id)
+      if (cb) {
+        pending.delete(msg.id)
+        cb(msg.existing ?? [])
+      }
+    }
+  }
+  onMount(() => window.addEventListener("message", handler))
+  onCleanup(() => window.removeEventListener("message", handler))
+
   const directory = () => {
     const dir = server.workspaceDirectory()
     if (!dir) return ""
@@ -168,6 +198,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onOpenDiff={openDiff}
       onOpenUrl={openUrl}
       onOpenContent={openContent}
+      onValidateFiles={validateFiles}
     >
       {props.children}
     </DataProvider>
@@ -386,11 +417,13 @@ const App: Component = () => {
                                   <ImageModelsProvider>
                                     <NotificationsProvider>
                                       <SessionProvider>
-                                        <FeedbackProvider>
-                                          <DataBridge>
-                                            <AppContent />
-                                          </DataBridge>
-                                        </FeedbackProvider>
+                                        <AgentRequirementsProvider>
+                                          <FeedbackProvider>
+                                            <DataBridge>
+                                              <AppContent />
+                                            </DataBridge>
+                                          </FeedbackProvider>
+                                        </AgentRequirementsProvider>
                                       </SessionProvider>
                                     </NotificationsProvider>
                                   </ImageModelsProvider>
