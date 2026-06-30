@@ -150,22 +150,67 @@ describe("CLI worktree mode", () => {
     }
   })
 
+  test("worktree mode reports staged shared source edits", () => {
+    const root = repo()
+    try {
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 4\n")
+      exec(root, ["add", "packages/opencode/src/shared.ts"])
+
+      const local = check(root, ["--worktree"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("packages/opencode/src/shared.ts:1")
+      expect(local.stderr).toContain("export const value = 4")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
   test("worktree mode checks local edits on upstream merge branches", () => {
     const root = repo()
     try {
-      mkdirSync(path.join(root, "packages/opencode/src/kilocode"), { recursive: true })
       exec(root, ["checkout", "-B", "upstream"])
-      writeFileSync(path.join(root, "packages/opencode/src/kilocode/upstream.ts"), "export const upstream = true\n")
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 2\n")
       exec(root, ["add", "."])
       exec(root, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "upstream"])
       exec(root, ["checkout", "main"])
       exec(root, ["merge", "--no-ff", "-m", "Merge: upstream opencode", "upstream"])
+
+      const head = check(root)
+      expect(head.status).toBe(0)
+      expect(head.stdout).toContain("Skipping shared upstream annotation check")
+
+      const upstream = check(root, ["--worktree"])
+      expect(upstream.status).toBe(0)
+      expect(upstream.stdout).toContain("No shared upstream source files changed")
+
       writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 3\n")
 
       const local = check(root, ["--worktree"])
       expect(local.status).toBe(1)
       expect(local.stderr).toContain("packages/opencode/src/shared.ts:1")
       expect(local.stderr).toContain("export const value = 3")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("worktree mode rejects base refs", () => {
+    const root = repo()
+    try {
+      const local = check(root, ["--worktree", "--base", "origin/main"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("--base cannot be used with --worktree")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("unknown arguments fail instead of falling back to default mode", () => {
+    const root = repo()
+    try {
+      const local = check(root, ["--worktre"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("Unknown argument: --worktre")
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

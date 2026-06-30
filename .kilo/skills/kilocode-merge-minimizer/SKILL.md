@@ -100,10 +100,10 @@ After editing shared files or marker comments, run:
 bun run script/check-opencode-annotations.ts --worktree
 ```
 
-If the PR uses a non-default comparison base, pass the correct base ref:
+If checking committed PR changes against a non-default comparison base, pass the correct base ref without `--worktree`:
 
 ```bash
-bun run script/check-opencode-annotations.ts --worktree --base <base-ref>
+bun run script/check-opencode-annotations.ts --base <base-ref>
 ```
 
 For stale or broad markers in one shared file, inspect the dry run before applying:

@@ -7,7 +7,7 @@
  * Usage:
  *   bun run script/check-opencode-annotations.ts                  # diff origin/main...HEAD
  *   bun run script/check-opencode-annotations.ts --base <ref>     # diff <ref>...HEAD
- *   bun run script/check-opencode-annotations.ts --worktree       # diff merge-base(origin/main, HEAD)..worktree
+ *   bun run script/check-opencode-annotations.ts --worktree       # diff HEAD..worktree plus untracked files
  *
  * A line is "covered" if it:
  *   - contains a kilocode_change marker comment           (inline annotation)
@@ -55,7 +55,17 @@ const EXEMPT_SCOPES = [
 ]
 
 const args = process.argv.slice(2)
+const unknown = args.find((arg, i) => arg !== "--base" && arg !== "--worktree" && args[i - 1] !== "--base")
+if (unknown) {
+  console.error(`Unknown argument: ${unknown}`)
+  process.exit(1)
+}
 const baseIdx = args.indexOf("--base")
+const worktree = args.includes("--worktree")
+if (worktree && baseIdx !== -1) {
+  console.error("--base cannot be used with --worktree")
+  process.exit(1)
+}
 const base = (() => {
   if (baseIdx === -1) return "origin/main"
   const ref = args[baseIdx + 1]
@@ -63,7 +73,6 @@ const base = (() => {
   console.error("Missing value for --base")
   process.exit(1)
 })()
-const worktree = args.includes("--worktree")
 
 function run(cmd: string, args: string[]) {
   const result = spawnSync(cmd, args, { cwd: ROOT, encoding: "utf8" })
@@ -75,7 +84,7 @@ function run(cmd: string, args: string[]) {
   return result.stdout?.trim() ?? ""
 }
 
-const ref = worktree ? run("git", ["merge-base", base, "HEAD"]) : `${base}...HEAD`
+const ref = worktree ? "HEAD" : `${base}...HEAD`
 
 function lines(out: string) {
   return out ? out.split("\n").filter(Boolean) : []
