@@ -229,7 +229,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // fetch with the stored key (#10139). Anything typed into the field
     // (a key or {env:VAR} syntax) takes precedence.
     const providerID = !raw && props.existing ? props.existing.providerID : undefined
-    const existing = new Set(form.models.map((m) => m.id.trim()).filter(Boolean))
+    const existing = new Set(form.models.map((m) => m.id.trim().toLowerCase()).filter(Boolean))
 
     const hdrs = form.headers
       .map((h) => ({ key: h.key.trim(), value: h.value.trim() }))
@@ -269,8 +269,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         return
       }
 
-      // Filter using the snapshot taken at fetch time
-      const fresh = models.filter((m) => !existing.has(m.id))
+      // Filter using the snapshot taken at fetch time (trimmed, case-insensitive)
+      const fresh = models.filter((m) => !existing.has(m.id.trim().toLowerCase()))
 
       if (fresh.length === 0) {
         setFetchStatus(language.t("provider.custom.models.fetch.allExist"))
@@ -327,20 +327,50 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [] })
-    const merged = empty ? picked.map(defaults) : [...form.models, ...picked.map(defaults)]
 
-    setForm("models", merged)
-    setErrors(
-      "models",
-      merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
-    )
-    setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(picked.length) }))
+    // Dedup against models already in the form (trimmed, case-insensitive). The
+    // picker is built from a fetch-time snapshot, so a model the user typed
+    // manually after fetching hasn't been filtered out yet.
+    const existing = new Set(form.models.map((m) => m.id.trim().toLowerCase()).filter(Boolean))
+    const toAdd = picked.filter((m) => {
+      const key = m.id.trim().toLowerCase()
+      if (!key || existing.has(key)) {
+        return false
+      }
+      existing.add(key)
+      return true
+    })
+
+    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [] })
+    const merged = empty ? toAdd.map(defaults) : [...form.models, ...toAdd.map(defaults)]
+
+    if (toAdd.length > 0) {
+      setForm("models", merged)
+      setErrors(
+        "models",
+        merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
+      )
+    }
 
     // Keep the picker open with the un-picked models so the user can keep adding.
-    // Only close the picker when every fetched model has been added.
+    // Remove every selected model, including ones skipped as duplicates, so the
+    // user isn't re-prompted to add them. Only close when nothing is left.
     const pickedIds = new Set(picked.map((m) => m.id))
     const remaining = models.filter((m) => !pickedIds.has(m.id))
+
+    if (toAdd.length > 0) {
+      // Count only models actually added, not duplicates that were skipped.
+      setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(toAdd.length) }))
+    } else if (remaining.length === 0) {
+      // Nothing added and nothing left in the picker; every fetched model exists.
+      setFetchStatus(language.t("provider.custom.models.fetch.allExist"))
+    } else {
+      // The selected models already existed but other fetched models remain;
+      // avoid implying everything was added. Dropping them from the picker is
+      // the feedback. Clear any stale status from a prior add.
+      setFetchStatus(undefined)
+    }
+
     if (remaining.length === 0) {
       setFetchedModels(undefined)
       setSearch("")

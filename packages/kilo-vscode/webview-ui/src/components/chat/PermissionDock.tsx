@@ -48,6 +48,8 @@ export const PermissionDock: Component<{
     // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
     return normalizeUrls(cmd)
   }
+  const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
+  const external = () => props.request.toolName === "external_directory"
   const cmdDescription = () => {
     const val = props.request.args?.description
     return typeof val === "string" && val.length > 0 ? val : undefined
@@ -248,8 +250,13 @@ export const PermissionDock: Component<{
                               </button>
                             </Tooltip>
                           </div>
-                          <code data-slot="permission-rule">
-                            {command() ? label(rule) : describeRule(props.request.toolName, rule, language.t)}
+                          <code data-slot="permission-rule" data-wrap={external() ? "" : undefined} title={text(rule)}>
+                            <Show when={external() && rule !== "*"} fallback={text(rule)}>
+                              <span data-slot="permission-rule-label">
+                                {language.t("ui.permission.toolLabel.externalDirectory")}{" "}
+                              </span>
+                              <span data-slot="permission-rule-path">{rule}</span>
+                            </Show>
                           </code>
                         </div>
                       )}
@@ -268,7 +275,16 @@ export const PermissionDock: Component<{
           const desc = description()
           if (!desc)
             return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
-          if (desc.kind === "single") return <div data-slot="permission-hint">{desc.text}</div>
+          if (desc.kind === "single")
+            return (
+              <div
+                data-slot="permission-hint"
+                data-wrap={external() ? "" : undefined}
+                title={external() ? desc.text : undefined}
+              >
+                {desc.text}
+              </div>
+            )
           return (
             <div data-slot="permission-patterns">
               <span data-slot="permission-patterns-title">{desc.title}</span>

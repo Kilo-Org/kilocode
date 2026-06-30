@@ -573,10 +573,11 @@ export const WithPRBadges: Story = {
   name: "Section — worktrees with PR badges",
   render: () => (
     <StoryProviders noPadding>
-      <div style={{ "max-height": "400px", overflow: "auto" }}>
+      <div style={{ "max-height": "560px", overflow: "auto" }}>
         <DndWrap>
-          <SectionHeader section={sec("s1", 0, { name: "In Review", color: "Blue" })} count={3} {...sectionProps}>
+          <SectionHeader section={sec("s1", 0, { name: "In Review", color: "Blue" })} count={8} {...sectionProps}>
             <div class="am-section-group-body">
+              {/* Open + passing + approved → green badge, green check */}
               <WorktreeItem
                 {...wtProps}
                 worktree={wt("wt-1", "feat/api-v2")}
@@ -595,6 +596,7 @@ export const WithPRBadges: Story = {
                   checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
                 }}
               />
+              {/* Open + failing checks → green badge, red ✗ (no longer confusable with closed) */}
               <WorktreeItem
                 {...wtProps}
                 worktree={wt("wt-2", "fix/race-cond")}
@@ -605,28 +607,101 @@ export const WithPRBadges: Story = {
                   title: "fix: race condition",
                   url: "#",
                   state: "open",
-                  review: "changes_requested",
+                  review: null,
                   additions: 15,
                   deletions: 8,
                   files: 3,
                   checks: { status: "failure", total: 5, passed: 3, failed: 2, pending: 0, items: [] },
                 }}
               />
+              {/* Open + changes requested → green badge, amber warning */}
               <WorktreeItem
                 {...wtProps}
-                worktree={wt("wt-3", "feat/cache")}
+                worktree={wt("wt-3", "feat/search")}
+                label="feat/search"
+                subtitle="feat/search"
+                pr={{
+                  number: 91,
+                  title: "feat: search",
+                  url: "#",
+                  state: "open",
+                  review: "changes_requested",
+                  additions: 60,
+                  deletions: 12,
+                  files: 4,
+                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+                }}
+              />
+              {/* Open + checks running → pulsing amber badge (animation disabled in snapshots) */}
+              <WorktreeItem
+                {...wtProps}
+                worktree={wt("wt-4", "feat/cache")}
                 label="feat/cache"
                 subtitle="feat/cache"
                 pr={{
                   number: 103,
                   title: "feat: cache layer",
                   url: "#",
-                  state: "draft",
+                  state: "open",
                   review: null,
                   additions: 200,
                   deletions: 0,
                   files: 8,
-                  checks: { status: "pending", total: 5, passed: 0, failed: 0, pending: 5, items: [] },
+                  checks: { status: "pending", total: 5, passed: 2, failed: 0, pending: 3, items: [] },
+                }}
+              />
+              {/* Draft → gray badge */}
+              <WorktreeItem
+                {...wtProps}
+                worktree={wt("wt-5", "wip/refactor")}
+                label="wip/refactor"
+                subtitle="wip/refactor"
+                pr={{
+                  number: 110,
+                  title: "wip: refactor",
+                  url: "#",
+                  state: "draft",
+                  review: null,
+                  additions: 30,
+                  deletions: 5,
+                  files: 2,
+                  checks: { status: "none", total: 0, passed: 0, failed: 0, pending: 0, items: [] },
+                }}
+              />
+              {/* Merged → purple badge, no status icon */}
+              <WorktreeItem
+                {...wtProps}
+                worktree={wt("wt-6", "feat/done")}
+                label="feat/done"
+                subtitle="feat/done"
+                pr={{
+                  number: 70,
+                  title: "feat: done",
+                  url: "#",
+                  state: "merged",
+                  review: "approved",
+                  additions: 90,
+                  deletions: 20,
+                  files: 6,
+                  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+                }}
+              />
+              {/* Closed → red badge, no status icon (distinct from a failing open PR) */}
+              <WorktreeItem
+                {...wtProps}
+                worktree={wt("wt-7", "spike/idea")}
+                label="spike/idea"
+                subtitle="spike/idea"
+                pr={{
+                  number: 65,
+                  title: "spike: idea",
+                  url: "#",
+                  state: "closed",
+                  review: null,
+                  additions: 10,
+                  deletions: 4,
+                  files: 1,
+                  checks: { status: "failure", total: 5, passed: 1, failed: 4, pending: 0, items: [] },
                 }}
               />
             </div>

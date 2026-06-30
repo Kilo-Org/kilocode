@@ -99,7 +99,7 @@ export class WorktreeStateManager {
   private sections = new Map<string, Section>()
   private tabOrder: Record<string, string[]> = {}
   private worktreeOrder: string[] = []
-  private collapsed = false
+  private collapsed = true
   private sidebar = false
   private reviewDiffStyle: "unified" | "split" = "unified"
   private defaultBase: string | undefined
@@ -650,6 +650,7 @@ export class WorktreeStateManager {
       this.worktreeOrder = data.worktreeOrder
     }
     const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    // State files from before this preference was explicit used the expanded layout.
     this.collapsed = data.sessionsCollapsed ?? false
     this.sidebar = data.sidebarCollapsed ?? false
     if (data.reviewDiffStyle === "split") {
@@ -754,9 +755,7 @@ export class WorktreeStateManager {
     if (this.worktreeOrder.length > 0) {
       data.worktreeOrder = this.worktreeOrder
     }
-    if (this.collapsed) {
-      data.sessionsCollapsed = true
-    }
+    data.sessionsCollapsed = this.collapsed
     if (this.sidebar) {
       data.sidebarCollapsed = true
     }

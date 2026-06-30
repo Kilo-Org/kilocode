@@ -24,10 +24,36 @@ Kilo Code supports all "always on" Synthetic AI models. The available models inc
 
 ## Configuration in Kilo Code
 
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2. **Select Provider:** Choose "Synthetic" from the "API Provider" dropdown.
-3. **Enter API Key:** Paste your Synthetic API key into the "Synthetic API Key" field.
-4. **Select Model:** Choose your desired model from the "Model" dropdown.
+{% tabs %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add Synthetic and enter your API key.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the API key as an environment variable or configure it in your `kilo.json` config file:
+
+```bash
+export SYNTHETIC_API_KEY="your-api-key"
+```
+
+```jsonc
+{
+  "provider": {
+    "synthetic": {
+      "env": ["SYNTHETIC_API_KEY"],
+    },
+  },
+}
+```
+
+Select a Synthetic model from the model picker after authentication, or set its full `synthetic/<model-id>` identifier as your default model.
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

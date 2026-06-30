@@ -42,12 +42,46 @@ runs:
         restore-keys: |
           ${{ runner.os }}-bun-
 
+    # kilocode_change start
+    - name: Setup Node for native dependency builds
+      if: runner.os != 'Windows'
+      uses: actions/setup-node@v6
+      with:
+        node-version: "24"
+        package-manager-cache: false
+
+    - name: Configure node-gyp Node headers
+      if: runner.os != 'Windows'
+      id: node-gyp
+      run: |
+        node <<'NODE'
+        const fs = require("node:fs")
+        const path = require("node:path")
+
+        const exe = path.dirname(fs.realpathSync(process.execPath))
+        const dirs = [exe, path.dirname(exe)]
+        const root = dirs.find((dir) => fs.existsSync(path.join(dir, "include", "node", "node.h")))
+        if (!root) {
+          throw new Error(`Node headers not found under ${dirs.join(", ")}`)
+        }
+
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, `nodedir=${root}\n`)
+        NODE
+      shell: bash
+    # kilocode_change end
+
     - name: Install setuptools for distutils compatibility
       run: python3 -m pip install setuptools || pip install setuptools || true
       shell: bash
 
     - name: Install dependencies
       run: |
+        # kilocode_change start
+        if [ "$RUNNER_OS" != "Windows" ]; then
+          export npm_config_nodedir="${{ steps.node-gyp.outputs.nodedir }}"
+        fi
+        # kilocode_change end
+
         # Workaround for patched peer variants
         # e.g. ./patches/ for standard-openapi
         # https://github.com/oven-sh/bun/issues/28147

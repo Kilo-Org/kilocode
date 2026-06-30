@@ -56,5 +56,12 @@ export function makeRuntime<I, S, E>(service: Context.Service<I, S>, layer: Laye
     runFork: <A, Err>(fn: (svc: S) => Effect.Effect<A, Err, I>) => getRuntime().runFork(attach(service.use(fn))),
     runCallback: <A, Err>(fn: (svc: S) => Effect.Effect<A, Err, I>) =>
       getRuntime().runCallback(attach(service.use(fn))),
+    // kilocode_change start - allow Kilo-owned service runtimes to release persistent resources
+    dispose: async () => {
+      const current = rt
+      rt = undefined
+      await current?.dispose()
+    },
+    // kilocode_change end
   }
 }

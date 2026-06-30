@@ -2,6 +2,11 @@
    Model Selector (uses kilo-ui Popover)
    ============================================ */
 
+.popup-selector[data-expanded],
+.popup-selector[data-closed] {
+  animation: none;
+}
+
 .model-selector-popover {
   transition:
     width 0.2s ease,
@@ -17,12 +22,14 @@
 }
 
 .model-selector-body .model-selector-list {
+  order: 3;
   flex: 1;
   min-height: 0;
   max-height: none;
 }
 
 .model-selector-preview {
+  order: 1;
   flex-shrink: 0;
   overflow: hidden;
   height: 0;
@@ -154,6 +161,40 @@
   color: var(--vscode-editor-foreground);
 }
 
+.model-preview-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.model-preview-candidate {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 3px 5px;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background);
+  color: var(--vscode-editor-foreground);
+}
+
+.model-preview-candidate-name,
+.model-preview-candidate-id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-preview-candidate-name {
+  font-size: var(--kilo-font-size-11);
+}
+
+.model-preview-candidate-id {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--kilo-font-size-10);
+  color: var(--vscode-descriptionForeground);
+}
+
 .model-preview-data-line {
   grid-column: 1 / -1;
   display: inline-flex;
@@ -202,11 +243,20 @@
 }
 
 .model-preview-free-data-icon,
+.model-preview-auto-icon,
+.model-selector-auto-icon,
 .model-selector-free-data-icon {
   display: inline-flex;
   align-items: center;
   color: var(--vscode-inputValidation-warningForeground, var(--vscode-descriptionForeground));
   flex-shrink: 0;
+}
+
+.model-preview-auto-icon,
+.model-selector-auto-icon {
+  --icon-base: var(--vscode-list-warningForeground, var(--vscode-inputValidation-warningForeground, #9a6700));
+  color: var(--icon-base);
+  opacity: 0.95;
 }
 
 .model-selector-preview--visible {
@@ -215,6 +265,7 @@
 }
 
 .model-selector-splitter {
+  order: 2;
   flex-shrink: 0;
   height: 5px;
   cursor: row-resize;
@@ -262,6 +313,7 @@
 }
 
 .model-selector-search-wrapper {
+  order: 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -336,7 +388,7 @@
   outline-offset: -1px;
 }
 
-.model-selector-group:not(:first-child) > .model-selector-group-label {
+.model-selector-group-label--divided {
   border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
   margin-top: 4px;
   padding-top: 8px;
@@ -426,6 +478,12 @@
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.model-selector-item.active .model-selector-auto-icon {
+  --icon-base: var(--vscode-list-warningForeground, var(--vscode-inputValidation-warningForeground, #9a6700));
+  color: var(--icon-base);
+  opacity: 1;
 }
 
 .model-selector-data-badge [data-component="tag"] {

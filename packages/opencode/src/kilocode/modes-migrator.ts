@@ -111,7 +111,9 @@ export namespace ModesMigrator {
       description: cfg.description ?? cfg.whenToUse ?? mode.name,
       prompt: prompt || undefined,
       permission: convertPermissions(groups),
-      options: { source: "organization", displayName: mode.name },
+      // Typed metadata fields — must NOT live in `options`, which is forwarded to the provider.
+      displayName: mode.name,
+      source: "organization",
     }
   }
 

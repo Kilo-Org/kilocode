@@ -169,19 +169,6 @@ In the new platform, AGENTS.md is loaded alongside other instruction sources. Th
 | **[Skills](/docs/customize/skills)** | Both | `.kilo/skills/`, config `skills` key | Loaded on demand |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-AGENTS.md works alongside Kilo Code's other configuration systems:
-
-| Feature | Scope | Location | Purpose | Priority |
-|---|---|---|---|---|
-| **[Mode-specific Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints | 1 (Highest) |
-| **[Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules/` | Kilo Code-specific rules and constraints | 2 |
-| **[AGENTS.md](/docs/customize/agents-md)** | Project | `AGENTS.md` | Universal standard for any AI coding tool | 3 |
-| **[Global Custom Rules](/docs/customize/custom-rules)** | Global | `~/.kilocode/rules/` | Global Kilo Code rules | 4 |
-| **[Custom Instructions](/docs/customize/custom-instructions)** | Global | IDE settings | Personal preferences across all projects | 5 (Lowest) |
-
-{% /tab %}
 {% /tabs %}
 
 ### Enabling/Disabling AGENTS.md
@@ -207,17 +194,6 @@ export KILO_DISABLE_EXTERNAL_SKILLS=true
 ```
 
 AGENTS.md itself cannot be individually disabled — it is always loaded if present. To override its instructions, use higher-priority sources like the `instructions` config key or agent-specific prompts.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-AGENTS.md support is **enabled by default**. To disable it, edit `settings.json`:
-
-```json
-{
-  "kilocode.useAgentRules": false
-}
-```
 
 {% /tab %}
 {% /tabs %}

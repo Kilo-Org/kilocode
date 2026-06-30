@@ -817,7 +817,7 @@ it.instance("agent markdown permission config preserves user key order", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     yield* AppFileSystem.use.writeWithDirs(
-      path.join(test.directory, ".opencode", "agent", "ordered.md"),
+      path.join(test.directory, ".kilo", "agent", "ordered.md"), // kilocode_change
       `---
 permission:
   bash: allow

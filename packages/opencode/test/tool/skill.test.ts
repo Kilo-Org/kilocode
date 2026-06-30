@@ -36,7 +36,7 @@ describe("tool.skill", () => {
   unix("execute returns skill content block with files", () =>
     provideTmpdirInstance((dir) =>
       Effect.gen(function* () {
-        const skill = path.join(dir, ".opencode", "skill", "tool-skill")
+        const skill = path.join(dir, ".kilo", "skill", "tool-skill") // kilocode_change
         yield* Effect.promise(() =>
           Bun.write(
             path.join(skill, "SKILL.md"),

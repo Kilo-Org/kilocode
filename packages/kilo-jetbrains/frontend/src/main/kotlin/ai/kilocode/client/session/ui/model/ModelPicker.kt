@@ -137,6 +137,11 @@ class ModelPicker : PickerButton() {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
+    fun open() {
+        if (!isEnabled || (items.isEmpty() && !allowEmpty)) return
+        showPopup()
+    }
+
     private fun showPopup() {
         val rows = modelPickerRows(items, favorites(), "", allowEmpty, emptyText, includeSmall)
         val model = CollectionListModel(rows)

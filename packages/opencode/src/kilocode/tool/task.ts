@@ -75,6 +75,7 @@ export namespace KiloTask {
     return [
       { permission: "task", pattern: "*", action: "deny" },
       { permission: "question", pattern: "*", action: "deny" },
+      { permission: "interactive_terminal", pattern: "*", action: "deny" },
       ...rules,
     ]
   }

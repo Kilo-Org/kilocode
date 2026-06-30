@@ -12,7 +12,7 @@ export default defineConfig({
   workers: process.env["PLAYWRIGHT_WORKERS"]
     ? Number.parseInt(process.env["PLAYWRIGHT_WORKERS"]!, 10) || undefined
     : undefined,
-  reporter: [["html", { open: "never" }], ["list"]],
+  reporter: process.env["CI"] ? [["dot"]] : [["list"]],
   use: {
     baseURL: "http://localhost:6006",
     viewport: { width: 1280, height: 720 },

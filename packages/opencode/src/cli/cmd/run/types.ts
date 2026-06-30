@@ -14,6 +14,7 @@
 import type { KeyEvent, Renderable } from "@opentui/core"
 import type { Binding } from "@opentui/keymap"
 import type { KiloClient, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
+import type { RunInteractiveTerminalSnapshot } from "@/kilocode/cli/cmd/run/types" // kilocode_change
 
 export type RunFilePart = {
   type: "file"
@@ -160,6 +161,7 @@ export type FooterView =
   | { type: "prompt" }
   | { type: "permission"; request: PermissionRequest }
   | { type: "question"; request: QuestionRequest }
+  | { type: "interactive_terminal"; terminal: RunInteractiveTerminalSnapshot } // kilocode_change
 
 export type FooterPromptRoute =
   | { type: "composer" }

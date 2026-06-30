@@ -1,0 +1,47 @@
+export const dict = {
+  "kilocode:autocomplete.statusBar.enabled": "$(kilo-logo) Autofullføring",
+  "kilocode:autocomplete.statusBar.snoozed": "utsatt",
+  "kilocode:autocomplete.statusBar.warning": "$(warning) Autofullføring",
+  "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code autofullføring",
+  "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code autofullføring (deaktivert)",
+  "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
+    "**Ingen autofullføringsmodell konfigurert**\n\nFor å aktivere autofullføring, legg til en profil med en av disse støttede leverandørene: {{providers}}.\n\n[Åpne innstillinger]({{command}})",
+  "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Total kostnad for økten:",
+  "kilocode:autocomplete.statusBar.tooltip.provider": "Leverandør:",
+  "kilocode:autocomplete.statusBar.tooltip.model": "Modell:",
+  "kilocode:autocomplete.statusBar.tooltip.profile": "Profil: ",
+  "kilocode:autocomplete.statusBar.tooltip.defaultProfile": "Standard",
+  "kilocode:autocomplete.statusBar.tooltip.completionSummary":
+    "Utførte {{count}} fullføringer mellom {{startTime}} og {{endTime}}, til en total kostnad på {{cost}}.",
+  "kilocode:autocomplete.statusBar.tooltip.providerInfo": "Autofullføringer leveres av {{model}} via {{provider}}.",
+  "kilocode:autocomplete.statusBar.cost.zero": "$0.00",
+  "kilocode:autocomplete.statusBar.cost.lessThanCent": "<$0.01",
+  "kilocode:autocomplete.toggleMessage": "Kilo Code autofullføring {{status}}",
+  "kilocode:autocomplete.progress.title": "Kilo Code",
+  "kilocode:autocomplete.progress.analyzing": "Analyserer koden din...",
+  "kilocode:autocomplete.progress.generating": "Genererer foreslåtte redigeringer...",
+  "kilocode:autocomplete.progress.processing": "Behandler foreslåtte redigeringer...",
+  "kilocode:autocomplete.progress.showing": "Viser foreslåtte redigeringer...",
+  "kilocode:autocomplete.input.title": "Kilo Code: Hurtig oppgave",
+  "kilocode:autocomplete.input.placeholder": "f.eks. 'refaktorer denne funksjonen så den blir mer effektiv'",
+  "kilocode:autocomplete.commands.generateSuggestions": "Kilo Code: Generer foreslåtte redigeringer",
+  "kilocode:autocomplete.commands.displaySuggestions": "Vis foreslåtte redigeringer",
+  "kilocode:autocomplete.commands.cancelSuggestions": "Avbryt foreslåtte redigeringer",
+  "kilocode:autocomplete.commands.applyCurrentSuggestion": "Bruk gjeldende foreslåtte redigering",
+  "kilocode:autocomplete.commands.applyAllSuggestions": "Bruk alle foreslåtte redigeringer",
+  "kilocode:autocomplete.commands.category": "Kilo Code",
+  "kilocode:autocomplete.codeAction.title": "Kilo Code: Foreslåtte redigeringer",
+  "kilocode:autocomplete.chatParticipant.fullName": "Kilo Code-agent",
+  "kilocode:autocomplete.chatParticipant.name": "Agent",
+  "kilocode:autocomplete.chatParticipant.description":
+    "Jeg kan hjelpe deg med hurtige oppgaver og foreslåtte redigeringer.",
+  "kilocode:autocomplete.incompatibilityExtensionPopup.message":
+    "Kilo Code autofullføring blokkeres av en konflikt med GitHub Copilot. For å fikse dette må du deaktivere Copilots inline-forslag.",
+  "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Deaktiver Copilot",
+  "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Deaktiver autofullføring",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code autofullføring er satt på pause. Mulige årsaker: Kilo-kontoen din har ingen gjenværende kreditter, eller den konfigurerte API-nøkkelen (BYOK) har nådd kvotegrensen. Legg til Kilo-kreditter eller kontroller API-nøkkelkonfigurasjonen for å gjenoppta autofullføring.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Legg til kreditter",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code autofullføring er satt på pause på grunn av et autentiseringsproblem. Mulige årsaker: du er ikke logget på Kilo, eller API-nøkkelen din (BYOK) er ugyldig eller mangler. Logg inn igjen eller kontroller innstillingene for leverandørens API-nøkkel.",
+}

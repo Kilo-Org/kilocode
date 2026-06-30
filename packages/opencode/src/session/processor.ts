@@ -21,6 +21,7 @@ import { Question } from "@/question"
 // kilocode_change start
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
+import { KiloRoutedModel } from "@/kilocode/session/routed-model"
 import { Suggestion } from "@/kilocode/suggestion"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
@@ -685,6 +686,13 @@ export const layer = Layer.effect(
               usage: value.usage ?? new Usage({}),
               metadata: value.providerMetadata,
             })
+            // kilocode_change start
+            const model = KiloRoutedModel.readAuto(value.providerMetadata, {
+              providerID: ctx.model.providerID,
+              modelID: ctx.model.id,
+              selected: ctx.assistantMessage.modelID,
+            })
+            // kilocode_change end
             // kilocode_change start - guard against finish-step without start-step:
             // ctx.stepStart is 0 until `start-step` fires, which would feed a
             // huge bogus `elapsed` into telemetry. Fall back to now().
@@ -723,6 +731,7 @@ export const layer = Layer.effect(
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
+              ...(model ? { model } : {}), // kilocode_change
               tokens: usage.tokens,
               cost: usage.cost,
             })

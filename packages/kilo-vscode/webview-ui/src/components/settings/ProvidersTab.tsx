@@ -71,6 +71,7 @@ const ProvidersTab: Component = () => {
   }
 
   function sourceTag(item: Provider) {
+    if (item.id === "anaconda-desktop") return language.t("settings.providers.tag.local")
     const current = source(item)
     if (current === "env") return language.t("settings.providers.tag.environment")
     if (current === "api") return language.t("provider.connect.method.apiKey")
@@ -259,6 +260,11 @@ const ProvidersTab: Component = () => {
                   <Show when={chatgpt(item)}>
                     <Button size="large" variant="ghost" onClick={() => connectChatGPT(item)}>
                       {language.t("settings.providers.action.signInChatGPT")}
+                    </Button>
+                  </Show>
+                  <Show when={item.id === "anaconda-desktop"}>
+                    <Button size="large" variant="ghost" onClick={() => connectProvider(item)}>
+                      {language.t("provider.anaconda.action.manage")}
                     </Button>
                   </Show>
                   <Show when={canDisconnect(item)}>

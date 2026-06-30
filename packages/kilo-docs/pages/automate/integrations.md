@@ -20,7 +20,7 @@ Kilo Integrations lets you connect GitHub or GitLab for repository workflows and
 - **Connect GitHub, GitLab, or DoltHub to Kilo Code** in a few clicks
 - **Enable advanced features** like Cloud Agents, Code Reviews, and Kilo Deploy
 - **Authorize GitHub or GitLab repository access** so Kilo can analyze and work with your code
-- **Query Dolt-versioned data** from your workspace through Kilo Connect
+- **Query Dolt-versioned data** and authorize DoltHub access for Gas Town Wasteland
 
 ## Prerequisites
 
@@ -114,14 +114,20 @@ For self-hosted GitLab instances using OAuth, you need to register an OAuth appl
 
 ## Connecting DoltHub
 
-DoltHub is available through [Kilo Connect](/docs/code-with-ai/platforms/kilo-connect) for teams that work with Dolt-versioned data.
+Use the DoltHub integration page to connect your DoltHub account. Kilo uses this OAuth connection for [Kilo Connect](/docs/code-with-ai/platforms/kilo-connect) and as the default auth method for [Gas Town Wasteland](/docs/code-with-ai/gastown/wasteland).
 
 1. Go to the **Integrations** page:
    - **Personal**: [app.kilo.ai/integrations/dolthub](https://app.kilo.ai/integrations/dolthub)
    - **Organization**: Your organization → Integrations → DoltHub
 2. Click **Connect DoltHub**.
-3. Authorize the connection with DoltHub.
+3. Approve Kilo on DoltHub.
 4. Return to Kilo and confirm DoltHub shows a **Connected** status.
+
+{% image src="/docs/img/integrations/dolthub/connect.png" alt="DoltHub integration page before OAuth connection" width="900" caption="DoltHub integration page in Kilo" /%}
+
+{% image src="/docs/img/integrations/dolthub/authorize.png" alt="DoltHub OAuth authorization screen for Kilo" width="700" caption="DoltHub OAuth authorization screen" /%}
+
+{% image src="/docs/img/integrations/dolthub/connected.png" alt="Connected DoltHub integration page showing api_read_write permission" width="900" caption="Connected DoltHub integration" /%}
 
 To remove the connection, click **Disconnect** from the DoltHub integration page.
 
@@ -153,6 +159,7 @@ Once your integrations are connected, the following features are enabled in Kilo
 
 - Query Dolt-versioned databases from your workspace
 - Use DoltHub alongside GitHub or GitLab when a workflow also needs repository access
+- Authorize Gas Town Wasteland to fork commons databases, push claims and evidence, and manage DoltHub PRs. Wasteland also supports an advanced API token option when OAuth is not available.
 
 ### Upcoming:
 
@@ -185,6 +192,7 @@ From the **Integrations** page:
 From the **Integrations** page, open DoltHub to:
 
 - View the connected status
+- View granted permissions
 - Disconnect DoltHub from Kilo
 
 ---

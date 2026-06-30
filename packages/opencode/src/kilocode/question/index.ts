@@ -48,6 +48,17 @@ export namespace KiloQuestion {
         }
       })
 
+  /** Publishes the terminal event when a pending question effect is interrupted. */
+  export const finalize = <ID, Value>(input: {
+    pending: Map<ID, Value>
+    id: ID
+    publishRejected: () => Effect.Effect<void>
+  }) =>
+    Effect.gen(function* () {
+      if (!input.pending.delete(input.id)) return
+      yield* input.publishRejected()
+    })
+
   /**
    * Auto-dismiss when a newer prompt is already queued on this session — a
    * tool that calls `Question.ask` after the queue event would otherwise block

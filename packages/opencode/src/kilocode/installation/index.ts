@@ -22,5 +22,5 @@ export const Scoop = {
 
 export const Release = {
   api: "https://api.github.com/repos/Kilo-Org/kilocode/releases/latest",
-  install: "https://kilo.ai/install",
+  install: "https://kilo.ai/cli/install",
 }

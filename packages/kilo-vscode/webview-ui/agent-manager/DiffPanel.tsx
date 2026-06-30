@@ -37,6 +37,7 @@ import {
   reviewComposerEdit,
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
+  sendReviewComments,
   type AnnotationLabels,
   type AnnotationMeta,
   type ReviewComposer,
@@ -104,6 +105,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     placeholder: t("agentManager.review.commentPlaceholder"),
     cancel: t("common.cancel"),
     comment: t("agentManager.review.commentAction"),
+    send: t("prompt.action.send"),
     save: t("common.save"),
     sendToChat: t("agentManager.review.sendToChat"),
     edit: t("common.edit"),
@@ -289,6 +291,18 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     focusRoot()
   }
 
+  const sendComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
+    const comment = { id: `c-${++nextId}-${Date.now()}`, file, side, line, comment: text, selectedText }
+    sendReviewComments([comment], props.activeTerminalId)
+    preserveScroll(() => {
+      setDraft(null)
+      draftMeta = null
+      composer().draft = null
+    })
+    props.onSendClick?.()
+    focusRoot()
+  }
+
   const updateComment = (id: string, text: string) => {
     preserveScroll(() => {
       updateComments((prev) => prev.map((c) => (c.id === id ? { ...c, comment: text } : c)))
@@ -400,6 +414,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       editing: editing(),
       setEditing: setEditState,
       addComment,
+      sendComment,
       updateComment,
       deleteComment,
       cancelDraft,

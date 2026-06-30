@@ -8,6 +8,7 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
+const EXPANDED = "modelSelectorExpanded"
 
 export function getVSCodeAPI(): VSCodeAPI {
   if (!vscodeApi) {
@@ -33,6 +34,8 @@ interface VSCodeContextValue {
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
   getState: <T>() => T | undefined
   setState: <T>(state: T) => void
+  getModelSelectorExpanded: () => boolean
+  setModelSelectorExpanded: (value: boolean) => void
 }
 
 const VSCodeContext = createContext<VSCodeContextValue>()
@@ -64,6 +67,14 @@ export const VSCodeProvider: ParentComponent = (props) => {
     },
     getState: <T,>() => api.getState() as T | undefined,
     setState: <T,>(state: T) => api.setState(state),
+    getModelSelectorExpanded: () => {
+      const state = api.getState() as Record<string, unknown> | undefined
+      return state?.[EXPANDED] !== false
+    },
+    setModelSelectorExpanded: (value: boolean) => {
+      const state = (api.getState() as Record<string, unknown> | undefined) ?? {}
+      api.setState({ ...state, [EXPANDED]: value })
+    },
   }
 
   return <VSCodeContext.Provider value={value}>{props.children}</VSCodeContext.Provider>

@@ -10,7 +10,52 @@ import {
   isSuggesting,
   isQuestioning,
   isPathMention,
+  applySandboxState,
+  applySandboxStates,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
+
+describe("applySandboxState", () => {
+  const state = (enabled: boolean, revision: number, sessionID = "ses_1", directory = "/repo") => ({
+    sessionID,
+    directory,
+    enabled,
+    available: true,
+    version: enabled ? 1 : 0,
+    revision,
+  })
+
+  it("ignores an HTTP response with an older backend version", () => {
+    const latest = { ...state(true, 1), version: 2 }
+    const stale = { ...state(false, 2), version: 1 }
+    expect(applySandboxState(latest, stale)).toEqual(latest)
+  })
+
+  it("uses provider revision to order equal backend versions", () => {
+    const current = { ...state(false, 2), version: 4 }
+    const older = { ...state(true, 1), version: 4 }
+    const newer = { ...state(true, 3), version: 4 }
+    expect(applySandboxState(current, older)).toEqual(current)
+    expect(applySandboxState(current, newer)).toEqual(newer)
+  })
+
+  it("keeps global provider ordering across sessions and directories", () => {
+    expect(applySandboxState(state(true, 5, "ses_1"), state(false, 1, "ses_2"))).toEqual(state(true, 5, "ses_1"))
+    expect(applySandboxState(state(true, 5), state(false, 6, "ses_1", "/worktree"))).toEqual(
+      state(false, 6, "ses_1", "/worktree"),
+    )
+  })
+
+  it("caches independently ordered statuses for worktree switching", () => {
+    const first = applySandboxStates({}, state(true, 5, "ses_1"))
+    const second = applySandboxStates(first, state(false, 1, "ses_2"))
+
+    expect(second).toEqual({
+      ses_1: state(true, 5, "ses_1"),
+      ses_2: state(false, 1, "ses_2"),
+    })
+    expect(applySandboxStates(second, state(false, 4, "ses_1"))).toBe(second)
+  })
+})
 
 describe("fileName", () => {
   it("extracts the last segment of a unix path", () => {

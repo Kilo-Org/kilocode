@@ -278,7 +278,7 @@ class KiloBackendAppService private constructor(
     private suspend fun reconnect() {
         mutex.withLock {
             val current = _appState.value
-            if (current is KiloAppState.Ready || current is KiloAppState.Connecting || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
+            if (current is KiloAppState.Ready || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
                 log.info("reconnect: already ${current::class.simpleName} — skipping")
                 return
             }
@@ -419,6 +419,10 @@ class KiloBackendAppService private constructor(
                             warnings = warns,
                         )
                     )
+                    log.info(
+                        "Application snapshot: profile=${if (prof != null) "loaded" else "not_logged_in"} " +
+                            "warnings=${warns.size} notifications=${notifs.size} ${configSummary(cfg)}",
+                    )
                     log.info("Application started — config, profile, notifications loaded")
                 } catch (e: TimeoutCancellationException) {
                     val err = LoadError(
@@ -438,6 +442,7 @@ class KiloBackendAppService private constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    ensureActive()
                     log.warn("Application start failed: ${e.message}")
                     captureLoad("Backend Load Failed", start, mapOf(
                         "errorCount" to errors.size.toString(),
@@ -637,6 +642,11 @@ class KiloBackendAppService private constructor(
     private fun warning(warn: ConfigWarning): String {
         val detail = warn.detail?.let { " detail=$it" } ?: ""
         return "${warn.path}: ${warn.message}$detail"
+    }
+
+    private fun configSummary(cfg: Config): String {
+        val text = cfg.toString()
+        return "configChars=${text.length} configHash=${text.hashCode().toUInt().toString(16)}"
     }
 
     private suspend fun restartConnection(reason: String) {

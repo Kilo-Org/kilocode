@@ -8,7 +8,7 @@
  * Three independent key pools are checked:
  *   - Webview (sidebar + agent manager): merged from app, ui, kilo-i18n, agent-manager dicts
  *   - CLI backend (extension-side server-manager): cli-backend/i18n dict
- *   - Autocomplete (extension-side): autocomplete/i18n dict
+ *   - Extension host: services/i18n aggregate dict
  *
  * Dynamic keys (template literals, variables) are intentionally skipped —
  * only string literals are validated.
@@ -115,7 +115,26 @@ import { dict as cliNl } from "../../src/services/cli-backend/i18n/nl"
 import { dict as cliUk } from "../../src/services/cli-backend/i18n/uk"
 import { dict as cliIt } from "../../src/services/cli-backend/i18n/it"
 
-import { dict as acEn } from "../../src/services/autocomplete/i18n/en"
+import { dict as hostEn } from "../../src/services/i18n/en"
+import { dict as hostZh } from "../../src/services/i18n/zh"
+import { dict as hostZht } from "../../src/services/i18n/zht"
+import { dict as hostDe } from "../../src/services/i18n/de"
+import { dict as hostEs } from "../../src/services/i18n/es"
+import { dict as hostFr } from "../../src/services/i18n/fr"
+import { dict as hostDa } from "../../src/services/i18n/da"
+import { dict as hostJa } from "../../src/services/i18n/ja"
+import { dict as hostKo } from "../../src/services/i18n/ko"
+import { dict as hostPl } from "../../src/services/i18n/pl"
+import { dict as hostRu } from "../../src/services/i18n/ru"
+import { dict as hostAr } from "../../src/services/i18n/ar"
+import { dict as hostNo } from "../../src/services/i18n/no"
+import { dict as hostBr } from "../../src/services/i18n/br"
+import { dict as hostTh } from "../../src/services/i18n/th"
+import { dict as hostBs } from "../../src/services/i18n/bs"
+import { dict as hostTr } from "../../src/services/i18n/tr"
+import { dict as hostNl } from "../../src/services/i18n/nl"
+import { dict as hostUk } from "../../src/services/i18n/uk"
+import { dict as hostIt } from "../../src/services/i18n/it"
 
 // ── Locale maps ─────────────────────────────────────────────────────────────
 
@@ -213,10 +232,33 @@ const cliLocales: Record<string, Record<string, string>> = {
   it: cliIt,
 }
 
+const hostLocales: Record<string, Record<string, string>> = {
+  en: hostEn,
+  zh: hostZh,
+  zht: hostZht,
+  de: hostDe,
+  es: hostEs,
+  fr: hostFr,
+  da: hostDa,
+  ja: hostJa,
+  ko: hostKo,
+  pl: hostPl,
+  ru: hostRu,
+  ar: hostAr,
+  no: hostNo,
+  br: hostBr,
+  th: hostTh,
+  bs: hostBs,
+  tr: hostTr,
+  nl: hostNl,
+  uk: hostUk,
+  it: hostIt,
+}
+
 // Merge webview dictionaries in the same priority order as language.tsx
 const webviewKeys = new Set(Object.keys({ ...appEn, ...uiEn, ...kiloEn, ...amEn }))
 const cliKeys = new Set(Object.keys(cliEn))
-const acKeys = new Set(Object.keys(acEn))
+const hostKeys = new Set(Object.keys(hostEn))
 
 // ── File scanning ───────────────────────────────────────────────────────────
 
@@ -310,19 +352,19 @@ async function findCliBackendMissing(): Promise<Missing[]> {
   return missing
 }
 
-// ── Autocomplete files ──────────────────────────────────────────────────────
+// ── Extension host files ────────────────────────────────────────────────────
 
-async function findAutocompleteMissing(): Promise<Missing[]> {
+async function findHostMissing(): Promise<Missing[]> {
   const glob = new Glob("**/*.ts")
   const dir = path.join(ROOT, "src/services/autocomplete")
 
-  const files = (await collectFiles(glob, dir)).filter((f) => !f.includes("/i18n/") && !f.includes("/shims/"))
+  const files = (await collectFiles(glob, dir)).filter((f) => !f.includes("/shims/"))
 
   const missing: Missing[] = []
   for (const file of files) {
     const content = await Bun.file(file).text()
     for (const { line, key } of extractKeys(content)) {
-      if (!acKeys.has(key)) {
+      if (!hostKeys.has(key)) {
         missing.push({ file: path.relative(ROOT, file), line, key })
       }
     }
@@ -383,12 +425,12 @@ describe("i18n key validation — no missing translation keys", () => {
     expect(missing).toEqual([])
   })
 
-  it("autocomplete: all t() string literal keys exist in autocomplete dictionary", async () => {
-    const missing = await findAutocompleteMissing()
+  it("extension host: autocomplete t() string literal keys exist in aggregate dictionary", async () => {
+    const missing = await findHostMissing()
     if (missing.length > 0) {
       expect(
         missing,
-        `Found ${missing.length} translation key(s) not present in autocomplete dictionary:\n${formatReport(missing)}`,
+        `Found ${missing.length} translation key(s) not present in extension host dictionary:\n${formatReport(missing)}`,
       ).toEqual([])
     }
     expect(missing).toEqual([])
@@ -435,6 +477,17 @@ describe("i18n locale completeness — every English key exists in all locales",
       expect(
         missing,
         `Found ${missing.length} missing cli-backend translation(s):\n${formatLocaleReport(missing)}`,
+      ).toEqual([])
+    }
+    expect(missing).toEqual([])
+  })
+
+  it("extension host: every English key has a translation in all locales", () => {
+    const missing = findMissingLocaleKeys(hostEn, hostLocales)
+    if (missing.length > 0) {
+      expect(
+        missing,
+        `Found ${missing.length} missing extension host translation(s):\n${formatLocaleReport(missing)}`,
       ).toEqual([])
     }
     expect(missing).toEqual([])

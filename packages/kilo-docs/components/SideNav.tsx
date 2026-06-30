@@ -69,10 +69,9 @@ const ChevronLeft = () => (
 
 function PlatformBadge({ platform }: { platform?: Platform }) {
   if (!platform || platform === "all") return null
-  const label = platform === "legacy" ? "Legacy" : "New"
   return (
     <span className="platform-badge" data-platform={platform}>
-      {label}
+      New
     </span>
   )
 }
@@ -503,11 +502,6 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
           margin-left: 0.375rem;
           vertical-align: middle;
           line-height: 1.4;
-        }
-
-        .nav-links :global(.platform-badge[data-platform="legacy"]) {
-          background-color: rgba(139, 92, 246, 0.12);
-          color: rgb(139, 92, 246);
         }
 
         .nav-links :global(.platform-badge[data-platform="new"]) {

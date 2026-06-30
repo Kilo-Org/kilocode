@@ -30,6 +30,7 @@ import { createComponent, createSignal, type Accessor, type Setter } from "solid
 import { createStore, reconcile } from "solid-js/store"
 import { withRunSpan } from "./otel"
 import { RUN_COMMAND_PANEL_ROWS, RUN_SUBAGENT_PANEL_ROWS } from "./footer.command"
+import { RUN_INTERACTIVE_TERMINAL_ROWS } from "@/kilocode/cli/cmd/run/interactive-terminal" // kilocode_change
 import { SUBAGENT_INSPECTOR_ROWS } from "./footer.subagent"
 import { PROMPT_MAX_ROWS, TEXTAREA_MIN_ROWS } from "./footer.prompt"
 import { printableBinding } from "./prompt.shared"
@@ -85,6 +86,9 @@ type RunFooterOptions = {
   onPermissionReply: (input: PermissionReply) => void | Promise<void>
   onQuestionReply: (input: QuestionReply) => void | Promise<void>
   onQuestionReject: (input: QuestionReject) => void | Promise<void>
+  onTerminalWrite: (input: { terminalID: string; data: string }) => Promise<void> // kilocode_change
+  onTerminalResize: (input: { terminalID: string; cols: number; rows: number }) => Promise<void> // kilocode_change
+  onTerminalClose: (terminalID: string) => Promise<void> // kilocode_change
   onCycleVariant?: () => CycleResult | void
   onModelSelect?: (model: NonNullable<RunInput["model"]>) => CycleResult | void | Promise<CycleResult | void>
   onVariantSelect?: (variant: string | undefined) => CycleResult | void | Promise<CycleResult | void>
@@ -283,6 +287,11 @@ export class RunFooter implements FooterApi {
           onPermissionReply: this.handlePermissionReply,
           onQuestionReply: this.handleQuestionReply,
           onQuestionReject: this.handleQuestionReject,
+          // kilocode_change start
+          onTerminalWrite: options.onTerminalWrite,
+          onTerminalResize: options.onTerminalResize,
+          onTerminalClose: options.onTerminalClose,
+          // kilocode_change end
           onCycle: this.handleCycle,
           onInterrupt: this.handleInterrupt,
           onInputClear: this.handleInputClear,
@@ -561,7 +570,11 @@ export class RunFooter implements FooterApi {
         ? this.base + PERMISSION_ROWS
         : type === "question"
           ? this.base + QUESTION_ROWS
-          : this.promptRoute.type === "command"
+          // kilocode_change start
+          : type === "interactive_terminal"
+            ? this.base + RUN_INTERACTIVE_TERMINAL_ROWS
+            : this.promptRoute.type === "command"
+          // kilocode_change end
             ? 1 + COMMAND_ROWS
             : this.promptRoute.type === "model"
               ? 1 + MODEL_ROWS

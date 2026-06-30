@@ -153,7 +153,9 @@ The tool supports two modes:
 | `worktree` | Creates one Agent Manager git worktree and session per task |
 | `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation |
 
-Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
+Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. A task with an initial prompt can also specify a `model` (by name, e.g. `Claude Opus 4.1`) and one of that model's reasoning `variant` values. Agent Manager resolves the provider for the chosen model, preferring the provider used by the current default model and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted to force a specific provider. Tasks without those fields use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
+
+The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
 The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested mode, so approving `worktree` does not automatically approve `local`.
 

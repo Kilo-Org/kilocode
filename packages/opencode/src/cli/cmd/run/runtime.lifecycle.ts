@@ -66,6 +66,9 @@ export type LifecycleInput = {
   onPermissionReply: (input: PermissionReply) => void | Promise<void>
   onQuestionReply: (input: QuestionReply) => void | Promise<void>
   onQuestionReject: (input: QuestionReject) => void | Promise<void>
+  onTerminalWrite: (input: { terminalID: string; data: string }) => Promise<void> // kilocode_change
+  onTerminalResize: (input: { terminalID: string; cols: number; rows: number }) => Promise<void> // kilocode_change
+  onTerminalClose: (terminalID: string) => Promise<void> // kilocode_change
   onCycleVariant?: () => CycleResult | void
   onModelSelect?: (model: NonNullable<RunInput["model"]>) => CycleResult | void | Promise<CycleResult | void>
   onVariantSelect?: (variant: string | undefined) => CycleResult | void | Promise<CycleResult | void>
@@ -175,7 +178,7 @@ export async function createRuntimeLifecycle(input: LifecycleInput): Promise<Lif
           stdin: source.stdin,
           targetFps: 30,
           maxFps: 60,
-          useMouse: false,
+          useMouse: true, // kilocode_change - interactive terminal close and scroll controls
           autoFocus: false,
           openConsoleOnError: false,
           exitOnCtrlC: false,
@@ -235,6 +238,11 @@ export async function createRuntimeLifecycle(input: LifecycleInput): Promise<Lif
           onPermissionReply: input.onPermissionReply,
           onQuestionReply: input.onQuestionReply,
           onQuestionReject: input.onQuestionReject,
+          // kilocode_change start
+          onTerminalWrite: input.onTerminalWrite,
+          onTerminalResize: input.onTerminalResize,
+          onTerminalClose: input.onTerminalClose,
+          // kilocode_change end
           onCycleVariant: input.onCycleVariant,
           onModelSelect: input.onModelSelect,
           onVariantSelect: input.onVariantSelect,

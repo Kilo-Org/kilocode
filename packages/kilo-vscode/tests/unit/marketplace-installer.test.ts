@@ -4,7 +4,9 @@ import * as os from "os"
 import * as path from "path"
 import { MarketplaceInstaller } from "../../src/services/marketplace/installer"
 import { MarketplacePaths } from "../../src/services/marketplace/paths"
+import type { AgentMarketplaceItem } from "../../src/services/marketplace/types"
 import { exec } from "../../src/util/process"
+import * as yaml from "yaml"
 
 const tmpDir = path.join(os.tmpdir(), `kilo-test-${Date.now()}`)
 
@@ -32,6 +34,24 @@ function skill(content: string, id = "test-skill") {
   }
 }
 
+function agent(content: AgentMarketplaceItem["content"], id = "test-agent"): AgentMarketplaceItem {
+  return {
+    type: "agent",
+    id,
+    name: "Test Agent",
+    description: "test",
+    category: "development",
+    content,
+  }
+}
+
+async function frontmatter(file: string) {
+  const content = await fs.readFile(file, "utf-8")
+  const match = content.match(/^---\n([\s\S]*?)\n---/)
+  expect(match).not.toBeNull()
+  return yaml.parse(match?.[1] ?? "") as Record<string, unknown>
+}
+
 async function archive(): Promise<Buffer> {
   const root = path.join(tmpDir, "archive")
   const source = path.join(root, "source")
@@ -55,6 +75,7 @@ describe("MarketplaceInstaller MCP format normalization", () => {
       id: "memory",
       name: "Memory",
       description: "test",
+      category: "development",
       url: "https://example.com",
       content: JSON.stringify({
         command: "npx",
@@ -81,6 +102,7 @@ describe("MarketplaceInstaller MCP format normalization", () => {
       id: "myremote",
       name: "Remote",
       description: "test",
+      category: "development",
       url: "https://example.com",
       content: JSON.stringify({
         type: "sse",
@@ -105,6 +127,7 @@ describe("MarketplaceInstaller MCP format normalization", () => {
       id: "already",
       name: "Already Done",
       description: "test",
+      category: "development",
       url: "https://example.com",
       content: JSON.stringify({
         type: "local",
@@ -153,6 +176,7 @@ describe("MarketplaceInstaller skills", () => {
           id: "test-mcp",
           name: "Test MCP",
           description: "test",
+          category: "development",
           url: "https://example.com",
           content: "{}",
         },
@@ -164,6 +188,7 @@ describe("MarketplaceInstaller skills", () => {
           id: "test-agent",
           name: "Test Agent",
           description: "test",
+          category: "development",
           content: { mode: "all", description: "test", prompt: "test" },
         },
         "project",
@@ -241,5 +266,29 @@ describe("MarketplaceInstaller skills", () => {
     } finally {
       globalThis.fetch = original
     }
+  })
+})
+
+describe("MarketplaceInstaller agents", () => {
+  it("preserves requirements in installed agent frontmatter", async () => {
+    const installer = new MarketplaceInstaller(new TestPaths())
+    const item = agent({
+      mode: "all",
+      description: "Requires local setup",
+      prompt: "Use the available project tools.",
+      requirements: {
+        skills: ["project-skill"],
+        mcps: ["project-mcp"],
+        vscode_extensions: [{ name: "Project Helper", id: "publisher.project-helper" }],
+      },
+    })
+
+    const result = await installer.installAgent(item, "project", tmpDir)
+
+    expect(result.success).toBe(true)
+    expect(result.filePath).toBeDefined()
+    if (!result.filePath) throw new Error("agent install did not return a file path")
+    const data = await frontmatter(result.filePath)
+    expect(data.requirements).toEqual(item.content.requirements)
   })
 })

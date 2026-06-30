@@ -1,4 +1,4 @@
-import { t } from "./shims/i18n"
+import { t } from "../i18n"
 
 /**
  * Format a session cost value to a human-readable string.

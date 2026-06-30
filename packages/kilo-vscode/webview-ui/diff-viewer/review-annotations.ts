@@ -8,6 +8,7 @@ export interface AnnotationLabels {
   placeholder: string
   cancel: string
   comment: string
+  send: string
   save: string
   sendToChat: string
   edit: string
@@ -76,6 +77,7 @@ interface AnnotationHandlers {
   editing: string | null
   setEditing: (id: string | null) => void
   addComment: (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => void
+  sendComment: (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => void
   updateComment: (id: string, text: string) => void
   deleteComment: (id: string) => void
   cancelDraft: () => void
@@ -131,6 +133,19 @@ function makeActionButton(title: string, icon: SVGSVGElement, action: () => void
     action()
   })
   return button
+}
+
+export function sendReviewComments(comments: ReviewComment[], activeTerminalId?: string): void {
+  window.dispatchEvent(
+    new MessageEvent("message", {
+      data: {
+        type: activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
+        comments,
+        autoSend: true,
+        targetTerminalId: activeTerminalId,
+      },
+    }),
+  )
 }
 
 export function buildFileAnnotations(
@@ -235,15 +250,28 @@ export function buildReviewAnnotation(
     submitButton.className = "am-annotation-btn am-annotation-btn-submit"
     submitButton.textContent = handlers.labels.comment
 
+    const sendButton = document.createElement("button")
+    sendButton.className = "am-annotation-btn am-annotation-btn-submit"
+    sendButton.textContent = handlers.labels.send
+    sendButton.title = handlers.labels.sendToChat
+
+    const update = () => {
+      const disabled = textarea.value.trim().length === 0
+      submitButton.disabled = disabled
+      sendButton.disabled = disabled
+    }
+
     const speech = handlers.speech?.render(meta, textarea)
     if (speech) actions.appendChild(speech)
     actions.appendChild(cancelButton)
     actions.appendChild(submitButton)
+    actions.appendChild(sendButton)
     wrapper.appendChild(header)
     wrapper.appendChild(textarea)
     wrapper.appendChild(actions)
 
     focusWhenConnected(textarea)
+    update()
 
     const submit = () => {
       if (handlers.speech?.active()) return
@@ -255,6 +283,16 @@ export function buildReviewAnnotation(
       handlers.addComment(meta.file, meta.side, meta.line, text, selected)
     }
 
+    const send = () => {
+      if (handlers.speech?.active()) return
+      const text = textarea.value.trim()
+      if (!text) return
+      const diff = handlers.diffs.find((item) => item.file === meta.file)
+      const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
+      const selected = extractLines(content, meta.line, meta.endLine ?? meta.line)
+      handlers.sendComment(meta.file, meta.side, meta.line, text, selected)
+    }
+
     cancelButton.addEventListener("click", (event) => {
       event.stopPropagation()
       handlers.cancelDraft()
@@ -263,6 +301,11 @@ export function buildReviewAnnotation(
     submitButton.addEventListener("click", (event) => {
       event.stopPropagation()
       submit()
+    })
+
+    sendButton.addEventListener("click", (event) => {
+      event.stopPropagation()
+      send()
     })
 
     textarea.addEventListener("keydown", (event) => {
@@ -276,6 +319,7 @@ export function buildReviewAnnotation(
         submit()
       }
     })
+    textarea.addEventListener("input", update)
 
     return wrapper
   }
@@ -360,16 +404,7 @@ export function buildReviewAnnotation(
 
   actions.appendChild(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      window.dispatchEvent(
-        new MessageEvent("message", {
-          data: {
-            type: handlers.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
-            comments: [comment],
-            autoSend: true,
-            targetTerminalId: handlers.activeTerminalId,
-          },
-        }),
-      )
+      sendReviewComments([comment], handlers.activeTerminalId)
       handlers.deleteComment(comment.id)
     }),
   )

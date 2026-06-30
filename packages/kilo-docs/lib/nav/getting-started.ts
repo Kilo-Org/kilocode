@@ -30,16 +30,12 @@ export const GettingStartedNav: NavSection[] = [
         children: "Settings",
         subLinks: [
           { href: "/getting-started/settings/auto-approving-actions", children: "Auto-Approving Actions" },
-          { href: "/getting-started/settings/auto-cleanup", children: "Auto Cleanup", platform: "legacy" },
-          {
-            href: "/getting-started/settings/system-notifications",
-            children: "System Notifications",
-            platform: "legacy",
-          },
+          { href: "/getting-started/settings/sandboxing", children: "Sandboxing" },
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
-      { href: "/getting-started/rate-limits-and-costs", children: "Rate Limits and Costs" },
+      { href: "/getting-started/rate-limits-and-costs", children: "Cost Efficiency & Model Selection" },
+      { href: "/getting-started/cost-controls-and-usage-safeguards", children: "Cost Controls and Usage Safeguards" },
     ],
   },
   {
@@ -53,7 +49,6 @@ export const GettingStartedNav: NavSection[] = [
           { href: "/getting-started/faq/setup-and-installation", children: "Setup and Installation" },
           { href: "/getting-started/faq/credits-and-billing", children: "Credits and Billing" },
           { href: "/getting-started/faq/account-and-integration", children: "Account and Integration" },
-          { href: "/getting-started/faq/known-issues", children: "Known Issues" },
         ],
       },
       {

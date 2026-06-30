@@ -43,6 +43,25 @@ describe("TUI config routes", () => {
     expect(body.plugin_origins).toBeUndefined()
   })
 
+  test("loads legacy .kilocode TUI config and ignores .opencode", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await fs.mkdir(path.join(dir, ".opencode"), { recursive: true })
+        await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+        await Bun.write(path.join(dir, ".opencode", "tui.json"), JSON.stringify({ theme: "dracula" }))
+        await Bun.write(path.join(dir, ".kilocode", "tui.json"), JSON.stringify({ theme: "nord" }))
+      },
+    })
+
+    const response = await Server.Default().app.request("/tui/config", {
+      headers: { "x-kilo-directory": tmp.path },
+    })
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { theme?: string }
+    expect(body.theme).toBe("nord")
+  })
+
   test("lists valid TUI keybinds", async () => {
     await using tmp = await tmpdir()
 

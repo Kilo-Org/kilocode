@@ -390,6 +390,12 @@ export const Info = Schema.Struct({
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       // kilocode_change start
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }),
+      agent_requirements: Schema.optional(Schema.Boolean).annotate({
+        description: "Require declared agent skills, MCPs, and VS Code extensions before VS Code prompts can run",
+      }),
+      native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable native tools for reading, editing, and executing VS Code notebooks",
+      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
@@ -403,6 +409,16 @@ export const Info = Schema.Struct({
       continue_loop_on_deny: Schema.optional(Schema.Boolean).annotate({
         description: "Continue the agent loop when a tool call is denied",
       }),
+      // kilocode_change start
+      sandbox: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access",
+      }),
+      sandbox_restrict_network: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)",
+      }),
+      // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
       }),
@@ -855,7 +871,7 @@ export const layer = Layer.effect(
         const directories = yield* ConfigPaths.directories(ctx.directory, ctx.worktree)
         const primary = Flag.KILO_DISABLE_PROJECT_CONFIG
           ? []
-          : yield* primaryPaths(ctx.directory, ctx.worktree, [".kilocode", ".kilo", ".opencode"])
+          : yield* primaryPaths(ctx.directory, ctx.worktree, [".kilocode", ".kilo"])
         // Load primary fallbacks before active-worktree config, then track them as local.
         directories.splice(1, 0, ...primary)
         const primarySet = new Set(primary)
@@ -924,7 +940,7 @@ export const layer = Layer.effect(
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir, warnings)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings)))
           // kilocode_change end
-          // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
+          // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
           yield* mergePluginOrigins(dir, list, scope) // kilocode_change

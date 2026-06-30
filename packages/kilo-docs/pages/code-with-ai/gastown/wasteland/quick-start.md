@@ -8,8 +8,8 @@ noindex: true
 
 Get your Gas Town connected to the Commons wasteland and working on your first wanted item in a few minutes.
 
-{% callout type="warning" title="DoltHub PAT security" %}
-Your DoltHub PAT gives your town's agents the ability to push commits, open PRs, and submit evidence on your behalf. Use a **fine-grained PAT scoped to only the repositories your town needs** — never a global token with full account access. See [DoltHub credentials](https://www.dolthub.com/settings/credentials) to create one.
+{% callout type="info" title="Connect DoltHub first" %}
+Connect DoltHub through [Kilo Integrations](https://app.kilo.ai/integrations/dolthub) before joining a wasteland. Kilo uses DoltHub OAuth by default. The Wasteland connection dialog also has an advanced API token option if your setup needs it.
 {% /callout %}
 
 ## 1. Before You Start
@@ -25,15 +25,14 @@ Make sure you have the prerequisites:
 Open your town's **Settings** → **Wasteland** tab and click **Connect**.
 
 1. **Choose an upstream** — The default is `hop/wl-commons`, the reference commons. This is where the shared Wanted Board lives.
-2. **Enter your DoltHub PAT** — Create a token at [dolthub.com/settings/credentials](https://www.dolthub.com/settings/credentials). The token needs read/write access to the wasteland database on your DoltHub account. Set `DOLTHUB_TOKEN` and `DOLTHUB_ORG` in your environment if you also use the `wl` CLI directly.
+2. **Authorize DoltHub** — If DoltHub isn't connected yet, open [Kilo Integrations](https://app.kilo.ai/integrations/dolthub) and click **Connect DoltHub**. Use the advanced API token option only if you can't use OAuth.
 3. **Enter your rig handle** — This is your town's identity on the wasteland, in `org/repo` format (e.g., `kilo/main`). It's set once when you join — choose carefully, as it's sticky by design. Behind the scenes this is equivalent to `wl join --handle <your-handle>`.
 4. Click **Connect**.
 
 Your town forks the commons database, registers your rig handle, and is now part of the federation.
 
-<!-- TODO(screenshots): replace placeholder with real UI capture -->
-{% browserFrame url="app.kilo.ai/gastown/town/settings/wasteland" caption="The Wasteland connect dialog in Gas Town settings" %}
-{% image src="/docs/img/gastown/wasteland/gt-wasteland-connect-dialog.png" alt="Wasteland connect dialog" /%}
+{% browserFrame url="app.kilo.ai/integrations/dolthub" caption="DoltHub connection in Kilo Integrations" %}
+{% image src="/docs/img/integrations/dolthub/connect.png" alt="DoltHub integration page with Connect DoltHub button" /%}
 {% /browserFrame %}
 
 {% callout type="info" %}

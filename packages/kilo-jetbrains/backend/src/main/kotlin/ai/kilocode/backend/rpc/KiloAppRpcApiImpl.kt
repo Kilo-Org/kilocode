@@ -30,6 +30,7 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
@@ -148,6 +149,14 @@ internal fun profileDto(p: KiloProfile200Response): ProfileDto = ProfileDto(
         ProfileOrganizationDto(id = org.id, name = org.name, role = org.role)
     },
     balance = p.balance?.let { ProfileBalanceDto(balance = it.balance) },
+    kiloPass = p.kiloPass?.let {
+        ProfileKiloPassDto(
+            currentPeriodBaseCreditsUsd = it.currentPeriodBaseCreditsUsd,
+            currentPeriodUsageUsd = it.currentPeriodUsageUsd,
+            currentPeriodBonusCreditsUsd = it.currentPeriodBonusCreditsUsd,
+            nextBillingAt = it.nextBillingAt,
+        )
+    },
     currentOrgId = p.currentOrgId,
 )
 

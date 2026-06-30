@@ -79,7 +79,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
         jobs += scope.launch { app.connect() }
         val path = hint ?: return
         jobs += scope.launch {
-            val dir = workspaces.resolveProjectDirectory(path)
+            val dir = workspaces.resolveProjectDirectory(null, path)
             withContext(edt) {
                 projectDirectory = dir
                 workspaceLoaded = false

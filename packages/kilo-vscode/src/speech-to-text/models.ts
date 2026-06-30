@@ -38,6 +38,11 @@ const models: SpeechToTextModelDef[] = [
     label: "Chirp 3",
     provider: "Google",
   },
+  {
+    id: "nvidia/parakeet-tdt-0.6b-v3",
+    label: "Parakeet TDT 0.6B v3",
+    provider: "NVIDIA",
+  },
 ]
 
 export const SPEECH_TO_TEXT_MODELS: readonly SpeechToTextModelDef[] = models

@@ -1,12 +1,12 @@
 ---
 title: "Wasteland Settings"
-description: "Wasteland connection settings in the Gas Town dashboard, DoltHub token setup, and rig identity"
+description: "Wasteland connection settings in the Gas Town dashboard, DoltHub credentials, and rig identity"
 noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}
 
-Reference for every Wasteland-related setting in your Gas Town dashboard, from upstream selection to DoltHub PAT management.
+Reference for every Wasteland setting in your Gas Town dashboard, from upstream selection to DoltHub credentials.
 
 Access these settings from your town dashboard → **Settings** → **Wasteland** tab.
 
@@ -72,46 +72,66 @@ If you absolutely need a different handle, disconnect from the wasteland and rec
 Think of your rig handle like a GitHub username — you set it once and it follows you everywhere on that wasteland. Choose something stable and recognizable.
 {% /callout %}
 
-## DoltHub PAT
+## DoltHub credentials
 
-Your DoltHub Personal Access Token lets your town's agents interact with the wasteland on your behalf — forking the commons, pushing claims, and submitting evidence via DoltHub pull requests.
+Your DoltHub credentials let your town's agents use the wasteland. They can fork the commons, push claims, and submit evidence through DoltHub pull requests.
 
-### Creating a PAT
+{% browserFrame url="app.kilo.ai/gastown/town/settings/wasteland" caption="DoltHub credentials dialog with OAuth default and advanced API token option" %}
+{% image src="/docs/img/gastown/wasteland/dolthub-credentials-dialog.png" alt="DoltHub credentials dialog showing connected account and advanced API token fields" /%}
+{% /browserFrame %}
 
-1. Go to [dolthub.com/settings/credentials](https://www.dolthub.com/settings/credentials)
-2. Create a new token
-3. Scope the token to the repositories your town needs access to
+### Default: OAuth through Kilo Integrations
 
-### Required scope
+1. Go to [Kilo Integrations → DoltHub](https://app.kilo.ai/integrations/dolthub)
+2. Click **Connect DoltHub**
+3. Approve Kilo on DoltHub
+4. Return to Kilo and confirm DoltHub shows **Connected**
 
-The PAT needs read/write access to the wasteland database on your DoltHub account. At minimum, it must be able to:
+When you join a wasteland, choose **Use your connected DoltHub account**. Confirm your DoltHub username so Kilo can label commits and contribution branches correctly.
+
+### Advanced: API token
+
+If OAuth is not available for your setup, expand **Advanced — Paste an API token** in the Wasteland connection dialog.
+
+1. Create a DoltHub API token from [dolthub.com/settings/tokens](https://www.dolthub.com/settings/tokens)
+2. Paste the token into **DoltHub API token**
+3. Enter your DoltHub username or organization
+
+Use this only when you need a token-based setup. For normal setup, use the connected DoltHub account.
+
+### Required access
+
+Your DoltHub credentials need read and write access. Kilo uses them to:
 
 - Fork the upstream commons database
 - Push branches to your fork
 - Open and update pull requests on the upstream
 
-{% callout type="warning" title="Security: agents act on your behalf" %}
-Your DoltHub PAT gives your town's agents the ability to push commits and open PRs under your DoltHub account. **Use a fine-grained PAT scoped to only the repositories your town needs.** Never use a global token with full account access. Since agents act autonomously, limiting the token's scope reduces the blast radius if it's ever compromised.
+{% callout type="info" title="Use OAuth by default" %}
+Kilo uses DoltHub OAuth for the normal Gas Town Wasteland flow. Use the advanced API token option only for setups that cannot use OAuth.
 {% /callout %}
 
-### Rotating your PAT
+### Reconnecting or rotating credentials
 
-To rotate an expired or compromised token:
+To reconnect DoltHub OAuth:
 
-1. Generate a new PAT at [dolthub.com/settings/credentials](https://www.dolthub.com/settings/credentials)
-2. Go to **Settings** → **Wasteland** tab
-3. Update the PAT field with the new token
-4. Revoke the old token on DoltHub
+1. Go to [Kilo Integrations → DoltHub](https://app.kilo.ai/integrations/dolthub)
+2. Click **Disconnect**
+3. Click **Connect DoltHub**
+4. Approve Kilo again on DoltHub
 
-Your town's active connections will pick up the new token immediately — no reconnect needed.
+If you used the advanced API token option, create a new token on DoltHub and paste it into the Wasteland connection dialog.
 
-### If your PAT is invalid
+Your town uses the updated DoltHub credentials automatically. You don't need to reconnect the wasteland.
 
-If the Mayor reports DoltHub authentication errors, the PAT may have expired or been revoked. Check:
+### If DoltHub auth fails
 
-- The token hasn't been revoked on [dolthub.com/settings/credentials](https://www.dolthub.com/settings/credentials)
-- The token's scope still covers the wasteland database
-- The token hasn't hit a rate limit
+If the Mayor reports DoltHub authentication errors, check:
+
+- DoltHub shows **Connected** in [Kilo Integrations](https://app.kilo.ai/integrations/dolthub)
+- The connected DoltHub account can access the wasteland database
+- The advanced API token is valid, if you used one
+- DoltHub isn't rate limiting API requests
 
 See the [Wasteland overview](/docs/code-with-ai/gastown/wasteland) for detailed diagnosis steps.
 
@@ -139,7 +159,7 @@ The auto-submit flow:
 4. Evidence is pushed to your wasteland fork and proposed upstream as a DoltHub PR
 
 {% callout type="info" %}
-If the auto-submit fails (e.g., DoltHub is unreachable, PAT expired), the Mayor will retry and notify you. The evidence isn't lost — it can be resubmitted once the issue is resolved.
+If the auto-submit fails, DoltHub may be unavailable, OAuth may be disconnected, or the advanced API token may be invalid. The Mayor will retry and notify you. The evidence isn't lost — it can be resubmitted once the auth issue is fixed.
 {% /callout %}
 
 ## Wasteland Admin Settings

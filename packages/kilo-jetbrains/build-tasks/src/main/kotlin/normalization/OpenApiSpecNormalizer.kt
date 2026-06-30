@@ -106,7 +106,7 @@ internal object OpenApiSpecNormalizer {
 
     /**
      * Fix the `/kilo/profile` GET 200 response schema: Effect's OpenAPI generator
-     * emits `balance` and `currentOrgId` as non-nullable required fields even
+     * emits `balance`, `kiloPass`, and `currentOrgId` as non-nullable required fields even
      * though the server schema is `Schema.NullOr(...)`.  Wrap each non-nullable
      * property in `anyOf: [<original-schema>, {"type": "null"}]` so the generated
      * Kotlin model uses a nullable type.  Already-nullable properties (those that
@@ -124,7 +124,7 @@ internal object OpenApiSpecNormalizer {
             as? JsonObject ?: return root
         val props = schema["properties"] as? JsonObject ?: return root
 
-        val nullable = setOf("balance", "currentOrgId")
+        val nullable = setOf("balance", "kiloPass", "currentOrgId")
         val fixed = JsonObject(props.mapValues { (key, value) ->
             if (key !in nullable) return@mapValues value
             val obj = value as? JsonObject ?: return@mapValues value

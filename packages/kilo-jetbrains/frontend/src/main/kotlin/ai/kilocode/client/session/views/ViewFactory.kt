@@ -70,9 +70,10 @@ object ViewFactory {
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
+        mentions: List<PromptMention> = emptyList(),
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
     ): PartView = when (content) {
-        is Text -> PromptView(content, openUrl = openUrl, selection = selection)
+        is Text -> PromptView(content, openFile = openFile, openAttachment = openAttachment, openUrl = openUrl, selection = selection, mentions = mentions)
         else -> create(content, openFile, openUrl, selection, repo, openAttachment)
     }
 

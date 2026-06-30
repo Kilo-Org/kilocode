@@ -134,6 +134,8 @@ function sid(event: Event): string | undefined {
     return event.properties.part.sessionID
   }
 
+  if (event.type === "interactive_terminal.updated") return event.properties.info.sessionID // kilocode_change
+
   if (
     event.type === "session.next.shell.started" ||
     event.type === "session.next.shell.ended" ||
@@ -142,6 +144,8 @@ function sid(event: Event): string | undefined {
     event.type === "question.asked" ||
     event.type === "question.replied" ||
     event.type === "question.rejected" ||
+    event.type === "interactive_terminal.data" || // kilocode_change
+    event.type === "interactive_terminal.deleted" || // kilocode_change
     event.type === "session.error" ||
     event.type === "session.status"
   ) {
@@ -268,6 +272,13 @@ function sameView(a: FooterView, b: FooterView) {
     return false
   }
 
+  // kilocode_change start
+  if (a.type === "interactive_terminal" && b.type === "interactive_terminal") {
+    return a.terminal === b.terminal
+  }
+
+  if (a.type === "interactive_terminal" || b.type === "interactive_terminal") return false
+  // kilocode_change end
   return a.request === b.request
 }
 
@@ -288,6 +299,7 @@ function firstByOrder<T extends { id: string }>(left: T[], right: T[], order: Ma
 
 function pickView(data: SessionData, subagent: SubagentData, order: Map<string, number>): FooterView {
   return pickBlockerView({
+    terminal: data.terminal, // kilocode_change
     permission: firstByOrder(data.permissions, listSubagentPermissions(subagent), order),
     question: firstByOrder(data.questions, listSubagentQuestions(subagent), order),
   })

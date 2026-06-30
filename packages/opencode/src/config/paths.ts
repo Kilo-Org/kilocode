@@ -26,13 +26,13 @@ export const directories = Effect.fn("ConfigPaths.directories")(function* (direc
     Global.Path.config,
     ...(!Flag.KILO_DISABLE_PROJECT_CONFIG
       ? yield* afs.up({
-          targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+          targets: [".kilocode", ".kilo"], // kilocode_change
           start: directory,
           stop: worktree,
         })
       : []),
     ...(yield* afs.up({
-      targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+      targets: [".kilocode", ".kilo"], // kilocode_change
       start: Global.Path.home,
       stop: Global.Path.home,
     })),

@@ -368,7 +368,7 @@ describe("util.effect-flock", () => {
         const proc = spawnWorker({ key: "eflock:crash", dir, ready, holdMs: 120_000 })
 
         try {
-          await waitForFile(ready, 5_000)
+          await waitForFile(ready, 20_000) // kilocode_change - hosted macOS can start this worker slowly after stress tests
           await stopWorker(proc) // kilocode_change - stopWorker now awaits close before returning
 
           // Backdate lock files so they're past STALE_MS (60s)
@@ -387,6 +387,6 @@ describe("util.effect-flock", () => {
           await fs.rm(tmp, { recursive: true, force: true })
         }
       }),
-    30_000,
+    60_000, // kilocode_change - match the wider worker readiness window
   )
 })
