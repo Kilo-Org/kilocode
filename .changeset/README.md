@@ -4,7 +4,7 @@ This directory contains changeset files used to track changes for the next relea
 
 ## Adding a changeset
 
-When making a user-facing change, run:
+When making a user-facing change, prefer one concise changeset per PR, grouping related changes when possible. Run:
 
 ```sh
 bunx changeset add

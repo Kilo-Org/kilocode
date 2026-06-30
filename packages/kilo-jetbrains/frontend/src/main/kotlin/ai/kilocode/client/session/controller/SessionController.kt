@@ -93,6 +93,7 @@ class SessionController(
   private val openProfileAction: () -> Unit = {},
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val timers: UiTimerSource = UiTimers,
+  private val log: KiloLog = LOG,
 ) : Disposable {
 
     private data class OrganizationTarget(val org: String?)
@@ -268,18 +269,19 @@ class SessionController(
 
     private fun dispatch(data: Dispatch, send: suspend (String) -> Unit) {
         assertEdt()
+        val props = data.props + if (data.kind == "command") slashProps() else emptyMap()
         capture("Conversation Send Clicked", sessionProps(sid ?: ref?.key) + mapOf(
             "source" to data.source,
             "hasExistingSession" to data.exists.toString(),
             "textLength" to bucket(data.text),
-        ) + data.props)
+        ) + props)
         showSession()
         val pending = sid?.let { CompletableDeferred(it) } ?: session()
         cs.launch {
             try {
                 val id = pending.await() ?: return@launch
                 send(id)
-                capture("Conversation Message", sessionProps(id) + mapOf("source" to data.source, "hasExistingSession" to data.exists.toString()) + data.props)
+                capture("Conversation Message", sessionProps(id) + mapOf("source" to data.source, "hasExistingSession" to data.exists.toString()) + props)
                 LOG.debug { "${ChatLogSummary.sid(id)} kind=${data.kind} dispatched=true" }
             } catch (e: Exception) {
                 capture("Session Error", sessionProps(sid ?: ref?.key ?: data.start) + mapOf("context" to data.kind, "errorClass" to e::class.java.name))
@@ -863,6 +865,10 @@ class SessionController(
                     LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
                     updates.enqueue(event)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("${ChatLogSummary.sid(id)} kind=subscription route=controller-events failed message=${e.message}", e)
             } finally {
                 LOG.debug { "${ChatLogSummary.sid(id)} kind=subscription subscribe=false" }
             }
@@ -881,6 +887,10 @@ class SessionController(
                     LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-event child=$child ${ChatLogSummary.eventBody(event)}" }
                     updates.enqueue(event)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-subscription child=$child failed message=${e.message}", e)
             } finally {
                 LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-subscription child=$child subscribe=false" }
             }
@@ -1531,7 +1541,17 @@ class SessionController(
             put("attachmentCount", files.size.toString())
             put("mediaAttachmentCount", files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
         }
+        val mentions = files.filter { it.source?.text?.value?.startsWith("@") == true }
+        if (mentions.isNotEmpty()) {
+            val resources = mentions.count { it.source?.path == "git-changes" }
+            put("hasMentions", "true")
+            put("mentionCount", mentions.size.toString())
+            put("fileMentionCount", (mentions.size - resources).toString())
+            put("resourceMentionCount", resources.toString())
+        }
     }
+
+    private fun slashProps() = mapOf("hasSlashCommand" to "true", "slashCommandType" to "server")
 
     private fun bucket(text: String): String = when (text.length) {
         0 -> "empty"

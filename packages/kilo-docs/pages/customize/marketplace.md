@@ -30,7 +30,7 @@ Every installation has a scope:
 
 Project files can be committed to version control and shared with teammates. Global files remain on your machine and do not travel with a repository.
 
-When the same configuration exists at both scopes, project configuration takes precedence over global configuration. Learn more about [Kilo's configuration files and precedence](/docs/getting-started/settings#configuration-files).
+When the same configuration exists at both scopes, project configuration takes precedence over global configuration. Learn more about [Kilo's configuration files and precedence](/docs/getting-started/settings#config-file-precedence).
 
 ## Files changed by installation
 

@@ -1,5 +1,4 @@
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
-import * as vscode from "vscode"
 
 type PluginSpec = string | [string, Record<string, unknown>]
 
@@ -15,6 +14,6 @@ export type Features = {
 export function configFeatures(config?: ConfigLike | null): Features {
   return {
     indexing: hasIndexingPlugin(config?.plugin ?? []),
-    sandboxControls: vscode.workspace.getConfiguration("kilo-code.new.internal").get("sandboxControls", false),
+    sandboxControls: process.platform !== "win32",
   }
 }

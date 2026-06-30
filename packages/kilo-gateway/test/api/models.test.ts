@@ -42,6 +42,25 @@ const VALID_BENCH_RESPONSE = JSON.stringify({
   ],
 })
 
+const VALID_AUTO_ROUTING_RESPONSE = JSON.stringify({
+  data: [
+    {
+      id: "kilo-auto/efficient",
+      name: "Kilo Auto Efficient",
+      context_length: 128000,
+      max_completion_tokens: 16384,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: ["tools", "temperature"],
+      autoRouting: {
+        models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
+      },
+    },
+  ],
+})
+
 const INVALID_BENCH_RESPONSE = JSON.stringify({
   data: [
     {
@@ -171,6 +190,26 @@ test("preserves Terminal Bench metadata as a dedicated model field", async () =>
   expect(result.models["test/model-a"].terminalBench).toEqual({
     overallScore: 0.551,
     avgAttemptCostUsd: 53.37,
+  })
+})
+
+test("preserves Auto Efficient routing metadata as a dedicated model field", async () => {
+  const orig = globalThis.fetch
+  stubFetch(
+    async () =>
+      new Response(VALID_AUTO_ROUTING_RESPONSE, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+  )
+
+  const result = await fetchKiloModels({})
+
+  ;(globalThis as any).fetch = orig
+
+  expect(result.error).toBeUndefined()
+  expect(result.models["kilo-auto/efficient"].autoRouting).toEqual({
+    models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
   })
 })
 

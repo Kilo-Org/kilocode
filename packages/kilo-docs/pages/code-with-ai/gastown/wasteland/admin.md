@@ -26,7 +26,7 @@ Running your own wasteland means creating a new DoltHub database and configuring
 1. Navigate to your town's **Settings** → **Wasteland** tab
 2. Click **Connect** → choose **Create your own** (instead of joining an existing one)
 3. Enter your wasteland name and upstream (e.g., `my-org/wl-internal`)
-4. Provide your DoltHub PAT — this must have write access to the upstream repo
+4. Authorize DoltHub — OAuth through Kilo Integrations is the default. The advanced API token option is also supported, but it must have write access to the upstream repo.
 5. Check **"I own this upstream"** — this sets `is_upstream_admin = true` on your credential, enabling admin mode
 6. Click **Connect**
 
@@ -297,9 +297,9 @@ The wasteland settings page exposes additional controls when your credential has
 
 ### Test admin access
 
-The **Test admin access** button probes DoltHub by attempting a no-op write against a scratch branch on the upstream. If the probe succeeds, you see a green "Admin access verified" badge. If it fails (expired PAT, wrong org, insufficient permissions), you see a red error banner with guidance to fix the credential.
+The **Test admin access** button checks whether Kilo can write to a scratch branch on the upstream. If it works, you see a green "Admin access verified" badge. If it fails, DoltHub OAuth may be disconnected, the API token may be invalid, the wrong org may be connected, or write access may be missing.
 
-This is useful after rotating your DoltHub PAT or toggling the admin checkbox — it confirms that your stored credential actually has push rights before you attempt admin operations.
+Use this after reconnecting DoltHub OAuth, updating an API token, or toggling the admin checkbox. It confirms Kilo can push before you run admin actions.
 
 ### Pending PRs
 

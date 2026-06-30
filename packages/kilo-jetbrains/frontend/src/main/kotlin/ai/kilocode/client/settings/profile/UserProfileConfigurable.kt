@@ -19,8 +19,8 @@ import javax.swing.JComponent
  *
  * Located at Settings -> Tools -> Kilo -> User Profile.
  *
- * Shows login / logout, current balance, personal/org account selector,
- * and a link to the Kilo dashboard. This is a status/action panel — it
+ * Shows login / logout, current balance, Kilo Pass, personal/org account selector,
+ * and account billing actions. This is a status/action panel — it
  * has no persistent settings, so [isModified] always returns false.
  */
 class UserProfileConfigurable : KiloReadyConfigurable() {

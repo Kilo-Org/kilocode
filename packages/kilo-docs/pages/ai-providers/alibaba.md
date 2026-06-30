@@ -18,11 +18,6 @@ Kilo Code supports Alibaba Cloud Model Studio (DashScope) through the native Ali
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-Use the **OpenAI Compatible** provider if the legacy provider list does not include Alibaba Cloud. Set the base URL and API key from your DashScope account, then choose or enter a supported model ID.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Alibaba Cloud. Enter your DashScope API key and choose a supported model from the model picker.

@@ -51,6 +51,7 @@ const mockVscode = {
     onDidOpenTextDocument: () => ({ dispose: noop }),
     onDidChangeTextDocument: () => ({ dispose: noop }),
     onDidCloseTextDocument: () => ({ dispose: noop }),
+    onDidChangeConfiguration: () => ({ dispose: noop }),
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,
       update: async () => {},
@@ -79,6 +80,7 @@ const mockVscode = {
     visibleNotebookEditors: [],
     tabGroups: { all: [] },
     showTextDocument: async () => {},
+    showInformationMessage: async () => undefined,
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
     createOutputChannel: () => ({
