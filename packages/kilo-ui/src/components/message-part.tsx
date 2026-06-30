@@ -58,6 +58,7 @@ import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
 import { escapeHtml } from "../util/escape-html"
+import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -934,56 +935,9 @@ export function UserMessageDisplay(props: {
   )
 }
 
-type HighlightSegment = { text: string; type?: "file" | "agent" }
-
-/** Match @path mentions: `@` followed by a path-like token (contains `/` or `.`). */
-const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
-
-function detectMentions(text: string): { start: number; end: number; type: "file" }[] {
-  const result: { start: number; end: number; type: "file" }[] = []
-  MENTION_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = MENTION_RE.exec(text))) {
-    result.push({ start: m.index, end: m.index + m[0].length, type: "file" })
-  }
-  return result
-}
-
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
-    const text = props.text
-
-    const offset: { start: number; end: number; type: "file" | "agent" }[] = [
-      ...props.references
-        .filter((r) => r.source?.text?.start !== undefined && r.source?.text?.end !== undefined)
-        .map((r) => ({ start: r.source!.text!.start, end: r.source!.text!.end, type: "file" as const })),
-      ...props.agents
-        .filter((a) => a.source?.start !== undefined && a.source?.end !== undefined)
-        .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
-    ]
-
-    // Fall back to regex detection when no source offsets are available
-    const allRefs = offset.length > 0 ? offset.sort((a, b) => a.start - b.start) : detectMentions(text)
-
-    const result: HighlightSegment[] = []
-    let lastIndex = 0
-
-    for (const ref of allRefs) {
-      if (ref.start < lastIndex) continue
-
-      if (ref.start > lastIndex) {
-        result.push({ text: text.slice(lastIndex, ref.start) })
-      }
-
-      result.push({ text: text.slice(ref.start, ref.end), type: ref.type })
-      lastIndex = ref.end
-    }
-
-    if (lastIndex < text.length) {
-      result.push({ text: text.slice(lastIndex) })
-    }
-
-    return result
+    return buildHighlightedTextSegments(props.text, props.references, props.agents)
   })
 
   const data = useData()

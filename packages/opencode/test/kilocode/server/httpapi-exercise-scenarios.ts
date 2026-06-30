@@ -71,6 +71,37 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "session process stop should return true")),
+  http.protected.get("/interactive-terminal", "interactiveTerminal.list").json(200, array),
+  http.protected
+    .get("/interactive-terminal/{terminalID}", "interactiveTerminal.get")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/input", "interactiveTerminal.write")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/input", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: { data: "x" },
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/resize", "interactiveTerminal.resize")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/resize", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: { cols: 1, rows: 1 },
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/close", "interactiveTerminal.close")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/close", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
   http.protected.get("/config/warnings", "config.warnings").json(200, array),
   http.protected.get("/config/effective", "config.effective").json(200, object),
   http.protected.get("/config/model-state", "config.modelState").json(200, object),
@@ -262,6 +293,19 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
   http.protected
+    .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
+    .seeded((ctx) => ctx.session({ title: "Model usage" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/model-usage", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.models)
+      object(body.totals)
+      check(body.models.length === 0, "a new session should have no model usage")
+    }),
+  http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
     .jsonEffect(200, (body) =>
@@ -271,6 +315,19 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .get("/kilocode/agent/requirements", "kilocode.agentRequirements")
+    .at((ctx) => ({ path: "/kilocode/agent/requirements?agent=httpapi-agent", headers: ctx.headers() }))
+    .json(200, (body, ctx) => {
+      object(body)
+      check(body.agent === "httpapi-agent", "agent requirements should echo the requested agent")
+      check(body.directory === ctx.directory, "agent requirements should use the routed workspace directory")
+      check(body.enabled === false, "agent requirements should report disabled when the experiment is off")
+      check(body.state === "disabled", "agent requirements should return the disabled state")
+      array(body.skills)
+      array(body.mcps)
+      array(body.vscode_extensions)
+    }),
+  http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .mutating()
     .preserveDatabase()
@@ -278,10 +335,10 @@ export const kiloScenarios: Scenario[] = [
       Effect.gen(function* () {
         const location = yield* file(
           ctx,
-          ".opencode/skill/httpapi-remove/SKILL.md",
+          ".kilo/skill/httpapi-remove/SKILL.md",
           "---\nname: httpapi-remove\ndescription: HTTP API removal fixture.\n---\n# HTTP API remove\n",
         )
-        const sentinel = yield* file(ctx, ".opencode/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
+        const sentinel = yield* file(ctx, ".kilo/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
         return { location, sentinel }
       }),
     )
@@ -306,9 +363,7 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .mutating()
-    .seeded((ctx) =>
-      file(ctx, ".opencode/agent/httpapi-remove.md", "---\ndescription: HTTP API remove\n---\nRemove me.\n"),
-    )
+    .seeded((ctx) => file(ctx, ".kilo/agent/httpapi-remove.md", "---\ndescription: HTTP API remove\n---\nRemove me.\n"))
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-remove" } }))
     .jsonEffect(200, (body, ctx) =>
       Effect.gen(function* () {

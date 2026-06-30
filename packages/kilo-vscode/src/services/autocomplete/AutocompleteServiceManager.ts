@@ -1,6 +1,6 @@
 import crypto from "crypto"
 import * as vscode from "vscode"
-import { t } from "./shims/i18n"
+import { t } from "../i18n"
 import { TelemetryProxy, TelemetryEventName } from "../telemetry"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
@@ -86,6 +86,7 @@ export class AutocompleteServiceManager {
   private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
   private unsubscribeState: (() => void) | null = null
   private unsubscribeEvent: (() => void) | null = null
+  private readonly config: vscode.Disposable
   // Resolved copy of the classic provider's ignore controller for synchronous
   // snippet filtering. Null until the async initialize() resolves.
   private ignoreControllerSync: { validateAccess(fsPath: string): boolean } | null = null
@@ -178,6 +179,12 @@ export class AutocompleteServiceManager {
       (event) => event.type === "global.disposed",
       () => this.inlineCompletionProvider.resetBackoff(),
     )
+
+    this.config = vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kilo-code.new.language")) {
+        this.updateStatusBar()
+      }
+    })
 
     void this.load()
   }
@@ -477,6 +484,7 @@ export class AutocompleteServiceManager {
     this.unsubscribeState = null
     this.unsubscribeEvent?.()
     this.unsubscribeEvent = null
+    this.config.dispose()
 
     // Dispose inline completion provider registration
     if (this.inlineCompletionProviderDisposable) {

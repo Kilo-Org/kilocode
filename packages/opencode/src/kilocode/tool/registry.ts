@@ -1,8 +1,10 @@
 // kilocode_change - new file
 import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
+import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -37,15 +39,17 @@ export namespace KiloToolRegistry {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
+      const managerModels = yield* AgentManagerModelsTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
-      if (!notebook) return { codebase, recall, manager, process }
+      const terminal = yield* InteractiveTerminalTool
+      if (!notebook) return { codebase, recall, managerModels, manager, process, terminal }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, manager, process, ...tools }
+      return { codebase, recall, managerModels, manager, process, terminal, ...tools }
     })
   }
 
@@ -55,8 +59,10 @@ export namespace KiloToolRegistry {
     tools: {
       codebase: Tool.Info
       recall: Tool.Info
+      managerModels: Tool.Info
       manager: Tool.Info
       process: Tool.Info
+      terminal?: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
@@ -68,9 +74,11 @@ export namespace KiloToolRegistry {
       const base = yield* Effect.all({
         codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
+        managerModels: Tool.init(tools.managerModels),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
       })
+      const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
           ? yield* Effect.all({
@@ -80,7 +88,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, ...notebooks, semantic }
+      return { ...base, terminal, ...notebooks, semantic }
     })
   }
 
@@ -121,14 +129,22 @@ export namespace KiloToolRegistry {
     })
   }
 
+  /** Hide human-driven tools from agents that cannot interact with the user directly. */
+  export function available(tool: Tool.Def, agent: Agent.Info) {
+    if (tool.id !== "interactive_terminal") return true
+    return agent.mode === "primary"
+  }
+
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
     tools: {
       codebase: Tool.Def
       semantic?: Tool.Def
       recall: Tool.Def
+      managerModels: Tool.Def
       manager: Tool.Def
       process: Tool.Def
+      terminal?: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
@@ -140,8 +156,9 @@ export namespace KiloToolRegistry {
       ...(tools.semantic ? [tools.semantic] : []),
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
-      // The extension is the only client that can consume the Agent Manager start event.
-      ...(Flag.KILO_CLIENT === "vscode" ? [tools.manager] : []),
+      ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
+      // Agent Manager tools are useful only when the extension can create and display their sessions.
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.managerModels, tools.manager] : []),
       ...(Flag.KILO_CLIENT === "vscode" &&
       cfg.experimental?.native_notebook_tools === true &&
       tools.notebookRead &&

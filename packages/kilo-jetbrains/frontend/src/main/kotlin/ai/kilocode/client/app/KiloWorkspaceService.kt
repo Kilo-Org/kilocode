@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.openapi.components.Service
 import ai.kilocode.log.KiloLog
+import com.intellij.platform.project.ProjectId
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
@@ -88,10 +89,10 @@ class KiloWorkspaceService internal constructor(
      * `/home/.cache/JetBrains/RemoteDev/...`). The backend resolves
      * it to the actual project root on the host.
      */
-    suspend fun resolveProjectDirectory(hint: String): String {
+    suspend fun resolveProjectDirectory(projectId: ProjectId?, hint: String): String {
         return try {
-            val resolved = call { resolveProjectDirectory(hint) }
-            LOG.info("Resolved project directory: hint=$hint → $resolved")
+            val resolved = call { resolveProjectDirectory(projectId, hint) }
+            LOG.info("Resolved project directory: projectId=$projectId hint=$hint -> $resolved")
             resolved
         } catch (e: Exception) {
             LOG.warn("Failed to resolve directory, falling back to hint=$hint", e)

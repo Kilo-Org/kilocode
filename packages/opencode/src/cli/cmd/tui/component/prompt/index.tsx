@@ -64,6 +64,7 @@ import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 import { TuiSlash } from "@/kilocode/cli/cmd/tui/slash"
 import { isAllowEverything } from "@/kilocode/cli/cmd/tui/app"
+import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
@@ -1100,6 +1101,29 @@ export function Prompt(props: PromptProps) {
       void promptModelWarning()
       return false
     }
+
+    // kilocode_change start - gate TUI sends on declared agent requirements
+    const requirements = await AgentRequirements.check({
+      client: sdk.client,
+      agent: agent.name,
+      directory: project.instance.directory() || sdk.directory || process.cwd(),
+    }).catch((error) => {
+      toast.show({
+        message: errorMessage(error),
+        variant: "error",
+      })
+      return undefined
+    })
+    if (!requirements) return false
+    if (!requirements.ok) {
+      toast.show({
+        title: "Agent requirements",
+        message: requirements.error.data.message,
+        variant: "error",
+      })
+      return false
+    }
+    // kilocode_change end
 
     const workspaceSession = props.sessionID ? sync.session.get(props.sessionID) : undefined
     const workspaceID = workspaceSession?.workspaceID
