@@ -146,6 +146,7 @@ describe("RemoteModelCatalog", () => {
       },
       connected: ["custom:edge", "anthropic"],
       failed: [],
+      truncated: false,
       currentModel: {
         model: {
           providerID: "custom:edge",
@@ -238,19 +239,19 @@ describe("RemoteModelCatalog", () => {
     expect(catalog.connected).toEqual(["custom"])
   })
 
-  test("includes all valid providers and models", () => {
+  test("caps the total number of models and reports truncation", () => {
     const providers = Object.fromEntries(
-      Array.from({ length: 5 }, (_, index) => {
-        const id = `provider-${index.toString().padStart(2, "0")}`
+      Array.from({ length: 3 }, (_, providerIndex) => {
+        const id = `provider-${providerIndex}`
         return [
           id,
           {
             id,
             name: id,
             models: Object.fromEntries(
-              Array.from({ length: 10 }, (_, modelIndex) => {
-                const modelId = `model-${modelIndex.toString().padStart(2, "0")}`
-                return [modelId, model(id, `${id}/${modelId}`, modelId)]
+              Array.from({ length: RemoteModelCatalog.MAX_MODELS + 10 }, (_, modelIndex) => {
+                const modelId = `model-${providerIndex}-${modelIndex}`
+                return [modelId, model(id, modelId, modelId)]
               }),
             ),
           },
@@ -260,7 +261,7 @@ describe("RemoteModelCatalog", () => {
     const catalog = RemoteModelCatalog.build({ providers, session: {}, messages: [] })
     const modelCount = catalog.all.reduce((total, provider) => total + Object.keys(provider.models).length, 0)
 
-    expect(catalog.all).toHaveLength(5)
-    expect(modelCount).toBe(50)
+    expect(modelCount).toBe(RemoteModelCatalog.MAX_MODELS)
+    expect(catalog.truncated).toBe(true)
   })
 })

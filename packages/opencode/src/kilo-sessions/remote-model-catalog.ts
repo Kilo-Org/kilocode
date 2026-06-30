@@ -4,6 +4,8 @@ import { Provider } from "@/provider/provider"
 import z from "zod"
 
 export namespace RemoteModelCatalog {
+  export const MAX_MODELS = 2_048
+
   export const Request = z
     .object({
       protocolVersion: z.literal(1),
@@ -30,6 +32,7 @@ export namespace RemoteModelCatalog {
     protocolVersion: 1
     currentModel?: ModelSelection
     defaultModel?: ModelRef
+    truncated: boolean
   }
 
   type SourceModel = Omit<Provider.Model, "id" | "providerID"> & {
@@ -193,9 +196,26 @@ export namespace RemoteModelCatalog {
   }
 
   export function build(input: Input): Response {
-    const all = Object.values(input.providers)
-      .map((source) => sanitizeProvider(source))
-      .filter((provider): provider is Provider.Info => provider !== undefined)
+    const all: Provider.Info[] = []
+    let modelCount = 0
+    let truncated = false
+
+    for (const source of Object.values(input.providers)) {
+      const provider = sanitizeProvider(source)
+      if (!provider) continue
+
+      const models = Object.values(provider.models)
+      if (modelCount + models.length > MAX_MODELS) {
+        truncated = true
+        const remaining = MAX_MODELS - modelCount
+        if (remaining <= 0) break
+        provider.models = Object.fromEntries(models.slice(0, remaining).map((model) => [model.id, model]))
+      }
+
+      modelCount += Object.keys(provider.models).length
+      all.push(provider)
+    }
+
     const active = current(input)
     const fallback = input.defaultModel
 
@@ -205,6 +225,7 @@ export namespace RemoteModelCatalog {
       connected: all.map((provider) => provider.id),
       failed: [],
       protocolVersion: 1,
+      truncated,
       ...(active ? { currentModel: active } : {}),
       ...(fallback ? { defaultModel: fallback } : {}),
     }
