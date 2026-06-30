@@ -258,8 +258,7 @@ describe("RemoteModelCatalog", () => {
     })
 
     expect(Object.hasOwn(catalog.all[0]?.models ?? {}, "toString")).toBe(false)
-    expect(catalog.default.provider).not.toBe("toString")
-    expect(Object.hasOwn(catalog.all[0]?.models ?? {}, catalog.default.provider ?? "")).toBe(true)
+    expect(catalog.default).toEqual({})
   })
 
   test("enforces provider, model, and variant count limits", () => {

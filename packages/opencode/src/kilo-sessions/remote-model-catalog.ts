@@ -229,6 +229,7 @@ export namespace RemoteModelCatalog {
   type CandidateProvider = Omit<Provider.Info, "models"> & {
     models: Provider.Model[]
     preferredDefault?: string
+    providerTruncated: boolean
   }
 
   function order(left: string, right: string) {
@@ -385,7 +386,8 @@ export namespace RemoteModelCatalog {
           })
           .sort(compare)
         const distinct = unique(models, state)
-        if (distinct.length > MAX_MODELS_PER_PROVIDER) state.truncated = true
+        const providerTruncated = distinct.length > MAX_MODELS_PER_PROVIDER
+        if (providerTruncated) state.truncated = true
         const limited = distinct.slice(0, MAX_MODELS_PER_PROVIDER)
         if (limited.length === 0) return []
         const preferredDefault = Provider.sort(distinct)[0]?.id
@@ -398,6 +400,7 @@ export namespace RemoteModelCatalog {
             options: {},
             models: limited,
             preferredDefault,
+            providerTruncated,
           },
         ]
       })
@@ -427,7 +430,7 @@ export namespace RemoteModelCatalog {
       const truncatedByLimit = selected.length < candidate.models.length
       if (preferred && Object.hasOwn(models, preferred)) {
         defaultEntries.push([candidate.id, preferred])
-      } else if (!truncatedByLimit && selected.length > 0) {
+      } else if (!candidate.providerTruncated && !truncatedByLimit && selected.length > 0) {
         defaultEntries.push([candidate.id, selected[0].id])
       }
       all.push({
