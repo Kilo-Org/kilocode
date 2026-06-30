@@ -30,7 +30,7 @@ import { useProvider } from "../../context/provider"
 import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import { getVSCodeAPI } from "../../context/vscode"
+import { useVSCode } from "../../context/vscode"
 import type { ModelSelection } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import {
@@ -136,33 +136,10 @@ export interface ModelSelectorBaseProps {
   description?: string
 }
 
-// Persisted via the VS Code webview state API so the preview-panel preference
-// survives reload and hide/show; defaults to expanded unless explicitly collapsed.
-const EXPANDED_STATE_KEY = "modelSelectorExpanded"
-
-function loadExpanded(): boolean {
-  try {
-    const state = getVSCodeAPI().getState() as Record<string, unknown> | undefined
-    return state?.[EXPANDED_STATE_KEY] !== false
-  } catch (err) {
-    console.warn("[Kilo New] model selector expanded load failed", err)
-    return true
-  }
-}
-
-function saveExpanded(val: boolean) {
-  try {
-    const api = getVSCodeAPI()
-    const state = (api.getState() as Record<string, unknown> | undefined) ?? {}
-    api.setState({ ...state, [EXPANDED_STATE_KEY]: val })
-  } catch (err) {
-    console.warn("[Kilo New] model selector expanded save failed", err)
-  }
-}
-
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const { connected, models, findModel } = useProvider()
   const language = useLanguage()
+  const vscode = useVSCode()
   // Session context is optional — ModelSelectorBase is also used in Settings
   // where SessionProvider may not be mounted.
   const session = useContext(SessionContext)
@@ -178,9 +155,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const [open, setOpen] = createSignal(false)
-  const [expanded, setExpanded] = createSignal(loadExpanded())
+  const [expanded, setExpanded] = createSignal(vscode.getModelSelectorExpanded())
   // Persist the user's expand/collapse choice so it is restored on reopen.
-  createEffect(() => saveExpanded(expanded()))
+  createEffect(() => vscode.setModelSelectorExpanded(expanded()))
   const [search, setSearch] = createSignal("")
   const [debouncedSearch, setDebouncedSearch] = createSignal("")
   const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)
