@@ -963,6 +963,7 @@ export const dict = {
   "provider.custom.models.name.label": "名称",
   "provider.custom.models.name.placeholder": "显示名称",
   "provider.custom.models.reasoning.label": "推理",
+  "provider.custom.models.modalities.image": "图片",
   "provider.custom.models.variants.label": "变体",
   "provider.custom.models.variants.add": "添加变体",
   "provider.custom.models.variants.remove": "移除变体",

@@ -946,6 +946,7 @@ export const dict = {
   "provider.custom.models.name.label": "Назва",
   "provider.custom.models.name.placeholder": "Відображувана назва",
   "provider.custom.models.reasoning.label": "Міркування",
+  "provider.custom.models.modalities.image": "Зображення",
   "provider.custom.models.variants.label": "Варіанти",
   "provider.custom.models.variants.add": "Додати варіант",
   "provider.custom.models.variants.remove": "Видалити варіант",

@@ -956,6 +956,7 @@ export const dict = {
   "provider.custom.models.name.label": "Navn",
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Resonnering",
+  "provider.custom.models.modalities.image": "Bilde",
   "provider.custom.models.variants.label": "Varianter",
   "provider.custom.models.variants.add": "Legg til variant",
   "provider.custom.models.variants.remove": "Fjern variant",

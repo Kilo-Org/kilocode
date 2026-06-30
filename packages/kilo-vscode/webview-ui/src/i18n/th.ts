@@ -981,6 +981,7 @@ export const dict = {
   "provider.custom.models.name.label": "ชื่อ",
   "provider.custom.models.name.placeholder": "ชื่อที่แสดง",
   "provider.custom.models.reasoning.label": "การใช้เหตุผล",
+  "provider.custom.models.modalities.image": "รูปภาพ",
   "provider.custom.models.variants.label": "รูปแบบ",
   "provider.custom.models.variants.add": "เพิ่มรูปแบบ",
   "provider.custom.models.variants.remove": "ลบรูปแบบ",
