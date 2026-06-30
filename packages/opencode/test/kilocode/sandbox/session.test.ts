@@ -46,6 +46,38 @@ describe("sandbox session cleanup", () => {
     }),
   )
 
+  it.live("forks into another directory carry the source confinement", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const dir = yield* tmpdirScoped({ git: true, config: { experimental: { sandbox: true } } })
+      const worktree = yield* tmpdirScoped({ git: true })
+      const source = yield* provideInstance(dir)(sessions.create({ title: "sandbox-source" }))
+      const status = yield* provideInstance(dir)(SandboxPolicy.status(source.id))
+      if (!status.available) return
+
+      // Move-to-worktree forks the source into a fresh directory where no snapshot exists yet.
+      const fork = yield* provideInstance(worktree)(sessions.fork({ sessionID: source.id }))
+      expect((yield* provideInstance(worktree)(SandboxPolicy.status(fork.id))).enabled).toBe(true)
+
+      // The carried-over confinement must not leak a phantom snapshot for the source in the worktree.
+      expect(yield* Effect.promise(() => SandboxStore.read(worktree, source.id))).toBeUndefined()
+    }),
+  )
+
+  it.live("creates honor the kilocode.sandbox metadata over the config default", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      // Config default is disabled; the create-time toggle asks for enabled.
+      const dir = yield* tmpdirScoped({ git: true, config: { experimental: { sandbox: false } } })
+      const session = yield* provideInstance(dir)(
+        sessions.create({ title: "sandbox-explicit", metadata: { "kilocode.sandbox": { enabled: true, version: 0 } } }),
+      )
+      const status = yield* provideInstance(dir)(SandboxPolicy.status(session.id))
+      if (!status.available) return
+      expect(status.enabled).toBe(true)
+    }),
+  )
+
   it.live("clears every directory snapshot when removing outside instance context", () =>
     Effect.gen(function* () {
       const session = yield* Session.Service
