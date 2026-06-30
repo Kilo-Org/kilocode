@@ -427,11 +427,15 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         // kilocode_change start
         case "global.config.updated": {
+          const current = project.workspace.current()
           sdk.client.global.config.get().then((x) => {
             if (x.data) setStore("globalConfig", reconcile(x.data))
           })
-          sdk.client.config.get().then((x) => {
+          sdk.client.config.get({ workspace: current }).then((x) => {
             if (x.data) setStore("config", reconcile(x.data))
+          })
+          sdk.client.app.agents({ workspace: current }).then((x) => {
+            if (x.data) setStore("agent", reconcile(x.data))
           })
           break
         }

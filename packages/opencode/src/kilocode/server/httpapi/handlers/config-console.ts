@@ -2,6 +2,7 @@ import { Account } from "@/account/account"
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
+import { KilocodeConfigHotUpdate } from "@/kilocode/config/hot-update"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
 import { KilocodeModelState } from "@/kilocode/config/model-state"
@@ -79,7 +80,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         return yield* config.get()
       }
       if (body.scope === "global") {
-        const hot = Object.keys(patch).every((key) => key === "console")
+        const hot = KilocodeConfigHotUpdate.hot(patch)
         const result = yield* config.updateGlobal(patch, hot ? { dispose: false } : undefined)
         if (result.changed && !hot) {
           yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
