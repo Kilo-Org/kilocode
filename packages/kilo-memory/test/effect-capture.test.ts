@@ -8,6 +8,7 @@ import { MemoryCapture } from "../src/effect/capture"
 import { KiloMemory } from "../src/effect/index"
 import type { MemoryPorts } from "../src/effect/ports"
 import { MemoryService } from "../src/effect/service"
+import { MemoryTimers } from "../src/effect/timers"
 
 async function tmp() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-memory-effect-"))
@@ -167,5 +168,21 @@ describe("MemoryCapture (fake ports)", () => {
     } finally {
       await t.done()
     }
+  })
+})
+
+describe("MemoryTimers signal ref-counting", () => {
+  test("shares one controller per root and drops it once the last capture releases", () => {
+    const root = "/kilo-memory/ref-count-root"
+    const first = MemoryTimers.signal(root)
+    const second = MemoryTimers.signal(root)
+    expect(second).toBe(first) // concurrent captures share the controller
+    MemoryTimers.release(root)
+    expect(MemoryTimers.signal(root)).toBe(first) // still alive while one capture remains
+    MemoryTimers.release(root)
+    MemoryTimers.release(root) // last in-flight capture settles → controller dropped
+    const fresh = MemoryTimers.signal(root)
+    expect(fresh).not.toBe(first) // next capture gets a new controller, proving cleanup
+    MemoryTimers.release(root)
   })
 })

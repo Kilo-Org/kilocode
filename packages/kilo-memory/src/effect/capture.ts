@@ -85,9 +85,11 @@ export namespace MemoryCapture {
     bypassInterval?: boolean
     memoryModel?: string
   }) {
-    const memory = yield* MemoryService.Service
     const root = input.root
+    // Acquire first (sync, cannot fail) so the matching `release` in the finalizer below always pairs
+    // with this acquire regardless of where the turn exits.
     const signal = MemoryTimers.signal(root)
+    const memory = yield* MemoryService.Service
     yield* memory.prepare({ root })
     const state = yield* memory.state({ root })
     const reported = new Set<string>()
@@ -493,7 +495,9 @@ export namespace MemoryCapture {
       }),
     )
     return { root, skipped: false as const, operationCount: count, tokens }
-  })
+  },
+  // Release the per-root abort controller acquired at the top once the turn settles (any exit path).
+  (effect, input) => effect.pipe(Effect.ensuring(Effect.sync(() => MemoryTimers.release(input.root)))))
 
   export function report(cause: Cause.Cause<unknown>) {
     // Brief message only: API errors carry response headers/bodies that would flood the host log.

@@ -79,7 +79,7 @@ Rules:
 - Use skipped reason "out_of_scope" for personal user-level content that is not project knowledge.
 - Use skipped reason "self_referential" for statements about memory itself or about facts already being captured.
 - Use skipped reason "quota_guard" or "rate_limit_guard" if the evidence says memory generation should avoid spending limited quota.
-- For a "duplicate" skip, set "file" (and "section" when known) to where the existing entry lives, so the duplicate is verified within that scope and not against unrelated memory.
+- For a "duplicate" skip, set both "file" and "section" to where the existing entry lives, so the duplicate is verified within that exact scope and not against unrelated memory. A "duplicate" claim that names a file without its section cannot be confirmed.
 - For upsert_environment_fact, use section "Commands" for runnable commands, "Paths" for important directories/files, and "Tooling" for package managers, runtimes, build systems, or test frameworks.
 - Omit section for other operations.
 - Do not include markdown.

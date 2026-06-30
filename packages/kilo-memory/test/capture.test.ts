@@ -376,6 +376,31 @@ describe("memory capture parsing", () => {
     })
   })
 
+  test("does not confirm a duplicate skip scoped to a file without a section", () => {
+    const items = [
+      {
+        id: "project.md:Decisions:repo_tests",
+        file: "project.md" as const,
+        section: "Decisions",
+        key: "repo_tests",
+        text: "repo_tests Run memory tests from packages/opencode.",
+      },
+    ]
+    const verified = verifySkips({
+      items,
+      skipped: [
+        // Claims project.md but not the section; the only match lives in Decisions. Confirming would
+        // risk a cross-section false positive, so it must downgrade to advisory.
+        { reason: "duplicate", text: "Run memory tests from packages/opencode.", file: "project.md" },
+      ],
+    })
+
+    expect(verified.skipped[0]).toEqual({
+      reason: "unsupported",
+      text: "Run memory tests from packages/opencode.",
+    })
+  })
+
   test("builds capture notices and guard summaries", () => {
     const ops = [
       { action: "add", file: "environment.md", section: "Commands", key: "tests", text: "Run bun test." },
