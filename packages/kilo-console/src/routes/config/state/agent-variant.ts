@@ -13,7 +13,6 @@ export function variantEdit(input: {
   native?: boolean
   source?: string
 }) {
-  if (input.native) return false
   if (input.editable === false) return false
   if (input.source === "organization") return false
   if (input.scope === "project") return true

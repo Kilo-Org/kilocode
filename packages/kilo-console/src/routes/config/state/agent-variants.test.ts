@@ -81,4 +81,9 @@ describe("agent variant settings", () => {
     expect(variantEdit({ scope: "global", inherited: true, editable: true, source: "global" })).toBe(false)
     expect(variantEdit({ scope: "project", inherited: true, editable: false, source: "global" })).toBe(false)
   })
+
+  test("allows native agent variant overrides", () => {
+    expect(variantEdit({ scope: "project", native: true })).toBe(true)
+    expect(variantEdit({ scope: "global", native: true })).toBe(true)
+  })
 })
