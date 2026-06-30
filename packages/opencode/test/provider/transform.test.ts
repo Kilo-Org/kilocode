@@ -4422,6 +4422,17 @@ describe("ProviderTransform.options - OpenAI Responses API params guard", () => 
     expect(result.reasoningEffort).toBe("medium")
   })
 
+  test("excludes OpenAI reasoning controls for NEAR AI Cloud", () => {
+    const result = ProviderTransform.options({
+      model: gpt5Model("@ai-sdk/openai-compatible", "nearai"),
+      sessionID,
+    })
+    expect(result.reasoningEffort).toBeUndefined()
+    expect(result.reasoningSummary).toBeUndefined()
+    expect(result.include).toBeUndefined()
+    expect(result.textVerbosity).toBeUndefined()
+  })
+
   test("excludes reasoningSummary for unknown SDK packages", () => {
     const result = ProviderTransform.options({
       model: gpt5Model("@ai-sdk/xai", "xai"),

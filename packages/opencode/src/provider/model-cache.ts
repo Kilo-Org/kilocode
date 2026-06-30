@@ -51,6 +51,91 @@ const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional
 const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
 
+// kilocode_change start - NEAR AI Cloud model catalog
+const NEARAI_BASE_URL = "https://cloud-api.near.ai/v1"
+const NEARAI_OUTPUT_LIMIT = 32_768
+const KILO_MODALITIES = ["text", "audio", "image", "video", "pdf"] as const
+const KILO_MODALITY_SET: ReadonlySet<string> = new Set(KILO_MODALITIES)
+const NearAIResponse = Schema.Struct({ models: Schema.optional(Schema.Array(Schema.Unknown)) })
+
+type KiloModality = (typeof KILO_MODALITIES)[number]
+type NearAIPrice = {
+  amount?: number
+  scale?: number
+}
+type NearAIModel = {
+  modelId?: string
+  inputCostPerToken?: NearAIPrice
+  outputCostPerToken?: NearAIPrice
+  cacheReadCostPerToken?: NearAIPrice
+  metadata?: {
+    contextLength?: number
+    modelDisplayName?: string
+    ownedBy?: string
+    supportedFeatures?: string[]
+    architecture?: {
+      inputModalities?: unknown
+      outputModalities?: unknown
+    }
+  }
+}
+
+function isKiloModality(value: string): value is KiloModality {
+  return KILO_MODALITY_SET.has(value)
+}
+
+function nearaiModelListURL(baseURL: string) {
+  const url = baseURL.replace(/\/+$/, "")
+  return `${url}/model/list`
+}
+
+function nearaiPrice(value: NearAIPrice | undefined) {
+  const amount = value?.amount
+  if (typeof amount !== "number" || !Number.isFinite(amount)) return 0
+  const scale = typeof value?.scale === "number" && Number.isFinite(value.scale) ? value.scale : 9
+  return amount * 10 ** (6 - scale)
+}
+
+function nearaiModalities(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) return fallback
+  return value.filter((item): item is string => typeof item === "string")
+}
+
+function nearaiModel(model: NearAIModel): Models[string] | undefined {
+  const id = model.modelId?.trim()
+  if (!id) return undefined
+  const key = id.toLowerCase()
+  if (key.includes("privacy-filter") || key.includes("reranker")) return undefined
+
+  const meta = model.metadata ?? {}
+  const arch = meta.architecture
+  const input = nearaiModalities(arch?.inputModalities, ["text"]).filter(isKiloModality)
+  const output = nearaiModalities(arch?.outputModalities, ["text"]).filter(isKiloModality)
+  if (!input.includes("text") || !output.includes("text")) return undefined
+
+  const context =
+    typeof meta.contextLength === "number" && Number.isFinite(meta.contextLength) ? meta.contextLength : 128_000
+
+  return {
+    id,
+    name: meta.modelDisplayName?.trim() || id,
+    family: meta.ownedBy ?? id.split("/")[0] ?? "",
+    release_date: "",
+    attachment: input.some((item) => item !== "text"),
+    reasoning: false,
+    temperature: true,
+    tool_call: Array.isArray(meta.supportedFeatures) ? meta.supportedFeatures.includes("tools") : true,
+    cost: {
+      input: nearaiPrice(model.inputCostPerToken),
+      output: nearaiPrice(model.outputCostPerToken),
+      cache_read: nearaiPrice(model.cacheReadCostPerToken),
+    },
+    limit: { context, output: Math.min(context, NEARAI_OUTPUT_LIMIT) },
+    modalities: { input, output },
+  }
+}
+// kilocode_change end
+
 export const layer: Layer.Layer<
   Service,
   never,
@@ -112,8 +197,31 @@ export const layer: Layer.Layer<
       return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
     })
 
+    // kilocode_change start - NEAR AI Cloud model catalog
+    const fetchNearAIModels = Effect.fn("ModelCache.fetchNearAIModels")(function* (options: Options) {
+      const baseURL = options.baseURL || NEARAI_BASE_URL
+      const request = HttpClientRequest.get(nearaiModelListURL(baseURL)).pipe(HttpClientRequest.acceptJson)
+      const response = yield* (options.apiKey ? HttpClientRequest.bearerToken(request, options.apiKey) : request).pipe(
+        http.execute,
+        Effect.timeout("10 seconds"),
+      )
+      if (response.status < 200 || response.status >= 300) {
+        log.error("nearai model fetch failed", { status: response.status })
+        return {}
+      }
+
+      const json = yield* HttpClientResponse.schemaBodyJson(NearAIResponse)(response)
+      const models: Record<string, Models[string]> = {}
+      for (const item of json.models ?? []) {
+        const entry = nearaiModel(item as NearAIModel)
+        if (entry) models[entry.id] = entry
+      }
+      return models as Models
+    })
+    // kilocode_change end
+
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
-      if (providerID !== "kilo" && providerID !== "apertis") return {}
+      if (providerID !== "kilo" && providerID !== "apertis" && providerID !== "nearai") return {}
       const config = yield* cfg.get()
       const options: Options = {}
 
@@ -154,12 +262,33 @@ export const layer: Layer.Layer<
         })
       }
 
+      // kilocode_change start - NEAR AI Cloud auth options
+      if (providerID === "nearai") {
+        const item = config.provider?.[providerID]
+        if (item?.options?.apiKey) options.apiKey = item.options.apiKey
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
+
+        const info = yield* auth.get(providerID)
+        if (info?.type === "api") options.apiKey = info.key
+        if (process.env.NEARAI_API_KEY) options.apiKey = process.env.NEARAI_API_KEY
+        if (process.env.NEARAI_BASE_URL) options.baseURL = process.env.NEARAI_BASE_URL
+        log.debug("nearai auth options resolved", {
+          providerID,
+          hasKey: !!options.apiKey,
+          hasBaseURL: !!options.baseURL,
+        })
+      }
+      // kilocode_change end
+
       return options
     })
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      // kilocode_change start - NEAR AI Cloud model catalog
+      if (providerID === "nearai") return fetchNearAIModels(options).pipe(Effect.map((models) => ({ models })))
+      // kilocode_change end
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
@@ -180,7 +309,9 @@ export const layer: Layer.Layer<
       if (providerID === "kilo") {
         return JSON.stringify([providerID, options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
       }
-      if (providerID === "apertis") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      if (providerID === "apertis" || providerID === "nearai") {
+        return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      }
       return providerID
     }
 

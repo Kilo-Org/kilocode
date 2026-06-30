@@ -1284,6 +1284,15 @@ export function options(input: {
     result["promptCacheKey"] = input.sessionID
   }
 
+  // kilocode_change start - NEAR AI Cloud does not support OpenAI reasoning controls
+  if (input.model.providerID === "nearai") {
+    delete result["reasoningEffort"]
+    delete result["reasoningSummary"]
+    delete result["include"]
+    delete result["textVerbosity"]
+  }
+  // kilocode_change end
+
   if (input.model.providerID === "openrouter") {
     result["prompt_cache_key"] = input.sessionID
   }
