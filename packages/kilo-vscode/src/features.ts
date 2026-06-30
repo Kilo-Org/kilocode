@@ -8,10 +8,12 @@ type ConfigLike = {
 
 export type Features = {
   indexing: boolean
+  sandboxControls: boolean
 }
 
 export function configFeatures(config?: ConfigLike | null): Features {
   return {
     indexing: hasIndexingPlugin(config?.plugin ?? []),
+    sandboxControls: process.platform !== "win32",
   }
 }

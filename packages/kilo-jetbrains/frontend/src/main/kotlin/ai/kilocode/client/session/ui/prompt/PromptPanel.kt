@@ -21,6 +21,12 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.PromptPartDto
 import com.intellij.icons.AllIcons
+import com.intellij.codeInsight.completion.CodeCompletionHandlerBase
+import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.codeInsight.lookup.LookupEx
+import com.intellij.codeInsight.lookup.LookupManagerListener
+import com.intellij.codeInsight.lookup.LookupPositionStrategy
+import com.intellij.codeInsight.lookup.LookupPresentation
 import com.intellij.ide.DataManager
 import com.intellij.ide.dnd.DnDEvent
 import com.intellij.ide.dnd.DnDSupport
@@ -28,18 +34,28 @@ import com.intellij.ide.dnd.FileCopyPasteUtil
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.colors.TextAttributesKey
+import com.intellij.openapi.editor.event.CaretEvent
+import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.editor.markup.HighlighterLayer
+import com.intellij.openapi.editor.markup.HighlighterTargetArea
+import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.keymap.Keymap
 import com.intellij.openapi.keymap.KeymapManagerListener
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.JBColor
@@ -82,6 +98,8 @@ class PromptPanel(
     private val onSend: (String, List<PromptPartDto>) -> Unit,
     private val onAbort: () -> Unit,
     private val onEnhance: (String, (Result<String>) -> Unit) -> Unit,
+    private val onMentions: (String) -> List<PromptPartDto> = { emptyList() },
+    private val completion: KiloPromptCompletionProvider? = null,
     private val selection: SessionSelection? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SendPromptContext, UiDataProvider {
 
@@ -92,6 +110,9 @@ class PromptPanel(
         private val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PromptPanel::class.java)
         private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
         private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
+        private val MENTION_KEY = DefaultLanguageHighlighterColors.METADATA
+        private val COMMAND_KEY = DefaultLanguageHighlighterColors.KEYWORD
+        private val INVALID_KEY = CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES
     }
 
     val mode = ModePicker()
@@ -114,8 +135,13 @@ class PromptPanel(
         )
     }
     private val attachments = mutableListOf<PromptAttachment>()
+    private val highlighters = mutableListOf<RangeHighlighter>()
     private val strip = PromptAttachmentStrip(project) { removeAttachment(it) }
     private var bus: MessageBusConnection? = null
+    private var lookupBus: MessageBusConnection? = null
+    private var completionAction: AnAction? = null
+    private var completionTarget: JComponent? = null
+    private var mentionCaret = false
     private var autoApprove = false
     private var attachment = true
     private var submitting = false
@@ -126,7 +152,7 @@ class PromptPanel(
         }
     }
 
-    private val editor = PromptEditorTextField(project, this, selection).apply {
+    private val editor = PromptEditorTextField(project, this, completion, selection).apply {
         border = JBUI.Borders.empty()
         setFontInheritedFromLAF(false)
         setPlaceholder(placeholder())
@@ -148,8 +174,20 @@ class PromptPanel(
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
             ed.scrollPane.horizontalScrollBarPolicy =
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            installCompletionShortcut(ed)
+            completion?.let { MentionNavigator(ed, it).install() }
             installFileDrop(ed.contentComponent, "editor")
             installFileDrop(ed.scrollPane, "scroll")
+            syncHighlights()
+            ed.caretModel.addCaretListener(object : CaretListener {
+                override fun caretPositionChanged(e: CaretEvent) {
+                    val provider = completion ?: return
+                    val inside = provider.inside(ed.document.text, ed.caretModel.offset)
+                    if (mentionCaret == inside) return
+                    mentionCaret = inside
+                    syncHighlights()
+                }
+            })
             ed.contentComponent.addFocusListener(object : FocusAdapter() {
                 override fun focusGained(e: FocusEvent) {
                     repaint()
@@ -218,6 +256,8 @@ class PromptPanel(
             override fun documentChanged(e: DocumentEvent) {
                 invalidateEnhancement()
                 syncEditorHeight()
+                triggerCompletion(e)
+                syncHighlights()
                 onChange()
             }
         })
@@ -262,6 +302,7 @@ class PromptPanel(
     @RequiresEdt
     fun setReady(value: Boolean) {
         ready = value
+        if (value) completion?.prewarm()
         if (!value) invalidateEnhancement() else syncEnhance()
     }
 
@@ -334,14 +375,58 @@ class PromptPanel(
         editor.background = style.editorScheme.defaultBackground
         syncEditorHeight()
         syncAutoApprove()
+        syncHighlights()
+    }
+
+    @RequiresEdt
+    fun refreshHighlights() {
+        syncHighlights()
     }
 
     @RequiresEdt
     fun clear() {
         editor.text = ""
         attachments.clear()
+        completion?.clearMentions()
+        completion?.prewarm()
         strip.clear()
         syncEditorHeight()
+        syncHighlights()
+    }
+
+    @RequiresEdt
+    private fun syncHighlights() {
+        val provider = completion ?: return
+        val ed = editor.getEditor(false) ?: return
+        highlighters.forEach(ed.markupModel::removeHighlighter)
+        highlighters.clear()
+        val length = ed.document.textLength
+        val text = ed.document.text
+        val caret = ed.caretModel.offset
+        provider.validate(text, caret) {
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed) refreshHighlights()
+            }
+        }
+        provider.highlights(text, caret).forEach { item ->
+            val start = item.start.coerceIn(0, length)
+            val end = item.end.coerceIn(start, length)
+            if (start == end) return@forEach
+            highlighters += ed.markupModel.addRangeHighlighter(
+                key(item.kind),
+                start,
+                end,
+                HighlighterLayer.SYNTAX + 1,
+                HighlighterTargetArea.EXACT_RANGE,
+            )
+        }
+        mentionCaret = provider.inside(text, caret)
+    }
+
+    private fun key(kind: KiloPromptCompletionProvider.HighlightKind): TextAttributesKey = when (kind) {
+        KiloPromptCompletionProvider.HighlightKind.MENTION -> MENTION_KEY
+        KiloPromptCompletionProvider.HighlightKind.COMMAND -> COMMAND_KEY
+        KiloPromptCompletionProvider.HighlightKind.INVALID -> INVALID_KEY
     }
 
     @RequiresEdt
@@ -360,6 +445,7 @@ class PromptPanel(
         super.addNotify()
         bindRoot()
         bindKeymap()
+        bindLookup()
     }
 
     override fun removeNotify() {
@@ -367,6 +453,9 @@ class PromptPanel(
         root = null
         bus?.disconnect()
         bus = null
+        lookupBus?.disconnect()
+        lookupBus = null
+        uninstallCompletionShortcut()
         super.removeNotify()
     }
 
@@ -432,11 +521,13 @@ class PromptPanel(
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
                 val files = items.map { it.part() }
+                val mentioned = onMentions(txt)
                 ApplicationManager.getApplication().invokeLater {
                     submitting = false
                     if (project.isDisposed) return@invokeLater
-                    LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, files))} src=$src busy=$busy" }
-                    onSend(txt, files)
+                    val parts = files + mentioned
+                    LOG.debug { "${ChatLogSummary.prompt(promptDto(txt, parts))} src=$src busy=$busy" }
+                    onSend(txt, parts)
                 }
             } catch (e: Exception) {
                 ApplicationManager.getApplication().invokeLater {
@@ -447,6 +538,61 @@ class PromptPanel(
                 }
             }
         }
+    }
+
+    private fun triggerCompletion(e: DocumentEvent) {
+        if (project.isDisposed) return
+        val value = e.newFragment.toString()
+        if (value.length != 1) return
+        val text = editor.text
+        val offset = e.offset + value.length
+        val popup = value == "@" || (value == "/" && text.take(offset).trim() == "/")
+        if (!popup) return
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed) return@invokeLater
+            editor.getEditor(false)?.let(::showCompletion)
+        }
+    }
+
+    @RequiresEdt
+    @Suppress("UnstableApiUsage")
+    private fun showCompletion(ed: com.intellij.openapi.editor.Editor) {
+        // Run completion synchronously and locally on this frontend-only editor. The public entry
+        // points (ACTION_CODE_COMPLETION, AutoPopupController.scheduleAutoPopup) route through
+        // split-mode RD/autopopup machinery that targets a backend-shared editor: in split mode they
+        // either dispatch to the backend (which has no editor and asserts) or get cancelled before the
+        // popup shows. CodeCompletionHandlerBase is public (not @ApiStatus.Internal) and is the only
+        // API that drives the completion engine directly against this local editor.
+        CodeCompletionHandlerBase.createHandler(CompletionType.BASIC, true, false, true)
+            .invokeCompletion(project, ed, 1)
+    }
+
+    @RequiresEdt
+    private fun installCompletionShortcut(ed: com.intellij.openapi.editor.Editor) {
+        if (completion == null) return
+        val base = ActionManager.getInstance().getAction(IdeActions.ACTION_CODE_COMPLETION) ?: return
+        val action = completionAction ?: object : DumbAwareAction(KiloBundle.message("prompt.completion.action")) {
+            override fun actionPerformed(e: AnActionEvent) {
+                editor.getEditor(false)?.let(::showCompletion)
+            }
+        }.also { completionAction = it }
+        uninstallCompletionShortcut()
+        val target = ed.contentComponent
+        action.registerCustomShortcutSet(base.shortcutSet, target)
+        completionTarget = target
+    }
+
+    @RequiresEdt
+    private fun refreshCompletionShortcut() {
+        val ed = editor.getEditor(false) ?: return
+        installCompletionShortcut(ed)
+    }
+
+    @RequiresEdt
+    private fun uninstallCompletionShortcut() {
+        val target = completionTarget ?: return
+        completionAction?.unregisterCustomShortcutSet(target)
+        completionTarget = null
     }
 
     @RequiresEdt
@@ -566,6 +712,7 @@ class PromptPanel(
             override fun activeKeymapChanged(keymap: Keymap?) {
                 editor.setPlaceholder(placeholder())
                 syncTooltip()
+                refreshCompletionShortcut()
             }
 
             override fun shortcutsChanged(keymap: Keymap, actionIds: Collection<String>, fromSettings: Boolean) {
@@ -574,7 +721,24 @@ class PromptPanel(
                     editor.setPlaceholder(placeholder())
                     syncTooltip()
                 }
+                if (IdeActions.ACTION_CODE_COMPLETION in actionIds) refreshCompletionShortcut()
             }
+        })
+    }
+
+    @RequiresEdt
+    private fun bindLookup() {
+        if (lookupBus != null) return
+        val connection = project.messageBus.connect()
+        lookupBus = connection
+        connection.subscribe(LookupManagerListener.TOPIC, LookupManagerListener { _, next ->
+            // LookupPresentation/LookupPositionStrategy are @ApiStatus.Experimental (no stable API
+            // forces the lookup above the caret). LookupEx is the public lookup interface.
+            val lookup = next as? LookupEx ?: return@LookupManagerListener
+            if (lookup.editor !== editor.getEditor(false)) return@LookupManagerListener
+            lookup.presentation = LookupPresentation.Builder(lookup.presentation)
+                .withPositionStrategy(LookupPositionStrategy.ONLY_ABOVE)
+                .build()
         })
     }
 
@@ -677,59 +841,7 @@ class PromptPanel(
         syncEditorHeight()
     }
 
-    private inner class SendButton : JButton(), UiDataProvider {
-        private var over = false
-
-        init {
-            iconButton(this)
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseEntered(e: MouseEvent) {
-                    sync(true)
-                }
-
-                override fun mouseExited(e: MouseEvent) {
-                    sync(false)
-                }
-            })
-        }
-
-        override fun getPreferredSize() = JBUI.size(
-            SessionUiStyle.View.Prompt.SEND_BUTTON_SIZE,
-            SessionUiStyle.View.Prompt.SEND_BUTTON_SIZE,
-        )
-
-        override fun uiDataSnapshot(sink: DataSink) {
-            sink.set(PromptDataKeys.SEND, this@PromptPanel)
-        }
-
-        override fun getMinimumSize() = preferredSize
-
-        override fun getMaximumSize() = preferredSize
-
-        override fun paintComponent(g: Graphics) {
-            if (over) {
-                val g2 = g.create() as Graphics2D
-                try {
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                    g2.color = JBUI.CurrentTheme.ActionButton.hoverBackground()
-                    val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
-                    g2.fillRoundRect(0, 0, width, height, arc, arc)
-                } finally {
-                    g2.dispose()
-                }
-            }
-            super.paintComponent(g)
-        }
-
-        private fun sync(value: Boolean) {
-            if (over == value) return
-            over = value
-            repaint()
-        }
-    }
-
-    private inner class AutoApproveButton : JButton() {
+    private inner abstract class PromptButton : JButton() {
         private var over = false
 
         init {
@@ -778,5 +890,13 @@ class PromptPanel(
             repaint()
         }
     }
+
+    private inner class SendButton : PromptButton(), UiDataProvider {
+        override fun uiDataSnapshot(sink: DataSink) {
+            sink.set(PromptDataKeys.SEND, this@PromptPanel)
+        }
+    }
+
+    private inner class AutoApproveButton : PromptButton()
 
 }

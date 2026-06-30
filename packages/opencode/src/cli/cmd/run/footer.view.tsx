@@ -14,6 +14,7 @@ import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { Match, Show, Switch, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import "opentui-spinner/solid"
 import { createColors, createFrames } from "../tui/ui/spinner"
+import { RunInteractiveTerminalBody } from "@/kilocode/cli/cmd/run/interactive-terminal" // kilocode_change
 import {
   RUN_SUBAGENT_PANEL_ROWS,
   RunCommandMenuBody,
@@ -82,6 +83,9 @@ type RunFooterViewProps = {
   onPermissionReply: (input: PermissionReply) => void | Promise<void>
   onQuestionReply: (input: QuestionReply) => void | Promise<void>
   onQuestionReject: (input: QuestionReject) => void | Promise<void>
+  onTerminalWrite: (input: { terminalID: string; data: string }) => Promise<void> // kilocode_change
+  onTerminalResize: (input: { terminalID: string; cols: number; rows: number }) => Promise<void> // kilocode_change
+  onTerminalClose: (terminalID: string) => Promise<void> // kilocode_change
   onCycle: () => void
   onInterrupt: () => boolean
   onInputClear: () => void
@@ -187,6 +191,12 @@ export function RunFooterView(props: RunFooterViewProps) {
     const view = active()
     return view.type === "question" ? view : undefined
   })
+  // kilocode_change start
+  const terminal = createMemo<Extract<FooterView, { type: "interactive_terminal" }> | undefined>(() => {
+    const view = active()
+    return view.type === "interactive_terminal" ? view : undefined
+  })
+  // kilocode_change end
   const promptView = createMemo(() => {
     if (active().type !== "prompt") {
       return active().type
@@ -491,6 +501,17 @@ export function RunFooterView(props: RunFooterViewProps) {
                         onReject={props.onQuestionReject}
                       />
                     </Match>
+                    {/* kilocode_change start */}
+                    <Match when={active().type === "interactive_terminal"}>
+                      <RunInteractiveTerminalBody
+                        terminal={() => terminal()!.terminal}
+                        theme={theme()}
+                        onWrite={props.onTerminalWrite}
+                        onResize={props.onTerminalResize}
+                        onClose={props.onTerminalClose}
+                      />
+                    </Match>
+                    {/* kilocode_change end */}
                   </Switch>
                 </box>
 

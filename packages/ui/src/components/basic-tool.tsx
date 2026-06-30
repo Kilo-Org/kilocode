@@ -33,6 +33,7 @@ export interface BasicToolProps {
   onOpenChange?: (open: boolean) => void
   forceOpen?: boolean
   defer?: boolean
+  retainDetails?: boolean // kilocode_change
   hasDetails?: boolean // kilocode_change
   locked?: boolean
   animated?: boolean
@@ -133,7 +134,7 @@ export function BasicTool(props: BasicToolProps) {
         if (!props.defer) return
         if (!value) {
           cancel()
-          setState("ready", false)
+          if (!props.retainDetails) setState("ready", false) // kilocode_change
           return
         }
 
@@ -182,6 +183,14 @@ export function BasicTool(props: BasicToolProps) {
     setOpen(value)
     props.onOpenChange?.(value) // kilocode_change
   }
+
+  // kilocode_change start
+  const end = (event: AnimationEvent) => {
+    if (event.target !== event.currentTarget) return
+    if (!props.retainDetails || open()) return
+    setState("ready", false)
+  }
+  // kilocode_change end
 
   const trigger = () => (
     <div
@@ -307,7 +316,7 @@ export function BasicTool(props: BasicToolProps) {
       </Show>
       {/* kilocode_change start */}
       <Show when={!props.animated && (hasChildren() || hasDetails()) && !props.hideDetails}>
-        <Collapsible.Content>
+        <Collapsible.Content onAnimationEnd={end}>
           <Show when={!props.defer || ready()}>{props.children}</Show>
         </Collapsible.Content>
       </Show>

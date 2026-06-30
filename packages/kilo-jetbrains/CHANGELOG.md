@@ -1,5 +1,43 @@
 # Changelog
 
+## 7.4.0
+
+### Minor Changes
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`1a812ea`](https://github.com/Kilo-Org/kilocode/commit/1a812ea5a0efea2647b1676c907d9a08afab9be7) - Add `/` slash commands and `@` file/git-changes mentions to the JetBrains chat prompt with native completion.
+
+### Patch Changes
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`3dc31d9`](https://github.com/Kilo-Org/kilocode/commit/3dc31d9fd10a622fde0a073e3df4720782c6afea) - Highlight rendered prompt file mentions and open them on click.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`c746eea`](https://github.com/Kilo-Org/kilocode/commit/c746eea1ee446a43b59929525ba93862c0065711) - Show JetBrains file mention suggestions immediately for empty `@` mentions and keep the completion popup stable while typing quickly.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`c23c3e3`](https://github.com/Kilo-Org/kilocode/commit/c23c3e300d410f4d7aac57bb9cbcbe5ce72e67b8) - Hide raw file contents from mentioned files in JetBrains chat messages.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`cfb7006`](https://github.com/Kilo-Org/kilocode/commit/cfb7006e880ae8ae2ad6c3d1bb70eb01e96d0bf4) - Fix @git-changes mentions causing JetBrains chat sessions to fail.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`e5d23fb`](https://github.com/Kilo-Org/kilocode/commit/e5d23fbb649f8326f51e80f15948d9b9e22559a6) - Show file type icons and keep predefined mentions first in JetBrains mention completions.
+
+- [#11805](https://github.com/Kilo-Org/kilocode/pull/11805) [`a303013`](https://github.com/Kilo-Org/kilocode/commit/a3030136e9f54ba5d194ecfdf8e2ab52a57c34a9) Thanks [@johnnyeric](https://github.com/johnnyeric)! - Show Kilo Pass usage, bonus credits, renewal date, and top-up actions in the JetBrains user profile.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`5647086`](https://github.com/Kilo-Org/kilocode/commit/5647086297592f6271663709b11a86942c99a9fc) - Show a concise single-line hint in the JetBrains prompt placeholder.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`dd8b43e`](https://github.com/Kilo-Org/kilocode/commit/dd8b43ef63439638675ac248f93bab629a9e3a34) - Fix prompt undo/redo, clean mid-token mention completion, and show unresolved file mentions in the JetBrains chat prompt.
+
+- [#11802](https://github.com/Kilo-Org/kilocode/pull/11802) [`971a418`](https://github.com/Kilo-Org/kilocode/commit/971a4184399769a321638bc8123496337f21e5ad) - Recover the JetBrains backend when startup or restart loading is interrupted by stale connection failures.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`d54e6b3`](https://github.com/Kilo-Org/kilocode/commit/d54e6b33d0bb7e58f3392d68b5401baa3d2ac2eb) - Attach hand-typed prompt file mentions when sending immediately.
+
+- [#11705](https://github.com/Kilo-Org/kilocode/pull/11705) [`0210702`](https://github.com/Kilo-Org/kilocode/commit/02107028f45c924fd2f61e65e21190b79371da47) - Improve JetBrains session error logs so nested CLI error messages are visible.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`48f2a5f`](https://github.com/Kilo-Org/kilocode/commit/48f2a5f7c8263042cb4a455f0d75f77d35704b9f) - Restore prompt focus after returning from session history in JetBrains.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`a326191`](https://github.com/Kilo-Org/kilocode/commit/a32619109a79e2426137aa1a00c0fa062b565c1d) - Support VS Code slash-command aliases in the JetBrains prompt.
+
+- [#11796](https://github.com/Kilo-Org/kilocode/pull/11796) [`8c37da0`](https://github.com/Kilo-Org/kilocode/commit/8c37da02dadec099fc7a85774facc512091ec539) - Reconnect the JetBrains plugin when its event stream stalls during startup.
+
+- [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`0c2a7c1`](https://github.com/Kilo-Org/kilocode/commit/0c2a7c1c5bd9c41a4d77df4690241daefaca6ef5) - Keep JetBrains prompt mention suggestions stable while typing fuzzy file matches.
+
 ## 7.3.47
 
 ### Patch Changes
@@ -87,6 +125,23 @@
 ### Patch Changes
 
 ## [Unreleased]
+
+## [7.0.1-rc.13] - 2026-06-23
+
+### Added
+
+- Add slash command and file mention completion in the prompt.
+- Add support for clickable and explainable `@file` mentions in the prompt.
+
+### Fixed
+
+- Fix prompt undo/redo behavior and restore prompt focus after history navigation.
+- Fix lazy session creation to avoid duplicate initialization.
+- Fix prompt-training model disclosure.
+
+### Changed
+
+- Update the bundled CLI to include upstream OpenCode 1.15.13 changes.
 
 ## [7.0.1-rc.12] - 2026-06-18
 

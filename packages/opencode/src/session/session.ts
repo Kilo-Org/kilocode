@@ -20,7 +20,6 @@ import * as Log from "@opencode-ai/core/util/log"
 import { MessageV2 } from "./message-v2"
 import type { InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
-import { capture } from "@/kilocode/instance" // kilocode_change - children() scopes by current project when available
 import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
@@ -32,9 +31,12 @@ import { Permission } from "@/permission"
 import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
+import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
 import { SessionExport } from "@/kilocode/session-export"
+import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { baseKey, cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
+import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements"
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { NonNegativeInt, optionalOmitUndefined } from "@opencode-ai/core/schema"
@@ -375,7 +377,9 @@ export const Event = {
       sessionID: Schema.optional(SessionID),
       // Reuses MessageV2.Assistant.fields.error (already Schema.optional) so
       // the derived zod keeps the same discriminated-union shape on the bus.
-      error: MessageV2.Assistant.fields.error,
+      // kilocode_change start - carry pre-message requirement failures over session.error
+      error: Schema.optional(Schema.Union([MessageV2.Assistant.fields.error, AgentRequirementError.EffectSchema])),
+      // kilocode_change end
     }),
   ),
   // kilocode_change start
@@ -566,6 +570,7 @@ export const layer: Layer.Layer<
       metadata?: typeof Metadata.Type
       permission?: Permission.Ruleset
       platform?: string // kilocode_change - per-session platform override for telemetry attribution
+      sourceID?: SessionID // kilocode_change - inherited sandbox policy source
     }) {
       const ctx = yield* InstanceState.context
       const result: Info = {
@@ -591,8 +596,10 @@ export const layer: Layer.Layer<
       }
       log.info("created", result)
 
-      // kilocode_change start - register attribution before session.created subscribers run
+      // kilocode_change start - initialize inherited state before session.created subscribers run
       KiloSession.register({ id: result.id, parentID: result.parentID, platform: input.platform })
+      const source = input.sourceID ?? result.parentID
+      if (source) yield* SandboxPolicy.inherit(source, result.id)
       // kilocode_change end
 
       yield* sync.run(Event.Created, { sessionID: result.id, info: result })
@@ -622,18 +629,22 @@ export const layer: Layer.Layer<
       )
     })
 
-    // kilocode_change start - scope by project_id when instance context is available
+    // kilocode_change start - scope children by persisted parent project_id
     const children = Effect.fn("Session.children")(function* (parentID: SessionID) {
-      const ctx = capture()
-      const conditions = [eq(SessionTable.parent_id, parentID)]
-      if (ctx) conditions.push(eq(SessionTable.project_id, ctx.project.id))
-      const rows = yield* db((d) =>
-        d
+      const rows = yield* db((d) => {
+        const parent = d
+          .select({ projectID: SessionTable.project_id })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, parentID))
+          .get()
+        const conditions = [eq(SessionTable.parent_id, parentID)]
+        if (parent) conditions.push(eq(SessionTable.project_id, parent.projectID))
+        return d
           .select()
           .from(SessionTable)
           .where(and(...conditions))
-          .all(),
-      )
+          .all()
+      })
       return rows.map(fromRow)
     })
     // kilocode_change end
@@ -655,20 +666,28 @@ export const layer: Layer.Layer<
         }
 
         // kilocode_change start
-        yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
-        KiloSession.clearPlatformOverride(sessionID)
-        if (hasInstance) {
-          yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
-          void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
-            app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(() => {}),
-          )
-        }
+        yield* SandboxPolicy.dispose(
+          sessionID,
+          Effect.gen(function* () {
+            yield* Effect.promise(() => KiloSession.removeSession(sessionID)).pipe(Effect.ignore)
+            KiloSession.clearPlatformOverride(sessionID)
+            if (hasInstance) {
+              yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID)).pipe(Effect.ignore)
+              yield* Effect.promise(() => InteractiveTerminal.stopSession(sessionID)).pipe(Effect.ignore)
+              void Promise.all([import("@/effect/app-runtime"), import("./run-state")]).then(([app, run]) =>
+                app.AppRuntime.runPromise(run.SessionRunState.Service.use((svc) => svc.cancel(sessionID))).catch(
+                  () => {},
+                ),
+              )
+            }
+            yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
+            // kilocode_change - capture final session-export workspace delta on close/delete
+            const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
+            yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
+            yield* sync.remove(sessionID)
+          }),
+        )
         // kilocode_change end
-        yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
-        // kilocode_change - capture final session-export workspace delta on close/delete
-        const workspaceKey = hasInstance ? yield* InstanceState.directory : undefined // kilocode_change
-        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID, workspaceKey)) // kilocode_change
-        yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)
       }
@@ -761,6 +780,7 @@ export const layer: Layer.Layer<
         workspaceID: original.workspaceID,
         title,
         metadata: structuredClone(original.metadata),
+        sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
       })
       const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()

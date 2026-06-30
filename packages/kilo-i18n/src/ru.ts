@@ -42,6 +42,27 @@ export const dict = {
   "marketplace.install.scope": "Область",
   "marketplace.install.scope.project": "Проект",
   "marketplace.install.scope.global": "Глобально",
+  "marketplace.install.scope.project.description":
+    "Только этот проект. Установленные файлы можно добавить в систему контроля версий и предоставить команде.",
+  "marketplace.install.scope.global.description":
+    "Все проекты на этом компьютере. Сохраняется в вашей пользовательской конфигурации.",
+  "marketplace.install.destination": "Место установки",
+  "marketplace.install.about.mcp":
+    "MCP-сервер предоставляет Kilo дополнительные инструменты для работы с внешними сервисами или локальными программами.",
+  "marketplace.install.about.agent":
+    "Агент добавляет многократно используемую роль с собственными инструкциями и разрешениями.",
+  "marketplace.install.about.skill":
+    "Навык добавляет инструкции и ресурсы для определённых задач, которые Kilo может загрузить при необходимости.",
+  "marketplace.install.mcp.warning":
+    "MCP-серверы могут выполнять локальные команды или подключаться к внешним сервисам. Kilo запросит разрешение перед использованием их инструментов, если только ваши разрешения не допускают это автоматически.",
+  "marketplace.install.project.warning":
+    "Файлы проекта могут быть добавлены в систему контроля версий. Не храните здесь секреты, если только конфигурация не ссылается на переменную окружения.",
+  "marketplace.install.learnMore": "Узнайте, как работает установка из Marketplace",
+  "marketplace.install.learnMcp": "Подробнее о MCP",
+  "marketplace.install.installedAt": "Установлено в {{path}}",
+  "marketplace.intro":
+    "Устанавливайте многократно используемых агентов, навыки и инструменты MCP для одного или всех проектов.",
+  "marketplace.intro.learnMore": "О Marketplace",
   "marketplace.install.prerequisites": "Предварительные требования",
   "marketplace.install.installing": "Установка...",
   "marketplace.install.cancel": "Отмена",
@@ -59,7 +80,9 @@ export const dict = {
   "marketplace.search": "Поиск...",
   "marketplace.filter.all": "Все элементы",
   "marketplace.filter.notInstalled": "Не установлено",
+  "marketplace.filter.relevant": "Подходящие для моего рабочего пространства",
   "marketplace.empty": "Элементы не найдены",
+  "marketplace.empty.relevant": "Для этого рабочего пространства не найдено подходящих элементов маркетплейса.",
   "marketplace.badge.mcpServer": "MCP-сервер",
   "marketplace.badge.mode": "Режим",
   "marketplace.card.by": "от {{author}}",
