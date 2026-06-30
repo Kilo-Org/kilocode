@@ -326,6 +326,13 @@ export interface QuestionRejectRequest {
   sessionID?: string
 }
 
+export interface SessionCostAlertResponseRequest {
+  type: "sessionCostAlertResponse"
+  sessionID: string
+  limit: number
+  response: "continue" | "stop"
+}
+
 export interface SuggestionAcceptRequest {
   type: "suggestionAccept"
   requestID: string
@@ -1208,6 +1215,7 @@ export type WebviewMessage =
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
+  | SessionCostAlertResponseRequest
   | SuggestionAcceptRequest
   | SuggestionDismissRequest
   | DeleteSessionRequest

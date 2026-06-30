@@ -1250,6 +1250,11 @@ export const dict = {
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",
+  "session.costAlert.header": "Varsel om øktkostnad",
+  "session.costAlert.continue": "Fortsett",
+  "session.costAlert.question":
+    "Denne økten gikk nettopp over varselgrensen per økt på {{limit}} og koster {{cost}}. Fortsette?",
+  "session.costAlert.stop": "Stopp",
 
   "ui.sessionTurn.cancel": "Avbryt",
   "ui.sessionTurn.status.thinking": "Tenker...",
@@ -1569,6 +1574,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. doom_loop og external_directory har Spør som standard.",
+  "settings.autoApprove.maxCost.title": "Varsel om øktkostnad",
+  "settings.autoApprove.maxCost.description":
+    "Varsle før en økt fortsetter etter at kostnaden overstiger dette USD-beløpet. Bruk hele dollar; la feltet stå tomt for å deaktivere.",
   "settings.autoApprove.level.allow": "Tillat",
   "settings.autoApprove.level.ask": "Spør",
   "settings.autoApprove.level.deny": "Avvis",

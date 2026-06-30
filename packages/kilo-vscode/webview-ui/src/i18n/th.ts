@@ -1273,6 +1273,11 @@ export const dict = {
   "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
   "session.outcome.error": "เทิร์นล้มเหลว",
   "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",
+  "session.costAlert.header": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
+  "session.costAlert.continue": "ดำเนินการต่อ",
+  "session.costAlert.question":
+    "เซสชันนี้เพิ่งเกินเกณฑ์แจ้งเตือนต่อเซสชันของคุณที่ {{limit}} และมีค่าใช้จ่าย {{cost}} ต้องการดำเนินการต่อหรือไม่?",
+  "session.costAlert.stop": "หยุด",
 
   "ui.sessionTurn.cancel": "ยกเลิก",
   "ui.sessionTurn.status.thinking": "กำลังคิด...",
@@ -1551,6 +1556,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "กำหนดวิธีอนุญาตการทำงานของเครื่องมือ โดยค่าเริ่มต้นเครื่องมือส่วนใหญ่คืออนุญาต ส่วน doom_loop และ external_directory ค่าเริ่มต้นคือถาม",
+  "settings.autoApprove.maxCost.title": "การแจ้งเตือนค่าใช้จ่ายของเซสชัน",
+  "settings.autoApprove.maxCost.description":
+    "แจ้งเตือนก่อนดำเนินเซสชันต่อหลังจากค่าใช้จ่ายเกินจำนวน USD นี้ ใช้จำนวนดอลลาร์เต็ม; เว้นว่างไว้เพื่อปิดใช้งาน",
   "settings.autoApprove.level.allow": "อนุญาต",
   "settings.autoApprove.level.ask": "ถาม",
   "settings.autoApprove.level.deny": "ปฏิเสธ",

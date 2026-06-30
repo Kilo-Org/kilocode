@@ -275,6 +275,7 @@ interface SessionContextValue {
   ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
+  closeQuestion: (requestID: string) => void
   acceptSuggestion: (requestID: string, index: number) => void
   dismissSuggestion: (requestID: string) => void
   createSession: () => void
@@ -360,6 +361,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
+  const costAlerts = new Map<string, { sessionID: string; limit: number }>()
 
   // Tracks question IDs that failed so the UI can reset sending state
   const [questionErrors, setQuestionErrors] = createSignal<Set<string>>(new Set())
@@ -1044,12 +1046,51 @@ export const SessionProvider: ParentComponent = (props) => {
     if (message.type === "extensionDataReady") queueModelUsageRefresh()
   }
 
+  function handleCostAlertMessage(message: ExtensionMessage): boolean {
+    if (message.type === "sessionCostAlert") {
+      const id = crypto.randomUUID()
+      costAlerts.set(id, { sessionID: message.sessionID, limit: message.limit })
+      handleQuestionRequest({
+        id,
+        sessionID: message.sessionID,
+        autoSubmit: true,
+        dismissResponse: "continue",
+        rejectLabel: language.t("session.costAlert.stop"),
+        tone: "warning",
+        questions: [
+          {
+            header: language.t("session.costAlert.header"),
+            question: language.t("session.costAlert.question", {
+              limit: `$${message.limit.toFixed(2)}`,
+              cost: message.cost,
+            }),
+            custom: false,
+            options: [{ label: language.t("session.costAlert.continue"), description: "" }],
+          },
+        ],
+      })
+      return true
+    }
+    if (message.type === "sessionCostAlertResolved") {
+      const liveIds = new Set(questions().map((q) => q.id))
+      for (const [entryId, alert] of costAlerts.entries()) {
+        if (alert.sessionID === message.sessionID && alert.limit === message.limit) {
+          costAlerts.delete(entryId)
+          if (liveIds.has(entryId)) handleQuestionResolved(entryId)
+        }
+      }
+      return true
+    }
+    return false
+  }
+
   function handleExtensionMessage(message: ExtensionMessage): void {
     // Route suggestion messages (extracted to stay within complexity limit)
     routeSuggestionMessage(message)
     if (handleModelUsageMessage(message)) return
     refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
+    handleCostAlertMessage(message)
     switch (message.type) {
       case "sessionCreated":
         handleSessionCreated(message.session, message.draftID)
@@ -1773,11 +1814,13 @@ export const SessionProvider: ParentComponent = (props) => {
       })
     }
 
-    showToast({
-      variant: "error",
-      title: language.t("prompt.toast.promptSendFailed.title") ?? "Failed to send message",
-      description: message.error,
-    })
+    if (!message.silent) {
+      showToast({
+        variant: "error",
+        title: language.t("prompt.toast.promptSendFailed.title") ?? "Failed to send message",
+        description: message.error,
+      })
+    }
 
     if (!message.sessionID && message.draftID) {
       setDraftSessionID(message.draftID)
@@ -2256,7 +2299,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const suggestion = scopedSuggestions(sid)[0]
     if (suggestion) dismissSuggestion(suggestion.id)
     for (const q of scopedQuestions(sid)) {
-      rejectQuestion(q.id)
+      dismissQuestion(q.id)
     }
 
     const scope = draftID ?? sid
@@ -2324,7 +2367,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const suggestion = scopedSuggestions(sid)[0]
     if (suggestion) dismissSuggestion(suggestion.id)
     for (const q of scopedQuestions(sid)) {
-      rejectQuestion(q.id)
+      dismissQuestion(q.id)
     }
 
     const scope = draftID ?? sid
@@ -2435,6 +2478,17 @@ export const SessionProvider: ParentComponent = (props) => {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    const alert = costAlerts.get(requestID)
+    if (alert) {
+      // The cost alert has a single affirmative option, so reaching reply means continue.
+      vscode.postMessage({
+        type: "sessionCostAlertResponse",
+        sessionID: alert.sessionID,
+        limit: alert.limit,
+        response: "continue",
+      })
+      return
+    }
     vscode.postMessage({
       type: "questionReply",
       requestID,
@@ -2443,10 +2497,32 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  function dismissQuestion(requestID: string) {
+    const question = questions().find((item) => item.id === requestID)
+    if (question?.dismissResponse === "continue") {
+      replyToQuestion(requestID, [])
+      return
+    }
+    rejectQuestion(requestID)
+  }
+
+  function closeQuestion(id: string) {
+    costAlerts.has(id) ? (costAlerts.delete(id), handleQuestionResolved(id)) : dismissQuestion(id)
+  }
   function rejectQuestion(requestID: string) {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    const alert = costAlerts.get(requestID)
+    if (alert) {
+      vscode.postMessage({
+        type: "sessionCostAlertResponse",
+        sessionID: alert.sessionID,
+        limit: alert.limit,
+        response: "stop",
+      })
+      return
+    }
     vscode.postMessage({
       type: "questionReject",
       requestID,
@@ -2929,6 +3005,7 @@ export const SessionProvider: ParentComponent = (props) => {
     respondToPermission,
     replyToQuestion,
     rejectQuestion,
+    closeQuestion,
     acceptSuggestion,
     dismissSuggestion,
     createSession,

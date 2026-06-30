@@ -3,10 +3,28 @@
    ============================================ */
 
 [data-component="question-dock"] {
+  box-sizing: border-box;
+  flex-shrink: 0;
   margin: 0 8px;
   background-color: var(--surface-base);
+  border: 1px solid transparent;
   border-radius: 8px;
   overflow: hidden;
+
+  &[data-tone="warning"] {
+    background-color: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.45);
+    color: color-mix(in oklab, var(--text-warning, #d97706) 85%, var(--text-base, #ccc));
+  }
+
+  &[data-tone="warning"] [data-slot="question-header-title"],
+  &[data-tone="warning"] [data-slot="question-text"] {
+    color: color-mix(in oklab, var(--text-warning, #d97706) 85%, var(--text-base, #ccc));
+  }
+
+  &[data-tone="warning"] [data-slot="question-option"]:hover:not([data-picked="true"]) {
+    background-color: rgba(245, 158, 11, 0.08);
+  }
 
   /* ── Header (always visible) ── */
   [data-slot="question-dock-header"] {
