@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test"
 import {
   resolveAgentVariant,
   resolveConfiguredVariant,
+  resolvePromptVariant,
+  resolveRuntimeVariant,
   resolveSelectedVariant,
 } from "../../src/kilocode/cli/cmd/tui/model-variant"
 
@@ -39,6 +41,10 @@ describe("model variant resolution", () => {
     expect(resolveConfiguredVariant({ variant: "low", variants: vars })).toBeUndefined()
   })
 
+  test("reserves configured default sentinel even when variants include default", () => {
+    expect(resolveConfiguredVariant({ variant: "default", variants: { ...vars, default: {} } })).toBeUndefined()
+  })
+
   test("applies agent variant when no config model is pinned", () => {
     expect(
       resolveAgentVariant({
@@ -58,5 +64,32 @@ describe("model variant resolution", () => {
         variants: vars,
       }),
     ).toBeUndefined()
+  })
+
+  test("explicit prompt default suppresses configured agent variant", () => {
+    expect(
+      resolvePromptVariant({
+        override: "default",
+        current: { providerID: "test", modelID: "saved-model" },
+        variant: "max",
+        variants: vars,
+      }),
+    ).toBe("default")
+  })
+
+  test("configured prompt default is not a prompt override", () => {
+    expect(
+      resolvePromptVariant({
+        override: undefined,
+        current: { providerID: "test", modelID: "saved-model" },
+        variant: "default",
+        variants: { ...vars, default: {} },
+      }),
+    ).toBeUndefined()
+  })
+
+  test("runtime variant treats default sentinel as base options", () => {
+    expect(resolveRuntimeVariant("default")).toBeUndefined()
+    expect(resolveRuntimeVariant("max")).toBe("max")
   })
 })

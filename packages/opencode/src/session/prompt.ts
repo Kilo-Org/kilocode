@@ -10,7 +10,7 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
-import { resolveAgentVariant } from "@/kilocode/cli/cmd/tui/model-variant" // kilocode_change
+import { resolveAgentVariant, resolvePromptVariant, resolveRuntimeVariant } from "@/kilocode/cli/cmd/tui/model-variant" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -774,14 +774,13 @@ export const layer = Layer.effect(
               .getModel(model.providerID, model.modelID)
               .pipe(Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)))
           : undefined
-      const variant =
-        input.variant ??
-        resolveAgentVariant({
-          current: model,
-          config: ag.model,
-          variant: ag.variant,
-          variants: full?.variants,
-        })
+      const variant = resolvePromptVariant({
+        override: input.variant,
+        current: model,
+        config: ag.model,
+        variant: ag.variant,
+        variants: full?.variants,
+      })
       // kilocode_change end
 
       const info: MessageV2.User = {
@@ -800,6 +799,10 @@ export const layer = Layer.effect(
         format: input.format,
         editorContext: input.editorContext, // kilocode_change
       }
+      // kilocode_change start - default sentinel means base provider behavior
+      const currentVariant = resolveRuntimeVariant(current?.model?.variant)
+      const nextVariant = resolveRuntimeVariant(info.model.variant)
+      // kilocode_change end
 
       if (current?.agent !== info.agent) {
         yield* events.publish(SessionEvent.AgentSwitched, {
@@ -811,7 +814,7 @@ export const layer = Layer.effect(
       if (
         current?.model?.providerID !== info.model.providerID ||
         current.model.id !== info.model.modelID ||
-        (current.model.variant === "default" ? undefined : current.model.variant) !== info.model.variant
+        currentVariant !== nextVariant // kilocode_change
       ) {
         yield* events.publish(SessionEvent.ModelSwitched, {
           sessionID: input.sessionID,

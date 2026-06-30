@@ -35,6 +35,11 @@ function pick(value: string | undefined, variants: string[]) {
   return valid(value, variants)
 }
 
+function prompt(value: string | undefined, variants: string[]) {
+  if (value === "default") return value
+  return valid(value, variants)
+}
+
 export function getVariant(
   store: Record<string, string>,
   sel: ModelSelection,
@@ -49,6 +54,24 @@ export function getVariant(
   if (sessionValue) return sessionValue
   const pendingValue = pick(store[variantKey(sel, agent)], variants)
   if (pendingValue === null) return undefined
+  if (pendingValue) return pendingValue
+  const configValue = pick(config, variants)
+  if (configValue === null) return undefined
+  return configValue
+}
+
+export function getPromptVariant(
+  store: Record<string, string>,
+  sel: ModelSelection,
+  variants: string[],
+  agent: string,
+  session?: string,
+  config?: string,
+) {
+  if (variants.length === 0) return undefined
+  const sessionValue = session ? prompt(store[variantKey(sel, agent, session)], variants) : undefined
+  if (sessionValue) return sessionValue
+  const pendingValue = prompt(store[variantKey(sel, agent)], variants)
   if (pendingValue) return pendingValue
   const configValue = pick(config, variants)
   if (configValue === null) return undefined

@@ -71,6 +71,7 @@ import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import {
   agentVariantKeys,
+  getPromptVariant,
   getVariant,
   modeVariant,
   sessionVariantKeys,
@@ -846,6 +847,16 @@ export const SessionProvider: ParentComponent = (props) => {
     if (list.length === 0) return undefined
     const agent = agentForScope(sid)
     return getVariant(store.variantSelections, sel, list, agent, sid, getModeVariant(agent, sel))
+  }
+
+  const promptVariant = (sessionID?: string) => {
+    const sid = sessionID ?? currentSessionID()
+    const sel = selected(sid)
+    if (!sel) return undefined
+    const list = variantList(sid)
+    if (list.length === 0) return undefined
+    const agent = agentForScope(sid)
+    return getPromptVariant(store.variantSelections, sel, list, agent, sid, getModeVariant(agent, sel))
   }
 
   const selectVariant = (value: string | undefined, sessionID?: string) => {
@@ -2168,7 +2179,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(scope),
+        variant: promptVariant(scope),
         files,
         review,
       })
@@ -2200,7 +2211,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(scope),
+      variant: promptVariant(scope),
       files,
       review,
       agentManagerContext: context,
@@ -2234,7 +2245,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(scope),
+        variant: promptVariant(scope),
         files,
         command,
         commandArgs: args,
@@ -2269,7 +2280,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(scope),
+      variant: promptVariant(scope),
       files,
       agentManagerContext: context,
     })

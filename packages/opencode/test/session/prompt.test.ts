@@ -2558,6 +2558,17 @@ noLLMServer.instance(
       if (override.info.role !== "user") throw new Error("expected user message")
       expect(override.info.model.variant).toBe("high")
 
+      const explicit = yield* prompt.prompt({
+        sessionID: session.id,
+        agent: "build",
+        model: { providerID: ProviderID.make("test"), modelID: ModelID.make("test-model") },
+        noReply: true,
+        variant: "default",
+        parts: [{ type: "text", text: "hello default" }],
+      })
+      if (explicit.info.role !== "user") throw new Error("expected user message")
+      expect(explicit.info.model.variant).toBe("default")
+
       const pinned = yield* prompt.prompt({
         sessionID: session.id,
         agent: "pinned",
@@ -2601,6 +2612,7 @@ noLLMServer.instance(
       },
     },
   },
+  10_000,
 )
 // kilocode_change end
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import {
   agentVariantKeys,
+  getPromptVariant,
   modeVariant,
   getVariant,
   sessionVariantKeys,
@@ -107,6 +108,27 @@ describe("per-session variant selection", () => {
     store[variantKey(model, "code")] = "default"
 
     expect(getVariant(store, model, variants, "code", undefined, "high")).toBeUndefined()
+  })
+
+  it("preserves explicit default for prompt payloads", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code", "session-a")] = "default"
+
+    expect(getVariant(store, model, variants, "code", "session-a", "high")).toBeUndefined()
+    expect(getPromptVariant(store, model, variants, "code", "session-a", "high")).toBe("default")
+  })
+
+  it("does not send configured default as a prompt override", () => {
+    const store: Record<string, string> = {}
+
+    expect(getPromptVariant(store, model, variants, "code", undefined, "default")).toBeUndefined()
+  })
+
+  it("reserves configured default even when a provider exposes a default variant", () => {
+    const store: Record<string, string> = {}
+
+    expect(getPromptVariant(store, model, [...variants, "default"], "code", undefined, "default")).toBeUndefined()
   })
 
   it("clears stale no-session variants for one agent before applying a new config default", () => {
