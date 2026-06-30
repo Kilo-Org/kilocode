@@ -388,7 +388,7 @@ export namespace RemoteModelCatalog {
         if (distinct.length > MAX_MODELS_PER_PROVIDER) state.truncated = true
         const limited = distinct.slice(0, MAX_MODELS_PER_PROVIDER)
         if (limited.length === 0) return []
-        const preferredDefault = Provider.sort(Object.values(source.models))[0]?.id
+        const preferredDefault = Provider.sort(distinct)[0]?.id
         return [
           {
             id: ProviderID.make(source.id),
@@ -424,7 +424,12 @@ export namespace RemoteModelCatalog {
       if (selected.length === 0) continue
       const models = Object.fromEntries(selected.map((model) => [model.id, model]))
       const preferred = candidate.preferredDefault
-      defaultEntries.push([candidate.id, preferred && Object.hasOwn(models, preferred) ? preferred : selected[0].id])
+      const truncatedByLimit = selected.length < candidate.models.length
+      if (preferred && Object.hasOwn(models, preferred)) {
+        defaultEntries.push([candidate.id, preferred])
+      } else if (!truncatedByLimit && selected.length > 0) {
+        defaultEntries.push([candidate.id, selected[0].id])
+      }
       all.push({
         id: candidate.id,
         name: candidate.name,

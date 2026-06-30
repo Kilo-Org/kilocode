@@ -75,6 +75,14 @@ function createServer() {
   }
 }
 
+async function until(predicate: () => boolean, timeout = 5000) {
+  const start = Date.now()
+  while (!predicate()) {
+    if (Date.now() - start > timeout) throw new Error("condition never became true")
+    await Bun.sleep(20)
+  }
+}
+
 async function settled() {
   await Bun.sleep(20)
 }
@@ -294,7 +302,7 @@ describe("RemoteWS", () => {
       first?.open()
       first?.disconnect()
 
-      await Bun.sleep(1_050)
+      await until(() => sockets.length >= 2)
       const second = sockets[1]
       expect(second).toBeDefined()
       second?.open()
