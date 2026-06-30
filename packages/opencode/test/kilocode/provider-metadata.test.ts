@@ -28,4 +28,8 @@ describe("providerMetadata", () => {
   test("falls back to synthetic icon for unknown providers", () => {
     expect(providerMetadata("unknown-provider")).toEqual({ icon: "synthetic" })
   })
+
+  test("aliases the Tencent TokenPlan icon to the TokenHub icon", () => {
+    expect(providerMetadata("tencent-tokenplan")).toEqual({ icon: "tencent-tokenhub" })
+  })
 })

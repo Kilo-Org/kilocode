@@ -654,6 +654,24 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
   if (!model.capabilities.reasoning) return {}
 
+  // kilocode_change start - Tencent thinking depth options
+  // hy3 only exposes none/high; hy3-preview keeps none/low/medium/high.
+  if (model.providerID === "tencent-tokenhub" || model.providerID === "tencent-tokenplan") {
+    if (model.id === "hy3-preview") {
+      return {
+        none: { reasoningEffort: "none" },
+        low: { reasoningEffort: "low" },
+        medium: { reasoningEffort: "medium" },
+        high: { reasoningEffort: "high" },
+      }
+    }
+    return {
+      none: { reasoningEffort: "none" },
+      high: { reasoningEffort: "high" },
+    }
+  }
+  // kilocode_change end
+
   const id = model.id.toLowerCase()
   const glm52 = ["glm-5.2", "glm-5-2", "glm-5p2"].some(
     (name) => id.includes(name) || model.api.id.toLowerCase().includes(name),
@@ -1234,6 +1252,18 @@ export function options(input: {
   ) {
     result["enable_thinking"] = true
   }
+
+  // kilocode_change start - Tencent hy3 defaults to "high" thinking depth.
+  // Set as a base option so it applies when no variant is selected; the
+  // low/medium/high variants still override it via mergeOptions.
+  if (
+    (input.model.providerID === "tencent-tokenhub" || input.model.providerID === "tencent-tokenplan") &&
+    input.model.capabilities.reasoning &&
+    input.model.api.npm === "@ai-sdk/openai-compatible"
+  ) {
+    result["reasoningEffort"] = "high"
+  }
+  // kilocode_change end
 
   if (input.model.api.npm === "@ai-sdk/azure" && input.model.api.id.includes("gpt-5.5")) {
     result["reasoningSummary"] = "auto"
