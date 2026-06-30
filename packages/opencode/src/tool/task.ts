@@ -86,11 +86,18 @@ function backgroundMessage(input: {
     input.state === "completed"
       ? `Background task completed: ${input.description}`
       : `Background task failed: ${input.description}`
+  // kilocode_change start - surface the resumable task_id when a background subagent fails (#11620)
+  const hint = resumeHint(input.sessionID)
+  const body =
+    input.state === "error" && !input.text.includes(hint)
+      ? `${input.text}\n${hint}`
+      : input.text
+  // kilocode_change end
   return [
     `<task id="${input.sessionID}" state="${input.state}">`,
     `<summary>${title}</summary>`,
     `<${tag}>`,
-    input.text,
+    body, // kilocode_change - was input.text
     `</${tag}>`,
     "</task>",
   ].join("\n")
@@ -100,6 +107,15 @@ function errorText(error: unknown) {
   if (error instanceof Error) return error.message
   return String(error)
 }
+
+// kilocode_change start - tell the parent agent how to resume a stopped/failed subagent (#11620)
+function resumeHint(sessionID: SessionID) {
+  return [
+    `This subagent session can be resumed: call the task tool again with task_id="${sessionID}"`,
+    `and a prompt describing how to continue or recover. Its prior context is preserved.`,
+  ].join(" ")
+}
+// kilocode_change end
 
 export const TaskTool = Tool.define(
   id,
@@ -264,9 +280,12 @@ export const TaskTool = Tool.define(
           },
           parts,
         })
-        // kilocode_change start - expose terminal child assistant errors through the task tool boundary
+        // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
+        // including the resumable task_id so the parent agent can continue the subagent (#11620)
         if (result.info.role === "assistant" && result.info.error) {
-          return yield* Effect.fail(new Error(errorMessage(result.info.error)))
+          return yield* Effect.fail(
+            new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`),
+          )
         }
         // kilocode_change end
         return result.parts.findLast((item) => item.type === "text")?.text ?? ""
