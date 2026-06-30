@@ -465,21 +465,23 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         },
       }),
       async (c: any) => {
-        const proxy = await getProxyAuth()
-        if (!proxy.auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
-        if (!proxy.token) return c.json({ error: "No valid token found" }, 401)
+        try {
+          const proxy = await getProxyAuth()
+          if (!proxy.auth || !proxy.token) throw new UnauthorizedError()
 
-        const result = await fetchKiloImageModels({
-          kilocodeToken: proxy.token,
-          kilocodeOrganizationId: proxy.organizationId,
-        })
-
-        if (result.error) {
-          if (result.error.kind === "unauthorized") return c.json({ error: "unauthorized" }, 401)
-          return c.json({ error: result.error.kind }, 400)
+          const result = await fetchKiloImageModels({
+            kilocodeToken: proxy.token,
+            kilocodeOrganizationId: proxy.organizationId,
+          })
+          if (result.error) {
+            if (result.error.kind === "unauthorized") throw new UnauthorizedError()
+            throw new Error(`Failed to fetch image models: ${result.error.kind}`)
+          }
+          return c.json(result.models)
+        } catch (err) {
+          if (!(err instanceof UnauthorizedError)) throw err
+          return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
         }
-
-        return c.json(result.models)
       },
     )
     .post(
