@@ -1317,6 +1317,8 @@ export type AgentConfig = {
   disable?: boolean
   description?: string
   mode?: "subagent" | "primary" | "all"
+  displayName?: string
+  source?: string
   hidden?: boolean
   options?: {
     [key: string]: unknown
@@ -2048,6 +2050,7 @@ export type Command = {
 export type Agent = {
   name: string
   displayName?: string
+  source?: string
   description?: string
   deprecated?: boolean
   mode: "subagent" | "primary" | "all"
@@ -2780,6 +2783,26 @@ export type KilocodeSessionImportResult = {
 
 export type EffectHttpApiErrorForbidden = {
   _tag: "Forbidden"
+}
+
+export type InteractiveTerminalInfo1 = {
+  id: string
+  sessionID: string
+  pid: number
+  command: string
+  cwd: string
+  description?: string
+  status: "running" | "closed"
+  cols: number
+  rows: number
+  exitCode?: number | "NaN" | "Infinity" | "-Infinity"
+  signal?: string
+  closedBy?: "exit" | "user" | "abort"
+  time: {
+    started: number
+    updated: number
+    ended?: number
+  }
 }
 
 export type SyncEventMessageUpdated = {
@@ -10309,6 +10332,15 @@ export type InteractiveTerminalListData = {
   url: "/interactive-terminal"
 }
 
+export type InteractiveTerminalListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type InteractiveTerminalListError = InteractiveTerminalListErrors[keyof InteractiveTerminalListErrors]
+
 export type InteractiveTerminalListResponses = {
   /**
    * List of interactive terminals
@@ -10331,6 +10363,10 @@ export type InteractiveTerminalGetData = {
 }
 
 export type InteractiveTerminalGetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
   /**
    * Not found
    */
@@ -10361,6 +10397,10 @@ export type InteractiveTerminalWriteData = {
 }
 
 export type InteractiveTerminalWriteErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
   /**
    * Not found
    */
@@ -10393,6 +10433,10 @@ export type InteractiveTerminalResizeData = {
 
 export type InteractiveTerminalResizeErrors = {
   /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
    * Not found
    */
   404: NotFoundError
@@ -10423,6 +10467,10 @@ export type InteractiveTerminalCloseData = {
 }
 
 export type InteractiveTerminalCloseErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
   /**
    * Not found
    */

@@ -136,6 +136,7 @@ import type {
   InteractiveTerminalCloseResponses,
   InteractiveTerminalGetErrors,
   InteractiveTerminalGetResponses,
+  InteractiveTerminalListErrors,
   InteractiveTerminalListResponses,
   InteractiveTerminalResizeErrors,
   InteractiveTerminalResizeInput,
@@ -6456,7 +6457,11 @@ export class InteractiveTerminal extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<InteractiveTerminalListResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<
+      InteractiveTerminalListResponses,
+      InteractiveTerminalListErrors,
+      ThrowOnError
+    >({
       url: "/interactive-terminal",
       ...options,
       ...params,
