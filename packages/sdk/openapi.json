@@ -14153,6 +14153,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_Unauthorized"
+                }
+              }
+            }
           }
         },
         "description": "List image-capable models from the Kilo Gateway OpenRouter passthrough",

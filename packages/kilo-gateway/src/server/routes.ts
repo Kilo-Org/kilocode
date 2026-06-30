@@ -461,7 +461,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
               },
             },
           },
-          ...errors(401),
+          ...errors(400, 401),
         },
       }),
       async (c: any) => {
@@ -475,8 +475,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         })
 
         if (result.error) {
-          const status = result.error.kind === "unauthorized" ? 401 : (result.error.status ?? 500)
-          return c.json({ error: result.error.kind }, status)
+          if (result.error.kind === "unauthorized") return c.json({ error: "unauthorized" }, 401)
+          return c.json({ error: result.error.kind }, 400)
         }
 
         return c.json(result.models)

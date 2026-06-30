@@ -87,13 +87,14 @@ export function resolveProvider(
 
 export function ensureExtension(relPath: string, format: ImageFormat): string {
   const ext = format === "jpeg" ? "jpg" : format
-  const existing = relPath.match(/\.([a-z]+)$/i)?.[1]?.toLowerCase()
-  if (!existing) return `${relPath}.${ext}`
-  const png = ["png"]
-  const jpg = ["jpg", "jpeg"]
-  if (ext === "jpg" && jpg.includes(existing)) return relPath
-  if (ext === "png" && png.includes(existing)) return relPath
-  return `${relPath}.${ext}`
+  const match = relPath.match(/\.([a-z]+)$/i)
+  if (!match) return `${relPath}.${ext}`
+  const existing = match[1].toLowerCase()
+  const imageExts = ["png", "jpg", "jpeg"]
+  if (!imageExts.includes(existing)) return `${relPath}.${ext}`
+  const matches = ext === "jpg" ? ["jpg", "jpeg"] : ["png"]
+  if (matches.includes(existing)) return relPath
+  return `${relPath.slice(0, -match[0].length)}.${ext}`
 }
 
 type ResolvedRequest = { url: string; headers: Record<string, string>; body: string }

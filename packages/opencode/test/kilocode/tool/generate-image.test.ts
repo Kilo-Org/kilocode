@@ -124,8 +124,10 @@ describe("generate-image path extension", () => {
     expect(ensureExtension("output/photo.jpeg", "jpeg")).toBe("output/photo.jpeg")
   })
 
-  test("replaces mismatched extension when format differs", () => {
-    expect(ensureExtension("output/photo.jpg", "png")).toBe("output/photo.jpg.png")
+  test("replaces mismatched image extension when format differs", () => {
+    expect(ensureExtension("output/photo.jpg", "png")).toBe("output/photo.png")
+    expect(ensureExtension("output/photo.jpeg", "png")).toBe("output/photo.png")
+    expect(ensureExtension("output/logo.png", "jpeg")).toBe("output/logo.jpg")
   })
 
   test("keeps uppercase .PNG extension when format is png", () => {
