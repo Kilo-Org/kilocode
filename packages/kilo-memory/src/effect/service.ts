@@ -238,6 +238,4 @@ export namespace MemoryService {
   }
 
   export const layer = Layer.sync(Service)(make)
-
-  export const defaultLayer = layer
 }
