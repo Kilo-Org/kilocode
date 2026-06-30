@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import type { MemorySchema } from "../schema"
+import { MemoryLog } from "./log"
 
 export namespace MemoryEvents {
   const Metric = Schema.Struct({
@@ -109,6 +110,14 @@ export namespace MemoryEvents {
   }
 
   export async function publish(input: { event?: Event; payload: Status }) {
-    await sink(input)
+    // Event wiring is best-effort: a failing host sink must not fail a memory op that already
+    // persisted, so swallow and log instead of propagating to callers.
+    try {
+      await sink(input)
+    } catch (err) {
+      MemoryLog.warn("memory event publish failed", {
+        err: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+      })
+    }
   }
 }

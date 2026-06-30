@@ -150,6 +150,7 @@ export namespace MemoryService {
     readonly decide: (input: DecideInput) => Effect.Effect<void, Failure>
     readonly readSource: (input: ReadSourceInput) => Effect.Effect<string, Failure>
     readonly turnLock: (sessionID: SessionID) => Semaphore.Semaphore
+    readonly dropLock: (sessionID: SessionID) => void
     readonly idleSettle: () => number
     readonly setIdleSettle: (ms: number) => Timing
   }
@@ -227,6 +228,12 @@ export namespace MemoryService {
         const next = Semaphore.makeUnsafe(1)
         locks.set(sessionID, next)
         return next
+      },
+      // Drop a session's memoized lock once its turn has fully settled. Exclusivity is held by the
+      // Semaphore reference for the duration of `withPermits`, so removing the map entry afterwards is
+      // safe and keeps the map from growing unbounded in a long-lived shared backend.
+      dropLock: (sessionID) => {
+        locks.delete(sessionID)
       },
       idleSettle: () => settle,
       setIdleSettle: (ms) => {
