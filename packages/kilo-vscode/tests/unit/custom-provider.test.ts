@@ -54,6 +54,10 @@ describe("resolveCustomProviderAuth", () => {
     expect(resolveCustomProviderAuth(" sk-test ", true)).toEqual({ mode: "set", key: "sk-test" })
   })
 
+  it("preserves auth when the masked edit placeholder is submitted", () => {
+    expect(resolveCustomProviderAuth(MASKED_CUSTOM_PROVIDER_KEY, true)).toEqual({ mode: "preserve" })
+  })
+
   it("clears auth when the field was changed to empty", () => {
     expect(resolveCustomProviderAuth(undefined, true)).toEqual({ mode: "clear" })
   })

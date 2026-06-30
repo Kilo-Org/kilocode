@@ -5,6 +5,7 @@
 import type { Config, KiloClient } from "@kilocode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
 import {
+  isMaskedCustomProviderKey,
   resolveCustomProviderAuth,
   sanitizeCustomProviderConfig,
   withCustomProviderDeletions,
@@ -109,6 +110,16 @@ export function resolveStoredKey(
   if (!stored) return undefined
   const normalize = (value: string) => value.trim().replace(/\/+$/, "")
   return normalize(stored.baseURL) === normalize(url) ? stored.key : undefined
+}
+
+export function resolveModelFetchKey(
+  storedKeys: Record<string, StoredProviderKey>,
+  providerID: unknown,
+  url: string,
+  apiKey: unknown,
+): string | undefined {
+  if (typeof apiKey === "string" && !isMaskedCustomProviderKey(apiKey)) return apiKey
+  return resolveStoredKey(storedKeys, providerID, url)
 }
 
 export function buildActionContext(

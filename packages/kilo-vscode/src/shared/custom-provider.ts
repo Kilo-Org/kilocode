@@ -99,9 +99,13 @@ export function parseCustomProviderSecret(raw: string): { value: { apiKey?: stri
 
 export function resolveCustomProviderAuth(apiKey: string | undefined, changed: boolean): CustomProviderAuthChange {
   const key = apiKey?.trim()
-  if (!changed) return { mode: "preserve" }
+  if (!changed || isMaskedCustomProviderKey(key)) return { mode: "preserve" }
   if (key) return { mode: "set", key }
   return { mode: "clear" }
+}
+
+export function isMaskedCustomProviderKey(apiKey: string | undefined) {
+  return apiKey?.trim() === MASKED_CUSTOM_PROVIDER_KEY
 }
 
 export function resolveCustomProviderKey(auth: "api" | "oauth" | "wellknown" | undefined) {
