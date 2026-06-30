@@ -2,6 +2,7 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
@@ -9,6 +10,7 @@ import ai.kilocode.rpc.dto.WorkspaceFileDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Fake [KiloWorkspaceRpcApi] for testing.
@@ -27,6 +29,10 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var models = ModelsWorkspaceDto()
     var modelsGate: CompletableDeferred<Unit>? = null
     var fileMatches = emptyList<WorkspaceFileDto>()
+    var fileResolver: ((String) -> List<WorkspaceFileDto>)? = null
+    var searchResult = FileSearchResultDto()
+    var search: ((String) -> FileSearchResultDto)? = null
+    var gitChanges: String? = null
     var openResult = true
     var localConfigPath = "/test/.kilo/kilo.jsonc"
     var globalConfigPath = "/config/kilo.jsonc"
@@ -34,9 +40,10 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var globalConfigDisplayPath = globalConfigPath
     var localConfigExists = true
     var globalConfigExists = true
-    val fileCalls = mutableListOf<Pair<String, String>>()
-    val opened = mutableListOf<String>()
-    val localConfigs = mutableListOf<String>()
+    val fileCalls = CopyOnWriteArrayList<Pair<String, String>>()
+    val searchQueries = CopyOnWriteArrayList<String>()
+    val opened = CopyOnWriteArrayList<String>()
+    val localConfigs = CopyOnWriteArrayList<String>()
     var globalConfigs = 0
     var localConfigPathCalls = 0
         private set
@@ -67,7 +74,18 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {
         assertNotEdt("files")
         fileCalls.add(directory to path)
-        return fileMatches
+        return fileResolver?.invoke(path) ?: fileMatches
+    }
+
+    override suspend fun searchFiles(directory: String, query: String, limit: Int): FileSearchResultDto {
+        assertNotEdt("searchFiles")
+        searchQueries.add(query)
+        return search?.invoke(query) ?: searchResult
+    }
+
+    override suspend fun gitChanges(directory: String): String? {
+        assertNotEdt("gitChanges")
+        return gitChanges
     }
 
     override suspend fun openFile(path: String): Boolean {

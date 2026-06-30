@@ -165,44 +165,6 @@ For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **Lance
 When indexing is enabled, the CLI shows an indexing status badge at the bottom of the TUI in the form `IDX <state>` (for example `IDX In Progress 40% 120/300`, `IDX Complete`, `IDX Standby`, or `IDX Error <message>`).
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-The legacy extension uses its own Codebase Indexing settings panel.
-
-### Open Codebase Indexing Settings
-
-1. In the chat header, click the database icon (indexing status).
-2. The Codebase Indexing settings panel opens.
-3. If you don't see the icon, open Kilo Code settings ({% codicon name="gear" /%}) and search for **Codebase Indexing**.
-
-{% image src="/docs/img/codebase-indexing/codebase-indexing.png" alt="Codebase Indexing Settings" width="800" caption="Codebase Indexing Settings (legacy)" /%}
-
-### Configure Settings
-
-1. Enable **"Enable Codebase Indexing"** using the toggle switch.
-2. Configure your embedding provider:
-   - **OpenAI**: Enter API key and select model
-   - **Gemini**: Enter Google AI API key and select embedding model
-   - **Ollama**: Enter base URL and select model
-3. Set Qdrant URL and optional API key.
-4. Configure **Max Search Results** (default: 20, range: 1-100).
-5. Click **Save** to start initial indexing.
-
-### Embedding providers
-
-The legacy extension supports a smaller set of providers:
-
-| Provider | How to use | Notes |
-|---|---|---|
-| **OpenAI** | API key | Default: `text-embedding-3-small`. |
-| **Gemini** | Google AI API key | Supports Gemini embedding models including `gemini-embedding-001`. |
-| **Ollama (local)** | Local base URL | No API costs. |
-
-### Vector store
-
-The legacy extension only supports **Qdrant**. See [Setting Up Qdrant](#setting-up-qdrant).
-
-{% /tab %}
 {% /tabs %}
 
 ## Setting Up Qdrant

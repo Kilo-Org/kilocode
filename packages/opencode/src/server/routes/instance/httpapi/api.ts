@@ -27,10 +27,12 @@ import { BackgroundProcessApi } from "@/kilocode/server/httpapi/groups/backgroun
 import { ConfigConsoleApi } from "@/kilocode/server/httpapi/groups/config-console"
 import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-prompt"
 import { IndexingApi } from "@/kilocode/server/httpapi/groups/indexing"
+import { InteractiveTerminalApi } from "@/kilocode/server/httpapi/groups/interactive-terminal"
 import { KiloGatewayApi } from "@/kilocode/server/httpapi/groups/kilo-gateway"
 import { KilocodeApi } from "@/kilocode/server/httpapi/groups/kilocode"
 import { NetworkApi } from "@/kilocode/server/httpapi/groups/network"
 import { RemoteApi } from "@/kilocode/server/httpapi/groups/remote"
+import { SandboxApi } from "@/kilocode/server/httpapi/groups/sandbox"
 import { SessionImportApi } from "@/kilocode/server/httpapi/groups/session-import"
 import { SuggestionApi } from "@/kilocode/server/httpapi/groups/suggestion"
 import { TelemetryApi } from "@/kilocode/server/httpapi/groups/telemetry"
@@ -71,10 +73,12 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(ConfigConsoleApi)
   .addHttpApi(EnhancePromptApi)
   .addHttpApi(IndexingApi)
+  .addHttpApi(InteractiveTerminalApi)
   .addHttpApi(KiloGatewayApi)
   .addHttpApi(KilocodeApi)
   .addHttpApi(NetworkApi)
   .addHttpApi(RemoteApi)
+  .addHttpApi(SandboxApi)
   .addHttpApi(SessionImportApi)
   .addHttpApi(SuggestionApi)
   .addHttpApi(TelemetryApi)

@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
+  "provider.anaconda.title.manage": "Anaconda Desktop beheren",
+  "provider.anaconda.status.checking": "Anaconda Desktop controleren...",
+  "provider.anaconda.status.opening": "Anaconda Desktop openen...",
+  "provider.anaconda.status.syncing": "Providermodellen vernieuwen...",
+  "provider.anaconda.status.ready": "Klaar om te verbinden",
+  "provider.anaconda.status.waiting": "Wachten op Desktop",
+  "provider.anaconda.status.attention": "Vereist aandacht",
+  "provider.anaconda.status.unavailable": "Niet beschikbaar",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop wordt niet ondersteund op {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installeer Anaconda Desktop op deze machine en kom hier dan terug. Kilo voert het installatieprogramma niet voor je uit.",
+  "provider.anaconda.state.notRunning":
+    "Open Anaconda Desktop, voltooi de installatie en meld je aan, kies daarna Opnieuw controleren.",
+  "provider.anaconda.state.invalidConfig":
+    "De installatie van Anaconda Desktop is onvolledig. Open Desktop, voltooi de installatie en herstart het indien nodig.",
+  "provider.anaconda.state.signedOut": "Open Anaconda Desktop en meld je aan voordat je Kilo verbindt.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo kon geen toegang krijgen tot Anaconda Desktop. Open Desktop, meld je opnieuw aan en herstart het indien nodig.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop reageert nog niet. Open het en wacht tot de applicatie volledig is opgestart.",
+  "provider.anaconda.state.noModel":
+    "Download in Anaconda Desktop een tekstgeneratiemodel. Kies er indien mogelijk een met ondersteuning voor toolaanroepen en start daarna de server.",
+  "provider.anaconda.state.noServer_one":
+    "Er is 1 gedownload tekstgeneratiemodel beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
+  "provider.anaconda.state.noServer_other":
+    "Er zijn {{count}} gedownloade tekstgeneratiemodellen beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
+  "provider.anaconda.state.unhealthy":
+    "De actieve inferentieserver is nog niet gezond. Controleer deze in Anaconda Desktop en herstart de server indien nodig.",
+  "provider.anaconda.state.ready":
+    "Kilo heeft een gezonde lokale tekstgeneratieserver gevonden en kan de huidige verbindingsinstellingen importeren.",
+  "provider.anaconda.server": "Actieve inferentieserver",
+  "provider.anaconda.context": "Contextvenster",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Toolaanroepen",
+  "provider.anaconda.tools.supported": "Ondersteund",
+  "provider.anaconda.tools.unsupported": "Niet ingeschakeld",
+  "provider.anaconda.tools.unknown": "Onbekend",
+  "provider.anaconda.warning.title": "Toolondersteuning is beperkt",
+  "provider.anaconda.warning.description":
+    "Deze server bevestigt geen toolaanroepen. Acties van de codeeragent kunnen mislukken of niet beschikbaar zijn. Ga alleen verder als je deze beperkingen accepteert.",
+  "provider.anaconda.action.download": "Anaconda Desktop downloaden",
+  "provider.anaconda.action.open": "Anaconda Desktop openen",
+  "provider.anaconda.action.checkAgain": "Opnieuw controleren",
+  "provider.anaconda.action.continue": "Toch doorgaan",
+  "provider.anaconda.action.manage": "Beheren / Vernieuwen",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop vernieuwd",
+  "provider.anaconda.toast.refreshed.description": "De actieve lokale server en modellen zijn up-to-date in Kilo.",
+  "settings.providers.note.anacondaDesktop": "Voer een model uit dat lokaal door Anaconda Desktop wordt aangeboden.",
+  "settings.providers.tag.local": "Lokaal",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Voorgesteld",
   "command.category.view": "Weergave",
   "command.category.project": "Project",
@@ -94,6 +148,31 @@ export const dict = {
   "command.session.unshare.description": "Stop met het delen van deze sessie",
   "command.session.export": "Sessietranscript exporteren",
 
+  "agentRequirements.skill.installed": "Geïnstalleerd",
+  "agentRequirements.skill.checkFailed": "De skillcontrole is mislukt",
+  "agentRequirements.skill.missing": "Niet geïnstalleerd",
+  "agentRequirements.mcp.connected": "Verbonden",
+  "agentRequirements.mcp.checkFailed": "De MCP-controle is mislukt",
+  "agentRequirements.mcp.missing": "Niet verbonden",
+  "agentRequirements.extension.installed": "Geïnstalleerd",
+  "agentRequirements.extension.checkFailed": "De controle van de VS Code-extensie is mislukt",
+  "agentRequirements.extension.missing": "Niet geïnstalleerd",
+  "agentRequirements.extension.description": "Installeer de ontbrekende extensies in VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCP’s",
+  "agentRequirements.group.extensions": "VS Code-extensies",
+  "agentRequirements.blocked.title": "Vereisten voor agent {{agent}}",
+  "agentRequirements.blocked.description":
+    "Deze agent heeft de volgende tools nodig voordat deze kan worden uitgevoerd.",
+  "agentRequirements.prompt.blocked": "Voltooi eerst de vereiste controles om deze agent te gebruiken",
+  "agentRequirements.action.openMarketplace": "Marketplace openen",
+  "agentRequirements.error.unknownAgent": "De geselecteerde agent kon niet worden gevonden.",
+  "agentRequirements.error.malformedDeclaration": "Deze agent heeft een ongeldige vereistenverklaring.",
+  "agentRequirements.error.discoveryFailed": "Kilo kon de beschikbare skills niet controleren.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo kon de MCP-serverstatus niet controleren.",
+  "agentRequirements.error.scopeMismatch": "Deze controle van agentvereisten is niet meer actief.",
+  "agentRequirements.error.requestFailed": "Kilo kon de agentvereisten niet controleren.",
+
   "palette.search.placeholder": "Zoeken naar bestanden, commando's en sessies",
   "palette.empty": "Geen resultaten gevonden",
   "palette.group.commands": "Commando's",
@@ -175,6 +254,7 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Gegevens kunnen worden gebruikt voor training",
   "model.tag.latest": "Nieuwste",
+  "model.group.auto": "Automatische modellen",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
   "model.group.collapse": "{{group}} inklappen",
@@ -202,6 +282,7 @@ export const dict = {
   "model.preview.label.average": "Gesch. gem. kosten",
   "model.preview.label.context": "Context",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Modelkeuzes",
   "model.preview.label.completion": "Voltooiing",
   "model.preview.label.costAttempt": "Kosten / poging",
   "model.preview.value.notSupported": "Niet ondersteund",
@@ -288,6 +369,25 @@ export const dict = {
   "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
+  "prompt.action.sandbox.enable": "Sandbox inschakelen",
+  "prompt.action.sandbox.disable": "Sandbox uitschakelen",
+  "prompt.action.sandbox.enabled":
+    "Sandbox is ingeschakeld. Shell-opdrachten van de agent zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox is uitgeschakeld. Klik om schrijfbewerkingen van shell-opdrachten van de agent te beperken tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.status.enabled": "Sandbox ingeschakeld",
+  "prompt.action.sandbox.status.disabled": "Sandbox uitgeschakeld",
+  "prompt.action.sandbox.filesystem": "Bestandssysteem",
+  "prompt.action.sandbox.network": "Netwerk",
+  "prompt.action.sandbox.filesystem.restricted": "Beperkt",
+  "prompt.action.sandbox.network.blocked": "Geblokkeerd",
+  "prompt.action.sandbox.network.allowed": "Toegestaan",
+  "prompt.action.sandbox.unrestricted": "Onbeperkt",
+  "prompt.action.sandbox.description.enabled": "Schrijfbewerkingen zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.description.disabled":
+    "Klik om schrijfbewerkingen in het bestandssysteem en netwerktoegang te beperken.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
@@ -1122,6 +1222,9 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Indexering inschakelen",
   "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
+  "settings.indexing.showButton.title": "Knop weergeven wanneer indexering is uitgeschakeld",
+  "settings.indexing.showButton.description":
+    "Geef de indexeringsknop onder de prompt weer wanneer indexering is uitgeschakeld. Als de knop verborgen is, opent u Instellingen > Indexering om indexering in te schakelen.",
   "settings.indexing.globalEnable.title": "Globaal inschakelen",
   "settings.indexing.globalEnable.description": "Indexering inschakelen voor elke werkruimte.",
   "settings.indexing.projectEnable.title": "Inschakelen voor dit project",
@@ -1219,6 +1322,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dit reset alleen VS Code-extensiespecifieke instellingen naar hun standaardwaarden. Instellingen die gedeeld worden met de CLI, zoals modi en regels voor automatisch goedkeuren, worden opgeslagen in de CLI-configuratie en worden niet gereset.",
   "settings.aboutKiloCode.resetSettings.button": "Alle instellingen resetten",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Instellingen overdragen",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exporteer of importeer uw instellingen om ze tussen VS Code-instanties over te dragen.",
@@ -1324,9 +1428,16 @@ export const dict = {
     "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
+  "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
+  "settings.experimental.nativeNotebookTools.description":
+    "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
+  "settings.sandboxing.title": "Sandbox",
+  "settings.sandboxing.network.title": "Netwerktoegang beperken",
+  "settings.sandboxing.network.description":
+    "Blokkeer uitgaande netwerktoegang voor door het model geïnitieerde opdrachten en HTTP-tools. Lokale MCP-servers en plugin-hooks vallen buiten deze beperking. Netwerkverkeer voor providers en modelinferentie blijft beschikbaar.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1338,6 +1449,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",
 
   "settings.agentBehaviour.defaultAgent.title": "Standaard Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent om te gebruiken wanneer er geen is opgegeven",

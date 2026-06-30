@@ -64,13 +64,14 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   }
 
   function onOpen(val: boolean) {
-    setOpen(val)
     if (val) {
       const items = rows()
       const idx = items.findIndex((v) => v === props.value)
-      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+      setFocused(idx >= 0 ? idx : 0)
+      setOpen(true)
       return
     }
+    setOpen(false)
     refocus()
   }
 
@@ -166,6 +167,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
                   role="option"
                   aria-selected={props.value === v}
                   tabindex={focused() === i() ? 0 : -1}
+                  data-autofocus={focused() === i() ? "" : undefined}
                   onClick={() => pick(v)}
                   onFocus={() => setFocused(i())}
                 >

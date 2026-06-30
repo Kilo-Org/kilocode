@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "test": "bun test",
-    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --dots --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "typecheck": "tsgo --noEmit"
   },
   "bin": {
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@kilocode/kilo-gateway": "workspace:*",
+    "@kilocode/sandbox": "workspace:*",
     "@effect/opentelemetry": "catalog:",
     "@effect/platform-node": "catalog:",
     "@npmcli/arborist": "9.4.0",

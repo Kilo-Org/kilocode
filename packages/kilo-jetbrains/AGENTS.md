@@ -136,6 +136,14 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - For state-driven updates, assert that the component state matches after flushing coroutines and draining the EDT.
 - For retained Swing components, assert that expand/collapse, update, and no-op paths work correctly without rebuilding the component tree.
 
+### Integration Test Timeouts
+
+- Prefer deterministic synchronization over timeouts: wait for explicit state transitions, event emissions, fake server hooks, latches, or coroutine completions that prove the system reached the expected condition.
+- Use timeouts only when an integration test cannot otherwise protect the suite from a stuck process, external boundary, or coroutine. Treat them as watchdogs, not as the mechanism that makes the test pass.
+- When a timeout is necessary, define one named timeout or wait helper near the top of the test file and reuse it. Do not scatter literal timeout values through individual assertions.
+- Timeout failures should include the last observed state and useful logs or errors so CI explains what blocked progress.
+- Do not use `delay`, sleeps, or repeated polling to guess when asynchronous work is done unless the behavior under test is timing-specific.
+
 ## Dependencies
 
 - **Always bundle third-party libraries with the plugin.** Do not rely on libraries bundled with the IntelliJ platform (e.g. OkHttp, Gson, Guava, kotlinx-serialization-json). The IDE's bundled versions change across releases without notice and can cause version collisions, classloader conflicts, or silent API breakage. Declare all third-party dependencies as `implementation` in the relevant `build.gradle.kts` so they ship inside the plugin JAR and load from the plugin's own classloader.

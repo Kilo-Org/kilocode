@@ -22,7 +22,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, features, updateConfig } = useConfig()
   const language = useLanguage()
   const imageModels = useImageModels()
   const vscode = useVSCode()
@@ -192,6 +192,19 @@ const ExperimentalTab: Component = () => {
         </Show>
 
         <SettingsRow
+          title={language.t("settings.experimental.nativeNotebookTools.title")}
+          description={language.t("settings.experimental.nativeNotebookTools.description")}
+        >
+          <Switch
+            checked={experimental().native_notebook_tools ?? false}
+            onChange={(checked) => updateExperimental("native_notebook_tools", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.nativeNotebookTools.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.continueOnDeny.title")}
           description={language.t("settings.experimental.continueOnDeny.description")}
         >
@@ -208,7 +221,7 @@ const ExperimentalTab: Component = () => {
         <SettingsRow
           title={language.t("settings.experimental.mcpTimeout.title")}
           description={language.t("settings.experimental.mcpTimeout.description")}
-          last
+          last={!features().sandboxControls}
         >
           <TextField
             value={String(experimental().mcp_timeout ?? 60000)}
@@ -220,6 +233,22 @@ const ExperimentalTab: Component = () => {
             }}
           />
         </SettingsRow>
+
+        <Show when={features().sandboxControls}>
+          <SettingsRow
+            title={language.t("settings.experimental.sandbox.title")}
+            description={language.t("settings.experimental.sandbox.description")}
+            last
+          >
+            <Switch
+              checked={experimental().sandbox ?? false}
+              onChange={(checked) => updateExperimental("sandbox", checked)}
+              hideLabel
+            >
+              {language.t("settings.experimental.sandbox.title")}
+            </Switch>
+          </SettingsRow>
+        </Show>
       </Card>
 
       {/* Tool toggles */}

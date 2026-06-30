@@ -27,11 +27,13 @@ const forbidden: { pattern: string; reason: string; allow?: string[] }[] = [
     allow: [
       "AGENTS.md",
       "README.md",
+      "translations/README.",
       ".opencode/glossary/",
       "packages/kilo-vscode/AGENTS.md",
       "packages/kilo-docs/source-links.md",
       "patches/",
       "script/upstream/",
+      "translations/",
     ],
   },
   {
