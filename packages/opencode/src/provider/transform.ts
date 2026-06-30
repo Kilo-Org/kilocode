@@ -1254,10 +1254,13 @@ export function options(input: {
   }
 
   // kilocode_change start - Tencent hy3 defaults to "high" thinking depth.
-  // Set as a base option so it applies when no variant is selected; the
-  // low/medium/high variants still override it via mergeOptions.
+  // Scoped to the `hy3` model only (not hy3-preview), so hy3-preview keeps the
+  // server-side default when no variant is selected. Set as a base option so it
+  // applies when no variant is selected; the none/high variants still override
+  // it via mergeOptions.
   if (
     (input.model.providerID === "tencent-tokenhub" || input.model.providerID === "tencent-tokenplan") &&
+    input.model.id === "hy3" &&
     input.model.capabilities.reasoning &&
     input.model.api.npm === "@ai-sdk/openai-compatible"
   ) {

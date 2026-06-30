@@ -53,13 +53,20 @@ describe("ProviderTransform.variants - Tencent", () => {
 describe("ProviderTransform.options - Tencent", () => {
   const sessionID = "test-session"
 
-  test("defaults reasoningEffort to high for Tencent reasoning models", () => {
+  test("defaults reasoningEffort to high for hy3 on both providers", () => {
     for (const providerID of ["tencent-tokenhub", "tencent-tokenplan"]) {
-      for (const id of ["hy3", "hy3-preview"]) {
-        const result = ProviderTransform.options({ model: model(providerID, id), sessionID, providerOptions: {} })
-        expect(result.reasoningEffort).toBe("high")
-      }
+      const result = ProviderTransform.options({ model: model(providerID, "hy3"), sessionID, providerOptions: {} })
+      expect(result.reasoningEffort).toBe("high")
     }
+  })
+
+  test("does not force a default for hy3-preview (keeps server-side default)", () => {
+    const result = ProviderTransform.options({
+      model: model("tencent-tokenhub", "hy3-preview"),
+      sessionID,
+      providerOptions: {},
+    })
+    expect(result.reasoningEffort).toBeUndefined()
   })
 
   test("does not set the Tencent default for non-reasoning models", () => {
