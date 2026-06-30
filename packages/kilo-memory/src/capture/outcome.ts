@@ -135,7 +135,7 @@ export function verifySkips(input: { skipped: CaptureSkip[]; items: CaptureSourc
       skipped.push(item)
       continue
     }
-    const source = duplicate({ text: item.text, items: input.items })
+    const source = duplicate({ text: item.text, items: input.items, file: item.file, section: item.section })
     if (source) {
       skipped.push({ ...item, duplicateOf: item.duplicateOf ?? source })
       continue

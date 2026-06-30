@@ -62,7 +62,9 @@ Output schema:
     {
       "reason": "duplicate" | "transient" | "unsupported" | "secret" | "too_specific" | "in_progress" | "policy_belongs_in_docs" | "out_of_scope" | "self_referential" | "quota_guard" | "rate_limit_guard",
       "text": "short description",
-      "duplicateOf": "source.md:key when the duplicate source is known"
+      "duplicateOf": "source.md:key when the duplicate source is known",
+      "file": "project.md" | "environment.md" | "corrections.md",
+      "section": "the section that holds the existing duplicate, when known"
     }
   ]
 }
@@ -77,6 +79,7 @@ Rules:
 - Use skipped reason "out_of_scope" for personal user-level content that is not project knowledge.
 - Use skipped reason "self_referential" for statements about memory itself or about facts already being captured.
 - Use skipped reason "quota_guard" or "rate_limit_guard" if the evidence says memory generation should avoid spending limited quota.
+- For a "duplicate" skip, set "file" (and "section" when known) to where the existing entry lives, so the duplicate is verified within that scope and not against unrelated memory.
 - For upsert_environment_fact, use section "Commands" for runnable commands, "Paths" for important directories/files, and "Tooling" for package managers, runtimes, build systems, or test frameworks.
 - Omit section for other operations.
 - Do not include markdown.

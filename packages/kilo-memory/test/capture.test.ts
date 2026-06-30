@@ -338,6 +338,44 @@ describe("memory capture parsing", () => {
     expect(filtered.skipped).toEqual([])
   })
 
+  test("scopes model-reported duplicate skips to the claimed file/section", () => {
+    const items = [
+      {
+        id: "corrections.md:Corrections:repo_tests",
+        file: "corrections.md" as const,
+        section: "Corrections",
+        key: "repo_tests",
+        text: "repo_tests Run memory tests from packages/opencode.",
+      },
+    ]
+    const verified = verifySkips({
+      items,
+      skipped: [
+        // Claims a duplicate in project.md/Facts, but the only match lives in corrections.md →
+        // unconfirmed, downgraded to advisory instead of confirmed cross-scope.
+        {
+          reason: "duplicate",
+          text: "Run memory tests from packages/opencode.",
+          file: "project.md",
+          section: "Facts",
+        },
+        // Same text, correctly scoped to where the entry actually lives → confirmed.
+        {
+          reason: "duplicate",
+          text: "Run memory tests from packages/opencode.",
+          file: "corrections.md",
+          section: "Corrections",
+        },
+      ],
+    })
+
+    expect(verified.skipped[0]).toMatchObject({ reason: "unsupported" })
+    expect(verified.skipped[1]).toMatchObject({
+      reason: "duplicate",
+      duplicateOf: "corrections.md:Corrections:repo_tests",
+    })
+  })
+
   test("builds capture notices and guard summaries", () => {
     const ops = [
       { action: "add", file: "environment.md", section: "Commands", key: "tests", text: "Run bun test." },

@@ -63,6 +63,10 @@ export const typedSchema = z
             reason: skip,
             text: z.string().max(500).optional(),
             duplicateOf: z.string().max(240).optional(),
+            // Optional scope of the entry this skip claims to duplicate, so duplicate verification
+            // matches within the same file/section instead of across all stored memory.
+            file: z.enum(["project.md", "environment.md", "corrections.md"]).optional(),
+            section: z.string().max(80).optional(),
           })
           .strict(),
       )
