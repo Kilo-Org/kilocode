@@ -103,6 +103,14 @@ describe("MaxCostNudge cost aggregation", () => {
 
     expect(nudge.sessionCost(sid)).toBe(3)
   })
+
+  test("clears stale cost when value becomes non-finite", () => {
+    const nudge = new MaxCostNudge()
+    nudge.updateMessageCost(sid, "a1", "assistant", 5)
+    nudge.updateMessageCost(sid, "a1", "assistant", undefined)
+
+    expect(nudge.sessionCost(sid)).toBe(0)
+  })
 })
 
 describe("MaxCostNudge alerts", () => {

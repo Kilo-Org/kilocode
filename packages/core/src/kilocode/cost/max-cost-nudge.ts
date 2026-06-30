@@ -71,15 +71,21 @@ export class MaxCostNudge {
 
   // Record an assistant message cost (message.updated). Returns the session total.
   updateMessageCost(sid: string, id: string, role: string | undefined, value: number | undefined): number {
-    if (role === "assistant" && Number.isFinite(value)) {
+    if (role === "assistant") {
       const prev = this.#msgs.get(id)
-      if (prev && prev.sid !== sid) {
+      if (Number.isFinite(value)) {
+        if (prev && prev.sid !== sid) {
+          this.#totals.set(prev.sid, Math.max(0, (this.#totals.get(prev.sid) ?? 0) - prev.cost))
+        }
+        const before = prev?.sid === sid ? prev.cost : 0
+        const cost = value!
+        this.#msgs.set(id, { sid, cost })
+        this.#totals.set(sid, Math.max(0, (this.#totals.get(sid) ?? 0) - before + cost))
+      } else if (prev) {
+        // value became non-finite — drop the stale contribution
         this.#totals.set(prev.sid, Math.max(0, (this.#totals.get(prev.sid) ?? 0) - prev.cost))
+        this.#msgs.delete(id)
       }
-      const before = prev?.sid === sid ? prev.cost : 0
-      const cost = value ?? 0
-      this.#msgs.set(id, { sid, cost })
-      this.#totals.set(sid, Math.max(0, (this.#totals.get(sid) ?? 0) - before + cost))
     }
     return this.sessionCost(sid)
   }
