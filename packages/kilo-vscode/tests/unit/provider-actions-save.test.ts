@@ -3,9 +3,11 @@ import {
   connectProvider,
   disconnectProvider,
   fetchProviderData,
+  resolveModelFetchKey,
   resolveStoredKey,
   saveCustomProvider,
 } from "../../src/provider-actions"
+import { MASKED_CUSTOM_PROVIDER_KEY } from "../../src/shared/custom-provider"
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
@@ -204,6 +206,24 @@ describe("saveCustomProvider", () => {
 
     expect(calls.remove).toHaveLength(0)
     expect(calls.set).toEqual([{ providerID: "myprovider", auth: { type: "api", key: "sk-test" } }])
+  })
+
+  it("preserves auth when the masked api key placeholder is submitted", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+
+    await saveCustomProvider(
+      ctx,
+      "req",
+      "myprovider",
+      createProvider(),
+      MASKED_CUSTOM_PROVIDER_KEY,
+      true,
+      null,
+      setCachedConfig,
+    )
+
+    expect(calls.set).toHaveLength(0)
+    expect(calls.remove).toHaveLength(0)
   })
 
   // Regression tests for https://github.com/Kilo-Org/kilocode/issues/9186
@@ -560,5 +580,21 @@ describe("resolveStoredKey", () => {
     expect(resolveStoredKey(storedKeys, "other", "https://example.com/v1")).toBeUndefined()
     expect(resolveStoredKey(storedKeys, undefined, "https://example.com/v1")).toBeUndefined()
     expect(resolveStoredKey(storedKeys, "", "https://example.com/v1")).toBeUndefined()
+  })
+})
+
+describe("resolveModelFetchKey", () => {
+  const storedKeys = {
+    myprovider: { key: "sk-stored", baseURL: "https://example.com/v1" },
+  }
+
+  it("uses a typed api key before falling back to stored auth", () => {
+    expect(resolveModelFetchKey(storedKeys, "myprovider", "https://example.com/v1", "sk-typed")).toBe("sk-typed")
+  })
+
+  it("uses stored auth when the webview submits the masked edit placeholder", () => {
+    expect(resolveModelFetchKey(storedKeys, "myprovider", "https://example.com/v1", MASKED_CUSTOM_PROVIDER_KEY)).toBe(
+      "sk-stored",
+    )
   })
 })
