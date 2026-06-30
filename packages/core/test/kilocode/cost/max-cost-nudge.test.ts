@@ -111,6 +111,32 @@ describe("MaxCostNudge cost aggregation", () => {
 
     expect(nudge.sessionCost(sid)).toBe(0)
   })
+
+  test("ignores non-assistant message costs", () => {
+    const nudge = new MaxCostNudge()
+    nudge.updateMessageCost(sid, "a1", "assistant", 3)
+
+    expect(nudge.updateMessageCost(sid, "u1", "user", 10)).toBe(3)
+    expect(nudge.sessionCost(sid)).toBe(3)
+  })
+
+  test("ignores non-finite assistant costs for new messages", () => {
+    const nudge = new MaxCostNudge()
+    nudge.updateMessageCost(sid, "a1", "assistant", 3)
+
+    expect(nudge.updateMessageCost(sid, "a2", "assistant", Number.NaN)).toBe(3)
+    expect(nudge.updateMessageCost(sid, "a3", "assistant", undefined)).toBe(3)
+    expect(nudge.sessionCost(sid)).toBe(3)
+  })
+
+  test("removing a message does not drop below the session-cost floor", () => {
+    const nudge = new MaxCostNudge()
+    nudge.updateMessageCost(sid, "a1", "assistant", 4)
+    nudge.setSessionCost(sid, 6)
+
+    nudge.removeMessageCost("a1")
+    expect(nudge.sessionCost(sid)).toBe(6)
+  })
 })
 
 describe("MaxCostNudge alerts", () => {
@@ -239,5 +265,16 @@ describe("MaxCostNudge.onSessionDeleted", () => {
     // A reused session id starts fresh and can alert again.
     nudge.updateMessageCost(sid, "a2", "assistant", 6)
     expect(nudge.check(sid)).toEqual({ limit: 5, cost: 6 })
+  })
+
+  test("leaves other sessions intact", () => {
+    const nudge = new MaxCostNudge()
+    nudge.updateMessageCost("ses_a", "a1", "assistant", 4)
+    nudge.updateMessageCost("ses_b", "b1", "assistant", 7)
+
+    nudge.onSessionDeleted("ses_a")
+
+    expect(nudge.sessionCost("ses_a")).toBe(0)
+    expect(nudge.sessionCost("ses_b")).toBe(7)
   })
 })
