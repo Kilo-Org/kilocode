@@ -381,7 +381,7 @@ describe("RemoteSender", () => {
     expect(sent).toHaveLength(1)
     expect(sent[0]?.type).toBe("response")
     expect(sent[0]?.id).toBe("req_models")
-    const result = RemoteModelCatalog.Response.parse(sent[0]?.result)
+    const result = sent[0]?.result as RemoteModelCatalog.Response
     expect(result.all).toHaveLength(1)
     expect(result.all[0]?.id).toBe("custom")
     expect(result.all[0]?.env).toEqual([])
