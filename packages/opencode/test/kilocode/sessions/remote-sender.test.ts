@@ -395,7 +395,6 @@ describe("RemoteSender", () => {
       variant: "precise",
     })
     expect(result.defaultModel).toEqual({ providerID: "custom", modelID: "deployment/model" })
-    expect(result.truncated).toBe(false)
     expect(JSON.stringify(result)).not.toContain("must-not-leak")
     expect(JSON.stringify(result)).not.toContain("private.example.com")
   })
@@ -503,7 +502,6 @@ describe("RemoteSender", () => {
           connected: [],
           failed: [],
           protocolVersion: 1,
-          truncated: false,
         },
       },
     ])

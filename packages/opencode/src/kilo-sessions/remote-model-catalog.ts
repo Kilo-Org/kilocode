@@ -4,15 +4,7 @@ import { Provider } from "@/provider/provider"
 import z from "zod"
 
 export namespace RemoteModelCatalog {
-  export const MAX_PROVIDERS = 64
-  export const MAX_MODELS_PER_PROVIDER = 512
-  export const MAX_MODELS_TOTAL = 2_048
-  export const MAX_VARIANTS_PER_MODEL = 32
-  export const MAX_VARIANTS_TOTAL = 8_192
-  export const MAX_IDENTITY_LENGTH = 255
-  export const MAX_SERIALIZED_BYTES = 512 * 1024
-
-  const Identity = z.string().min(1).max(MAX_IDENTITY_LENGTH)
+  const Identity = z.string().min(1)
 
   export const Request = z
     .object({
@@ -40,7 +32,6 @@ export namespace RemoteModelCatalog {
     protocolVersion: 1
     currentModel?: ModelSelection
     defaultModel?: ModelRef
-    truncated: boolean
   }
 
   const EmptyRecord = z.object({}).strict()
@@ -58,7 +49,7 @@ export namespace RemoteModelCatalog {
       id: Identity,
       providerID: Identity,
       api: z.object({ id: Identity, url: z.literal(""), npm: z.literal("") }).strict(),
-      name: z.string().max(MAX_IDENTITY_LENGTH),
+      name: z.string(),
       capabilities: z
         .object({
           temperature: z.boolean(),
@@ -97,7 +88,7 @@ export namespace RemoteModelCatalog {
   const SanitizedProvider = z
     .object({
       id: Identity,
-      name: z.string().max(MAX_IDENTITY_LENGTH),
+      name: z.string(),
       source: z.enum(["env", "config", "custom", "api"]),
       env: z.array(z.never()).max(0),
       options: EmptyRecord,
@@ -107,19 +98,16 @@ export namespace RemoteModelCatalog {
 
   export const Response = z
     .object({
-      all: z.array(SanitizedProvider).max(MAX_PROVIDERS),
+      all: z.array(SanitizedProvider),
       default: z.record(Identity, Identity),
-      connected: z.array(Identity).max(MAX_PROVIDERS),
-      failed: z.array(Identity).max(MAX_PROVIDERS),
+      connected: z.array(Identity),
+      failed: z.array(Identity),
       protocolVersion: z.literal(1),
       currentModel: ModelSelection.optional(),
       defaultModel: ModelRef.optional(),
-      truncated: z.boolean(),
     })
     .strict()
     .superRefine((catalog, context) => {
-      let modelCount = 0
-      let variantCount = 0
       const providers = new Map(catalog.all.map((provider) => [provider.id, provider]))
       if (providers.size !== catalog.all.length) {
         context.addIssue({ code: "custom", message: "Provider ID must be unique", path: ["all"] })
@@ -129,22 +117,12 @@ export namespace RemoteModelCatalog {
       }
       for (const [providerIndex, provider] of catalog.all.entries()) {
         const models = Object.entries(provider.models)
-        modelCount += models.length
         for (const [modelKey, model] of models) {
           if (modelKey !== model.id || model.providerID !== provider.id || model.api.id !== model.id) {
             context.addIssue({
               code: "custom",
               message: "Model record identity must match its provider and record key",
               path: ["all", providerIndex, "models", modelKey],
-            })
-          }
-          const variants = Object.keys(model.variants ?? {})
-          variantCount += variants.length
-          if (variants.length > MAX_VARIANTS_PER_MODEL) {
-            context.addIssue({
-              code: "custom",
-              message: `Model cannot contain more than ${MAX_VARIANTS_PER_MODEL} variants`,
-              path: ["all", providerIndex, "models", modelKey, "variants"],
             })
           }
         }
@@ -157,31 +135,8 @@ export namespace RemoteModelCatalog {
       for (const [providerID, modelID] of Object.entries(catalog.default)) {
         const provider = providers.get(providerID)
         if (!provider || !Object.hasOwn(provider.models, modelID)) {
-          context.addIssue({
-            code: "custom",
-            message: "Default model must exist in all",
-            path: ["default", providerID],
-          })
+          context.addIssue({ code: "custom", message: "Default model must exist in all", path: ["default", providerID] })
         }
-      }
-
-      if (catalog.all.length > MAX_PROVIDERS) {
-        context.addIssue({ code: "custom", message: `Catalog cannot contain more than ${MAX_PROVIDERS} providers` })
-      }
-      if (catalog.all.some((provider) => Object.keys(provider.models).length > MAX_MODELS_PER_PROVIDER)) {
-        context.addIssue({
-          code: "custom",
-          message: `Provider cannot contain more than ${MAX_MODELS_PER_PROVIDER} models`,
-        })
-      }
-      if (modelCount > MAX_MODELS_TOTAL) {
-        context.addIssue({ code: "custom", message: `Catalog cannot contain more than ${MAX_MODELS_TOTAL} models` })
-      }
-      if (variantCount > MAX_VARIANTS_TOTAL) {
-        context.addIssue({ code: "custom", message: `Catalog cannot contain more than ${MAX_VARIANTS_TOTAL} variants` })
-      }
-      if (new TextEncoder().encode(JSON.stringify(catalog)).byteLength > MAX_SERIALIZED_BYTES) {
-        context.addIssue({ code: "custom", message: `Catalog cannot exceed ${MAX_SERIALIZED_BYTES} serialized bytes` })
       }
     })
 
@@ -222,16 +177,6 @@ export namespace RemoteModelCatalog {
     defaultModel?: ModelRef
   }
 
-  type State = {
-    truncated: boolean
-  }
-
-  type CandidateProvider = Omit<Provider.Info, "models"> & {
-    models: Provider.Model[]
-    preferredDefault?: string
-    providerTruncated: boolean
-  }
-
   function order(left: string, right: string) {
     if (left < right) return -1
     if (left > right) return 1
@@ -243,57 +188,35 @@ export namespace RemoteModelCatalog {
     return label || order(left.id, right.id)
   }
 
-  function unique<T extends { id: string }>(items: T[], state: State) {
+  function unique<T extends { id: string }>(items: T[]) {
     const ids = new Set<string>()
     return items.filter((item) => {
-      if (!ids.has(item.id)) {
-        ids.add(item.id)
-        return true
-      }
-      state.truncated = true
-      return false
+      if (ids.has(item.id)) return false
+      ids.add(item.id)
+      return true
     })
   }
 
-  function identity(value: string) {
-    return value.length > 0 && value.length <= MAX_IDENTITY_LENGTH
-  }
-
-  function displayName(value: string, fallback: string, state: State) {
-    if (value.length <= MAX_IDENTITY_LENGTH) return value
-    state.truncated = true
-    return fallback
-  }
-
-  function selection(value: ModelSelection | undefined, state: State) {
-    if (!value) return undefined
-    if (
-      !identity(value.model.providerID) ||
-      !identity(value.model.modelID) ||
-      (value.variant && !identity(value.variant))
-    ) {
-      state.truncated = true
-      return undefined
-    }
-    return value
+  function validIdentity(value: string) {
+    return value.length > 0
   }
 
   function current(input: Input): ModelSelection | undefined {
-    if (input.session.model) {
+    const session = input.session.model
+    if (session && validIdentity(session.providerID) && validIdentity(session.id)) {
       return {
         model: {
-          providerID: input.session.model.providerID,
-          modelID: input.session.model.id,
+          providerID: session.providerID,
+          modelID: session.id,
         },
-        ...(input.session.model.variant && input.session.model.variant !== "default"
-          ? { variant: input.session.model.variant }
-          : {}),
+        ...(session.variant && session.variant !== "default" ? { variant: session.variant } : {}),
       }
     }
 
     for (let idx = input.messages.length - 1; idx >= 0; idx--) {
       const info = input.messages[idx]?.info
       if (info?.role !== "user" || !info.model) continue
+      if (!validIdentity(info.model.providerID) || !validIdentity(info.model.modelID)) continue
       return {
         model: {
           providerID: info.model.providerID,
@@ -305,11 +228,7 @@ export namespace RemoteModelCatalog {
     return undefined
   }
 
-  function sanitizeModel(source: SourceModel, providerID: string, state: State): Provider.Model | undefined {
-    if (!identity(source.id)) {
-      state.truncated = true
-      return undefined
-    }
+  function sanitizeModel(source: SourceModel, providerID: string): Provider.Model | undefined {
     if (
       !Number.isFinite(source.limit.context) ||
       source.limit.context < 0 ||
@@ -317,23 +236,15 @@ export namespace RemoteModelCatalog {
       source.limit.output < 0 ||
       (source.limit.input !== undefined && (!Number.isFinite(source.limit.input) || source.limit.input < 0))
     ) {
-      state.truncated = true
       return undefined
     }
-    const variants = Object.keys(source.variants ?? {})
-      .sort(order)
-      .filter((variant) => {
-        if (identity(variant)) return true
-        state.truncated = true
-        return false
-      })
-    if (variants.length > MAX_VARIANTS_PER_MODEL) state.truncated = true
+    if (!validIdentity(source.id)) return undefined
 
     return {
       id: ModelID.make(source.id),
       providerID: ProviderID.make(providerID),
       api: { id: source.id, url: "", npm: "" },
-      name: displayName(source.name, source.id, state),
+      name: source.name,
       capabilities: {
         temperature: source.capabilities.temperature,
         reasoning: source.capabilities.reasoning,
@@ -368,129 +279,75 @@ export namespace RemoteModelCatalog {
       options: {},
       headers: {},
       release_date: "",
-      variants: Object.fromEntries(variants.slice(0, MAX_VARIANTS_PER_MODEL).map((variant) => [variant, {}])),
+      variants: Object.fromEntries(
+        Object.keys(source.variants ?? {})
+          .filter(validIdentity)
+          .sort(order)
+          .map((variant) => [variant, {}]),
+      ),
     }
   }
 
-  function candidates(input: Input, state: State): CandidateProvider[] {
-    const providers = Object.values(input.providers)
-      .flatMap((source) => {
-        if (!identity(source.id)) {
-          state.truncated = true
-          return []
-        }
-        const models = Object.values(source.models)
-          .flatMap((model) => {
-            const sanitized = sanitizeModel(model, source.id, state)
-            return sanitized ? [sanitized] : []
-          })
-          .sort(compare)
-        const distinct = unique(models, state)
-        const providerTruncated = distinct.length > MAX_MODELS_PER_PROVIDER
-        if (providerTruncated) state.truncated = true
-        const limited = distinct.slice(0, MAX_MODELS_PER_PROVIDER)
-        if (limited.length === 0) return []
-        const preferredDefault = Provider.sort(distinct)[0]?.id
-        return [
-          {
-            id: ProviderID.make(source.id),
-            name: displayName(source.name, source.id, state),
-            source: source.source ?? "custom",
-            env: [],
-            options: {},
-            models: limited,
-            preferredDefault,
-            providerTruncated,
-          },
-        ]
-      })
-      .sort(compare)
-    const distinct = unique(providers, state)
-    if (distinct.length > MAX_PROVIDERS) state.truncated = true
-    return distinct.slice(0, MAX_PROVIDERS)
-  }
-
-  function assemble(
-    candidates: CandidateProvider[],
-    modelLimit: number,
-    active: ModelSelection | undefined,
-    fallback: ModelRef | undefined,
-    truncated: boolean,
-  ): Response {
-    let remaining = modelLimit
-    const all: Provider.Info[] = []
-    const defaultEntries: Array<[string, string]> = []
-    for (const candidate of candidates) {
-      if (remaining <= 0) break
-      const selected = candidate.models.slice(0, remaining)
-      remaining -= selected.length
-      if (selected.length === 0) continue
-      const models = Object.fromEntries(selected.map((model) => [model.id, model]))
-      const preferred = candidate.preferredDefault
-      const truncatedByLimit = selected.length < candidate.models.length
-      if (preferred && Object.hasOwn(models, preferred)) {
-        defaultEntries.push([candidate.id, preferred])
-      } else if (!candidate.providerTruncated && !truncatedByLimit && selected.length > 0) {
-        defaultEntries.push([candidate.id, selected[0].id])
-      }
-      all.push({
-        id: candidate.id,
-        name: candidate.name,
-        source: candidate.source,
-        env: candidate.env,
-        options: candidate.options,
-        models,
-      })
-    }
+  function sanitizeProvider(source: SourceProvider): Provider.Info | undefined {
+    if (!validIdentity(source.id)) return undefined
+    const models = unique(
+      Object.values(source.models)
+        .flatMap((model) => {
+          const sanitized = sanitizeModel(model, source.id)
+          return sanitized ? [sanitized] : []
+        })
+        .sort(compare),
+    )
+    if (models.length === 0) return undefined
     return {
+      id: ProviderID.make(source.id),
+      name: source.name,
+      source: source.source ?? "custom",
+      env: [],
+      options: {},
+      models: Object.fromEntries(models.map((model) => [model.id, model])),
+    }
+  }
+
+  function providers(input: Input): Provider.Info[] {
+    return unique(
+      Object.values(input.providers)
+        .flatMap((source) => {
+          const provider = sanitizeProvider(source)
+          return provider ? [provider] : []
+        })
+        .sort(compare),
+    )
+  }
+
+  function defaults(providers: Provider.Info[]): Record<string, string> {
+    const result: Record<string, string> = {}
+    for (const provider of providers) {
+      const models = Object.values(provider.models)
+      if (models.length === 0) continue
+      const preferred = Provider.sort(models)[0]?.id
+      if (preferred && Object.hasOwn(provider.models, preferred)) {
+        result[provider.id] = preferred
+      } else {
+        result[provider.id] = models[0].id
+      }
+    }
+    return result
+  }
+
+  export function build(input: Input): Response {
+    const all = providers(input)
+    const active = current(input)
+    const fallback = input.defaultModel
+
+    return Response.parse({
       all,
-      default: Object.fromEntries(defaultEntries),
+      default: defaults(all),
       connected: all.map((provider) => provider.id),
       failed: [],
       protocolVersion: 1,
       ...(active ? { currentModel: active } : {}),
       ...(fallback ? { defaultModel: fallback } : {}),
-      truncated,
-    }
-  }
-
-  export function build(input: Input): Response {
-    const state: State = { truncated: false }
-    const available = candidates(input, state)
-    const active = selection(current(input), state)
-    const fallback = selection(input.defaultModel ? { model: input.defaultModel } : undefined, state)?.model
-    let variantCount = 0
-    let modelCount = 0
-    const limited = available.flatMap((provider) => {
-      const models = provider.models.flatMap((model) => {
-        if (modelCount >= MAX_MODELS_TOTAL) {
-          state.truncated = true
-          return []
-        }
-        modelCount += 1
-        const variants = Object.keys(model.variants ?? {})
-        const remaining = MAX_VARIANTS_TOTAL - variantCount
-        if (variants.length > remaining) state.truncated = true
-        const selected = variants.slice(0, Math.max(remaining, 0))
-        variantCount += selected.length
-        return [{ ...model, variants: Object.fromEntries(selected.map((variant) => [variant, {}])) }]
-      })
-      if (models.length === 0) return []
-      return [{ ...provider, models }]
     })
-    const total = limited.reduce((count, provider) => count + provider.models.length, 0)
-    const full = assemble(limited, total, active, fallback, state.truncated)
-    const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).byteLength
-    if (bytes(full) <= MAX_SERIALIZED_BYTES) return Response.parse(full)
-
-    let low = 0
-    let high = total
-    while (low < high) {
-      const middle = Math.ceil((low + high) / 2)
-      const candidate = assemble(limited, middle, active, fallback, true)
-      if (bytes(candidate) <= MAX_SERIALIZED_BYTES) low = middle
-      else high = middle - 1
-    }
-    return Response.parse(assemble(limited, low, active, fallback, true))
   }
 }
