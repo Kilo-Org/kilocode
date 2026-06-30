@@ -278,7 +278,9 @@ describe("memory capture parsing", () => {
     const verified = verifySkips({
       items,
       skipped: [
-        { reason: "duplicate", text: "Run memory tests from packages/opencode." },
+        // Fully scoped to the stored entry → confirmed.
+        { reason: "duplicate", text: "Run memory tests from packages/opencode.", file: "project.md", section: "Facts" },
+        // Unscoped → unverified regardless of any text overlap.
         { reason: "duplicate", text: "New durable workflow preference." },
       ],
     })

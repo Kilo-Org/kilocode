@@ -135,13 +135,13 @@ export function verifySkips(input: { skipped: CaptureSkip[]; items: CaptureSourc
       skipped.push(item)
       continue
     }
-    // A claim scoped to a file but not a section cannot be verified without risking a cross-section
-    // false confirm within that file, so treat it as unverified. A claim with no scope at all keeps
-    // the prior whole-memory match.
-    const unverifiable = item.file !== undefined && item.section === undefined
-    const source = unverifiable
-      ? undefined
-      : duplicate({ text: item.text, items: input.items, file: item.file, section: item.section })
+    // A model-claimed duplicate is only confirmable when it names the exact scope (file + section).
+    // Any missing scope field would let fuzzy text matching confirm against unrelated memory, so
+    // downgrade partially-scoped or unscoped claims to advisory instead.
+    const scoped = item.file !== undefined && item.section !== undefined
+    const source = scoped
+      ? duplicate({ text: item.text, items: input.items, file: item.file, section: item.section })
+      : undefined
     if (source) {
       skipped.push({ ...item, duplicateOf: item.duplicateOf ?? source })
       continue
