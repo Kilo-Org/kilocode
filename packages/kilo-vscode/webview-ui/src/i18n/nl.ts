@@ -1622,6 +1622,13 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagentmodel",
   "settings.providers.subagentModel.description":
     "Standaardmodel en redeneerinspanning voor task-tool subagenten. Laat leeg om het model van de aanroepende agent over te nemen.",
+  "settings.models.refreshCatalog.title": "Modelcatalogus bijwerken",
+  "settings.models.refreshCatalog.description": "Haal nu de nieuwste modellen op van models.dev en de Kilo Gateway.",
+  "settings.models.refreshCatalog.button": "Nu bijwerken",
+  "settings.models.refreshCatalog.refreshing": "Bijwerken…",
+  "settings.models.refreshCatalog.toast.success": "Modelcatalogus bijgewerkt",
+  "settings.models.refreshCatalog.toast.error":
+    "De modelcatalogus kon niet volledig worden vernieuwd. Probeer het opnieuw.",
   "settings.models.hidePromptTraining.title": "Modellen die prompts voor training gebruiken verbergen",
   "settings.models.hidePromptTraining.description":
     "Verberg Kilo Gateway-modellen waarvan providers je prompts mogelijk voor training gebruiken.",

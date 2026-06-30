@@ -1609,6 +1609,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "Alt Aracı Modeli",
   "settings.providers.subagentModel.description":
     "task-tool alt aracıları için varsayılan model ve akıl yürütme çabası. Çağıran aracının modelini devralmak için boş bırakın.",
+  "settings.models.refreshCatalog.title": "Model kataloğunu güncelle",
+  "settings.models.refreshCatalog.description": "models.dev ve Kilo Gateway'den en son modelleri hemen al.",
+  "settings.models.refreshCatalog.button": "Şimdi güncelle",
+  "settings.models.refreshCatalog.refreshing": "Güncelleniyor…",
+  "settings.models.refreshCatalog.toast.success": "Model kataloğu güncellendi",
+  "settings.models.refreshCatalog.toast.error": "Model kataloğu tamamen yenilenemedi. Lütfen tekrar deneyin.",
   "settings.models.hidePromptTraining.title": "İstemlerle eğitilen modelleri gizle",
   "settings.models.hidePromptTraining.description":
     "Sağlayıcıları istemlerinizi eğitim için kullanabilecek Kilo Gateway modellerini gizleyin.",

@@ -960,6 +960,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "サブエージェントモデル",
   "settings.providers.subagentModel.description":
     "task-tool サブエージェントのデフォルトモデルと推論の労力。呼び出し元のエージェントのモデルを継承する場合は未設定のままにしてください。",
+  "settings.models.refreshCatalog.title": "モデルカタログを更新",
+  "settings.models.refreshCatalog.description": "models.dev と Kilo Gateway から最新のモデルを今すぐ取得します。",
+  "settings.models.refreshCatalog.button": "今すぐ更新",
+  "settings.models.refreshCatalog.refreshing": "更新中…",
+  "settings.models.refreshCatalog.toast.success": "モデルカタログを更新しました",
+  "settings.models.refreshCatalog.toast.error": "モデルカタログを完全に更新できませんでした。もう一度お試しください。",
   "settings.models.hidePromptTraining.title": "プロンプトを学習に使用するモデルを非表示",
   "settings.models.hidePromptTraining.description":
     "プロバイダーがプロンプトを学習に使用する可能性のある Kilo Gateway モデルを非表示にします。",

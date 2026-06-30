@@ -1606,6 +1606,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
+  "settings.models.refreshCatalog.title": "Оновити каталог моделей",
+  "settings.models.refreshCatalog.description": "Отримати найновіші моделі з models.dev і Kilo Gateway зараз.",
+  "settings.models.refreshCatalog.button": "Оновити зараз",
+  "settings.models.refreshCatalog.refreshing": "Оновлення…",
+  "settings.models.refreshCatalog.toast.success": "Каталог моделей оновлено",
+  "settings.models.refreshCatalog.toast.error": "Не вдалося повністю оновити каталог моделей. Спробуйте ще раз.",
   "settings.models.hidePromptTraining.title": "Приховувати моделі, що навчаються на запитах",
   "settings.models.hidePromptTraining.description":
     "Приховувати моделі Kilo Gateway, постачальники яких можуть використовувати ваші запити для навчання.",

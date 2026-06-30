@@ -918,6 +918,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
     "task-tool 하위 에이전트의 기본 모델 및 추론 수준입니다. 호출하는 에이전트의 모델을 상속하려면 비워 두세요.",
+  "settings.models.refreshCatalog.title": "모델 카탈로그 업데이트",
+  "settings.models.refreshCatalog.description": "models.dev와 Kilo Gateway에서 최신 모델을 지금 가져옵니다.",
+  "settings.models.refreshCatalog.button": "지금 업데이트",
+  "settings.models.refreshCatalog.refreshing": "업데이트 중…",
+  "settings.models.refreshCatalog.toast.success": "모델 카탈로그가 업데이트되었습니다",
+  "settings.models.refreshCatalog.toast.error": "모델 카탈로그를 완전히 새로 고치지 못했습니다. 다시 시도해 주세요.",
   "settings.models.hidePromptTraining.title": "프롬프트를 학습에 사용하는 모델 숨기기",
   "settings.models.hidePromptTraining.description":
     "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
