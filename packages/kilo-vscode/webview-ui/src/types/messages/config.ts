@@ -40,6 +40,8 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   batch_tool?: boolean
   codebase_search?: boolean
+  image_generation?: boolean
+  image_generation_model?: string
   agent_requirements?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string

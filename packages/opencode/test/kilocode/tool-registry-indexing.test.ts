@@ -238,6 +238,7 @@ describe("kilocode tool registry indexing", () => {
       managerModels: def("agent_manager_models"),
       manager: def("agent_manager"),
       process: def("background_process"),
+      image: def("generate_image"),
       terminal: def("interactive_terminal"),
       notebookRead: def("notebook_read"),
       notebookEdit: def("notebook_edit"),
@@ -255,6 +256,18 @@ describe("kilocode tool registry indexing", () => {
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
         ["codebase_search", "semantic_search", "recall", "background_process", "interactive_terminal"],
       )
+      expect(
+        KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, image_generation: true } }).map(
+          (tool) => tool.id,
+        ),
+      ).toEqual([
+        "codebase_search",
+        "generate_image",
+        "semantic_search",
+        "recall",
+        "background_process",
+        "interactive_terminal",
+      ])
 
       process.env["KILO_CLIENT"] = "vscode"
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(

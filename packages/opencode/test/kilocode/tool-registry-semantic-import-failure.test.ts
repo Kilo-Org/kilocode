@@ -52,6 +52,7 @@ function infos() {
     managerModels: info("agent_manager_models"),
     manager: info("agent_manager"),
     process: info("background_process"),
+    image: info("generate_image"),
     notebookRead: info("notebook_read"),
     notebookEdit: info("notebook_edit"),
     notebookExecute: info("notebook_execute"),
