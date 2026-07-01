@@ -67,6 +67,16 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../context/tui-config"
+// kilocode_change start - vim modal editing for the prompt
+import {
+  createVimState,
+  enterNormal as vimEnterNormal,
+  handleNormalKey as vimHandleNormalKey,
+  handleVisualKey as vimHandleVisualKey,
+  type VimDoc,
+  type VimKey,
+} from "./vim"
+// kilocode_change end
 
 export type PromptProps = {
   sessionID?: string
@@ -204,6 +214,100 @@ export function Prompt(props: PromptProps) {
   const [workspaceCreatingDots, setWorkspaceCreatingDots] = createSignal(3)
   const [warpNotice, setWarpNotice] = createSignal<string>()
   const [cursorVersion, setCursorVersion] = createSignal(0)
+  // kilocode_change start - vim modal editing for the prompt
+  const vimState = createVimState("insert")
+  const [vimMode, setVimMode] = createSignal<"insert" | "normal" | "visual" | "visual-line">("insert")
+  const vimEnabled = createMemo(() => kv.get("vim_enabled", tuiConfig.vim ?? false))
+  function syncVimMode() {
+    if (vimState.mode !== vimMode()) setVimMode(vimState.mode)
+    setCursorVersion((value) => value + 1)
+  }
+  function resetVim() {
+    vimState.mode = "insert"
+    vimState.operator = undefined
+    vimState.awaitingG = false
+    vimState.awaitingReplace = false
+    vimState.countDigits = ""
+    vimState.desiredColumn = undefined
+    vimState.visualAnchor = undefined
+    if (input && !input.isDestroyed) input.clearSelection()
+    setVimMode("insert")
+  }
+  function vimDoc(): VimDoc {
+    return {
+      get text() {
+        return input.plainText
+      },
+      get cursor() {
+        return input.cursorOffset
+      },
+      setCursor(offset: number) {
+        input.cursorOffset = Math.max(0, Math.min(offset, input.plainText.length))
+      },
+      insert(offset: number, value: string) {
+        input.cursorOffset = Math.max(0, Math.min(offset, input.plainText.length))
+        input.insertText(value)
+      },
+      remove(start: number, end: number) {
+        const removed = input.plainText.slice(start, end)
+        input.setSelection(start, end)
+        input.deleteSelection()
+        return removed
+      },
+      undo() {
+        input.undo()
+      },
+      redo() {
+        input.redo()
+      },
+      setSelection(start: number, end: number) {
+        input.setSelection(start, end)
+      },
+      clearSelection() {
+        input.clearSelection()
+      },
+    }
+  }
+  /**
+   * Intercept a key while vim mode is active. Returns true when the key was
+   * consumed by the vim layer (caller must preventDefault so the textarea does
+   * not also process it).
+   */
+  function vimOnKey(e: KeyEvent): boolean {
+    if (!vimEnabled() || props.disabled || !input || input.isDestroyed) return false
+
+    // INSERT mode: only Escape is special (switch to NORMAL). Everything else
+    // is left to the native textarea so typing behaves normally.
+    if (vimState.mode === "insert") {
+      if (e.name === "escape" && !auto()?.visible) {
+        vimEnterNormal(vimDoc(), vimState)
+        syncVimMode()
+        return true
+      }
+      return false
+    }
+
+    const visual = vimState.mode === "visual" || vimState.mode === "visual-line"
+
+    // In NORMAL mode keep Enter (submit) and Tab (autocomplete) working rather
+    // than emulating strict vim line motions for them. In VISUAL mode the user
+    // is selecting, so let the engine handle those keys instead.
+    if (!visual && (e.name === "return" || e.name === "enter" || e.name === "tab")) return false
+
+    // Let global ctrl/meta combos (e.g. ctrl+c to exit) through, except ctrl+r
+    // which is vim redo.
+    const ctrl = e.ctrl === true
+    if ((ctrl || e.meta === true || e.super === true) && !(ctrl && e.name === "r")) return false
+
+    const key: VimKey = ctrl
+      ? { key: e.name, ctrl: true }
+      : { key: e.sequence && e.sequence.length === 1 ? e.sequence : e.name }
+
+    const result = visual ? vimHandleVisualKey(vimDoc(), vimState, key) : vimHandleNormalKey(vimDoc(), vimState, key)
+    if (result.handled) syncVimMode()
+    return result.handled
+  }
+  // kilocode_change end
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
 
@@ -340,6 +444,22 @@ export function Prompt(props: PromptProps) {
     if (props.disabled) input.cursorColor = theme.backgroundElement
     if (!props.disabled) input.cursorColor = theme.text
   })
+
+  // kilocode_change start - vim cursor shape + reset when vim is disabled
+  createEffect(() => {
+    if (!vimEnabled()) {
+      if (vimState.mode !== "insert") resetVim()
+      // Restore the default (non-vim) cursor so a block cursor from NORMAL/VISUAL
+      // mode does not linger after vim mode is turned off.
+      if (input && !input.isDestroyed) input.cursorStyle = { style: "block", blinking: true }
+      return
+    }
+    cursorVersion()
+    if (!input || input.isDestroyed) return
+    // Block cursor in NORMAL/VISUAL modes, bar cursor in INSERT mode (vim convention).
+    input.cursorStyle = vimMode() === "insert" ? { style: "line", blinking: true } : { style: "block", blinking: false }
+  })
+  // kilocode_change end
 
   const lastUserMessage = createMemo(() => {
     if (!props.sessionID) return undefined
@@ -603,6 +723,22 @@ export function Prompt(props: PromptProps) {
           input.cursorOffset = Bun.stringWidth(content)
         },
       },
+      // kilocode_change start - vim modal editing toggle (palette + /vim)
+      {
+        title: "Toggle vim mode",
+        desc: "Enable or disable vim modal editing in the prompt input",
+        name: "prompt.vim.toggle",
+        category: "Prompt",
+        slashName: "vim",
+        run: () => {
+          const next = !vimEnabled()
+          kv.set("vim_enabled", next)
+          resetVim()
+          dialog.clear()
+          toast.show({ message: next ? "Vim mode enabled" : "Vim mode disabled", variant: "info" })
+        },
+      },
+      // kilocode_change end
       {
         title: "Skills",
         name: "prompt.skills",
@@ -662,6 +798,7 @@ export function Prompt(props: PromptProps) {
       "prompt.stash",
       "prompt.stash.pop",
       "prompt.stash.list",
+      "prompt.vim.toggle", // kilocode_change
       "session.interrupt",
       "workspace.set",
     ]),
@@ -694,6 +831,7 @@ export function Prompt(props: PromptProps) {
         parts: [],
       })
       setStore("extmarkToPartIndex", new Map())
+      resetVim() // kilocode_change - return to insert mode after the prompt is cleared
     },
     submit() {
       void submit()
@@ -846,6 +984,7 @@ export function Prompt(props: PromptProps) {
           input.clear()
           setStore("prompt", { input: "", parts: [] })
           setStore("extmarkToPartIndex", new Map())
+          resetVim() // kilocode_change
           dialog.clear()
         },
       },
@@ -861,6 +1000,7 @@ export function Prompt(props: PromptProps) {
             setStore("prompt", { input: entry.input, parts: entry.parts })
             restoreExtmarksFromParts(entry.parts)
             input.gotoBufferEnd()
+            resetVim() // kilocode_change
           }
           dialog.clear()
         },
@@ -878,6 +1018,7 @@ export function Prompt(props: PromptProps) {
                 setStore("prompt", { input: entry.input, parts: entry.parts })
                 restoreExtmarksFromParts(entry.parts)
                 input.gotoBufferEnd()
+                resetVim() // kilocode_change
               }}
             />
           ))
@@ -1000,6 +1141,7 @@ export function Prompt(props: PromptProps) {
             setStore("prompt", item)
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromParts(item.parts)
+            resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = 0
           },
         },
@@ -1036,6 +1178,7 @@ export function Prompt(props: PromptProps) {
             setStore("prompt", item)
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromParts(item.parts)
+            resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = input.plainText.length
           },
         },
@@ -1300,6 +1443,7 @@ export function Prompt(props: PromptProps) {
       }, 50)
     }
     input.clear()
+    resetVim() // kilocode_change - drop back to insert mode after sending
     return true
   }
   const exit = useExit()
@@ -1460,6 +1604,7 @@ export function Prompt(props: PromptProps) {
       parts: [],
     })
     setStore("extmarkToPartIndex", new Map())
+    resetVim() // kilocode_change - don't leak stale vim mode/selection into an emptied prompt
   }
 
   const highlight = createMemo(() => {
@@ -1584,9 +1729,15 @@ export function Prompt(props: PromptProps) {
                 setCursorVersion((value) => value + 1)
                 if (store.mode === "normal") auto()?.onCursorChange()
               }}
-              onKeyDown={(e: { preventDefault(): void }) => {
+              onKeyDown={(e: KeyEvent) => {
                 if (props.disabled) {
                   e.preventDefault()
+                  return
+                }
+                // kilocode_change - route keys through the vim layer when enabled
+                if (vimOnKey(e)) {
+                  e.preventDefault()
+                  e.stopPropagation()
                   return
                 }
               }}
@@ -1654,6 +1805,36 @@ export function Prompt(props: PromptProps) {
                             Locale.titlecase(local.agent.current()?.name ?? ""))}{" "}
                         {/* kilocode_change end */}
                       </text>
+                      {/* kilocode_change start - vim mode indicator */}
+                      <Show when={vimEnabled() && store.mode !== "shell"}>
+                        <box flexDirection="row" gap={1}>
+                          <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>·</text>
+                          <text>
+                            <span
+                              style={{
+                                fg: fadeColor(
+                                  vimMode() === "insert"
+                                    ? theme.info
+                                    : vimMode() === "visual" || vimMode() === "visual-line"
+                                      ? theme.warning
+                                      : theme.success,
+                                  agentMetaAlpha(),
+                                ),
+                                bold: true,
+                              }}
+                            >
+                              {vimMode() === "insert"
+                                ? "INSERT"
+                                : vimMode() === "visual"
+                                  ? "VISUAL"
+                                  : vimMode() === "visual-line"
+                                    ? "V-LINE"
+                                    : "NORMAL"}
+                            </span>
+                          </text>
+                        </box>
+                      </Show>
+                      {/* kilocode_change end */}
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
                           <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
