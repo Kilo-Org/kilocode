@@ -190,6 +190,15 @@ describe("Extension — KiloProvider handler wiring", () => {
     expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
   })
 
+  it("openKiloInNewTab uses tab groups to choose the target column", () => {
+    const fn = ext.indexOf("function openKiloInNewTab")
+    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(ext, fn)
+    expect(body).toContain("vscode.window.tabGroups.all")
+    expect(body).not.toContain("visibleTextEditors")
+    expect(body).not.toContain("workbench.action.newGroupRight")
+  })
+
   it("TabPanel deserializer wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
     const serializer = ext.indexOf('"kilo-code.new.TabPanel"')
     expect(serializer, "TabPanel serializer must exist").toBeGreaterThan(-1)
