@@ -45,10 +45,12 @@ export namespace KiloSessionOverflow {
 
   export function measure(input: Payload) {
     let extra = 0
+    let media = 0
     const normalized = JSON.stringify(input.messages, function (this: unknown, key, value: unknown) {
       if (!["data", "url", "image"].includes(key)) return value
       if (!this || typeof this !== "object" || !("type" in this)) return value
       if (!["file", "image", "media"].includes(String(this.type))) return value
+      media++
       const tokens =
         value instanceof Uint8Array
           ? Math.ceil(value.byteLength / 4)
@@ -70,6 +72,7 @@ export namespace KiloSessionOverflow {
     return {
       normalized: Math.ceil((messages + tools) * FACTOR),
       raw: Math.ceil((raw + tools) * FACTOR),
+      media,
       continuation: continued(input.messages),
     }
   }

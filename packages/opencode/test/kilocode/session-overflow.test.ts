@@ -134,6 +134,67 @@ describe("Kilo request estimation", () => {
     expect(KiloLLM.needsEstimate({ model: model({ context: 0, output: 32_000 }), configured: 32_000 })).toBe(false)
     expect(KiloLLM.needsEstimate({ model: mdl, configured: 32_000 })).toBe(true)
   })
+
+  test("caps output tokens from media-normalized context instead of encoded image bytes", () => {
+    const configured = 32_000
+    const messages = [
+      {
+        role: "user",
+        content: [{ type: "image", image: `data:image/png;base64,${"x".repeat(300_000)}` }],
+      },
+    ] satisfies ModelMessage[]
+    const usage = KiloSessionOverflow.measure({ messages, tools: {} })
+    const mdl = model({ context: usage.raw + 2_048 + 1_758, output: configured })
+
+    expect(usage.raw).toBeGreaterThan(usage.normalized + configured)
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured })).toBe(configured)
+  })
+
+  test("reserves output capacity for media parts without counting raw bytes", () => {
+    const configured = 32_000
+    const messages = [
+      {
+        role: "user",
+        content: [
+          { type: "image", image: `data:image/png;base64,${"x".repeat(300_000)}` },
+          { type: "image", image: `data:image/png;base64,${"y".repeat(300_000)}` },
+        ],
+      },
+    ] satisfies ModelMessage[]
+    const usage = KiloSessionOverflow.measure({ messages, tools: {} })
+    const mdl = model({ context: usage.normalized + 2_048 + 30_000, output: configured })
+
+    expect(usage.raw).toBeGreaterThan(usage.normalized + configured)
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured })).toBe(25_904)
+  })
+
+  test("reserves output capacity when context tokens are precomputed", () => {
+    const configured = 32_000
+    const messages = [
+      {
+        role: "user",
+        content: [
+          { type: "image", image: `data:image/png;base64,${"x".repeat(300_000)}` },
+          { type: "image", image: `data:image/png;base64,${"y".repeat(300_000)}` },
+        ],
+      },
+    ] satisfies ModelMessage[]
+    const usage = KiloSessionOverflow.measure({ messages, tools: {} })
+    const mdl = model({ context: usage.normalized + 2_048 + 30_000, output: configured })
+
+    expect(
+      KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured, contextTokens: usage.normalized }),
+    ).toBe(25_904)
+  })
+
+  test("still reduces output tokens for oversized text context", () => {
+    const configured = 32_000
+    const messages = [{ role: "user", content: "x".repeat(300_000) }] satisfies ModelMessage[]
+    const usage = KiloSessionOverflow.measure({ messages, tools: {} })
+    const mdl = model({ context: usage.normalized + 2_048 + 8_000, output: configured })
+
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured })).toBe(8_000)
+  })
 })
 
 describe("Kilo preflight compaction", () => {
