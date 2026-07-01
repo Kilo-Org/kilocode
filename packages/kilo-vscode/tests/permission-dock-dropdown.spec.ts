@@ -294,6 +294,33 @@ test.describe.skip("Permission Dock Dropdown — config pre-populated", () => {
 })
 
 // ---------------------------------------------------------------------------
+// Many parallel edits — permission body is scrollable when content overflows
+// ---------------------------------------------------------------------------
+
+test.describe("Permission Dock — many parallel edits (scrollability)", () => {
+  const STORY_ID = "composite-webview--permission-dock-many-edits"
+
+  test("permission body scrolls when many diffs overflow container", async ({ page }) => {
+    await page.goto(storyUrl(STORY_ID), { waitUntil: "load" })
+    await disableAnimations(page)
+    await page.waitForSelector("#storybook-root *", { state: "attached" })
+
+    // The story renders the dock in a 350px-tall container with 5 file diffs —
+    // content naturally overflows. Verify `permission-body` is scrollable.
+    const body = page.locator('[data-slot="permission-body"]')
+    await body.waitFor({ state: "visible" })
+
+    const scrollable = await body.evaluate(
+      (node) => node.scrollHeight > node.clientHeight && getComputedStyle(node).overflowY !== "hidden",
+    )
+    expect(scrollable).toBe(true)
+
+    const root = page.locator("#storybook-root")
+    await expect(root).toHaveScreenshot(["permission-dock-dropdown", "many-edits-overflow.png"])
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Subagent permission — shows "(subagent)" in subtitle
 // ---------------------------------------------------------------------------
 

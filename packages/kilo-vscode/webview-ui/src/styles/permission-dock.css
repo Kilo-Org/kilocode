@@ -28,6 +28,7 @@
   [data-slot="permission-body"] {
     padding: 10px 16px 0;
     gap: 8px;
+    overflow-y: auto;
   }
 
   [data-slot="permission-header-title"] {
