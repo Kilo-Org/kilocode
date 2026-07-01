@@ -1,11 +1,13 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test"
 import path from "path"
+import type { Ignore } from "ignore"
 import { mockEmbeddingsCreate, openAIMockFactory, setOpenAIConstructorHook } from "./embedders/__helpers__/openai-mock"
 
 mock.module("openai", openAIMockFactory)
 import { CodeIndexServiceFactory } from "../../../src/indexing/service-factory"
 import { CodeIndexConfigManager } from "../../../src/indexing/config-manager"
 import { CacheManager } from "../../../src/indexing/cache-manager"
+import type { IEmbedder } from "../../../src/indexing/interfaces"
 
 const workspacePath = "/tmp/ws"
 const cacheDirectory = "/tmp/cache"
@@ -220,5 +222,71 @@ describe("CodeIndexServiceFactory", () => {
       encoding_format: "base64",
       dimensions: 1024,
     })
+  })
+
+  test("uses registry default for known model without explicit dimension", async () => {
+    const factory = createFactory({
+      embedderProvider: "openai",
+      modelId: "text-embedding-3-small",
+      modelDimension: undefined,
+    })
+
+    let embedderCreatedWithDimension: number | undefined
+    const originalCreateEmbedder = factory.createEmbedder.bind(factory)
+    factory.createEmbedder = function (override?: number) {
+      embedderCreatedWithDimension = override
+      return originalCreateEmbedder(override)
+    }
+
+    const services = await factory.createServices({} as CacheManager, {} as Ignore)
+
+    expect(embedderCreatedWithDimension).toBe(1536)
+    expect((services.vectorStore as unknown as { vectorSize: number }).vectorSize).toBe(1536)
+  })
+
+  test("uses explicit dimension over registry default", async () => {
+    const factory = createFactory({
+      embedderProvider: "openai",
+      modelId: "text-embedding-3-small",
+      modelDimension: 12346789,
+    })
+
+    let embedderCreatedWithDimension: number | undefined
+    const originalCreateEmbedder = factory.createEmbedder.bind(factory)
+    factory.createEmbedder = function (override?: number) {
+      embedderCreatedWithDimension = override
+      return originalCreateEmbedder(override)
+    }
+
+    const services = await factory.createServices({} as CacheManager, {} as Ignore)
+
+    expect(embedderCreatedWithDimension).toBe(12346789)
+    expect((services.vectorStore as unknown as { vectorSize: number }).vectorSize).toBe(12346789)
+  })
+
+  test("detects dimension for unknown model without explicit dimension", async () => {
+    const factory = createFactory({
+      embedderProvider: "openai-compatible",
+      modelId: "custom/unknown-model",
+      modelDimension: undefined,
+      openAiCompatibleBaseUrl: "http://localhost:1234/v1",
+    })
+
+    let detectionCalled = false
+    const originalDetect = factory.detectEmbeddingDimension.bind(factory)
+    ;(factory as any).detectEmbeddingDimension = async function (embedder: IEmbedder) {
+      detectionCalled = true
+      return originalDetect(embedder)
+    }
+
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: [0.1, 0.2, 0.3, 0.4, 0.5] }],
+      usage: { prompt_tokens: 1, total_tokens: 1 },
+    })
+
+    const services = await factory.createServices({} as CacheManager, {} as Ignore)
+
+    expect(detectionCalled).toBe(true)
+    expect((services.vectorStore as unknown as { vectorSize: number }).vectorSize).toBe(5)
   })
 })
