@@ -30,7 +30,7 @@ function mapProviderAuthError<A, R>(self: Effect.Effect<A, ProviderAuth.Error, R
       if (error instanceof ProviderAuth.ValidationFailed) {
         return new ProviderAuthApiError({ name: error._tag, data: { field: error.field, message: error.message } })
       }
-      return new ProviderAuthApiError({ name: "BadRequest", data: {} })
+      return new ProviderAuthApiError({ name: "BadRequest", data: { message: error.message } }) // kilocode_change
     }),
   )
 }

@@ -6,6 +6,7 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Plugin } from "../plugin"
 import { ProviderID } from "./schema"
 import { Array as Arr, Effect, Layer, Record, Result, Context, Schema } from "effect"
+import { errorMessage } from "@/util/error" // kilocode_change
 
 // kilocode_change start
 import { Telemetry } from "@kilocode/kilo-telemetry"
@@ -183,7 +184,12 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
         }
       }
 
-      const result = yield* Effect.promise(() => method.authorize(input.inputs))
+      // kilocode_change start
+      const result = yield* Effect.tryPromise({
+        try: () => method.authorize(input.inputs),
+        catch: (err) => new Auth.AuthError({ message: errorMessage(err), cause: err }),
+      })
+      // kilocode_change end
       pending.set(input.providerID, result)
       return {
         url: result.url,

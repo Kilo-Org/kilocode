@@ -16,6 +16,7 @@ import { isConsoleManagedProvider } from "@tui/util/provider-origin"
 import * as KiloProvider from "@/kilocode/cli/cmd/tui/component/dialog-provider" // kilocode_change
 import { useConnected } from "./use-connected"
 import { useBindings } from "../keymap"
+import { errorMessage } from "@/util/error" // kilocode_change
 
 const PROVIDER_PRIORITY: Record<string, number> = KiloProvider.PROVIDER_PRIORITY // kilocode_change
 
@@ -182,7 +183,7 @@ export function createDialogProviderOptions() {
               if (result.error) {
                 toast.show({
                   variant: "error",
-                  message: JSON.stringify(result.error),
+                  message: errorMessage(result.error), // kilocode_change
                 })
                 dialog.clear()
                 return
