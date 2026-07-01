@@ -100,7 +100,6 @@ export interface ErrorMessage {
 export interface SendMessageFailedMessage {
   type: "sendMessageFailed"
   error: string
-  silent?: boolean
   text: string
   sessionID?: string
   draftID?: string
