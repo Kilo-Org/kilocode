@@ -382,6 +382,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly confirmations = new MessageConfirmation()
   private readonly costs = new MaxCostNudge()
   private readonly nudgeWaiters = new Map<string, Array<(response: MaxCostChoice) => void>>()
+  private readonly activeAlerts = new Map<string, number>() // sid -> limit currently shown in UI
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
   /** Cached migration data so migration doesn't re-read from disk/SecretStorage. */ // legacy-migration
@@ -1970,8 +1971,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.visibleTaskStreams.delete(sessionID)
       this.syncedChildSessions.delete(sessionID)
       this.costs.onSessionDeleted(sessionID)
-      for (const key of this.nudgeWaiters.keys()) {
-        if (key.startsWith(`${sessionID}:`)) this.resolveCostWaiters(key, "stop")
+      const deletedAlertLimit = this.activeAlerts.get(sessionID)
+      if (deletedAlertLimit !== undefined) {
+        this.activeAlerts.delete(sessionID)
+        this.postMessage({ type: "sessionCostAlertResolved", sessionID: sessionID, limit: deletedAlertLimit })
       }
       this.sessionDirectories.delete(sessionID)
       this.aborts.delete(sessionID)
@@ -3043,6 +3046,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.costs.setSessionCost(sid, cost)
     const alert = this.costs.check(sid)
     if (!alert) return
+    this.activeAlerts.set(sid, alert.limit)
     this.postMessage({
       type: "sessionCostAlert",
       sessionID: sid,
@@ -3052,6 +3056,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async handleCostAlertResponse(sid: string, limit: number, response: MaxCostChoice): Promise<void> {
+    this.activeAlerts.delete(sid)
     this.resolveCostWaiters(`${sid}:${limit}`, response)
     this.costs.resolve(sid, response, limit)
     if (response !== "continue") await this.handleAbort(sid)
@@ -3439,12 +3444,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         .getConfiguration("kilo-code.new")
         .update("maxCost", normalized, vscode.ConfigurationTarget.Global)
       for (const sid of this.trackedSessionIds) {
-        for (const key of this.nudgeWaiters.keys()) {
-          if (key.startsWith(`${sid}:`)) {
-            const oldLimit = Number(key.split(":")[1])
-            this.nudgeWaiters.delete(key)
-            this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
-          }
+        const oldLimit = this.activeAlerts.get(sid)
+        if (oldLimit !== undefined) {
+          this.activeAlerts.delete(sid)
+          this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
         }
         this.costs.rearm(sid)
         this.requestCostAlert(sid, this.costs.sessionCost(sid))
