@@ -4,6 +4,7 @@ import { Global } from "@opencode-ai/core/global"
 import { InstallationBuildKind, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
+import { Effect } from "effect"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Config } from "@/config/config"
 import { Auth } from "@/auth"
@@ -18,6 +19,7 @@ import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
+import { KilocodeModelVariantMigration } from "@/kilocode/config/model-variant-migration"
 
 const log = Log.create({ service: "kilocode.cli" })
 
@@ -55,7 +57,15 @@ export namespace KiloCli {
     if (!process.env[ENV_VERSION]) process.env[ENV_VERSION] = InstallationVersion
     process.env.KILO = "1"
 
-    const cfg = await AppRuntime.runPromise(Config.Service.use((c) => c.getGlobal()))
+    const cfg = await AppRuntime.runPromise(
+      Config.Service.use((svc) =>
+        Effect.gen(function* () {
+          const cfg = yield* svc.getGlobal()
+          yield* KilocodeModelVariantMigration.run({ config: cfg, update: svc.updateGlobal })
+          return cfg
+        }),
+      ),
+    )
     await Telemetry.init({
       dataPath: Global.Path.data,
       version: InstallationVersion,

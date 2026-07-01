@@ -735,7 +735,7 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
     }
   })
 
-  test("migrates legacy model.json variant for the current fallback model", async () => {
+  test("preserves model-keyed variants without startup config migration", async () => {
     const { local, dispose } = await initLocal({
       prewrite: {
         recent: [SONNET],
@@ -744,28 +744,19 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
       },
     })
     try {
-      await waitForGlobalConfigUpdates(1)
-
       expect(local.model.current()).toEqual(SONNET)
-      expect(local.model.variant.selected()).toBe("high")
-      expect(local.model.variant.current()).toBe("high")
-      expect(globalConfigUpdates).toEqual([
-        { config: { agent: { code: { variant: "high" }, plan: { variant: "high" } } } },
-      ])
-
-      local.agent.set("plan")
-      expect(local.model.variant.current()).toBe("high")
+      expect(local.model.variant.selected()).toBeUndefined()
+      expect(globalConfigUpdates).toEqual([])
 
       await local.model.flush()
       const data = await readModelJson()
-      expect(data.variant).toBeUndefined()
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
     } finally {
       dispose()
     }
   })
 
-  test("preserves legacy model.json variant when config migration fails", async () => {
-    globalConfigUpdateError = new Error("simulated migration failure")
+  test("preserves model-keyed variants after model changes", async () => {
     const { local, dispose } = await initLocal({
       prewrite: {
         recent: [SONNET],
@@ -784,30 +775,7 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
     }
   })
 
-  test("preserves legacy model.json variant when config migration returns an sdk error", async () => {
-    globalConfigReturnError = true
-    const { local, dispose } = await initLocal({
-      prewrite: {
-        recent: [SONNET],
-        favorite: [],
-        variant: { "anthropic/claude-sonnet": "high" },
-      },
-    })
-    try {
-      await waitForGlobalConfigUpdates(1)
-      expect(globalConfigUpdateOptions).toEqual([{ throwOnError: true }])
-
-      local.model.set(OPUS, { recent: true })
-      await local.model.flush()
-
-      const data = await readModelJson()
-      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
-    } finally {
-      dispose()
-    }
-  })
-
-  test("does not migrate stale persisted model variants when a configured model wins", async () => {
+  test("does not expand stale persisted variants when a configured model wins", async () => {
     mockAgents = [
       {
         name: "code",
@@ -840,7 +808,7 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
     }
   })
 
-  test("migrates fallback model variants when persisted model is invalid", async () => {
+  test("preserves model-keyed variants when persisted model is invalid", async () => {
     const { local, dispose } = await initLocal({
       prewrite: {
         model: { code: { providerID: "missing", modelID: "missing" } },
@@ -850,39 +818,13 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
       },
     })
     try {
-      await waitForGlobalConfigUpdates(1)
-
       expect(local.model.current()).toEqual(SONNET)
-      expect(local.model.variant.current()).toBe("high")
-      expect(globalConfigUpdates).toEqual([
-        { config: { agent: { code: { variant: "high" }, plan: { variant: "high" } } } },
-      ])
-    } finally {
-      dispose()
-    }
-  })
-
-  test("preserves unrelated legacy model variants after migration", async () => {
-    const { local, dispose } = await initLocal({
-      prewrite: {
-        recent: [SONNET],
-        favorite: [],
-        variant: {
-          "anthropic/claude-sonnet": "high",
-          "openai/gpt-5": "low",
-        },
-      },
-    })
-    try {
-      await waitForGlobalConfigUpdates(1)
-
-      expect(globalConfigUpdates).toEqual([
-        { config: { agent: { code: { variant: "high" }, plan: { variant: "high" } } } },
-      ])
+      expect(local.model.variant.current()).toBeUndefined()
+      expect(globalConfigUpdates).toEqual([])
 
       await local.model.flush()
       const data = await readModelJson()
-      expect(data.variant).toEqual({ "openai/gpt-5": "low" })
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
     } finally {
       dispose()
     }
@@ -916,7 +858,7 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
       local.model.set(OPUS, { recent: true })
       await local.model.flush()
       const data = await readModelJson()
-      expect(data.variant).toBeUndefined()
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
     } finally {
       dispose()
     }

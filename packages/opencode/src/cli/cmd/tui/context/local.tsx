@@ -14,7 +14,6 @@ import { useArgs } from "./args"
 import { useSDK } from "./sdk"
 import { useProject } from "./project" // kilocode_change
 import { resolveAgentVariant, resolveSelectedVariant } from "@/kilocode/cli/cmd/tui/model-variant" // kilocode_change
-import { migrate as migrateLegacyVariants, variants as legacyVariants } from "@/kilocode/cli/cmd/tui/model-variant-migration" // kilocode_change
 import { RGBA } from "@opentui/core"
 import { Filesystem } from "@/util/filesystem"
 
@@ -25,6 +24,15 @@ export function parseModel(model: string) {
     modelID: rest.join("/"),
   }
 }
+
+// kilocode_change start
+function variants(input: unknown) {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return {}
+  return Object.fromEntries(
+    Object.entries(input).filter((item): item is [string, string] => typeof item[1] === "string"),
+  )
+}
+// kilocode_change end
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
@@ -158,8 +166,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const state = {
         pending: false,
         writer: Promise.resolve() as Promise<unknown>, // kilocode_change - serialize writes
-        legacy: undefined as Record<string, string> | undefined, // kilocode_change
-        migrating: false, // kilocode_change
+        variant: undefined as Record<string, string> | undefined, // kilocode_change
       }
 
       // kilocode_change start - keep configured-agent selections process-local
@@ -198,7 +205,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
-          ...(state.legacy ? { variant: state.legacy } : {}),
+          ...(state.variant ? { variant: state.variant } : {}),
         }
         state.writer = state.writer.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
         // kilocode_change end
@@ -208,8 +215,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         .then((x: any) => {
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
           if (Array.isArray(x.favorite)) setModelStore("favorite", x.favorite)
-          const old = legacyVariants(x.variant) // kilocode_change
-          state.legacy = Object.keys(old).length > 0 ? old : undefined // kilocode_change
+          const old = variants(x.variant) // kilocode_change
+          state.variant = Object.keys(old).length > 0 ? old : undefined // kilocode_change
           if (typeof x.model === "object" && x.model !== null) setModelStore("model", x.model) // kilocode_change
         })
         .catch(() => {})
@@ -272,53 +279,6 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         )
         // kilocode_change end
       })
-
-      // kilocode_change start - migrate legacy model-keyed variants to agent config
-      createEffect(() => {
-        if (!modelStore.ready) return
-        if (!state.legacy) return
-        if (state.migrating) return
-        const a = agent.current()
-        const m = currentModel()
-        const list = agent.list()
-        const fallback = !args.model ? fallbackModel() : undefined
-        const model = Object.fromEntries(
-          list.map((item) => {
-            const cfg = item.model && isModelValid(item.model) ? item.model : undefined
-            const saved = modelStore.model[item.name]
-            const persisted = saved && isModelValid(saved) ? saved : undefined
-            return [item.name, cfg ?? persisted ?? fallback] as const
-          }),
-        )
-        const migrated = migrateLegacyVariants({
-          old: state.legacy,
-          model,
-          agent: list,
-          current: !args.model && a && m ? { name: a.name, model: m } : undefined,
-        })
-        if (Object.keys(migrated.cfg).length === 0) {
-          if (migrated.matched) {
-            state.legacy = Object.keys(migrated.remaining).length > 0 ? migrated.remaining : undefined
-            save()
-          }
-          return
-        }
-        state.migrating = true
-        for (const [name, value] of Object.entries(migrated.override)) {
-          setModelStore("variant", variantKey(name), value)
-        }
-        void sdk.client.global.config
-          .update({ config: { agent: migrated.cfg } }, { throwOnError: true })
-          .then(() => {
-            state.legacy = Object.keys(migrated.remaining).length > 0 ? migrated.remaining : undefined
-            save()
-          })
-          .catch(() => undefined)
-          .finally(() => {
-            state.migrating = false
-          })
-      })
-      // kilocode_change end
 
       return {
         current: currentModel,

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "bun:test"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -17,8 +17,12 @@ afterAll(async () => {
   await rm(dir, { recursive: true, force: true })
 })
 
+beforeEach(async () => {
+  await rm(file, { force: true })
+})
+
 describe("model selection state", () => {
-  it("drops the stale top-level variant when persisting model selections", async () => {
+  it("preserves unknown top-level fields when persisting model selections", async () => {
     const client = {
       path: {
         get: async () => ({ data: { state: dir } }),
@@ -41,27 +45,17 @@ describe("model selection state", () => {
       variant?: string
     }
 
-    expect(data.variant).toBeUndefined()
+    expect(data.variant).toBe("high")
     expect(data.recent).toEqual(["keep"])
     expect(data.model).toEqual({
       code: { providerID: "anthropic", modelID: "claude-sonnet-4" },
     })
   })
 
-  it("migrates legacy model variants into agent config before deleting them", async () => {
-    const updates: unknown[] = []
+  it("preserves model-keyed variants when persisting model selections", async () => {
     const client = {
       path: {
         get: async () => ({ data: { state: dir } }),
-      },
-      global: {
-        config: {
-          get: async () => ({ data: { agent: {} } }),
-          update: async (input: unknown) => {
-            updates.push(input)
-            return { data: input }
-          },
-        },
       },
     } as unknown as KiloClient
 
@@ -84,26 +78,15 @@ describe("model selection state", () => {
       () => {},
     )
 
-    expect(updates).toEqual([{ config: { agent: { code: { variant: "high" } } } }])
     const raw = await readFile(file, "utf-8")
     const data = JSON.parse(raw) as { variant?: unknown }
-    expect(data.variant).toBeUndefined()
+    expect(data.variant).toEqual({ "anthropic/claude-sonnet-4": "high" })
   })
 
-  it("migrates legacy variants from the pre-write model map before clearing selections", async () => {
-    const updates: unknown[] = []
+  it("preserves model-keyed variants when clearing model selections", async () => {
     const client = {
       path: {
         get: async () => ({ data: { state: dir } }),
-      },
-      global: {
-        config: {
-          get: async () => ({ data: { agent: {} } }),
-          update: async (input: unknown) => {
-            updates.push(input)
-            return { data: input }
-          },
-        },
       },
     } as unknown as KiloClient
 
@@ -121,25 +104,28 @@ describe("model selection state", () => {
 
     await ModelState.handleMessage("clearModelSelection", { agent: "code" }, client, () => {})
 
-    expect(updates).toEqual([{ config: { agent: { code: { variant: "high" } } } }])
     const raw = await readFile(file, "utf-8")
     const data = JSON.parse(raw) as {
       model?: Record<string, { providerID: string; modelID: string }>
       variant?: unknown
     }
-    expect(data.variant).toBeUndefined()
+    expect(data.variant).toEqual({ "anthropic/claude-sonnet-4": "high" })
     expect(data.model).toEqual({})
   })
 
-  it("migrates legacy variants from a pending model selection when no old selection exists", async () => {
+  it("does not call global config update during model-state writes", async () => {
     const updates: unknown[] = []
+    const reads: unknown[] = []
     const client = {
       path: {
         get: async () => ({ data: { state: dir } }),
       },
       global: {
         config: {
-          get: async () => ({ data: { agent: {} } }),
+          get: async () => {
+            reads.push(true)
+            return { data: { agent: {} } }
+          },
           update: async (input: unknown) => {
             updates.push(input)
             return { data: input }
@@ -166,133 +152,7 @@ describe("model selection state", () => {
       () => {},
     )
 
-    expect(updates).toEqual([{ config: { agent: { code: { variant: "high" } } } }])
-    const raw = await readFile(file, "utf-8")
-    const data = JSON.parse(raw) as { variant?: unknown }
-    expect(data.variant).toBeUndefined()
-  })
-
-  it("migrates legacy variants from a pending model selection when an old selection differs", async () => {
-    const updates: unknown[] = []
-    const client = {
-      path: {
-        get: async () => ({ data: { state: dir } }),
-      },
-      global: {
-        config: {
-          get: async () => ({ data: { agent: {} } }),
-          update: async (input: unknown) => {
-            updates.push(input)
-            return { data: input }
-          },
-        },
-      },
-    } as unknown as KiloClient
-
-    await writeFile(
-      file,
-      JSON.stringify(
-        {
-          model: { code: { providerID: "anthropic", modelID: "claude-opus-4" } },
-          variant: { "anthropic/claude-sonnet-4": "high" },
-        },
-        null,
-        2,
-      ),
-    )
-
-    await ModelState.handleMessage(
-      "persistModelSelection",
-      { agent: "code", providerID: "anthropic", modelID: "claude-sonnet-4" },
-      client,
-      () => {},
-    )
-
-    expect(updates).toEqual([{ config: { agent: { code: { variant: "high" } } } }])
-    const raw = await readFile(file, "utf-8")
-    const data = JSON.parse(raw) as { variant?: unknown }
-    expect(data.variant).toBeUndefined()
-  })
-
-  it("preserves unrelated legacy variants that cannot be mapped to an agent", async () => {
-    const updates: unknown[] = []
-    const client = {
-      path: {
-        get: async () => ({ data: { state: dir } }),
-      },
-      global: {
-        config: {
-          get: async () => ({ data: { agent: {} } }),
-          update: async (input: unknown) => {
-            updates.push(input)
-            return { data: input }
-          },
-        },
-      },
-    } as unknown as KiloClient
-
-    await writeFile(
-      file,
-      JSON.stringify(
-        {
-          model: { code: { providerID: "anthropic", modelID: "claude-sonnet-4" } },
-          variant: {
-            "anthropic/claude-sonnet-4": "high",
-            "openai/gpt-5": "low",
-          },
-        },
-        null,
-        2,
-      ),
-    )
-
-    await ModelState.handleMessage("clearModelSelection", { agent: "code" }, client, () => {})
-
-    expect(updates).toEqual([{ config: { agent: { code: { variant: "high" } } } }])
-    const raw = await readFile(file, "utf-8")
-    const data = JSON.parse(raw) as { variant?: unknown }
-    expect(data.variant).toEqual({ "openai/gpt-5": "low" })
-  })
-
-  it("does not overwrite an existing agent config variant during legacy migration", async () => {
-    const updates: unknown[] = []
-    const client = {
-      path: {
-        get: async () => ({ data: { state: dir } }),
-      },
-      global: {
-        config: {
-          get: async () => ({ data: { agent: { code: { variant: "max" } } } }),
-          update: async (input: unknown) => {
-            updates.push(input)
-            return { data: input }
-          },
-        },
-      },
-    } as unknown as KiloClient
-
-    await writeFile(
-      file,
-      JSON.stringify(
-        {
-          model: { code: { providerID: "anthropic", modelID: "claude-sonnet-4" } },
-          variant: { "anthropic/claude-sonnet-4": "high" },
-        },
-        null,
-        2,
-      ),
-    )
-
-    await ModelState.handleMessage(
-      "persistModelSelection",
-      { agent: "code", providerID: "anthropic", modelID: "claude-sonnet-4" },
-      client,
-      () => {},
-    )
-
+    expect(reads).toEqual([])
     expect(updates).toEqual([])
-    const raw = await readFile(file, "utf-8")
-    const data = JSON.parse(raw) as { variant?: unknown }
-    expect(data.variant).toBeUndefined()
   })
 })
