@@ -156,7 +156,7 @@ const blockSuggestions: SuggestionRequest[] = [
     sessionID: SID,
     text: "Run a local visual review after checking this block matrix.",
     actions: [
-      { label: "Review UI", prompt: "/local-review-uncommitted" },
+      { label: "Review UI", prompt: "/review uncommitted" },
       { label: "Open Storybook", prompt: "Inspect the Tool Call Lab Block Matrix story" },
     ],
     tool: { messageID: MID, callID: "matrix-call-suggest-active" },

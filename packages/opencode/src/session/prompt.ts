@@ -9,6 +9,8 @@ import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
+import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
+import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -100,12 +102,26 @@ const REQUEST_PRUNE_BYTES = 1_250_000
 const log = Log.create({ service: "session.prompt" })
 const elog = EffectLogger.create({ service: "session.prompt" })
 
+function isOrphanedInterruptedTool(part: MessageV2.ToolPart) {
+  // cleanup() marks abandoned tool_use blocks this way after retries/aborts.
+  // They are not pending work and must not trigger an assistant-prefill request.
+  return part.state.status === "error" && part.state.metadata?.interrupted === true
+}
+
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  // kilocode_change start - prompt can fail on unmet agent requirements
+  readonly prompt: (
+    input: PromptInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
   readonly loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError>
-  readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  // kilocode_change start - commands can fail on unmet agent requirements
+  readonly command: (
+    input: CommandInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -148,7 +164,6 @@ export const layer = Layer.effect(
         cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: (input: PromptInput) => prompt(input).pipe(Effect.catch(Effect.die)),
-        loop: (input: LoopInput) => loop(input).pipe(Effect.orDie),
       } satisfies TaskPromptOps
     })
 
@@ -743,14 +758,15 @@ export const layer = Layer.effect(
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent
-      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!ag) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name) // kilocode_change
+        const hint = available.length ? ` Available agents: ${available.join(", ")}` : "" // kilocode_change
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
+        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
+      yield* agents.guardRequirements(ag) // kilocode_change - enforce requirements before creating a turn
 
       const current = Database.use((db) =>
         db
@@ -1408,12 +1424,13 @@ export const layer = Layer.effect(
           ) ?? KiloSessionProcessor.extractSuggestionReviewTelemetry(lastAssistantMsg?.parts ?? [])
         // kilocode_change end
 
-        // Some providers return "stop" even when the assistant message contains tool calls.
-        // Keep the loop running so tool results can be sent back to the model.
-        // Skip provider-executed tool parts — those were fully handled within the
-        // provider's stream (e.g. DWS Agent Platform) and don't need a re-loop.
+        // Some providers return "stop" even when the assistant message contains
+        // tool calls. Keep the loop running so tool results can be sent back to
+        // the model, but ignore cleanup-marked interrupted orphans.
         const hasToolCalls =
-          lastAssistantMsg?.parts.some((part) => part.type === "tool" && !part.metadata?.providerExecuted) ?? false
+          lastAssistantMsg?.parts.some(
+            (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
+          ) ?? false
 
         // kilocode_change start - plan_exit is a hard stop before another model call
         if (
@@ -1439,12 +1456,16 @@ export const layer = Layer.effect(
           lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
           userBeforeAssistant // kilocode_change - compare chronology, not generated IDs
         ) {
-          // kilocode_change start - ask follow-up when plan_exit tool was called
-          const action = yield* Effect.promise((signal) =>
-            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal, question }),
+          const orphan = lastAssistantMsg?.parts.find(
+            (part): part is MessageV2.ToolPart => part.type === "tool" && isOrphanedInterruptedTool(part),
           )
-          if (action === "continue") continue
-          // kilocode_change end
+          if (orphan) {
+            yield* slog.warn("loop exit with orphaned interrupted tool", {
+              messageID: lastAssistant.id,
+              tool: orphan.tool,
+              callID: orphan.callID,
+            })
+          }
           yield* slog.info("exiting loop")
           break
         }
@@ -1805,12 +1826,77 @@ export const layer = Layer.effect(
       const cmd = yield* commands.get(input.command)
       if (!cmd) {
         const available = (yield* commands.list()).map((c) => c.name)
+        available.push(...BUILTIN_COMMANDS) // kilocode_change - surface built-in session commands in error hint
+        available.sort() // kilocode_change - alphabetical for stable, easy-to-scan output
         const hint = available.length ? ` Available commands: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Command not found: "${input.command}".${hint}` })
         yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
       const agentName = cmd.agent ?? input.agent
+      // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
+      const legacy = legacyReviewMessage(input.command)
+      if (legacy) {
+        const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+        if (!agent) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        const model = yield* Effect.gen(function* () {
+          if (cmd.model) return Provider.parseModel(cmd.model)
+          if (cmd.agent && agent.model) return agent.model
+          if (input.model) return Provider.parseModel(input.model)
+          return yield* currentModel(input.sessionID)
+        })
+        yield* getModel(model.providerID, model.modelID, input.sessionID)
+        const text = `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`
+        const user = yield* createUserMessage({
+          sessionID: input.sessionID,
+          messageID: input.messageID,
+          model,
+          agent: agent.name,
+          variant: input.variant,
+          parts: [{ type: "text", text }, ...(input.parts ?? [])],
+        })
+        yield* sessions.touch(input.sessionID)
+        const ctx = yield* InstanceState.context
+        const completed = Date.now()
+        const info: MessageV2.Assistant = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: user.info.id,
+          sessionID: input.sessionID,
+          mode: agent.name,
+          agent: agent.name,
+          variant: user.info.model.variant,
+          path: { cwd: ctx.directory, root: ctx.worktree },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: user.info.model.modelID,
+          providerID: user.info.model.providerID,
+          time: { created: completed, completed },
+          finish: "stop",
+        })
+        const part: MessageV2.TextPart = yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: legacy,
+        })
+        const result = { info, parts: [part] }
+        yield* bus.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: result.info.id,
+        })
+        return result
+      }
+      // kilocode_change end
 
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
@@ -1864,14 +1950,15 @@ export const layer = Layer.effect(
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
 
-      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!agent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name) // kilocode_change
+        const hint = available.length ? ` Available agents: ${available.join(", ")}` : "" // kilocode_change
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
+        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
+      yield* agents.guardRequirements(agent) // kilocode_change - command agent overrides must satisfy requirements
 
       const templateParts = yield* resolvePromptParts(template)
       KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry

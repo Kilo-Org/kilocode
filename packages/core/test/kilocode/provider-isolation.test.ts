@@ -20,8 +20,8 @@ describe("provider attribution isolation", () => {
         yield* plugins.add(plugin)
       }
 
-      const load = yield* catalog.loader()
-      yield* load((catalog) => {
+      const transform = yield* catalog.transform()
+      yield* transform((catalog) => {
         const items = [
           provider("custom-llmgateway", {
             enabled: { via: "env", name: "CUSTOM_LLMGATEWAY_API_KEY" },

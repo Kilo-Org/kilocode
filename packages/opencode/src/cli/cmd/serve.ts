@@ -18,7 +18,14 @@ export const ServeCommand = effectCmd({
     }
     const opts = yield* resolveNetworkOptions(args)
     const server = yield* Effect.promise(() => Server.listen(opts))
-    console.log(`kilo server listening on http://${server.hostname}:${server.port}`) // kilocode_change
+
+    // kilocode_change start
+    const urls = server.urls
+
+    console.log(`kilo server listening on ${urls.bind}`)
+    if (urls.local !== urls.bind) console.log(`  Local:   ${urls.local}`)
+    if (urls.network) console.log(`  Network: ${urls.network}`)
+    // kilocode_change end
 
     // kilocode_change start - graceful signal shutdown
     // yield* Effect.never

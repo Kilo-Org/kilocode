@@ -7,9 +7,8 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
-import { localReviewCommand, localReviewUncommittedCommand, reviewerCommand } from "@/kilocode/review/command" // kilocode_change
+import { legacyReviewCommand, reviewCommand, reviewerCommand } from "@/kilocode/review/command" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
-import PROMPT_REVIEW from "./template/review.txt"
 
 type State = {
   commands: Record<string, Info>
@@ -54,10 +53,6 @@ export function hints(template: string) {
 export const Default = {
   INIT: "init",
   REVIEW: "review",
-  // kilocode_change start
-  LOCAL_REVIEW: "local-review",
-  LOCAL_REVIEW_UNCOMMITTED: "local-review-uncommitted",
-  // kilocode_change end
 } as const
 
 export interface Interface {
@@ -110,21 +105,10 @@ export const layer = Layer.effect(
         },
         hints: hints(PROMPT_INITIALIZE),
       }
-      commands[Default.REVIEW] = {
-        name: Default.REVIEW,
-        description: "review changes [commit|branch|pr], defaults to uncommitted",
-        source: "command",
-        get template() {
-          return PROMPT_REVIEW.replace("${path}", ctx.worktree)
-        },
-        subtask: true,
-        hints: hints(PROMPT_REVIEW),
-      }
-
       // kilocode_change start
-      commands[Default.REVIEW] = reviewerCommand(commands[Default.REVIEW])
-      commands[Default.LOCAL_REVIEW] = localReviewCommand()
-      commands[Default.LOCAL_REVIEW_UNCOMMITTED] = localReviewUncommittedCommand()
+      commands[Default.REVIEW] = reviewerCommand(reviewCommand())
+      commands["local-review"] = legacyReviewCommand("local-review")!
+      commands["local-review-uncommitted"] = legacyReviewCommand("local-review-uncommitted")!
       // kilocode_change end
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
@@ -185,10 +169,10 @@ export const layer = Layer.effect(
 
     const get = Effect.fn("Command.get")(function* (name: string) {
       const s = yield* InstanceState.get(state)
-      // kilocode_change start
-      const exact = s.commands[name]
-      if (exact) return exact
-      // kilocode_change end
+      const exact = s.commands[name] // kilocode_change
+      if (exact) return exact // kilocode_change
+      const alias = legacyReviewCommand(name) // kilocode_change
+      if (alias) return alias // kilocode_change
 
       // kilocode_change start
       const target = skillName(name)

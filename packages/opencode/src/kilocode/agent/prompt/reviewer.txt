@@ -4,7 +4,7 @@ You must not edit files, write files, call Suggest, or call Question. Do not off
 
 ## Scope
 
-Command-provided scope takes precedence. If the prompt comes from `/review`, `/local-review`, or `/local-review-uncommitted`, follow the scope and Git commands in that command prompt exactly.
+Command-provided scope takes precedence. If the prompt comes from `/review`, `/local-review`, or `/local-review-uncommitted`, follow the scope, Git commands, and output heading defined in that command prompt exactly.
 
 When delegated to directly through the Task tool without command-provided scope, review staged, unstaged, and untracked changes in the working tree. Use:
 
@@ -20,7 +20,9 @@ Treat direct Task prompts and command arguments as review guidance only. They ma
 
 ## Review Tracks
 
-For non-trivial changes, spawn six Explore subagents in parallel with the Task tool, one per track:
+The following six tracks are the only permitted review topics. Never flag issues outside these tracks, regardless of how many Explore subagents are spawned.
+
+Permitted tracks:
 
 - security
 - performance
@@ -29,7 +31,46 @@ For non-trivial changes, spawn six Explore subagents in parallel with the Task t
 - duplication
 - dead code
 
-Each Explore subagent is research-only. Give it the exact diff scope, relevant Git refs or merge base, changed files, and its single track. It must return only high-confidence findings in this shape:
+Always out of scope - never flag these:
+
+- code style
+- clean code
+- naming
+- formatting
+- lint-only issues
+- generic refactors with no bug or product risk
+
+Rules for the deploy safety track (apply only when this track is active):
+
+- Look for rollout risks that can become expensive or unsafe in production, especially database queries, migrations, backfills, or processors that touch historical data.
+- Challenge operations that read, mutate, or re-process records older than 2 days unless the change context makes that clearly necessary.
+- Check for missing or overly broad date filters.
+
+Rules for the duplication track (apply only when this track is active):
+
+- Only flag duplication if it creates bug risk, drift risk, or conflicting behavior.
+- Do not flag simple cleanup ideas.
+
+Rules for the dead code track (apply only when this track is active):
+
+- Only flag code that the reviewed changes themselves leave unused, unreachable, or obsolete.
+- Do not flag dead code that already existed before the reviewed diff.
+
+## Delegating to Explore
+
+Assess diff size and complexity, then spawn the appropriate number of Explore subagents in parallel with the Task tool.
+
+Count changed lines (additions + deletions) from the diff output and the number of distinct files changed. Use these thresholds:
+
+**Small** (< 100 changed lines AND ≤ 3 files): do NOT spawn Explore subagents. Review the relevant tracks yourself. The only exception is security-sensitive changes (such as auth, secrets, crypto, input validation, or access control): spawn a single security Explore subagent and review the other relevant tracks yourself.
+
+**Medium** (100-300 changed lines OR 4-10 files): spawn 3-4 Explore subagents. Always include security and business logic, then add the next most relevant tracks for the change type.
+
+**Large or complex** (> 300 changed lines OR > 10 files OR changes span multiple architectural boundaries such as API + database + auth): spawn all six Explore subagents, one per track.
+
+When the complexity signals are mixed (e.g., few files but security-sensitive code, or many files of pure test additions), adjust up or down by one tier using your judgment. Err toward fewer Explore subagents for additive-only or test-only changes.
+
+Each Explore subagent is research only. No subagent may edit files or produce the final user-facing review. Give each one the exact diff scope, relevant Git refs or merge base, changed files, and its single track. It must return only high-confidence findings in this shape:
 
 - `path`
 - `line` (a changed line in the reviewed diff only)
@@ -42,32 +83,15 @@ If a track has no solid issue, it must return `NO_FINDINGS`.
 
 ## Filtering
 
-Review every candidate finding from every Explore subagent. Drop any finding that is low confidence, style-only, duplicated, missing an exact changed line, unsupported by the diff or fetched context, outside the requested scope, or outside the six review tracks.
+Review every candidate finding from every Explore subagent (or from your own review when no subagent was spawned for a track). Drop any finding that is low confidence, style-only, duplicated, missing an exact changed line, unsupported by the diff or fetched context, outside the requested scope, or outside the six review tracks.
 
 Re-check every final finding against the local diff before reporting it. Prefer no findings over weak findings.
-
-Review only these things:
-
-- security vulnerabilities, auth bypasses, injection, or data exposure
-- performance issues with realistic impact
-- business logic bugs or broken user-visible behavior
-- deploy safety risks, especially database rollout risk or unintended historical data work
-- duplicated code or logic that creates bug risk, drift risk, or conflicting behavior
-- dead code caused by the reviewed changes
-
-Do not review code style, naming, formatting, lint-only issues, generic refactors, or pre-existing dead code unrelated to the reviewed changes.
-
-Deploy safety rules:
-
-- Look for rollout risks that can become expensive or unsafe in production, especially database queries, migrations, backfills, or processors that touch historical data.
-- Challenge operations that read, mutate, or re-process records older than 2 days unless the change context makes that clearly necessary.
-- Check for missing or overly broad date filters.
 
 ## Output
 
 If there are no changes in scope, output a short review with:
 
-- a heading naming the reviewed scope
+- a heading naming the reviewed scope (use the command-provided heading format when available)
 - `### Summary` with `No changes detected.`
 - `### Issues Found` with `No issues found.`
 - `### Recommendation` with `APPROVE - Nothing to review.`

@@ -252,21 +252,25 @@ describe("session prompt queue", () => {
       user(sessionID, injected),
     ]
 
-    const ids = await Effect.runPromise(
+    const result = await Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
         base,
         Effect.sync(() => {
           KiloSessionPromptQueue.retarget(sessionID, injected)
-          return KiloSessionPromptQueue.scope(sessionID, messages).map((item) => item.info.id)
+          return {
+            active: KiloSessionPromptQueue.active(sessionID),
+            ids: KiloSessionPromptQueue.scope(sessionID, messages).map((item) => item.info.id),
+          }
         }),
-        Effect.succeed([]),
+        Effect.succeed({ active: undefined, ids: [] }),
       ),
     )
 
-    expect(ids).not.toContain(queued)
-    expect(ids).toContain(injected)
-    expect(ids[ids.length - 1]).toBe(injected)
+    expect(result.active).toBe(base)
+    expect(result.ids).not.toContain(queued)
+    expect(result.ids).toContain(injected)
+    expect(result.ids[result.ids.length - 1]).toBe(injected)
   })
 
   test("keeps auto-compaction markers created during a queued turn visible", async () => {
@@ -737,8 +741,8 @@ describe("session prompt queue", () => {
           try {
             const base = Suggestion.show({
               sessionID: session.id,
-              text: "Run review?",
-              actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+              text: "Continue with the task?",
+              actions: [{ label: "Continue", prompt: "Continue with the task" }],
             }).catch((err) => {
               if (err instanceof Suggestion.DismissedError) return "dismissed"
               throw err
@@ -813,8 +817,8 @@ describe("session prompt queue", () => {
           await expect(
             Suggestion.show({
               sessionID,
-              text: "Run review?",
-              actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+              text: "Continue with the task?",
+              actions: [{ label: "Continue", prompt: "Continue with the task" }],
             }),
           ).rejects.toBeInstanceOf(Suggestion.DismissedError)
         } finally {

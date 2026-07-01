@@ -27,6 +27,8 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 internal const val DASHBOARD_URL = "https://app.kilo.ai/profile"
+internal const val TOP_UP_URL = "https://app.kilo.ai/credits"
+internal const val PASS_URL = "https://kilo.ai/pricing/kilo-pass"
 
 internal val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -61,6 +63,14 @@ internal class ProfileUi(
         dashboard = {
             telemetry("Dashboard Opened", mapOf("surface" to "settings"))
             browse(DASHBOARD_URL)
+        },
+        topUp = {
+            telemetry("Credits Opened", mapOf("surface" to "settings"))
+            browse(TOP_UP_URL)
+        },
+        pass = {
+            telemetry("Kilo Pass Opened", mapOf("surface" to "settings"))
+            browse(PASS_URL)
         },
         logout = ::logout,
         organization = ::organization,

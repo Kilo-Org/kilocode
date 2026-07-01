@@ -59,6 +59,7 @@ class ModelPicker : PickerButton() {
         val byok: Boolean = false,
         val variants: List<String> = emptyList(),
         val attachment: Boolean = false,
+        val mayTrainOnYourPrompts: Boolean = false,
     ) {
         val key: String get() = "$provider/$id"
 
@@ -134,6 +135,11 @@ class ModelPicker : PickerButton() {
         toolTipText = if (item?.let(ModelText::collectsData) == true) ModelText.dataCollectedTooltip() else KiloBundle.message("model.picker.tooltip")
         isEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+    }
+
+    fun open() {
+        if (!isEnabled || (items.isEmpty() && !allowEmpty)) return
+        showPopup()
     }
 
     private fun showPopup() {
@@ -474,7 +480,7 @@ internal object ModelText {
 
     fun freeLabel(): String = KiloBundle.message("model.picker.free")
 
-    fun collectsData(item: ModelPicker.Item): Boolean = item.free && item.provider == "kilo"
+    fun collectsData(item: ModelPicker.Item): Boolean = item.mayTrainOnYourPrompts
 
     fun freeBg(): JBColor = JBColor.namedColor("Kilo.ModelPicker.freeBadgeBackground", JBColor(0x95D6AC, 0x7FCA99))
 }

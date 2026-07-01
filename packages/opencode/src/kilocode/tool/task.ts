@@ -58,12 +58,21 @@ export namespace KiloTask {
   }
 
   /**
-   * Build inherited permission rules from the calling agent.
+   * Build inherited permission ceilings from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions
-   * so concrete restrictions survive multi-hop chains (plan → general → explore).
+   * so denials survive multi-hop chains (plan → general → explore) without
+   * overriding the selected subagent's own allowlist with parent ask/allow rules.
+   * Restricted read-only tools (read, grep, glob, list, skill, webfetch, websearch,
+   * codebase_search, semantic_search, external_directory, suggest) also inherit
+   * this ceiling so Explore respects Reviewer's own restrictions when nested.
+   *
+   * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
+   * Kilo intentionally differs: parent denials remain hard ceilings for Plan Mode
+   * and MCP restrictions, while parent ask/allow rules must not replace the
+   * selected subagent's policy. Preserve this distinction during upstream merges.
    *
    * The caller must resolve `caller` (Agent.Info) and `session` (Session.Info)
-   * before calling — this function is pure/synchronous.
+   * before calling. This function is pure/synchronous.
    */
   export function inherited(input: {
     caller: Agent.Info
@@ -73,9 +82,13 @@ export namespace KiloTask {
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     const isRestricted = (p: string) => restricted.some((tool) => Wildcard.match(tool, p))
+    // A blanket "*" pattern rule is only kept when it denies; a bare ask/allow catch-all
+    // (typically a raw global permission default) must not dilute the subagent's own
+    // catch-all policy. Narrower patterns (specific commands/paths) always survive so
+    // purpose-built guards like reviewerBash keep their scoped allow exceptions.
     const keep = (rule: Permission.Rule, session: boolean) => {
       if (rule.permission === "*") return session && rule.action !== "allow"
-      if (rule.permission === "bash") return session ? rule.action !== "allow" : true
+      if (rule.permission === "bash") return rule.pattern !== "*" || rule.action === "deny"
       if (rule.permission === "edit") return rule.action !== "allow"
       if (rule.permission === "external_directory") return true
       if (isMcp(rule.permission)) return true
@@ -93,6 +106,7 @@ export namespace KiloTask {
     return [
       ...(canTask ? [] : [{ permission: "task" as const, pattern: "*" as const, action: "deny" as const }]),
       { permission: "question", pattern: "*", action: "deny" },
+      { permission: "interactive_terminal", pattern: "*", action: "deny" },
       ...rules,
     ]
   }

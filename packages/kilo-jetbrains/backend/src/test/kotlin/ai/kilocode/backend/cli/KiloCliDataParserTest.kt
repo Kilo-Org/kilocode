@@ -10,6 +10,8 @@ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
@@ -188,6 +190,42 @@ class KiloCliDataParserTest {
             assertEquals("image/png", result.part.mime)
             assertEquals("file:///tmp/a.png", result.part.url)
             assertEquals("a.png", result.part.filename)
+        }
+
+        @Test
+        fun `parseChatEvent - part preserves synthetic flag and source metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "file_1",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "file",
+                        "mime": "text/plain",
+                        "url": "file:///tmp/a.kt",
+                        "filename": "a.kt",
+                        "synthetic": true,
+                        "source": {
+                            "type": "file",
+                            "path": "src/a.kt",
+                            "text": { "value": "@src/a.kt", "start": 4, "end": 13 }
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.PartUpdated)
+            assertEquals(true, result.part.synthetic)
+            assertEquals("file", result.part.source?.type)
+            assertEquals("src/a.kt", result.part.source?.path)
+            assertEquals("@src/a.kt", result.part.source?.text?.value)
+            assertEquals(4.0, result.part.source?.text?.start)
+            assertEquals(13.0, result.part.source?.text?.end)
         }
 
         @Test
@@ -524,6 +562,32 @@ class KiloCliDataParserTest {
             assertEquals("Unauthorized", result.error?.message)
             assertEquals(401, result.error?.statusCode)
             assertEquals("""{"error":{"code":"PAID_MODEL_AUTH_REQUIRED"}}""", result.error?.responseBody)
+        }
+
+        @Test
+        fun `parseChatEvent - session error preserves nested named error details`() {
+            val data = globalEvent("""
+                "type": "session.error",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "error": {
+                        "name": "UnknownError",
+                        "data": {
+                            "message": "Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'",
+                            "ref": "err_123"
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("session.error", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.Error)
+            assertEquals("ses_1", result.sessionID)
+            assertEquals("UnknownError", result.error?.type)
+            assertEquals("Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'", result.error?.message)
+            assertEquals(listOf("message", "ref"), result.error?.dataKeys)
+            assertEquals("err_123", result.error?.ref)
         }
 
         @Test
@@ -1113,6 +1177,25 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseMessages - preserves synthetic and source metadata`() {
+            val raw = """[
+                {
+                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "parts": [
+                        { "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "hidden", "synthetic": true },
+                        { "id": "f1", "sessionID": "s1", "messageID": "m1", "type": "file", "mime": "text/plain", "url": "file:///tmp/a.kt", "source": { "type": "file", "path": "src/a.kt", "text": { "value": "@src/a.kt", "start": 0, "end": 9 } } }
+                    ]
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw).single()
+
+            assertEquals(true, result.parts[0].synthetic)
+            assertEquals("src/a.kt", result.parts[1].source?.path)
+            assertEquals("@src/a.kt", result.parts[1].source?.text?.value)
+        }
+
+        @Test
         fun `parseMessages - message with tool parts`() {
             val raw = """[{
                 "info": { "id": "m1", "sessionID": "s1", "role": "assistant", "time": { "created": 1.0 } },
@@ -1256,6 +1339,7 @@ class KiloCliDataParserTest {
                             "status": "active",
                             "isFree": false,
                             "hasUserByokAvailable": true,
+                            "mayTrainOnYourPrompts": true,
                             "recommendedIndex": 2,
                             "variants": {"high": {}, "low": {}, "medium": {}},
                             "options": {}, "headers": {}
@@ -1277,6 +1361,7 @@ class KiloCliDataParserTest {
             assertEquals("active", model.status)
             assertFalse(model.free)
             assertTrue(model.byok)
+            assertTrue(model.mayTrainOnYourPrompts)
             assertEquals(2.0, model.recommendedIndex)
             assertEquals(200000L, model.limit?.context)
             assertEquals(100000L, model.limit?.input)
@@ -1326,7 +1411,13 @@ class KiloCliDataParserTest {
                         "extra": true
                     },
                     "unknown": "ok",
-                    "models": {}
+                    "models": {
+                        "gpt-5": {
+                            "name": "GPT-5",
+                            "capabilities": {},
+                            "mayTrainOnYourPrompts": true
+                        }
+                    }
                 }],
                 "default": {"code":"openai/gpt-5"},
                 "connected": ["openai"]
@@ -1339,6 +1430,7 @@ class KiloCliDataParserTest {
             assertEquals("Build with OpenAI models", provider.description)
             assertEquals("openai", provider.metadata?.icon)
             assertEquals(3, provider.metadata?.priority)
+            assertTrue(provider.models.getValue("gpt-5").mayTrainOnYourPrompts)
             assertEquals(listOf("openai"), result.second)
             assertEquals(mapOf("code" to "openai/gpt-5"), result.third)
         }
@@ -1372,6 +1464,7 @@ class KiloCliDataParserTest {
             assertEquals(false, model.reasoning)
             assertEquals(false, model.temperature)
             assertEquals(false, model.toolCall)
+            assertFalse(model.mayTrainOnYourPrompts)
             assertNull(model.limit)
         }
 
@@ -1623,6 +1716,86 @@ class KiloCliDataParserTest {
             val result = KiloCliDataParser.buildPromptJson(prompt)
 
             assertTrue(result.contains(""""filename":"a \"b\".txt""""), result)
+        }
+
+        @Test
+        fun `buildPromptJson - file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///tmp/a.kt",
+                filename = "a.kt",
+                source = PartSourceDto(
+                    type = "file",
+                    path = "src/a.kt",
+                    text = PartSourceTextDto("@src/a.kt", 4.0, 13.0),
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"text/plain","url":"file:///tmp/a.kt","filename":"a.kt","source":{"type":"file","text":{"value":"@src/a.kt","start":4.0,"end":13.0},"path":"src/a.kt"}}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - data file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "data:text/plain;charset=utf-8,diff%20content",
+                filename = "git-changes.txt",
+                source = PartSourceDto(
+                    type = "file",
+                    text = PartSourceTextDto("@git-changes", 7.0, 19.0),
+                    path = "git-changes",
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"text/plain","url":"data:text/plain;charset=utf-8,diff%20content","filename":"git-changes.txt","source":{"type":"file","text":{"value":"@git-changes","start":7.0,"end":19.0},"path":"git-changes"}}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCommandJson - file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///tmp/a.kt",
+                source = PartSourceDto(
+                    type = "file",
+                    path = "src/a.kt",
+                    text = PartSourceTextDto("@src/a.kt", 0.0, 9.0),
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildCommandJson("review", "", prompt)
+
+            assertTrue(result.contains(""""source":{"type":"file","text":{"value":"@src/a.kt","start":0.0,"end":9.0},"path":"src/a.kt"}"""), result)
+        }
+
+        @Test
+        fun `buildCommandJson - includes agent variant model and arguments`() {
+            val prompt = PromptDto(
+                parts = emptyList(),
+                agent = "code",
+                variant = "high",
+                providerID = "kilo",
+                modelID = "gpt-5",
+            )
+
+            val result = KiloCliDataParser.buildCommandJson("review", "src/", prompt)
+
+            assertEquals(
+                """{"command":"review","arguments":"src/","agent":"code","variant":"high","model":"kilo/gpt-5"}""",
+                result,
+            )
         }
 
         // ---- buildSummarizeJson ----

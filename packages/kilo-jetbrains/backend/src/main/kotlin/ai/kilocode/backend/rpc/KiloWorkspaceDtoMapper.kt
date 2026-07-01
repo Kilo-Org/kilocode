@@ -79,6 +79,7 @@ internal object KiloWorkspaceDtoMapper {
         recommendedIndex = m.recommendedIndex,
         variants = m.variants,
         limit = m.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+        mayTrainOnYourPrompts = m.mayTrainOnYourPrompts,
     )
 
     private fun agent(a: AgentInfo) = AgentDto(

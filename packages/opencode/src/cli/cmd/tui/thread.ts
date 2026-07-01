@@ -13,11 +13,11 @@ import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, localSessionID, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { TuiConfig } from "./config/tui"
-import { KiloTuiThreadDaemon } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
+import { KiloTuiThreadDaemon, type StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
 import {
   KILO_PROCESS_ROLE,
   KILO_RUN_ID,
@@ -33,11 +33,12 @@ declare global {
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
 
 // kilocode_change start - lazy-load the TUI app after daemon attach in source mode
-type TuiInput = Parameters<typeof import("./app").tui>[0]
-
-async function start(input: TuiInput) {
+async function start(input: StartInput) {
   const app = await import("./app")
-  return await app.tui(input)
+  // start() creates the renderer for both paths, daemon/worker
+  const renderer = await app.createTuiRenderer(input.config)
+  const handle = app.tui({ ...input, renderer })
+  await handle.done
 }
 // kilocode_change end
 
@@ -318,7 +319,7 @@ export const TuiThreadCommand = cmd({
       try {
         await validateSession({
           url: transport.url, // kilocode_change
-          sessionID: args.session,
+          sessionID: localSessionID(args), // kilocode_change
           directory: cwd,
           fetch: transport.fetch,
         })
@@ -352,6 +353,7 @@ export const TuiThreadCommand = cmd({
         }
         // kilocode_change end
 
+        // kilocode_change start
         await start({
           // kilocode_change - shared lazy loader also supports daemon attach
           url: transport.url,
@@ -373,6 +375,7 @@ export const TuiThreadCommand = cmd({
             fork: args.fork,
           },
         })
+        // kilocode_change end
       } finally {
         await stop()
       }

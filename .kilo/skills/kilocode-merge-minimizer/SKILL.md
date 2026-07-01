@@ -1,11 +1,13 @@
 ---
 name: kilocode-merge-minimizer
-description: Use when changing shared upstream-owned files, editing or reviewing `kilocode_change` markers, or moving additive Kilo-specific behavior into Kilo-owned code to reduce future merge conflicts.
+description: Use when changing shared upstream-owned files to add Kilo-specific behavior, editing `kilocode_change` markers in shared code, or moving additive behavior out of shared code to reduce upstream merge conflicts. Do not use for changes confined to Kilo-owned paths such as `packages/kilo-vscode/` or `packages/kilo-ui/`.
 ---
 
 # Kilo Merge Minimizer
 
 Use this skill whenever a normal development task touches shared upstream-owned code and includes Kilo-specific behavior, especially for marker cleanup, extraction work, or `kilocode_change` annotations.
+
+Do not use this skill when all changes are confined to Kilo-owned paths, including `packages/kilo-vscode/`, `packages/kilo-ui/`, and paths with `kilocode` in their name. Those files are not merged from upstream and do not need merge-minimization guidance. If a task also touches shared upstream-owned code, use this skill for the shared portion only.
 
 Do not use this as the primary guide for upstream merge resolution. Upstream merges have their own instructions and should not duplicate that workflow here.
 

@@ -160,6 +160,7 @@ export namespace PlanFollowup {
   export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
+  export const ANSWER_KEEP_REFINING = "Keep refining"
 
   export function abort(sessionID: SessionID) {
     const ctl = pending.get(sessionID)
@@ -319,6 +320,13 @@ export namespace PlanFollowup {
               description: "Implement the plan in this session",
               descriptionKey: "plan.followup.answer.continue.description",
               mode: "code",
+            },
+            {
+              label: ANSWER_KEEP_REFINING,
+              labelKey: "plan.followup.answer.keepRefining",
+              description: "Keep planning without implementing yet",
+              descriptionKey: "plan.followup.answer.keepRefining.description",
+              mode: "plan",
             },
           ],
         },
@@ -535,6 +543,18 @@ export namespace PlanFollowup {
         agent: "code",
         model: code.model,
         text: "Implement the plan above.",
+      })
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      return "continue"
+    }
+
+    if (answer === ANSWER_KEEP_REFINING) {
+      Telemetry.trackPlanFollowup(input.sessionID, "keep_refining")
+      const msg = await inject({
+        sessionID: input.sessionID,
+        agent: "plan",
+        model: user.model,
+        text: "Continue refining the plan. Do not implement yet.",
       })
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"

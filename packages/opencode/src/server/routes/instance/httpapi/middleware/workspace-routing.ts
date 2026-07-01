@@ -6,10 +6,11 @@ import { Session } from "@/session/session"
 import { HttpApiProxy } from "./proxy"
 import * as Fence from "@/server/shared/fence"
 import { getWorkspaceRouteSessionID, isLocalWorkspaceRoute, workspaceProxyURL } from "@/server/shared/workspace-routing"
+import { forkTargetDirectory } from "@/kilocode/server/routes/fork-routing" // kilocode_change - fork honors explicit target directory
 import { NotFoundError } from "@/storage/storage"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Context, Data, Effect, Layer, Option, Schema } from "effect"
-import { HttpClient, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { HttpClient, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiMiddleware } from "effect/unstable/httpapi"
 import * as Socket from "effect/unstable/socket/Socket"
 import { InvalidRequestError } from "../errors"
@@ -159,14 +160,14 @@ function planWorkspaceRequest(
 
 function planRequest(
   request: HttpServerRequest.HttpServerRequest,
-  sessionWorkspaceID?: WorkspaceID,
+  session?: Session.Info,
 ): Effect.Effect<RequestPlan, never, Workspace.Service> {
   return Effect.gen(function* () {
     const url = requestURL(request)
     const envWorkspaceID = configuredWorkspaceID()
     const workspaceID = url.pathname.startsWith("/api/")
-      ? selectedV2WorkspaceID(url, sessionWorkspaceID)
-      : selectedWorkspaceID(url, sessionWorkspaceID)
+      ? selectedV2WorkspaceID(url, session?.workspaceID)
+      : selectedWorkspaceID(url, session?.workspaceID)
     if (workspaceID === InvalidWorkspaceID) return RequestPlan.InvalidWorkspace()
     const workspace = yield* resolveWorkspace(workspaceID, envWorkspaceID)
 
@@ -178,7 +179,13 @@ function planRequest(
       return yield* planWorkspaceRequest(request, url, workspace)
     }
 
-    return RequestPlan.Local({ directory: defaultDirectory(request, url), workspaceID: envWorkspaceID ?? workspaceID })
+    // kilocode_change start - a fork targeting an explicit directory (e.g. a worktree) must not inherit the source session's directory
+    const forkDirectory = forkTargetDirectory(request.method, url, request.headers as Record<string, string | undefined>)
+    return RequestPlan.Local({
+      directory: forkDirectory || session?.directory || defaultDirectory(request, url),
+      workspaceID: envWorkspaceID ?? workspaceID,
+    })
+    // kilocode_change end
   })
 }
 
@@ -219,11 +226,14 @@ function routeHttpApiWorkspace<E>(
     const sessionID = getWorkspaceRouteSessionID(requestURL(request))
     const session = sessionID
       ? yield* Session.Service.use((svc) => svc.get(sessionID)).pipe(
-          Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed(undefined)),
+          Effect.catchIf(
+            (error): error is NotFoundError => NotFoundError.isInstance(error),
+            () => Effect.succeed(undefined),
+          ),
           Effect.catchDefect(() => Effect.succeed(undefined)),
         )
       : undefined
-    const plan = yield* planRequest(request, session?.workspaceID)
+    const plan = yield* planRequest(request, session)
     return yield* routeWorkspace(client, effect, plan)
   })
 }
@@ -240,22 +250,5 @@ export const workspaceRoutingLayer = Layer.effect(
         Effect.provideService(Workspace.Service, workspace),
       ),
     )
-  }),
-)
-
-export const workspaceRouterMiddleware = HttpRouter.middleware<{ provides: WorkspaceRouteContext }>()(
-  Effect.gen(function* () {
-    const makeWebSocket = yield* Socket.WebSocketConstructor
-    const workspace = yield* Workspace.Service
-    const client = yield* HttpClient.HttpClient
-    return (effect) =>
-      Effect.gen(function* () {
-        const request = yield* HttpServerRequest.HttpServerRequest
-        const plan = yield* planRequest(request)
-        return yield* routeWorkspace(client, effect, plan)
-      }).pipe(
-        Effect.provideService(Socket.WebSocketConstructor, makeWebSocket),
-        Effect.provideService(Workspace.Service, workspace),
-      )
   }),
 )

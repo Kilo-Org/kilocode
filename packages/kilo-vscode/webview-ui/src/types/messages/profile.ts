@@ -18,6 +18,13 @@ export interface KilocodeBalance {
   balance: number
 }
 
+export interface KiloPassState {
+  currentPeriodBaseCreditsUsd: number
+  currentPeriodUsageUsd: number
+  currentPeriodBonusCreditsUsd: number
+  nextBillingAt?: string | null
+}
+
 export interface ProfileData {
   profile: {
     email: string
@@ -25,5 +32,6 @@ export interface ProfileData {
     organizations?: Array<{ id: string; name: string; role: string }>
   }
   balance: KilocodeBalance | null
+  kiloPass: KiloPassState | null
   currentOrgId: string | null
 }

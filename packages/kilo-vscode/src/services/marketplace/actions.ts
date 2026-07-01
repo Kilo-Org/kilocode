@@ -28,9 +28,10 @@ export async function fetchMarketplaceData(
   ctx: MarketplaceActionContext,
   project: string | undefined,
   dir: string | undefined,
+  roots: readonly vscode.Uri[],
 ): Promise<MarketplaceDataResponse> {
   const skills = dir ? await fetchSkills(ctx, dir) : undefined
-  return ctx.marketplace.fetchData(project, skills)
+  return ctx.marketplace.fetchData(project, skills, roots)
 }
 
 export async function installMarketplaceItem(

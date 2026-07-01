@@ -47,9 +47,11 @@ const mockVscode = {
   workspace: {
     workspaceFolders: [{ uri: { fsPath: "/repo" } }],
     textDocuments: [] as Array<unknown>,
+    notebookDocuments: [] as Array<unknown>,
     onDidOpenTextDocument: () => ({ dispose: noop }),
     onDidChangeTextDocument: () => ({ dispose: noop }),
     onDidCloseTextDocument: () => ({ dispose: noop }),
+    onDidChangeConfiguration: () => ({ dispose: noop }),
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,
       update: async () => {},
@@ -73,9 +75,12 @@ const mockVscode = {
   },
   window: {
     activeTextEditor: undefined,
+    activeNotebookEditor: undefined,
     visibleTextEditors: [],
+    visibleNotebookEditors: [],
     tabGroups: { all: [] },
     showTextDocument: async () => {},
+    showInformationMessage: async () => undefined,
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
     createOutputChannel: () => ({
@@ -132,6 +137,10 @@ const mockVscode = {
   TabInputText: class {
     constructor(public uri: { scheme: string; fsPath: string }) {}
   },
+  TabInputNotebook: class {
+    constructor(public uri: { scheme: string; fsPath: string }) {}
+  },
+  NotebookCellKind: { Markup: 1, Code: 2 },
   Position: class {
     constructor(
       public line: number,

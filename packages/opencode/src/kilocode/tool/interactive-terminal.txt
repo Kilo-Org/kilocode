@@ -1,0 +1,25 @@
+Run a single command in a real interactive terminal (PTY) that the user can type into directly.
+
+This is the only tool that lets the user interact with a running process. In the CLI it opens a terminal dialog over the session input area, streams the live output, and hands keyboard control to the user. The user can type into the process, press Ctrl+C to send the standard terminal interrupt, or close the terminal to terminate it. The tool blocks until the process exits or the terminal is closed, then returns the captured output together with how it ended (exit code, user close, or cancellation).
+
+Use this only for commands that genuinely need a TTY or private human input:
+- Authentication and login flows (`gh auth login`, `vercel login`, cloud CLIs).
+- Credential, passphrase, and 2FA prompts (`ssh`, `gpg`, `op`).
+- Interactive installers, scaffolders, and wizards (`npm create`, `create-next-app`).
+- REPLs and interactive shells the user should drive (`python3`, `node`, `psql`).
+
+Prefer other tools whenever possible:
+- Use the bash tool for non-interactive commands, even if they normally prompt — pass flags like `--yes`, `-y`, `--no-input`, or pipe input instead of waiting on a human.
+- Use background_process for long-running servers, watchers, and dev processes.
+
+Notes:
+- Runs one command per call; it is not a persistent shell, and each call starts a fresh terminal.
+- Uses the same permissions as the bash tool, plus a directory permission when `workdir` is outside the project.
+- This tool is not available to subagents. Do not delegate steps that require direct user interaction.
+- Do not use it for commands that do not need human input — the run will block waiting on a user who has nothing to do.
+- Full-screen terminal applications such as vim, htop, and less are not guaranteed to render perfectly in the dialog.
+
+Parameters:
+- `command` (required): the command to run.
+- `workdir` (optional): working directory. Defaults to the project directory.
+- `description` (optional): short label shown in the terminal dialog, e.g. "Log in to GitHub".

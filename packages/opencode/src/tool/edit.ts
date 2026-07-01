@@ -117,7 +117,7 @@ export const EditTool = Tool.define(
                 const existed = yield* afs.existsSafe(filePath)
                 // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
                 // derive the BOM flag from the detected encoding label instead of the decoded text.
-                const pre = existed ? yield* EncodedIO.read(filePath) : { text: "", encoding: "utf-8" }
+                const pre = existed ? yield* EncodedIO.read(afs, filePath) : { text: "", encoding: "utf-8" }
                 const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
                 // kilocode_change end
                 const next = Bom.split(params.newString)
@@ -136,9 +136,9 @@ export const EditTool = Tool.define(
                     filediff: cachedFilediff, // kilocode_change
                   },
                 })
-                yield* EncodedIO.write(filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+                yield* EncodedIO.write(afs, filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
                 if (yield* format.file(filePath)) {
-                  contentNew = yield* Bom.syncFile(afs, filePath, desiredBom)
+                  contentNew = yield* EncodedIO.sync(afs, filePath, desiredBom, source.encoding)
                 }
                 yield* bus.publish(File.Event.Edited, { file: filePath })
                 yield* bus.publish(FileWatcher.Event.Updated, {
@@ -153,7 +153,7 @@ export const EditTool = Tool.define(
               if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
               // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
               // derive the BOM flag from the detected encoding label instead of the decoded text.
-              const pre = yield* EncodedIO.read(filePath)
+              const pre = yield* EncodedIO.read(afs, filePath)
               const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
               // kilocode_change end
               contentOld = source.text
@@ -186,9 +186,9 @@ export const EditTool = Tool.define(
                 },
               })
 
-              yield* EncodedIO.write(filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+              yield* EncodedIO.write(afs, filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
               if (yield* format.file(filePath)) {
-                contentNew = yield* Bom.syncFile(afs, filePath, desiredBom)
+                contentNew = yield* EncodedIO.sync(afs, filePath, desiredBom, source.encoding)
               }
               yield* bus.publish(File.Event.Edited, { file: filePath })
               yield* bus.publish(FileWatcher.Event.Updated, {
