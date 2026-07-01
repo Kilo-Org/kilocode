@@ -381,7 +381,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
   private readonly confirmations = new MessageConfirmation()
   private readonly costs = new MaxCostNudge()
-  private readonly nudgeWaiters = new Map<string, Array<(response: MaxCostChoice) => void>>()
   private readonly activeAlerts = new Map<string, number>() // sid -> limit currently shown in UI
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
@@ -3033,12 +3032,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return this.costs.limit
   }
 
-  private resolveCostWaiters(key: string, response: MaxCostChoice): void {
-    const waiters = this.nudgeWaiters.get(key) ?? []
-    this.nudgeWaiters.delete(key)
-    for (const resolve of waiters) resolve(response)
-  }
-
   private requestCostAlert(sid: string, cost: number): void {
     const limit = this.costLimit()
     if (limit === undefined || !Number.isFinite(cost) || cost < limit) return
@@ -3057,7 +3050,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private async handleCostAlertResponse(sid: string, limit: number, response: MaxCostChoice): Promise<void> {
     this.activeAlerts.delete(sid)
-    this.resolveCostWaiters(`${sid}:${limit}`, response)
     this.costs.resolve(sid, response, limit)
     if (response !== "continue") await this.handleAbort(sid)
     this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit })
