@@ -10,6 +10,7 @@ import type {
   FilePartInput,
   Config,
 } from "@kilocode/sdk/v2/client"
+import { MaxCostNudge, type MaxCostChoice } from "@opencode-ai/core/kilocode/cost/max-cost-nudge"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import { previewSound } from "./services/attention"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
@@ -166,6 +167,8 @@ import {
   validIndexingSetting,
   watchIndexingConfig,
 } from "./kilo-provider/indexing-settings"
+
+let maxCost = 0
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 type ContextMessage = { contextDirectory?: unknown }
@@ -377,6 +380,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private readonly streams = new SessionStreamScheduler((msg) => this.postMessage(msg))
   private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
   private readonly confirmations = new MessageConfirmation()
+  private readonly costs = new MaxCostNudge()
+  private readonly activeAlerts = new Map<string, number>() // sid -> limit currently shown in UI
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
   /** Cached migration data so migration doesn't re-read from disk/SecretStorage. */ // legacy-migration
@@ -1170,6 +1175,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.pendingFollowup = null
           await handleQuestionReject(this.questionCtx, message.requestID, message.sessionID)
           break
+        case "sessionCostAlertResponse":
+          await this.handleCostAlertResponse(message.sessionID, message.limit, message.response)
+          break
         case "requestSandboxStatus":
           await this.fetchAndSendSandboxStatus(message.sessionID)
           break
@@ -1786,6 +1794,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       for (const message of messages) {
         this.connectionService.recordMessageSessionId(message.id, message.sessionID)
       }
+      if (mode === "replace" || mode === "reconcile") this.resetMessageCosts(sessionID, messages)
       // Authoritative snapshots normally supersede buffered deltas. A newly
       // opened sub-agent viewer has no earlier renderer state, so its buffered
       // updates arrived during this fetch and must follow the snapshot.
@@ -1847,6 +1856,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       for (const message of messages) {
         this.connectionService.recordMessageSessionId(message.id, message.sessionID)
       }
+      this.resetMessageCosts(sessionID, messages)
 
       // Snapshot supersedes any queued deltas (see handleLoadMessages for the
       // snapshot-freshness assumption that governs drop() here).
@@ -1959,6 +1969,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.streams.drop(sessionID)
       this.visibleTaskStreams.delete(sessionID)
       this.syncedChildSessions.delete(sessionID)
+      this.costs.onSessionDeleted(sessionID)
+      const deletedAlertLimit = this.activeAlerts.get(sessionID)
+      if (deletedAlertLimit !== undefined) {
+        this.activeAlerts.delete(sessionID)
+        this.postMessage({ type: "sessionCostAlertResolved", sessionID: sessionID, limit: deletedAlertLimit })
+      }
       this.sessionDirectories.delete(sessionID)
       this.aborts.delete(sessionID)
       this.lastReconciledAt.delete(sessionID)
@@ -2347,6 +2363,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
+        settings: { maxCost: this.maxCostSetting() },
         features: configFeatures(config),
       }
       this.cachedConfigMessage = message
@@ -2442,6 +2459,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
+        settings: { maxCost: this.maxCostSetting() },
         features: configFeatures(config),
       }
       this.postMessage({
@@ -2449,6 +2467,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
+        settings: { maxCost: this.maxCostSetting() },
         features: configFeatures(config),
       })
     } catch (error) {
@@ -2830,6 +2849,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: merged,
         globalConfig: global,
         projectConfig: overlay?.project,
+        settings: { maxCost: this.maxCostSetting() },
         features: configFeatures(merged),
       }
       this.postMessage({
@@ -2837,6 +2857,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: merged,
         globalConfig: global,
         projectConfig: overlay?.project,
+        settings: { maxCost: this.maxCostSetting() },
         features: configFeatures(merged),
       })
       this.requirements.clear()
@@ -2858,6 +2879,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "configUpdated",
         config: optimistic,
         globalConfig: this.cachedGlobalConfig ?? undefined,
+        settings: { maxCost: this.maxCostSetting() },
         features: features ?? configFeatures(optimistic as Config),
       })
       this.requirements.clear()
@@ -2994,6 +3016,67 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private maxCostSetting(): number {
+    return this.setMaxCost(vscode.workspace.getConfiguration("kilo-code.new").get<number>("maxCost", 0))
+  }
+
+  private setMaxCost(value: unknown): number {
+    maxCost = MaxCostNudge.normalizeLimit(typeof value === "number" ? value : Number(value)) ?? 0
+    this.costs.setLimit(maxCost)
+    return maxCost
+  }
+
+  private costLimit(): number | undefined {
+    const limit = maxCost
+    this.costs.setLimit(limit)
+    return this.costs.limit
+  }
+
+  private requestCostAlert(sid: string, cost: number): void {
+    const limit = this.costLimit()
+    if (limit === undefined || !Number.isFinite(cost) || cost < limit) return
+
+    this.costs.setSessionCost(sid, cost)
+    const alert = this.costs.check(sid)
+    if (!alert) return
+    this.activeAlerts.set(sid, alert.limit)
+    this.postMessage({
+      type: "sessionCostAlert",
+      sessionID: sid,
+      limit: alert.limit,
+      cost: MaxCostNudge.formatCost(alert.cost),
+    })
+  }
+
+  private async handleCostAlertResponse(sid: string, limit: number, response: MaxCostChoice): Promise<void> {
+    this.activeAlerts.delete(sid)
+    this.costs.resolve(sid, response, limit)
+    if (response !== "continue") await this.handleAbort(sid)
+    this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit })
+  }
+
+  private resetMessageCosts(
+    sid: string,
+    messages: Array<{ id: string; sessionID: string; role?: string; cost?: number }>,
+  ) {
+    const total = this.costs.resetMessageCosts(sid, messages)
+    this.requestCostAlert(sid, total)
+  }
+
+  private updateMessageCost(
+    sid: string,
+    id: string,
+    role: string | undefined,
+    cost: number | undefined,
+  ): number | undefined {
+    if (role !== "assistant" || !Number.isFinite(cost)) return undefined
+    return this.costs.updateMessageCost(sid, id, role, cost)
+  }
+
+  private removeMessageCost(id: string): void {
+    this.costs.removeMessageCost(id)
+  }
+
   private async handleSendMessage(
     text: string,
     messageID?: string,
@@ -3028,7 +3111,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
       )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      if (!resolved) throw new Error("Failed to resolve session")
       if (sandbox) await sandbox
+      const sid = resolved.sid
+      const dir = resolved.dir
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -3038,8 +3124,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       parts.push({ type: "text", text, metadata: review ? reviewMetadata(review) : undefined })
 
-      const sid = resolved!.sid
-      const dir = resolved!.dir
       await this.requirements.assertAgentRequirements(agent, dir)
       const editorContext = await this.gatherEditorContext(dir)
 
@@ -3114,10 +3198,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
       )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      if (!resolved) throw new Error("Failed to resolve session")
       if (sandbox) await sandbox
+      const sid = resolved.sid
+      const dir = resolved.dir
 
       if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
+        this.connectionService.recordMessageSessionId(messageID, sid)
       }
 
       const parts = files?.map((f) => ({
@@ -3128,8 +3215,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         source: f.source,
       }))
 
-      const sid = resolved!.sid
-      const dir = resolved!.dir
       await this.requirements.assertAgentRequirements(agent, dir)
       await this.checkpoints.get(sid)
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", () =>
@@ -3170,6 +3255,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!this.client || !sid || !(await this.aborts.stop(this.client, sid, this.getWorkspaceDirectory(sid)))) return
     this.sessionStatusMap.set(sid, "idle")
     this.streams.flush(sid)
+    this.postMessage({ type: "sessionTurnClosed", sessionID: sid, reason: "interrupted" })
     this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
   }
 
@@ -3344,6 +3430,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * The key uses dot notation relative to `kilo-code.new` (e.g. "browserAutomation.enabled").
    */
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
+    if (key === "maxCost") {
+      const normalized = this.setMaxCost(value)
+      await vscode.workspace
+        .getConfiguration("kilo-code.new")
+        .update("maxCost", normalized, vscode.ConfigurationTarget.Global)
+      for (const sid of this.trackedSessionIds) {
+        const oldLimit = this.activeAlerts.get(sid)
+        if (oldLimit !== undefined) {
+          this.activeAlerts.delete(sid)
+          this.postMessage({ type: "sessionCostAlertResolved", sessionID: sid, limit: oldLimit })
+        }
+        this.costs.rearm(sid)
+        this.requestCostAlert(sid, this.costs.sessionCost(sid))
+      }
+      return
+    }
     const { section, leaf } = buildSettingPath(key)
     if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
     if (section === "indexing" && !validIndexingSetting(leaf, value)) return
@@ -3602,6 +3704,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // busy-session warning on Save.
     if (event.type === "session.status") {
       const sid = event.properties.sessionID
+      const prev = this.sessionStatusMap.get(sid)
+      if ((prev === undefined || prev === "idle") && event.properties.status.type !== "idle") {
+        this.costs.rearm(sid)
+      }
       this.sessionStatusMap.set(sid, event.properties.status.type)
       this.aborts.observe(sid, event.properties.status.type, directory)
       const msg = mapSSEEventToWebviewMessage(event, sid)
@@ -3626,6 +3732,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (this.postModelUsageChanged(event, sessionID)) return
     if (event.type !== "indexing.status" && sessionID && !this.trackedSessionIds.has(sessionID)) {
       return
+    }
+
+    if (event.type === "session.updated" && typeof event.properties.info.cost === "number") {
+      const cost = this.costs.setSessionCost(event.properties.sessionID, event.properties.info.cost)
+      this.requestCostAlert(event.properties.sessionID, cost)
     }
 
     if (event.type === "session.updated") {
@@ -3664,6 +3775,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Forward relevant events to webview
     // Side effects that must happen before the webview message is sent
+    if (event.type === "message.updated") {
+      const info = event.properties.info
+      const value = info.role === "assistant" ? info.cost : undefined
+      const cost = this.updateMessageCost(event.properties.sessionID, info.id, info.role, value)
+      if (cost !== undefined) this.requestCostAlert(event.properties.sessionID, cost)
+    }
+    if (event.type === "message.removed") {
+      this.removeMessageCost(event.properties.messageID)
+    }
     if (event.type === "session.created" && !this.currentSession) {
       this.setCurrentSession(event.properties.info)
       this.contextSessionID = event.properties.info.id
@@ -3679,6 +3799,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.modelUsageSessionIds.delete(sid)
       this.sessionDirectories.delete(sid)
       this.connectionService.pruneSession(sid)
+      this.costs.onSessionDeleted(sid)
     }
 
     // Auto-adopt child sessions as soon as the task tool part reveals their ID.
