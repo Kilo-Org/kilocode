@@ -41,6 +41,59 @@ function setup() {
 }
 
 describe("useSpeechToText", () => {
+  it("waits for microphone readiness before reporting recording", () => {
+    const ctx = setup()
+
+    ctx.speech.start({ model: "scribe", insert: () => {} })
+    const start = ctx.sent[0]
+    if (start?.type !== "speechToTextStart") throw new Error("speech start message missing")
+
+    expect(ctx.speech.state()).toBe("starting")
+    expect(ctx.speech.active()).toBe(true)
+
+    ctx.fire({ type: "speechToTextStarted", requestId: "another-request" })
+    expect(ctx.speech.state()).toBe("starting")
+
+    ctx.fire({ type: "speechToTextStarted", requestId: start.requestId })
+    expect(ctx.speech.state()).toBe("recording")
+    ctx.dispose()
+  })
+
+  it("does not stop or start another recording while the microphone is starting", () => {
+    const ctx = setup()
+
+    ctx.speech.start({ model: "scribe", insert: () => {} })
+    const start = ctx.sent[0]
+    if (start?.type !== "speechToTextStart") throw new Error("speech start message missing")
+
+    ctx.speech.stop()
+    ctx.speech.start({ model: "other", insert: () => {} })
+    expect(ctx.speech.state()).toBe("starting")
+    expect(ctx.sent).toEqual([start])
+
+    ctx.fire({ type: "speechToTextStarted", requestId: start.requestId })
+    ctx.speech.stop()
+    expect(ctx.speech.state()).toBe("transcribing")
+    expect(ctx.sent[1]).toEqual({ type: "speechToTextStop", requestId: start.requestId })
+    ctx.dispose()
+  })
+
+  it("cancels a pending microphone startup and ignores its late acknowledgement", () => {
+    const ctx = setup()
+
+    ctx.speech.start({ model: "scribe", insert: () => {} })
+    const start = ctx.sent[0]
+    if (start?.type !== "speechToTextStart") throw new Error("speech start message missing")
+
+    ctx.speech.cancel()
+    expect(ctx.sent[1]).toEqual({ type: "speechToTextCancel", requestId: start.requestId })
+    expect(ctx.speech.state()).toBe("idle")
+
+    ctx.fire({ type: "speechToTextStarted", requestId: start.requestId })
+    expect(ctx.speech.state()).toBe("idle")
+    ctx.dispose()
+  })
+
   it("offers sign-in when stored credentials stop authenticating", () => {
     const ctx = setup()
 
@@ -70,6 +123,7 @@ describe("useSpeechToText", () => {
     ctx.speech.start({ model: "scribe", insert: (value) => text.push(value) })
     const start = ctx.sent[0]
     if (start?.type !== "speechToTextStart") throw new Error("speech start message missing")
+    ctx.fire({ type: "speechToTextStarted", requestId: start.requestId })
 
     ctx.speech.stop({ done: () => done++ })
     ctx.fire({ type: "speechToTextResult", requestId: start.requestId, text: "Recorded prompt" })
@@ -87,6 +141,7 @@ describe("useSpeechToText", () => {
     ctx.speech.start({ model: "scribe", insert: () => {} })
     const start = ctx.sent[0]
     if (start?.type !== "speechToTextStart") throw new Error("speech start message missing")
+    ctx.fire({ type: "speechToTextStarted", requestId: start.requestId })
 
     ctx.speech.stop({ done: () => done++ })
     ctx.speech.cancel()
@@ -105,6 +160,7 @@ describe("useSpeechToText", () => {
     ctx.speech.start({ model: "scribe", insert: (value) => text.push(value) })
     const start = ctx.sent[0]
     if (start?.type !== "speechToTextStart") throw new Error("speech start message missing")
+    ctx.fire({ type: "speechToTextStarted", requestId: start.requestId })
 
     ctx.speech.stop({ done: () => done++, ready: () => false })
     ctx.fire({ type: "speechToTextResult", requestId: start.requestId, text: "Keep as draft" })
