@@ -9,6 +9,9 @@ import { createEffect, on } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/util/clipboard"
+import { useArgs } from "@tui/context/args"
+import { useRoute } from "@tui/context/route"
+import { useProject } from "@tui/context/project" // kilocode_change
 import { useBindings } from "@tui/keymap"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
@@ -20,6 +23,7 @@ import { DialogSelect } from "@tui/ui/dialog-select"
 import { Link } from "@tui/ui/link"
 import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
+import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
 import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
@@ -52,6 +56,7 @@ export const APP_NAME = "Kilo"
 // Utilities
 // ---------------------------------------------------------------------------
 
+// kilocode_change start - global allow-everything helper for persistent config auto-approve
 export function isAllowEverything(permission: unknown): boolean {
   if (typeof permission !== "object" || permission === null) return false
   const wildcard = (permission as Record<string, unknown>)["*"]
@@ -59,10 +64,7 @@ export function isAllowEverything(permission: unknown): boolean {
   if (typeof wildcard === "object" && wildcard !== null) return (wildcard as Record<string, unknown>)["*"] === "allow"
   return false
 }
-
-// ---------------------------------------------------------------------------
-// Session effects
-// ---------------------------------------------------------------------------
+// kilocode_change end
 
 /**
  * Reactive effects for session management:
@@ -198,10 +200,19 @@ export function handleSessionError(error: unknown, toast: ReturnType<typeof useT
  * - Registers the auto-approve toggle command
  */
 export function init() {
+  const route = useRoute()
+  const args = useArgs()
   const sync = useSync()
   const sdk = useSDK()
+  const project = useProject() // kilocode_change
   const toast = useToast()
   const dialog = useDialog()
+
+  const enabled = () => {
+    if (route.data.type === "home") return TuiAutoApprove.next()
+    if (route.data.type !== "session") return false
+    return TuiAutoApprove.enabled(route.data.sessionID)
+  }
 
   useIndexingWarnings()
 
@@ -223,6 +234,65 @@ export function init() {
   // Register Kilo Gateway commands (profile, teams, kiloclaw, remote, etc.)
   registerKiloCommands(useSDK)
 
+  createEffect(() => {
+    if (!args.autoApprove) return
+    if (route.data.type !== "session") return
+    if (!args.sessionID && !args.continue && !args.fork) return
+    TuiAutoApprove.boot(route.data.sessionID)
+  })
+
+  // kilocode_change start - resolve the root for a permission request's session
+  // so child (Task subagent) prompts are gated on the root, not the child.
+  // The root map must be rebuilt each effect run so runtime-spawned
+  // subagents are visible — a snapshot taken at init() misses them.
+  const buildRootMap = () => {
+    const rootByID = new Map<string, string>()
+    for (const item of sync.data.session) {
+      rootByID.set(item.id, TuiAutoApprove.root(item) ?? item.id)
+    }
+    if (route.data.type === "session" && !rootByID.has(route.data.sessionID)) {
+      rootByID.set(route.data.sessionID, route.data.sessionID)
+    }
+    return rootByID
+  }
+
+  const reply = async (sid: string, rid: string, rootByID: Map<string, string>) => {
+    const root = rootByID.get(sid) ?? sid
+    if (!TuiAutoApprove.mark(root, rid)) return
+    if (!TuiAutoApprove.enabled(root)) return
+    try {
+      const result = await sdk.client.permission.reply({
+        requestID: rid,
+        reply: "once",
+        workspace: project.workspace.current(), // kilocode_change - match manual permission replies
+      })
+      if (result.error) TuiAutoApprove.unmark(root, rid)
+    } catch (err) {
+      console.error("kilocode: auto-approve reply failed", err)
+      TuiAutoApprove.unmark(root, rid)
+    }
+  }
+  // kilocode_change end
+
+  createEffect(() => {
+    const rootByID = buildRootMap()
+    const active = new Set(sync.data.session.map((item) => item.id))
+    if (route.data.type === "session") active.add(route.data.sessionID)
+    TuiAutoApprove.prune(active)
+    // kilocode_change start - drop replied request IDs that are no longer pending
+    const allPending = Object.values(sync.data.permission).flatMap((list) => list ?? [])
+    TuiAutoApprove.dropStale(allPending)
+    // kilocode_change end
+    for (const root of TuiAutoApprove.roots()) {
+      const ids = TuiAutoApprove.scope(root, sync.data.session)
+      for (const id of ids) {
+        for (const req of sync.data.permission[id] ?? []) {
+          void reply(id, req.id, rootByID)
+        }
+      }
+    }
+  })
+
   // Register auto-approve toggle
   useBindings(() => ({
     commands: [
@@ -238,15 +308,19 @@ export function init() {
           dialog.replace(() => <DialogProcessList />)
         },
       },
+      // kilocode_change start - global allow_everything for persistent config-level auto-approve
       {
         namespace: "palette",
         name: "permission.allow_everything",
         get title() {
           return isAllowEverything(sync.data.config.permission)
-            ? "Disable auto-approve mode"
-            : "Enable auto-approve mode"
+            ? "Disable global auto-approve mode"
+            : "Enable global auto-approve mode"
         },
+        desc: "Auto-approve all permissions across all sessions (persists in config)",
         category: "System",
+        slashName: "auto-approve-global",
+        slashAliases: ["yolo-global"],
         run: async () => {
           const enabled = isAllowEverything(sync.data.config.permission)
           const result = await sdk.client.permission.allowEverything({ enable: !enabled })
@@ -256,6 +330,44 @@ export function init() {
               message: `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
             })
             return
+          }
+          dialog.clear()
+        },
+      },
+      // kilocode_change end
+      {
+        namespace: "palette",
+        name: "permission.auto_approve_session",
+        get title() {
+          return enabled() ? "Disable session auto-approve" : "Enable session auto-approve"
+        },
+        desc: "Approve permission prompts once for this session",
+        category: "Session",
+        slashName: "auto-approve",
+        slashAliases: ["yolo"],
+        enabled: route.data.type === "session" || route.data.type === "home",
+        run: async () => {
+          if (route.data.type === "home") {
+            TuiAutoApprove.pending(!enabled())
+            dialog.clear()
+            return
+          }
+          if (route.data.type !== "session") return
+          const sessionID = route.data.sessionID
+          const next = !enabled()
+          TuiAutoApprove.set(sessionID, next)
+          if (next) {
+            const rootByID = buildRootMap() // kilocode_change
+            for (const req of sync.data.permission[sessionID] ?? []) {
+              await reply(sessionID, req.id, rootByID)
+            }
+            if (!TuiAutoApprove.enabled(sessionID)) {
+              toast.show({
+                variant: "error",
+                message: "Failed to enable auto-approve mode",
+              })
+              return
+            }
           }
           dialog.clear()
         },

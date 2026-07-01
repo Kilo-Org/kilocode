@@ -1,5 +1,6 @@
 import { createSimpleContext } from "./helper"
 
+// kilocode_change start
 export interface Args {
   model?: string
   agent?: string
@@ -7,7 +8,9 @@ export interface Args {
   continue?: boolean
   sessionID?: string
   fork?: boolean
+  autoApprove?: boolean // kilocode_change
 }
+// kilocode_change end
 
 export const { use: useArgs, provider: ArgsProvider } = createSimpleContext({
   name: "Args",

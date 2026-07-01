@@ -255,7 +255,13 @@ export const RunCommand = effectCmd({
       // kilocode_change start - auto approve tracked task sessions
       .option("auto", {
         type: "boolean",
-        describe: "auto-approve all permissions (for autonomous/pipeline usage)",
+        describe: "auto-approve all permissions for autonomous/pipeline usage (see also --auto-approve)",
+        default: false,
+      })
+      .option("auto-approve", {
+        type: "boolean",
+        alias: ["yolo"], // kilocode_change
+        describe: "auto-approve tool permission prompts for this session (transient, replies once; alias: --yolo; see also --auto)",
         default: false,
       })
       // kilocode_change end
@@ -701,6 +707,7 @@ export const RunCommand = effectCmd({
         }
         const sessionID = sess.id
         const auto = KiloRunAuto.create(sessionID) // kilocode_change
+        const approve = args.auto || args["auto-approve"] // kilocode_change
 
         function emit(type: string, data: Record<string, unknown>) {
           if (args.format === "json") {
@@ -747,7 +754,7 @@ export const RunCommand = effectCmd({
             if (event.type === "message.part.updated") {
               const part = event.properties.part
               // kilocode_change start - track Task child sessions for --auto permission replies
-              if (args.auto) KiloRunAuto.track(auto, part)
+              if (approve) KiloRunAuto.track(auto, part)
               // kilocode_change end
               if (part.sessionID !== sessionID) continue
 
@@ -841,7 +848,7 @@ export const RunCommand = effectCmd({
             if (event.type === "permission.asked") {
               const permission = event.properties
               // kilocode_change start - approve root and tracked Task child permissions in auto mode
-              if (args.auto) {
+              if (approve) {
                 if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
                 await client.permission.reply({
                   requestID: permission.id,

@@ -113,7 +113,10 @@ Options:
                                                                           [boolean] [default: false]
       --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied
                                       (dangerous!)                        [boolean] [default: false]
-      --auto                          auto-approve all permissions (for autonomous/pipeline usage)
+      --auto                          auto-approve all permissions for autonomous/pipeline usage
+                                      (see also --auto-approve)           [boolean] [default: false]
+      --auto-approve, --yolo          auto-approve tool permission prompts for this session
+                                      (transient, replies once; alias: --yolo; see also --auto)
                                                                           [boolean] [default: false]
       --demo                          enable direct interactive demo slash commands; pass one as the
                                       message to run it immediately       [boolean] [default: false]"

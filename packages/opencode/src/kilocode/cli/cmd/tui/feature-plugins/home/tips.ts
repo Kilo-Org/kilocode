@@ -170,6 +170,7 @@ export const KILO_TIPS: Tip[] = [
   "Use {highlight}/connect{/highlight} with Kilo Gateway for curated, tested models",
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
+  "Use {highlight}/auto-approve{/highlight} ({highlight}/yolo{/highlight}) to skip tool permission prompts in the current session, or {highlight}/auto-approve-global{/highlight} ({highlight}/yolo-global{/highlight}) to apply globally",
   (shortcuts) => `Use ${commandText("/help", shortcuts.helpShow())} to show the help dialog`,
   "Use {highlight}/rename{/highlight} to rename the current session",
   ...(process.platform === "win32"
