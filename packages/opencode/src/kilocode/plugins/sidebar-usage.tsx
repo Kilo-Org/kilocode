@@ -1,10 +1,9 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
-import { createEffect, createMemo, createResource, For, on, onCleanup, onMount, Show } from "solid-js"
+import { createMemo, createResource, For, onCleanup, onMount, Show } from "solid-js"
 import { useLocal } from "@tui/context/local"
 import * as Model from "@tui/util/model"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { fmtAttemptCost, fmtScore } from "@/kilocode/components/model-info-panel-utils"
-import { KiloTuiUsage } from "@/kilocode/cli/cmd/tui/usage"
 import {
   failed,
   formatCost,
@@ -31,7 +30,6 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   )
   const usage = createMemo(() => select(result(), props.session_id))
   const unavailable = createMemo(() => failed(result(), props.session_id))
-  const stamp = createMemo(() => KiloTuiUsage.stamp(props.api.state.session.messages(props.session_id)))
   const providers = createMemo(() => Model.index([...props.api.state.provider]))
   const groups = createMemo(() => groupModelsByProvider(usage()?.models ?? [], props.api.state.provider))
   const bench = createMemo(() => {
@@ -73,8 +71,6 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       for (const off of offs) off()
     })
   })
-
-  createEffect(on(stamp, () => void refetch(), { defer: true }))
 
   return (
     <box gap={1}>

@@ -9,7 +9,6 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { Locale } from "@/util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useCommandShortcut, useOpencodeKeymap } from "../../keymap"
-import { KiloTuiUsage } from "@/kilocode/cli/cmd/tui/usage" // kilocode_change
 
 export function SubagentFooter() {
   const route = useRouteData("session")
@@ -58,10 +57,8 @@ export function SubagentFooter() {
     if (tokens <= 0) return
 
     const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
-    // kilocode_change start - message costs update live while session totals are refreshed lazily
     const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
-    const cost = KiloTuiUsage.cost(msg, session()?.cost)
-    // kilocode_change end
+    const cost = session()?.cost ?? 0
 
     const money = new Intl.NumberFormat("en-US", {
       style: "currency",
