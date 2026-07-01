@@ -69,4 +69,16 @@ describe("session preference recovery", () => {
       variant: undefined,
     })
   })
+
+  it("resolves a user message with default variant", () => {
+    const prefs = resolveMessagePrefs(
+      [msg({ model: { providerID: "anthropic", modelID: "claude-sonnet-4", variant: "default" } })],
+      agents,
+    )
+
+    expect(prefs).toEqual({
+      model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+      variant: "default",
+    })
+  })
 })

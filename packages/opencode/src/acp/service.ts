@@ -44,6 +44,7 @@ import { ACPProfile } from "./profile"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { Provider } from "@/provider/provider"
 import type { Command } from "@/command"
+import * as ACPVariant from "@/kilocode/acp/variant" // kilocode_change
 
 export const AuthMethodID = "kilo-login" // kilocode_change
 const log = Log.create({ service: "acp-service" })
@@ -164,8 +165,10 @@ export function make(input: {
     const started = performance.now()
     const snapshot = yield* directorySnapshot(params.cwd)
     const selected = selectDefaultModel(snapshot)
-    const variant = selectVariant(snapshot, selected)
+    // kilocode_change start - configured mode variants should win before default/first fallback
     const modeId = snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined
+    const variant = selectVariant(snapshot, selected, modeId)
+    // kilocode_change end
     const created = yield* profiledRequest(
       "acp.newSession.session.create",
       () =>
@@ -224,13 +227,16 @@ export function make(input: {
     )
     const restored = restoreFromMessages(messages.map((item) => item.info))
     const model = restored.model ?? selectDefaultModel(snapshot)
+    // kilocode_change start - mode config participates when no restored variant exists
+    const modeId = restored.modeId ?? (snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined)
+    // kilocode_change end
     const state = yield* session.load({
       id: params.sessionId,
       cwd: params.cwd,
       mcpServers: params.mcpServers,
       model,
-      variant: restored.variant ?? selectVariant(snapshot, model),
-      modeId: restored.modeId ?? (snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined),
+      variant: restored.variant ?? selectVariant(snapshot, model, modeId), // kilocode_change
+      modeId, // kilocode_change
     })
     sessionSnapshots.set(state.id, snapshot)
 
@@ -309,13 +315,16 @@ export function make(input: {
     )
     const restored = restoreFromMessages(messages.map((item) => item.info))
     const model = restored.model ?? selectDefaultModel(snapshot)
+    // kilocode_change start - mode config participates when no restored variant exists
+    const modeId = restored.modeId ?? (snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined)
+    // kilocode_change end
     const state = yield* session.load({
       id: params.sessionId,
       cwd: params.cwd,
       mcpServers: params.mcpServers ?? [],
       model,
-      variant: restored.variant ?? selectVariant(snapshot, model),
-      modeId: restored.modeId ?? (snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined),
+      variant: restored.variant ?? selectVariant(snapshot, model, modeId), // kilocode_change
+      modeId, // kilocode_change
     })
     sessionSnapshots.set(state.id, snapshot)
 
@@ -371,13 +380,16 @@ export function make(input: {
     )
     const restored = restoreFromMessages(messages.map((item) => item.info))
     const model = restored.model ?? selectDefaultModel(snapshot)
+    // kilocode_change start - mode config participates when no restored variant exists
+    const modeId = restored.modeId ?? (snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined)
+    // kilocode_change end
     const state = yield* session.load({
       id: forked.id,
       cwd: params.cwd,
       mcpServers: params.mcpServers ?? [],
       model,
-      variant: restored.variant ?? selectVariant(snapshot, model),
-      modeId: restored.modeId ?? (snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined),
+      variant: restored.variant ?? selectVariant(snapshot, model, modeId), // kilocode_change
+      modeId, // kilocode_change
     })
     sessionSnapshots.set(state.id, snapshot)
 
@@ -406,7 +418,7 @@ export function make(input: {
 
     if (params.configId === "model") {
       const selected = yield* parseSelectedModel(snapshot, params.value)
-      const variant = selected.variant ?? selectVariant(snapshot, selected.model)
+      const variant = selected.variant ?? selectVariant(snapshot, selected.model, current.modeId) // kilocode_change
       const state = yield* session
         .setVariant(params.sessionId, Directory.variants(snapshot, selected.model) ? variant : undefined)
         .pipe(Effect.andThen(session.setModel(params.sessionId, selected.model)))
@@ -419,6 +431,7 @@ export function make(input: {
       }
     }
 
+    // kilocode_change start - expose model variants as ACP effort config
     if (params.configId === "effort") {
       const model = current.model ?? selectDefaultModel(snapshot)
       const variants = Directory.variants(snapshot, model)
@@ -434,12 +447,16 @@ export function make(input: {
         }),
       }
     }
+    // kilocode_change end
 
+    // kilocode_change start - explicit mode switches clear stale variants
     if (params.configId === "mode") {
       if (!snapshot.availableModes.some((mode) => mode.id === params.value)) {
         return yield* new ACPError.InvalidModeError({ mode: params.value })
       }
-      const state = yield* session.setMode(params.sessionId, params.value)
+      const state = yield* session
+        .setMode(params.sessionId, params.value)
+        .pipe(Effect.andThen(session.setVariant(params.sessionId, undefined)))
       return {
         configOptions: configOptions(snapshot, {
           model: state.model ?? selectDefaultModel(snapshot),
@@ -448,6 +465,7 @@ export function make(input: {
         }),
       }
     }
+    // kilocode_change end
 
     return yield* new ACPError.InvalidConfigOptionError({ configId: params.configId })
   })
@@ -458,7 +476,11 @@ export function make(input: {
     if (!snapshot.availableModes.some((mode) => mode.id === params.modeId)) {
       return yield* new ACPError.InvalidModeError({ mode: params.modeId })
     }
-    yield* session.setMode(params.sessionId, params.modeId)
+    // kilocode_change start - explicit mode switches clear stale variants
+    yield* session
+      .setMode(params.sessionId, params.modeId)
+      .pipe(Effect.andThen(session.setVariant(params.sessionId, undefined)))
+    // kilocode_change end
     return {}
   })
 
@@ -470,7 +492,7 @@ export function make(input: {
       .setVariant(
         params.sessionId,
         Directory.variants(snapshot, selected.model)
-          ? (selected.variant ?? selectVariant(snapshot, selected.model))
+          ? (selected.variant ?? selectVariant(snapshot, selected.model, current.modeId)) // kilocode_change
           : undefined,
       )
       .pipe(Effect.andThen(session.setModel(params.sessionId, selected.model)))
@@ -496,8 +518,8 @@ export function make(input: {
       if (!current.model) {
         yield* session.setModel(params.sessionId, selected)
       }
-      const variant = current.variant ?? selectVariant(snapshot, selected)
       const modeId = current.modeId ?? (snapshot.availableModes.length > 0 ? snapshot.defaultModeID : undefined)
+      const variant = current.variant ?? selectVariant(snapshot, selected, modeId) // kilocode_change
       const parts = promptContentToParts(params.prompt)
       const command = detectSlashCommand(parts)
 
@@ -759,6 +781,12 @@ async function loadDirectorySnapshot(sdk: KiloClient, directory: string) {
         id: agent.name,
         name: agent.name,
         ...(agent.description ? { description: agent.description } : {}),
+        // kilocode_change start - preserve agent model/variant for ACP variant resolution
+        ...(agent.model
+          ? { model: { providerID: ProviderID.make(agent.model.providerID), modelID: ModelID.make(agent.model.modelID) } }
+          : {}),
+        ...(agent.variant ? { variant: agent.variant } : {}),
+        // kilocode_change end
       }))
     const commands = [
       ...commandsData,
@@ -847,18 +875,17 @@ function sendUsageUpdate(
   })
 }
 
-function selectVariant(snapshot: Directory.Snapshot, model: Directory.DefaultModel) {
-  const variants = Directory.variants(snapshot, model)
-  if (!variants) return
-  if (variants.default) return "default"
-  return Object.keys(variants)[0]
+// kilocode_change start
+function selectVariant(snapshot: Directory.Snapshot, model: Directory.DefaultModel, modeId?: string) {
+  return ACPVariant.select({ snapshot, model, modeId })
 }
+// kilocode_change end
 
 function configOptions(snapshot: Directory.Snapshot, session: ConfigState) {
   return buildConfigOptions({
     providers: Object.values(snapshot.providers),
     currentModel: session.model,
-    currentVariant: session.variant,
+    currentVariant: session.variant ?? selectVariant(snapshot, session.model, session.modeId), // kilocode_change
     modes: snapshot.availableModes,
     currentModeId: session.modeId,
   })

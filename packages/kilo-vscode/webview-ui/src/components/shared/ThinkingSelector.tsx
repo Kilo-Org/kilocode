@@ -12,6 +12,7 @@ import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { thinkingRows } from "./thinking-selector-utils"
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -43,7 +44,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   const [focused, setFocused] = createSignal(-1)
   let listRef: HTMLDivElement | undefined
 
-  const rows = () => (props.allowClear ? [undefined, ...props.variants] : props.variants)
+  const rows = () => thinkingRows(props.variants, props.allowClear ?? false)
   const clearLabel = () => props.clearLabel ?? "Not set"
 
   function display(value: string | undefined) {
@@ -199,6 +200,9 @@ export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
       variants={session.variantList(id())}
       value={session.currentVariant(id())}
       onSelect={(value) => session.selectVariant(value, id())}
+      onClear={() => session.selectVariant(undefined, id())}
+      allowClear
+      clearLabel="Default"
     />
   )
 }

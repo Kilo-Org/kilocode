@@ -3,7 +3,12 @@
 /** @jsxImportSource solid-js */
 
 import { type Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
-import type { AgentManagerBranchesMessage, AgentManagerImportResultMessage, BranchInfo } from "../src/types/messages"
+import type {
+  AgentManagerBranchesMessage,
+  AgentManagerImportResultMessage,
+  BranchInfo,
+  ModelSelection,
+} from "../src/types/messages"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -36,6 +41,7 @@ import { convertToMentionPath } from "../src/utils/path-mentions"
 import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 import { tracker } from "./telemetry"
+import { agentConfigSelection, agentConfigVariant } from "./agent-config-selection"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -91,10 +97,25 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.configModel())
+  const modelExists = (sel: ModelSelection) => !!provider.findModel(sel)
+  const variantsFor = (sel: ModelSelection | null) => {
+    if (!sel) return []
+    const found = provider.findModel(sel)
+    if (!found?.variants) return []
+    return Object.keys(found.variants)
+  }
+  const initialAgent = session.selectedAgent()
+  const initial = agentConfigSelection({
+    config: config(),
+    agent: initialAgent,
+    fallback: session.configModel(),
+    exists: modelExists,
+    variants: variantsFor,
+  })
+  const [model, setModel] = createSignal<ModelSelection | null>(initial.model)
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
-  const [agent, setAgent] = createSignal(session.selectedAgent())
+  const [agent, setAgent] = createSignal(initialAgent)
   const [starting, setStarting] = createSignal(false)
   const [showAdvanced, setShowAdvanced] = createSignal(false)
   const [branchName, setBranchName] = createSignal("")
@@ -102,7 +123,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(session.currentVariant())
+  const [variant, setVariant] = createSignal<string | undefined>(initial.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>()
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -114,22 +135,29 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const speech = useSpeechToText(vscode, server, { t })
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())
+  const selectionFor = (name: string, fallback = model()) =>
+    agentConfigSelection({ config: config(), agent: name, fallback, exists: modelExists, variants: variantsFor })
+  const applyAgent = (name: string) => {
+    const next = selectionFor(name, session.configModel())
+    setAgent(name)
+    setModel(next.model)
+    setVariant(next.variant)
+  }
+  const applyModel = (sel: ModelSelection) => {
+    setModel(sel)
+    setVariant(agentConfigVariant({ config: config(), agent: agent(), model: sel, variants: variantsFor(sel) }))
+  }
 
   // Variant list for the currently selected model
   const variants = createMemo(() => {
-    const sel = model()
-    if (!sel) return []
-    const found = provider.findModel(sel)
-    if (!found?.variants) return []
-    return Object.keys(found.variants)
+    return variantsFor(model())
   })
 
-  // Current effective variant — falls back to first available if stored value is invalid
   const effectiveVariant = createMemo(() => {
     const list = variants()
     if (list.length === 0) return undefined
     const stored = variant()
-    return stored && list.includes(stored) ? stored : list[0]
+    return stored && list.includes(stored) ? stored : undefined
   })
 
   // True when the user has changed the model from the session/config default
@@ -140,7 +168,6 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
   })
 
-  // Reset variant when model changes and stored variant is not in new list
   createEffect(() => {
     const list = variants()
     if (list.length === 0) {
@@ -148,7 +175,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       return
     }
     const stored = variant()
-    if (!stored || !list.includes(stored)) setVariant(list[0])
+    if (stored && !list.includes(stored)) setVariant(undefined)
   })
 
   createEffect(() => {
@@ -474,13 +501,13 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               <div class="prompt-input-hint">
                 <div class="prompt-input-hint-selectors">
                   <Show when={session.agents().length > 1}>
-                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} deferDismiss />
+                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={applyAgent} deferDismiss />
                   </Show>
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
                       value={model()}
                       onSelect={(pid, mid) => {
-                        if (pid && mid) setModel({ providerID: pid, modelID: mid })
+                        if (pid && mid) applyModel({ providerID: pid, modelID: mid })
                       }}
                       placement="top-start"
                       portal={false}
@@ -490,6 +517,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      onClear={() => setVariant(undefined)}
+                      allowClear
+                      clearLabel="Default"
                       deferDismiss
                     />
                     <Show when={overridden()}>
@@ -497,7 +527,11 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         <Button
                           variant="ghost"
                           size="small"
-                          onClick={() => setModel(session.configModel())}
+                          onClick={() => {
+                            const next = selectionFor(agent(), session.configModel())
+                            setModel(next.model)
+                            setVariant(next.variant)
+                          }}
                           aria-label={t("prompt.action.resetModel")}
                         >
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">

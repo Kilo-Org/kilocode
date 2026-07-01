@@ -13,6 +13,7 @@ import { useToast } from "../ui/toast"
 import { useArgs } from "./args"
 import { useSDK } from "./sdk"
 import { useProject } from "./project" // kilocode_change
+import { resolveAgentVariant, resolveSelectedVariant } from "@/kilocode/cli/cmd/tui/model-variant" // kilocode_change
 import { RGBA } from "@opentui/core"
 import { Filesystem } from "@/util/filesystem"
 
@@ -23,6 +24,15 @@ export function parseModel(model: string) {
     modelID: rest.join("/"),
   }
 }
+
+// kilocode_change start
+function variants(input: unknown) {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return {}
+  return Object.fromEntries(
+    Object.entries(input).filter((item): item is [string, string] => typeof item[1] === "string"),
+  )
+}
+// kilocode_change end
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
@@ -114,7 +124,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const model = iife(() => {
       const [modelStore, setModelStore] = createStore<{
         ready: boolean
-        // kilocode_change start - persisted picks plus process-local overrides
+        // kilocode_change start - persisted model picks plus process-local overrides
         model: Record<
           string,
           | {
@@ -140,7 +150,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           providerID: string
           modelID: string
         }[]
+        // kilocode_change start - runtime variant overrides stay process-local
         variant: Record<string, string | undefined>
+        // kilocode_change end
       }>({
         ready: false,
         model: {},
@@ -154,6 +166,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const state = {
         pending: false,
         writer: Promise.resolve() as Promise<unknown>, // kilocode_change - serialize writes
+        variant: undefined as Record<string, string> | undefined, // kilocode_change
       }
 
       // kilocode_change start - keep configured-agent selections process-local
@@ -161,6 +174,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
       function key(name: string) {
         return [scope(), name].join(":")
+      }
+
+      function variantKey(name: string) {
+        return key(name)
       }
 
       function clear(name: string) {
@@ -188,7 +205,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
-          variant: modelStore.variant,
+          ...(state.variant ? { variant: state.variant } : {}),
         }
         state.writer = state.writer.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
         // kilocode_change end
@@ -198,8 +215,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         .then((x: any) => {
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
           if (Array.isArray(x.favorite)) setModelStore("favorite", x.favorite)
+          const old = variants(x.variant) // kilocode_change
+          state.variant = Object.keys(old).length > 0 ? old : undefined // kilocode_change
           if (typeof x.model === "object" && x.model !== null) setModelStore("model", x.model) // kilocode_change
-          if (typeof x.variant === "object" && x.variant !== null) setModelStore("variant", x.variant)
         })
         .catch(() => {})
         .finally(() => {
@@ -404,15 +422,29 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         },
         variant: {
           selected() {
+            const a = agent.current()
             const m = currentModel()
-            if (!m) return undefined
-            const key = `${m.providerID}/${m.modelID}`
-            return modelStore.variant[key]
+            if (!a || !m) return undefined
+            const provider = sync.data.provider.find((x) => x.id === m.providerID)
+            const info = provider?.models[m.modelID]
+            const same = !a.model || (a.model.providerID === m.providerID && a.model.modelID === m.modelID)
+            return resolveSelectedVariant({
+              override: modelStore.variant[variantKey(a.name)],
+              config:
+                a.variant === "default" && same
+                  ? "default"
+                  : resolveAgentVariant({
+                      current: m,
+                      config: a.model,
+                      variant: a.variant,
+                      variants: info?.variants,
+                    }),
+              variants: info?.variants,
+            })
           },
           current() {
             const v = this.selected()
-            if (!v) return undefined
-            if (!this.list().includes(v)) return undefined
+            if (!v || v === "default") return undefined
             return v
           },
           list() {
@@ -424,11 +456,33 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             return Object.keys(info.variants)
           },
           set(value: string | undefined) {
+            const a = agent.current()
             const m = currentModel()
-            if (!m) return
-            const key = `${m.providerID}/${m.modelID}`
-            setModelStore("variant", key, value ?? "default")
-            save()
+            if (!a || !m) return
+            setModelStore("variant", variantKey(a.name), value ?? "default")
+            void sdk.client.global.config
+              .update({
+                config: {
+                  agent: {
+                    [a.name]: {
+                      variant: value ?? "default",
+                    },
+                  },
+                },
+              }, { throwOnError: true }) // kilocode_change
+              .catch(() => {
+                toast.show({
+                  message: `Failed to save variant for ${a.name}`,
+                  variant: "warning",
+                  duration: 3000,
+                })
+              })
+          },
+          sync(value: string | undefined) {
+            const a = agent.current()
+            const m = currentModel()
+            if (!a || !m) return
+            setModelStore("variant", variantKey(a.name), value)
           },
           cycle() {
             const variants = this.list()

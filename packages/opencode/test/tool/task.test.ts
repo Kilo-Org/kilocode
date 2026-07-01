@@ -8,11 +8,11 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Session } from "@/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
+import { Provider } from "../../src/provider/provider" // kilocode_change - use configured variant correctly
 import { MessageID, PartID, SessionID } from "../../src/session/schema" // kilocode_change - SessionID used by cost propagation tests
 import { SessionRunState } from "@/session/run-state"
 import { SessionStatus } from "@/session/status"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Provider } from "../../src/provider/provider" // kilocode_change
 import { KiloSession } from "../../src/kilocode/session" // kilocode_change
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "@/tool/truncate"
@@ -37,11 +37,11 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
     Bus.defaultLayer,
     Config.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
+    Provider.defaultLayer, // kilocode_change - use configured variant correctly
     Session.defaultLayer,
     SessionRunState.defaultLayer,
     SessionStatus.defaultLayer,
     Truncate.defaultLayer,
-    Provider.defaultLayer, // kilocode_change
     ToolRegistry.defaultLayer,
     RuntimeFlags.layer(flags),
   )
