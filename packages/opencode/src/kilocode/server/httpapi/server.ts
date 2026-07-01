@@ -21,6 +21,7 @@ import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
 import { sandboxHandlers } from "./handlers/sandbox"
 import { sessionImportHandlers } from "./handlers/session-import"
+import { statsHandlers } from "./handlers/stats"
 import { suggestionHandlers } from "./handlers/suggestion"
 import { telemetryHandlers } from "./handlers/telemetry"
 
@@ -39,6 +40,7 @@ export const provide = Layer.provide([
   remoteHandlers,
   sandboxHandlers,
   sessionImportHandlers,
+  statsHandlers,
   suggestionHandlers,
   telemetryHandlers,
 ])

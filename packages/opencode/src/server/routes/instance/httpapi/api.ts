@@ -34,6 +34,7 @@ import { NetworkApi } from "@/kilocode/server/httpapi/groups/network"
 import { RemoteApi } from "@/kilocode/server/httpapi/groups/remote"
 import { SandboxApi } from "@/kilocode/server/httpapi/groups/sandbox"
 import { SessionImportApi } from "@/kilocode/server/httpapi/groups/session-import"
+import { StatsApi } from "@/kilocode/server/httpapi/groups/stats"
 import { SuggestionApi } from "@/kilocode/server/httpapi/groups/suggestion"
 import { TelemetryApi } from "@/kilocode/server/httpapi/groups/telemetry"
 // kilocode_change end
@@ -80,6 +81,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(RemoteApi)
   .addHttpApi(SandboxApi)
   .addHttpApi(SessionImportApi)
+  .addHttpApi(StatsApi)
   .addHttpApi(SuggestionApi)
   .addHttpApi(TelemetryApi)
   // kilocode_change end
