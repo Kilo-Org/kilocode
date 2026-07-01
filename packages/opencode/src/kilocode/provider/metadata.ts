@@ -25,9 +25,21 @@ const priority = new Map<string, number>(order.map((id, index) => [id, index]))
 
 const icons = new Set<string>(iconNames)
 
+// kilocode_change - providers that should reuse another provider's icon.
+// Tencent TokenPlan shares the Tencent TokenHub icon.
+const iconAliases: Record<string, string> = {
+  "tencent-tokenplan": "tencent-tokenhub",
+}
+
 function key(id: string) {
   if (id.startsWith("github-copilot")) return "github-copilot"
   return id
+}
+
+function resolveIcon(name: string): string {
+  const alias = iconAliases[name] // kilocode_change
+  if (alias && icons.has(alias as IconName)) return alias // kilocode_change
+  return icons.has(name as IconName) ? name : "synthetic"
 }
 
 export function providerMetadata(id: string): ProviderMetadata {
@@ -35,7 +47,7 @@ export function providerMetadata(id: string): ProviderMetadata {
   const note = notes[name]
   return {
     noteKey: note,
-    icon: icons.has(name as IconName) ? name : "synthetic",
+    icon: resolveIcon(name), // kilocode_change
     priority: priority.get(name),
   }
 }
