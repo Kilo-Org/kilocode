@@ -11,6 +11,7 @@ import { Config } from "../../src/config/config"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git"
 import { Npm } from "@opencode-ai/core/npm"
 import { provideTestInstance } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
@@ -42,6 +43,7 @@ const unexpectedHttp = HttpClient.make((request) =>
 )
 
 const layer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),

@@ -42,6 +42,27 @@ export const dict = {
   "marketplace.install.scope": "Portée",
   "marketplace.install.scope.project": "Projet",
   "marketplace.install.scope.global": "Global",
+  "marketplace.install.scope.project.description":
+    "Uniquement ce projet. Les fichiers installés peuvent être ajoutés au contrôle de version et partagés avec votre équipe.",
+  "marketplace.install.scope.global.description":
+    "Tous les projets sur cette machine. Enregistré dans votre configuration utilisateur.",
+  "marketplace.install.destination": "Destination de l'installation",
+  "marketplace.install.about.mcp":
+    "Un serveur MCP fournit à Kilo des outils supplémentaires pour interagir avec des services externes ou des programmes locaux.",
+  "marketplace.install.about.agent":
+    "Un agent ajoute un rôle réutilisable avec ses propres instructions et autorisations.",
+  "marketplace.install.about.skill":
+    "Une compétence ajoute des instructions et des ressources propres à une tâche que Kilo peut charger en cas de besoin.",
+  "marketplace.install.mcp.warning":
+    "Les serveurs MCP peuvent exécuter des commandes locales ou se connecter à des services externes. Kilo demandera votre autorisation avant d'utiliser leurs outils, sauf si vos autorisations le permettent automatiquement.",
+  "marketplace.install.project.warning":
+    "Les fichiers du projet peuvent être ajoutés au contrôle de version. N'y stockez pas de secrets, sauf si la configuration fait référence à une variable d'environnement.",
+  "marketplace.install.learnMore": "Découvrir le fonctionnement des installations depuis le Marketplace",
+  "marketplace.install.learnMcp": "En savoir plus sur MCP",
+  "marketplace.install.installedAt": "Installé dans {{path}}",
+  "marketplace.intro":
+    "Installez des agents, des compétences et des outils MCP réutilisables pour un projet ou pour tous vos projets.",
+  "marketplace.intro.learnMore": "À propos du Marketplace",
   "marketplace.install.prerequisites": "Prérequis",
   "marketplace.install.installing": "Installation en cours...",
   "marketplace.install.cancel": "Annuler",
@@ -59,7 +80,9 @@ export const dict = {
   "marketplace.search": "Rechercher...",
   "marketplace.filter.all": "Tous les éléments",
   "marketplace.filter.notInstalled": "Non installé",
+  "marketplace.filter.relevant": "Pertinents pour mon espace de travail",
   "marketplace.empty": "Aucun élément trouvé",
+  "marketplace.empty.relevant": "Aucun élément pertinent du marketplace trouvé pour cet espace de travail.",
   "marketplace.badge.mcpServer": "Serveur MCP",
   "marketplace.badge.mode": "Mode",
   "marketplace.card.by": "par {{author}}",
@@ -92,6 +115,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implémenter dans une nouvelle session avec un contexte vierge",
   "plan.followup.answer.continue": "Continuer ici",
   "plan.followup.answer.continue.description": "Implémenter le plan dans cette session",
+  "plan.followup.answer.keepRefining": "Continuer à affiner",
+  "plan.followup.answer.keepRefining.description": "Continuer à planifier sans implémenter pour l'instant",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Instantané lent",

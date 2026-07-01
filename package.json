@@ -76,7 +76,7 @@
       "@solidjs/start": "https://pkg.pr.new/@solidjs/start@dfb2020",
       "solid-js": "1.9.12",
       "vite-plugin-solid": "2.11.10",
-      "@lydell/node-pty": "1.2.0-beta.10",
+      "@lydell/node-pty": "1.2.0-beta.12",
       "@opentui/keymap": "0.2.15",
       "@effect/sql-sqlite-bun": "4.0.0-beta.66"
     }
@@ -148,6 +148,6 @@
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.3.50",
+  "version": "7.3.63",
   "peerDependencies": {}
 }

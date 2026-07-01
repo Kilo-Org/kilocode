@@ -84,6 +84,16 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
+      - name: Setup Zig for Linux sandbox helpers
+        run: |
+          curl --fail --location --retry 3 \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+      # kilocode_change end
       - name: Build
         id: build
         run: |
@@ -179,6 +189,18 @@ jobs:
           smoke_host() {
             binary="$1"
             "$binary" --version
+            helper="$(dirname "$binary")/bwrap"
+            if [[ "${{ matrix.target }}" == linux-* ]]; then
+              test -x "$helper"
+              grep -q '^SPDX-License-Identifier: LGPL-2.0-or-later$' "$(dirname "$binary")/licenses/bubblewrap/NOTICE"
+              "$helper" --version
+              # The live user-namespace bootstrap depends on the runner's kernel/AppArmor policy
+              # (GitHub-hosted Ubuntu 24.04 sets kernel.apparmor_restrict_unprivileged_userns=1), not on
+              # the shipped artifact. The runtime probe degrades gracefully, so keep this check non-fatal.
+              "$helper" --unshare-user --disable-userns --unshare-pid --die-with-parent --new-session \
+                --ro-bind / / --dev /dev --proc /proc -- "$helper" --version \
+                || echo "unprivileged user namespaces unavailable on this runner; skipping live sandbox check"
+            fi
             root="$(mktemp -d)"
             trap 'rm -rf "$root"' RETURN
             (
@@ -212,8 +234,10 @@ jobs:
               # as optional packages and must be installed for any Bun-compiled musl binary to run.
               apk add --no-cache libstdc++ libgcc
               # kilocode_change end
-              binary="/dist/$PACKAGE/bin/kilo"
-              "$binary" --version
+              binary="/dist/$PACKAGE/bin/kilo" # kilocode_change
+              "$binary" --version # kilocode_change
+              "/dist/$PACKAGE/bin/bwrap" --version # kilocode_change
+              grep -q '\''^SPDX-License-Identifier: LGPL-2.0-or-later$'\'' "/dist/$PACKAGE/bin/licenses/bubblewrap/NOTICE" # kilocode_change
               root="$(mktemp -d)"
               trap '\''rm -rf "$root"'\'' EXIT
               unset KILO_MODELS_PATH KILO_MODELS_URL KILO_CONFIG KILO_CONFIG_DIR

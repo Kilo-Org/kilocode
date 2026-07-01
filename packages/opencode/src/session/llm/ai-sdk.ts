@@ -2,6 +2,7 @@ import { FinishReason, LLMEvent, ProviderMetadata, ToolResultValue } from "@open
 import { Effect, Schema } from "effect"
 import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
+import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
 
 type Result = Awaited<ReturnType<typeof streamText>>
 type AISDKEvent = Result["fullStream"] extends AsyncIterable<infer T> ? T : never
@@ -77,7 +78,7 @@ export function toLLMEvents(
           index: state.step++,
           reason: finishReason(event.finishReason),
           usage: usage(event.usage),
-          providerMetadata: providerMetadata(event.providerMetadata),
+          providerMetadata: KiloRoutedModel.write(providerMetadata(event.providerMetadata), event.response?.modelId), // kilocode_change
         }),
       ])
 

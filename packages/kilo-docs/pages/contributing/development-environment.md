@@ -109,6 +109,36 @@ bun run extension
 
 This will build and launch the extension in an isolated VS Code instance.
 
+The command auto-detects VS Code on macOS, Linux, and Windows. Use these options when the default launch target is not the one you need:
+
+| Option | Use |
+|---|---|
+| `--no-build` | Launch the extension host without rebuilding first |
+| `--app-path <path>` | Point to a specific VS Code executable |
+| `VSCODE_EXEC_PATH` | Set the VS Code executable through the current shell environment |
+| `--insiders` | Prefer VS Code Insiders |
+| `--workspace <path>` | Open a specific workspace folder |
+| `--clean` | Reset cached extension state before launch |
+
+For example, to test the extension against a sample workspace:
+
+```bash
+bun run extension --workspace ../sample-project
+```
+
+To set the executable through an environment variable, use the syntax for your shell:
+
+```bash
+VSCODE_EXEC_PATH=/usr/local/bin/code bun run extension
+```
+
+```powershell
+$env:VSCODE_EXEC_PATH = "C:\Users\me\AppData\Local\Programs\Microsoft VS Code\Code.exe"
+bun run extension
+```
+
+When the Extension Development Host opens, check the Kilo Code output channel and the Developer Tools console for startup or webview errors.
+
 ### Building the Extension
 
 From `packages/kilo-vscode/`:

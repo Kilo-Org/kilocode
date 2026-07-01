@@ -5,6 +5,7 @@ import { Discovery } from "../../src/skill/discovery"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { Git } from "../../src/git" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Global } from "@opencode-ai/core/global"
@@ -17,6 +18,7 @@ const node = CrossSpawnSpawner.defaultLayer
 
 const skills = (disableExternalSkills: boolean, disableClaudeCodeSkills: boolean) =>
   Skill.layer.pipe(
+    Layer.provide(Git.defaultLayer), // kilocode_change
     Layer.provide(Discovery.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Bus.layer),
@@ -192,10 +194,12 @@ Just some content without YAML frontmatter.
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
+          // kilocode_change start - load .kilo skills without falling back to .opencode
           yield* Effect.promise(() =>
-            Bun.write(
-              path.join(dir, ".opencode", "skill", "manual-skill", "SKILL.md"),
-              `---
+            Promise.all([
+              Bun.write(
+                path.join(dir, ".kilo", "skill", "manual-skill", "SKILL.md"),
+                `---
 name: manual-skill
 ---
 
@@ -203,8 +207,18 @@ name: manual-skill
 
 Instructions here.
 `,
-            ),
+              ),
+              Bun.write(
+                path.join(dir, ".opencode", "skill", "ignored-skill", "SKILL.md"),
+                `---
+name: ignored-skill
+description: This skill must not load.
+---
+`,
+              ),
+            ]),
           )
+          // kilocode_change end
 
           const skill = yield* Skill.Service
           const list = discovered(yield* skill.all()) // kilocode_change
@@ -483,16 +497,18 @@ description: A skill in the .agents/skills directory.
 # Agent Skill
 `,
               ),
+              // kilocode_change start
               Bun.write(
-                path.join(dir, ".opencode", "skill", "opencode-skill", "SKILL.md"),
+                path.join(dir, ".kilo", "skill", "opencode-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .opencode/skill directory.
+description: A skill in the .kilo/skill directory.
 ---
 
 # OpenCode Skill
 `,
               ),
+              // kilocode_change end
             ]),
           )
 
@@ -530,26 +546,28 @@ description: A skill in the .agents/skills directory.
 # Agent Skill
 `,
               ),
+              // kilocode_change start
               Bun.write(
-                path.join(dir, ".opencode", "skill", "agent-skill", "SKILL.md"),
+                path.join(dir, ".kilo", "skill", "agent-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .opencode/skill directory.
+description: A skill in the .kilo/skill directory.
 ---
 
 # OpenCode Skill
 `,
               ),
               Bun.write(
-                path.join(dir, ".opencode", "skills", "agent-skill", "SKILL.md"),
+                path.join(dir, ".kilo", "skills", "agent-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .opencode/skills directory.
+description: A skill in the .kilo/skills directory.
 ---
 
 # OpenCode Skill
 `,
               ),
+              // kilocode_change end
             ]),
           )
 

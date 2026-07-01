@@ -19,7 +19,10 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
+import { TaskUsage } from "./TaskUsage"
+import { hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
+import { BalanceChip } from "../shared/BalanceChip"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
@@ -68,7 +71,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return { tokens, pct }
   })
 
-  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
+  const tokens = createMemo(() => {
+    const usage = session.modelUsage()
+    return hasModelUsage(usage) ? tokenSummary(usage) : calcTokenUsage(session.visibleMessages())
+  })
 
   const hasTimeline = createMemo(() => {
     for (const m of session.visibleMessages()) {
@@ -77,12 +83,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     }
     return false
   })
-
-  const fmtNum = (n: number): string => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-    return String(n)
-  }
 
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
@@ -185,6 +185,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
         <div data-slot="task-header-stats">
+          <BalanceChip />
           <Show when={cost()}>
             {(c) => (
               <Tooltip value={costTooltip()} placement="bottom">
@@ -233,31 +234,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
-          <Show when={tokens()}>
-            {(tk) => (
-              <div class="task-header-tokens">
-                <span class="task-header-tokens-label">Tokens</span>
-                <Show when={tk().input > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-up" size="small" />
-                    {fmtNum(tk().input)}
-                  </span>
-                </Show>
-                <Show when={tk().output > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-down-to-line" size="small" />
-                    {fmtNum(tk().output)}
-                  </span>
-                </Show>
-                <Show when={tk().cached > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-down-to-line" size="small" />
-                    cache {fmtNum(tk().cached)}
-                  </span>
-                </Show>
-              </div>
-            )}
-          </Show>
+          <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
         </div>
       </Show>
       <Show when={hasTodos()}>

@@ -15,6 +15,8 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -264,6 +266,100 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertEquals(listOf("data:image/png;base64,aGVsbG8=", "data:text/plain;base64,aGVsbG8="), opened)
     }
 
+    fun `test user file mention hides synthetic read payload and text attachment card`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "read @src/a.kt"))
+        model.updateContent("u1", PartDto(
+            id = "p2",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "text",
+            text = "<path>/tmp/a.kt</path>\n<content>raw</content>",
+            synthetic = true,
+        ))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "file:///tmp/a.kt",
+            filename = "a.kt",
+            source = source("src/a.kt"),
+        ))
+
+        val msg = panel.findMessage("u1")!!
+
+        assertEquals(listOf("p1"), msg.partIds())
+        assertNull(msg.part("p2"))
+        assertNull(msg.part("f1"))
+        assertEquals("read [@src/a.kt](src/a.kt)", (msg.part("p1") as TextView).markdown())
+        assertEquals(0, msg.components.filterIsInstance<PromptAttachmentView>().size)
+    }
+
+    fun `test user git changes mention hides synthetic data attachment card`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "review @git-changes"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "data:text/plain;charset=utf-8,diff%20content",
+            filename = "git-changes.txt",
+            source = PartSourceDto(
+                type = "file",
+                text = PartSourceTextDto("@git-changes", 7.0, 19.0),
+                path = "git-changes",
+            ),
+        ))
+
+        val msg = panel.findMessage("u1")!!
+
+        assertEquals(listOf("p1"), msg.partIds())
+        assertNull(msg.part("f1"))
+        assertEquals("review [@git-changes](git-changes)", (msg.part("p1") as TextView).markdown())
+        assertEquals(0, msg.components.filterIsInstance<PromptAttachmentView>().size)
+    }
+
+    fun `test source less text attachment still renders in prompt strip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "data:text/plain;base64,aGVsbG8=",
+            filename = "note.txt",
+        ))
+
+        val view = panel.findMessage("u1")!!.part("f1")
+
+        assertTrue(view is PromptAttachmentView)
+        assertNotNull(find(view!!, AttachmentCard::class.java))
+    }
+
+    fun `test source backed image attachment still renders in prompt strip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "image/png",
+            url = "file:///tmp/a.png",
+            filename = "a.png",
+            source = source("src/a.png"),
+        ))
+
+        val view = panel.findMessage("u1")!!.part("f1")
+
+        assertTrue(view is PromptAttachmentView)
+        assertNotNull(find(view!!, AttachmentCard::class.java))
+    }
+
     fun `test empty sanitized user text does not create prompt panel`() {
         model.upsertMessage(msg("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", text = "read these screenshots"))
@@ -459,6 +555,12 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     private fun toolPart(id: String, mid: String, tool: String, state: String) = PartDto(
         id = id, sessionID = "ses", messageID = mid, type = "tool", tool = tool, state = state,
+    )
+
+    private fun source(path: String) = PartSourceDto(
+        type = "file",
+        path = path,
+        text = PartSourceTextDto("@$path", 5.0, (6 + path.length).toDouble()),
     )
 
     private fun <T : Any> find(root: java.awt.Component, type: Class<T>): T? {

@@ -1,4 +1,57 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Connect Anaconda Desktop",
+  "provider.anaconda.title.manage": "Manage Anaconda Desktop",
+  "provider.anaconda.status.checking": "Checking Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Opening Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Refreshing provider models...",
+  "provider.anaconda.status.ready": "Ready to connect",
+  "provider.anaconda.status.waiting": "Waiting for Desktop",
+  "provider.anaconda.status.attention": "Needs attention",
+  "provider.anaconda.status.unavailable": "Unavailable",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop is not supported on {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Install Anaconda Desktop on this machine, then return here. Kilo does not run the installer for you.",
+  "provider.anaconda.state.notRunning": "Open Anaconda Desktop, finish setup and sign in, then choose Check again.",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop setup is incomplete. Open Desktop, finish setup, and restart it if needed.",
+  "provider.anaconda.state.signedOut": "Open Anaconda Desktop and sign in before connecting Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo could not access Anaconda Desktop. Open Desktop, sign in again, and restart it if needed.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop is not responding yet. Open it and wait for the application to finish starting.",
+  "provider.anaconda.state.noModel":
+    "In Anaconda Desktop, download a text-generation model. Choose one with tool calling when possible, then start its server.",
+  "provider.anaconda.state.noServer_one":
+    "1 downloaded text-generation model is available. In Anaconda Desktop, start a model server. Models with tool calling support are strongly recommended.",
+  "provider.anaconda.state.noServer_other":
+    "{{count}} downloaded text-generation models are available. In Anaconda Desktop, start a model server. Models with tool calling support are strongly recommended.",
+  "provider.anaconda.state.unhealthy":
+    "The active inference server is not healthy yet. Check it in Anaconda Desktop and restart the server if needed.",
+  "provider.anaconda.state.ready":
+    "Kilo found a healthy local text-generation server and can import its current connection settings.",
+  "provider.anaconda.server": "Active inference server",
+  "provider.anaconda.context": "Context window",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Tool calling",
+  "provider.anaconda.tools.supported": "Supported",
+  "provider.anaconda.tools.unsupported": "Not enabled",
+  "provider.anaconda.tools.unknown": "Unknown",
+  "provider.anaconda.warning.title": "Tool support is limited",
+  "provider.anaconda.warning.description":
+    "This server does not confirm tool calling. Coding-agent actions may fail or be unavailable. Continue only if you accept these limitations.",
+  "provider.anaconda.action.download": "Download Anaconda Desktop",
+  "provider.anaconda.action.open": "Open Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Check again",
+  "provider.anaconda.action.continue": "Continue anyway",
+  "provider.anaconda.action.manage": "Manage / Refresh",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop refreshed",
+  "provider.anaconda.toast.refreshed.description": "The active local server and models are up to date in Kilo.",
+  "settings.providers.note.anacondaDesktop": "Run a model served locally by Anaconda Desktop.",
+  "settings.providers.tag.local": "Local",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Suggested",
   "command.category.view": "View",
   "command.category.project": "Project",
@@ -94,6 +147,30 @@ export const dict = {
   "command.session.unshare.description": "Stop sharing this session",
   "command.session.export": "Export session transcript",
 
+  "agentRequirements.skill.installed": "Installed",
+  "agentRequirements.skill.checkFailed": "The skill check failed",
+  "agentRequirements.skill.missing": "Not installed",
+  "agentRequirements.mcp.connected": "Connected",
+  "agentRequirements.mcp.checkFailed": "The MCP check failed",
+  "agentRequirements.mcp.missing": "Not connected",
+  "agentRequirements.extension.installed": "Installed",
+  "agentRequirements.extension.checkFailed": "The VS Code extension check failed",
+  "agentRequirements.extension.missing": "Not installed",
+  "agentRequirements.extension.description": "Install the missing extensions in VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCPs",
+  "agentRequirements.group.extensions": "VS Code Extensions",
+  "agentRequirements.blocked.title": "{{agent}} agent prerequisites",
+  "agentRequirements.blocked.description": "This agent needs the following tools before it can run.",
+  "agentRequirements.prompt.blocked": "Complete the required checks to use this agent first",
+  "agentRequirements.action.openMarketplace": "Open Marketplace",
+  "agentRequirements.error.unknownAgent": "The selected agent could not be found.",
+  "agentRequirements.error.malformedDeclaration": "This agent has an invalid requirement declaration.",
+  "agentRequirements.error.discoveryFailed": "Kilo could not check the available skills.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo could not check MCP server status.",
+  "agentRequirements.error.scopeMismatch": "This agent requirement check is no longer active.",
+  "agentRequirements.error.requestFailed": "Kilo could not check the agent requirements.",
+
   "palette.search.placeholder": "Search files, commands, and sessions",
   "palette.empty": "No results found",
   "palette.group.commands": "Commands",
@@ -175,6 +252,7 @@ export const dict = {
   "model.tag.free": "Free",
   "model.tag.dataCollected": "Data may be used for training",
   "model.tag.latest": "Latest",
+  "model.group.auto": "Auto Models",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",
   "model.group.collapse": "Collapse {{group}}",
@@ -202,6 +280,7 @@ export const dict = {
   "model.preview.label.average": "Est. Average Cost",
   "model.preview.label.context": "Context",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Model choices",
   "model.preview.label.completion": "Completion",
   "model.preview.label.costAttempt": "Cost / attempt",
   "model.preview.value.notSupported": "Not supported",
@@ -283,6 +362,24 @@ export const dict = {
   "prompt.action.autoApprove.disable": "Disable auto-approve",
   "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
   "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
+  "prompt.action.sandbox.enable": "Enable sandbox",
+  "prompt.action.sandbox.disable": "Disable sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox is enabled. Agent shell commands are confined to the project and Kilo directories.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox is disabled. Click to confine agent shell command writes to the project and Kilo directories.",
+  "prompt.action.sandbox.status.enabled": "Sandbox enabled",
+  "prompt.action.sandbox.status.disabled": "Sandbox disabled",
+  "prompt.action.sandbox.filesystem": "Filesystem",
+  "prompt.action.sandbox.network": "Network",
+  "prompt.action.sandbox.filesystem.restricted": "Restricted",
+  "prompt.action.sandbox.network.blocked": "Blocked",
+  "prompt.action.sandbox.network.allowed": "Allowed",
+  "prompt.action.sandbox.unrestricted": "Unrestricted",
+  "prompt.action.sandbox.description.enabled": "Writes are limited to the project and Kilo directories.",
+  "prompt.action.sandbox.description.disabled": "Click to restrict filesystem writes and network access.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Click to restrict filesystem writes. Network access remains allowed by your sandbox settings.",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -1066,6 +1163,10 @@ export const dict = {
   "profile.balance.title": "Balance",
   "profile.balance.refresh": "Refresh balance",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Top up",
+  "profile.pass.subscribe": "Get Kilo Pass to add credits and earn bonuses",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Renews",
   "profile.action.logout": "Log Out",
 
   "settings.section.configuration": "Configuration",
@@ -1081,6 +1182,9 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
   "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
+  "settings.indexing.showButton.title": "Show button when indexing is off",
+  "settings.indexing.showButton.description":
+    "Show the indexing button below the prompt while indexing is off. If hidden, open Settings > Indexing to enable indexing.",
   "settings.indexing.globalEnable.title": "Enable globally",
   "settings.indexing.globalEnable.description": "Enable indexing for every workspace.",
   "settings.indexing.projectEnable.title": "Enable for this project",
@@ -1206,6 +1310,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "This resets only VS Code extension-specific settings to their default values. Settings shared with the CLI, such as modes and auto-approve rules, are stored in the CLI configuration and will not be reset.",
   "settings.aboutKiloCode.resetSettings.button": "Reset All Settings",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Settings Transfer",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Export or import your settings to transfer them between VS Code instances.",
@@ -1300,8 +1405,18 @@ export const dict = {
     "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Speech to Text Model",
   "settings.models.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
+  "settings.experimental.nativeNotebookTools.title": "Native Notebook Tools",
+  "settings.experimental.nativeNotebookTools.description":
+    "Enable experimental tools for reading, editing, and executing VS Code notebooks",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Run agent shell commands inside an OS-level sandbox that restricts writes to the project and Kilo state directories",
+  "settings.sandboxing.title": "Sandboxing",
+  "settings.sandboxing.network.title": "Restrict Network Access",
+  "settings.sandboxing.network.description":
+    "Block outbound network access from model-originated commands and HTTP tools. Local MCP servers and plugin hooks run outside this restriction. Provider and model inference traffic remains available.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",

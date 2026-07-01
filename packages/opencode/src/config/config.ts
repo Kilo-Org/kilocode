@@ -1,5 +1,5 @@
 import * as Log from "@opencode-ai/core/util/log"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import path from "path"
 import { pathToFileURL } from "url"
 import os from "os"
@@ -50,6 +50,8 @@ import z from "zod" // kilocode_change - Kilo config compatibility schemas
 // kilocode_change start
 import { ZodOverride } from "@opencode-ai/core/effect-zod"
 import { KilocodeConfig } from "../kilocode/config/config"
+import { primaryPaths } from "../kilocode/primary-worktree"
+import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import {
@@ -59,6 +61,7 @@ import {
 import { unique } from "remeda"
 // kilocode_change end
 import { withTransientReadRetry } from "@/util/effect-http-client"
+import { ConfigExperimental } from "@opencode-ai/core/config/experimental"
 
 const log = Log.create({ service: "config" })
 
@@ -387,6 +390,12 @@ export const Info = Schema.Struct({
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       // kilocode_change start
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }),
+      agent_requirements: Schema.optional(Schema.Boolean).annotate({
+        description: "Require declared agent skills, MCPs, and VS Code extensions before VS Code prompts can run",
+      }),
+      native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable native tools for reading, editing, and executing VS Code notebooks",
+      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
@@ -400,8 +409,21 @@ export const Info = Schema.Struct({
       continue_loop_on_deny: Schema.optional(Schema.Boolean).annotate({
         description: "Continue the agent loop when a tool call is denied",
       }),
+      // kilocode_change start
+      sandbox: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access",
+      }),
+      sandbox_restrict_network: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)",
+      }),
+      // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
+      }),
+      policies: Schema.optional(Schema.mutable(Schema.Array(ConfigExperimental.Policy))).annotate({
+        description: "Policy statements applied to supported resources, such as provider access",
       }),
     }),
   ),
@@ -519,6 +541,7 @@ export const layer = Layer.effect(
     const env = yield* Env.Service
     const npmSvc = yield* Npm.Service
     const http = yield* HttpClient.HttpClient
+    const git = yield* Git.Service // kilocode_change
 
     const readConfigFile = (filepath: string) => fs.readFileStringSafe(filepath).pipe(Effect.orDie)
 
@@ -824,7 +847,7 @@ export const layer = Layer.effect(
         if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
           // kilocode_change start - also discover kilo.json project files
           for (const name of ["kilo", "opencode"] as const) {
-            for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.project.worktree).pipe(Effect.orDie)) {
+            for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
               yield* merge(
                 file,
                 yield* loadFile(file, authEnv).pipe(
@@ -844,7 +867,15 @@ export const layer = Layer.effect(
         result.mode = result.mode || {}
         result.plugin = result.plugin || []
 
-        const directories = yield* ConfigPaths.directories(ctx.directory, ctx.project.worktree) // kilocode_change
+        // kilocode_change start - include config directories from the primary checkout
+        const directories = yield* ConfigPaths.directories(ctx.directory, ctx.worktree)
+        const primary = Flag.KILO_DISABLE_PROJECT_CONFIG
+          ? []
+          : yield* primaryPaths(ctx.directory, ctx.worktree, [".kilocode", ".kilo"])
+        // Load primary fallbacks before active-worktree config, then track them as local.
+        directories.splice(1, 0, ...primary)
+        const primarySet = new Set(primary)
+        // kilocode_change end
 
         if (Flag.KILO_CONFIG_DIR) {
           log.debug("loading config from KILO_CONFIG_DIR", { path: Flag.KILO_CONFIG_DIR })
@@ -854,6 +885,7 @@ export const layer = Layer.effect(
 
         // kilocode_change start
         for (const dir of unique(directories)) {
+          const scope = primarySet.has(dir) ? "local" : undefined
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
             for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
               const source = path.join(dir, file)
@@ -866,6 +898,7 @@ export const layer = Layer.effect(
                     return Effect.succeed({} as Info)
                   }),
                 ),
+                scope,
               )
               result.agent ??= {}
               result.mode ??= {}
@@ -907,10 +940,10 @@ export const layer = Layer.effect(
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir, warnings)))
           result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings)))
           // kilocode_change end
-          // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
+          // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))
-          yield* mergePluginOrigins(dir, list)
+          yield* mergePluginOrigins(dir, list, scope) // kilocode_change
         }
 
         if (process.env.KILO_CONFIG_CONTENT) {
@@ -1027,7 +1060,14 @@ export const layer = Layer.effect(
           result.permission = mergeDeep(perms, result.permission ?? {})
         }
 
-        if (!result.username) result.username = os.userInfo().username
+        if (!result.username) {
+          try {
+            result.username = os.userInfo().username || "user"
+          } catch (err) {
+            log.warn("failed to read system username, using fallback", { err })
+            result.username = "user"
+          }
+        }
 
         if (result.autoshare === true && !result.share) {
           result.share = "auto"
@@ -1060,7 +1100,7 @@ export const layer = Layer.effect(
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("Config.state")(function* (ctx) {
-        return yield* loadInstanceState(ctx).pipe(Effect.orDie)
+        return yield* loadInstanceState(ctx).pipe(Effect.provideService(Git.Service, git), Effect.orDie) // kilocode_change
       }),
     )
 
@@ -1195,6 +1235,7 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(
+  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),

@@ -5,7 +5,7 @@ const root = path.join(__dirname, "..", "..")
 
 describe("Kilo OAuth branding", () => {
   test("Codex OAuth browser flow uses Kilo branding", async () => {
-    const src = await Bun.file(path.join(root, "src", "plugin", "codex.ts")).text()
+    const src = await Bun.file(path.join(root, "src", "plugin", "openai", "codex.ts")).text()
 
     expect(src).toContain('originator: "kilo"')
     expect(src).toContain('"User-Agent": `kilo/${InstallationVersion}`')

@@ -3,11 +3,12 @@ import type { NetworkOptions } from "@/cli/network"
 import { errorMessage } from "@/util/error"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { validateSession } from "@/cli/cmd/tui/validate-session"
-import { importCloudSession } from "@/kilocode/cloud-session"
+import { importCloudSession, localSessionID } from "@/kilocode/cloud-session"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { createKiloClient } from "@kilocode/sdk/v2"
 
 type TuiInput = Parameters<typeof import("@/cli/cmd/tui/app").tui>[0]
+export type StartInput = Omit<TuiInput, "renderer">
 
 type Args = NetworkOptions & {
   prompt?: string
@@ -23,7 +24,7 @@ type Input = {
   args: Args
   cwd: string
   input: () => Promise<string | undefined>
-  start: (input: TuiInput) => Promise<void>
+  start: (input: StartInput) => Promise<void>
 }
 
 async function session(input: Input, daemon: DaemonClient.Connection) {
@@ -54,7 +55,7 @@ export namespace KiloTuiThreadDaemon {
     try {
       await validateSession({
         url: daemon.url,
-        sessionID: input.args.session,
+        sessionID: localSessionID(input.args),
         directory: input.cwd,
         headers: daemon.headers,
       })

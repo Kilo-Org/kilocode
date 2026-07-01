@@ -44,9 +44,15 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const [focused, setFocused] = createSignal(-1)
   const language = useLanguage()
   let listRef: HTMLDivElement | undefined
+  // True while the picker was opened by the slash command rather than a click,
+  // so dismissal returns focus to the prompt like the model/variant pickers.
+  let slash = false
 
   // Listen for slash command trigger
-  const onTrigger = () => setOpen(true)
+  const onTrigger = () => {
+    slash = true
+    openSelected()
+  }
   window.addEventListener("openModePicker", onTrigger)
   onCleanup(() => window.removeEventListener("openModePicker", onTrigger))
 
@@ -65,11 +71,23 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
     items[clamped]?.focus()
   }
 
+  function openSelected() {
+    const idx = props.agents.findIndex((a) => a.name === props.value)
+    setFocused(idx >= 0 ? idx : 0)
+    setOpen(true)
+  }
+
   function onOpen(val: boolean) {
-    setOpen(val)
     if (val) {
-      const idx = props.agents.findIndex((a) => a.name === props.value)
-      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+      // A click on the trigger opens without the slash flag.
+      slash = false
+      openSelected()
+      return
+    }
+    setOpen(false)
+    if (slash) {
+      slash = false
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
     }
   }
 
@@ -135,6 +153,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
                   role="option"
                   aria-selected={agent.name === props.value}
                   tabindex={focused() === i() ? 0 : -1}
+                  data-autofocus={focused() === i() ? "" : undefined}
                   onClick={() => pick(agent.name)}
                   onFocus={() => setFocused(i())}
                 >

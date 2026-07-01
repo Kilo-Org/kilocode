@@ -1,4 +1,57 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "توصيل Anaconda Desktop",
+  "provider.anaconda.title.manage": "إدارة Anaconda Desktop",
+  "provider.anaconda.status.checking": "جارٍ التحقق من Anaconda Desktop...",
+  "provider.anaconda.status.opening": "جارٍ فتح Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "جارٍ تحديث نماذج الموفر...",
+  "provider.anaconda.status.ready": "جاهز للتوصيل",
+  "provider.anaconda.status.waiting": "في انتظار Desktop",
+  "provider.anaconda.status.attention": "يحتاج إلى انتباه",
+  "provider.anaconda.status.unavailable": "غير متوفر",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop غير مدعوم على {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "ثبّت Anaconda Desktop على هذا الجهاز، ثم عُد إلى هنا. لا يقوم Kilo بتشغيل المثبّت نيابةً عنك.",
+  "provider.anaconda.state.notRunning": "افتح Anaconda Desktop، وأكمل الإعداد وسجّل الدخول، ثم اختر تحقق مرة أخرى.",
+  "provider.anaconda.state.invalidConfig":
+    "إعداد Anaconda Desktop غير مكتمل. افتح Desktop، وأكمل الإعداد، وأعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.signedOut": "افتح Anaconda Desktop وسجّل الدخول قبل توصيل Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "تعذّر على Kilo الوصول إلى Anaconda Desktop. افتح Desktop، وسجّل الدخول مرة أخرى، وأعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.unavailable":
+    "لا يستجيب Anaconda Desktop بعد. افتحه وانتظر حتى ينتهي التطبيق من بدء التشغيل.",
+  "provider.anaconda.state.noModel":
+    "في Anaconda Desktop، نزّل نموذجًا لتوليد النصوص. اختر نموذجًا يدعم استدعاء الأدوات إن أمكن، ثم شغّل خادمه.",
+  "provider.anaconda.state.noServer_one":
+    "يتوفر نموذج واحد مُنزّل لتوليد النصوص. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.noServer_other":
+    "تتوفر نماذج مُنزّلة لتوليد النصوص، وعددها {{count}}. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.unhealthy":
+    "خادم الاستدلال النشط ليس في حالة سليمة بعد. تحقق منه في Anaconda Desktop وأعد تشغيل الخادم إذا لزم الأمر.",
+  "provider.anaconda.state.ready":
+    "عثر Kilo على خادم محلي سليم لتوليد النصوص ويمكنه استيراد إعدادات الاتصال الحالية الخاصة به.",
+  "provider.anaconda.server": "خادم الاستدلال النشط",
+  "provider.anaconda.context": "نافذة السياق",
+  "provider.anaconda.contextValue": "{{count}} رمز",
+  "provider.anaconda.tools": "استدعاء الأدوات",
+  "provider.anaconda.tools.supported": "مدعوم",
+  "provider.anaconda.tools.unsupported": "غير مُفعّل",
+  "provider.anaconda.tools.unknown": "غير معروف",
+  "provider.anaconda.warning.title": "دعم الأدوات محدود",
+  "provider.anaconda.warning.description":
+    "لا يؤكد هذا الخادم استدعاء الأدوات. قد تفشل إجراءات وكيل البرمجة أو تكون غير متوفرة. تابع فقط إذا قبلت هذه القيود.",
+  "provider.anaconda.action.download": "تنزيل Anaconda Desktop",
+  "provider.anaconda.action.open": "فتح Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "تحقق مرة أخرى",
+  "provider.anaconda.action.continue": "تابع على أي حال",
+  "provider.anaconda.action.manage": "إدارة / تحديث",
+  "provider.anaconda.toast.refreshed.title": "تم تحديث Anaconda Desktop",
+  "provider.anaconda.toast.refreshed.description": "الخادم المحلي النشط والنماذج محدّثة في Kilo.",
+  "settings.providers.note.anacondaDesktop": "شغّل نموذجًا يُقدّم محليًا بواسطة Anaconda Desktop.",
+  "settings.providers.tag.local": "محلي",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "مقترح",
   "command.category.view": "عرض",
   "command.category.project": "مشروع",
@@ -94,6 +147,30 @@ export const dict = {
   "command.session.unshare.description": "إيقاف مشاركة هذه الجلسة",
   "command.session.export": "تصدير سجل الجلسة",
 
+  "agentRequirements.skill.installed": "مثبت",
+  "agentRequirements.skill.checkFailed": "فشل فحص المهارة",
+  "agentRequirements.skill.missing": "غير مثبت",
+  "agentRequirements.mcp.connected": "متصل",
+  "agentRequirements.mcp.checkFailed": "فشل فحص MCP",
+  "agentRequirements.mcp.missing": "غير متصل",
+  "agentRequirements.extension.installed": "مثبت",
+  "agentRequirements.extension.checkFailed": "فشل فحص إضافة VS Code",
+  "agentRequirements.extension.missing": "غير مثبت",
+  "agentRequirements.extension.description": "ثبّت الإضافات الناقصة في VS Code.",
+  "agentRequirements.group.skills": "المهارات",
+  "agentRequirements.group.mcps": "MCPs",
+  "agentRequirements.group.extensions": "إضافات VS Code",
+  "agentRequirements.blocked.title": "متطلبات وكيل {{agent}}",
+  "agentRequirements.blocked.description": "يحتاج هذا الوكيل إلى الأدوات التالية قبل أن يتمكن من العمل.",
+  "agentRequirements.prompt.blocked": "أكمل الفحوصات المطلوبة لاستخدام هذا الوكيل أولاً",
+  "agentRequirements.action.openMarketplace": "فتح Marketplace",
+  "agentRequirements.error.unknownAgent": "تعذر العثور على الوكيل المحدد.",
+  "agentRequirements.error.malformedDeclaration": "لدى هذا الوكيل تعريف متطلبات غير صالح.",
+  "agentRequirements.error.discoveryFailed": "تعذر على Kilo فحص المهارات المتاحة.",
+  "agentRequirements.error.mcpStatusFailed": "تعذر على Kilo فحص حالة خادم MCP.",
+  "agentRequirements.error.scopeMismatch": "لم يعد فحص متطلبات هذا الوكيل نشطًا.",
+  "agentRequirements.error.requestFailed": "تعذر على Kilo فحص متطلبات الوكيل.",
+
   "palette.search.placeholder": "البحث في الملفات والأوامر والجلسات",
   "palette.empty": "لا توجد نتائج",
   "palette.group.commands": "الأوامر",
@@ -173,6 +250,7 @@ export const dict = {
   "model.tag.free": "مجاني",
   "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
   "model.tag.latest": "الأحدث",
+  "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
   "model.group.collapse": "طي {{group}}",
@@ -200,6 +278,7 @@ export const dict = {
   "model.preview.label.average": "متوسط التكلفة التقديرية",
   "model.preview.label.context": "السياق",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "خيارات النماذج",
   "model.preview.label.completion": "الإكمال",
   "model.preview.label.costAttempt": "التكلفة / المحاولة",
   "model.preview.value.notSupported": "غير مدعوم",
@@ -283,6 +362,23 @@ export const dict = {
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
+  "prompt.action.sandbox.enable": "تفعيل sandbox",
+  "prompt.action.sandbox.disable": "تعطيل sandbox",
+  "prompt.action.sandbox.enabled": "sandbox مُفعّل. أوامر shell الخاصة بالوكيل مقتصرة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.disabled":
+    "sandbox مُعطّل. انقر لتقييد كتابة أوامر shell الخاصة بالوكيل على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.status.enabled": "العزل مُفعّل",
+  "prompt.action.sandbox.status.disabled": "العزل مُعطّل",
+  "prompt.action.sandbox.filesystem": "نظام الملفات",
+  "prompt.action.sandbox.network": "الشبكة",
+  "prompt.action.sandbox.filesystem.restricted": "مقيّد",
+  "prompt.action.sandbox.network.blocked": "محظورة",
+  "prompt.action.sandbox.network.allowed": "مسموح بها",
+  "prompt.action.sandbox.unrestricted": "غير مقيّد",
+  "prompt.action.sandbox.description.enabled": "تقتصر عمليات الكتابة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.description.disabled": "انقر لتقييد الكتابة في نظام الملفات والوصول إلى الشبكة.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
@@ -1094,6 +1190,10 @@ export const dict = {
   "profile.balance.title": "الرصيد",
   "profile.balance.refresh": "تحديث الرصيد",
   "profile.action.dashboard": "لوحة التحكم",
+  "profile.action.topUp": "إضافة رصيد",
+  "profile.pass.subscribe": "احصل على Kilo Pass لإضافة رصيد وكسب مكافآت",
+  "profile.pass.bonus": "مكافأة",
+  "profile.pass.renews": "يتجدد",
   "profile.action.logout": "تسجيل الخروج",
 
   "settings.section.configuration": "الإعدادات",
@@ -1110,6 +1210,9 @@ export const dict = {
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
   "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
+  "settings.indexing.showButton.title": "إظهار الزر عند تعطيل الفهرسة",
+  "settings.indexing.showButton.description":
+    "إظهار زر الفهرسة أسفل حقل الإدخال عندما تكون الفهرسة معطلة. إذا كان الزر مخفيًا، فافتح الإعدادات > الفهرسة لتفعيل الفهرسة.",
   "settings.indexing.globalEnable.title": "تمكين عام",
   "settings.indexing.globalEnable.description": "تمكين الفهرسة لكل مساحة عمل.",
   "settings.indexing.projectEnable.title": "تمكين لهذا المشروع",
@@ -1207,6 +1310,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "يؤدي هذا إلى إعادة تعيين الإعدادات الخاصة بامتداد VS Code فقط إلى قيمها الافتراضية. الإعدادات المشتركة مع CLI، مثل الأوضاع وقواعد الموافقة التلقائية، مخزّنة في تكوين CLI ولن تتأثر.",
   "settings.aboutKiloCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "نقل الإعدادات",
   "settings.aboutKiloCode.settingsTransfer.description": "تصدير أو استيراد إعداداتك لنقلها بين نُسخ VS Code.",
   "settings.aboutKiloCode.exportSettings": "تصدير",
@@ -1293,8 +1397,15 @@ export const dict = {
     "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
+  "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
+  "settings.experimental.nativeNotebookTools.description":
+    "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
+  "settings.sandboxing.title": "العزل",
+  "settings.sandboxing.network.title": "تقييد الوصول إلى الشبكة",
+  "settings.sandboxing.network.description":
+    "احظر الوصول الصادر إلى الشبكة من الأوامر الصادرة عن النموذج وأدوات HTTP. تعمل خوادم MCP المحلية وخطافات المكونات الإضافية خارج هذا التقييد. تظل حركة مرور استدلال الموفّر والنموذج متاحة.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1425,6 +1536,9 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
     "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",

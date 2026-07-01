@@ -15,6 +15,8 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
+import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
+import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
 
 const log = Log.create({ service: "skill" })
@@ -187,9 +189,12 @@ const discoverSkills = Effect.fnUntraced(function* (
       yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global" })
     }
 
-    const upDirs = yield* fsys
+    // kilocode_change start
+    const local = yield* fsys
       .up({ targets: externalDirs, start: directory, stop: worktree })
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+    const upDirs = [...(yield* primaryPaths(directory, worktree, externalDirs)), ...local]
+    // kilocode_change end
 
     for (const root of upDirs) {
       yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "project" })
@@ -238,10 +243,7 @@ const loadSkills = Effect.fnUntraced(function* (state: State, discovered: Discov
   }
   // kilocode_change end
 
-  yield* Effect.forEach(discovered.matches, (match) => add(state, match, bus), {
-    concurrency: "unbounded",
-    discard: true,
-  })
+  for (const match of discovered.matches) yield* add(state, match, bus) // kilocode_change
 
   log.info("init", { count: Object.keys(state.skills).length })
 })
@@ -257,6 +259,7 @@ export const layer = Layer.effect(
     const fsys = yield* AppFileSystem.Service
     const global = yield* Global.Service
     const flags = yield* RuntimeFlags.Service
+    const git = yield* Git.Service // kilocode_change
     const discovered = yield* InstanceState.make(
       Effect.fn("Skill.discovery")(function* (ctx) {
         return yield* discoverSkills(
@@ -267,8 +270,8 @@ export const layer = Layer.effect(
           flags.disableExternalSkills,
           flags.disableClaudeCodeSkills,
           ctx.directory,
-          ctx.project.worktree, // kilocode_change
-        )
+          ctx.worktree, // kilocode_change
+        ).pipe(Effect.provideService(Git.Service, git)) // kilocode_change
       }),
     )
     const state = yield* InstanceState.make(
@@ -312,6 +315,7 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(
+  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(Discovery.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(Bus.layer),

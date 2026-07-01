@@ -4,6 +4,7 @@ import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -66,5 +67,23 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
         assertFalse(ok)
         assertEquals(listOf("/test/.kilo/plans/a.md"), rpc.opened)
+    }
+
+    fun `test searchFiles rethrows cancellation`() = runBlocking {
+        val err = CancellationException("stale completion")
+        rpc.search = { throw err }
+
+        val seen = try {
+            withContext(Dispatchers.Default) {
+                service.searchFiles("/test", "dep")
+            }
+            fail("expected cancellation")
+            null
+        } catch (e: CancellationException) {
+            e
+        }
+
+        assertEquals(err.message, seen?.message)
+        assertEquals(listOf("dep"), rpc.searchQueries)
     }
 }

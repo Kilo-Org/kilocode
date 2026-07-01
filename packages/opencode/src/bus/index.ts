@@ -5,7 +5,7 @@ import { BusEvent } from "./bus-event"
 import { GlobalBus } from "./global"
 import { InstanceState } from "@/effect/instance-state"
 import { makeRuntime } from "@/effect/run-service"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Identifier } from "@/id/id"
 import { context as instanceContext, type InstanceContext } from "@/project/instance-context" // kilocode_change
 import { InstanceRef } from "@/effect/instance-ref"

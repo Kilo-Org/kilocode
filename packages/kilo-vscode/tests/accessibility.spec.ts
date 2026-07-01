@@ -11,8 +11,7 @@ const STORIES = [
   { id: "profile--logged-in-personal", name: "Profile / personal account" },
   { id: "profile--logged-in", name: "Profile / organization account" },
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
-  { id: "marketplace--skills-tab-empty", name: "Marketplace / skills empty state" },
-  { id: "marketplace--agents-tab-empty", name: "Marketplace / agents empty state" },
+  { id: "marketplace--empty-list", name: "Marketplace / empty state" },
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
 ]
 

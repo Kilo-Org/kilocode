@@ -9,6 +9,8 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -152,6 +154,88 @@ class SessionModelTest : BasePlatformTestCase() {
 
         assertNull(model.message("m1")!!.parts["p1"])
         assertEquals("ContentRemoved m1/p1", events.single().toString())
+    }
+
+    fun `test updateContent skips user synthetic text`() {
+        model.addMessage(msg("m1", "user"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "raw content", synthetic = true))
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test updateContent removes existing user text when marked synthetic`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertEquals("ContentRemoved m1/p1", events.single().toString())
+    }
+
+    fun `test assistant synthetic text remains visible`() {
+        model.addMessage(msg("m1", "assistant"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible", synthetic = true))
+
+        assertEquals("visible", (model.message("m1")!!.parts["p1"] as Text).content.toString())
+        assertEquals("ContentAdded m1/p1", events.single().toString())
+    }
+
+    fun `test updateContent non synthetic text unhides previous synthetic user text`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible now"))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible now
+        """)
+        assertEquals("ContentAdded m1/p1", events.single().toString())
+    }
+
+    fun `test removeMessage clears hiddenText so a later non-synthetic part renders`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+
+        model.removeMessage("m1")
+        events.clear()
+
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible now"))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible now
+        """)
+        assertEquals("ContentAdded m1/p1", events.last().toString())
+    }
+
+    fun `test clear resets hiddenText so a later non-synthetic part renders`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+
+        model.clear()
+        events.clear()
+
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible now"))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible now
+        """)
+        assertEquals("ContentAdded m1/p1", events.last().toString())
     }
 
     fun `test updateContent reasoning creates Reasoning content`() {
@@ -387,6 +471,17 @@ class SessionModelTest : BasePlatformTestCase() {
         assertTrue(events[1] is SessionModelEvent.ContentDelta)
     }
 
+    fun `test appendDelta ignores hidden synthetic user text part`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+        events.clear()
+
+        model.appendDelta("m1", "p1", "still hidden")
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertTrue(events.isEmpty())
+    }
+
     fun `test appendDelta on tool content is noop`() {
         model.addMessage(msg("m1", "assistant"))
         model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "running"))
@@ -577,6 +672,32 @@ class SessionModelTest : BasePlatformTestCase() {
         val entry = model.message("m1")!!
         assertEquals(listOf("p1", "p3"), entry.parts.keys.toList())
         assertTrue(entry.parts["p3"] is StepFinish)
+    }
+
+    fun `test loadHistory skips user synthetic text`() {
+        model.loadHistory(listOf(MessageWithPartsDto(
+            msg("m1", "user"),
+            listOf(
+                part("p1", "m1", "text", text = "visible"),
+                part("p2", "m1", "text", text = "hidden", synthetic = true),
+            ),
+        )))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible
+        """)
+    }
+
+    fun `test file attachment preserves source metadata`() {
+        val source = PartSourceDto("file", PartSourceTextDto("@src/a.kt", 0.0, 9.0), path = "src/a.kt")
+        model.addMessage(msg("m1", "user"))
+
+        model.updateContent("m1", filePart("f1", "m1", "text/plain", "file:///tmp/a.kt", "a.kt", source))
+
+        val file = model.message("m1")!!.parts["f1"] as FileAttachment
+        assertEquals(source, file.source)
     }
 
     fun `test updateContent drops patch parts`() {
@@ -897,6 +1018,8 @@ class SessionModelTest : BasePlatformTestCase() {
         mime: String? = null,
         url: String? = null,
         filename: String? = null,
+        synthetic: Boolean? = null,
+        source: PartSourceDto? = null,
     ) = PartDto(
         id = id,
         sessionID = "ses",
@@ -906,6 +1029,8 @@ class SessionModelTest : BasePlatformTestCase() {
         mime = mime,
         url = url,
         filename = filename,
+        synthetic = synthetic,
+        source = source,
         tool = tool,
         state = state,
         title = title,
@@ -921,13 +1046,14 @@ class SessionModelTest : BasePlatformTestCase() {
         tokens = tokens,
     )
 
-    private fun filePart(id: String, mid: String, mime: String, url: String, filename: String) = part(
+    private fun filePart(id: String, mid: String, mime: String, url: String, filename: String, source: PartSourceDto? = null) = part(
         id = id,
         mid = mid,
         type = "file",
         mime = mime,
         url = url,
         filename = filename,
+        source = source,
     )
 
     private fun question(id: String) = Question(
