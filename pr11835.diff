@@ -1,0 +1,1397 @@
+diff --git a/.changeset/remote-cli-provider-models.md b/.changeset/remote-cli-provider-models.md
+new file mode 100644
+index 00000000000..3c2c2acdf14
+--- /dev/null
++++ b/.changeset/remote-cli-provider-models.md
+@@ -0,0 +1,5 @@
++---
++"@kilocode/cli": minor
++---
++
++Support provider-aware model discovery and selection for remote Cloud sessions.
+diff --git a/packages/opencode/src/kilo-sessions/remote-model-catalog.ts b/packages/opencode/src/kilo-sessions/remote-model-catalog.ts
+new file mode 100644
+index 00000000000..4c23e258a41
+--- /dev/null
++++ b/packages/opencode/src/kilo-sessions/remote-model-catalog.ts
+@@ -0,0 +1,233 @@
++import type { ProviderListResponse } from "@kilocode/sdk/v2/client"
++import { ModelID, ProviderID } from "@/provider/schema"
++import { Provider } from "@/provider/provider"
++import z from "zod"
++
++export namespace RemoteModelCatalog {
++  export const MAX_MODELS = 2_048
++
++  export const Request = z
++    .object({
++      protocolVersion: z.literal(1),
++    })
++    .strict()
++
++  export const ModelRef = z
++    .object({
++      providerID: z.string().min(1),
++      modelID: z.string().min(1),
++    })
++    .strict()
++  export type ModelRef = z.infer<typeof ModelRef>
++
++  export const ModelSelection = z
++    .object({
++      model: ModelRef,
++      variant: z.string().optional(),
++    })
++    .strict()
++  export type ModelSelection = z.infer<typeof ModelSelection>
++
++  export type Response = ProviderListResponse & {
++    protocolVersion: 1
++    currentModel?: ModelSelection
++    defaultModel?: ModelRef
++    truncated: boolean
++  }
++
++  type SourceModel = Omit<Provider.Model, "id" | "providerID"> & {
++    id: string
++    providerID: string
++  }
++
++  type SourceProvider = Omit<Provider.Info, "id" | "models" | "source" | "env" | "options"> & {
++    id: string
++    source?: Provider.Info["source"]
++    env?: string[]
++    options?: Record<string, unknown>
++    models: Record<string, SourceModel>
++  }
++
++  type SourceSelection = {
++    providerID: string
++    modelID: string
++    variant?: string
++  }
++
++  type Input = {
++    providers: Record<string, SourceProvider>
++    session: {
++      model?: {
++        id: string
++        providerID: string
++        variant?: string
++      }
++    }
++    messages: ReadonlyArray<{
++      info: {
++        role: string
++        model?: SourceSelection
++      }
++    }>
++    defaultModel?: ModelRef
++  }
++
++  function validIdentity(value: string) {
++    return value.length > 0
++  }
++
++  function current(input: Input): ModelSelection | undefined {
++    const session = input.session.model
++    if (session && validIdentity(session.providerID) && validIdentity(session.id)) {
++      return {
++        model: {
++          providerID: session.providerID,
++          modelID: session.id,
++        },
++        ...(session.variant && session.variant !== "default" ? { variant: session.variant } : {}),
++      }
++    }
++
++    for (let idx = input.messages.length - 1; idx >= 0; idx--) {
++      const info = input.messages[idx]?.info
++      if (info?.role !== "user" || !info.model) continue
++      if (!validIdentity(info.model.providerID) || !validIdentity(info.model.modelID)) continue
++      return {
++        model: {
++          providerID: info.model.providerID,
++          modelID: info.model.modelID,
++        },
++        ...(info.model.variant && info.model.variant !== "default" ? { variant: info.model.variant } : {}),
++      }
++    }
++    return undefined
++  }
++
++  function sanitizeModel(source: SourceModel, providerID: string): Provider.Model | undefined {
++    if (
++      !Number.isFinite(source.limit.context) ||
++      source.limit.context < 0 ||
++      !Number.isFinite(source.limit.output) ||
++      source.limit.output < 0 ||
++      (source.limit.input !== undefined && (!Number.isFinite(source.limit.input) || source.limit.input < 0))
++    ) {
++      return undefined
++    }
++    if (!validIdentity(source.id)) return undefined
++
++    return {
++      id: ModelID.make(source.id),
++      providerID: ProviderID.make(providerID),
++      api: { id: source.id, url: "", npm: "" },
++      name: source.name,
++      capabilities: {
++        temperature: source.capabilities.temperature,
++        reasoning: source.capabilities.reasoning,
++        attachment: source.capabilities.attachment,
++        toolcall: source.capabilities.toolcall,
++        input: {
++          text: source.capabilities.input.text,
++          audio: source.capabilities.input.audio,
++          image: source.capabilities.input.image,
++          video: source.capabilities.input.video,
++          pdf: source.capabilities.input.pdf,
++        },
++        output: {
++          text: source.capabilities.output.text,
++          audio: source.capabilities.output.audio,
++          image: source.capabilities.output.image,
++          video: source.capabilities.output.video,
++          pdf: source.capabilities.output.pdf,
++        },
++        interleaved:
++          typeof source.capabilities.interleaved === "boolean"
++            ? source.capabilities.interleaved
++            : { field: source.capabilities.interleaved.field },
++      },
++      cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
++      limit: {
++        context: source.limit.context,
++        ...(source.limit.input !== undefined ? { input: source.limit.input } : {}),
++        output: source.limit.output,
++      },
++      status: source.status,
++      options: {},
++      headers: {},
++      release_date: "",
++      variants: Object.fromEntries(
++        Object.keys(source.variants ?? {})
++          .filter(validIdentity)
++          .map((variant) => [variant, {}]),
++      ),
++    }
++  }
++
++  function sanitizeProvider(source: SourceProvider): Provider.Info | undefined {
++    if (!validIdentity(source.id)) return undefined
++    const models = Object.values(source.models)
++      .flatMap((model) => {
++        const sanitized = sanitizeModel(model, source.id)
++        return sanitized ? [sanitized] : []
++      })
++    if (models.length === 0) return undefined
++    return {
++      id: ProviderID.make(source.id),
++      name: source.name,
++      source: source.source ?? "custom",
++      env: [],
++      options: {},
++      models: Object.fromEntries(models.map((model) => [model.id, model])),
++    }
++  }
++
++  function defaults(providers: Provider.Info[]): Record<string, string> {
++    const result: Record<string, string> = {}
++    for (const provider of providers) {
++      const models = Object.values(provider.models)
++      if (models.length === 0) continue
++      const preferred = Provider.sort(models)[0]?.id
++      if (preferred && Object.hasOwn(provider.models, preferred)) {
++        result[provider.id] = preferred
++      } else {
++        result[provider.id] = models[0].id
++      }
++    }
++    return result
++  }
++
++  export function build(input: Input): Response {
++    const all: Provider.Info[] = []
++    let modelCount = 0
++    let truncated = false
++
++    for (const source of Object.values(input.providers)) {
++      const provider = sanitizeProvider(source)
++      if (!provider) continue
++
++      const models = Object.values(provider.models)
++      if (modelCount + models.length > MAX_MODELS) {
++        truncated = true
++        const remaining = MAX_MODELS - modelCount
++        if (remaining <= 0) break
++        provider.models = Object.fromEntries(models.slice(0, remaining).map((model) => [model.id, model]))
++      }
++
++      modelCount += Object.keys(provider.models).length
++      all.push(provider)
++    }
++
++    const active = current(input)
++    const fallback = input.defaultModel
++
++    return {
++      all,
++      default: defaults(all),
++      connected: all.map((provider) => provider.id),
++      failed: [],
++      protocolVersion: 1,
++      truncated,
++      ...(active ? { currentModel: active } : {}),
++      ...(fallback ? { defaultModel: fallback } : {}),
++    }
++  }
++}
+diff --git a/packages/opencode/src/kilo-sessions/remote-sender.ts b/packages/opencode/src/kilo-sessions/remote-sender.ts
+index 274592901c1..bb9bf5231dc 100644
+--- a/packages/opencode/src/kilo-sessions/remote-sender.ts
++++ b/packages/opencode/src/kilo-sessions/remote-sender.ts
+@@ -1,7 +1,9 @@
++import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
+ import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+ import type { RemoteWS } from "@/kilo-sessions/remote-ws"
+ import { GlobalBus } from "@/bus/global"
+ import { Session } from "@/session/session"
++import type { MessageV2 } from "@/session/message-v2"
+ import { SessionPrompt } from "@/session/prompt"
+ import { Question } from "@/question"
+ import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
+@@ -9,11 +11,11 @@ import { Permission } from "@/permission"
+ import { PermissionID } from "@/permission/schema"
+ import { SessionID } from "@/session/schema"
+ import { QuestionID } from "@/question/schema"
++import { Provider } from "@/provider/provider"
+ import { ModelID, ProviderID } from "@/provider/schema"
+-import * as Log from "@opencode-ai/core/util/log"
+ import z from "zod"
+ import { zodObject } from "@opencode-ai/core/effect-zod"
+-import { Effect } from "effect"
++import { Effect, Option, Schema } from "effect"
+ 
+ type Provide = typeof import("@/kilocode/instance").provide
+ 
+@@ -38,24 +40,35 @@ const SuggestionData = z.object({
+   index: z.number().int().nonnegative(),
+ })
+ 
++const decodeSessionID = Schema.decodeUnknownOption(SessionID)
++
+ // kilocode_change start — lazy init to avoid circular dependency
+ // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
++type RemotePromptInput = Omit<SessionPrompt.PromptInput, "model"> & {
++  model?: string | RemoteModelCatalog.ModelRef
++}
+ let _remotePromptInput: z.ZodObject<any> | undefined
+ function getRemotePromptInput() {
+   return (_remotePromptInput ??= zodObject(SessionPrompt.PromptInput).extend({
+-    model: z.string().optional(),
++    model: z.union([z.string(), RemoteModelCatalog.ModelRef]).optional(),
+   }))
+ }
+ // kilocode_change end
+-function normalizeModel(model: string | undefined) {
++function normalizeModel(model: string | RemoteModelCatalog.ModelRef | undefined): SessionPrompt.PromptInput["model"] {
+   if (!model) return undefined
++  if (typeof model !== "string") {
++    return {
++      providerID: ProviderID.make(model.providerID),
++      modelID: ModelID.make(model.modelID),
++    }
++  }
+   return {
+     providerID: ProviderID.make("kilo"),
+     modelID: ModelID.make(model.startsWith("kilocode/") ? model.slice("kilocode/".length) : model),
+   }
+ }
+ 
+-function normalizePrompt(input: SessionPrompt.PromptInput & { model?: string }): SessionPrompt.PromptInput {
++function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
+   return {
+     ...input,
+     model: normalizeModel(input.model),
+@@ -83,6 +96,12 @@ export namespace RemoteSender {
+       readonly reject: (requestID: QuestionID) => Promise<void>
+     }
+     prompt?: (input: SessionPrompt.PromptInput) => Promise<unknown>
++    catalog?: {
++      readonly get: (sessionID: SessionID) => Promise<Session.Info>
++      readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
++      readonly providers: () => Promise<Record<ProviderID, Provider.Info>>
++      readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
++    }
+   }
+ 
+   export type Sender = {
+@@ -124,6 +143,30 @@ export namespace RemoteSender {
+         const { AppRuntime } = await import("@/effect/app-runtime")
+         return AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.prompt(input)))
+       })
++    const catalog = options.catalog ?? {
++      get: async (sessionID: SessionID) => {
++        const { AppRuntime } = await import("@/effect/app-runtime")
++        return AppRuntime.runPromise(Session.Service.use((svc) => svc.get(sessionID)))
++      },
++      messages: async (sessionID: SessionID) => {
++        const { AppRuntime } = await import("@/effect/app-runtime")
++        return AppRuntime.runPromise(
++          Session.Service.use((svc) =>
++            svc
++              .findMessage(sessionID, (message) => message.info.role === "user" && !!message.info.model)
++              .pipe(Effect.map((message) => (Option.isSome(message) ? [message.value] : []))),
++          ),
++        )
++      },
++      providers: async () => {
++        const { AppRuntime } = await import("@/effect/app-runtime")
++        return AppRuntime.runPromise(Provider.Service.use((svc) => svc.list()))
++      },
++      default: async () => {
++        const { AppRuntime } = await import("@/effect/app-runtime")
++        return AppRuntime.runPromise(Provider.Service.use((svc) => svc.defaultModel()))
++      },
++    }
+ 
+     const sub =
+       options.subscribe ??
+@@ -305,6 +348,45 @@ export namespace RemoteSender {
+     }
+ 
+     function dispatch(msg: RemoteProtocol.Command) {
++      if (msg.command === "list_models") {
++        const parsed = RemoteModelCatalog.Request.safeParse(msg.data)
++        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
++        if (!parsed.success || Option.isNone(session)) {
++          options.conn.send({
++            type: "response",
++            id: msg.id,
++            error: "invalid list_models command",
++          })
++          return
++        }
++        const run = options.provide ?? provide
++        void (async () => {
++          try {
++            const info = await catalog.get(session.value)
++            const result = await run({
++              directory: info.directory,
++              fn: async () => {
++                const [providers, messages, fallback] = await Promise.all([
++                  catalog.providers(),
++                  catalog.messages(info.id),
++                  catalog.default().catch(() => undefined),
++                ])
++                return RemoteModelCatalog.build({
++                  providers,
++                  session: info,
++                  messages,
++                  defaultModel: fallback,
++                })
++              },
++            })
++            options.conn.send({ type: "response", id: msg.id, result })
++          } catch {
++            options.log.error("list models command failed", { id: msg.id })
++            options.conn.send({ type: "response", id: msg.id, error: "failed to list models" })
++          }
++        })()
++        return
++      }
+       if (msg.command === "send_message") {
+         const parsed = getRemotePromptInput().safeParse(msg.data)
+         if (!parsed.success) {
+@@ -315,9 +397,7 @@ export namespace RemoteSender {
+           })
+           return
+         }
+-        const input = SessionPrompt.PromptInput.zod.safeParse(
+-          normalizePrompt(parsed.data as SessionPrompt.PromptInput & { model?: string }),
+-        )
++        const input = SessionPrompt.PromptInput.zod.safeParse(normalizePrompt(parsed.data as RemotePromptInput))
+         if (!input.success) {
+           options.conn.send({
+             type: "response",
+diff --git a/packages/opencode/src/kilo-sessions/remote-ws.ts b/packages/opencode/src/kilo-sessions/remote-ws.ts
+index a6bc3e5d162..89b152a76be 100644
+--- a/packages/opencode/src/kilo-sessions/remote-ws.ts
++++ b/packages/opencode/src/kilo-sessions/remote-ws.ts
+@@ -36,7 +36,8 @@ export namespace RemoteWS {
+ 
+   export function connect(options: Options): Connection {
+     const interval = options.heartbeat ?? 10_000
+-    const connectionId = crypto.randomUUID()
++    let connectionId = crypto.randomUUID()
++    let generation = 0
+     const withContext = options.withContext ?? ((fn) => fn())
+     let ws: WebSocket | undefined
+     let backoff = 1000
+@@ -53,7 +54,8 @@ export namespace RemoteWS {
+ 
+       const current = Promise.resolve(
+         withContext(async () => {
+-          while (queued && !closed) {
++          while (queued) {
++            if (closed) return
+             queued = false
+             const sessions = await options.getSessions()
+             if (closed) return
+@@ -117,22 +119,30 @@ export namespace RemoteWS {
+         schedule()
+         return
+       }
++      if (generation > 0) connectionId = crypto.randomUUID()
++      generation += 1
+       const endpoint = `${options.url}/api/user/cli?token=${encodeURIComponent(token)}&connectionId=${connectionId}`
+       options.log.info("remote-ws connecting", { connectionId, endpoint: endpoint.replace(/token=[^&]+/, "token=***") })
+-      ws = new WebSocket(endpoint)
++      const socket = new WebSocket(endpoint)
++      ws = socket
+ 
+-      ws.onopen = () => {
++      socket.onopen = () => {
++        if (ws !== socket || closed) {
++          socket.close()
++          return
++        }
+         options.log.info("remote-ws connected", { buffered: buffer.length })
+         void withContext(() => options.onOpen?.())
+         backoff = 1000
+-        for (const msg of buffer) ws!.send(msg)
++        for (const msg of buffer) socket.send(msg)
+         buffer.length = 0
+         activity = Date.now()
+         startHeartbeat()
+         startWatchdog()
+       }
+ 
+-      ws.onmessage = (event) => {
++      socket.onmessage = (event) => {
++        if (ws !== socket || closed) return
+         activity = Date.now()
+         const raw = String(event.data)
+         let json: unknown
+@@ -152,7 +162,8 @@ export namespace RemoteWS {
+         options.onMessage?.(parsed.data)
+       }
+ 
+-      ws.onclose = (event) => {
++      socket.onclose = (event) => {
++        if (ws !== socket) return
+         options.log.info("remote-ws closed", { code: event.code, reason: event.reason })
+         ws = undefined
+         stopHeartbeat()
+@@ -170,7 +181,8 @@ export namespace RemoteWS {
+         schedule()
+       }
+ 
+-      ws.onerror = (event) => {
++      socket.onerror = (event) => {
++        if (ws !== socket || closed) return
+         options.log.error("remote-ws error", { error: event })
+       }
+     }
+@@ -200,10 +212,12 @@ export namespace RemoteWS {
+       if (ws) ws.close()
+     }
+ 
+-    open()
++    void open()
+ 
+     return {
+-      connectionId,
++      get connectionId() {
++        return connectionId
++      },
+       send,
+       heartbeat,
+       close,
+diff --git a/packages/opencode/test/kilocode/sessions/remote-model-catalog.test.ts b/packages/opencode/test/kilocode/sessions/remote-model-catalog.test.ts
+new file mode 100644
+index 00000000000..06a558f53ff
+--- /dev/null
++++ b/packages/opencode/test/kilocode/sessions/remote-model-catalog.test.ts
+@@ -0,0 +1,267 @@
++import { describe, expect, test } from "bun:test"
++import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
++
++function sanitizedModel(providerID: string, id: string, name: string) {
++  return {
++    id,
++    providerID,
++    api: { id, url: "", npm: "" },
++    name,
++    capabilities: {
++      temperature: true,
++      attachment: true,
++      reasoning: false,
++      toolcall: true,
++      input: { text: true, audio: false, image: true, video: false, pdf: true },
++      output: { text: true, audio: false, image: false, video: false, pdf: false },
++      interleaved: false,
++    },
++    cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
++    limit: { context: 200_000, output: 8_192 },
++    status: "active" as const,
++    variants: { fast: {}, precise: {} },
++    options: {},
++    headers: {},
++    release_date: "",
++  }
++}
++
++function model(providerID: string, id: string, name: string) {
++  const variants: Record<string, Record<string, unknown>> = {
++    fast: { apiKey: "must-not-leak" },
++    precise: { baseURL: "https://private.example.com" },
++  }
++  return {
++    id,
++    providerID,
++    api: {
++      id: "private-deployment-id",
++      url: "https://private.example.com",
++      npm: "file:///private/provider-package",
++    },
++    name,
++    capabilities: {
++      temperature: true,
++      attachment: true,
++      reasoning: false,
++      toolcall: true,
++      input: { text: true, audio: false, image: true, video: false, pdf: true },
++      output: { text: true, audio: false, image: false, video: false, pdf: false },
++      interleaved: false,
++    },
++    cost: {
++      input: 1,
++      output: 2,
++      cache: { read: 3, write: 4 },
++    },
++    limit: {
++      context: 200_000,
++      output: 8_192,
++    },
++    status: "active" as const,
++    variants,
++    options: { apiKey: "must-not-leak" },
++    headers: { authorization: "must-not-leak" },
++    release_date: "2026-01-01",
++  }
++}
++
++describe("RemoteModelCatalog", () => {
++  test("transforms providers to an allowlisted catalog with exact model identities", () => {
++    const privateModel = model("custom:edge", "model.with/slash-and:colon", "Model One")
++    Object.assign(privateModel.capabilities, { privateCapabilityConfig: "must-not-leak" })
++    Object.assign(privateModel.limit, { privateLimitConfig: "must-not-leak" })
++    const catalog = RemoteModelCatalog.build({
++      providers: {
++        custom: {
++          id: "custom:edge",
++          name: "Zeta Provider",
++          source: "config" as const,
++          key: "must-not-leak",
++          env: ["PRIVATE_API_KEY"],
++          options: { baseURL: "https://private.example.com" },
++          models: {
++            model: privateModel,
++          },
++        },
++        anthropic: {
++          id: "anthropic",
++          name: "Anthropic",
++          source: "env" as const,
++          env: ["ANTHROPIC_API_KEY"],
++          options: { apiKey: "must-not-leak" },
++          models: {
++            claude: model("anthropic", "claude-sonnet", "Claude Sonnet"),
++          },
++        },
++      },
++      session: {
++        model: {
++          id: "model.with/slash-and:colon",
++          providerID: "custom:edge",
++          variant: "default",
++        },
++      },
++      messages: [
++        {
++          info: {
++            role: "user",
++            model: { providerID: "anthropic", modelID: "claude-sonnet" },
++          },
++        },
++      ],
++      defaultModel: {
++        providerID: "anthropic",
++        modelID: "claude-sonnet",
++      },
++    })
++
++    expect(catalog).toEqual({
++      protocolVersion: 1,
++      all: [
++        {
++          id: "custom:edge",
++          name: "Zeta Provider",
++          source: "config",
++          env: [],
++          options: {},
++          models: {
++            "model.with/slash-and:colon": sanitizedModel("custom:edge", "model.with/slash-and:colon", "Model One"),
++          },
++        },
++        {
++          id: "anthropic",
++          name: "Anthropic",
++          source: "env",
++          env: [],
++          options: {},
++          models: {
++            "claude-sonnet": sanitizedModel("anthropic", "claude-sonnet", "Claude Sonnet"),
++          },
++        },
++      ],
++      default: {
++        "custom:edge": "model.with/slash-and:colon",
++        anthropic: "claude-sonnet",
++      },
++      connected: ["custom:edge", "anthropic"],
++      failed: [],
++      truncated: false,
++      currentModel: {
++        model: {
++          providerID: "custom:edge",
++          modelID: "model.with/slash-and:colon",
++        },
++      },
++      defaultModel: {
++        providerID: "anthropic",
++        modelID: "claude-sonnet",
++      },
++    })
++    expect(JSON.stringify(catalog)).not.toContain("must-not-leak")
++    expect(JSON.stringify(catalog)).not.toContain("PRIVATE_API_KEY")
++    expect(JSON.stringify(catalog)).not.toContain("private.example.com")
++  })
++
++  test("keeps duplicate model IDs distinct across providers", () => {
++    const catalog = RemoteModelCatalog.build({
++      providers: {
++        first: { id: "first", name: "First", models: { shared: model("first", "shared/model", "Shared") } },
++        second: { id: "second", name: "Second", models: { shared: model("second", "shared/model", "Shared") } },
++      },
++      session: {},
++      messages: [],
++    })
++
++    expect(catalog.all.map((provider) => [provider.id, Object.values(provider.models)[0]?.id])).toEqual([
++      ["first", "shared/model"],
++      ["second", "shared/model"],
++    ])
++  })
++
++  test("uses the latest user message when the session has no current model", () => {
++    const catalog = RemoteModelCatalog.build({
++      providers: {},
++      session: {},
++      messages: [
++        {
++          info: {
++            role: "user",
++            model: { providerID: "older", modelID: "older/model", variant: "slow" },
++          },
++        },
++        { info: { role: "assistant" } },
++        {
++          info: {
++            role: "user",
++            model: { providerID: "latest", modelID: "latest/model", variant: "default" },
++          },
++        },
++        { info: { role: "user" } },
++      ],
++    })
++
++    expect(catalog.currentModel).toEqual({
++      model: { providerID: "latest", modelID: "latest/model" },
++    })
++  })
++
++  test("drops empty identities but keeps overlong ones", () => {
++    const empty = ""
++    const overlong = "x".repeat(500)
++    const kept = model("custom", "kept/model", overlong)
++    kept.variants = {
++      exact: {},
++      [empty]: {},
++    }
++
++    const catalog = RemoteModelCatalog.build({
++      providers: {
++        custom: {
++          id: "custom",
++          name: overlong,
++          models: {
++            kept,
++            removed: model("custom", empty, "Removed"),
++          },
++        },
++      },
++      session: {},
++      messages: [],
++    })
++
++    expect(catalog.all).toHaveLength(1)
++    expect(catalog.all[0]?.name).toBe(overlong)
++    expect(Object.keys(catalog.all[0]?.models ?? {})).toEqual(["kept/model"])
++    expect(catalog.all[0]?.models["kept/model"]?.name).toBe(overlong)
++    expect(catalog.all[0]?.models["kept/model"]?.variants).toEqual({ exact: {} })
++    expect(catalog.default).toEqual({ custom: "kept/model" })
++    expect(catalog.connected).toEqual(["custom"])
++  })
++
++  test("caps the total number of models and reports truncation", () => {
++    const providers = Object.fromEntries(
++      Array.from({ length: 3 }, (_, providerIndex) => {
++        const id = `provider-${providerIndex}`
++        return [
++          id,
++          {
++            id,
++            name: id,
++            models: Object.fromEntries(
++              Array.from({ length: RemoteModelCatalog.MAX_MODELS + 10 }, (_, modelIndex) => {
++                const modelId = `model-${providerIndex}-${modelIndex}`
++                return [modelId, model(id, modelId, modelId)]
++              }),
++            ),
++          },
++        ]
++      }),
++    )
++    const catalog = RemoteModelCatalog.build({ providers, session: {}, messages: [] })
++    const modelCount = catalog.all.reduce((total, provider) => total + Object.keys(provider.models).length, 0)
++
++    expect(modelCount).toBe(RemoteModelCatalog.MAX_MODELS)
++    expect(catalog.truncated).toBe(true)
++  })
++})
+diff --git a/packages/opencode/test/kilocode/sessions/remote-sender.test.ts b/packages/opencode/test/kilocode/sessions/remote-sender.test.ts
+index 1e500ceaa1e..ea8af8e889a 100644
+--- a/packages/opencode/test/kilocode/sessions/remote-sender.test.ts
++++ b/packages/opencode/test/kilocode/sessions/remote-sender.test.ts
+@@ -1,6 +1,7 @@
+ import { describe, expect, test } from "bun:test"
+ import { afterEach, mock, spyOn } from "bun:test"
+ import { Effect } from "effect"
++import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
+ import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
+ import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
+ import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
+@@ -72,6 +73,31 @@ function prompts(calls: SessionPrompt.PromptInput[]) {
+   }
+ }
+ 
++function catalogModel(providerID: string, modelID: string, name: string, reasoning = false) {
++  return {
++    id: ModelID.make(modelID),
++    providerID: ProviderID.make(providerID),
++    api: { id: "private-deployment", url: "https://private.example.com", npm: "file:///private/provider" },
++    name,
++    capabilities: {
++      temperature: true,
++      attachment: true,
++      reasoning,
++      toolcall: true,
++      input: { text: true, audio: false, image: true, video: false, pdf: true },
++      output: { text: true, audio: false, image: false, video: false, pdf: false },
++      interleaved: false,
++    },
++    cost: { input: 1, output: 2, cache: { read: 3, write: 4 } },
++    limit: { context: 100_000, output: 4_096 },
++    status: "active" as const,
++    options: { apiKey: "must-not-leak" },
++    headers: { authorization: "must-not-leak" },
++    release_date: "2026-01-01",
++    variants: { precise: { apiKey: "must-not-leak" } },
++  }
++}
++
+ // kilocode_change start
+ afterEach(() => {
+   mock.restore()
+@@ -299,6 +325,307 @@ describe("RemoteSender", () => {
+     })
+   })
+ 
++  test("list_models returns the effective catalog from the exact session directory", async () => {
++    const { conn, sent } = fakeConn()
++    const dirs: string[] = []
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/process-default",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => {
++        dirs.push(input.directory)
++        return input.fn()
++      },
++      catalog: {
++        get: async () =>
++          ({
++            id: SessionID.make("ses_models"),
++            directory: "/workspace/project-a",
++            model: {
++              id: ModelID.make("deployment/model"),
++              providerID: ProviderID.make("custom"),
++              variant: "precise",
++            },
++          }) as any,
++        messages: async () => [],
++        providers: async () =>
++          ({
++            custom: {
++              id: ProviderID.make("custom"),
++              name: "Custom Provider",
++              source: "config",
++              env: ["PRIVATE_API_KEY"],
++              key: "must-not-leak",
++              options: { apiKey: "must-not-leak" },
++              models: {
++                "deployment/model": catalogModel("custom", "deployment/model", "Deployment Model", true),
++              },
++            },
++          }) as any,
++        default: async () => ({ providerID: ProviderID.make("custom"), modelID: ModelID.make("deployment/model") }),
++      },
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_models",
++      command: "list_models",
++      sessionId: "ses_models",
++      data: { protocolVersion: 1 },
++    })
++
++    await new Promise((resolve) => setTimeout(resolve, 0))
++
++    expect(dirs).toEqual(["/workspace/project-a"])
++    expect(sent).toHaveLength(1)
++    expect(sent[0]?.type).toBe("response")
++    expect(sent[0]?.id).toBe("req_models")
++    const result = sent[0]?.result as RemoteModelCatalog.Response
++    expect(result.all).toHaveLength(1)
++    expect(result.all[0]?.id).toBe("custom")
++    expect(result.all[0]?.env).toEqual([])
++    expect(result.all[0]?.options).toEqual({})
++    expect(result.all[0]?.models["deployment/model"]?.variants).toEqual({ precise: {} })
++    expect(result.default).toEqual({ custom: "deployment/model" })
++    expect(result.connected).toEqual(["custom"])
++    expect(result.failed).toEqual([])
++    expect(result.currentModel).toEqual({
++      model: { providerID: "custom", modelID: "deployment/model" },
++      variant: "precise",
++    })
++    expect(result.defaultModel).toEqual({ providerID: "custom", modelID: "deployment/model" })
++    expect(result.truncated).toBe(false)
++    expect(JSON.stringify(result)).not.toContain("must-not-leak")
++    expect(JSON.stringify(result)).not.toContain("private.example.com")
++  })
++
++  test("list_models scopes provider discovery to each session directory", async () => {
++    const { conn, sent } = fakeConn()
++    const state = { directory: "" }
++    const messages: string[] = []
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/process-default",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => {
++        state.directory = input.directory
++        const result = await input.fn()
++        state.directory = ""
++        return result
++      },
++      catalog: {
++        get: async (sessionID) =>
++          ({
++            id: sessionID,
++            directory: sessionID === SessionID.make("ses_first") ? "/workspace/first" : "/workspace/second",
++          }) as any,
++        messages: async (sessionID) => {
++          messages.push(sessionID)
++          return []
++        },
++        providers: async () => {
++          const id = state.directory === "/workspace/first" ? "first-provider" : "second-provider"
++          return {
++            [id]: {
++              id: ProviderID.make(id),
++              name: id,
++              source: "custom",
++              env: [],
++              options: {},
++              models: {
++                model: catalogModel(id, "model", "Model"),
++              },
++            },
++          } as any
++        },
++        default: async () => undefined,
++      },
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_models_first",
++      command: "list_models",
++      sessionId: "ses_first",
++      data: { protocolVersion: 1 },
++    })
++    await new Promise((resolve) => setTimeout(resolve, 0))
++    sender.handle({
++      type: "command",
++      id: "req_models_second",
++      command: "list_models",
++      sessionId: "ses_second",
++      data: { protocolVersion: 1 },
++    })
++    await new Promise((resolve) => setTimeout(resolve, 0))
++
++    expect(sent.map((message) => message.result?.all[0]?.id)).toEqual(["first-provider", "second-provider"])
++    expect(messages).toEqual([SessionID.make("ses_first"), SessionID.make("ses_second")])
++  })
++
++  test("list_models tolerates unavailable provider default resolution", async () => {
++    const { conn, sent } = fakeConn()
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/process-default",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
++      catalog: {
++        get: async () => ({ id: SessionID.make("ses_models"), directory: "/workspace/project-a" }) as any,
++        messages: async () => [],
++        providers: async () => ({}),
++        default: async () => {
++          throw new Error("no provider default")
++        },
++      },
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_models_no_default",
++      command: "list_models",
++      sessionId: "ses_models",
++      data: { protocolVersion: 1 },
++    })
++
++    await new Promise((resolve) => setTimeout(resolve, 0))
++
++    expect(sent).toEqual([
++      {
++        type: "response",
++        id: "req_models_no_default",
++        result: {
++          all: [],
++          default: {},
++          connected: [],
++          failed: [],
++          protocolVersion: 1,
++          truncated: false,
++        },
++      },
++    ])
++  })
++
++  test("list_models never falls back to the process directory for an unknown session", async () => {
++    const { conn, sent } = fakeConn()
++    const dirs: string[] = []
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/process-default",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => {
++        dirs.push(input.directory)
++        return input.fn()
++      },
++      catalog: {
++        get: async () => {
++          throw new Error("session not found")
++        },
++        messages: async () => [],
++        providers: async () => ({}),
++        default: async () => undefined,
++      },
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_models_missing",
++      command: "list_models",
++      sessionId: "ses_missing",
++      data: { protocolVersion: 1 },
++    })
++
++    await new Promise((resolve) => setTimeout(resolve, 0))
++
++    expect(dirs).toEqual([])
++    expect(sent).toEqual([
++      {
++        type: "response",
++        id: "req_models_missing",
++        error: "failed to list models",
++      },
++    ])
++  })
++
++  test("list_models returns one generic error when provider discovery fails", async () => {
++    const { conn, sent } = fakeConn()
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/process-default",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
++      catalog: {
++        get: async () => ({ id: SessionID.make("ses_models"), directory: "/workspace/project-a" }) as any,
++        messages: async () => [],
++        providers: async () => {
++          throw new Error("private provider failure with api-key")
++        },
++        default: async () => undefined,
++      },
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_models_failed",
++      command: "list_models",
++      sessionId: "ses_models",
++      data: { protocolVersion: 1 },
++    })
++
++    await new Promise((resolve) => setTimeout(resolve, 0))
++
++    expect(sent).toEqual([
++      {
++        type: "response",
++        id: "req_models_failed",
++        error: "failed to list models",
++      },
++    ])
++    expect(JSON.stringify(sent)).not.toContain("api-key")
++  })
++
++  test("list_models rejects unsupported versions and missing session IDs", () => {
++    const { conn, sent } = fakeConn()
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/test",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_models_v2",
++      command: "list_models",
++      sessionId: "ses_models",
++      data: { protocolVersion: 2 },
++    })
++    sender.handle({
++      type: "command",
++      id: "req_models_missing_session",
++      command: "list_models",
++      data: { protocolVersion: 1 },
++    })
++    sender.handle({
++      type: "command",
++      id: "req_models_invalid_session",
++      command: "list_models",
++      sessionId: "not-a-session-id",
++      data: { protocolVersion: 1 },
++    })
++
++    expect(sent).toEqual([
++      { type: "response", id: "req_models_v2", error: "invalid list_models command" },
++      { type: "response", id: "req_models_missing_session", error: "invalid list_models command" },
++      { type: "response", id: "req_models_invalid_session", error: "invalid list_models command" },
++    ])
++  })
++
+   test("send_message with agent is accepted", async () => {
+     const { conn, sent } = fakeConn()
+     let resolveProvide: () => void
+@@ -405,31 +732,103 @@ describe("RemoteSender", () => {
+     ])
+   })
+ 
+-  test("send_message rejects structured model on remote path", () => {
++  test("send_message preserves a structured provider and model", async () => {
++    const { conn, sent } = fakeConn()
++    const calls: SessionPrompt.PromptInput[] = []
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/test",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
++      prompt: prompts(calls),
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_model_structured",
++      command: "send_message",
++      data: {
++        sessionID: "ses_x",
++        parts: [{ type: "text", text: "hello" }],
++        model: { providerID: "custom:edge", modelID: "deployment/model-v1" },
++        variant: "precise",
++      },
++    })
++
++    await new Promise((resolve) => setTimeout(resolve, 0))
++
++    expect(sent[0]).toEqual({ type: "response", id: "req_model_structured", result: {} })
++    expect(calls).toEqual([
++      {
++        sessionID: SessionID.make("ses_x"),
++        parts: [{ type: "text", text: "hello" }],
++        model: {
++          providerID: ProviderID.make("custom:edge"),
++          modelID: ModelID.make("deployment/model-v1"),
++        },
++        variant: "precise",
++      },
++    ])
++  })
++
++  test("send_message rejects invalid structured model identities before ACK", () => {
+     const { conn, sent } = fakeConn()
++    const calls: SessionPrompt.PromptInput[] = []
+     const sender = RemoteSender.create({
+       conn,
+       directory: "/tmp/test",
+       log: nolog,
+       subscribe: fakeBus().subscribe,
+       provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
++      prompt: prompts(calls),
+     })
+ 
+     sender.handle({
+       type: "command",
+-      id: "req_model_alias",
++      id: "req_model_invalid",
+       command: "send_message",
+       data: {
+         sessionID: "ses_x",
+         parts: [{ type: "text", text: "hello" }],
+-        model: { providerID: "kilocode", modelID: "gpt-5-mini" },
++        model: { providerID: "", modelID: "deployment/model-v1" },
+       },
+     })
+ 
+     expect(sent).toHaveLength(1)
+-    expect(sent[0].type).toBe("response")
+-    expect(sent[0].id).toBe("req_model_alias")
+-    expect(sent[0].error).toContain("invalid send_message data")
++    expect(sent[0]?.error).toContain("invalid send_message data")
++    expect(calls).toHaveLength(0)
++  })
++
++  test("send_message leaves model and variant omitted for CLI precedence", async () => {
++    const { conn, sent } = fakeConn()
++    const calls: SessionPrompt.PromptInput[] = []
++    const sender = RemoteSender.create({
++      conn,
++      directory: "/tmp/test",
++      log: nolog,
++      subscribe: fakeBus().subscribe,
++      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
++      prompt: prompts(calls),
++    })
++
++    sender.handle({
++      type: "command",
++      id: "req_model_omitted",
++      command: "send_message",
++      data: {
++        sessionID: "ses_x",
++        parts: [{ type: "text", text: "hello" }],
++        agent: "configured-agent",
++      },
++    })
++
++    await new Promise((resolve) => setTimeout(resolve, 0))
++
++    expect(sent[0]).toEqual({ type: "response", id: "req_model_omitted", result: {} })
++    expect(calls).toHaveLength(1)
++    expect(calls[0]?.model).toBeUndefined()
++    expect(calls[0]?.variant).toBeUndefined()
+   })
+ 
+   test("send_message does not special-case kilo-prefixed model", async () => {
+diff --git a/packages/opencode/test/kilocode/sessions/remote-ws.test.ts b/packages/opencode/test/kilocode/sessions/remote-ws.test.ts
+index e00b6ec0a36..0afe34525e7 100644
+--- a/packages/opencode/test/kilocode/sessions/remote-ws.test.ts
++++ b/packages/opencode/test/kilocode/sessions/remote-ws.test.ts
+@@ -25,6 +25,7 @@ function capture() {
+ function createServer() {
+   const messages: string[] = []
+   const clients: ServerWebSocket<unknown>[] = []
++  const urls: URL[] = []
+   const pending: {
+     connect: ((ws: ServerWebSocket<unknown>) => void)[]
+     message: ((msg: string) => void)[]
+@@ -33,6 +34,7 @@ function createServer() {
+   const server = Bun.serve({
+     port: 0,
+     fetch(req, server) {
++      urls.push(new URL(req.url))
+       const upgraded = server.upgrade(req)
+       if (!upgraded) return new Response("Not found", { status: 404 })
+       return undefined
+@@ -60,6 +62,7 @@ function createServer() {
+     url: `ws://localhost:${server.port}`,
+     messages,
+     clients,
++    urls,
+     stop: () => server.stop(true),
+     waitForConnect: () =>
+       new Promise<ServerWebSocket<unknown>>((resolve) => {
+@@ -72,6 +75,14 @@ function createServer() {
+   }
+ }
+ 
++async function until(predicate: () => boolean, timeout = 5000) {
++  const start = Date.now()
++  while (!predicate()) {
++    if (Date.now() - start > timeout) throw new Error("condition never became true")
++    await Bun.sleep(20)
++  }
++}
++
+ async function settled() {
+   await Bun.sleep(20)
+ }
+@@ -211,6 +222,106 @@ describe("RemoteWS", () => {
+     expect(conn.connected).toBe(true)
+   })
+ 
++  test("rotates connection identity for each WebSocket generation", async () => {
++    server = createServer()
++
++    conn = RemoteWS.connect({
++      url: server.url,
++      getToken: async () => "tok",
++      getSessions: async () => ({ sessions: [] }),
++      log: nolog(),
++      heartbeat: 60_000,
++    })
++
++    const first = await server.waitForConnect()
++    await settled()
++    const initial = server.urls[0]?.searchParams.get("connectionId")
++    expect(initial).toBe(conn.connectionId)
++
++    const reconnecting = server.waitForConnect()
++    first.close()
++    await reconnecting
++    await settled()
++
++    const replacement = server.urls[1]?.searchParams.get("connectionId")
++    expect(replacement).not.toBe(initial)
++    expect(replacement).toBe(conn.connectionId)
++  })
++
++  test("ignores callbacks from a stale WebSocket generation", async () => {
++    const OriginalWebSocket = globalThis.WebSocket
++    const sockets: FakeWebSocket[] = []
++    const received: unknown[] = []
++
++    class FakeWebSocket {
++      static readonly OPEN = 1
++      readonly sent: string[] = []
++      readyState = 0
++      onopen: (() => void) | null = null
++      onmessage: ((event: { data: string }) => void) | null = null
++      onclose: ((event: { code: number; reason: string }) => void) | null = null
++      onerror: ((event: unknown) => void) | null = null
++
++      constructor(readonly url: string) {
++        sockets.push(this)
++      }
++
++      send(message: string) {
++        this.sent.push(message)
++      }
++
++      close() {
++        this.readyState = 3
++      }
++
++      open() {
++        this.readyState = FakeWebSocket.OPEN
++        this.onopen?.()
++      }
++
++      disconnect(code = 1000, reason = "closed") {
++        this.readyState = 3
++        this.onclose?.({ code, reason })
++      }
++    }
++
++    Object.defineProperty(globalThis, "WebSocket", { value: FakeWebSocket, configurable: true, writable: true })
++    try {
++      conn = RemoteWS.connect({
++        url: "ws://example.test",
++        getToken: async () => "tok",
++        getSessions: async () => ({ sessions: [] }),
++        log: nolog(),
++        heartbeat: 60_000,
++        onMessage: (message) => received.push(message),
++      })
++
++      await settled()
++      const first = sockets[0]
++      expect(first).toBeDefined()
++      first?.open()
++      first?.disconnect()
++
++      await until(() => sockets.length >= 2)
++      const second = sockets[1]
++      expect(second).toBeDefined()
++      second?.open()
++
++      first?.onmessage?.({ data: JSON.stringify({ type: "subscribe", sessionId: "stale" }) })
++      first?.onclose?.({ code: 1000, reason: "late close" })
++      conn.send({ type: "event", sessionId: "active", event: "test", data: {} })
++
++      expect(received).toEqual([])
++      expect(conn.connected).toBe(true)
++      expect(second?.sent).toEqual([JSON.stringify({ type: "event", sessionId: "active", event: "test", data: {} })])
++
++      conn.close()
++      conn = undefined
++    } finally {
++      Object.defineProperty(globalThis, "WebSocket", { value: OriginalWebSocket, configurable: true, writable: true })
++    }
++  })
++
+   test("stops reconnecting on 4401", async () => {
+     server = createServer()
+ 
