@@ -29,6 +29,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -740,11 +741,30 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private fun clear() {
+    private suspend fun clear() {
+        synchronized(loadLock) {
+            val jobs = listOfNotNull(loader, eventWatcher)
+            loader = null
+            eventWatcher = null
+            jobs
+        }.forEach { job ->
+            // LLM note: restart/reinstall must not open a new CLI while old app-load requests are still unwinding.
+            job.cancelAndJoin()
+        }
+        reset()
+    }
+
+    private fun clearNow() {
         synchronized(loadLock) {
             loader?.cancel()
             eventWatcher?.cancel()
+            loader = null
+            eventWatcher = null
         }
+        reset()
+    }
+
+    private fun reset() {
         stopRuntime()
         profile = null
         config = null
@@ -852,7 +872,7 @@ class KiloBackendAppService private constructor(
         closed = true
         watcher?.cancel()
         watcher = null
-        clear()
+        clearNow()
         connection.dispose()
         server.dispose()
     }
