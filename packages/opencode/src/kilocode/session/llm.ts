@@ -53,19 +53,20 @@ export namespace KiloLLM {
     tools: Record<string, { description?: string; inputSchema?: unknown }>
     configured: number | undefined
     contextTokens?: number
+    contextMedia?: number
   }): number | undefined {
     if (input.configured == null) return input.configured
     if (input.configured <= 0) return undefined
     const { context } = input.model.limit
     if (!context) return input.configured
 
-    const tokens =
-      input.contextTokens ??
-      (() => {
-        const usage = KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools })
-        return usage.normalized + usage.media * MEDIA_OUTPUT_RESERVE
-      })()
-    const available = context - tokens - SAFETY
+    const usage =
+      input.contextTokens === undefined || input.contextMedia === undefined
+        ? KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools })
+        : undefined
+    const tokens = input.contextTokens ?? usage?.normalized ?? 0
+    const media = input.contextMedia ?? usage?.media ?? 0
+    const available = context - tokens - media * MEDIA_OUTPUT_RESERVE - SAFETY
     // If available is ≤0 the input alone exceeds context — return the original
     // value so the provider returns a natural overflow error which triggers
     // compaction (compactionAttempts guard stops the loop eventually).

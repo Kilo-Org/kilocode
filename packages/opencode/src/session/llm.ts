@@ -142,6 +142,7 @@ const live: Layer.Layer<
         tools: base.tools,
         configured: base.params.maxOutputTokens,
         contextTokens: usage?.normalized,
+        contextMedia: usage?.media,
       })
       if (
         preflight &&
