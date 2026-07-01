@@ -58,7 +58,9 @@ export function SubagentFooter() {
 
     const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
     const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
-    const cost = session()?.cost ?? 0
+    // kilocode_change start - message costs update live while session totals are refreshed lazily
+    const cost = msg.reduce((sum, item) => sum + (item.role === "assistant" ? (item.cost ?? 0) : 0), 0)
+    // kilocode_change end
 
     const money = new Intl.NumberFormat("en-US", {
       style: "currency",
