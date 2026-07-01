@@ -245,6 +245,32 @@ const fileError: ToolPart = {
   },
 }
 
+const repeatedEdits = [1, 2, 3].map(
+  (index): ToolPart => ({
+    id: `part-edit-${index}`,
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: `call-edit-${index}`,
+    tool: "edit",
+    state: {
+      status: "completed",
+      input: { filePath: "packages/opencode/src/kilocode/notebook/protocol.ts" },
+      output: "",
+      title: "Edit file",
+      metadata: {
+        filediff: {
+          file: "packages/opencode/src/kilocode/notebook/protocol.ts",
+          additions: index,
+          deletions: 1,
+          patch: "@@ -1 +1 @@\n-old\n+new",
+        },
+      },
+      time: { start: now - 5000 + index * 500, end: now - 4800 + index * 500 },
+    },
+  }),
+)
+
 const textPart: TextPart = {
   id: "part-text-001",
   sessionID: SESSION_ID,
@@ -735,6 +761,18 @@ export const MultipleToolCalls: Story = {
   name: "Multiple Tool Calls",
   render: () => {
     const data = dataWith([readCompleted, globCompleted, textPart])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const RepeatedFileEdits: Story = {
+  name: "Repeated File Edits",
+  render: () => {
+    const data = dataWith(repeatedEdits)
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />

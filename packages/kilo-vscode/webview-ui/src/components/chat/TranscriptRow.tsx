@@ -76,6 +76,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               message={row().message as unknown as SDKAssistantMessage}
               parts={row().parts as unknown as SDKPart[]}
               showAssistantCopyPartID={row().copy}
+              animateEdits={row().live}
               feedback={{
                 enabled: feedback.telemetryEnabled(),
                 rating: feedback.getRating(row().message.id),

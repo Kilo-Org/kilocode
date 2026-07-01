@@ -7,7 +7,7 @@
  * Active questions render inline via QuestionDock; permissions are in the bottom dock.
  */
 
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, onCleanup, type JSX } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
@@ -27,6 +27,7 @@ import { snapshotProgress } from "../../context/session-utils"
 import { planDisplayPath } from "../../utils/plan-path"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
+import { bundleEdits } from "./edit-bundles"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
@@ -122,6 +123,7 @@ interface AssistantMessageProps {
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
+  animateEdits?: boolean
 }
 
 type ToolStateProps = {
@@ -179,6 +181,31 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
   )
 }
 
+function EditBundleMotion(props: { id: string; count: number; enabled?: boolean; children: JSX.Element }) {
+  let ref: HTMLDivElement | undefined
+  let prior = props.id
+  createEffect(() => {
+    const id = props.id
+    if (id === prior) return
+    prior = id
+    if (!props.enabled || props.count < 2 || !ref || window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+      return
+    const motion = ref.animate(
+      [
+        { opacity: 0, transform: "translateY(10px)" },
+        { opacity: 1, transform: "translateY(0)" },
+      ],
+      { duration: 180, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
+    )
+    onCleanup(() => motion.cancel())
+  })
+  return (
+    <div ref={ref} data-component="edit-bundle-motion">
+      {props.children}
+    </div>
+  )
+}
+
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
@@ -198,94 +225,100 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       return !!matchToolRequest(part, "question", session.questions())
     })
   })
+  const grouped = createMemo(() => {
+    const bundles = bundleEdits(parts())
+    return {
+      keys: bundles.map((bundle) => bundle.key),
+      items: new Map(bundles.map((bundle) => [bundle.key, bundle] as const)),
+    }
+  })
 
   return (
     <>
-      <For each={parts()}>
-        {(part) => {
-          // Upstream PART_MAPPING["tool"] returns null for todowrite/todoread,
-          // so we detect them here and render via ToolRegistry directly.
-          const isUpstreamSuppressed =
-            part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
-
-          // Active question tool parts render the interactive QuestionDock inline
-          const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
-
-          // Active suggestion tool parts render the interactive SuggestBar inline
-          const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
+      <For each={grouped().keys}>
+        {(key) => {
+          const bundle = createMemo(() => grouped().items.get(key)!)
+          const part = createMemo(() => bundle().part)
+          const suppressed = createMemo(
+            () => part().type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part() as ToolPart).tool),
+          )
+          const activeQuestion = createMemo(() => matchToolRequest(part(), "question", session.questions()))
+          const activeSuggestion = createMemo(() => matchToolRequest(part(), "suggest", session.suggestions()))
           const bash = createMemo(() => {
-            if (part.type !== "tool") return
-            const tool = part as unknown as ToolPart
-            if (tool.tool !== "bash") return
-            if (tool.state?.status === "error") return
-            return part
+            if (part().type !== "tool") return
+            const tool = part() as unknown as ToolPart
+            if (tool.tool !== "bash" || tool.state?.status === "error") return
+            return tool
           })
           const planExit = createMemo(() => {
-            if (!planExitInfo(part)) return
-            return part as unknown as ToolPart
+            if (!planExitInfo(part())) return
+            return part() as unknown as ToolPart
           })
 
           return (
             <Show
               when={
-                isUpstreamSuppressed ||
+                suppressed() ||
                 activeQuestion() ||
                 activeSuggestion() ||
                 bash() ||
                 planExit() ||
-                PART_MAPPING[part.type]
+                PART_MAPPING[part().type]
               }
             >
-              <div data-component="tool-part-wrapper" data-part-type={part.type}>
-                <Show
-                  when={activeQuestion()}
-                  fallback={
-                    <Show
-                      when={activeSuggestion()}
-                      fallback={
-                        <Show
-                          when={planExit()}
-                          fallback={
-                            <Show
-                              when={bash()}
-                              fallback={
-                                <Show
-                                  when={isUpstreamSuppressed}
-                                  fallback={
-                                    <Part
-                                      part={part}
-                                      message={props.message as SDKMessage}
-                                      showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      defaultOpen={editOpen(part, edit())}
-                                      reasoningAutoCollapse={display.reasoningAutoCollapse()}
-                                      feedback={props.feedback}
-                                      animate={
-                                        part.type === "tool" &&
-                                        ((part as unknown as ToolPart).state?.status === "pending" ||
-                                          (part as unknown as ToolPart).state?.status === "running")
-                                      }
-                                    />
-                                  }
-                                >
-                                  <TodoToolCard part={part as unknown as ToolPart} />
-                                </Show>
-                              }
-                            >
-                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
-                            </Show>
-                          }
-                        >
-                          {(tp) => <PlanExitCard part={tp()} />}
-                        </Show>
-                      }
-                    >
-                      {(req) => <SuggestBar request={req()} />}
-                    </Show>
-                  }
-                >
-                  {(req) => <QuestionDock request={req()} />}
-                </Show>
-              </div>
+              <EditBundleMotion id={bundle().part.id} count={bundle().count} enabled={props.animateEdits}>
+                <div data-component="tool-part-wrapper" data-part-type={part().type}>
+                  <Show
+                    when={activeQuestion()}
+                    fallback={
+                      <Show
+                        when={activeSuggestion()}
+                        fallback={
+                          <Show
+                            when={planExit()}
+                            fallback={
+                              <Show
+                                when={bash()}
+                                fallback={
+                                  <Show
+                                    when={suppressed()}
+                                    fallback={
+                                      <Part
+                                        part={part()}
+                                        message={props.message as SDKMessage}
+                                        bundleCount={bundle().count}
+                                        showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                        defaultOpen={editOpen(part(), edit())}
+                                        reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                        feedback={props.feedback}
+                                        animate={
+                                          part().type === "tool" &&
+                                          ((part() as unknown as ToolPart).state?.status === "pending" ||
+                                            (part() as unknown as ToolPart).state?.status === "running")
+                                        }
+                                      />
+                                    }
+                                  >
+                                    <TodoToolCard part={part() as unknown as ToolPart} />
+                                  </Show>
+                                }
+                              >
+                                {(tool) => <BashToolCard part={tool()} defaultOpen={open()} />}
+                              </Show>
+                            }
+                          >
+                            {(tool) => <PlanExitCard part={tool()} />}
+                          </Show>
+                        }
+                      >
+                        {(request) => <SuggestBar request={request()} />}
+                      </Show>
+                    }
+                  >
+                    {(request) => <QuestionDock request={request()} />}
+                  </Show>
+                </div>
+              </EditBundleMotion>
             </Show>
           )
         }}
