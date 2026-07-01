@@ -966,6 +966,13 @@ export const dict = {
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель по умолчанию и уровень рассуждения для субагентов task-tool. Оставьте пустым, чтобы унаследовать модель вызывающего агента.",
+  "settings.models.refreshCatalog.title": "Обновить каталог моделей",
+  "settings.models.refreshCatalog.description": "Получить последние модели из models.dev и Kilo Gateway прямо сейчас.",
+  "settings.models.refreshCatalog.button": "Обновить сейчас",
+  "settings.models.refreshCatalog.refreshing": "Обновление…",
+  "settings.models.refreshCatalog.toast.success": "Каталог моделей обновлён",
+  "settings.models.refreshCatalog.toast.error":
+    "Не удалось полностью обновить каталог моделей. Пожалуйста, попробуйте ещё раз.",
   "settings.models.hidePromptTraining.title": "Скрывать модели, обучающиеся на запросах",
   "settings.models.hidePromptTraining.description":
     "Скрывать модели Kilo Gateway, поставщики которых могут использовать ваши запросы для обучения.",

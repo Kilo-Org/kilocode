@@ -911,6 +911,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
     "النموذج الافتراضي وجهد التفكير للوكلاء الفرعيين لـ task-tool. اتركه فارغًا ليرث نموذج الوكيل المستدعي.",
+  "settings.models.refreshCatalog.title": "تحديث كتالوج النماذج",
+  "settings.models.refreshCatalog.description": "احصل الآن على أحدث النماذج من models.dev وبوابة Kilo.",
+  "settings.models.refreshCatalog.button": "تحديث الآن",
+  "settings.models.refreshCatalog.refreshing": "جارٍ التحديث…",
+  "settings.models.refreshCatalog.toast.success": "تم تحديث كتالوج النماذج",
+  "settings.models.refreshCatalog.toast.error": "تعذّر تحديث كتالوج النماذج بالكامل. يرجى المحاولة مرة أخرى.",
   "settings.models.hidePromptTraining.title": "إخفاء النماذج التي تدرّب على المطالبات",
   "settings.models.hidePromptTraining.description":
     "إخفاء نماذج Kilo Gateway التي قد يستخدم مزودوها مطالباتك لأغراض التدريب.",

@@ -30,6 +30,7 @@ import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
+import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
@@ -62,6 +63,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const auth = yield* Auth.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
+    const modelsDev = yield* ModelsDev.Service
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -94,6 +96,21 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         token: getToken(info),
         organizationId: getOrganizationId(info),
       }
+    })
+
+    const refreshCatalog = Effect.fn("KiloGatewayHttpApi.refreshCatalog")(function* () {
+      // Force a models.dev refetch; this also notifies the provider layer to rebuild its catalog.
+      // Note: core ModelsDev.refresh swallows its own transport failures, so we cannot observe a
+      // models.dev outage here — only the gateway re-fetch below produces a reliable success signal.
+      yield* modelsDev.refresh(true)
+      // Drop the gateway caches and re-fetch eagerly so the response reflects whether the gateway
+      // was actually reachable, instead of always reporting success.
+      yield* cache.clear("kilo")
+      yield* cache.clear("apertis")
+      yield* cache.fetch("kilo").pipe(Effect.ignore)
+      yield* cache.fetch("apertis").pipe(Effect.ignore)
+      const failed = yield* cache.failedProviders()
+      return { success: failed.length === 0 }
     })
 
     const modes = Effect.fn("KiloGatewayHttpApi.modes")(function* () {
@@ -519,6 +536,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     return handlers
       .handle("profile", profile)
       .handle("authStatus", authStatus)
+      .handle("refreshCatalog", refreshCatalog)
       .handle("modes", modes)
       .handle("fim", fim)
       .handle("edit", edit)

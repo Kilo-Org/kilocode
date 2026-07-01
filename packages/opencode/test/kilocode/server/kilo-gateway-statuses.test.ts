@@ -6,6 +6,7 @@ import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { Auth } from "../../../src/auth"
 import { KiloGatewayApi, KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { kiloGatewayHandlers } from "../../../src/kilocode/server/httpapi/handlers/kilo-gateway"
+import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { InstanceStore } from "../../../src/project/instance-store"
 import { ModelCache } from "../../../src/provider/model-cache"
 import { Session } from "../../../src/session/session"
@@ -24,6 +25,7 @@ const auth = Layer.mock(Auth.Service)({
 })
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
+const modelsDev = Layer.mock(ModelsDev.Service)({})
 const session = Layer.mock(Session.Service)({})
 const passthroughAuthorization = Layer.succeed(
   Authorization,
@@ -50,6 +52,7 @@ const layer = HttpRouter.serve(
       auth,
       store,
       cache,
+      modelsDev,
       session,
     ]),
   ),

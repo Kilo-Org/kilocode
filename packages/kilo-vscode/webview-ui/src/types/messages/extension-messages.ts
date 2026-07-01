@@ -350,6 +350,12 @@ export interface ProvidersLoadedMessage {
   authStates: Record<string, ProviderAuthState>
 }
 
+export interface ModelCatalogRefreshedMessage {
+  type: "modelCatalogRefreshed"
+  success: boolean
+  error?: string
+}
+
 export interface AgentsLoadedMessage {
   type: "agentsLoaded"
   agents: AgentInfo[]
@@ -1072,6 +1078,7 @@ export type ExtensionMessage =
   | IndexingSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ProvidersLoadedMessage
+  | ModelCatalogRefreshedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
   | AgentRequirementsLoadedMessage

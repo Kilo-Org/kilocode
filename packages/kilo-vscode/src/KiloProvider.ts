@@ -1072,6 +1072,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
           break
+        case "refreshModelCatalog":
+          this.handleRefreshModelCatalog().catch((e) =>
+            console.error("[Kilo New] handleRefreshModelCatalog failed:", e),
+          )
+          break
         case "connectProvider":
         case "authorizeProviderOAuth":
         case "completeProviderOAuth":
@@ -2086,6 +2091,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
     this.providersRefresh = done
     await done
+  }
+
+  private async handleRefreshModelCatalog(): Promise<void> {
+    const client = this.client
+    if (!client) {
+      this.postMessage({ type: "modelCatalogRefreshed", success: false })
+      return
+    }
+    try {
+      const result = await client.kilo.refreshCatalog(
+        { directory: this.getWorkspaceDirectory() },
+        { throwOnError: true },
+      )
+      // Reload providers so the webview reflects the refreshed catalog. fetchAndSendProviders()
+      // swallows its own fetch errors, so we verify it actually produced a fresh providersLoaded
+      // message (it sets cachedProvidersMessage on success) before reporting success.
+      this.cachedProvidersMessage = null
+      await this.fetchAndSendProviders()
+      const reloaded = this.cachedProvidersMessage !== null
+      if (result.data?.success !== true || !reloaded) {
+        // The catalog endpoint or the follow-up provider reload reported a problem. Send a bare
+        // failure and let the webview render a localized message.
+        this.postMessage({ type: "modelCatalogRefreshed", success: false })
+        return
+      }
+      this.postMessage({ type: "modelCatalogRefreshed", success: true })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to refresh model catalog:", error)
+      this.postMessage({ type: "modelCatalogRefreshed", success: false, error: getErrorMessage(error) })
+    }
   }
 
   private async handleProviderAction(msg: Record<string, unknown>): Promise<void> {

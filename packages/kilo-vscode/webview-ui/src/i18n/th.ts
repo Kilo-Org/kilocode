@@ -954,6 +954,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "โมเดลตัวแทนย่อย",
   "settings.providers.subagentModel.description":
     "โมเดลเริ่มต้นและระดับการใช้เหตุผลสำหรับตัวแทนย่อยของ task-tool ปล่อยว่างไว้เพื่อรับค่าโมเดลจากตัวแทนที่เรียก",
+  "settings.models.refreshCatalog.title": "อัปเดตแคตตาล็อกโมเดล",
+  "settings.models.refreshCatalog.description": "ดึงโมเดลล่าสุดจาก models.dev และ Kilo Gateway ทันที",
+  "settings.models.refreshCatalog.button": "อัปเดตทันที",
+  "settings.models.refreshCatalog.refreshing": "กำลังอัปเดต…",
+  "settings.models.refreshCatalog.toast.success": "อัปเดตแคตตาล็อกโมเดลแล้ว",
+  "settings.models.refreshCatalog.toast.error": "ไม่สามารถรีเฟรชแคตตาล็อกโมเดลได้ทั้งหมด โปรดลองอีกครั้ง",
   "settings.models.hidePromptTraining.title": "ซ่อนโมเดลที่ใช้พรอมต์ในการฝึก",
   "settings.models.hidePromptTraining.description": "ซ่อนโมเดล Kilo Gateway ที่ผู้ให้บริการอาจใช้พรอมต์ของคุณในการฝึก",
   "settings.providers.modeModels": "โมเดลต่อโหมด",

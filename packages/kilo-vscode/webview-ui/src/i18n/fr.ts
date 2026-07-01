@@ -978,6 +978,14 @@ export const dict = {
   "settings.providers.subagentModel.title": "Modèle de sous-agent",
   "settings.providers.subagentModel.description":
     "Modèle par défaut et effort de raisonnement pour les sous-agents du task-tool. Laissez vide pour hériter du modèle de l'agent appelant.",
+  "settings.models.refreshCatalog.title": "Mettre à jour le catalogue de modèles",
+  "settings.models.refreshCatalog.description":
+    "Récupérez immédiatement les derniers modèles de models.dev et de Kilo Gateway.",
+  "settings.models.refreshCatalog.button": "Mettre à jour",
+  "settings.models.refreshCatalog.refreshing": "Mise à jour…",
+  "settings.models.refreshCatalog.toast.success": "Catalogue de modèles mis à jour",
+  "settings.models.refreshCatalog.toast.error":
+    "Le catalogue de modèles n'a pas pu être entièrement actualisé. Veuillez réessayer.",
   "settings.models.hidePromptTraining.title": "Masquer les modèles entraînés sur les prompts",
   "settings.models.hidePromptTraining.description":
     "Masquez les modèles Kilo Gateway dont les fournisseurs peuvent utiliser vos prompts à des fins d'entraînement.",

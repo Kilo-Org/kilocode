@@ -251,10 +251,15 @@ export const CloudSessionData = Schema.Struct({
   messages: Schema.Array(CloudMessage),
 })
 
+export const RefreshCatalog = Schema.Struct({
+  success: Schema.Boolean,
+})
+
 export const KiloGatewayPaths = {
   modes: `${root}/modes`,
   profile: `${root}/profile`,
   authStatus: `${root}/auth-status`,
+  refreshCatalog: `${root}/refresh-catalog`,
   fim: `${root}/fim`,
   edit: `${root}/edit`,
   audioTranscriptions: `${root}/audio/transcriptions`,
@@ -291,6 +296,19 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             identifier: "kilo.authStatus",
             summary: "Get Kilo authentication status",
             description: "Check whether a locally stored Kilo credential can authenticate Gateway requests",
+          }),
+        ),
+        HttpApiEndpoint.post("refreshCatalog", KiloGatewayPaths.refreshCatalog, {
+          query: WorkspaceRoutingQuery,
+          success: described(RefreshCatalog, "Catalog refresh result"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.refreshCatalog",
+            summary: "Refresh model catalog",
+            description:
+              "Force an immediate refresh of the models.dev catalog and clear the Kilo Gateway and Apertis " +
+              "model caches so the next provider listing re-fetches fresh data.",
           }),
         ),
         HttpApiEndpoint.get("modes", KiloGatewayPaths.modes, {

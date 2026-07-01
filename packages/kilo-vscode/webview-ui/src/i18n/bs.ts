@@ -969,6 +969,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
     "Zadani model i napor zaključivanja za podagente task-tool-a. Ostavite nepodešeno da naslijedi model pozivnog agenta.",
+  "settings.models.refreshCatalog.title": "Ažuriraj katalog modela",
+  "settings.models.refreshCatalog.description": "Odmah dohvati najnovije modele s models.dev i Kilo Gatewaya.",
+  "settings.models.refreshCatalog.button": "Ažuriraj sada",
+  "settings.models.refreshCatalog.refreshing": "Ažuriranje…",
+  "settings.models.refreshCatalog.toast.success": "Katalog modela je ažuriran",
+  "settings.models.refreshCatalog.toast.error": "Katalog modela nije moguće u potpunosti osvježiti. Pokušajte ponovo.",
   "settings.models.hidePromptTraining.title": "Sakrij modele koji treniraju na promptovima",
   "settings.models.hidePromptTraining.description":
     "Sakrij Kilo Gateway modele čiji pružaoci mogu koristiti vaše promptove za treniranje.",

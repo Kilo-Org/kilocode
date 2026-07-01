@@ -1,12 +1,15 @@
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onCleanup } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
+import { useVSCode } from "../../context/vscode"
 import { parseModelString } from "../../../../src/shared/provider-model"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
@@ -21,6 +24,33 @@ const ModelsTab: Component = () => {
   const language = useLanguage()
   const provider = useProvider()
   const session = useSession()
+  const vscode = useVSCode()
+  const [refreshing, setRefreshing] = createSignal(false)
+
+  onCleanup(
+    vscode.onMessage((message) => {
+      if (message.type !== "modelCatalogRefreshed") return
+      setRefreshing(false)
+      if (message.success) {
+        showToast({
+          variant: "success",
+          icon: "circle-check",
+          title: language.t("settings.models.refreshCatalog.toast.success"),
+        })
+        return
+      }
+      showToast({
+        title: language.t("common.requestFailed"),
+        description: message.error ?? language.t("settings.models.refreshCatalog.toast.error"),
+      })
+    }),
+  )
+
+  function refreshCatalog() {
+    if (refreshing()) return
+    setRefreshing(true)
+    vscode.postMessage({ type: "refreshModelCatalog" })
+  }
 
   const autocompleteProvider = () => {
     const v = settings()["autocomplete.provider"]
@@ -103,6 +133,16 @@ const ModelsTab: Component = () => {
   return (
     <div>
       <Card>
+        <SettingsRow
+          title={language.t("settings.models.refreshCatalog.title")}
+          description={language.t("settings.models.refreshCatalog.description")}
+        >
+          <Button variant="secondary" size="small" icon="reset" disabled={refreshing()} onClick={refreshCatalog}>
+            {refreshing()
+              ? language.t("settings.models.refreshCatalog.refreshing")
+              : language.t("settings.models.refreshCatalog.button")}
+          </Button>
+        </SettingsRow>
         <SettingsRow
           title={language.t("settings.providers.defaultModel.title")}
           description={language.t("settings.providers.defaultModel.description")}

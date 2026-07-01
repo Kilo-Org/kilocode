@@ -177,6 +177,10 @@ export interface RequestProvidersMessage {
   type: "requestProviders"
 }
 
+export interface RefreshModelCatalogMessage {
+  type: "refreshModelCatalog"
+}
+
 export interface CompactRequest {
   type: "compact"
   sessionID: string
@@ -1192,6 +1196,7 @@ export type WebviewMessage =
   | WebviewReadyRequest
   | SelectSourceRequest
   | RequestProvidersMessage
+  | RefreshModelCatalogMessage
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage

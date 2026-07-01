@@ -928,6 +928,12 @@ export const dict = {
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
     "Standardmodell og resonneringsinnsats for task-tool-underagenter. La stå tom for å arve den kallende agentens modell.",
+  "settings.models.refreshCatalog.title": "Oppdater modellkatalog",
+  "settings.models.refreshCatalog.description": "Hent de nyeste modellene fra models.dev og Kilo Gateway nå.",
+  "settings.models.refreshCatalog.button": "Oppdater nå",
+  "settings.models.refreshCatalog.refreshing": "Oppdaterer…",
+  "settings.models.refreshCatalog.toast.success": "Modellkatalog oppdatert",
+  "settings.models.refreshCatalog.toast.error": "Modellkatalogen kunne ikke oppdateres fullstendig. Prøv igjen.",
   "settings.models.hidePromptTraining.title": "Skjul modeller som trener på ledetekster",
   "settings.models.hidePromptTraining.description":
     "Skjul Kilo Gateway-modeller der leverandørene kan bruke ledetekstene dine til trening.",

@@ -175,6 +175,13 @@ export const kiloScenarios: Scenario[] = [
     array(body.modes)
   }),
   http.protected
+    .post("/kilo/refresh-catalog", "kilo.refreshCatalog")
+    .at((ctx) => ({ path: "/kilo/refresh-catalog", headers: ctx.headers() }))
+    .json(200, (body) => {
+      object(body)
+      check(typeof body.success === "boolean", "refresh-catalog should report a boolean success")
+    }),
+  http.protected
     .post("/kilo/fim", "kilo.fim")
     .at((ctx) => ({ path: "/kilo/fim", headers: ctx.headers(), body: { prefix: "const value = ", suffix: "\n" } }))
     .status(401),
