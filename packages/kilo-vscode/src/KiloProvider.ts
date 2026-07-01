@@ -362,7 +362,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private modelUsageSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
   private readonly checkpoints = new Map<string, Promise<void>>()
-  private readonly sessionCreations = new Map<string, Promise<{ sid: string; dir: string }>>()
+  private readonly sessionCreations = new Map<string, Promise<{ sid: string; dir: string } | undefined>>()
   private readonly sandboxTransitions = new Map<string, Promise<void>>()
   private readonly revisions = new Map<string, { id: string; seq: number }>()
   private readonly refreshes = new Map<string, number>()
@@ -2890,12 +2890,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const key = `${draftID ?? context ?? "new"}\0${dir}`
       const pending = this.sessionCreations.get(key)
       if (pending) return pending
+      if (draftID) this.creatingDrafts.add(draftID)
       const creation = (async () => {
         const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, this.client!, dir)
         const { data: session } = await this.client!.session.create(
           { directory: dir, platform: this.opts.platform, metadata },
           { throwOnError: true },
         )
+        if (draftID) this.draftSessions.set(draftID, session.id)
+        if (draftID && this.closedDrafts.delete(draftID)) {
+          this.draftSessions.delete(draftID)
+          await this.client!.session.delete({ sessionID: session.id, directory: dir }, { throwOnError: true })
+          return undefined
+        }
         this.stopCurrentSessionProcesses(session.id)
         this.setCurrentSession(session)
         this.contextSessionID = session.id
@@ -2908,7 +2915,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           draftID,
         })
         return { sid: session.id, dir }
-      })().finally(() => this.sessionCreations.delete(key))
+      })().finally(() => {
+        this.sessionCreations.delete(key)
+        if (draftID) this.creatingDrafts.delete(draftID)
+      })
       this.sessionCreations.set(key, creation)
       return creation
     }
@@ -2918,6 +2928,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.add(sid)
     return { sid, dir }
   }
+
+  /** Drafts closed while their backend session is being created or submitted. */
+  private closedDrafts = new Set<string>()
+  private creatingDrafts = new Set<string>()
+  private draftSessions = new Map<string, string>()
 
   /** Abort controllers for active retry loops, keyed by session ID */
   private retryAbortControllers = new Map<string, AbortController>()
@@ -3028,6 +3043,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
       )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      if (!resolved) return
       if (sandbox) await sandbox
 
       const parts: Array<TextPartInput | FilePartInput> = []
@@ -3042,6 +3058,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const dir = resolved!.dir
       await this.requirements.assertAgentRequirements(agent, dir)
       const editorContext = await this.gatherEditorContext(dir)
+      if (draftID && this.closedDrafts.delete(draftID)) {
+        this.draftSessions.delete(draftID)
+        return
+      }
 
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, sid)
@@ -3114,6 +3134,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.sandboxKey({ sessionID, draftID, agentManagerContext: context, contextDirectory }),
       )
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+      if (!resolved) return
       if (sandbox) await sandbox
 
       if (messageID) {
@@ -3165,9 +3186,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  public acknowledgeDraft(draftID: string, sessionID: string): void {
+    if (this.draftSessions.get(draftID) !== sessionID) return
+    this.draftSessions.delete(draftID)
+    this.closedDrafts.delete(draftID)
+  }
+
+  public async abortSessions(ids: readonly string[]): Promise<void> {
+    const sessions = [...new Set(ids)]
+    const targets = new Set(sessions.filter((sid) => !sid.startsWith("pending:")))
+    for (const draft of sessions.filter((sid) => sid.startsWith("pending:"))) {
+      const sid = this.draftSessions.get(draft)
+      if (!sid && !this.creatingDrafts.has(draft)) continue
+      this.closedDrafts.add(draft)
+      if (sid) targets.add(sid)
+    }
+    await Promise.all([...targets].map((sid) => this.stopSession(sid)))
+  }
+
+  private stopSession(sid: string): Promise<boolean> {
+    this.cancelRetry(sid)
+    const client = this.client
+    if (!client) return Promise.resolve(false)
+    return this.aborts.stop(client, sid, this.getWorkspaceDirectory(sid))
+  }
+
   private async handleAbort(sessionID?: string): Promise<void> {
     const sid = sessionID || this.currentSession?.id
-    if (!this.client || !sid || !(await this.aborts.stop(this.client, sid, this.getWorkspaceDirectory(sid)))) return
+    if (!sid || !(await this.stopSession(sid))) return
     this.sessionStatusMap.set(sid, "idle")
     this.streams.flush(sid)
     this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })

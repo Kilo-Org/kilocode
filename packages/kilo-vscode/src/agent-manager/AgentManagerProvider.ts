@@ -79,6 +79,8 @@ export class AgentManagerProvider implements Disposable {
   private unsubFont: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
+  // Tracks sessions owned by this panel until they are explicitly closed.
+  private panelSessions = new Set<string>()
 
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
    *  Updated synchronously — unlike the session provider's currentSession which depends on
@@ -224,8 +226,9 @@ export class AgentManagerProvider implements Disposable {
   private attachPanel(ctx: PanelContext): void {
     if (this.panel) {
       this.log("Disposing previous panel before attaching new one")
-      this.panel.dispose()
+      const panel = this.panel
       this.panel = undefined
+      panel.dispose()
     }
     this.panel = ctx
 
@@ -248,6 +251,10 @@ export class AgentManagerProvider implements Disposable {
       // have already replaced us via attachPanel.
       if (this.panel === ctx) {
         this.log("Panel disposed")
+        const ids = [...this.panelSessions]
+        if (this.activeSessionId) ids.push(this.activeSessionId)
+        this.panelSessions.clear()
+        void ctx.sessions.abortSessions(ids).catch((err) => this.log("Failed to abort sessions on panel close:", err))
         this.statsPoller.stop()
         this.prBridge.poller.stop()
         this.diffs.stop()
@@ -429,6 +436,11 @@ export class AgentManagerProvider implements Disposable {
 
     if (m.type === "agentManager.persistSession" || m.type === "agentManager.forgetSession") {
       const persist = m.type === "agentManager.persistSession"
+      if (persist && m.draftID) {
+        this.panel?.sessions.acknowledgeDraft(m.draftID, m.sessionId)
+        this.panelSessions.delete(m.draftID)
+        this.panelSessions.add(m.sessionId)
+      }
       void this.stateReady?.then(() => {
         const state = this.getStateManager()
         if (!state) return
@@ -446,6 +458,9 @@ export class AgentManagerProvider implements Disposable {
       m.type === "setSandboxDefault" ||
       ((m.type === "sendMessage" || m.type === "sendCommand" || m.type === "toggleSandbox") && !m.sessionID)
     ) {
+      if (m.type === "sendMessage" || m.type === "sendCommand") {
+        if (m.draftID) this.panelSessions.add(m.draftID)
+      }
       const ctx = typeof m.agentManagerContext === "string" ? m.agentManagerContext : undefined
       const worktree = ctx && ctx !== "local" ? this.getStateManager()?.getWorktree(ctx) : undefined
       if (worktree) {
@@ -497,6 +512,7 @@ export class AgentManagerProvider implements Disposable {
     }
 
     if (m.type === "agentManager.openSessions") {
+      for (const id of m.sessionIDs) this.panelSessions.add(id)
       this.connectionService.registerOpen("agent-manager", m.sessionIDs)
       return null
     }
@@ -1228,22 +1244,22 @@ export class AgentManagerProvider implements Disposable {
     )
   }
 
-  /** Close (remove) a session from its worktree. */
+  /** Stop a session and remove it from Agent Manager. */
   private async onCloseSession(sessionId: string): Promise<null> {
     const state = this.getStateManager()
-    if (!state) return null
-
     const dirs = this.panel?.sessions.getSessionDirectories()
-    const dir = state.directoryFor(sessionId) ?? dirs?.get(sessionId) ?? this.getRoot() ?? process.cwd()
+    const dir = state?.directoryFor(sessionId) ?? dirs?.get(sessionId) ?? this.getRoot() ?? process.cwd()
+    await this.panel?.sessions.abortSessions([sessionId])
+    this.panelSessions.delete(sessionId)
     try {
       await stopSessionProcesses(this.connectionService.getClient(), sessionId, dir)
     } catch (err) {
       this.log("onCloseSession: client not available:", err)
     }
 
-    state.removeSession(sessionId)
+    state?.removeSession(sessionId)
     this.panel?.sessions.clearSessionDirectory(sessionId)
-    this.pushState()
+    if (state) this.pushState()
     this.log(`Closed session ${sessionId}`)
     return null
   }
@@ -1883,7 +1899,9 @@ export class AgentManagerProvider implements Disposable {
     this.run.dispose()
     this.terminalManager.dispose()
     await this.terminalRouter.dispose()
-    this.panel?.dispose()
+    const panel = this.panel
+    this.panel = undefined
+    panel?.dispose()
     this.outputChannel.dispose()
     this.host.dispose()
   }

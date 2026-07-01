@@ -373,6 +373,7 @@ interface CloseSessionIn {
 interface PersistSessionIn {
   type: "agentManager.persistSession"
   sessionId: string
+  draftID?: string
 }
 
 /** Remove a non-worktree session from agent-manager.json. */
