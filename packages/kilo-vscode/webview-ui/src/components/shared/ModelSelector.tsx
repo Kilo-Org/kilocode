@@ -30,6 +30,7 @@ import { useProvider } from "../../context/provider"
 import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import type { ModelSelection } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import {
@@ -138,6 +139,7 @@ export interface ModelSelectorBaseProps {
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const { connected, models, findModel } = useProvider()
   const language = useLanguage()
+  const vscode = useVSCode()
   // Session context is optional — ModelSelectorBase is also used in Settings
   // where SessionProvider may not be mounted.
   const session = useContext(SessionContext)
@@ -153,7 +155,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const [open, setOpen] = createSignal(false)
-  const [expanded, setExpanded] = createSignal(true)
+  const [expanded, setExpanded] = createSignal(vscode.getModelSelectorExpanded())
+  // Persist the user's expand/collapse choice so it is restored on reopen.
+  createEffect(() => vscode.setModelSelectorExpanded(expanded()))
   const [search, setSearch] = createSignal("")
   const [debouncedSearch, setDebouncedSearch] = createSignal("")
   const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)

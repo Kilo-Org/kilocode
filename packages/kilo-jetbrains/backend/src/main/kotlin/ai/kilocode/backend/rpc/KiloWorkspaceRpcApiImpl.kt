@@ -40,6 +40,8 @@ import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.platform.project.ProjectId
+import com.intellij.platform.project.findProjectOrNull
 import com.intellij.navigation.NavigationItem
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.search.GlobalSearchScope
@@ -68,8 +70,8 @@ import kotlin.coroutines.resume
  * Backend implementation of [KiloWorkspaceRpcApi].
  *
  * Routes through the [KiloBackendWorkspaceManager] to get a workspace
- * for the given directory. No [ProjectManager] dependency — any
- * directory (including worktrees) can get a workspace.
+ * for the given directory. Project lookup is only used to resolve the
+ * calling frontend project to the correct backend directory.
  */
 class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
     companion object {
@@ -94,12 +96,15 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
     private val manager: KiloBackendWorkspaceManager
         get() = app.workspaces
 
-    override suspend fun resolveProjectDirectory(hint: String): String {
-        // In monolith mode, find the open project whose basePath matches the hint.
-        // In split mode, the backend's project.basePath is the real directory.
-        val projects = ProjectManager.getInstance().openProjects
-        val match = projects.firstOrNull { !it.isDefault }
-        return match?.basePath ?: hint
+    override suspend fun resolveProjectDirectory(projectId: ProjectId?, hint: String): String {
+        // Experimental IntelliJ ProjectId API: maps the calling frontend project
+        // to the matching backend project across monolith windows and split mode.
+        val base = projectId?.findProjectOrNull()?.takeIf { !it.isDefault }?.basePath
+        if (base != null) return base
+        val bases = ProjectManager.getInstance().openProjects
+            .filter { !it.isDefault }
+            .mapNotNull { it.basePath }
+        return resolveProjectDirectoryHint(hint, bases)
     }
 
     /**
@@ -443,6 +448,17 @@ internal fun normalizeWorkspacePath(path: String): String? {
     } catch (_: Exception) {
         null
     }
+}
+
+internal fun resolveProjectDirectoryHint(hint: String, bases: List<String>): String {
+    val clean = normalizeWorkspacePath(hint)
+    val match = bases.firstOrNull { base ->
+        val path = normalizeWorkspacePath(base)
+        path != null && clean != null && path == clean
+    }
+    if (match != null) return match
+    if (hint.isNotBlank()) return hint
+    return bases.firstOrNull() ?: hint
 }
 
 internal fun workspaceGitAvailable(base: Path, cache: ConcurrentHashMap<String, Boolean> = ConcurrentHashMap()): Boolean {

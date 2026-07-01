@@ -11,9 +11,10 @@ import type { InstanceContext } from "@/project/instance-context"
 import type { SessionID } from "@/session/schema"
 import { Changed } from "./event"
 import * as Network from "./network"
+import * as SandboxState from "./state"
 import { SandboxStore } from "./store"
 
-type Snapshot = SandboxStore.Snapshot
+export type Snapshot = SandboxStore.Snapshot
 
 const snapshots = new Map<string, Snapshot>()
 const locks = new Map<SessionID, { semaphore: Semaphore.Semaphore; refs: number }>()
@@ -137,8 +138,11 @@ const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: Sessi
       const existing = yield* read(directory, sessionID)
       if (existing) return { directory, state: existing }
       const cfg = yield* (yield* Config.Service).get()
+      // A session's create-time kilocode.sandbox toggle takes precedence over the config default, so a
+      // session moved or created with an explicit choice keeps that choice instead of resetting.
+      const chosen = yield* SandboxState.read(sessionID)
       const next = secure({
-        enabled: cfg.experimental?.sandbox ?? false,
+        enabled: chosen?.enabled ?? cfg.experimental?.sandbox ?? false,
         mode: cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny",
         version: 0,
       })
@@ -205,6 +209,11 @@ function change<E, R>(sessionID: SessionID, guard: Effect.Effect<unknown, E, R>)
 
 export const toggle = Effect.fn("SandboxPolicy.toggle")((sessionID: SessionID) => change(sessionID, Effect.void))
 
+/** Stored confinement for a session in an explicit directory, without seeding from config. */
+export const peek = Effect.fn("SandboxPolicy.peek")(function* (directory: string, sessionID: SessionID) {
+  return yield* read(directory, sessionID)
+})
+
 export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
   parentID: SessionID,
   sessionID: SessionID,
@@ -217,10 +226,9 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
       const stored = yield* read(directory, parentID)
       const parent = stored ?? (fallback && secure({ ...fallback, version: 0 }))
       if (!parent) return
-      if (!stored) {
-        yield* Effect.promise(() => SandboxStore.write(directory, parentID, parent))
-        snapshots.set(key(directory, parentID), parent)
-      }
+      // Only persist the parent snapshot when it actually belongs to this directory. A fallback
+      // carries confinement from another directory (e.g. forking into a worktree) and must not be
+      // written back under the parent's key here, or it leaks a phantom parent record.
       yield* locked(
         sessionID,
         Effect.gen(function* () {
