@@ -1246,6 +1246,10 @@ export const dict = {
   "profile.balance.title": "残高",
   "profile.balance.refresh": "残高を更新",
   "profile.action.dashboard": "ダッシュボード",
+  "profile.action.topUp": "チャージ",
+  "profile.pass.subscribe": "Kilo Passに登録してクレジットを追加し、ボーナスを獲得",
+  "profile.pass.bonus": "ボーナス",
+  "profile.pass.renews": "更新",
   "profile.action.logout": "ログアウト",
 
   "settings.section.configuration": "設定",

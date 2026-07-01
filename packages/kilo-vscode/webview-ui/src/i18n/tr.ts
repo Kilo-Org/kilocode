@@ -1202,6 +1202,10 @@ export const dict = {
   "profile.balance.title": "Bakiye",
   "profile.balance.refresh": "Bakiyeyi yenile",
   "profile.action.dashboard": "Kontrol Paneli",
+  "profile.action.topUp": "Bakiye yükle",
+  "profile.pass.subscribe": "Kredi eklemek ve bonus kazanmak için Kilo Pass edinin",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Yenilenir",
   "profile.action.logout": "Çıkış Yap",
 
   "settings.section.configuration": "Yapılandırma",

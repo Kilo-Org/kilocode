@@ -1163,6 +1163,10 @@ export const dict = {
   "profile.balance.title": "Balance",
   "profile.balance.refresh": "Refresh balance",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Top up",
+  "profile.pass.subscribe": "Get Kilo Pass to add credits and earn bonuses",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Renews",
   "profile.action.logout": "Log Out",
 
   "settings.section.configuration": "Configuration",

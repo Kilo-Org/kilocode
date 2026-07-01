@@ -1196,6 +1196,10 @@ export const dict = {
   "profile.balance.title": "الرصيد",
   "profile.balance.refresh": "تحديث الرصيد",
   "profile.action.dashboard": "لوحة التحكم",
+  "profile.action.topUp": "إضافة رصيد",
+  "profile.pass.subscribe": "احصل على Kilo Pass لإضافة رصيد وكسب مكافآت",
+  "profile.pass.bonus": "مكافأة",
+  "profile.pass.renews": "يتجدد",
   "profile.action.logout": "تسجيل الخروج",
 
   "settings.section.configuration": "الإعدادات",

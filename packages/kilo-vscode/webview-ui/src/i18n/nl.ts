@@ -1205,6 +1205,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Saldo vernieuwen",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Opwaarderen",
+  "profile.pass.subscribe": "Schaf Kilo Pass aan om tegoed toe te voegen en bonussen te verdienen",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Vernieuwt",
   "profile.action.logout": "Uitloggen",
 
   "settings.section.configuration": "Configuratie",

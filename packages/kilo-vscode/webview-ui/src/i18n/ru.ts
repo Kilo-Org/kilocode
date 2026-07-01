@@ -1258,6 +1258,10 @@ export const dict = {
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Обновить баланс",
   "profile.action.dashboard": "Панель управления",
+  "profile.action.topUp": "Пополнить",
+  "profile.pass.subscribe": "Оформите Kilo Pass, чтобы добавить кредиты и получать бонусы",
+  "profile.pass.bonus": "Бонус",
+  "profile.pass.renews": "Продлевается",
   "profile.action.logout": "Выйти",
 
   "settings.section.configuration": "Конфигурация",

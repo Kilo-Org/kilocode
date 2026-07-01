@@ -1200,6 +1200,10 @@ export const dict = {
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Оновити баланс",
   "profile.action.dashboard": "Панель керування",
+  "profile.action.topUp": "Поповнити",
+  "profile.pass.subscribe": "Отримайте Kilo Pass, щоб додати кредити та заробляти бонуси",
+  "profile.pass.bonus": "Бонус",
+  "profile.pass.renews": "Поновлюється",
   "profile.action.logout": "Вийти",
 
   "settings.section.configuration": "Конфігурація",

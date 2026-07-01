@@ -1219,6 +1219,10 @@ export const dict = {
   "profile.balance.title": "余额",
   "profile.balance.refresh": "刷新余额",
   "profile.action.dashboard": "控制面板",
+  "profile.action.topUp": "充值",
+  "profile.pass.subscribe": "订阅 Kilo Pass 以添加额度并赚取奖励",
+  "profile.pass.bonus": "奖励",
+  "profile.pass.renews": "续订",
   "profile.action.logout": "退出登录",
 
   "settings.section.configuration": "配置",

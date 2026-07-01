@@ -344,7 +344,7 @@ const live: Layer.Layer<
           })
         },
         async experimental_repairToolCall(failed) {
-          const lower = failed.toolCall.toolName.toLowerCase()
+          const lower = failed.toolCall.toolName.trim().toLowerCase() // kilocode_change
           if (lower !== failed.toolCall.toolName && prepared.tools[lower]) {
             l.info("repairing tool call", {
               tool: failed.toolCall.toolName,
