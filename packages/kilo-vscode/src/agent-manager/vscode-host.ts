@@ -167,6 +167,14 @@ export class VscodeHost implements Host {
     return getWorkspaceRoot()
   }
 
+  autoBranchNaming(): { enabled: boolean; prefix: string } {
+    const cfg = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
+    return {
+      enabled: cfg.get("autoBranchNaming", true),
+      prefix: cfg.get("branchPrefix", ""),
+    }
+  }
+
   showError(msg: string): void {
     void vscode.window.showErrorMessage(msg)
   }

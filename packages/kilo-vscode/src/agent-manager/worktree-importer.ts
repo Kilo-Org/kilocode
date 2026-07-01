@@ -97,6 +97,7 @@ export class WorktreeImporter {
         path: result.path,
         parentBranch: result.parentBranch,
         remote: result.remote,
+        branchOwned: false,
       })
       this.host.push()
 
@@ -149,6 +150,7 @@ export class WorktreeImporter {
         path: result.path,
         parentBranch: result.parentBranch,
         remote: result.remote,
+        branchOwned: false,
       })
       this.host.push()
 
@@ -211,7 +213,7 @@ export class WorktreeImporter {
       }
 
       const base = await manager.resolveBaseBranch()
-      worktree = state.addWorktree({ branch, path, parentBranch: base.branch, remote: base.remote })
+      worktree = state.addWorktree({ branch, path, parentBranch: base.branch, remote: base.remote, branchOwned: false })
       this.host.push()
 
       const session = await this.host.session(path, branch, worktree.id)
@@ -287,6 +289,7 @@ export class WorktreeImporter {
             path: external.path,
             parentBranch: base.branch,
             remote: base.remote,
+            branchOwned: false,
           })
           const session = await this.host.session(external.path, external.branch, worktree.id)
           if (session) {
