@@ -384,12 +384,24 @@ class KiloBackendWorkspaceTest {
         mock.sessions = """[
             {"id":"ses_1","slug":"s","projectID":"p","directory":"/test/project","title":"T","version":"1","time":{"created":1,"updated":1}}
         ]"""
-        val app = setup()
-        val ws = ready(app)
+        val port = mock.start()
+        val http = KiloBackendHttpClients.api(mock.password)
+        val api = DefaultApi(basePath = "http://127.0.0.1:$port", client = http)
+        val events = MutableSharedFlow<SseEvent>()
+        val sessions = KiloBackendSessionManager(scope, log)
+        val manager = KiloBackendWorkspaceManager(scope, sessions, log)
+        sessions.start(api, http, port, events)
+        manager.start(api, http, port, events)
 
-        val result = ws.sessions()
-        assertEquals(1, result.sessions.size)
-        assertEquals("ses_1", result.sessions[0].id)
+        try {
+            val result = manager.get("/test/project").sessions()
+            assertEquals(1, result.sessions.size)
+            assertEquals("ses_1", result.sessions[0].id)
+        } finally {
+            manager.stop()
+            sessions.stop()
+            KiloBackendHttpClients.shutdown(http)
+        }
     }
 
     @Test
