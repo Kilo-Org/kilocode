@@ -596,6 +596,18 @@
   display: none;
 }
 
+.kilo-console .config-top-option-external {
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.kilo-console .config-top-option-external [data-component="icon"] {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-weaker);
+  flex: none;
+}
+
 .kilo-console .config-group-items {
   display: flex;
   flex-direction: column;
