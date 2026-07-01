@@ -52,7 +52,12 @@ export function createCostAlertHandler(
   }
 
   function close(id: string, dismiss: (id: string) => void) {
-    costAlerts.has(id) ? (costAlerts.delete(id), handleQuestionResolved(id)) : dismiss(id)
+    if (costAlerts.has(id)) {
+      costAlerts.delete(id)
+      handleQuestionResolved(id)
+      return
+    }
+    dismiss(id)
   }
 
   return { handleMessage, reply, close }
