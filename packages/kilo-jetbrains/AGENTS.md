@@ -176,6 +176,7 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - Use standard `XDG_*_HOME` env vars for this isolation. Do not introduce custom `KILO_DATA_DIR`, `KILO_GLOBAL_CONFIG_DIR`, `KILO_STATE_DIR`, or `KILO_CACHE_DIR` env vars — the CLI core already respects `XDG_*_HOME` via `xdg-basedir`.
 - The `.kilo-dev/` directory is gitignored and created automatically on first run.
 - The implementation lives in `KiloBackendCliManager.buildEnv()` / `devStorageEnv()`. Tests: `KiloBackendCliManagerEnvTest`.
+- To test the legacy v5 migration wizard locally, run `script/dev/mock-legacy-settings.sh seed` from `packages/kilo-jetbrains/` before launching the isolated IDE. It writes `.kilo-dev/config/kilo/legacy-settings.json`; run `script/dev/mock-legacy-settings.sh clean` to remove it. Use `KILO_CONFIG_DIR=/path/to/config/kilo script/dev/mock-legacy-settings.sh seed` when testing a non-default config directory.
 
 ### Debugging Session Event Logs
 
@@ -190,6 +191,7 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, prepare production CLI binaries, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.
 - **Test version build**: If the user asks for a JetBrains test build, still require a version and use `script/build-version.sh <version> --skip-signing --skip-verification` from `packages/kilo-jetbrains/` so no signing secrets are needed. Add `--skip-clean` only when the user wants a faster incremental test build.
 - **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. Does NOT require CLI binaries.
+- Do not run `java -version` before every JetBrains check; it is slow and Gradle will fail clearly if the configured Java runtime is unusable. Check Java only when diagnosing a Java/Gradle/runtime failure or when the user asks.
 - **Full build**: `bun run build` from `packages/kilo-jetbrains/` (prepares CLI binaries + runs Gradle `buildPlugin`).
 - **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present in `backend/build/generated/cli/`; run `bun run build --prepare-cli` first).
 - **Java checks**: Do not run `java -version` as a routine preflight. Gradle commands already fail clearly when Java is missing or incompatible; check Java only when diagnosing that failure mode.
