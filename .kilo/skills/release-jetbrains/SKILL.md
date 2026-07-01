@@ -163,10 +163,22 @@ bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --versi
 
 Report the Marketplace channel and GitHub Release URL. RC versions publish to the `eap` channel; stable versions publish to the default Marketplace channel.
 
+## Publish Recovery
+
+Use GitHub's built-in rerun when the failed publish workflow is available and the failure clearly happened before Marketplace accepted the version.
+
+Use manual `publish-jetbrains` workflow dispatch when the original run is unavailable, event rerun is inconvenient, or Marketplace accepted the plugin but GitHub Release upload failed. Dispatch from `main` with the merged JetBrains release PR number.
+
+For a clean full publish retry, choose `mode=full-publish` and set `confirm_marketplace_not_accepted=true`. Only use this when Marketplace did not accept the version, such as failures during checkout, validation, install, CLI resource preparation, plugin verification, signing, network preflight, or a Marketplace rejection that did not create a version.
+
+For GitHub Release repair after Marketplace acceptance, choose `mode=github-release-only`. This rebuilds and signs the plugin archive from the immutable release tag, renders the reviewed release notes, skips `publishPlugin`, and uploads or updates the GitHub Release asset.
+
+Do not use `full-publish` after Marketplace has accepted the version. Marketplace publish is not reliably idempotent for an accepted version, and duplicate publish attempts can fail or create confusing release state.
+
 ## Recovery
 
 - If prepare created the tag but failed before creating a PR, rerun prepare for the same version. The existing workflow reuses the tag if it points to the same commit.
 - If a tag points to an unexpected SHA, stop and inspect manually. Do not move or delete release tags casually.
 - If release PR checks fail from an apparent flake, use `gh run rerun <run-id> --failed`, then `gh run watch <run-id> --exit-status` before publishing.
-- If publish fails after merge, rerun the failed workflow only if Marketplace did not already accept the version.
-- If Marketplace succeeds but GitHub Release upload fails, manually create or edit the GitHub Release for `jetbrains/v<version>` using the reviewed changelog.
+- If publish fails after merge before Marketplace acceptance, use a built-in rerun or manual `publish-jetbrains` dispatch with `mode=full-publish` and `confirm_marketplace_not_accepted=true`.
+- If Marketplace succeeds but GitHub Release upload fails, use manual `publish-jetbrains` dispatch with `mode=github-release-only`.
