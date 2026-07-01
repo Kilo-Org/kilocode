@@ -41,6 +41,7 @@ import type { IndexingStatus } from "@kilocode/kilo-indexing/status" // kilocode
 import path from "path"
 import { useKV } from "./kv"
 import { aggregateFailures } from "./aggregate-failures"
+import { KiloTuiLiveCost } from "@/kilocode/cli/cmd/tui/live-cost" // kilocode_change
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -517,6 +518,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     })
 
     event.sync((event) => {
+      // kilocode_change start - keep session cost reactive when step-finish parts change
+      const delta = KiloTuiLiveCost.delta(event, { parts: store.part })
+      if (delta) {
+        const match = Binary.search(store.session, delta.sessionID, (s) => s.id)
+        if (match.found) setStore("session", match.index, "cost", (cost = 0) => cost + delta.cost)
+      }
+
       switch (event.name) {
         case "session.created.1": {
           const info = event.data.info
@@ -648,9 +656,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
       }
-    })
+      // kilocode_change end
+    }) // kilocode_change
 
-    const exit = useExit()
+    const exit = useExit() // kilocode_change
     const args = useArgs()
 
     async function bootstrap(input: { fatal?: boolean } = {}) {
