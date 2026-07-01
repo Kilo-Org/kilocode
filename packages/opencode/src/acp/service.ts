@@ -236,7 +236,7 @@ export function make(input: {
       mcpServers: params.mcpServers,
       model,
       variant: restored.variant ?? selectVariant(snapshot, model, modeId), // kilocode_change
-      modeId,
+      modeId, // kilocode_change
     })
     sessionSnapshots.set(state.id, snapshot)
 
@@ -324,7 +324,7 @@ export function make(input: {
       mcpServers: params.mcpServers ?? [],
       model,
       variant: restored.variant ?? selectVariant(snapshot, model, modeId), // kilocode_change
-      modeId,
+      modeId, // kilocode_change
     })
     sessionSnapshots.set(state.id, snapshot)
 
@@ -389,7 +389,7 @@ export function make(input: {
       mcpServers: params.mcpServers ?? [],
       model,
       variant: restored.variant ?? selectVariant(snapshot, model, modeId), // kilocode_change
-      modeId,
+      modeId, // kilocode_change
     })
     sessionSnapshots.set(state.id, snapshot)
 
