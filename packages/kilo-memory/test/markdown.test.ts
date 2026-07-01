@@ -28,15 +28,27 @@ describe("memory markdown serialization", () => {
   test("upsert replaces a same-key line in the section and creates absent sections", () => {
     const base = `## Facts\n${MemoryMarkdown.line("runtime", "Bun 1.0")}\n`
 
-    const replaced = MemoryMarkdown.upsert({ text: base, section: "Facts", line: MemoryMarkdown.line("runtime", "Bun 1.3") })
+    const replaced = MemoryMarkdown.upsert({
+      text: base,
+      section: "Facts",
+      line: MemoryMarkdown.line("runtime", "Bun 1.3"),
+    })
     expect(replaced.changed).toBe(true)
     expect(MemoryMarkdown.parse(replaced.text)).toEqual([{ section: "Facts", key: "runtime", text: "Bun 1.3" }])
 
-    const added = MemoryMarkdown.upsert({ text: base, section: "Decisions", line: MemoryMarkdown.line("db", "Postgres") })
+    const added = MemoryMarkdown.upsert({
+      text: base,
+      section: "Decisions",
+      line: MemoryMarkdown.line("db", "Postgres"),
+    })
     expect(added.changed).toBe(true)
     expect(MemoryMarkdown.parse(added.text)).toContainEqual({ section: "Decisions", key: "db", text: "Postgres" })
 
-    const noop = MemoryMarkdown.upsert({ text: base, section: "Facts", line: MemoryMarkdown.line("runtime", "Bun 1.0") })
+    const noop = MemoryMarkdown.upsert({
+      text: base,
+      section: "Facts",
+      line: MemoryMarkdown.line("runtime", "Bun 1.0"),
+    })
     expect(noop.changed).toBe(false)
   })
 
@@ -81,7 +93,10 @@ describe("memory markdown serialization", () => {
       MemoryMarkdown.line("a", "three"),
     ].join("\n")
 
-    const result = MemoryMarkdown.remove({ text: doc, match: (entry) => entry.section === "Facts" && entry.key === "a" })
+    const result = MemoryMarkdown.remove({
+      text: doc,
+      match: (entry) => entry.section === "Facts" && entry.key === "a",
+    })
     expect(result.count).toBe(1)
     expect(MemoryMarkdown.parse(result.text)).toEqual([
       { section: "Facts", key: "b", text: "two" },

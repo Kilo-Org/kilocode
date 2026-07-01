@@ -266,11 +266,21 @@ describe("memory capture parsing", () => {
   })
 
   test("verifies duplicate skips and operation duplicates", () => {
-    const items = [{ id: "project.md:repo_tests", text: "repo_tests Run memory tests from packages/opencode." }]
+    const items = [
+      {
+        id: "project.md:Facts:repo_tests",
+        file: "project.md" as const,
+        section: "Facts",
+        key: "repo_tests",
+        text: "repo_tests Run memory tests from packages/opencode.",
+      },
+    ]
     const verified = verifySkips({
       items,
       skipped: [
-        { reason: "duplicate", text: "Run memory tests from packages/opencode." },
+        // Fully scoped to the stored entry → confirmed.
+        { reason: "duplicate", text: "Run memory tests from packages/opencode.", file: "project.md", section: "Facts" },
+        // Unscoped → unverified regardless of any text overlap.
         { reason: "duplicate", text: "New durable workflow preference." },
       ],
     })
@@ -279,29 +289,133 @@ describe("memory capture parsing", () => {
       skipped: verified.skipped,
       ops: [
         { action: "add", file: "project.md", section: "Facts", key: "repo_tests", text: "Run memory tests." },
-        { action: "add", file: "project.md", section: "Facts", key: "new_preference", text: "New durable workflow preference." },
+        {
+          action: "add",
+          file: "project.md",
+          section: "Facts",
+          key: "new_preference",
+          text: "New durable workflow preference.",
+        },
       ],
     })
 
-    expect(verified.skipped[0]?.duplicateOf).toBe("project.md:repo_tests")
-    expect(verified.rescued).toEqual([])
+    expect(verified.skipped[0]?.duplicateOf).toBe("project.md:Facts:repo_tests")
     expect(verified.skipped).toContainEqual({ reason: "unsupported", text: "New durable workflow preference." })
     expect(deduped.ops).toEqual([
-      { action: "add", file: "project.md", section: "Facts", key: "new_preference", text: "New durable workflow preference." },
+      {
+        action: "add",
+        file: "project.md",
+        section: "Facts",
+        key: "new_preference",
+        text: "New durable workflow preference.",
+      },
     ])
-    expect(deduped.skipped.some((item) => item.duplicateOf === "project.md:repo_tests")).toBe(true)
+    expect(deduped.skipped.some((item) => item.duplicateOf === "project.md:Facts:repo_tests")).toBe(true)
+  })
+
+  test("does not pre-skip similar operations from different memory scopes", () => {
+    const filtered = duplicateOps({
+      items: [
+        {
+          id: "corrections.md:Corrections:repo_tests",
+          file: "corrections.md",
+          section: "Corrections",
+          key: "repo_tests",
+          text: "repo_tests Run memory tests from packages/opencode.",
+        },
+      ],
+      skipped: [],
+      ops: [
+        {
+          action: "add",
+          file: "project.md",
+          section: "Facts",
+          key: "repo_tests",
+          text: "Run memory tests from packages/opencode.",
+        },
+      ],
+    })
+
+    expect(filtered.ops).toHaveLength(1)
+    expect(filtered.skipped).toEqual([])
+  })
+
+  test("scopes model-reported duplicate skips to the claimed file/section", () => {
+    const items = [
+      {
+        id: "corrections.md:Corrections:repo_tests",
+        file: "corrections.md" as const,
+        section: "Corrections",
+        key: "repo_tests",
+        text: "repo_tests Run memory tests from packages/opencode.",
+      },
+    ]
+    const verified = verifySkips({
+      items,
+      skipped: [
+        // Claims a duplicate in project.md/Facts, but the only match lives in corrections.md →
+        // unconfirmed, downgraded to advisory instead of confirmed cross-scope.
+        {
+          reason: "duplicate",
+          text: "Run memory tests from packages/opencode.",
+          file: "project.md",
+          section: "Facts",
+        },
+        // Same text, correctly scoped to where the entry actually lives → confirmed.
+        {
+          reason: "duplicate",
+          text: "Run memory tests from packages/opencode.",
+          file: "corrections.md",
+          section: "Corrections",
+        },
+      ],
+    })
+
+    expect(verified.skipped[0]).toMatchObject({ reason: "unsupported" })
+    expect(verified.skipped[1]).toMatchObject({
+      reason: "duplicate",
+      duplicateOf: "corrections.md:Corrections:repo_tests",
+    })
+  })
+
+  test("does not confirm a duplicate skip scoped to a file without a section", () => {
+    const items = [
+      {
+        id: "project.md:Decisions:repo_tests",
+        file: "project.md" as const,
+        section: "Decisions",
+        key: "repo_tests",
+        text: "repo_tests Run memory tests from packages/opencode.",
+      },
+    ]
+    const verified = verifySkips({
+      items,
+      skipped: [
+        // Claims project.md but not the section; the only match lives in Decisions. Confirming would
+        // risk a cross-section false positive, so it must downgrade to advisory.
+        { reason: "duplicate", text: "Run memory tests from packages/opencode.", file: "project.md" },
+      ],
+    })
+
+    expect(verified.skipped[0]).toEqual({
+      reason: "unsupported",
+      text: "Run memory tests from packages/opencode.",
+    })
   })
 
   test("builds capture notices and guard summaries", () => {
-    const ops = [{ action: "add", file: "environment.md", section: "Commands", key: "tests", text: "Run bun test." }] as const
+    const ops = [
+      { action: "add", file: "environment.md", section: "Commands", key: "tests", text: "Run bun test." },
+    ] as const
 
     expect(notice({ count: 1, ops: [...ops], skipped: [], tokens: 12 })).toMatchObject({
       type: "saved",
       message: "Memory saved · environment.md:tests",
       files: ["environment.md"],
     })
-    expect(notice({ count: 0, ops: [], skipped: [{ reason: "duplicate", duplicateOf: "project.md:tests" }], tokens: 3 }))
-      .toMatchObject({ type: "skipped", skippedCount: 1 })
+    expect(
+      notice({ count: 0, ops: [], skipped: [{ reason: "duplicate", duplicateOf: "project.md:tests" }], tokens: 3 }),
+    ).toMatchObject({ type: "skipped", skippedCount: 1 })
     expect(skipLine([{ reason: "duplicate", duplicateOf: "project.md:tests" }])).toBe(
       "reason=duplicate duplicateOf=project.md:tests",
     )
@@ -346,7 +460,11 @@ describe("memory capture parsing", () => {
     const cases = [
       ["postgres://alice:hunter2@db.local/app", "postgres://[redacted]@db.local/app", "hunter2"],
       ["postgresql://alice:p%40ss@db.local/app", "postgresql://[redacted]@db.local/app", "p%40ss"],
-      ["mongodb+srv://user:secret@cluster.mongodb.net/app", "mongodb+srv://[redacted]@cluster.mongodb.net/app", "secret"],
+      [
+        "mongodb+srv://user:secret@cluster.mongodb.net/app",
+        "mongodb+srv://[redacted]@cluster.mongodb.net/app",
+        "secret",
+      ],
       ["redis://:cache-secret@localhost:6379/0", "redis://[redacted]@localhost:6379/0", "cache-secret"],
       ["https://user:pass@example.com/path", "https://[redacted]@example.com/path", "pass"],
     ] as const

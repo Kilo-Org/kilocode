@@ -115,6 +115,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implement in a fresh session with a clean context",
   "plan.followup.answer.continue": "Continue here",
   "plan.followup.answer.continue.description": "Implement the plan in this session",
+  "plan.followup.answer.keepRefining": "Keep refining",
+  "plan.followup.answer.keepRefining.description": "Keep planning without implementing yet",
 
   // Slow-repo snapshot prompt. The English strings here are the canonical
   // labels sent by the backend and must stay in sync with

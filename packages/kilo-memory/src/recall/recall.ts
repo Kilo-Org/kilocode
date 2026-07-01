@@ -120,9 +120,7 @@ export namespace MemoryRecall {
       input.state.limits.maxSessionFiles,
       input.state.limits.maxSessionLineChars,
     )
-    return items
-      .filter((item) => item.id !== input.currentSessionID && !MemoryDigest.empty(item))
-      .map(digest)
+    return items.filter((item) => item.id !== input.currentSessionID && !MemoryDigest.empty(item)).map(digest)
   }
 
   function score(input: { hit: Hit; keys: string[] }) {

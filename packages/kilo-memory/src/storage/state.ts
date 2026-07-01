@@ -116,7 +116,10 @@ export namespace MemoryState {
       if (MemoryFs.miss(error)) return [] as string[]
       throw error
     })
-    const digests = files.filter((file) => file.endsWith(".md")).sort().reverse()
+    const digests = files
+      .filter((file) => file.endsWith(".md"))
+      .sort()
+      .reverse()
     const sources = [
       paths.project,
       paths.environment,

@@ -112,6 +112,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "クリーンなコンテキストの新しいセッションで実装する",
   "plan.followup.answer.continue": "ここで続行",
   "plan.followup.answer.continue.description": "このセッションで計画を実装する",
+  "plan.followup.answer.keepRefining": "さらに調整する",
+  "plan.followup.answer.keepRefining.description": "まだ実装せずに計画を続ける",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "スナップショットが遅い",

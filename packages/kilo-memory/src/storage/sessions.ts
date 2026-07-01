@@ -132,15 +132,18 @@ export namespace MemorySessions {
       .filter((item) => item.endsWith(".md"))
       .sort()
       .reverse()
-      .reduce(async (prior, file) => {
-        const current = await prior
-        if (current) return current
-        const content = await MemoryFs.read(path.join(listed.paths.sessions, file))
-        if (!content) return
-        const item = parse(file, content, input.max)
-        if (item?.id !== input.sessionID) return
-        return item
-      }, Promise.resolve(undefined as Digest | undefined))
+      .reduce(
+        async (prior, file) => {
+          const current = await prior
+          if (current) return current
+          const content = await MemoryFs.read(path.join(listed.paths.sessions, file))
+          if (!content) return
+          const item = parse(file, content, input.max)
+          if (item?.id !== input.sessionID) return
+          return item
+        },
+        Promise.resolve(undefined as Digest | undefined),
+      )
   }
 
   export async function pruneSessions(root: string, max: number) {

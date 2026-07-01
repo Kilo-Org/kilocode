@@ -161,13 +161,36 @@ const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
 const run = SessionRunState.layer.pipe(Layer.provide(status))
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 
-const processorCreateStarted: Array<() => void> = []
+// kilocode_change start
+const agent: AgentSvc.Info = {
+  name: "build",
+  mode: "primary",
+  native: true,
+  permission: Permission.fromConfig({ "*": "allow" }),
+  model: ref,
+  options: {},
+}
+const fastAgents = Layer.mock(AgentSvc.Service)({
+  get: () => Effect.succeed(agent),
+  list: () => Effect.succeed([agent]),
+  defaultInfo: () => Effect.succeed(agent),
+  defaultAgent: () => Effect.succeed(agent.name),
+  guardRequirements: () => Effect.void,
+})
+
+const processorCreateStarted: Deferred.Deferred<void>[] = []
 const blockingProcessor = Layer.succeed(
   SessionProcessor.Service,
   SessionProcessor.Service.of({
-    create: () => Effect.sync(() => processorCreateStarted.shift()?.()).pipe(Effect.andThen(Effect.never)),
+    create: () =>
+      Effect.gen(function* () {
+        const started = processorCreateStarted.shift()
+        if (started) yield* Deferred.succeed(started, undefined).pipe(Effect.ignore)
+        return yield* Effect.never
+      }),
   }),
 )
+// kilocode_change end
 
 function makePrompt(input?: { processor?: "blocking" }) {
   const deps = Layer.mergeAll(
@@ -175,7 +198,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
-    AgentSvc.defaultLayer,
+    input?.processor === "blocking" ? fastAgents : AgentSvc.defaultLayer, // kilocode_change
     Command.defaultLayer,
     Permission.defaultLayer,
     Plugin.defaultLayer,
@@ -358,14 +381,6 @@ const deferredAsPromise = <A>(deferred: Deferred.Deferred<A>): PromiseLike<A> =>
     return deferredAsPromise(deferred) as PromiseLike<never>
   },
 })
-
-function defer<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void
-  const promise = new Promise<T>((done) => {
-    resolve = done
-  })
-  return { promise, resolve }
-}
 
 const succeedVoid = (deferred: Deferred.Deferred<void>) => {
   Effect.runSync(Deferred.succeed(deferred, void 0).pipe(Effect.ignore))
@@ -1151,10 +1166,12 @@ raceNoLLMServer.instance(
         parts: [{ type: "text", text: "first" }],
       })
 
-      const firstCreate = defer<void>()
-      processorCreateStarted.push(firstCreate.resolve)
+      // kilocode_change start
+      const firstCreate = yield* Deferred.make<void>()
+      processorCreateStarted.push(firstCreate)
       const first = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.promise(() => firstCreate.promise)
+      yield* awaitWithTimeout(Deferred.await(firstCreate), "processor.create did not start for first turn")
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const firstExit = yield* Fiber.await(first)
@@ -1177,10 +1194,12 @@ raceNoLLMServer.instance(
         parts: [{ type: "text", text: "second" }],
       })
 
-      const secondCreate = defer<void>()
-      processorCreateStarted.push(secondCreate.resolve)
+      // kilocode_change start
+      const secondCreate = yield* Deferred.make<void>()
+      processorCreateStarted.push(secondCreate)
       const second = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.promise(() => secondCreate.promise)
+      yield* awaitWithTimeout(Deferred.await(secondCreate), "processor.create did not start for second turn")
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const secondExit = yield* Fiber.await(second)

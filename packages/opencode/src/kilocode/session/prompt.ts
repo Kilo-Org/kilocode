@@ -40,6 +40,10 @@ export namespace KiloSessionPrompt {
     return id === "architect" || name === "plan" || name === "architect"
   }
 
+  function supportsPlanFollowup() {
+    return ["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)
+  }
+
   /**
    * Determines whether the plan follow-up prompt should be shown.
    * Checks if the plan_exit tool was called in the last assistant turn.
@@ -47,7 +51,7 @@ export namespace KiloSessionPrompt {
    */
   export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
-    if (!["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)) return false
+    if (!supportsPlanFollowup()) return false
     const idx = input.messages.findLastIndex((m) => m.info.role === "user")
     return input.messages
       .slice(idx + 1)
@@ -299,7 +303,9 @@ export namespace KiloSessionPrompt {
       info,
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
       "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
-      'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
+      supportsPlanFollowup()
+        ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
+        : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
     ].join("\n")
     add(`<system-reminder>\n${body}\n</system-reminder>`)
   }

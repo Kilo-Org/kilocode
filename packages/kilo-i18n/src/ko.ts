@@ -112,6 +112,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "깨끗한 컨텍스트의 새 세션에서 구현",
   "plan.followup.answer.continue": "여기서 계속하기",
   "plan.followup.answer.continue.description": "이 세션에서 계획 구현",
+  "plan.followup.answer.keepRefining": "계속 다듬기",
+  "plan.followup.answer.keepRefining.description": "아직 구현하지 않고 계획을 계속 진행",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "스냅샷이 느립니다",

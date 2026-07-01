@@ -108,6 +108,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "在具有乾淨上下文的新工作階段中實作",
   "plan.followup.answer.continue": "在此繼續",
   "plan.followup.answer.continue.description": "在本工作階段中實作計畫",
+  "plan.followup.answer.keepRefining": "繼續完善",
+  "plan.followup.answer.keepRefining.description": "繼續規劃，暫不實作",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "快照速度較慢",

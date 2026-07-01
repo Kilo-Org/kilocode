@@ -44,11 +44,7 @@ export namespace Memory {
     return slug || MemorySlug.hash(text, "memory")
   }
 
-  async function injected(input: {
-    root: string
-    index: MemoryIndexer.Result
-    sessionID?: string
-  }) {
+  async function injected(input: { root: string; index: MemoryIndexer.Result; sessionID?: string }) {
     return MemoryFiles.queue(input.root, async () => {
       const state = await MemoryFiles.readState(input.root)
       const next = {
