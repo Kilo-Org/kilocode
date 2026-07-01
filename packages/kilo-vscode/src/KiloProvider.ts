@@ -1497,6 +1497,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // for the busy-session warning on Save.
           if (event.type === "session.status") return true
 
+          // session.deleted must always pass through so the webview can run its cleanup
+          // (messages, parts, stash, todos, permissions, drafts, etc.) — including for
+          // sessions that were never explicitly tracked here (e.g. child sessions
+          // cascade-deleted with the parent, or external CLI deletions). We deliberately
+          // do NOT re-track the deleted id: handleLoadMessages intentionally drops late
+          // responses for sessions that have been pruned, and re-tracking would let an
+          // in-flight messagesLoaded response resurrect transcript state for a session
+          // the webview just cleaned up.
+          if (event.type === "session.deleted") return true
+
           return this.trackedSessionIds.has(sessionId)
         },
         (payload, directory) => {
@@ -1940,6 +1950,37 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Drops every per-session cache entry we hold for the given id. Shared between
+   * the user-initiated delete path (handleDeleteSession, after the backend
+   * confirms) and the SSE session.deleted path (cascaded child deletes and
+   * external CLI/TUI deletes that arrive via the event stream), so both paths
+   * leave trackedSessionIds, sessionDirectories, and the related Maps in the
+   * same state — including currentSession / contextSessionID / focused-session
+   * registration. Without clearing those three, resolveSession() would still
+   * see the deleted id via this.currentSession and the next send would target
+   * a session the backend has already deleted.
+   */
+  private pruneDeletedSession(sessionID: string): void {
+    this.trackedSessionIds.delete(sessionID)
+    this.streams.drop(sessionID)
+    this.visibleTaskStreams.delete(sessionID)
+    this.syncedChildSessions.delete(sessionID)
+    this.sessionDirectories.delete(sessionID)
+    this.aborts.delete(sessionID)
+    this.lastReconciledAt.delete(sessionID)
+    this.checkpoints.delete(sessionID)
+    this.revisions.delete(sessionID)
+    this.refreshes.delete(sessionID)
+    this.sessionStatusMap.delete(sessionID)
+    this.connectionService.pruneSession(sessionID)
+    if (this.currentSession?.id === sessionID) {
+      this.contextSessionID = undefined
+      this.setCurrentSession(null)
+    }
+    if (this.streams.active === sessionID) this.focusSession(undefined)
+  }
+
+  /**
    * Handle deleting a session.
    */
   private async handleDeleteSession(sessionID: string): Promise<void> {
@@ -1955,17 +1996,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
       await stopSessionProcesses(this.client, sessionID, workspaceDir)
       await this.client.session.delete({ sessionID, directory: workspaceDir }, { throwOnError: true })
-      this.trackedSessionIds.delete(sessionID)
-      this.streams.drop(sessionID)
-      this.visibleTaskStreams.delete(sessionID)
-      this.syncedChildSessions.delete(sessionID)
-      this.sessionDirectories.delete(sessionID)
-      this.aborts.delete(sessionID)
-      this.lastReconciledAt.delete(sessionID)
-      this.checkpoints.delete(sessionID)
-      this.revisions.delete(sessionID)
-      this.refreshes.delete(sessionID)
-      this.connectionService.pruneSession(sessionID)
+      this.pruneDeletedSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.contextSessionID = undefined
         this.setCurrentSession(null)
@@ -3624,9 +3655,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // message.part.* events are always session-scoped; drop if session unknown.
     if (!sessionID && isSessionScopedPartEvent(event.type)) return
     if (this.postModelUsageChanged(event, sessionID)) return
-    if (event.type !== "indexing.status" && sessionID && !this.trackedSessionIds.has(sessionID)) {
+    if (
+      event.type !== "indexing.status" &&
+      event.type !== "session.deleted" &&
+      sessionID &&
+      !this.trackedSessionIds.has(sessionID)
+    )
       return
-    }
 
     if (event.type === "session.updated") {
       // Full bus snapshots duplicate sync patches with the same event ID but no sequence metadata.
@@ -3698,6 +3733,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         console.log("[Kilo New] KiloProvider: 🔗 Auto-adopting child session from task tool", { childId })
         void this.handleSyncSession(childId, part.sessionID ?? sessionID)
       }
+    }
+
+    // Drop the per-session caches for deleted sessions so a late
+    // handleLoadMessages response (or any other guarded read) can't resurrect
+    // transcript state for a session the webview just cleaned up. The
+    // prefilter lets session.deleted through without re-tracking, and the
+    // handleEvent guard does the same — this is the matching prune.
+    if (event.type === "session.deleted" && sessionID) {
+      this.pruneDeletedSession(sessionID)
     }
 
     if (!isLegacySyncEvent(event)) {
