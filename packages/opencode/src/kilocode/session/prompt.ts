@@ -15,6 +15,7 @@ import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Permission } from "@/permission"
+import { KiloPermission } from "@/kilocode/permission/lifecycle"
 import { Question } from "@/question"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
@@ -167,16 +168,19 @@ export namespace KiloSessionPrompt {
     agent: Agent.Info
     session: Session.Info
     request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
+    abort: AbortSignal
   }) {
     const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
     const session = yield* input.sessions
       .get(input.session.id)
       .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
-    yield* input.permission.ask({
-      ...input.request,
-      ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
-      hardRuleset: hardPermissions({ agent }),
-    })
+    yield* input.permission
+      .ask({
+        ...input.request,
+        ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
+        hardRuleset: hardPermissions({ agent }),
+      })
+      .pipe(Effect.raceFirst(KiloPermission.abort(input.abort)))
   })
 
   /**
