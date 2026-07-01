@@ -20,6 +20,7 @@ import {
   fetchKiloPassState,
   fetchOrganizationModes,
   fetchProfile,
+  resolveCurrentOrganizationId,
 } from "@kilocode/kilo-gateway"
 import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
@@ -67,11 +68,31 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
-      const currentOrgId = info.accountId ?? null
-      const [profile, balance, kiloPass] = yield* Effect.tryPromise({
+      const persistedOrganizationId = info.accountId ?? null
+      const profile = yield* Effect.tryPromise({
+        try: () => fetchProfile(info.access),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+      const currentOrgId = resolveCurrentOrganizationId(profile, persistedOrganizationId)
+
+      if (persistedOrganizationId && !currentOrgId) {
+        yield* auth
+          .set("kilo", {
+            type: "oauth",
+            refresh: info.refresh,
+            access: info.access,
+            expires: info.expires,
+            ...(info.enterpriseUrl !== undefined && { enterpriseUrl: info.enterpriseUrl }),
+          })
+          .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+        yield* cache.clear("kilo")
+        clearModesCache()
+        yield* store.disposeAll().pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      }
+
+      const [balance, kiloPass] = yield* Effect.tryPromise({
         try: () =>
           Promise.all([
-            fetchProfile(info.access),
             fetchBalance(info.access, currentOrgId ?? undefined),
             fetchKiloPassState(info.access),
           ]),

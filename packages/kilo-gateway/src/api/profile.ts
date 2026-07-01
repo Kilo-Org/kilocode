@@ -40,6 +40,16 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
  */
 export const getKiloProfile = fetchProfile
 
+export function resolveCurrentOrganizationId(
+  profile: KilocodeProfile,
+  currentOrganizationId: string | null,
+): string | null {
+  if (!currentOrganizationId) return null
+  return profile.organizations?.some((organization) => organization.id === currentOrganizationId)
+    ? currentOrganizationId
+    : null
+}
+
 /**
  * Fetch user balance from Kilo API
  * @param token - Authentication token
