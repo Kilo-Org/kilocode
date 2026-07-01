@@ -26,6 +26,7 @@ export function createCostAlertHandler(
           {
             header: t("session.costAlert.header"),
             question: t("session.costAlert.question", params),
+            custom: false,
             options: [{ label: t("session.costAlert.continue"), description: "" }],
           },
         ],
