@@ -2,6 +2,7 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import type { TuiPlugin, TuiPluginApi } from "@kilocode/plugin/tui"
 import type { InternalTuiPlugin } from "../../plugin/internal"
 import { createMemo } from "solid-js"
+import { KiloTuiUsage } from "@/kilocode/cli/cmd/tui/usage" // kilocode_change
 
 const id = "internal:sidebar-context"
 
@@ -12,11 +13,10 @@ const money = new Intl.NumberFormat("en-US", {
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
   const theme = () => props.api.theme.current
-  const msg = createMemo(() => props.api.state.session.messages(props.session_id))
   // kilocode_change start - message costs update live while session totals are refreshed lazily
-  const cost = createMemo(() =>
-    msg().reduce((sum, item) => sum + (item.role === "assistant" ? (item.cost ?? 0) : 0), 0),
-  )
+  const msg = createMemo(() => props.api.state.session.messages(props.session_id))
+  const session = createMemo(() => props.api.state.session.get(props.session_id))
+  const cost = createMemo(() => KiloTuiUsage.cost(msg(), session()?.cost))
   // kilocode_change end
 
   const state = createMemo(() => {

@@ -38,6 +38,7 @@ import { useExit } from "../../context/exit"
 import * as Clipboard from "../../util/clipboard"
 import type { AssistantMessage, FilePart, UserMessage } from "@kilocode/sdk/v2"
 import { TuiEvent } from "../../event"
+import { KiloTuiUsage } from "@/kilocode/cli/cmd/tui/usage" // kilocode_change
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
 import { errorMessage } from "@/util/error"
@@ -350,6 +351,7 @@ export function Prompt(props: PromptProps) {
 
   const usage = createMemo(() => {
     if (!props.sessionID) return
+    const session = sync.session.get(props.sessionID)
     const msg = sync.data.message[props.sessionID] ?? []
     const last = msg.findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)
     if (!last) return
@@ -358,10 +360,10 @@ export function Prompt(props: PromptProps) {
       last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
     if (tokens <= 0) return
 
+    // kilocode_change start - message costs update live while session totals are refreshed lazily
     const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
     const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
-    // kilocode_change start - message costs update live while session totals are refreshed lazily
-    const cost = msg.reduce((sum, item) => sum + (item.role === "assistant" ? (item.cost ?? 0) : 0), 0)
+    const cost = KiloTuiUsage.cost(msg, session?.cost)
     // kilocode_change end
     return {
       context: pct ? `${Locale.number(tokens)} (${pct})` : Locale.number(tokens),
