@@ -265,6 +265,19 @@
         "@typescript/native-preview": "catalog:",
       },
     },
+    "packages/kilo-memory": {
+      "name": "@kilocode/kilo-memory",
+      "version": "7.3.45",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/node22": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/kilo-telemetry": {
       "name": "@kilocode/kilo-telemetry",
       "version": "7.3.63",
@@ -1315,6 +1328,8 @@
     "@kilocode/kilo-indexing": ["@kilocode/kilo-indexing@workspace:packages/kilo-indexing"],
 
     "@kilocode/kilo-jetbrains": ["@kilocode/kilo-jetbrains@workspace:packages/kilo-jetbrains"],
+
+    "@kilocode/kilo-memory": ["@kilocode/kilo-memory@workspace:packages/kilo-memory"],
 
     "@kilocode/kilo-telemetry": ["@kilocode/kilo-telemetry@workspace:packages/kilo-telemetry"],
 

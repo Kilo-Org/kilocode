@@ -10,6 +10,7 @@ import {
   createSignal,
   createMemo,
   createEffect,
+  on,
   onMount,
   onCleanup,
   batch,
@@ -2519,26 +2520,60 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  // Session whose message fetch was deferred because the backend was offline at
+  // selection time. Replayed by the reconnect effect below.
+  let deferredFetch: string | undefined
+
   function selectSession(id: string) {
-    if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot select session: not connected")
-      return
-    }
+    // Cloud preview sessions use a separate keyed path (selectCloudSession).
     if (id.startsWith("cloud:")) {
       console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
       return
     }
     const ready = loaded().has(id)
+    // Reflect the selection locally and synchronously so the chat always tracks
+    // the sidebar/tab selection. These are local signals and need no backend, so
+    // they update even while disconnected. Bailing out here when not connected
+    // froze the chat on the previous session while the side diff (resolved from
+    // the worktree selection) still moved (the reported "only the diff changes").
     setCurrentSessionID(id)
     setDraftSessionID(id)
     setLoading(!ready)
-    if (ready) {
-      vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "focus" })
+    if (!ready) patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
+    // Only the message fetch needs the backend. Defer it while offline and let
+    // the reconnect effect replay it. We defer even for cached sessions: the
+    // load message is what re-focuses the backend (focusSession, contextSessionID,
+    // SSE tracking, active worktree) and runs the reconcile self-heal, so skipping
+    // it would leave the extension focused on the previously selected session.
+    if (!server.isConnected()) {
+      deferredFetch = id
       return
     }
-    patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
-    vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "replace", limit: MESSAGE_PAGE_LIMIT })
+    deferredFetch = undefined
+    loadFocusedMessages(id, ready)
   }
+
+  function loadFocusedMessages(id: string, ready: boolean) {
+    vscode.postMessage(
+      ready
+        ? { type: "loadMessages", sessionID: id, mode: "focus" }
+        : { type: "loadMessages", sessionID: id, mode: "replace", limit: MESSAGE_PAGE_LIMIT },
+    )
+  }
+
+  // Replay a fetch deferred while offline once the backend reconnects. Scoped to
+  // the still-current session so the normal connected path never double-fetches.
+  // Uses the same focus/replace choice as a live selection so a reconnect after
+  // a cached-session switch still re-focuses the backend and reconciles.
+  createEffect(
+    on(server.isConnected, (connected) => {
+      if (!connected) return
+      const id = deferredFetch
+      deferredFetch = undefined
+      if (!id || id !== currentSessionID()) return
+      loadFocusedMessages(id, loaded().has(id))
+    }),
+  )
 
   function selectCloudSession(cloudSessionId: string) {
     if (!server.isConnected()) {

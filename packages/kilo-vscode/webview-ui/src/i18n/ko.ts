@@ -1197,6 +1197,10 @@ export const dict = {
   "profile.balance.title": "잔액",
   "profile.balance.refresh": "잔액 새로고침",
   "profile.action.dashboard": "대시보드",
+  "profile.action.topUp": "충전",
+  "profile.pass.subscribe": "Kilo Pass를 구독하여 크레딧을 추가하고 보너스를 받으세요",
+  "profile.pass.bonus": "보너스",
+  "profile.pass.renews": "갱신",
   "profile.action.logout": "로그아웃",
 
   "settings.section.configuration": "구성",
