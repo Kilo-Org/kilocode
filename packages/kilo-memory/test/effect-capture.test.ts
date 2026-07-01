@@ -171,6 +171,23 @@ describe("MemoryCapture (fake ports)", () => {
   })
 })
 
+describe("MemoryService turn-lock ref-counting", () => {
+  test("keeps one semaphore per session until the last holder drops", () => {
+    const svc = MemoryService.make()
+    const a = svc.turnLock("ses_lock")
+    const b = svc.turnLock("ses_lock")
+    expect(b).toBe(a) // a queued close() shares the same semaphore as the holder it waits on
+    svc.dropLock("ses_lock") // first holder settles; second is still queued/holding
+    const c = svc.turnLock("ses_lock")
+    expect(c).toBe(a) // a later close() must not get a fresh semaphore while a holder remains
+    svc.dropLock("ses_lock")
+    svc.dropLock("ses_lock") // last holder leaves → entry dropped
+    const fresh = svc.turnLock("ses_lock")
+    expect(fresh).not.toBe(a) // only now does a new turn get a new semaphore
+    svc.dropLock("ses_lock")
+  })
+})
+
 describe("MemoryTimers signal ref-counting", () => {
   test("shares one controller per root and drops it once the last capture releases", () => {
     const root = "/kilo-memory/ref-count-root"

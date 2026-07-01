@@ -59,7 +59,6 @@ export namespace MemoryTurn {
 
   export const close = Effect.fn("MemoryTurn.close")(function* (input: Input) {
     const memory = yield* MemoryService.Service
-    let scheduled = false
     yield* memory
       .turnLock(input.sessionID)
       .withPermits(1)(
@@ -89,10 +88,7 @@ export namespace MemoryTurn {
               }),
             ),
           )
-          if (result?.skipped && result.idleFlush) {
-            scheduled = true
-            schedule(input, memory, result.root)
-          }
+          if (result?.skipped && result.idleFlush) schedule(input, memory, result.root)
         }),
       )
       .pipe(
@@ -100,8 +96,8 @@ export namespace MemoryTurn {
           Effect.sync(() => MemoryLog.warn("memory turn-close hook failed", { err: brief(cause) })),
         ),
       )
-    // Release the memoized lock once the turn settles. When a flush was scheduled the timer owns the
-    // drop instead, so the lock survives until that deferred run completes.
-    if (!scheduled) yield* Effect.sync(() => memory.dropLock(input.sessionID))
+    // Always release this holder. A deferred flush takes its own turnLock/dropLock pair when its
+    // timer fires, so exclusivity across overlapping closes is preserved by the ref count.
+    yield* Effect.sync(() => memory.dropLock(input.sessionID))
   })
 }

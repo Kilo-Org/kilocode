@@ -158,7 +158,7 @@ export namespace MemoryService {
   export class Service extends Context.Service<Service, Interface>()("@kilocode/MemoryService") {}
 
   export function make() {
-    const locks = new Map<SessionID, Semaphore.Semaphore>()
+    const locks = new Map<SessionID, { sema: Semaphore.Semaphore; holders: number }>()
     let settle = IDLE_SETTLE_MS
     return Service.of({
       prepare: (input) => bridge(() => KiloMemory.prepare(input)),
@@ -222,18 +222,26 @@ export namespace MemoryService {
         ),
       decide: (input) => bridge(() => MemoryFiles.decide(input.root, input.decision)),
       readSource: (input) => bridge(() => MemoryFiles.readSource(input.root, input.file)),
+      // Ref-counted so every acquirer — in-flight or queued behind `withPermits` — shares one
+      // semaphore. Each call must be balanced by exactly one `dropLock`.
       turnLock: (sessionID) => {
         const prior = locks.get(sessionID)
-        if (prior) return prior
-        const next = Semaphore.makeUnsafe(1)
-        locks.set(sessionID, next)
-        return next
+        if (prior) {
+          prior.holders += 1
+          return prior.sema
+        }
+        const sema = Semaphore.makeUnsafe(1)
+        locks.set(sessionID, { sema, holders: 1 })
+        return sema
       },
-      // Drop a session's memoized lock once its turn has fully settled. Exclusivity is held by the
-      // Semaphore reference for the duration of `withPermits`, so removing the map entry afterwards is
-      // safe and keeps the map from growing unbounded in a long-lived shared backend.
+      // Release one holder. The entry is dropped only when the last holder leaves, so a queued
+      // close() can never be handed a different semaphore than the peer it is waiting on — while the
+      // map still stops growing unbounded in a long-lived shared backend.
       dropLock: (sessionID) => {
-        locks.delete(sessionID)
+        const item = locks.get(sessionID)
+        if (!item) return
+        item.holders -= 1
+        if (item.holders <= 0) locks.delete(sessionID)
       },
       idleSettle: () => settle,
       setIdleSettle: (ms) => {
