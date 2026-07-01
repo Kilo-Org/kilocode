@@ -158,7 +158,7 @@ export const TaskTool = Tool.define(
       KiloTask.validate(next, params.subagent_type)
       // kilocode_change end
 
-      const canTask = KiloTask.nestedTask() // kilocode_change - Kilo disallows subagents spawning subagents
+      const canTask = KiloTask.nestedTask(next.name) // kilocode_change - only Reviewer children can spawn Explore
       const canTodo = next.permission.some((rule) => rule.permission === "todowrite")
 
       const session = params.task_id
@@ -174,7 +174,7 @@ export const TaskTool = Tool.define(
         ? yield* agent.get(parent.agent).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
         : undefined
       // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
-      const caller = yield* agent.get(ctx.agent)
+      const caller = parentAgent ?? (yield* agent.get(ctx.agent))
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
       // kilocode_change end
       // kilocode_change start - refresh current parent restrictions when resuming an existing task session
@@ -189,7 +189,7 @@ export const TaskTool = Tool.define(
             parentAgent,
             subagent: next,
           }),
-          KiloTask.permissions(rules),
+          KiloTask.permissions(rules, canTask),
         )
         session.permission = permission
         yield* sessions.setPermission({ sessionID: session.id, permission })
@@ -202,6 +202,7 @@ export const TaskTool = Tool.define(
         (yield* sessions.create({
           parentID: ctx.sessionID,
           title: params.description + ` (@${next.name} subagent)`,
+          agent: next.name, // kilocode_change - persist child target for inherited permissions
           platform, // kilocode_change
           // kilocode_change start - dedupe inherited restrictions before child prompt toggles persist
           permission: KiloTask.merge(
@@ -215,7 +216,7 @@ export const TaskTool = Tool.define(
               action: "allow" as const,
               permission: item,
             })) ?? [],
-            KiloTask.permissions(rules),
+            KiloTask.permissions(rules, canTask),
           ),
           // kilocode_change end
         }))

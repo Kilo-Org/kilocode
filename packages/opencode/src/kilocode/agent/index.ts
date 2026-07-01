@@ -8,12 +8,16 @@ import type { Info as AgentInfo } from "../../agent/agent"
 import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+import { Wildcard } from "@/util/wildcard"
 import { Flag } from "@opencode-ai/core/flag/flag"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
+import PROMPT_REVIEWER from "./prompt/reviewer.txt"
+
+export const REVIEWER_AGENT = "kilo-reviewer"
 
 export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "ask",
@@ -57,7 +61,7 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "gunzip *": "allow",
 }
 
-export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
+const readBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
   "cat *": "allow",
   "head *": "allow",
@@ -109,6 +113,9 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
+}
+
+const shellDenyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*\n*": "deny",
   "*<(*": "deny",
   "*|*": "deny",
@@ -127,6 +134,39 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "sort * -o *": "deny",
   "sort --output*": "deny",
   "sort * --output*": "deny",
+}
+
+export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
+  ...readBash,
+  ...shellDenyBash,
+}
+
+export const reviewerBash: Record<string, "allow" | "ask" | "deny"> = {
+  "*": "deny",
+  "test -L *": "allow",
+  "readlink *": "allow",
+  "git -c core.quotepath=false diff": "allow",
+  "git -c core.quotepath=false diff *": "allow",
+  "git ls-files --others --exclude-standard": "allow",
+  "git log *..HEAD --oneline": "allow",
+  "git merge-base HEAD *": "allow",
+  "git rev-parse --abbrev-ref HEAD": "allow",
+  "git show-ref --verify --quiet refs/heads/*": "allow",
+  "git show-ref --verify --quiet refs/remotes/*": "allow",
+  "git status --short": "allow",
+  "gh pr view *": "allow",
+  "gh pr diff *": "allow",
+  "git --output*": "deny",
+  "git * --output*": "deny",
+  "git * -o *": "deny",
+  "git * -o*": "deny",
+  "git --ext-diff*": "deny",
+  "git * --ext-diff*": "deny",
+  "git --output-indicator*": "deny",
+  "git * --output-indicator*": "deny",
+  "gh pr view --web*": "deny",
+  "gh pr view * --web*": "deny",
+  ...shellDenyBash,
 }
 
 function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
@@ -211,6 +251,72 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
   })
 }
 
+function reviewerGuard() {
+  return Permission.fromConfig({
+    "*": "deny",
+    bash: reviewerBash,
+    read: {
+      "*": "allow",
+      "*.env": "ask",
+      "*.env.*": "ask",
+      "*.env.example": "allow",
+    },
+    grep: "allow",
+    glob: "allow",
+    list: "allow",
+    skill: "allow",
+    webfetch: "allow",
+    websearch: "allow",
+    codebase_search: "allow",
+    semantic_search: "allow",
+    external_directory: {
+      [Truncate.GLOB]: "allow",
+    },
+    task: {
+      "*": "deny",
+      explore: "allow",
+    },
+    edit: "deny",
+    question: "deny",
+    suggest: "deny",
+  })
+}
+
+const reviewerTools = [
+  "bash",
+  "read",
+  "grep",
+  "glob",
+  "list",
+  "skill",
+  "webfetch",
+  "websearch",
+  "codebase_search",
+  "semantic_search",
+  "external_directory",
+  "task",
+  "edit",
+  "question",
+  "suggest",
+]
+
+function reviewerUser(user: Permission.Ruleset, guard: Permission.Ruleset) {
+  return user.flatMap((rule) => {
+    const tools = reviewerTools.filter((tool) => Wildcard.match(tool, rule.permission))
+    if (!tools.length) return []
+    if (rule.permission === "*") {
+      if (rule.action === "allow") return []
+      return tools
+        .filter((tool) => rule.action === "deny" || Permission.evaluate(tool, rule.pattern, guard).action === "allow")
+        .map((permission) => ({ ...rule, permission }))
+    }
+    if (rule.action === "allow") return []
+    if (rule.action === "deny") return [rule]
+    if (tools.every((tool) => Permission.evaluate(tool, rule.pattern, guard).action !== "deny")) return [rule]
+    return []
+  })
+}
+
 // Generate per-server MCP wildcard rules that allow MCP tools with user approval.
 export function getMcpRules(cfg: Config.Info): Record<string, "allow" | "ask" | "deny"> {
   const rules: Record<string, "allow" | "ask" | "deny"> = {}
@@ -259,6 +365,7 @@ export function resolveKey(name: string): string {
 export function preprocessConfig<T>(agentConfig: Record<string, T>): Record<string, T> {
   const result: Record<string, T> = {}
   for (const [key, value] of Object.entries(agentConfig)) {
+    if (key === REVIEWER_AGENT) continue
     result[key === "build" ? "code" : key] = value
   }
   return result
@@ -488,6 +595,19 @@ export function patchAgents(
     permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
     mode: "primary",
     native: true,
+  }
+
+  const reviewer = reviewerGuard()
+  agents[REVIEWER_AGENT] = {
+    name: REVIEWER_AGENT,
+    displayName: "Reviewer",
+    description: "High-signal read-only review agent that delegates only to Explore.",
+    prompt: PROMPT_REVIEWER,
+    options: {},
+    permission: Permission.merge(defaults, reviewer, reviewerUser(user, reviewer)),
+    mode: "subagent",
+    native: true,
+    hidden: true,
   }
 
   hardenSystemAgents(agents)
