@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Update TUI session cost and usage displays as soon as assistant usage changes.
+Update TUI session cost displays as soon as assistant usage changes.

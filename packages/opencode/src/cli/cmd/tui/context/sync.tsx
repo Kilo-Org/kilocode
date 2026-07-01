@@ -41,6 +41,7 @@ import type { IndexingStatus } from "@kilocode/kilo-indexing/status" // kilocode
 import path from "path"
 import { useKV } from "./kv"
 import { aggregateFailures } from "./aggregate-failures"
+import { KiloTuiLiveCost } from "@/kilocode/cli/cmd/tui/live-cost" // kilocode_change
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -517,6 +518,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     })
 
     event.sync((event) => {
+      // kilocode_change start - keep session cost reactive when step-finish parts change
+      const delta = KiloTuiLiveCost.delta(event, { parts: store.part })
+      if (delta) {
+        const match = Binary.search(store.session, delta.sessionID, (s) => s.id)
+        if (match.found) setStore("session", match.index, "cost", (cost = 0) => cost + delta.cost)
+      }
+
       switch (event.name) {
         case "session.created.1": {
           const info = event.data.info
@@ -615,21 +623,6 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         case "message.part.updated.1": {
           const part = event.data.part
           const parts = store.part[part.messageID]
-          // kilocode_change start - keep session cost reactive when step-finish parts arrive
-          const previous = (() => {
-            if (!parts) return undefined
-            const match = Binary.search(parts, part.id, (p) => p.id)
-            if (match.found) return parts[match.index]
-            return undefined
-          })()
-          const delta =
-            (part.type === "step-finish" ? part.cost : 0) -
-            (previous?.type === "step-finish" ? previous.cost : 0)
-          if (delta !== 0) {
-            const match = Binary.search(store.session, part.sessionID, (s) => s.id)
-            if (match.found) setStore("session", match.index, "cost", (cost = 0) => cost + delta)
-          }
-          // kilocode_change end
           if (!parts) {
             setStore("part", part.messageID, [part])
             break
@@ -653,13 +646,6 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           if (!parts) break
           const match = Binary.search(parts, event.data.partID, (p) => p.id)
           if (!match.found) break
-          // kilocode_change start - keep session cost reactive when step-finish parts are removed
-          const part = parts[match.index]
-          if (part.type === "step-finish") {
-            const session = Binary.search(store.session, event.data.sessionID, (s) => s.id)
-            if (session.found) setStore("session", session.index, "cost", (cost = 0) => cost - part.cost)
-          }
-          // kilocode_change end
           setStore(
             "part",
             event.data.messageID,
@@ -670,9 +656,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
       }
-    })
+      // kilocode_change end
+    }) // kilocode_change
 
-    const exit = useExit()
+    const exit = useExit() // kilocode_change
     const args = useArgs()
 
     async function bootstrap(input: { fatal?: boolean } = {}) {
