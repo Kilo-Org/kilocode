@@ -48,6 +48,8 @@
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://cli.github.com/>
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
+- <https://cloud-agent-next.kilosessions.ai>
+  <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
 - <https://cloud.digitalocean.com/v1/oauth/authorize>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
@@ -108,6 +110,7 @@
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.ts -->
+  <!-- packages/opencode/src/kilocode/cloud/origin.ts -->
   <!-- packages/opencode/src/mcp/oauth-provider.ts -->
   <!-- packages/opencode/src/session/network.ts -->
 - <https://kilo.ai/>
