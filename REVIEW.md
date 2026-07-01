@@ -35,6 +35,7 @@ Read enough of the surrounding file to actually understand the change — diffs 
 - Race conditions, especially around session/process lifecycle in the CLI and Agent Manager
 - Resource leaks (unclosed file handles, child processes, subscriptions)
 - Inputs that aren't validated where they cross trust boundaries (server routes, IPC, config loading)
+- In `.github/workflows/**` and release/test-infra changes, flag only issues tied to this repo's actual behavior (for example, mismatched `if:` guards on restore/save cache steps or a non-essential reporting job included in a required aggregate gate); don't raise speculative path/default warnings when the workflow or observed runs already verify the behavior.
 
 ### 2. Style guide judgment calls
 
@@ -80,7 +81,7 @@ When `Config.Info` in `packages/opencode/src/config/config.ts` gains a new `kilo
 
 For changes under `packages/kilo-vscode/webview-ui/`:
 
-- Significant visual or layout changes should have a Storybook story added under `webview-ui/src/stories/`. Minor tweaks and i18n-only changes don't need one.
+- Significant visual or layout changes should have a Storybook story added under `webview-ui/src/stories/`.
 - Don't ask for locally generated baseline PNGs — those must come from Linux CI.
 
 ## How to comment
