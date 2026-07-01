@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test"
+import { spawnSync } from "node:child_process"
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
 
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".yml", ".yaml", ".toml", ".sh", ".bash", ".zsh"])
@@ -82,6 +85,137 @@ function coveredLines(text: string): Set<number> {
 
   return covered
 }
+
+const SCRIPT = path.resolve(import.meta.dir, "../../../script/check-opencode-annotations.ts")
+
+function exec(root: string, args: string[]) {
+  const out = spawnSync("git", args, { cwd: root, encoding: "utf8" })
+  if (out.status === 0) return
+  throw new Error(out.stderr || out.stdout || `git ${args.join(" ")} failed`)
+}
+
+function repo() {
+  const root = mkdtempSync(path.join(os.tmpdir(), "kilo-annotations-"))
+  mkdirSync(path.join(root, "script"), { recursive: true })
+  mkdirSync(path.join(root, "packages/opencode/src"), { recursive: true })
+  copyFileSync(SCRIPT, path.join(root, "script/check-opencode-annotations.ts"))
+  writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 1\n")
+  exec(root, ["init"])
+  exec(root, ["checkout", "-B", "main"])
+  exec(root, ["add", "."])
+  exec(root, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "init"])
+  exec(root, ["update-ref", "refs/remotes/origin/main", "HEAD"])
+  return root
+}
+
+function check(root: string, args: string[] = []) {
+  return spawnSync(process.execPath, ["run", "script/check-opencode-annotations.ts", ...args], {
+    cwd: root,
+    encoding: "utf8",
+  })
+}
+
+// ─── CLI worktree mode ───────────────────────────────────────────────────────
+
+describe("CLI worktree mode", () => {
+  test("default mode ignores local edits, worktree mode reports them", () => {
+    const root = repo()
+    try {
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 2\n")
+
+      const head = check(root)
+      expect(head.status).toBe(0)
+      expect(head.stdout).toContain("No shared upstream source files changed")
+
+      const local = check(root, ["--worktree"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("packages/opencode/src/shared.ts:1")
+      expect(local.stderr).toContain("export const value = 2")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("worktree mode reports untracked shared source files", () => {
+    const root = repo()
+    try {
+      writeFileSync(path.join(root, "packages/opencode/src/new.ts"), "export const value = 1\n")
+
+      const local = check(root, ["--worktree"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("packages/opencode/src/new.ts:1")
+      expect(local.stderr).toContain("export const value = 1")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("worktree mode reports staged shared source edits", () => {
+    const root = repo()
+    try {
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 4\n")
+      exec(root, ["add", "packages/opencode/src/shared.ts"])
+
+      const local = check(root, ["--worktree"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("packages/opencode/src/shared.ts:1")
+      expect(local.stderr).toContain("export const value = 4")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("worktree mode checks local edits on upstream merge branches", () => {
+    const root = repo()
+    try {
+      exec(root, ["checkout", "-B", "upstream"])
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 2\n")
+      exec(root, ["add", "."])
+      exec(root, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "upstream"])
+      exec(root, ["checkout", "main"])
+      exec(root, ["merge", "--no-ff", "-m", "Merge: upstream opencode", "upstream"])
+
+      const head = check(root)
+      expect(head.status).toBe(0)
+      expect(head.stdout).toContain("Skipping shared upstream annotation check")
+
+      const upstream = check(root, ["--worktree"])
+      expect(upstream.status).toBe(0)
+      expect(upstream.stdout).toContain("No shared upstream source files changed")
+
+      writeFileSync(path.join(root, "packages/opencode/src/shared.ts"), "export const value = 3\n")
+
+      const local = check(root, ["--worktree"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("packages/opencode/src/shared.ts:1")
+      expect(local.stderr).toContain("export const value = 3")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("worktree mode rejects base refs", () => {
+    const root = repo()
+    try {
+      const local = check(root, ["--worktree", "--base", "origin/main"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("--base cannot be used with --worktree")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("unknown arguments fail instead of falling back to default mode", () => {
+    const root = repo()
+    try {
+      const local = check(root, ["--worktre"])
+      expect(local.status).toBe(1)
+      expect(local.stderr).toContain("Unknown argument: --worktre")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
 
 // ─── hasMarker tests ──────────────────────────────────────────────────────────
 
