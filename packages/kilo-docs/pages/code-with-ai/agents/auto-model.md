@@ -9,16 +9,16 @@ Auto Model is a smart routing system that selects an underlying model for each r
 
 | Tier | Best For | Pricing |
 |---|---|---|
+| `kilo-auto/efficient` | Lowest cost per task, with capability matched to difficulty | Paid |
 | `kilo-auto/frontier` | Maximum capability with the best available models | Paid |
 | `kilo-auto/balanced` | Strong performance at a lower cost | Paid |
-| `kilo-auto/efficient` | Lowest cost per task, with capability matched to difficulty | Paid |
 | `kilo-auto/free` | The best free models available | Free |
 
 ## How It Works
 
 1. Select an Auto Model tier (e.g. `kilo-auto/frontier`) in the model dropdown
 2. Start working in any mode (Code, Architect, Debug, etc.)
-3. The system automatically routes your requests to the best model for that task
+3. The system automatically selects the model for your chosen tier
 
 That's it. No configuration needed.
 
@@ -28,20 +28,39 @@ You can see which underlying models are used, as well as the cost, in the expand
 The underlying models behind each Auto Model tier are updated server-side as better options become available or as providers change pricing and availability. The tier you select stays the same; the model it routes to may change over time.
 {% /callout %}
 
-## Tiers
+## Auto Efficient
 
-- **Frontier** — Routes to the latest and most capable paid models. Uses different models for reasoning-heavy tasks (planning, architecture, debugging) versus implementation tasks (coding, building, exploring), pairing the right capability to each type of work.
-- **Balanced** — Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. A good default for most developers who want strong AI assistance without paying frontier prices.
-- **Efficient** — Session-aware routing that classifies the difficulty of each request in real time and routes it to the cheapest model proven accurate enough for that task, based on Kilo's continuously-run benchmarks. Routine work stays lean while harder tasks get a more capable model. Because it watches your session in context, it keeps using a model across related turns and only switches when a cheaper option is clearly worth it. If a routing decision can't be made, it falls back to the Balanced tier, so quality never drops below Balanced.
-- **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
+Session-aware routing that classifies the difficulty of each request in real time and routes it to the cheapest model proven accurate enough for that task, based on Kilo's continuously-run benchmarks. Routine work stays lean while harder tasks get a more capable model. Because it watches your session in context, it keeps using a model across related turns and only switches when a cheaper option is clearly worth it. If a routing decision can't be made, it falls back to the Balanced tier, so quality never drops below Balanced.
 
-### How Auto Efficient routing works
+#### How Auto Efficient routing works
 
 1. Kilo observes your coding session in context
 2. It classifies each task by complexity
 3. It routes to the benchmark-proven best model for that task automatically
 
 You get lean costs on routine work and stronger models when the work demands it — with no manual switching.
+
+#### Further Configuration
+
+You can configure how Auto Efficient ranks models, prioritizing either best accuracy per dollar or best accuracy. For individuals, this is configured in the [Kilo Dashboard](https://app.kilo.ai). For Enterprise customers, this is configured in the **Model Access** tab of the dashboard.
+
+{% image src="/docs/img/auto-model/dashboard-configuration.png" alt="Auto Efficient configuration in the Kilo Dashboard" width="800" /%}
+
+#### Usage Visibility
+
+To view the models used by Auto Efficient, go to the [Kilo Dashboard](https://app.kilo.ai), navigate to the **Usage** tab, and scroll to the **Models** section.
+
+## Auto Frontier
+
+Routes to the latest and most capable paid models. It uses different models for reasoning-heavy tasks such as planning, architecture, and debugging versus implementation tasks such as coding, building, and exploring, pairing the right capability to each type of work.
+
+## Auto Balanced
+
+Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. It is a good default for most developers who want strong AI assistance without paying frontier prices.
+
+## Auto Free
+
+Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side, so you always get the best free option without having to track what is currently available. Quality is lower than paid tiers, and the models may change over time.
 
 {% callout type="warning" title="Data handling for Auto Free" %}
 Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. Do not submit personal or confidential data when using Auto Free. In particular, it may route to NVIDIA's free endpoints.
@@ -53,7 +72,7 @@ For NVIDIA free endpoints (Super/Ultra/etc): Trial use only - do not submit pers
 
 ### Cost Optimization
 
-Automatically uses the best model for a given task, selecting the best balance of cost and capability for a given task. Uses the more economical models for more straight forward tasks, while reserving stronger reasoning models for planning tasks. You get optimal cost-to-capability ratio without thinking about it.
+Automatically uses the best model for a given task, selecting the best balance of cost and capability for a given task. Uses the more economical models for more straightforward tasks, while reserving stronger reasoning models for planning tasks. You get optimal cost-to-capability ratio without thinking about it.
 
 ### No Configuration Required
 
