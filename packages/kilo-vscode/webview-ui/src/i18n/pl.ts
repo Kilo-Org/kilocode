@@ -1208,6 +1208,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Odśwież saldo",
   "profile.action.dashboard": "Panel",
+  "profile.action.topUp": "Doładuj",
+  "profile.pass.subscribe": "Zdobądź Kilo Pass, aby dodać środki i zdobywać bonusy",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Odnawia się",
   "profile.action.logout": "Wyloguj się",
 
   "settings.section.configuration": "Konfiguracja",

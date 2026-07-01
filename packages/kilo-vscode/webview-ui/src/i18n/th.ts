@@ -1233,6 +1233,10 @@ export const dict = {
   "profile.balance.title": "ยอดคงเหลือ",
   "profile.balance.refresh": "รีเฟรชยอดคงเหลือ",
   "profile.action.dashboard": "แดชบอร์ด",
+  "profile.action.topUp": "เติมเงิน",
+  "profile.pass.subscribe": "รับ Kilo Pass เพื่อเพิ่มเครดิตและรับโบนัส",
+  "profile.pass.bonus": "โบนัส",
+  "profile.pass.renews": "ต่ออายุ",
   "profile.action.logout": "ออกจากระบบ",
 
   "settings.section.configuration": "การกำหนดค่า",
