@@ -7,8 +7,6 @@
  * Returns the action to take: select a session by ID, go to local, or do nothing.
  */
 
-import { isRootSession } from "../src/context/session-utils"
-
 /** Sentinel value for the local repo selection. */
 export const LOCAL = "local" as const
 
@@ -16,14 +14,55 @@ type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | {
 
 type SessionLike = { id: string; parentID?: string | null; createdAt: string }
 
+export function isKnownRootSession(session: Pick<SessionLike, "parentID">): boolean {
+  return session.parentID === null
+}
+
+export function keepWorktreeSession(
+  current: string | undefined,
+  worktreeId: string,
+  sessions: Pick<SessionLike, "id" | "parentID">[],
+  managed: { id: string; worktreeId: string | null }[],
+  pending: Record<string, string>,
+): boolean {
+  if (!current) return false
+  const info = sessions.find((item) => item.id === current)
+  if (!info || !isKnownRootSession(info)) return false
+  const state = managed.find((item) => item.id === current)
+  return state?.worktreeId === worktreeId || pending[current] === worktreeId
+}
+
+export function prunePendingWorktreeSessions(
+  pending: Record<string, string>,
+  managed: { id: string }[],
+): Record<string, string> | undefined {
+  const ids = new Set(managed.map((item) => item.id))
+  const entries = Object.entries(pending).filter(([id]) => !ids.has(id))
+  if (entries.length === Object.keys(pending).length) return
+  return Object.fromEntries(entries)
+}
+
 export function filterUnassignedSessions<T extends SessionLike>(
   sessions: T[],
   worktree: Set<string>,
   local: Set<string>,
 ): T[] {
   return [...sessions]
-    .filter((s) => isRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
+    .filter((s) => isKnownRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
+export function admitCreatedSession(
+  session: Pick<SessionLike, "id" | "parentID">,
+  draft: string | undefined,
+  local: string[],
+  worktree: Set<string>,
+): { pending: string | undefined } | undefined {
+  if (!isKnownRootSession(session)) return
+  const pending = draft && local.includes(draft) ? draft : undefined
+  if (!pending && local.includes(session.id)) return
+  if (worktree.has(session.id)) return
+  return { pending }
 }
 
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
@@ -158,31 +197,33 @@ export function remoteSessions(
 
 export function reconcileLocalSessions(
   current: string[],
-  loaded: string[],
+  loaded: Pick<SessionLike, "id" | "parentID">[],
   managed: { id: string; worktreeId: string | null }[],
   isPending: (id: string) => boolean,
 ): { ids: string[]; forget: string[] } | undefined {
-  const seen = new Set(loaded)
+  const seen = new Set(loaded.filter(isKnownRootSession).map((s) => s.id))
+  const children = new Set(loaded.filter((s) => s.parentID !== undefined && !isKnownRootSession(s)).map((s) => s.id))
+  const unknown = new Set(loaded.filter((s) => s.parentID === undefined).map((s) => s.id))
   const local = new Set(managed.filter((s) => !s.worktreeId).map((s) => s.id))
   const worktree = new Set(managed.filter((s) => s.worktreeId).map((s) => s.id))
   const ids: string[] = []
-  const forget: string[] = []
+  const forget = new Set(managed.filter((s) => children.has(s.id)).map((s) => s.id))
 
   for (const id of current) {
     if (isPending(id)) {
       ids.push(id)
       continue
     }
-    if (worktree.has(id)) continue
+    if (children.has(id) || unknown.has(id) || worktree.has(id)) continue
     if (seen.has(id) || local.has(id)) {
       ids.push(id)
       continue
     }
-    forget.push(id)
+    forget.add(id)
   }
 
-  if (ids.length === current.length && forget.length === 0) return undefined
-  return { ids, forget }
+  if (ids.length === current.length && forget.size === 0) return undefined
+  return { ids, forget: [...forget] }
 }
 
 /**

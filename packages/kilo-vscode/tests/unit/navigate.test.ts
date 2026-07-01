@@ -6,6 +6,9 @@ import {
   restoreLocalSessions,
   reconcileLocalSessions,
   filterUnassignedSessions,
+  admitCreatedSession,
+  keepWorktreeSession,
+  prunePendingWorktreeSessions,
   remoteSessions,
   LOCAL,
 } from "../../webview-ui/agent-manager/navigate"
@@ -192,16 +195,16 @@ describe("adjacentHint", () => {
 
 describe("filterUnassignedSessions", () => {
   const at = (day: number) => `2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`
-  const info = (id: string, day: number, parentID?: string | null) => ({
+  const info = (id: string, day: number, parentID: string | null = null) => ({
     id,
     createdAt: at(day),
-    ...(parentID === undefined ? {} : { parentID }),
+    parentID,
   })
 
-  it("keeps root sessions with undefined parent IDs", () => {
-    const result = filterUnassignedSessions([info("old", 1), info("new", 3)], new Set(), new Set())
+  it("filters sparse session updates until ancestry is known", () => {
+    const result = filterUnassignedSessions([{ id: "unknown", createdAt: at(1) }], new Set(), new Set())
 
-    expect(result.map((s) => s.id)).toEqual(["new", "old"])
+    expect(result).toEqual([])
   })
 
   it("keeps root sessions with null parent IDs", () => {
@@ -286,6 +289,59 @@ describe("filterUnassignedSessions", () => {
     const result = filterUnassignedSessions([info("root", 1), info("child", 2, "root")], new Set(), new Set())
 
     expect(result.map((s) => s.id)).toEqual(["root"])
+  })
+})
+
+describe("admitCreatedSession", () => {
+  const local = ["local", "pending"]
+  const worktree = new Set(["worktree"])
+
+  it("admits new root sessions and resolves their pending draft", () => {
+    expect(admitCreatedSession({ id: "root", parentID: null }, "pending", local, worktree)).toEqual({
+      pending: "pending",
+    })
+    expect(admitCreatedSession({ id: "root", parentID: null }, undefined, local, worktree)).toEqual({
+      pending: undefined,
+    })
+  })
+
+  it("rejects subagents and sparse updates before they can become tabs", () => {
+    expect(admitCreatedSession({ id: "unknown" }, undefined, local, worktree)).toBeUndefined()
+    expect(admitCreatedSession({ id: "child", parentID: "root" }, undefined, local, worktree)).toBeUndefined()
+    expect(admitCreatedSession({ id: "child", parentID: "" }, undefined, local, worktree)).toBeUndefined()
+  })
+
+  it("rejects existing local and worktree sessions", () => {
+    expect(admitCreatedSession({ id: "local", parentID: null }, undefined, local, worktree)).toBeUndefined()
+    expect(admitCreatedSession({ id: "worktree", parentID: null }, undefined, local, worktree)).toBeUndefined()
+  })
+})
+
+describe("keepWorktreeSession", () => {
+  const sessions = [{ id: "root", parentID: null }, { id: "child", parentID: "root" }, { id: "sparse" }]
+
+  it("keeps known roots already mapped to the selected worktree", () => {
+    expect(keepWorktreeSession("root", "wt-1", sessions, [{ id: "root", worktreeId: "wt-1" }], {})).toBe(true)
+  })
+
+  it("keeps pending worktree roots before managed state catches up", () => {
+    expect(keepWorktreeSession("root", "wt-1", sessions, [], { root: "wt-1" })).toBe(true)
+  })
+
+  it("does not keep local, sparse, or child sessions", () => {
+    expect(keepWorktreeSession("root", "wt-1", sessions, [{ id: "root", worktreeId: null }], {})).toBe(false)
+    expect(keepWorktreeSession("sparse", "wt-1", sessions, [], { sparse: "wt-1" })).toBe(false)
+    expect(keepWorktreeSession("child", "wt-1", sessions, [], { child: "wt-1" })).toBe(false)
+  })
+})
+
+describe("prunePendingWorktreeSessions", () => {
+  it("drops pending entries once managed state includes them", () => {
+    expect(prunePendingWorktreeSessions({ a: "wt-1", b: "wt-2" }, [{ id: "a" }])).toEqual({ b: "wt-2" })
+  })
+
+  it("returns undefined when pending entries are unchanged", () => {
+    expect(prunePendingWorktreeSessions({ a: "wt-1" }, [{ id: "b" }])).toBeUndefined()
   })
 })
 
@@ -423,6 +479,8 @@ describe("remoteSessions", () => {
 
 describe("reconcileLocalSessions", () => {
   const isPending = (id: string) => id.startsWith("pending-")
+  const loaded = (...ids: string[]) => ids.map((id) => ({ id, parentID: null }))
+  const sparse = (...ids: string[]) => ids.map((id) => ({ id }))
 
   it("keeps restored local sessions through a partial restart refresh", () => {
     const managed = [
@@ -431,7 +489,7 @@ describe("reconcileLocalSessions", () => {
     ]
     const restored = restoreLocalSessions(managed, [], undefined, isPending, (items) => items)?.filter(Boolean) ?? []
 
-    const result = reconcileLocalSessions(restored, ["worktree-1"], managed, isPending)
+    const result = reconcileLocalSessions(restored, loaded("worktree-1"), managed, isPending)
 
     expect(restored).toEqual(["local-1"])
     expect(result).toBeUndefined()
@@ -454,7 +512,7 @@ describe("reconcileLocalSessions", () => {
   it("does not forget persisted local sessions when only worktree sessions loaded", () => {
     const result = reconcileLocalSessions(
       ["local-1"],
-      ["worktree-1"],
+      loaded("worktree-1"),
       [
         { id: "local-1", worktreeId: null },
         { id: "worktree-1", worktreeId: "wt-1" },
@@ -466,10 +524,10 @@ describe("reconcileLocalSessions", () => {
   })
 
   it("waits for managed state before removing sessions restored from webview state", () => {
-    const beforeState = reconcileLocalSessions(["local-1"], ["worktree-1"], [], isPending)
+    const beforeState = reconcileLocalSessions(["local-1"], loaded("worktree-1"), [], isPending)
     const afterState = reconcileLocalSessions(
       ["local-1"],
-      ["worktree-1"],
+      loaded("worktree-1"),
       [
         { id: "local-1", worktreeId: null },
         { id: "worktree-1", worktreeId: "wt-1" },
@@ -482,7 +540,7 @@ describe("reconcileLocalSessions", () => {
   })
 
   it("forgets stale local sessions missing from loaded and managed state", () => {
-    const result = reconcileLocalSessions(["s1", "gone"], ["s1"], [{ id: "s1", worktreeId: null }], isPending)
+    const result = reconcileLocalSessions(["s1", "gone"], loaded("s1"), [{ id: "s1", worktreeId: null }], isPending)
 
     expect(result).toEqual({ ids: ["s1"], forget: ["gone"] })
   })
@@ -490,7 +548,7 @@ describe("reconcileLocalSessions", () => {
   it("evicts worktree sessions that raced into local state without forgetting them", () => {
     const result = reconcileLocalSessions(
       ["local-1", "worktree-1"],
-      ["local-1", "worktree-1"],
+      loaded("local-1", "worktree-1"),
       [
         { id: "local-1", worktreeId: null },
         { id: "worktree-1", worktreeId: "wt-1" },
@@ -499,6 +557,60 @@ describe("reconcileLocalSessions", () => {
     )
 
     expect(result).toEqual({ ids: ["local-1"], forget: [] })
+  })
+
+  it("evicts sparse local sessions until ancestry is known", () => {
+    const result = reconcileLocalSessions(["child"], sparse("child"), [{ id: "child", worktreeId: null }], isPending)
+
+    expect(result).toEqual({ ids: [], forget: [] })
+  })
+
+  it("does not forget sparse managed sessions until ancestry is known", () => {
+    const result = reconcileLocalSessions(
+      ["root"],
+      sparse("child"),
+      [
+        { id: "root", worktreeId: null },
+        { id: "child", worktreeId: "wt-1" },
+      ],
+      isPending,
+    )
+
+    expect(result).toBeUndefined()
+  })
+
+  it("evicts and forgets a subagent leaked into local tabs", () => {
+    const result = reconcileLocalSessions(
+      ["root", "child"],
+      [
+        { id: "root", parentID: null },
+        { id: "child", parentID: "root" },
+      ],
+      [
+        { id: "root", worktreeId: null },
+        { id: "child", worktreeId: null },
+      ],
+      isPending,
+    )
+
+    expect(result).toEqual({ ids: ["root"], forget: ["child"] })
+  })
+
+  it("forgets a subagent leaked into a worktree", () => {
+    const result = reconcileLocalSessions(
+      ["root"],
+      [
+        { id: "root", parentID: null },
+        { id: "child", parentID: "root" },
+      ],
+      [
+        { id: "root", worktreeId: null },
+        { id: "child", worktreeId: "wt-1" },
+      ],
+      isPending,
+    )
+
+    expect(result).toEqual({ ids: ["root"], forget: ["child"] })
   })
 
   it("keeps pending local tabs during reconciliation", () => {
