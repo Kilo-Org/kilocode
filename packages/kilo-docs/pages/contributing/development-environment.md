@@ -240,7 +240,7 @@ Agent limitations, local resource constraints, OOM constraints, or an agent prom
 
 ## Git Hooks
 
-This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks. The current pre-push hook checks the Bun version against root `package.json` and runs the repo-level typecheck.
+This project uses [Husky](https://typicode.github.io/husky/) to manage Git hooks. The current pre-push hook checks the Bun version against root `package.json` and runs the repo-level typecheck. The JetBrains typecheck runs only when the pushed changes can affect the JetBrains plugin, so VS Code-only, docs-only, and changeset-only pushes do not require Java.
 
 ## Troubleshooting
 
