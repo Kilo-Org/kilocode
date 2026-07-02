@@ -65,7 +65,12 @@ export function truncate(str: string, len: number): string {
 
 export function truncateLeft(str: string, len: number): string {
   if (str.length <= len) return str
-  return "…" + str.slice(-(len - 1))
+  // kilocode_change start
+  const keep = len - 1
+  // `slice(-0)` is `slice(0)` and returns the whole string, so at len <= 1 the
+  // tail must be dropped explicitly, otherwise it leaks the entire input.
+  return "…" + (keep > 0 ? str.slice(-keep) : "")
+  // kilocode_change end
 }
 
 export function truncateMiddle(str: string, maxLength: number = 35): string {
@@ -75,7 +80,12 @@ export function truncateMiddle(str: string, maxLength: number = 35): string {
   const keepStart = Math.ceil((maxLength - ellipsis.length) / 2)
   const keepEnd = Math.floor((maxLength - ellipsis.length) / 2)
 
-  return str.slice(0, keepStart) + ellipsis + str.slice(-keepEnd)
+  // kilocode_change start
+  // `slice(-0)` is `slice(0)` and returns the whole string, so when keepEnd is 0
+  // (maxLength 1 or 2) the tail must be dropped explicitly, otherwise the result
+  // is longer than the input instead of truncated.
+  return str.slice(0, keepStart) + ellipsis + (keepEnd > 0 ? str.slice(-keepEnd) : "")
+  // kilocode_change end
 }
 
 export function pluralize(count: number, singular: string, plural: string): string {
