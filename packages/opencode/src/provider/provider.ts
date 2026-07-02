@@ -39,7 +39,6 @@ import {
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
   buildTimeoutSignal,
-  defaultInterleaved,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
@@ -1163,10 +1162,10 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
       },
       interleaved:
         model.interleaved ??
-        defaultInterleaved(
-          model.id,
-          model.provider?.npm ?? provider.npm ?? "@ai-sdk/openai-compatible",
-        ), 
+        ((model.provider?.npm ?? provider.npm ?? "@ai-sdk/openai-compatible") === "@ai-sdk/openai-compatible" &&
+          model.id.includes("step")
+          ? { field: "reasoning_content" as const }
+          : false),
     },
     release_date: model.release_date ?? "",
     variants: {},
@@ -1405,7 +1404,9 @@ export const layer = Layer.effect(
                   model.interleaved ??
                   (existingModel?.capabilities.interleaved
                     ? existingModel.capabilities.interleaved
-                    : defaultInterleaved(apiID, apiNpm)),
+                    : apiNpm === "@ai-sdk/openai-compatible" && (apiID.includes("deepseek") || apiID.includes("step"))
+                      ? { field: "reasoning_content" as const }
+                      : false),
               },
               cost: {
                 input: model?.cost?.input ?? existingModel?.cost?.input ?? 0,

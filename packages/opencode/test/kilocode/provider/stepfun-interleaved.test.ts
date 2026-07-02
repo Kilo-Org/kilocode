@@ -56,6 +56,21 @@ test("StepFun provider does not default when model ID does not include step", ()
   expect(provider.models["custom"].capabilities.interleaved).toBe(false)
 })
 
+test("catalog DeepSeek models do not default to interleaved reasoning_content", () => {
+  const provider = Provider.fromModelsDevProvider({
+    id: "custom-provider",
+    name: "Custom Provider",
+    env: ["CUSTOM_API_KEY"],
+    npm: "@ai-sdk/openai-compatible",
+    api: "https://api.custom.com/v1",
+    models: {
+      "deepseek-r1": base("deepseek-r1"),
+    },
+  })
+
+  expect(provider.models["deepseek-r1"].capabilities.interleaved).toBe(false)
+})
+
 test("catalog model IDs containing step default to interleaved reasoning_content", () => {
   const provider = Provider.fromModelsDevProvider({
     id: "custom-provider",

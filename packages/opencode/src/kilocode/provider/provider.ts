@@ -93,13 +93,6 @@ export function patchConfigModel(cfg: any, existing: any) {
   }
 }
 
-export function defaultInterleaved(model: string, npm: string) {
-  if (npm !== "@ai-sdk/openai-compatible") return false
-  if (model.includes("deepseek")) return { field: "reasoning_content" as const }
-  if (model.includes("step")) return { field: "reasoning_content" as const }
-  return false
-}
-
 // ---------------------------------------------------------------------------
 // Custom loaders (new or fully-replaced loaders)
 // ---------------------------------------------------------------------------
