@@ -571,9 +571,11 @@ export const layer = Layer.effect(
       const source = "path" in options ? options.path : options.source
       const expanded = yield* Effect.promise(() =>
         ConfigVariable.substitute(
+          // kilocode_change start
           "path" in options
             ? { text, type: "path", path: options.path, env, fileScope }
             : { text, type: "virtual", ...options, env, fileScope },
+          // kilocode_change end
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
@@ -589,18 +591,20 @@ export const layer = Layer.effect(
         yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
       }
       return data
-    })
+    }) // kilocode_change
 
+    // kilocode_change start
     const loadFile = Effect.fnUntraced(function* (
       filepath: string,
       env?: Record<string, string>,
-      fileScope?: ConfigVariable.FileScope, // kilocode_change
+      fileScope?: ConfigVariable.FileScope,
     ) {
       log.info("loading", { path: filepath })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
-      return yield* loadConfig(text, { path: filepath }, env, fileScope)
+      return yield* loadConfig(text, { path: filepath }, env, fileScope) // kilocode_change
     })
+    // kilocode_change end
 
     let globalStamp = "" // kilocode_change
 
@@ -849,8 +853,8 @@ export const layer = Layer.effect(
           log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
         }
 
+        // kilocode_change start - also discover kilo.json project files
         if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-          // kilocode_change start - also discover kilo.json project files
           for (const name of ["kilo", "opencode"] as const) {
             for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
               const fileScope = { root: ctx.worktree === "/" ? ctx.directory : ctx.worktree, source: file }
@@ -866,8 +870,8 @@ export const layer = Layer.effect(
               )
             }
           }
-          // kilocode_change end
         }
+        // kilocode_change end
 
         result.agent = result.agent || {}
         result.mode = result.mode || {}
@@ -887,9 +891,9 @@ export const layer = Layer.effect(
           log.debug("loading config from KILO_CONFIG_DIR", { path: Flag.KILO_CONFIG_DIR })
         }
 
+        // kilocode_change start
         const deps: Fiber.Fiber<void>[] = []
 
-        // kilocode_change start
         for (const dir of unique(directories)) {
           const scope = primarySet.has(dir) || containsPath(dir, ctx) ? "local" : undefined
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
