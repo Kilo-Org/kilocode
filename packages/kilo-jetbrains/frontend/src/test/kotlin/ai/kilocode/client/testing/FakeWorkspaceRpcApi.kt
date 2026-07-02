@@ -41,6 +41,8 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var globalConfigDisplayPath = globalConfigPath
     var localConfigExists = true
     var globalConfigExists = true
+    var beforeLocalConfigTarget: (suspend () -> Unit)? = null
+    var beforeGlobalConfigTarget: (suspend () -> Unit)? = null
     val fileCalls = CopyOnWriteArrayList<Pair<String, String>>()
     val searchQueries = CopyOnWriteArrayList<String>()
     val opened = CopyOnWriteArrayList<String>()
@@ -98,12 +100,14 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun localConfigTarget(directory: String): ConfigTargetDto {
         assertNotEdt("localConfigTarget")
         localConfigPathCalls += 1
+        beforeLocalConfigTarget?.invoke()
         return ConfigTargetDto(localConfigPath, localConfigDisplayPath, localConfigExists)
     }
 
     override suspend fun globalConfigTarget(): ConfigTargetDto {
         assertNotEdt("globalConfigTarget")
         globalConfigPathCalls += 1
+        beforeGlobalConfigTarget?.invoke()
         return ConfigTargetDto(globalConfigPath, globalConfigDisplayPath, globalConfigExists)
     }
 

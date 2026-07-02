@@ -10,18 +10,21 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
+import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.components.Service
 import ai.kilocode.log.KiloLog
 import com.intellij.platform.project.ProjectId
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * App-level service that manages [Workspace] instances keyed by directory.
@@ -46,6 +49,8 @@ class KiloWorkspaceService internal constructor(
 
     private val workspaces = ConcurrentHashMap<String, Workspace>()
     internal val localConfig = ConcurrentHashMap<String, ConfigTargetDto>()
+    private val pendingLocal = ConcurrentHashMap.newKeySet<String>()
+    private val pendingGlobal = AtomicBoolean(false)
 
     @Volatile
     internal var globalConfig: ConfigTargetDto? = null
@@ -74,12 +79,16 @@ class KiloWorkspaceService internal constructor(
      * for the same directory share the same instance.
      */
     fun workspace(directory: String): Workspace {
-        return workspaces.getOrPut(directory) {
+        val workspace = workspaces.getOrPut(directory) {
             LOG.info("Creating workspace for $directory")
             val state = stream { state(directory) }
                 .stateIn(cs, SharingStarted.Eagerly, INIT)
             Workspace(directory, state) { reload(directory) }
         }
+        // Refresh on every workspace access so config actions reflect file system changes.
+        refreshLocalConfigTarget(directory)
+        refreshGlobalConfigTarget()
+        return workspace
     }
 
     /**
@@ -178,6 +187,32 @@ class KiloWorkspaceService internal constructor(
         } catch (e: Exception) {
             LOG.warn("global config lookup failed", e)
             globalConfig
+        }
+    }
+
+    fun refreshLocalConfigTarget(directory: String): Job? {
+        if (!pendingLocal.add(directory)) return null
+
+        return cs.launch {
+            try {
+                localConfigTarget(directory)
+            } finally {
+                pendingLocal.remove(directory)
+                ActivityTracker.getInstance().inc()
+            }
+        }
+    }
+
+    fun refreshGlobalConfigTarget(): Job? {
+        if (!pendingGlobal.compareAndSet(false, true)) return null
+
+        return cs.launch {
+            try {
+                globalConfigTarget()
+            } finally {
+                pendingGlobal.set(false)
+                ActivityTracker.getInstance().inc()
+            }
         }
     }
 

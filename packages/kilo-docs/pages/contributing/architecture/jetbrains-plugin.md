@@ -124,7 +124,7 @@ Split mode changes path and UI assumptions:
 
 ## Development checks
 
-JetBrains Kotlin toolchain is Java 21. Check `java -version` before Gradle verification.
+JetBrains Kotlin toolchain is Java 21. Gradle commands report missing or incompatible Java clearly; check Java only when diagnosing that failure mode.
 
 | Check | Command from `packages/kilo-jetbrains/` |
 |---|---|
@@ -132,9 +132,9 @@ JetBrains Kotlin toolchain is Java 21. Check `java -version` before Gradle verif
 | Tests | `./gradlew test` |
 | Full plugin build | `bun run build` |
 | Gradle plugin assembly with prepared CLI binaries | `./gradlew buildPlugin` |
-| Sandbox IDE | `./gradlew runIde` |
-| Split backend sandbox | `./gradlew runIdeBackend` |
-| Split-mode run configs | `./gradlew generateSplitModeRunConfigurations` |
+| Split-mode sandbox | `./gradlew --no-configuration-cache runIdeSplitMode` |
+| Split backend sandbox | `./gradlew --no-configuration-cache runIdeBackend` |
+| Monolithic sandbox IDE | `./gradlew runIde` after `bun run build --prepare-cli` |
 
 Run `Plugin DevKit | Code | Frontend and Backend API Usage` inspection when moving code across split boundary.
 
