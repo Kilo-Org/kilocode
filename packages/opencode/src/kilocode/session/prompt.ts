@@ -20,6 +20,7 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
+import { Global } from "@/kilocode/global"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -284,20 +285,22 @@ export namespace KiloSessionPrompt {
 
     // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
     const ctx = Instance.bind(() => Instance.current)()
-    const plan = Session.plan(input.session, ctx)
+    // const plan = Session.plan(input.session, ctx) // Wrong path of the plan file, for the input of input.session
 
     if (mode(input.agent.name) === "plan") add(NATIVE_PLAN_PROMPT)
-
+    
     const file = input.messages ? PlanFile.latest(input.messages) : undefined
     const saved = PlanFile.resolve(file, ctx)
-    const target = saved ?? plan
     const time = input.session.time.created
-    const dir = path.dirname(target)
-    if (!saved || !(await Filesystem.exists(target))) await ensurePlanDir(dir)
+
+    // Determine the plan directory (don't use Session.plan() for default filename)
+    const planDir = ctx.project.vcs
+      ? path.join(ctx.worktree, ".kilo", "plans")
+      : path.join(Global.Path.data, "plans")
 
     const info = saved
-      ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
-      : `Use any exact plan file path from user or project instructions unchanged. If only a directory is specified, create the plan there; otherwise create it in ${dir}. For generated filenames, use ${time}-<concise-kebab-case-suffix>.md, choosing the suffix from the plan details, for example ${time}-database-cache-plan.md.`
+      ? `The current saved plan file is ${saved}. Read and edit this file when refining the plan.`
+      : `Use any exact plan file path from user or project instructions unchanged. If only a directory is specified, create the plan there; otherwise create it in ${planDir}. For generated filenames, use ${time}-<concise-kebab-case-suffix>.md, choosing the suffix from the plan details, for example ${time}-database-cache-plan.md.`
     const body = [
       "## Plan File",
       info,
