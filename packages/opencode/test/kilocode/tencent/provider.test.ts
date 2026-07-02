@@ -5,8 +5,8 @@ import { overlay, TOKENHUB_PROVIDER_ID, TOKENPLAN_PROVIDER_ID } from "@/kilocode
 const HY3 = "hy3"
 const HY3_PREVIEW = "hy3-preview"
 
-// hy3 CNY prices (1/4/0.25 per 1M) converted to USD at 1 USD = 7 CNY.
-const HY3_COST = { input: 1 / 7, output: 4 / 7, cache_read: 0.25 / 7 }
+// hy3 pricing is hidden and reported as free.
+const HY3_COST = { input: 0, output: 0, cache_read: 0 }
 
 function preview(): Model {
   return {

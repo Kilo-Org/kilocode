@@ -22,15 +22,9 @@ const HY3_PREVIEW_MODEL_ID = "hy3-preview"
 const CONTEXT_WINDOW = 256_000
 const MAX_OUTPUT_TOKENS = 64_000
 
-// hy3 pricing is quoted in CNY (RMB) per 1M tokens: input 1, output 4,
-// cached input 0.25. The catalog/UI/billing layer assumes USD and has no
-// runtime FX support, so convert at a fixed 1 USD = 7 CNY rate.
-const CNY_PER_USD = 7
-const HY3_COST = {
-  input: 1 / CNY_PER_USD,
-  output: 4 / CNY_PER_USD,
-  cache_read: 0.25 / CNY_PER_USD,
-}
+// hy3 pricing is intentionally hidden: report it as free (zero cost) so the UI
+// shows "Free" instead of any per-token price.
+const HY3_COST = { input: 0, output: 0, cache_read: 0 }
 
 // Fallback used only when the live catalog doesn't expose hy3-preview (e.g. when
 // model fetching is disabled or offline). Mirrors the hy3-preview definition so
@@ -53,8 +47,8 @@ function hy3Fallback(): Model {
 
 // Clone hy3-preview into a new `hy3` model so capabilities, limits and (most
 // importantly) the thinking depth stay aligned with hy3-preview. Cost is the
-// deliberate exception: hy3 uses its own pricing (see HY3_COST), so it does not
-// track hy3-preview's cost.
+// deliberate exception: hy3 hides its pricing and is reported as free (see
+// HY3_COST), so it does not track hy3-preview's cost.
 function deriveHy3(preview: Model | undefined): Model {
   if (!preview) return hy3Fallback()
   return { ...preview, id: HY3_MODEL_ID, name: "Hy3", cost: { ...HY3_COST } }
