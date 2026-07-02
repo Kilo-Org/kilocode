@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PrimarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.TodoDto
@@ -40,8 +41,12 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertTrue(view.rowChecked(0))
         assertFalse(view.rowChecked(1))
         assertTrue(view.rowText(0).contains("<s>Done</s>"))
-        assertFalse(view.rowCheckboxOpaque(0))
-        assertFalse(view.rowCheckboxOpaque(1))
+        assertEquals(SessionUiStyle.View.Todo.checkBg(), view.rowCheckBackground(0))
+        assertEquals(SessionUiStyle.View.Todo.checkBg(), view.rowCheckBackground(1))
+        assertEquals(SessionUiStyle.View.Todo.checkFg(), view.rowCheckForeground(0))
+        assertEquals(SessionUiStyle.View.Todo.checkBorder(), view.rowCheckBorder(0))
+        assertEquals("Completed to-do: Done", view.rowCheckAccessibleName(0))
+        assertEquals("Pending to-do: Next", view.rowCheckAccessibleName(1))
     }
 
     fun `test pending rows keep normal foreground`() {
@@ -56,6 +61,21 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         view.applyStyle(style)
 
         assertEquals(style.editorForeground, view.rowForeground(1))
+    }
+
+    fun `test changed rows use same regular font as other rows`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(
+                TodoDto("Changed", "pending", "high", changed = true),
+                TodoDto("Regular", "pending", "medium"),
+            )
+        })
+        val style = SessionEditorStyle.current()
+
+        view.applyStyle(style)
+
+        assertEquals(style.regularFont, view.rowFont(0))
+        assertEquals(style.regularFont, view.rowFont(1))
     }
 
     fun `test todo header title subtitle gap uses standard medium gap`() {
