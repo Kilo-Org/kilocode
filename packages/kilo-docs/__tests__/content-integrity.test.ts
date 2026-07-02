@@ -112,6 +112,17 @@ describe("active documentation integrity", () => {
     expect(fs.existsSync(path.join(pages, "code-with-ai/platforms/vscode/whats-new.md"))).toBe(true)
   })
 
+  it("explains when indexed context is selected by agents", () => {
+    const indexing = fs.readFileSync(path.join(pages, "customize/context/codebase-indexing.md"), "utf8")
+    const search = fs.readFileSync(path.join(pages, "automate/tools/semantic-search.md"), "utf8")
+
+    expect(indexing).toContain("Indexing makes `semantic_search` available")
+    expect(indexing).toContain("does not force Kilo Code to use that tool for every codebase question")
+    expect(indexing).toContain("[AGENTS.md](/docs/customize/agents-md)")
+    expect(search).toContain("LanceDB or Qdrant")
+    expect(search).toContain("prefer `semantic_search` for broad codebase questions")
+  })
+
   it("references existing local images, including PNG files", () => {
     const missing = new Set<string>()
     for (const file of files) {
