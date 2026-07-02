@@ -1,8 +1,15 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.workspace.CommandInfo
+import ai.kilocode.backend.workspace.ModelAutoRoutingInfo
+import ai.kilocode.backend.workspace.ModelCacheCostInfo
+import ai.kilocode.backend.workspace.ModelCapabilitiesInfo
+import ai.kilocode.backend.workspace.ModelCostInfo
 import ai.kilocode.backend.workspace.ModelInfo
+import ai.kilocode.backend.workspace.ModelInputCapabilitiesInfo
 import ai.kilocode.backend.workspace.ModelLimitInfo
+import ai.kilocode.backend.workspace.ModelOptionsInfo
+import ai.kilocode.backend.workspace.ModelTerminalBenchInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -18,10 +25,17 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelAutoRoutingDto
+import ai.kilocode.rpc.dto.ModelCacheCostDto
+import ai.kilocode.rpc.dto.ModelCapabilitiesDto
+import ai.kilocode.rpc.dto.ModelCostDto
 import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ModelInputCapabilitiesDto
 import ai.kilocode.rpc.dto.ModelLimitDto
+import ai.kilocode.rpc.dto.ModelOptionsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
@@ -1039,6 +1053,11 @@ object KiloCliDataParser {
         return ModelDto(
             id = model.id,
             name = model.name,
+            inputPrice = model.inputPrice,
+            outputPrice = model.outputPrice,
+            contextLength = model.contextLength,
+            releaseDate = model.releaseDate,
+            latest = model.latest,
             attachment = model.attachment,
             reasoning = model.reasoning,
             temperature = model.temperature,
@@ -1049,16 +1068,38 @@ object KiloCliDataParser {
             recommendedIndex = model.recommendedIndex,
             variants = model.variants,
             limit = model.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+            cost = model.cost?.let { cost ->
+                ModelCostDto(
+                    input = cost.input,
+                    output = cost.output,
+                    cache = cost.cache?.let { ModelCacheCostDto(it.read, it.write) },
+                )
+            },
+            capabilities = model.capabilities?.let { cap ->
+                ModelCapabilitiesDto(
+                    reasoning = cap.reasoning,
+                    input = cap.input?.let { ModelInputCapabilitiesDto(it.text, it.image, it.audio, it.video, it.pdf) },
+                )
+            },
+            options = model.options?.let { ModelOptionsDto(it.description) },
+            autoRouting = model.autoRouting?.let { ModelAutoRoutingDto(it.models) },
+            terminalBench = model.terminalBench?.let { ModelTerminalBenchDto(it.overallScore, it.avgAttemptCostUsd) },
             mayTrainOnYourPrompts = model.mayTrainOnYourPrompts,
         )
     }
 
     private fun parseModel(id: String, obj: JsonObject): ModelInfo {
-        val cap = obj["capabilities"]?.jsonObject
-        val limit = obj["limit"]?.jsonObject
+        val cap = obj["capabilities"].obj()
+        val limit = obj["limit"].obj()
+        val input = cap?.get("input").obj()
         return ModelInfo(
             id = obj.str("id") ?: id,
             name = obj.str("name") ?: id,
+            inputPrice = obj.num("inputPrice"),
+            outputPrice = obj.num("outputPrice"),
+            contextLength = obj.long("contextLength"),
+            releaseDate = obj.str("release_date"),
+            latest = null,
             attachment = cap.bool("attachment"),
             reasoning = cap.bool("reasoning"),
             temperature = cap.bool("temperature"),
@@ -1075,8 +1116,45 @@ object KiloCliDataParser {
                     output = it.long("output") ?: 0,
                 )
             },
+            cost = parseModelCost(obj["cost"]),
+            capabilities = ModelCapabilitiesInfo(
+                reasoning = cap.bool("reasoning"),
+                input = input?.let {
+                    ModelInputCapabilitiesInfo(
+                        text = it.bool("text"),
+                        image = it.bool("image"),
+                        audio = it.bool("audio"),
+                        video = it.bool("video"),
+                        pdf = it.bool("pdf"),
+                    )
+                },
+            ).takeUnless { !it.reasoning && it.input == null },
+            options = obj["options"].obj()?.str("description")?.let { ModelOptionsInfo(it) },
+            autoRouting = obj["autoRouting"].obj()?.get("models")?.arr()?.mapNotNull { it.jsonPrimitive.contentOrNull }?.let {
+                ModelAutoRoutingInfo(it)
+            },
+            terminalBench = parseTerminalBench(obj["terminalBench"]),
             mayTrainOnYourPrompts = obj.bool("mayTrainOnYourPrompts"),
         )
+    }
+
+    private fun parseModelCost(raw: JsonElement?): ModelCostInfo? {
+        val obj = raw.obj() ?: return null
+        val input = obj.num("input") ?: return null
+        val output = obj.num("output") ?: return null
+        val cache = obj["cache"].obj()?.let { cache ->
+            val read = cache.num("read") ?: return@let null
+            val write = cache.num("write") ?: return@let null
+            ModelCacheCostInfo(read, write)
+        }
+        return ModelCostInfo(input, output, cache)
+    }
+
+    private fun parseTerminalBench(raw: JsonElement?): ModelTerminalBenchInfo? {
+        val obj = raw.obj() ?: return null
+        val score = obj.num("overallScore") ?: return null
+        val cost = obj.num("avgAttemptCostUsd") ?: return null
+        return ModelTerminalBenchInfo(score, cost)
     }
 
     private fun parseVariants(obj: JsonObject): List<String> {

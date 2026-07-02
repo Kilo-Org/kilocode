@@ -1369,6 +1369,67 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseProviders - maps model preview metadata`() {
+            val raw = """{
+                "all": [{
+                    "id": "kilo", "name": "Kilo", "source": "api", "env": [], "options": {},
+                    "models": {
+                        "auto": {
+                            "id": "auto",
+                            "name": "Kilo Auto",
+                            "inputPrice": 0.25,
+                            "outputPrice": 1.5,
+                            "contextLength": 256000,
+                            "release_date": "2026-06-01",
+                            "capabilities": {
+                                "reasoning": true,
+                                "input": {"text": true, "image": true, "audio": false, "video": true, "pdf": true}
+                            },
+                            "cost": {"input": 0.25, "output": 1.5, "cache": {"read": 0.05, "write": 0.2}},
+                            "options": {"description": "Fast routed model"},
+                            "autoRouting": {"models": ["openai/gpt", "anthropic/claude"]},
+                            "terminalBench": {"overallScore": 0.73, "avgAttemptCostUsd": 1.25}
+                        }
+                    }
+                }],
+                "default": {}, "connected": []
+            }"""
+
+            val model = KiloCliDataParser.parseProviders(raw).providers.single().models.getValue("auto")
+
+            assertEquals(0.25, model.inputPrice)
+            assertEquals(1.5, model.outputPrice)
+            assertEquals(256000L, model.contextLength)
+            assertEquals("2026-06-01", model.releaseDate)
+            assertNull(model.latest)
+            assertEquals(0.05, model.cost?.cache?.read)
+            assertEquals(true, model.capabilities?.reasoning)
+            assertEquals(true, model.capabilities?.input?.image)
+            assertEquals(false, model.capabilities?.input?.audio)
+            assertEquals("Fast routed model", model.options?.description)
+            assertEquals(listOf("openai/gpt", "anthropic/claude"), model.autoRouting?.models)
+            assertEquals(0.73, model.terminalBench?.overallScore)
+            assertEquals(1.25, model.terminalBench?.avgAttemptCostUsd)
+        }
+
+        @Test
+        fun `parseProviders - malformed optional preview metadata is ignored`() {
+            val raw = """{
+                "all": [{
+                    "id": "p", "name": "P", "source": "api", "env": [], "options": {},
+                    "models": {"m": {"capabilities": "bad", "cost": {"input": "bad"}, "terminalBench": []}}
+                }],
+                "default": {}, "connected": []
+            }"""
+
+            val model = KiloCliDataParser.parseProviders(raw).providers.single().models.getValue("m")
+
+            assertFalse(model.reasoning)
+            assertNull(model.cost)
+            assertNull(model.terminalBench)
+        }
+
+        @Test
         fun `parseProviders - orders variants by effort rank then name`() {
             val raw = """{
                 "all": [{

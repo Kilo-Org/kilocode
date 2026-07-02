@@ -348,20 +348,18 @@ const useServerConfig = Effect.fn("test.useServerConfig")(function* (config: (ur
   return { dir, llm }
 })
 
-// Wait for a session's runner to enter a busy state. SessionStatus is flipped to
-// "busy" inside Runner.startShell's modifyEffect at the same moment the runner
-// is registered, so this is a deterministic readiness signal — cancel can't
-// no-op once we observe it.
+// kilocode_change start - wait for the runner state that cancel observes instead of session status
 const waitForBusy = (sessionID: SessionID, duration: Duration.Input = "2 seconds") =>
   pollWithTimeout(
     Effect.gen(function* () {
-      const status = yield* SessionStatus.Service
-      const s = yield* status.get(sessionID)
-      return s.type === "busy" ? (true as const) : undefined
+      const run = yield* SessionRunState.Service
+      const exit = yield* run.assertNotBusy(sessionID).pipe(Effect.exit)
+      return Exit.isFailure(exit) ? (true as const) : undefined
     }),
     `session ${sessionID} never became busy`,
     duration,
   )
+// kilocode_change end
 
 const hasBash = Effect.sync(() => Bun.which("bash") !== null)
 
