@@ -252,19 +252,6 @@
       "name": "@kilocode/kilo-jetbrains",
       "version": "7.3.63",
     },
-    "packages/kilo-sandbox": {
-      "name": "@kilocode/sandbox",
-      "version": "7.3.63",
-      "dependencies": {
-        "effect": "catalog:",
-      },
-      "devDependencies": {
-        "@effect/platform-node": "catalog:",
-        "@tsconfig/bun": "catalog:",
-        "@types/bun": "catalog:",
-        "@typescript/native-preview": "catalog:",
-      },
-    },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",
       "version": "7.3.45",
@@ -277,6 +264,19 @@
         "@types/node": "catalog:",
         "@typescript/native-preview": "catalog:",
         "typescript": "catalog:",
+      },
+    },
+    "packages/kilo-sandbox": {
+      "name": "@kilocode/sandbox",
+      "version": "7.3.63",
+      "dependencies": {
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@effect/platform-node": "catalog:",
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
       },
     },
     "packages/kilo-telemetry": {

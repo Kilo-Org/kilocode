@@ -74,6 +74,12 @@ class KiloBackendWorkspaceTest {
         return app.workspaces.get("/test/project")
     }
 
+    private suspend fun awaitReady(ws: KiloBackendWorkspace) {
+        withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Ready }
+        }
+    }
+
     // ------ Workspace manager lifecycle ------
 
     @Test
@@ -386,6 +392,7 @@ class KiloBackendWorkspaceTest {
         ]"""
         val app = setup()
         val ws = ready(app)
+        awaitReady(ws)
 
         val result = ws.sessions()
         assertEquals(1, result.sessions.size)
@@ -397,6 +404,7 @@ class KiloBackendWorkspaceTest {
         mock.sessionCreate = """{"id":"ses_new","slug":"n","projectID":"p","directory":"/test/project","title":"New","version":"1","time":{"created":1,"updated":1}}"""
         val app = setup()
         val ws = ready(app)
+        awaitReady(ws)
 
         val session = ws.createSession()
         assertEquals("ses_new", session.id)

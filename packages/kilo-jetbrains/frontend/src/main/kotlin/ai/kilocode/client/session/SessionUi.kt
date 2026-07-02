@@ -52,6 +52,7 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import com.intellij.util.ui.JBUI
@@ -430,10 +431,22 @@ class SessionUi(
                             display = it.display,
                             provider = it.provider,
                             providerName = it.providerName,
+                            inputPrice = it.inputPrice,
+                            outputPrice = it.outputPrice,
+                            contextLength = it.contextLength,
+                            releaseDate = it.releaseDate,
+                            latest = it.latest,
                             recommendedIndex = it.recommendedIndex,
                             free = it.free,
                             byok = it.byok,
                             variants = it.variants,
+                            limit = it.limit?.let { limit -> ModelLimitDto(limit.context, limit.input, limit.output) },
+                            cost = it.cost,
+                            capabilities = it.capabilities,
+                            options = it.options,
+                            autoRouting = it.autoRouting,
+                            terminalBench = it.terminalBench,
+                            reasoning = it.reasoning,
                             attachment = it.attachment,
                             mayTrainOnYourPrompts = it.mayTrainOnYourPrompts,
                         )
