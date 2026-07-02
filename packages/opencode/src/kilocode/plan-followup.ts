@@ -223,6 +223,15 @@ export namespace PlanFollowup {
     return input
   }
 
+  async function locatePlan(sessionID: SessionID, messages: MessageV2.WithParts[]) {
+    const ctx = Instance.current
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(sessionID))
+    const target = PlanFile.resolve(PlanFile.latest(messages), ctx) ?? Session.plan(session, ctx)
+    const agent = messages.findLast((m) => m.info.role === "user")?.info.agent
+    const file = await PlanFile.locate(target, messages, session, ctx, agent)
+    return { target, file }
+  }
+
   async function resolvePlan(input: {
     assistant?: MessageV2.WithParts
     messages: MessageV2.WithParts[]
@@ -243,9 +252,11 @@ export namespace PlanFollowup {
     if (text) return text
 
     // Fall back to plan file on disk
-    const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
-    const file =
-      PlanFile.resolve(PlanFile.latest(input.messages), Instance.current) ?? Session.plan(session, Instance.current)
+    const { target, file } = await locatePlan(input.sessionID, input.messages)
+    if (!file) {
+      log.warn("resolvePlan: no saved plan file found", { sessionID: input.sessionID, target })
+      return ""
+    }
     const plan = await Bun.file(file)
       .text()
       .catch(() => "")
@@ -522,7 +533,7 @@ export namespace PlanFollowup {
     if (answer === ANSWER_NEW_SESSION) {
       Telemetry.trackPlanFollowup(input.sessionID, "new_session")
       const ctx = Instance.current
-      const file = PlanFile.resolve(PlanFile.latest(input.messages), ctx)
+      const { file } = await locatePlan(input.sessionID, input.messages)
       await startNew({
         sessionID: input.sessionID,
         file: file ? PlanFile.display(file, ctx) : undefined,
