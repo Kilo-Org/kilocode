@@ -1,4 +1,4 @@
-import { BedrockRuntimeClient, InvokeModelCommand, type InvokeModelCommandInput } from "@aws-sdk/client-bedrock-runtime"
+import { BedrockRuntimeClient, InvokeModelCommand, InvokeModelCommandOutput, type InvokeModelCommandInput } from "@aws-sdk/client-bedrock-runtime"
 import { fromIni } from "@aws-sdk/credential-provider-ini"
 import type { IEmbedder, EmbeddingResponse, EmbedderInfo } from "../interfaces"
 import {
@@ -215,7 +215,7 @@ export class BedrockEmbedder implements IEmbedder {
 
     const command = new InvokeModelCommand(params)
 
-    const response = await this.bedrockClient.send(command)
+    const response: InvokeModelCommandOutput = await this.bedrockClient.send(command)
 
     // Parse the response
     const responseBody = JSON.parse(new TextDecoder().decode(response.body))
