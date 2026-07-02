@@ -23,7 +23,7 @@ jobs:
           matched=false
           while IFS= read -r file; do
             case "$file" in
-              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-vscode/tests/accessibility*|packages/kilo-docs/public/img/screenshot-tests/*|.github/workflows/visual-regression.yml)
+              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-vscode/tests/accessibility*|packages/kilo-docs/public/img/screenshot-tests/*|.github/actions/setup-bun/*|.github/workflows/visual-regression.yml)
                 matched=true
                 break
                 ;;
@@ -76,18 +76,7 @@ jobs:
           fi
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Cache Bun modules
-        uses: actions/cache@v5 # kilocode_change
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ hashFiles('bun.lock') }}
-
-      - name: Install dependencies
-        run: bun install
+        uses: ./.github/actions/setup-bun # kilocode_change
 
       - name: Cache Playwright browsers
         id: playwright-cache
@@ -244,18 +233,7 @@ jobs:
           fi
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Cache Bun modules
-        uses: actions/cache@v5 # kilocode_change
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ hashFiles('bun.lock') }}
-
-      - name: Install dependencies
-        run: bun install
+        uses: ./.github/actions/setup-bun # kilocode_change
 
       - name: Cache Playwright browsers
         id: playwright-cache-vscode

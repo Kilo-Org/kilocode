@@ -621,8 +621,8 @@ describe("mapSSEEventToWebviewMessage", () => {
       properties: {
         id: "sug-1",
         sessionID: "sess-1",
-        text: "Review changes?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        text: "Run tests?",
+        actions: [{ label: "Run tests", prompt: "Run the test suite" }],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -636,7 +636,7 @@ describe("mapSSEEventToWebviewMessage", () => {
         sessionID: "sess-1",
         requestID: "sug-1",
         index: 0,
-        action: { label: "Start", prompt: "/local-review-uncommitted" },
+        action: { label: "Run tests", prompt: "Run the test suite" },
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")

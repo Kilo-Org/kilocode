@@ -6,7 +6,6 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Insets
-import javax.swing.border.Border
 
 /** Static style tokens owned by the chat session UI. */
 object SessionUiStyle {
@@ -74,6 +73,11 @@ object SessionUiStyle {
             const val CONTROL_GAP = 4
             const val SHELL_VERTICAL_PADDING = 6
             const val SHELL_HORIZONTAL_PADDING = 8
+
+            fun separator(): Color = JBColor.namedColor(
+                "EditorTabs.underTabsBorderColor",
+                JBUI.CurrentTheme.EditorTabs.borderColor(),
+            )
         }
 
         /** Attachment preview card geometry. */
@@ -174,18 +178,4 @@ object SessionUiStyle {
         val TEXT: Color = JBColor.namedColor("Kilo.Session.Timeline.Text", UIUtil.getContextHelpForeground())
         val STEP: Color = JBColor.namedColor("Kilo.Session.Timeline.Step", JBColor.border())
     }
-}
-
-/** Border presets for connection dock panel. */
-object Dock {
-    fun banner(): Border = JBUI.Borders.compound(
-        JBUI.Borders.customLine(
-            SessionUiStyle.View.Outline.color(),
-            SessionUiStyle.View.Outline.width(),
-            0,
-            0,
-            0,
-        ),
-        JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.lg(), 0, UiStyle.Gap.lg()),
-    )!!
 }

@@ -133,6 +133,7 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - Extend `BasePlatformTestCase` to get a real IntelliJ Application and EDT in tests. The session package already uses `SessionControllerTestBase` which wraps this.
 - Do not mock the EDT or threading assertions — test against the real threading model.
 - Do not add production methods whose only purpose is test access. Prefer exercising the public API and inspecting the real Swing component tree in tests.
+- Do not expose `internal` accessors, helper methods, or synthetic seams just so tests can inspect private implementation details. If a test needs this, either assert observable UI/action behavior or refactor the production API so the new seam has real product value.
 - For state-driven updates, assert that the component state matches after flushing coroutines and draining the EDT.
 - For retained Swing components, assert that expand/collapse, update, and no-op paths work correctly without rebuilding the component tree.
 
@@ -170,8 +171,8 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 ### Dev Storage Isolation
 
-- In development (`runIdeBackend` / `runIde`), the Gradle property `kilo.dev.storage.isolated=true` makes the backend set `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, and `XDG_CACHE_HOME` to `<worktree>/.kilo-dev/{data,config,state,cache}` before spawning the CLI. The worktree root comes from the `kilo.dev.worktree.root` JVM system property (auto-set by Gradle from the project directory).
-- The checked-in `Run IDE (Backend)` run configuration enables isolation by default (`-Pkilo.dev.storage.isolated=true`). Developers can disable it by passing `-Pkilo.dev.storage.isolated=false`.
+- In development (`runIdeSplitMode`, `runIdeBackend`, `runIdeFrontend`, or `runIde`), the Gradle property `kilo.dev.storage.isolated=true` makes the backend set `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, and `XDG_CACHE_HOME` to `<worktree>/.kilo-dev/{data,config,state,cache}` before spawning the CLI. The worktree root comes from the `kilo.dev.worktree.root` JVM system property (auto-set by Gradle from the project directory).
+- The checked-in `Run IDE (Backend)`, `Run IDE (Frontend)`, and `Run IDE (Split Mode)` run configurations enable isolation by default (`-Pkilo.dev.storage.isolated=true`). Developers can disable it by passing `-Pkilo.dev.storage.isolated=false`.
 - Use standard `XDG_*_HOME` env vars for this isolation. Do not introduce custom `KILO_DATA_DIR`, `KILO_GLOBAL_CONFIG_DIR`, `KILO_STATE_DIR`, or `KILO_CACHE_DIR` env vars — the CLI core already respects `XDG_*_HOME` via `xdg-basedir`.
 - The `.kilo-dev/` directory is gitignored and created automatically on first run.
 - The implementation lives in `KiloBackendCliManager.buildEnv()` / `devStorageEnv()`. Tests: `KiloBackendCliManagerEnvTest`.
@@ -193,9 +194,9 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present in `backend/build/generated/cli/`; run `bun run build --prepare-cli` first).
 - **Java checks**: Do not run `java -version` as a routine preflight. Gradle commands already fail clearly when Java is missing or incompatible; check Java only when diagnosing that failure mode.
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
-- **Run in sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does NOT build CLI binaries.
-- **Run split backend**: `./gradlew runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
-- **Test split mode**: `./gradlew generateSplitModeRunConfigurations` creates a "Run IDE (Split Mode)" config that starts both frontend and backend processes locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally and prepares the local-platform CLI binary automatically. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — prepares the local-platform CLI binary automatically; if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
+- **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does NOT build CLI binaries.
 
 ### CLI/SDK Change Awareness
 
@@ -240,7 +241,6 @@ Before introducing any new reusable color, spacing value, border, size, font, or
 - `SessionUiStyle.View` — card sizing, card borders, surfaces, hover colors, and nested objects for `Prompt`, `Reasoning`, `Message`, and `Tool`.
 - `SessionUiStyle.RecentSessions` — recent sessions list limits.
 - `SessionUiStyle.Timeline` — activity-indicator colors for the session header timeline.
-- `Dock` — border presets for question, permission, and connection dock panels.
 
 Rules:
 - Generic layout constants (gaps, generic colors, reusable helpers) → `UiStyle`.
