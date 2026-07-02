@@ -74,6 +74,12 @@ class KiloBackendWorkspaceTest {
         return app.workspaces.get("/test/project")
     }
 
+    private suspend fun loaded(ws: KiloBackendWorkspace) {
+        withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Ready }
+        }
+    }
+
     // ------ Workspace manager lifecycle ------
 
     @Test
@@ -110,6 +116,8 @@ class KiloBackendWorkspaceTest {
 
         val ws1 = app.workspaces.get("/test")
         val ws2 = app.workspaces.get("/test")
+        // LLM note: get() starts background loading; settle it so teardown is not racing active HTTP calls in CI.
+        loaded(ws1)
         assertTrue(ws1 === ws2)
     }
 
@@ -120,6 +128,9 @@ class KiloBackendWorkspaceTest {
 
         val ws1 = app.workspaces.get("/project-a")
         val ws2 = app.workspaces.get("/project-b")
+        // LLM note: get() starts background loading; settle both loads before the scope-cancelling teardown.
+        loaded(ws1)
+        loaded(ws2)
         assertTrue(ws1 !== ws2)
         assertEquals("/project-a", ws1.directory)
         assertEquals("/project-b", ws2.directory)
