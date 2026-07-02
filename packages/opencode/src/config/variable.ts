@@ -6,6 +6,8 @@ import { Filesystem } from "@/util/filesystem"
 import { InvalidError } from "./error"
 import { ConfigVariableGuard } from "@/kilocode/config/variable" // kilocode_change
 
+export type FileScope = ConfigVariableGuard.FileScope // kilocode_change
+
 type ParseSource =
   | {
       type: "path"
@@ -22,6 +24,7 @@ type SubstituteInput = ParseSource & {
   missing?: "error" | "empty"
   escapeJson?: boolean // kilocode_change
   env?: Record<string, string>
+  fileScope?: ConfigVariableGuard.FileScope // kilocode_change
 }
 
 function source(input: ParseSource) {
@@ -74,21 +77,23 @@ export async function substitute(input: SubstituteInput) {
     const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(configDir, filePath)
     // kilocode_change start - validate and read one opened file to prevent credential substitution races
     const fileContent = (
-      await ConfigVariableGuard.read(resolvedPath, Filesystem.readText).catch((error: NodeJS.ErrnoException) => {
-        if (missing === "empty") return ""
+      await ConfigVariableGuard.read(resolvedPath, Filesystem.readText, input.fileScope && { ...input.fileScope, token }).catch(
+        (error: NodeJS.ErrnoException) => {
+          if (missing === "empty") return ""
 
-        const errMsg = `bad file reference: "${token}"`
-        if (error.code === "ENOENT") {
-          throw new InvalidError(
-            {
-              path: configSource,
-              message: errMsg + ` ${resolvedPath} does not exist`,
-            },
-            { cause: error },
-          )
-        }
-        throw new InvalidError({ path: configSource, message: errMsg }, { cause: error })
-      })
+          const errMsg = `bad file reference: "${token}"`
+          if (error.code === "ENOENT") {
+            throw new InvalidError(
+              {
+                path: configSource,
+                message: errMsg + ` ${resolvedPath} does not exist`,
+              },
+              { cause: error },
+            )
+          }
+          throw new InvalidError({ path: configSource, message: errMsg }, { cause: error })
+        },
+      )
     ).trim()
     // kilocode_change end
 

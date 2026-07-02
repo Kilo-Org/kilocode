@@ -612,6 +612,84 @@ it.instance("handles file inclusion with replacement tokens", () =>
   }),
 )
 
+// kilocode_change start
+describe("project config file reference scope", () => {
+  it.instance("skips project config that reads an absolute file", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      yield* writeConfigEffect(test.directory, {
+        $schema: "https://app.kilo.ai/config.json",
+        username: "{file:/etc/passwd}",
+      })
+      const config = yield* Config.use.get()
+      expect(config.username).not.toContain("root:")
+      expect(config.username).toBeDefined()
+    }),
+  )
+
+  it.instance("skips project config that reads a home file", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const home = yield* tmpdirScoped()
+      yield* AppFileSystem.use.writeWithDirs(path.join(home, "secret.txt"), "home-secret")
+      yield* writeConfigEffect(test.directory, {
+        $schema: "https://app.kilo.ai/config.json",
+        username: `{file:${path.join(home, "secret.txt")}}`,
+      })
+      const config = yield* Config.use.get()
+      expect(config.username).not.toBe("home-secret")
+    }),
+  )
+
+  it.instance("skips project config that escapes with parent directories", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const outside = path.join(path.dirname(test.directory), "secret.txt")
+      yield* AppFileSystem.use.writeWithDirs(outside, "outside-secret")
+      yield* writeConfigEffect(test.directory, {
+        $schema: "https://app.kilo.ai/config.json",
+        username: "{file:../secret.txt}",
+      })
+      const config = yield* Config.use.get()
+      expect(config.username).not.toBe("outside-secret")
+    }),
+  )
+
+  it.instance("skips project config that escapes through a symlink", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const outside = path.join(path.dirname(test.directory), "secret.txt")
+      const link = path.join(test.directory, "secret-link")
+      yield* AppFileSystem.use.writeWithDirs(outside, "outside-secret")
+      yield* Effect.promise(() => fs.symlink(outside, link))
+      yield* writeConfigEffect(test.directory, {
+        $schema: "https://app.kilo.ai/config.json",
+        username: "{file:secret-link}",
+      })
+      const config = yield* Config.use.get()
+      expect(config.username).not.toBe("outside-secret")
+    }),
+  )
+
+  it.instance("still allows global config to read absolute files", () =>
+    withGlobalConfig(
+      {},
+      ({ dir }) =>
+        Effect.gen(function* () {
+          const secret = path.join(dir, "secret.txt")
+          yield* AppFileSystem.use.writeWithDirs(secret, "global-secret")
+          yield* writeConfigEffect(dir, {
+            $schema: "https://app.kilo.ai/config.json",
+            username: `{file:${secret}}`,
+          })
+          const config = yield* Config.use.get()
+          expect(config.username).toBe("global-secret")
+        }),
+    ),
+  )
+})
+// kilocode_change end
+
 const accountTokenIt = configIt({
   account: Layer.mock(Account.Service)({
     active: () =>

@@ -566,13 +566,14 @@ export const layer = Layer.effect(
       text: string,
       options: { path: string } | { dir: string; source: string },
       env?: Record<string, string>,
+      fileScope?: ConfigVariable.FileScope, // kilocode_change
     ) {
       const source = "path" in options ? options.path : options.source
       const expanded = yield* Effect.promise(() =>
         ConfigVariable.substitute(
           "path" in options
-            ? { text, type: "path", path: options.path, env }
-            : { text, type: "virtual", ...options, env },
+            ? { text, type: "path", path: options.path, env, fileScope }
+            : { text, type: "virtual", ...options, env, fileScope },
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
@@ -590,11 +591,15 @@ export const layer = Layer.effect(
       return data
     })
 
-    const loadFile = Effect.fnUntraced(function* (filepath: string, env?: Record<string, string>) {
+    const loadFile = Effect.fnUntraced(function* (
+      filepath: string,
+      env?: Record<string, string>,
+      fileScope?: ConfigVariable.FileScope, // kilocode_change
+    ) {
       log.info("loading", { path: filepath })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
-      return yield* loadConfig(text, { path: filepath }, env)
+      return yield* loadConfig(text, { path: filepath }, env, fileScope)
     })
 
     let globalStamp = "" // kilocode_change
@@ -848,9 +853,10 @@ export const layer = Layer.effect(
           // kilocode_change start - also discover kilo.json project files
           for (const name of ["kilo", "opencode"] as const) {
             for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
+              const fileScope = { root: ctx.worktree === "/" ? ctx.directory : ctx.worktree, source: file }
               yield* merge(
                 file,
-                yield* loadFile(file, authEnv).pipe(
+                yield* loadFile(file, authEnv, fileScope).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, file, err)
                     return Effect.succeed({} as Info)
@@ -885,14 +891,15 @@ export const layer = Layer.effect(
 
         // kilocode_change start
         for (const dir of unique(directories)) {
-          const scope = primarySet.has(dir) ? "local" : undefined
+          const scope = primarySet.has(dir) || containsPath(dir, ctx) ? "local" : undefined
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
             for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
               const source = path.join(dir, file)
+              const fileScope = scope === "local" ? { root: ctx.worktree === "/" ? ctx.directory : ctx.worktree, source } : undefined
               log.debug(`loading config from ${source}`)
               yield* merge(
                 source,
-                yield* loadFile(source, authEnv).pipe(
+                yield* loadFile(source, authEnv, fileScope).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, source, err)
                     return Effect.succeed({} as Info)

@@ -37,6 +37,25 @@ test("reads ordinary file substitutions on every platform", async () => {
   }
 })
 
+test("rejects scoped file substitutions outside the allowed root", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-config-variable-root-"))
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-config-variable-outside-"))
+  const file = path.join(dir, "value")
+  await fs.writeFile(file, "blocked")
+  try {
+    await expect(
+      ConfigVariable.substitute({
+        ...source,
+        text: `{file:${file}}`,
+        fileScope: { root, source: "test" },
+      }),
+    ).rejects.toBeInstanceOf(InvalidError)
+  } finally {
+    await fs.rm(root, { recursive: true, force: true })
+    await fs.rm(dir, { recursive: true, force: true })
+  }
+})
+
 test.skipIf(process.platform !== "linux")("does not substitute process environment files", async () => {
   await expect(
     ConfigVariable.substitute({
