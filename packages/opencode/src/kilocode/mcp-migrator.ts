@@ -1,19 +1,24 @@
 import * as fs from "fs/promises"
 import * as path from "path"
+import { parse as parseJsonc, type ParseError } from "jsonc-parser"
 import { Config } from "../config/config"
 import { ConfigMCP } from "../config/mcp"
 import * as Log from "@opencode-ai/core/util/log"
+import { isRecord } from "@/util/record"
 import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 
 export namespace McpMigrator {
   const log = Log.create({ service: "kilocode.mcp-migrator" })
 
-  // Remote transport types used by the Kilocode extension
-  const REMOTE_TYPES = new Set(["streamable-http", "sse"])
+  // Remote transport types used by the Kilocode extension plus the standard
+  // `.mcp.json` spellings ("http"). Servers with a `url` but no `command` are
+  // also treated as remote, matching the shared `.mcp.json` shorthand.
+  const REMOTE_TYPES = new Set(["streamable-http", "http", "sse"])
 
   function isRemote(server: KilocodeMcpServer): boolean {
-    return !!server.type && REMOTE_TYPES.has(server.type)
+    if (server.type) return REMOTE_TYPES.has(server.type)
+    return !!server.url && !server.command
   }
 
   // Kilocode MCP server structure
@@ -177,5 +182,59 @@ export namespace McpMigrator {
       log.warn("failed to load kilocode MCP servers", { error: err })
       return {}
     }
+  }
+
+  /**
+   * Read a shared external MCP config file in the standard `mcpServers` format
+   * (JSON or JSONC, e.g. a canonical `.mcp.json`) and return its raw server map.
+   * Returns an `error` string instead of throwing so callers can surface it as a warning.
+   */
+  export async function readMcpServersFile(
+    filepath: string,
+  ): Promise<{ servers?: Record<string, KilocodeMcpServer>; error?: string }> {
+    if (!(await Filesystem.exists(filepath))) return { error: "file not found" }
+    const text = await fs.readFile(filepath, "utf-8").catch(() => undefined)
+    if (text === undefined) return { error: "could not read file" }
+
+    const errors: ParseError[] = []
+    const data = parseJsonc(text, errors, { allowTrailingComma: true })
+    if (errors.length > 0) return { error: "not valid JSON(C)" }
+    if (!isRecord(data)) return { error: "expected a JSON object" }
+
+    // The canonical shared format nests servers under `mcpServers`.
+    if (data.mcpServers === undefined) return { servers: {} }
+    if (!isRecord(data.mcpServers)) return { error: "`mcpServers` must be an object" }
+    return { servers: data.mcpServers as Record<string, KilocodeMcpServer> }
+  }
+
+  /**
+   * Load MCP servers from one or more shared external files referenced by
+   * `mcpConfig.file`. Relative paths resolve from `root` (the project directory).
+   * Later files win over earlier ones for the same server name.
+   */
+  export async function loadExternalMcpConfig(input: {
+    files: string[]
+    root: string
+  }): Promise<{ mcp: Record<string, ConfigMCP.Info>; warnings: Config.Warning[] }> {
+    const mcp: Record<string, ConfigMCP.Info> = {}
+    const warnings: Config.Warning[] = []
+
+    for (const entry of input.files) {
+      if (!entry) continue
+      const file = path.isAbsolute(entry) ? entry : path.resolve(input.root, entry)
+      const read = await readMcpServersFile(file)
+      if (read.error) {
+        warnings.push({ path: file, message: `Could not load MCP config file at ${file}: ${read.error}` })
+        log.warn("skipped external MCP config file", { file, error: read.error })
+        continue
+      }
+      for (const [name, server] of Object.entries(read.servers ?? {})) {
+        const converted = convertServer(name, server)
+        if (converted) mcp[name] = converted
+      }
+      log.debug("loaded external MCP config file", { file, count: Object.keys(read.servers ?? {}).length })
+    }
+
+    return { mcp, warnings }
   }
 }

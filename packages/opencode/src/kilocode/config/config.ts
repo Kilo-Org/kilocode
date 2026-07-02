@@ -35,6 +35,19 @@ export namespace KilocodeConfig {
     }),
   ).annotate({ description: "Configuration for AI-generated commit messages" })
 
+  /** Schema for loading MCP servers from a shared external file (e.g. a canonical .mcp.json). */
+  export const McpConfigSchema = Schema.optional(
+    Schema.Struct({
+      file: Schema.Union([Schema.String, Schema.mutable(Schema.Array(Schema.String))]).annotate({
+        description:
+          "Path, or list of paths, to a shared external MCP config file in the standard `mcpServers` format (e.g. a canonical .mcp.json). Relative paths resolve from the project root. Servers load from these files and any inline `mcp` entry with the same name overrides them.",
+      }),
+    }),
+  ).annotate({
+    description:
+      "Load MCP server definitions from a shared external file, such as a .mcp.json used by multiple agents, instead of duplicating them under `mcp`.",
+  })
+
   // ── Config file constants ────────────────────────────────────────────
 
   /** Kilo-specific config file names (highest-to-lowest precedence within kilo). */
@@ -290,6 +303,27 @@ export namespace KilocodeConfig {
     }
 
     return { config: result, warnings }
+  }
+
+  /**
+   * Apply MCP servers referenced from a shared external file via `mcpConfig.file`.
+   * Runs after the config chain is merged, so relative paths resolve from the project root.
+   * The shared file is the base; inline `mcp` entries override it by server name. Mutates
+   * `config.mcp` and appends any load warnings.
+   */
+  export async function applyExternalMcp(input: {
+    config: Config.Info
+    root: string
+    warnings: Config.Warning[]
+  }): Promise<void> {
+    const file = input.config.mcpConfig?.file
+    if (!file) return
+    const files = Array.isArray(file) ? file : [file]
+    const external = await McpMigrator.loadExternalMcpConfig({ files, root: input.root })
+    if (Object.keys(external.mcp).length > 0) {
+      input.config.mcp = { ...external.mcp, ...(input.config.mcp ?? {}) }
+    }
+    input.warnings.push(...external.warnings)
   }
 
   // ── Organization modes ───────────────────────────────────────────────

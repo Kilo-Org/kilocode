@@ -322,6 +322,7 @@ export const Info = Schema.Struct({
       ]),
     ),
   ).annotate({ description: "MCP (Model Context Protocol) server configurations" }),
+  mcpConfig: KilocodeConfig.McpConfigSchema, // kilocode_change - load MCP servers from a shared external file
   formatter: Schema.optional(ConfigFormatter.Info).annotate({
     description:
       "Enable or configure formatters. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
@@ -1081,6 +1082,10 @@ export const layer = Layer.effect(
         }
         // kilocode_change start — inject Kilo default plugins into both plugin list and origins
         KilocodeDefaultPlugins.apply(result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
+        // kilocode_change end
+
+        // kilocode_change start - load MCP servers from a shared external file referenced by mcpConfig.file
+        yield* Effect.promise(() => KilocodeConfig.applyExternalMcp({ config: result, root: ctx.directory, warnings }))
         // kilocode_change end
 
         return {
