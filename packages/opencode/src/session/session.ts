@@ -571,6 +571,7 @@ export const layer: Layer.Layer<
       permission?: Permission.Ruleset
       platform?: string // kilocode_change - per-session platform override for telemetry attribution
       sourceID?: SessionID // kilocode_change - inherited sandbox policy source
+      sandboxFallback?: SandboxPolicy.Snapshot // kilocode_change - confinement to seed when source state lives in another directory
     }) {
       const ctx = yield* InstanceState.context
       const result: Info = {
@@ -599,7 +600,7 @@ export const layer: Layer.Layer<
       // kilocode_change start - initialize inherited state before session.created subscribers run
       KiloSession.register({ id: result.id, parentID: result.parentID, platform: input.platform })
       const source = input.sourceID ?? result.parentID
-      if (source) yield* SandboxPolicy.inherit(source, result.id)
+      if (source) yield* SandboxPolicy.inherit(source, result.id, input.sandboxFallback)
       // kilocode_change end
 
       yield* sync.run(Event.Created, { sessionID: result.id, info: result })
@@ -774,6 +775,9 @@ export const layer: Layer.Layer<
       const ctx = yield* InstanceState.context
       const original = yield* get(input.sessionID)
       const title = getForkedTitle(original.title)
+      // kilocode_change start - forks into another directory cannot read the source confinement from the new dir, so carry it over explicitly
+      const sandboxFallback = yield* SandboxPolicy.peek(original.directory, input.sessionID)
+      // kilocode_change end
       const session = yield* createNext({
         directory: ctx.directory,
         path: sessionPath(ctx.worktree, ctx.directory),
@@ -781,6 +785,7 @@ export const layer: Layer.Layer<
         title,
         metadata: structuredClone(original.metadata),
         sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
+        sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
       })
       const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()

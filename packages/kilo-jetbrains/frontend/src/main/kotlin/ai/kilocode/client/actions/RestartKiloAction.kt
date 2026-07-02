@@ -1,6 +1,7 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -15,5 +16,8 @@ class RestartKiloAction : AnAction(), DumbAware {
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabled = true
+        if (e.place == KiloActionPlaces.connectionRetryPopup()) {
+            e.presentation.text = KiloBundle.message("action.Kilo.Restart.cli.text")
+        }
     }
 }

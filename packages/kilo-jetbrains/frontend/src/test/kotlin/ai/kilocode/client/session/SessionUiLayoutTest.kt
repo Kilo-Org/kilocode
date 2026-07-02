@@ -45,16 +45,15 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(root.blocker.isVisible)
     }
 
-    fun `test bottom stack contains connection and prompt only`() {
+    fun `test prompt is docked and connection is overlaid`() {
         val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
-        assertSame(root.content, stack.parent)
-        assertSame(stack, connection.parent)
+        assertSame(root.content, prompt.parent)
+        assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
-        assertEquals(listOf(connection, prompt), stack.components.toList())
+        assertFalse(root.content.components.contains(connection))
     }
 
     fun `test drop overlay is attached under root overlay layer`() {
@@ -140,19 +139,35 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
     }
 
-    fun `test connection panel uses stack width and sits above prompt`() {
+    fun `test connection panel overlays above full prompt width`() {
+        val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
         showConnection()
         layout()
 
         assertTrue(connection.isVisible)
-        assertEquals(0, connection.x)
-        assertEquals(stack.width, connection.width)
+        assertSame(root.overlay, connection.parent)
+        assertEquals(prompt.x, connection.x)
         assertEquals(prompt.width, connection.width)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+    }
+
+    fun `test expanded connection panel remains anchored above prompt`() {
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            "line 1\nline 2",
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
     }
 
     fun `test connection panel is unaffected by active question view`() {
@@ -170,7 +185,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -189,7 +204,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 

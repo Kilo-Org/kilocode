@@ -113,6 +113,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implementer i en ny økt med ren kontekst",
   "plan.followup.answer.continue": "Fortsett her",
   "plan.followup.answer.continue.description": "Implementer planen i denne økten",
+  "plan.followup.answer.keepRefining": "Fortsett å finpusse",
+  "plan.followup.answer.keepRefining.description": "Fortsett planleggingen uten å implementere ennå",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Snapshot er tregt",

@@ -1,5 +1,8 @@
 import { describe, expect, spyOn, test } from "bun:test"
 import { Effect } from "effect"
+import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { TuiEvent } from "../../src/cli/cmd/tui/event"
@@ -8,7 +11,6 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/kilocode/instance"
-import { provideTestInstance } from "../fixture/fixture"
 import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
@@ -17,11 +19,9 @@ import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
 import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
-import { Global } from "@opencode-ai/core/global"
-import * as Log from "@opencode-ai/core/util/log"
 import path from "path"
 import fs from "fs/promises"
-import { tmpdir } from "../fixture/fixture"
+import { provideTestInstance, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
@@ -309,13 +309,14 @@ describe("plan follow-up", () => {
       expect(q.options.map((item) => item.label)).toEqual([
         PlanFollowup.ANSWER_NEW_SESSION,
         PlanFollowup.ANSWER_CONTINUE,
+        PlanFollowup.ANSWER_KEEP_REFINING,
       ])
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
     }))
 
-  test("ask - Continue here option carries mode: code so VS Code picker updates immediately", () =>
+  test("ask - follow-up options carry modes so the picker updates immediately", () =>
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build" })
       const pending = PlanFollowup.ask({
@@ -334,6 +335,9 @@ describe("plan follow-up", () => {
 
       const continueOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_CONTINUE)
       expect(continueOpt?.mode).toBe("code")
+
+      const refineOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_KEEP_REFINING)
+      expect(refineOpt?.mode).toBe("plan")
 
       // Start new session should not carry a mode (it opens a new session — the
       // current picker is irrelevant once the session switches).
@@ -400,15 +404,21 @@ describe("plan follow-up", () => {
       expect(q.options.map((o) => o.labelKey)).toEqual([
         "plan.followup.answer.newSession",
         "plan.followup.answer.continue",
+        "plan.followup.answer.keepRefining",
       ])
       expect(q.options.map((o) => o.descriptionKey)).toEqual([
         "plan.followup.answer.newSession.description",
         "plan.followup.answer.continue.description",
+        "plan.followup.answer.keepRefining.description",
       ])
 
       // Canonical English labels stay on the wire — the server still matches on `label`,
       // so translating the UI must not change the reply format.
-      expect(q.options.map((o) => o.label)).toEqual([PlanFollowup.ANSWER_NEW_SESSION, PlanFollowup.ANSWER_CONTINUE])
+      expect(q.options.map((o) => o.label)).toEqual([
+        PlanFollowup.ANSWER_NEW_SESSION,
+        PlanFollowup.ANSWER_CONTINUE,
+        PlanFollowup.ANSWER_KEEP_REFINING,
+      ])
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
@@ -464,6 +474,45 @@ describe("plan follow-up", () => {
       expect(part?.type).toBe("text")
       if (!part || part.type !== "text") return
       expect(part.text).toBe("Implement the plan above.")
+      expect(part.synthetic).toBe(true)
+    }))
+
+  test("ask - returns continue and creates plan message on Keep refining", () =>
+    withInstance(async () => {
+      const track = spyOn(Telemetry, "trackPlanFollowup").mockImplementation(() => {})
+      using _ = {
+        [Symbol.dispose]() {
+          track.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_KEEP_REFINING]],
+      })
+
+      await expect(pending).resolves.toBe("continue")
+      expect(track).toHaveBeenCalledWith(seeded.sessionID, "keep_refining")
+
+      const user = await latestUser(seeded.sessionID)
+      expect(user?.info.role).toBe("user")
+      if (!user || user.info.role !== "user") return
+      expect(user.info.agent).toBe("plan")
+
+      const part = user.parts.find((item) => item.type === "text")
+      expect(part?.type).toBe("text")
+      if (!part || part.type !== "text") return
+      expect(part.text).toBe("Continue refining the plan. Do not implement yet.")
       expect(part.synthetic).toBe(true)
     }))
 

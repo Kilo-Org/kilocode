@@ -133,8 +133,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | Command | Description |
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
-| `/local-review` | Review code changes |
-| `/local-review-uncommitted` | Review uncommitted changes |
+| `/review` | Review code changes |
 
 ## Local Code Reviews
 
@@ -144,8 +143,11 @@ Review your code locally before pushing — catch issues early without waiting f
 
 | Command | Description |
 |---|---|
-| `/local-review` | Review current branch changes vs base branch |
-| `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged) |
+| `/review` | Review staged, unstaged, and untracked changes (the default with no arguments) |
+| `/review uncommitted [guidance]` | Review uncommitted changes with optional guidance |
+| `/review branch [base] [guidance]` | Review the current branch against its detected or specified base, with optional guidance |
+| `/review <commit-hash>` | Review a specific commit |
+| `/review <PR URL or number>` | Review a pull request |
 
 ## Config Reference
 

@@ -115,6 +115,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implémenter dans une nouvelle session avec un contexte vierge",
   "plan.followup.answer.continue": "Continuer ici",
   "plan.followup.answer.continue.description": "Implémenter le plan dans cette session",
+  "plan.followup.answer.keepRefining": "Continuer à affiner",
+  "plan.followup.answer.keepRefining.description": "Continuer à planifier sans implémenter pour l'instant",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Instantané lent",

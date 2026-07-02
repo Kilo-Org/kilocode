@@ -421,7 +421,7 @@
 }
 
 .account-switcher-welcome {
-  width: 160px;
+  width: 210px;
 }
 
 .account-switcher-trigger {
@@ -431,7 +431,7 @@
   background: var(--vscode-dropdown-background);
   color: var(--vscode-dropdown-foreground);
   border-radius: 4px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -463,9 +463,24 @@
 }
 
 .account-switcher-label {
+  min-width: 28px;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.account-switcher-balance {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: var(--kilo-font-size-11);
+  background: rgba(127, 127, 127, 0.18);
+  color: var(--vscode-foreground);
 }
 
 .account-switcher-badges {
@@ -477,7 +492,7 @@
 
 .account-switcher-role {
   border-radius: 9999px;
-  padding: 1px 12px;
+  padding: 1px 7px;
   font-size: var(--kilo-font-size-10);
   letter-spacing: 0.3px;
   background: var(--vscode-badge-background);
