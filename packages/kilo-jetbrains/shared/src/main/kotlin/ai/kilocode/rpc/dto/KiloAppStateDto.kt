@@ -1,6 +1,7 @@
 package ai.kilocode.rpc.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
 @Serializable
 enum class KiloAppStatusDto {
@@ -44,6 +45,15 @@ data class ConfigWarningDto(
 data class AgentConfigDto(
     val model: String? = null,
     val variant: String? = null,
+    val prompt: String? = null,
+    val description: String? = null,
+    val mode: String? = null,
+    val hidden: Boolean? = null,
+    val disable: Boolean? = null,
+    val temperature: Double? = null,
+    val top_p: Double? = null,
+    val steps: Long? = null,
+    val permission: PermissionConfigDto? = null,
 )
 
 @Serializable
@@ -52,18 +62,72 @@ data class ConfigDto(
     val smallModel: String? = null,
     val subagentModel: String? = null,
     val subagentVariant: String? = null,
+    val defaultAgent: String? = null,
+    val instructions: List<String> = emptyList(),
+    val skills: SkillsConfigDto? = null,
+    val mcp: Map<String, McpConfigDto> = emptyMap(),
     val agent: Map<String, AgentConfigDto> = emptyMap(),
 )
 
 @Serializable
+data class SkillsConfigDto(
+    val paths: List<String> = emptyList(),
+    val urls: List<String> = emptyList(),
+)
+
+@Serializable
+data class SkillsPatchDto(
+    val paths: List<String>? = null,
+    val urls: List<String>? = null,
+)
+
+@Serializable
+data class McpConfigDto(
+    val type: String? = null,
+    val command: List<String>? = null,
+    val url: String? = null,
+    val environment: Map<String, String>? = null,
+    val headers: Map<String, String>? = null,
+    val enabled: Boolean? = null,
+    val timeout: Long? = null,
+)
+
+typealias PermissionConfigDto = Map<String, PermissionRuleDto>
+
+@Serializable
+sealed class PermissionRuleDto {
+    @Serializable
+    @SerialName("level")
+    data class Level(val value: String? = null) : PermissionRuleDto()
+
+    @Serializable
+    @SerialName("patterns")
+    data class Patterns(val map: Map<String, String?> = emptyMap()) : PermissionRuleDto()
+}
+
+@Serializable
 data class ConfigPatchDto(
     val values: Map<String, String?> = emptyMap(),
+    val instructions: List<String>? = null,
+    val skills: SkillsPatchDto? = null,
+    val mcp: Map<String, McpConfigDto?>? = null,
     val agents: Map<String, AgentConfigPatchDto> = emptyMap(),
 )
 
 @Serializable
 data class AgentConfigPatchDto(
+    val clear: List<String> = emptyList(),
     val model: String? = null,
+    val variant: String? = null,
+    val prompt: String? = null,
+    val description: String? = null,
+    val mode: String? = null,
+    val hidden: Boolean? = null,
+    val disable: Boolean? = null,
+    val temperature: Double? = null,
+    val top_p: Double? = null,
+    val steps: Long? = null,
+    val permission: PermissionConfigDto? = null,
 )
 
 @Serializable

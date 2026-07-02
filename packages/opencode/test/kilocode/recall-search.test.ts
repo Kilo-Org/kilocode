@@ -70,8 +70,8 @@ describe("RecallSearch", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const sessions = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
-        const session = await Effect.runPromise(sessions.create({ title: "Quartz migration" }))
+        const service = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
+        const session = await Effect.runPromise(service.create({ title: "Quartz migration" }))
         add(session.id, "user", { type: "text", text: "Investigate the zephyr request path" })
         add(session.id, "assistant", { type: "text", text: "The cobalt adapter needs a bounded scan" })
 
@@ -80,9 +80,9 @@ describe("RecallSearch", () => {
         expect(result.results.map((item) => item.id)).toEqual([session.id])
         expect(result.results[0]?.matches.map((item) => item.source)).toEqual(["user", "assistant"])
 
-        const title = await Effect.runPromise(sessions.create({ title: "ranking-needle" }))
-        const user = await Effect.runPromise(sessions.create({ title: "User rank" }))
-        const assistant = await Effect.runPromise(sessions.create({ title: "Assistant rank" }))
+        const title = await Effect.runPromise(service.create({ title: "ranking-needle" }))
+        const user = await Effect.runPromise(service.create({ title: "User rank" }))
+        const assistant = await Effect.runPromise(service.create({ title: "Assistant rank" }))
         add(user.id, "user", { type: "text", text: "ranking-needle" })
         add(assistant.id, "assistant", { type: "text", text: "ranking-needle" })
         expect((await run("ranking-needle")).results.map((item) => item.id)).toEqual([title.id, user.id, assistant.id])
@@ -95,16 +95,16 @@ describe("RecallSearch", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const sessions = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
-        const historical = await Effect.runPromise(sessions.create({ title: "Historical" }))
-        const active = await Effect.runPromise(sessions.create({ title: "exclusive-recall-needle" }))
+        const service = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
+        const historical = await Effect.runPromise(service.create({ title: "Historical" }))
+        const active = await Effect.runPromise(service.create({ title: "exclusive-recall-needle" }))
         add(historical.id, "user", { type: "text", text: "exclusive-recall-needle" })
         add(active.id, "user", { type: "text", text: "older unrelated turn" })
         add(active.id, "user", { type: "text", text: "exclusive-recall-needle" })
         add(active.id, "assistant", { type: "text", text: "exclusive-recall-needle" })
         add(active.id, "user", { type: "text", text: "exclusive-recall-needle", synthetic: true })
         const current = add(active.id, "assistant", { type: "text", text: "exclusive-recall-needle" })
-        const messages = await Effect.runPromise(sessions.messages({ sessionID: active.id }))
+        const messages = await Effect.runPromise(service.messages({ sessionID: active.id }))
 
         const result = await RecallSearch.search({
           query: "exclusive-recall-needle",
@@ -124,8 +124,8 @@ describe("RecallSearch", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const sessions = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
-        const session = await Effect.runPromise(sessions.create({ title: "Queued turn" }))
+        const service = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
+        const session = await Effect.runPromise(service.create({ title: "Queued turn" }))
         const previous = add(session.id, "user", { type: "text", text: "previous request" })
         const active = add(session.id, "user", { type: "text", text: "queued prompt current-turn-needle" })
         const tail = add(
@@ -141,7 +141,7 @@ describe("RecallSearch", () => {
           { parentID: active.messageID },
         )
 
-        const messages = await Effect.runPromise(sessions.messages({ sessionID: session.id }))
+        const messages = await Effect.runPromise(service.messages({ sessionID: session.id }))
         expect(RecallSearch.visible(messages, active.messageID).map((message) => message.info.id)).toEqual([
           previous.messageID,
           tail.messageID,
@@ -173,8 +173,8 @@ describe("RecallSearch", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const sessions = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
-        const session = await Effect.runPromise(sessions.create({ title: "Search policy" }))
+        const service = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
+        const session = await Effect.runPromise(service.create({ title: "Search policy" }))
         add(session.id, "user", {
           type: "file",
           mime: "text/plain",
@@ -244,20 +244,20 @@ describe("RecallSearch", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const sessions = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
-        const parent = await Effect.runPromise(sessions.create({ title: "Parent" }))
-        const child = await Effect.runPromise(sessions.create({ title: "Child", parentID: parent.id }))
-        await Effect.runPromise(sessions.setArchived({ sessionID: child.id, time: Date.now() }))
+        const service = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
+        const parent = await Effect.runPromise(service.create({ title: "Parent" }))
+        const child = await Effect.runPromise(service.create({ title: "Child", parentID: parent.id }))
+        await Effect.runPromise(service.setArchived({ sessionID: child.id, time: Date.now() }))
         add(child.id, "user", { type: "text", text: "archived-child-needle" })
 
-        const broad = await Effect.runPromise(sessions.create({ title: "Broad" }))
+        const broad = await Effect.runPromise(service.create({ title: "Broad" }))
         for (let index = 0; index < 300; index++) add(broad.id, "user", { type: "text", text: `page ${index}` })
         for (let index = 0; index < 70; index++) {
-          const session = await Effect.runPromise(sessions.create({ title: `Batch ${index}` }))
+          const session = await Effect.runPromise(service.create({ title: `Batch ${index}` }))
           if (index === 69) add(session.id, "user", { type: "text", text: "last-session-needle" })
         }
 
-        const outside = await Effect.runPromise(sessions.create({ title: "Outside" }))
+        const outside = await Effect.runPromise(service.create({ title: "Outside" }))
         add(outside.id, "user", { type: "text", text: "last-session-needle" })
         Database.use((db) =>
           db
@@ -281,8 +281,8 @@ describe("RecallSearch", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const sessions = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
-        const session = await Effect.runPromise(sessions.create({ title: "Large session" }))
+        const service = await Effect.runPromise(Session.Service.pipe(Effect.provide(Session.defaultLayer)))
+        const session = await Effect.runPromise(service.create({ title: "Large session" }))
         add(session.id, "user", { type: "text", text: "job_id reached 100%" })
         add(session.id, "user", { type: "text", text: `${"x".repeat(1_000)} Compatibility ＦＯＯ marker` })
         add(session.id, "user", {

@@ -24,6 +24,7 @@ dependencies {
     implementation(libs.commonmark.autolink)
     implementation(libs.commonmark.tables)
     implementation(libs.commonmark.strikethrough)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.zxing.core)
 
     testImplementation(kotlin("test"))

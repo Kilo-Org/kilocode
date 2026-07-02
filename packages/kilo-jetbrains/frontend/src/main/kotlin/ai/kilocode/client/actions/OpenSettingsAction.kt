@@ -1,6 +1,7 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.KiloSettingsConfigurable
 import ai.kilocode.client.settings.KiloSettingsSelection
 import ai.kilocode.client.telemetry.Telemetry
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -21,14 +22,18 @@ class OpenSettingsAction : DumbAwareAction(
         Telemetry.send("Settings Opened", mapOf("surface" to "tool_window"))
         val project = e.project ?: ProjectManager.getInstance().defaultProject
         val target = KiloSettingsSelection.target(project)
-        ShowSettingsUtil.getInstance().showSettingsDialog(
-            project,
-            Predicate { cfg: Configurable ->
-                cfg is ConfigurableWithId && cfg.getId() == target
-            },
-            null,
-        )
+        val util = ShowSettingsUtil.getInstance()
+        try {
+            util.showSettingsDialog(project, predicate(target), null)
+        } catch (err: IllegalStateException) {
+            if (target == KiloSettingsConfigurable.ID) throw err
+            util.showSettingsDialog(project, predicate(KiloSettingsConfigurable.ID), null)
+        }
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+
+    private fun predicate(id: String) = Predicate { cfg: Configurable ->
+        cfg is ConfigurableWithId && cfg.getId() == id
+    }
 }
