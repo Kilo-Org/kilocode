@@ -1,6 +1,7 @@
 import type { Command } from "@/command"
 import type { ReviewCommand } from "@kilocode/kilo-telemetry"
 import REVIEW from "./review.txt"
+import { REVIEWER_AGENT } from "@/kilocode/agent"
 
 const legacy = {
   "local-review": {
@@ -25,6 +26,14 @@ export function parseReviewCommand(prompt: string | undefined): ReviewCommand | 
   if (!prompt?.startsWith("/")) return
   const name = prompt.slice(1).split(/\s/, 1)[0]
   return reviewCommandName(name)
+}
+
+export function reviewerCommand(command: Command.Info): Command.Info {
+  return {
+    ...command,
+    agent: REVIEWER_AGENT,
+    subtask: true,
+  }
 }
 
 export function reviewCommand(): Command.Info {

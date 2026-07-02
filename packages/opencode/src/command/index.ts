@@ -7,7 +7,7 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
-import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
+import { legacyReviewCommand, reviewCommand, reviewerCommand } from "@/kilocode/review/command" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 
 type State = {
@@ -106,7 +106,7 @@ export const layer = Layer.effect(
         hints: hints(PROMPT_INITIALIZE),
       }
       // kilocode_change start
-      commands[Default.REVIEW] = reviewCommand()
+      commands[Default.REVIEW] = reviewerCommand(reviewCommand())
       commands["local-review"] = legacyReviewCommand("local-review")!
       commands["local-review-uncommitted"] = legacyReviewCommand("local-review-uncommitted")!
       // kilocode_change end

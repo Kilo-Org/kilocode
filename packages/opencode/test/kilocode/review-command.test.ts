@@ -2,19 +2,18 @@ import { describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer } from "effect"
 import { Command } from "../../src/command"
-import { legacyReviewMessage, parseReviewCommand, reviewCommand } from "../../src/kilocode/review/command"
+import { REVIEWER_AGENT } from "../../src/kilocode/agent"
+import REVIEWER_PROMPT from "../../src/kilocode/agent/prompt/reviewer.txt"
+import {
+  legacyReviewMessage,
+  parseReviewCommand,
+  reviewCommand,
+  reviewerCommand,
+} from "../../src/kilocode/review/command"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Layer.mergeAll(Command.defaultLayer, CrossSpawnSpawner.defaultLayer))
-
-function expectReviewFixContract(text: string) {
-  expect(text).toContain("During the initial review phase")
-  expect(text).toContain("DO NOT modify any files")
-  expect(text).toContain("After the user chooses a fix option")
-  expect(text).toContain("you may switch from review to implementation behavior")
-  expect(text).toContain("Use editing tools to modify code only for findings in the completed review")
-}
 
 describe("review command parsing", () => {
   test("parses every supported review invocation", () => {
@@ -114,33 +113,15 @@ describe("review command", () => {
     expect(text).toContain("Never insert raw target text into executable shell syntax")
   })
 
-  test("scopes no-edit behavior to the review phase", () => {
-    expectReviewFixContract(cmd.template as string)
-  })
-
-  test("applies the high-signal review focus", () => {
+  test("defers review methodology to the Reviewer agent", () => {
     const text = cmd.template as string
-    expect(text).toContain("Permitted tracks")
-    expect(text).toContain("deploy safety")
-    expect(text).toContain("duplication")
-    expect(text).toContain("dead code")
-    expect(text).toContain("Always out of scope")
-    expect(text).toContain("code style")
-    expect(text).toContain("generic refactors with no bug or product risk")
-    expect(text).not.toContain("noticeably larger than comparable ones")
-  })
-
-  test("applies adaptive parallel review tracks", () => {
-    const text = cmd.template as string
-    expect(text).toContain("spawn the appropriate sub-agents in parallel")
-    expect(text).toContain("do NOT spawn sub-agents")
-    expect(text).toContain("spawn a single security sub-agent")
-    expect(text).toContain("spawn 3-4 sub-agents")
-    expect(text).toContain("spawn all six sub-agents")
-    expect(text).toContain("security")
-    expect(text).toContain("performance")
-    expect(text).toContain("business logic")
-    expect(text).toContain("NO_FINDINGS")
+    expect(text).toContain("following your Reviewer instructions")
+    expect(text).not.toContain("Permitted tracks")
+    expect(text).not.toContain("spawn the appropriate sub-agents")
+    expect(text).not.toContain("Post-Review Workflow")
+    expect(text).not.toContain("question tool")
+    expect(text).not.toContain("After User Chooses")
+    expect(text).not.toContain("Use editing tools")
   })
 
   it.live("lists review and deprecated review aliases", () =>
@@ -158,16 +139,76 @@ describe("review command", () => {
           expect(names).toContain("local-review")
           expect(names).toContain("local-review-uncommitted")
           expect(review?.name).toBe("review")
+          expect(review?.agent).toBe(REVIEWER_AGENT)
+          expect(review?.subtask).toBe(true)
           expect(branch?.description).toBe("deprecated; use /review branch")
           expect(branch?.template).toBe(legacyReviewMessage("local-review"))
           expect(String(branch?.template)).not.toContain("$ARGUMENTS")
           expect(branch?.hints).toEqual([])
+          expect(branch?.agent).toBeUndefined()
           expect(uncommitted?.description).toBe("deprecated; use /review uncommitted")
           expect(uncommitted?.template).toBe(legacyReviewMessage("local-review-uncommitted"))
           expect(String(uncommitted?.template)).not.toContain("$ARGUMENTS")
           expect(uncommitted?.hints).toEqual([])
+          expect(uncommitted?.agent).toBeUndefined()
         }),
       { git: true },
     ),
   )
+})
+
+describe("reviewer command overlay", () => {
+  test("preserves upstream command fields while assigning Reviewer", () => {
+    const base: Command.Info = {
+      name: "review",
+      description: "review changes",
+      source: "command",
+      template: "Input: $ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    expect(reviewerCommand(base)).toEqual({
+      ...base,
+      agent: REVIEWER_AGENT,
+      subtask: true,
+    })
+  })
+})
+
+describe("Reviewer prompt", () => {
+  test("defines the default uncommitted scope and delegates to command-provided scope", () => {
+    expect(REVIEWER_PROMPT).toContain("staged, unstaged, and untracked changes")
+    expect(REVIEWER_PROMPT).toContain("Command-provided scope takes precedence")
+  })
+
+  test("applies the high-signal review focus", () => {
+    expect(REVIEWER_PROMPT).toContain("Permitted tracks")
+    expect(REVIEWER_PROMPT).toContain("deploy safety")
+    expect(REVIEWER_PROMPT).toContain("duplication")
+    expect(REVIEWER_PROMPT).toContain("dead code")
+    expect(REVIEWER_PROMPT).toContain("Always out of scope")
+    expect(REVIEWER_PROMPT).toContain("code style")
+    expect(REVIEWER_PROMPT).toContain("generic refactors with no bug or product risk")
+    expect(REVIEWER_PROMPT).not.toContain("noticeably larger than comparable ones")
+  })
+
+  test("applies adaptive parallel Explore delegation", () => {
+    expect(REVIEWER_PROMPT).toContain("spawn the appropriate number of Explore subagents in parallel")
+    expect(REVIEWER_PROMPT).toContain("do NOT spawn Explore subagents")
+    expect(REVIEWER_PROMPT).toContain("spawn a single security Explore subagent")
+    expect(REVIEWER_PROMPT).toContain("spawn 3-4 Explore subagents")
+    expect(REVIEWER_PROMPT).toContain("spawn all six Explore subagents")
+    expect(REVIEWER_PROMPT).toContain("security")
+    expect(REVIEWER_PROMPT).toContain("performance")
+    expect(REVIEWER_PROMPT).toContain("business logic")
+    expect(REVIEWER_PROMPT).toContain("NO_FINDINGS")
+  })
+
+  test("does not include post-review fix workflow", () => {
+    expect(REVIEWER_PROMPT).toContain("must not edit files")
+    expect(REVIEWER_PROMPT).toContain("call Question")
+    expect(REVIEWER_PROMPT).not.toContain("After User Chooses")
+    expect(REVIEWER_PROMPT).not.toContain('mode "code"')
+    expect(REVIEWER_PROMPT).not.toContain("Use editing tools")
+  })
 })

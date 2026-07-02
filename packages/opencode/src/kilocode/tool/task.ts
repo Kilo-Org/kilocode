@@ -10,9 +10,25 @@ import type { Session } from "../../session/session"
 import type { Agent } from "../../agent/agent"
 import type { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
+import { REVIEWER_AGENT } from "@/kilocode/agent"
+import { Wildcard } from "@/util/wildcard"
 import z from "zod"
 
 const log = Log.create({ service: "kilocode-task-model" })
+
+const restricted = [
+  "read",
+  "grep",
+  "glob",
+  "list",
+  "skill",
+  "webfetch",
+  "websearch",
+  "codebase_search",
+  "semantic_search",
+  "external_directory",
+  "suggest",
+]
 
 // RATIONALE: Mirror narrow state slice Task tool consumes and ignore unrelated TUI fields.
 const ModelState = z
@@ -36,9 +52,9 @@ export namespace KiloTask {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
   }
 
-  /** Kilo keeps delegation one level deep to avoid recursive subagent chains. */
-  export function nestedTask(): false {
-    return false
+  /** Kilo keeps delegation one level deep except for Reviewer -> Explore. */
+  export function nestedTask(name: string) {
+    return name === REVIEWER_AGENT
   }
 
   /**
@@ -46,6 +62,9 @@ export namespace KiloTask {
    * Merges the static agent definition with the session's accumulated permissions
    * so denials survive multi-hop chains (plan → general → explore) without
    * overriding the selected subagent's own allowlist with parent ask/allow rules.
+   * Restricted read-only tools (read, grep, glob, list, skill, webfetch, websearch,
+   * codebase_search, semantic_search, external_directory, suggest) also inherit
+   * this ceiling so Explore respects Reviewer's own restrictions when nested.
    *
    * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
    * Kilo intentionally differs: parent denials remain hard ceilings for Plan Mode
@@ -60,19 +79,32 @@ export namespace KiloTask {
     session: Session.Info
     mcp: Config.Info["mcp"]
   }): Permission.Ruleset {
-    const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
-    return rules.filter(
-      (r: Permission.Rule) =>
-        r.action === "deny" && (r.permission === "edit" || r.permission === "bash" || isMcp(r.permission)),
-    )
+    const isRestricted = (p: string) => restricted.some((tool) => Wildcard.match(tool, p))
+    // A blanket "*" pattern rule is only kept when it denies; a bare ask/allow catch-all
+    // (typically a raw global permission default) must not dilute the subagent's own
+    // catch-all policy. Narrower patterns (specific commands/paths) always survive so
+    // purpose-built guards like reviewerBash keep their scoped allow exceptions.
+    const keep = (rule: Permission.Rule, session: boolean) => {
+      if (rule.permission === "*") return session && rule.action !== "allow"
+      if (rule.permission === "bash") return rule.pattern !== "*" || rule.action === "deny"
+      if (rule.permission === "edit") return rule.action !== "allow"
+      if (rule.permission === "external_directory") return true
+      if (isMcp(rule.permission)) return true
+      if (!isRestricted(rule.permission)) return false
+      return rule.action !== "allow"
+    }
+    return [
+      ...(input.caller.permission ?? []).filter((rule) => keep(rule, false)),
+      ...(input.session.permission ?? []).filter((rule) => keep(rule, true)),
+    ]
   }
 
   /** Extra permission rules appended to subagent sessions */
-  export function permissions(rules: Permission.Ruleset): Permission.Ruleset {
+  export function permissions(rules: Permission.Ruleset, canTask: boolean): Permission.Ruleset {
     return [
-      { permission: "task", pattern: "*", action: "deny" },
+      ...(canTask ? [] : [{ permission: "task" as const, pattern: "*" as const, action: "deny" as const }]),
       { permission: "question", pattern: "*", action: "deny" },
       { permission: "interactive_terminal", pattern: "*", action: "deny" },
       ...rules,
