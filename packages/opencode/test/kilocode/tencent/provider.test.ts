@@ -5,6 +5,9 @@ import { overlay, TOKENHUB_PROVIDER_ID, TOKENPLAN_PROVIDER_ID } from "@/kilocode
 const HY3 = "hy3"
 const HY3_PREVIEW = "hy3-preview"
 
+// hy3 CNY prices (1/4/0.25 per 1M) converted to USD at 1 USD = 7 CNY.
+const HY3_COST = { input: 1 / 7, output: 4 / 7, cache_read: 0.25 / 7 }
+
 function preview(): Model {
   return {
     id: HY3_PREVIEW,
@@ -40,10 +43,10 @@ describe("tencent overlay", () => {
     expect(models[HY3_PREVIEW]).toEqual(preview())
   })
 
-  test("derives hy3 from hy3-preview so capabilities and limits stay aligned", () => {
+  test("derives hy3 from hy3-preview so capabilities and limits stay aligned, with hy3 pricing", () => {
     const result = overlay({ [TOKENHUB_PROVIDER_ID]: tokenHub({ [HY3_PREVIEW]: preview() }) })
     const hy3 = result[TOKENHUB_PROVIDER_ID].models[HY3]
-    expect(hy3).toEqual({ ...preview(), id: HY3, name: "Hy3" })
+    expect(hy3).toEqual({ ...preview(), id: HY3, name: "Hy3", cost: HY3_COST })
   })
 
   test("creates a TokenPlan provider that exposes only hy3", () => {
@@ -54,7 +57,7 @@ describe("tencent overlay", () => {
     expect(plan.api).toBe("https://api.lkeap.cloud.tencent.com/plan/v3")
     expect(plan.npm).toBe("@ai-sdk/openai-compatible")
     expect(Object.keys(plan.models)).toEqual([HY3])
-    expect(plan.models[HY3]).toEqual({ ...preview(), id: HY3, name: "Hy3" })
+    expect(plan.models[HY3]).toEqual({ ...preview(), id: HY3, name: "Hy3", cost: HY3_COST })
   })
 
   test("falls back to a synthetic hy3 when the catalog has no hy3-preview", () => {

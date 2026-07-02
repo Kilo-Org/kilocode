@@ -22,6 +22,16 @@ const HY3_PREVIEW_MODEL_ID = "hy3-preview"
 const CONTEXT_WINDOW = 256_000
 const MAX_OUTPUT_TOKENS = 64_000
 
+// hy3 pricing is quoted in CNY (RMB) per 1M tokens: input 1, output 4,
+// cached input 0.25. The catalog/UI/billing layer assumes USD and has no
+// runtime FX support, so convert at a fixed 1 USD = 7 CNY rate.
+const CNY_PER_USD = 7
+const HY3_COST = {
+  input: 1 / CNY_PER_USD,
+  output: 4 / CNY_PER_USD,
+  cache_read: 0.25 / CNY_PER_USD,
+}
+
 // Fallback used only when the live catalog doesn't expose hy3-preview (e.g. when
 // model fetching is disabled or offline). Mirrors the hy3-preview definition so
 // the thinking depth (reasoning effort variants) stays identical.
@@ -35,7 +45,7 @@ function hy3Fallback(): Model {
     reasoning: true,
     temperature: true,
     tool_call: true,
-    cost: { input: 0, output: 0 },
+    cost: { ...HY3_COST },
     limit: { context: CONTEXT_WINDOW, output: MAX_OUTPUT_TOKENS },
     modalities: { input: ["text"], output: ["text"] },
   }
@@ -45,7 +55,7 @@ function hy3Fallback(): Model {
 // (most importantly) the thinking depth all stay aligned with hy3-preview.
 function deriveHy3(preview: Model | undefined): Model {
   if (!preview) return hy3Fallback()
-  return { ...preview, id: HY3_MODEL_ID, name: "Hy3" }
+  return { ...preview, id: HY3_MODEL_ID, name: "Hy3", cost: { ...HY3_COST } }
 }
 
 // Fallback TokenHub provider definition, only used if the catalog is missing it.
