@@ -51,8 +51,10 @@ function hy3Fallback(): Model {
   }
 }
 
-// Clone hy3-preview into a new `hy3` model so capabilities, limits, cost and
-// (most importantly) the thinking depth all stay aligned with hy3-preview.
+// Clone hy3-preview into a new `hy3` model so capabilities, limits and (most
+// importantly) the thinking depth stay aligned with hy3-preview. Cost is the
+// deliberate exception: hy3 uses its own pricing (see HY3_COST), so it does not
+// track hy3-preview's cost.
 function deriveHy3(preview: Model | undefined): Model {
   if (!preview) return hy3Fallback()
   return { ...preview, id: HY3_MODEL_ID, name: "Hy3", cost: { ...HY3_COST } }
