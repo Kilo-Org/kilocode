@@ -1277,6 +1277,11 @@ export const dict = {
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",
+  "session.costAlert.header": "Oturum Maliyeti Uyarısı",
+  "session.costAlert.continue": "Devam et",
+  "session.costAlert.question":
+    "Bu oturum, oturum başına {{limit}} uyarı eşiğini yeni geçti ve maliyeti {{cost}} oldu. Devam edilsin mi?",
+  "session.costAlert.stop": "Durdur",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",
@@ -1537,6 +1542,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. doom_loop ve external_directory varsayılan olarak Sor'dur.",
+  "settings.autoApprove.maxCost.title": "Oturum Maliyeti Uyarısı",
+  "settings.autoApprove.maxCost.description":
+    "Bir oturumun harcaması bu USD tutarını aştıktan sonra devam etmeden önce uyar. Tam dolar kullanın; devre dışı bırakmak için boş bırakın.",
   "settings.autoApprove.level.allow": "İzin Ver",
   "settings.autoApprove.level.ask": "Sor",
   "settings.autoApprove.level.deny": "Reddet",

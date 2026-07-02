@@ -34,6 +34,17 @@ export namespace KiloToolRegistry {
     return config.indexing?.enabled ?? global?.indexing?.enabled
   }
 
+  export function usePatch(input: { modelID: string; family?: string }) {
+    if (process.env["KILO_E2E_LLM_URL"]) return true
+
+    const id = input.modelID.toLowerCase()
+    const family = input.family?.toLowerCase()
+    if (id.includes("gpt-4") || family?.startsWith("gpt-4")) return false
+    if (id.includes("oss") || family?.includes("oss") || family === "gpt-image") return false
+    if (id.includes("gpt-")) return true
+    return family?.startsWith("gpt") ?? false
+  }
+
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
   export function infos(notebook?: Notebook.Interface) {

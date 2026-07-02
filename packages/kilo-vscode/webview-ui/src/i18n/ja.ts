@@ -1281,6 +1281,11 @@ export const dict = {
   "session.outcome.interrupted": "ターンが中断されました",
   "session.outcome.error": "ターンが失敗しました",
   "session.outcome.finish": "終了理由: {{reason}}",
+  "session.costAlert.header": "セッションコストアラート",
+  "session.costAlert.continue": "続行",
+  "session.costAlert.question":
+    "このセッションは、セッションごとのアラートしきい値 {{limit}} を超え、現在のコストは {{cost}} です。続行しますか？",
+  "session.costAlert.stop": "停止",
 
   "ui.sessionTurn.cancel": "キャンセル",
   "ui.sessionTurn.status.thinking": "考え中...",
@@ -1572,6 +1577,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "ツールの実行許可を定義します。ほとんどのツールはデフォルトで「許可」されます。doom_loop と external_directory はデフォルトで「確認」になります。",
+  "settings.autoApprove.maxCost.title": "セッションコストアラート",
+  "settings.autoApprove.maxCost.description":
+    "セッションの支出がこの米ドル金額を超えた後、続行する前に警告します。整数のドル額を使用してください。無効にするには空欄にします。",
   "settings.autoApprove.level.allow": "許可",
   "settings.autoApprove.level.ask": "確認",
   "settings.autoApprove.level.deny": "拒否",

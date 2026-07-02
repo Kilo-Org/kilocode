@@ -1300,6 +1300,11 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrumpido",
   "session.outcome.error": "Turno fallido",
   "session.outcome.finish": "Motivo de finalización: {{reason}}",
+  "session.costAlert.header": "Alerta de coste de sesión",
+  "session.costAlert.continue": "Continuar",
+  "session.costAlert.question":
+    "Esta sesión acaba de superar tu umbral de alerta por sesión de {{limit}} y cuesta {{cost}}. ¿Seguir?",
+  "session.costAlert.stop": "Detener",
 
   "ui.sessionTurn.cancel": "Cancelar",
   "ui.sessionTurn.status.thinking": "Pensando...",
@@ -1598,6 +1603,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Defina cómo se permite la ejecución de las herramientas. La mayoría de las herramientas tienen como valor predeterminado Permitir. doom_loop y external_directory tienen como valor predeterminado Preguntar.",
+  "settings.autoApprove.maxCost.title": "Alerta de coste de sesión",
+  "settings.autoApprove.maxCost.description":
+    "Avisa antes de continuar una sesión cuando su gasto supere este importe en USD. Usa dólares enteros; déjalo vacío para desactivarlo.",
   "settings.autoApprove.level.allow": "Permitir",
   "settings.autoApprove.level.ask": "Preguntar",
   "settings.autoApprove.level.deny": "Denegar",

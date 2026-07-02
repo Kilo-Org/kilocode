@@ -1274,6 +1274,11 @@ export const dict = {
   "session.outcome.interrupted": "Хід перервано",
   "session.outcome.error": "Хід не вдався",
   "session.outcome.finish": "Причина завершення: {{reason}}",
+  "session.costAlert.header": "Сповіщення про вартість сесії",
+  "session.costAlert.continue": "Продовжити",
+  "session.costAlert.question":
+    "Ця сесія щойно перевищила поріг сповіщення для сесії {{limit}} і коштує {{cost}}. Продовжити?",
+  "session.costAlert.stop": "Зупинити",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1534,6 +1539,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
+  "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
+  "settings.autoApprove.maxCost.description":
+    "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",
   "settings.autoApprove.level.allow": "Дозволити",
   "settings.autoApprove.level.ask": "Запитувати",
   "settings.autoApprove.level.deny": "Відхилити",

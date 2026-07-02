@@ -113,6 +113,22 @@ object SessionUiStyle {
             const val BODY_HORIZONTAL_PADDING = 8
         }
 
+        /** Markdown colors that mirror Kilo's VS Code webview tokens. */
+        object Markdown {
+            fun string(): Color = JBColor.namedColor(
+                "Kilo.Session.Markdown.String",
+                JBColor(0xA31515, 0xCE9178),
+            )
+        }
+
+        object Todo {
+            fun checkBg(): Color = JBColor.namedColor("Kilo.Session.Todo.Checkbox.Background", Color.WHITE)
+
+            fun checkFg(): Color = JBColor.namedColor("Kilo.Session.Todo.Checkbox.Foreground", Color(0x1F, 0x23, 0x28))
+
+            fun checkBorder(): Color = UiStyle.Colors.contentBorder()
+        }
+
         /** Message container roles and user bubble geometry. */
         object Message {
             const val USER_ROLE = "user"
@@ -134,6 +150,11 @@ object SessionUiStyle {
             const val WIDTH_PADDING = 16
 
             fun topPadding(): Int = VIEWPORT_TOP_PADDING
+        }
+
+        object Popup {
+            const val MAX_LINES = 15
+            const val MAX_WIDTH = 520
         }
 
         /** Permission session-view command preview limits. */

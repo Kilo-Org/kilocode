@@ -1217,6 +1217,10 @@ export const dict = {
   "session.outcome.interrupted": "回合已中斷",
   "session.outcome.error": "回合失敗",
   "session.outcome.finish": "結束原因：{{reason}}",
+  "session.costAlert.header": "工作階段費用提醒",
+  "session.costAlert.continue": "繼續",
+  "session.costAlert.question": "此工作階段剛剛超過每工作階段提醒門檻 {{limit}}，目前費用為 {{cost}}。是否繼續？",
+  "session.costAlert.stop": "停止",
 
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",
@@ -1488,6 +1492,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",
+  "settings.autoApprove.maxCost.title": "工作階段費用提醒",
+  "settings.autoApprove.maxCost.description":
+    "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
   "settings.autoApprove.level.allow": "允許",
   "settings.autoApprove.level.ask": "詢問",
   "settings.autoApprove.level.deny": "拒絕",

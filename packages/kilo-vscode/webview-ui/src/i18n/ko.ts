@@ -1277,6 +1277,10 @@ export const dict = {
   "session.outcome.interrupted": "턴이 중단되었습니다",
   "session.outcome.error": "턴이 실패했습니다",
   "session.outcome.finish": "종료 이유: {{reason}}",
+  "session.costAlert.header": "세션 비용 알림",
+  "session.costAlert.continue": "계속",
+  "session.costAlert.question": "이 세션이 세션별 알림 기준 {{limit}}을 방금 넘었고 비용은 {{cost}}입니다. 계속할까요?",
+  "session.costAlert.stop": "중지",
 
   "ui.sessionTurn.cancel": "취소",
   "ui.sessionTurn.status.thinking": "생각 중...",
@@ -1561,6 +1565,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
+  "settings.autoApprove.maxCost.title": "세션 비용 알림",
+  "settings.autoApprove.maxCost.description":
+    "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",
   "settings.autoApprove.level.allow": "허용",
   "settings.autoApprove.level.ask": "확인",
   "settings.autoApprove.level.deny": "거부",
