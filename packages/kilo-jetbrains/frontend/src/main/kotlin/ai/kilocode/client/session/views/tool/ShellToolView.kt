@@ -3,6 +3,9 @@ package ai.kilocode.client.session.views.tool
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -22,7 +25,10 @@ import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
+import java.awt.Container
 import java.awt.Dimension
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -125,6 +131,9 @@ class ShellToolView(
     internal fun subtitleForeground() = parts.sub.foreground
 
     @RequiresEdt
+    internal fun subtitleMarkup() = parts.sub.text ?: ""
+
+    @RequiresEdt
     internal fun stateFont() = parts.state.font
 
     @RequiresEdt
@@ -136,6 +145,15 @@ class ShellToolView(
     @RequiresEdt
     internal fun horizontalPolicy() = holder.shell?.scrolls()?.firstOrNull()?.horizontalScrollBarPolicy
         ?: ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? {
+        if (isExpanded()) return null
+        val cmd = command(item).takeIf { it.isNotBlank() } ?: return null
+        return HeaderPopupRequest(row, build = { buildPopupBody(cmd) }) {
+            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "bash"))
+        }
+    }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
@@ -170,11 +188,67 @@ class ShellToolView(
         return body.update(item)
     }
 
+    @RequiresEdt
+    private fun buildPopupBody(cmd: String): HeaderPopupBody {
+        val md = MdViewFactory.create(
+            style,
+            null,
+            MdCodeBlockFactory.default(
+                MdCodeBlockOptions(
+                    border = MdCodeBlockBorder.None,
+                    maxLines = SessionUiStyle.View.Popup.MAX_LINES,
+                    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                    editorOnly = true,
+                ),
+            ),
+        )
+        md.applyStyle(style)
+        md.font = style.transcriptFont
+        md.foreground = style.editorForeground
+        md.background = style.editorBackground
+        md.preBg = style.editorBackground
+        md.codeFont = style.editorFamily
+        md.component.border = JBUI.Borders.empty()
+        md.set(popupMd(formatCommand(cmd)))
+        return HeaderPopupBody(PopupPanel(md.component), md, style.editorBackground)
+    }
+
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"
 
     companion object {
         fun canRender(tool: Tool) = tool.name == "bash"
     }
+}
+
+private class PopupPanel(child: JComponent) : JPanel(BorderLayout()) {
+    init {
+        // Transparent so the balloon fill (editor background) shows uniformly behind the content.
+        isOpaque = false
+        add(child, BorderLayout.CENTER)
+    }
+
+    override fun getPreferredSize(): Dimension {
+        // The markdown code block reports a preferred width of 0 so transcript layout can stretch it.
+        // A balloon has no such constraint, so derive the natural content width and cap it instead.
+        val size = super.getPreferredSize()
+        val width = contentWidth(this).coerceAtMost(JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
+        return Dimension(maxOf(width, size.width), size.height)
+    }
+}
+
+private fun contentWidth(root: Container): Int {
+    var max = 0
+    for (child in root.components) {
+        if (child is JBScrollPane) {
+            val view = child.viewport.view as? JComponent
+            val content = view?.preferredSize?.width ?: 0
+            val insets = child.insets
+            val viewport = child.viewportBorder?.getBorderInsets(child) ?: JBUI.emptyInsets()
+            max = maxOf(max, content + insets.left + insets.right + viewport.left + viewport.right)
+        }
+        if (child is Container) max = maxOf(max, contentWidth(child))
+    }
+    return max
 }
 
 class ShellHolder(
@@ -292,6 +366,51 @@ private data class ShellContent(
 }
 
 private fun outputLang(text: String): String = if (MdTerminal.hasAnsi(text)) "ansi-stdout" else "shell-output"
+
+private fun popupMd(text: String): String = buildString {
+    val fence = fence(text)
+    append(fence).append("shell-command\n")
+    append(text)
+    if (!text.endsWith('\n')) append('\n')
+    append(fence)
+}
+
+/**
+ * Inserts line breaks after shell separators (`&&`, `||`, `|`, `;`) that sit outside quotes,
+ * so a long single-line command reads as one statement per line in the popup. Quote and escape
+ * state is tracked so separators inside string literals are left untouched.
+ */
+private fun formatCommand(cmd: String): String {
+    val out = StringBuilder(cmd.length + 8)
+    var quote = ' '
+    var i = 0
+    while (i < cmd.length) {
+        val c = cmd[i]
+        if (quote != ' ') {
+            out.append(c)
+            if (c == '\\' && quote == '"' && i + 1 < cmd.length) {
+                out.append(cmd[i + 1])
+                i += 2
+                continue
+            }
+            if (c == quote) quote = ' '
+            i++
+            continue
+        }
+        val next = cmd.getOrNull(i + 1)
+        when {
+            c == '\'' || c == '"' -> { quote = c; out.append(c); i++ }
+            c == '\\' && next != null -> { out.append(c).append(next); i += 2 }
+            c == '&' && next == '&' -> { out.append("&&\n"); i += 2 }
+            c == '|' && next == '|' -> { out.append("||\n"); i += 2 }
+            c == '|' && next == '&' -> { out.append("|&\n"); i += 2 }
+            c == '|' -> { out.append("|\n"); i++ }
+            c == ';' -> { out.append(";\n"); i++ }
+            else -> { out.append(c); i++ }
+        }
+    }
+    return out.toString()
+}
 
 private fun StringBuilder.section(title: String, text: String, lang: String) {
     if (text.isBlank()) return

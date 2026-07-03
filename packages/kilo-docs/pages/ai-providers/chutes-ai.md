@@ -23,14 +23,6 @@ Always refer to the official Chutes AI documentation or your dashboard for the m
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "Chutes AI" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your Chutes AI API key into the "Chutes AI API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Chutes AI and enter your API key.

@@ -1,5 +1,7 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileLinks
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.ui.attachment.AttachmentCard
@@ -17,7 +19,7 @@ class AttachmentView(
 ) : PartView() {
     constructor(
         item: FileAttachment,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
         openUrl: (String) -> Unit,
     ) : this(item, { openDefault(it, openFile, openUrl) })
 
@@ -54,12 +56,16 @@ class AttachmentView(
     private fun same(next: FileAttachment) = item.mime == next.mime && item.url == next.url && item.filename == next.filename
 
     companion object {
-        fun openDefault(item: FileAttachment, openFile: (String) -> Unit, openUrl: (String) -> Unit) {
+        fun openDefault(item: FileAttachment, openFile: SessionFileOpener, openUrl: (String) -> Unit) {
             val url = item.url.takeIf { it.isNotBlank() } ?: return
             val uri = runCatching { URI.create(url) }.getOrNull() ?: return
             if (uri.scheme == "file") {
                 val path = runCatching { Path.of(uri).toString() }.getOrNull() ?: return
-                openFile(path)
+                openFile(path, null)
+                return
+            }
+            if (SessionFileLinks.isFileHref(url)) {
+                openFile(url, null)
                 return
             }
             openUrl(url)

@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Connecter Anaconda Desktop",
+  "provider.anaconda.title.manage": "Gérer Anaconda Desktop",
+  "provider.anaconda.status.checking": "Vérification d’Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Ouverture d’Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Actualisation des modèles du fournisseur...",
+  "provider.anaconda.status.ready": "Prêt à se connecter",
+  "provider.anaconda.status.waiting": "En attente de Desktop",
+  "provider.anaconda.status.attention": "Nécessite une attention",
+  "provider.anaconda.status.unavailable": "Indisponible",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop n’est pas pris en charge sur {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installez Anaconda Desktop sur cette machine, puis revenez ici. Kilo n’exécute pas l’installateur à votre place.",
+  "provider.anaconda.state.notRunning":
+    "Ouvrez Anaconda Desktop, terminez la configuration et connectez-vous, puis choisissez Vérifier à nouveau.",
+  "provider.anaconda.state.invalidConfig":
+    "La configuration d’Anaconda Desktop est incomplète. Ouvrez Desktop, terminez la configuration et redémarrez-le si nécessaire.",
+  "provider.anaconda.state.signedOut": "Ouvrez Anaconda Desktop et connectez-vous avant de connecter Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo n’a pas pu accéder à Anaconda Desktop. Ouvrez Desktop, reconnectez-vous et redémarrez-le si nécessaire.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop ne répond pas encore. Ouvrez-le et attendez que l’application finisse de démarrer.",
+  "provider.anaconda.state.noModel":
+    "Dans Anaconda Desktop, téléchargez un modèle de génération de texte. Choisissez-en un prenant en charge l’appel d’outils si possible, puis démarrez son serveur.",
+  "provider.anaconda.state.noServer_one":
+    "1 modèle de génération de texte téléchargé est disponible. Dans Anaconda Desktop, démarrez un serveur de modèle. Les modèles prenant en charge l’appel d’outils sont vivement recommandés.",
+  "provider.anaconda.state.noServer_other":
+    "{{count}} modèles de génération de texte téléchargés sont disponibles. Dans Anaconda Desktop, démarrez un serveur de modèle. Les modèles prenant en charge l’appel d’outils sont vivement recommandés.",
+  "provider.anaconda.state.unhealthy":
+    "Le serveur d’inférence actif n’est pas encore sain. Vérifiez-le dans Anaconda Desktop et redémarrez le serveur si nécessaire.",
+  "provider.anaconda.state.ready":
+    "Kilo a trouvé un serveur local sain de génération de texte et peut importer ses paramètres de connexion actuels.",
+  "provider.anaconda.server": "Serveur d’inférence actif",
+  "provider.anaconda.context": "Fenêtre de contexte",
+  "provider.anaconda.contextValue": "{{count}} jetons",
+  "provider.anaconda.tools": "Appel d’outils",
+  "provider.anaconda.tools.supported": "Pris en charge",
+  "provider.anaconda.tools.unsupported": "Non activé",
+  "provider.anaconda.tools.unknown": "Inconnu",
+  "provider.anaconda.warning.title": "La prise en charge des outils est limitée",
+  "provider.anaconda.warning.description":
+    "Ce serveur ne confirme pas l’appel d’outils. Les actions de l’agent de codage peuvent échouer ou être indisponibles. Ne continuez que si vous acceptez ces limitations.",
+  "provider.anaconda.action.download": "Télécharger Anaconda Desktop",
+  "provider.anaconda.action.open": "Ouvrir Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Vérifier à nouveau",
+  "provider.anaconda.action.continue": "Continuer quand même",
+  "provider.anaconda.action.manage": "Gérer / Actualiser",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop actualisé",
+  "provider.anaconda.toast.refreshed.description": "Le serveur local actif et les modèles sont à jour dans Kilo.",
+  "settings.providers.note.anacondaDesktop": "Exécutez un modèle servi localement par Anaconda Desktop.",
+  "settings.providers.tag.local": "Local",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Suggéré",
   "command.category.view": "Affichage",
   "command.category.project": "Projet",
@@ -95,6 +149,30 @@ export const dict = {
   "command.session.unshare.description": "Arrêter de partager cette session",
   "command.session.export": "Exporter la transcription de la session",
 
+  "agentRequirements.skill.installed": "Installée",
+  "agentRequirements.skill.checkFailed": "La vérification de la compétence a échoué",
+  "agentRequirements.skill.missing": "Non installée",
+  "agentRequirements.mcp.connected": "Connecté",
+  "agentRequirements.mcp.checkFailed": "La vérification MCP a échoué",
+  "agentRequirements.mcp.missing": "Non connecté",
+  "agentRequirements.extension.installed": "Installée",
+  "agentRequirements.extension.checkFailed": "La vérification de l’extension VS Code a échoué",
+  "agentRequirements.extension.missing": "Non installée",
+  "agentRequirements.extension.description": "Installez les extensions manquantes dans VS Code.",
+  "agentRequirements.group.skills": "Compétences",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "Extensions VS Code",
+  "agentRequirements.blocked.title": "Prérequis de l’agent {{agent}}",
+  "agentRequirements.blocked.description": "Cet agent a besoin des outils suivants avant de pouvoir s’exécuter.",
+  "agentRequirements.prompt.blocked": "Terminez d’abord les vérifications requises pour utiliser cet agent",
+  "agentRequirements.action.openMarketplace": "Ouvrir Marketplace",
+  "agentRequirements.error.unknownAgent": "L’agent sélectionné est introuvable.",
+  "agentRequirements.error.malformedDeclaration": "Cet agent a une déclaration de prérequis invalide.",
+  "agentRequirements.error.discoveryFailed": "Kilo n’a pas pu vérifier les compétences disponibles.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo n’a pas pu vérifier l’état du serveur MCP.",
+  "agentRequirements.error.scopeMismatch": "Cette vérification des prérequis de l’agent n’est plus active.",
+  "agentRequirements.error.requestFailed": "Kilo n’a pas pu vérifier les prérequis de l’agent.",
+
   "palette.search.placeholder": "Rechercher des fichiers, des commandes et des sessions",
   "palette.empty": "Aucun résultat trouvé",
   "palette.group.commands": "Commandes",
@@ -176,6 +254,7 @@ export const dict = {
   "model.tag.free": "Gratuit",
   "model.tag.dataCollected": "Les données peuvent être utilisées pour l’entraînement",
   "model.tag.latest": "Dernier",
+  "model.group.auto": "Modèles automatiques",
   "model.group.recommended": "Recommandé",
   "model.group.favorites": "Favoris",
   "model.group.collapse": "Réduire {{group}}",
@@ -204,6 +283,7 @@ export const dict = {
   "model.preview.label.average": "Coût moyen est.",
   "model.preview.label.context": "Contexte",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Choix de modèles",
   "model.preview.label.completion": "Réussite",
   "model.preview.label.costAttempt": "Coût / tentative",
   "model.preview.value.notSupported": "Non pris en charge",
@@ -1189,6 +1269,10 @@ export const dict = {
   "profile.balance.title": "Solde",
   "profile.balance.refresh": "Actualiser le solde",
   "profile.action.dashboard": "Tableau de bord",
+  "profile.action.topUp": "Recharger",
+  "profile.pass.subscribe": "Obtenez Kilo Pass pour ajouter des crédits et gagner des bonus",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Renouvelle",
   "profile.action.logout": "Déconnexion",
 
   "settings.section.configuration": "Configuration",
@@ -1226,6 +1310,11 @@ export const dict = {
   "session.outcome.interrupted": "Tour interrompu",
   "session.outcome.error": "Échec du tour",
   "session.outcome.finish": "Motif de fin : {{reason}}",
+  "session.costAlert.header": "Alerte de coût de session",
+  "session.costAlert.continue": "Continuer",
+  "session.costAlert.question":
+    "Cette session vient de dépasser votre seuil d’alerte par session de {{limit}} et coûte {{cost}}. Continuer ?",
+  "session.costAlert.stop": "Arrêter",
 
   "ui.sessionTurn.cancel": "Annuler",
   "ui.sessionTurn.status.thinking": "Réflexion...",
@@ -1272,6 +1361,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Ceci réinitialise uniquement les paramètres spécifiques à l'extension VS Code à leurs valeurs par défaut. Les paramètres partagés avec le CLI, tels que les modes et les règles d'approbation automatique, sont stockés dans la configuration du CLI et ne seront pas réinitialisés.",
   "settings.aboutKiloCode.resetSettings.button": "Réinitialiser tous les paramètres",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Transfert des paramètres",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exportez ou importez vos paramètres pour les transférer entre instances VS Code.",
@@ -1370,6 +1460,9 @@ export const dict = {
   "settings.models.speechToTextModel.title": "Modèle de transcription vocale",
   "settings.models.speechToTextModel.description":
     "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",
+  "settings.experimental.nativeNotebookTools.title": "Outils de notebook natifs",
+  "settings.experimental.nativeNotebookTools.description":
+    "Activer les outils expérimentaux pour lire, modifier et exécuter les notebooks VS Code",
   "settings.experimental.continueOnDeny.title": "Continuer en cas de refus",
   "settings.experimental.continueOnDeny.description":
     "Continuer la boucle de l'agent lorsqu'une autorisation est refusée",
@@ -1520,6 +1613,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Définissez comment les outils sont autorisés à s'exécuter. La plupart des outils sont définis sur Autoriser par défaut. doom_loop et external_directory sont définis sur Demander par défaut.",
+  "settings.autoApprove.maxCost.title": "Alerte de coût de session",
+  "settings.autoApprove.maxCost.description":
+    "Alerter avant de continuer une session lorsque sa dépense dépasse ce montant en USD. Utilisez des dollars entiers ; laissez vide pour désactiver.",
   "settings.autoApprove.level.allow": "Autoriser",
   "settings.autoApprove.level.ask": "Demander",
   "settings.autoApprove.level.deny": "Refuser",

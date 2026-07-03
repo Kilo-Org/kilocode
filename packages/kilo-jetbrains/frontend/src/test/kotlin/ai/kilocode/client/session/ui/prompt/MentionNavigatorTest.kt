@@ -17,6 +17,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
 @Suppress("UnstableApiUsage")
@@ -47,9 +49,13 @@ class MentionNavigatorTest : BasePlatformTestCase() {
         editor = factory.createEditor(factory.createDocument(text), project) as EditorEx
         navigator = MentionNavigator(editor, provider)
         navigator.install()
-        provider.validate(text, -1) {}
+        val resolved = CountDownLatch(2)
+        provider.validate(text, -1) { resolved.countDown() }
+        assertTrue("mention validation did not complete", resolved.await(5, TimeUnit.SECONDS))
+        // LLM note: the callback can fire before cross-thread mention state is observable to mouse-event assertions.
         waitFor {
-            provider.mentionAt(text, 6)?.resolved == true && provider.mentionAt(text, 20)?.resolved == false
+            provider.mentionAt(text, 6)?.resolved == true &&
+                provider.mentionAt(text, 20)?.resolved == false
         }
     }
 

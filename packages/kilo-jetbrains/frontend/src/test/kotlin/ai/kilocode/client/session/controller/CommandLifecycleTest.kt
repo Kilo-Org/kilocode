@@ -48,8 +48,12 @@ class CommandLifecycleTest : SessionControllerTestBase() {
 
         val sent = appRpc.telemetry.single { it.event == "Conversation Send Clicked" }
         assertEquals("command", sent.properties["source"])
+        assertEquals("true", sent.properties["hasSlashCommand"])
+        assertEquals("server", sent.properties["slashCommandType"])
         val message = appRpc.telemetry.single { it.event == "Conversation Message" }
         assertEquals("command", message.properties["source"])
+        assertEquals("true", message.properties["hasSlashCommand"])
+        assertEquals("server", message.properties["slashCommandType"])
     }
 
     fun `test command errors set state and telemetry`() {

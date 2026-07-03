@@ -11,6 +11,7 @@ export const sandboxHandlers = HttpApiBuilder.group(InstanceHttpApi, "sandbox", 
     const session = yield* Session.Service
     const exists = (sessionID: SessionID) => SessionError.mapStorageNotFound(session.get(sessionID))
     return handlers
+      .handle("support", () => SandboxPolicy.configuredSupport())
       .handle("status", (ctx: { params: { sessionID: SessionID } }) =>
         exists(ctx.params.sessionID).pipe(Effect.andThen(SandboxPolicy.status(ctx.params.sessionID))),
       )

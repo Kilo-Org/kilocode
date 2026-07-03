@@ -42,6 +42,25 @@ export const dict = {
   "marketplace.install.scope": "Omfang",
   "marketplace.install.scope.project": "Prosjekt",
   "marketplace.install.scope.global": "Globalt",
+  "marketplace.install.scope.project.description":
+    "Bare dette prosjektet. De installerte filene kan legges til i versjonskontroll og deles med teamet ditt.",
+  "marketplace.install.scope.global.description":
+    "Alle prosjekter på denne maskinen. Lagres i brukerkonfigurasjonen din.",
+  "marketplace.install.destination": "Installasjonssted",
+  "marketplace.install.about.mcp":
+    "En MCP-server gir Kilo flere verktøy for å arbeide med eksterne tjenester eller lokale programmer.",
+  "marketplace.install.about.agent": "En agent legger til en gjenbrukbar rolle med egne instruksjoner og tillatelser.",
+  "marketplace.install.about.skill":
+    "En ferdighet legger til oppgavespesifikke instruksjoner og ressurser som Kilo kan laste inn ved behov.",
+  "marketplace.install.mcp.warning":
+    "MCP-servere kan kjøre lokale kommandoer eller koble til eksterne tjenester. Kilo ber om tillatelse før verktøyene brukes, med mindre tillatelsene dine automatisk tillater det.",
+  "marketplace.install.project.warning":
+    "Prosjektfiler kan legges til i versjonskontroll. Ikke lagre hemmeligheter her med mindre konfigurasjonen viser til en miljøvariabel.",
+  "marketplace.install.learnMore": "Finn ut hvordan installasjoner fra Marketplace fungerer",
+  "marketplace.install.learnMcp": "Finn ut mer om MCP",
+  "marketplace.install.installedAt": "Installert i {{path}}",
+  "marketplace.intro": "Installer gjenbrukbare agenter, ferdigheter og MCP-verktøy for ett eller alle prosjekter.",
+  "marketplace.intro.learnMore": "Om Marketplace",
   "marketplace.install.prerequisites": "Forutsetninger",
   "marketplace.install.installing": "Installerer...",
   "marketplace.install.cancel": "Avbryt",
@@ -59,7 +78,9 @@ export const dict = {
   "marketplace.search": "Søk...",
   "marketplace.filter.all": "Alle elementer",
   "marketplace.filter.notInstalled": "Ikke installert",
+  "marketplace.filter.relevant": "Relevant for arbeidsområdet mitt",
   "marketplace.empty": "Ingen elementer funnet",
+  "marketplace.empty.relevant": "Ingen relevante marketplace-elementer funnet for dette arbeidsområdet.",
   "marketplace.badge.mcpServer": "MCP-server",
   "marketplace.badge.mode": "Modus",
   "marketplace.card.by": "av {{author}}",
@@ -92,6 +113,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implementer i en ny økt med ren kontekst",
   "plan.followup.answer.continue": "Fortsett her",
   "plan.followup.answer.continue.description": "Implementer planen i denne økten",
+  "plan.followup.answer.keepRefining": "Fortsett å finpusse",
+  "plan.followup.answer.keepRefining.description": "Fortsett planleggingen uten å implementere ennå",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Snapshot er tregt",

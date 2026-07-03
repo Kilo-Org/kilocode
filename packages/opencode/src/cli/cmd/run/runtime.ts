@@ -276,6 +276,23 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
 
           await ctx.sdk.question.reject(next)
         },
+        // kilocode_change start - human-driven terminal in direct interactive mode
+        onTerminalWrite: async (next) => {
+          await ctx.sdk.interactiveTerminal.write({
+            terminalID: next.terminalID,
+            interactiveTerminalWriteInput: { data: next.data },
+          })
+        },
+        onTerminalResize: async (next) => {
+          await ctx.sdk.interactiveTerminal.resize({
+            terminalID: next.terminalID,
+            interactiveTerminalResizeInput: { cols: next.cols, rows: next.rows },
+          })
+        },
+        onTerminalClose: async (terminalID) => {
+          await ctx.sdk.interactiveTerminal.close({ terminalID })
+        },
+        // kilocode_change end
         onCycleVariant: () => {
           if (!state.model || state.variants.length === 0) {
             return {

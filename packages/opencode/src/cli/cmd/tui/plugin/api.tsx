@@ -165,7 +165,11 @@ function stateApi(sync: ReturnType<typeof useSync>): TuiPluginApi["state"] {
       },
       // kilocode_change start
       processes(sessionID) {
-        return sync.data.background_process[sessionID] ?? []
+        const own = sync.data.background_process[sessionID] ?? []
+        const persistent = Object.values(sync.data.background_process)
+          .flat()
+          .filter((item) => item.lifetime === "persistent" && item.sessionID !== sessionID)
+        return [...own, ...persistent].toSorted((a, b) => a.id.localeCompare(b.id))
       },
       // kilocode_change end
       messages(sessionID) {

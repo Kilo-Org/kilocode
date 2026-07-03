@@ -76,6 +76,30 @@ export const ProvidersConfigure: Story = {
   ),
 }
 
+/** Opens the Disabled Providers collapsible on mount so the expanded list has coverage. */
+function OpenDisabledProviders() {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      ref?.querySelector<HTMLButtonElement>('[data-slot="collapsible-trigger"]')?.click()
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      <ProvidersTab />
+    </div>
+  )
+}
+
+export const ProvidersDisabledExpanded: Story = {
+  name: "ProvidersTab — disabled providers expanded",
+  render: () => (
+    <StoryProviders config={{ disabled_providers: ["openai", "anthropic"] } as any}>
+      <OpenDisabledProviders />
+    </StoryProviders>
+  ),
+}
+
 export const ModelsAutocompleteOpen: Story = {
   name: "ModelsTab — autocomplete model picker open",
   render: () => (

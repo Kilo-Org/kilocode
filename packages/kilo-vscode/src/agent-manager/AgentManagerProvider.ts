@@ -14,6 +14,7 @@ import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type Work
 import { PRStatusBridge } from "./pr-status-bridge"
 import { GitOps } from "./GitOps"
 import { versionedName } from "./branch-name"
+import { BranchNamingController } from "./branch-naming"
 import { classifyWorktreeError } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
@@ -34,11 +35,13 @@ import { restoreWorktrees } from "./state-recovery"
 import { createLocalDiff, diffSummary as localDiffSummary } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
+import { sandboxSessionMetadata } from "../shared/sandbox-session"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
+import { ensureSandbox } from "./sandbox-bootstrap"
 import { Semaphore } from "./semaphore"
 import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
@@ -69,6 +72,7 @@ export class AgentManagerProvider implements Disposable {
   private prBridge!: PRStatusBridge
   private gitOps: GitOps
   private diffs: WorktreeDiffController
+  private naming: BranchNamingController
   private staleWorktreeIds = new Set<string>()
   private toolRequests = new Set<string>()
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
@@ -126,6 +130,14 @@ export class AgentManagerProvider implements Disposable {
     })
     const semaphore = new Semaphore(3)
     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
+    this.naming = new BranchNamingController({
+      state: () => this.getStateManager(),
+      manager: () => this.getWorktreeManager(),
+      client: (dir) => this.connectionService.getClientAsync(dir),
+      settings: () => this.host.autoBranchNaming(),
+      push: () => this.pushState(),
+      log: (msg) => this.log(msg),
+    })
     const local = createLocalDiff(this.gitOps, (...args) => this.log(...args))
     this.diffs = new WorktreeDiffController({
       getState: () => this.getStateManager(),
@@ -344,6 +356,7 @@ export class AgentManagerProvider implements Disposable {
     msg = await this.contextMessage(msg)
     const m = msg as unknown as AgentManagerInMessage
     if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)
+    this.onBranchPrompt(m)
 
     const worktree = await this.onWorktreeMessage(m)
     if (worktree !== undefined) return worktree
@@ -362,6 +375,15 @@ export class AgentManagerProvider implements Disposable {
     if (this.terminalRouter.handle(m)) return null
 
     return msg
+  }
+
+  private onBranchPrompt(m: AgentManagerInMessage): void {
+    if (m.type !== "sendMessage" && m.type !== "sendCommand") return
+    const sessionID = m.sessionID ?? m.draftID ?? this.activeSessionId
+    if (!sessionID) return
+    const text = m.type === "sendMessage" ? m.text.trim() : `/${m.command} ${m.arguments}`.trim()
+    if (!text) return
+    this.naming.prompt({ sessionID, text, providerID: m.providerID, modelID: m.modelID })
   }
 
   private async contextMessage(msg: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -439,11 +461,15 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
-    if ((m.type === "sendMessage" || m.type === "sendCommand" || m.type === "toggleSandbox") && !m.sessionID) {
+    if (
+      m.type === "requestSandboxDefault" ||
+      m.type === "setSandboxDefault" ||
+      ((m.type === "sendMessage" || m.type === "sendCommand" || m.type === "toggleSandbox") && !m.sessionID)
+    ) {
       const ctx = typeof m.agentManagerContext === "string" ? m.agentManagerContext : undefined
       const worktree = ctx && ctx !== "local" ? this.getStateManager()?.getWorktree(ctx) : undefined
       if (worktree) {
-        if (m.draftID) this.activeSessionId = m.draftID
+        if ("draftID" in m && m.draftID) this.activeSessionId = m.draftID
         return { ...msg, contextDirectory: worktree.path }
       }
     }
@@ -777,6 +803,7 @@ export class AgentManagerProvider implements Disposable {
       remote: result.remote,
       groupId: opts?.groupId,
       label: opts?.label,
+      branchOwned: !opts?.existingBranch,
     })
 
     // Push state immediately so the sidebar shows the new worktree with a loading indicator
@@ -826,10 +853,11 @@ export class AgentManagerProvider implements Disposable {
     })
 
     try {
+      const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktreePath)
       const { data: session } = await startSession(
         client,
         worktreePath,
-        () => client.session.create({ directory: worktreePath, platform: PLATFORM }, { throwOnError: true }),
+        () => client.session.create({ directory: worktreePath, platform: PLATFORM, metadata }, { throwOnError: true }),
         (...args) => this.log(...args),
       )
       return session
@@ -847,6 +875,28 @@ export class AgentManagerProvider implements Disposable {
         context: "createSession",
       })
       return null
+    }
+  }
+
+  /** Remove a worktree whose session could not be safely initialized. */
+  private async discardWorktree(id: string, dir: string, branch: string, sessionId?: string): Promise<void> {
+    this.getStateManager()?.removeWorktree(id)
+    this.pushState()
+
+    if (sessionId) {
+      try {
+        await this.connectionService
+          .getClient()
+          .session.delete({ sessionID: sessionId, directory: dir }, { throwOnError: true })
+      } catch (err) {
+        this.log(`Failed to delete session ${sessionId} after worktree setup failed:`, err)
+      }
+    }
+
+    try {
+      await this.getWorktreeManager()?.removeWorktree(dir, branch)
+    } catch (err) {
+      this.log(`Failed to remove worktree ${id} after setup failed:`, err)
     }
   }
 
@@ -942,6 +992,7 @@ export class AgentManagerProvider implements Disposable {
         },
         setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
         createSessionInWorktree: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+        sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
         push: () => this.pushState(),
@@ -980,6 +1031,7 @@ export class AgentManagerProvider implements Disposable {
 
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
+    if (!branchName && this.host.autoBranchNaming().enabled) state.armAutoName(created.worktree.id, session.id)
     this.registerWorktreeSession(session.id, created.result.path)
     // Push state before registerSession so the webview's sessionCreated handler
     // sees the worktree mapping and routes the session to the worktree tab.
@@ -1017,12 +1069,13 @@ export class AgentManagerProvider implements Disposable {
     for (const s of orphaned) this.panel?.sessions.clearSessionDirectory(s.id)
     this.pushState()
     // Disk removal after state is clean — pollers no longer reference this worktree.
+    const branch = worktree.branchOwned === false ? undefined : (worktree.originalBranch ?? worktree.branch)
     try {
-      await manager.removeWorktree(worktree.path, worktree.originalBranch ?? worktree.branch)
+      await manager.removeWorktree(worktree.path, branch)
     } catch (error) {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
-    this.log(`Deleted worktree ${worktreeId} (${worktree.originalBranch ?? worktree.branch})`)
+    this.log(`Deleted worktree ${worktreeId}${branch ? ` (${branch})` : ""}`)
     return null
   }
 
@@ -1133,8 +1186,9 @@ export class AgentManagerProvider implements Disposable {
 
     let session: Session
     try {
+      const metadata = await sandboxSessionMetadata(this.connectionService.sandboxPreference, client, worktree.path)
       const { data } = await client.session.create(
-        { directory: worktree.path, platform: PLATFORM },
+        { directory: worktree.path, platform: PLATFORM, metadata },
         { throwOnError: true },
       )
       session = data
@@ -1287,6 +1341,34 @@ export class AgentManagerProvider implements Disposable {
 
       const state = this.getStateManager()!
       state.addSession(session.id, wt.worktree.id)
+      if (!branchName && !worktreeName && this.host.autoBranchNaming().enabled) {
+        state.armAutoName(wt.worktree.id, session.id)
+      }
+
+      // Sandbox must match the user's choice before this session is exposed or
+      // receives its initial prompt. A failed reconciliation aborts this version.
+      if (msg.sandbox !== undefined) {
+        try {
+          await ensureSandbox(this.connectionService.getClient(), session.id, wt.result.path, msg.sandbox)
+        } catch (error) {
+          const err = getErrorMessage(error)
+          this.log(`Failed to configure sandbox for ${session.id}: ${err}`)
+          this.postToWebview({
+            type: "agentManager.worktreeSetup",
+            status: "error",
+            message: `Failed to configure sandbox: ${err}`,
+            worktreeId: wt.worktree.id,
+          })
+          this.host.capture("Agent Manager Session Error", {
+            source: PLATFORM,
+            error: err,
+            context: "configureSandbox",
+          })
+          await this.discardWorktree(wt.worktree.id, wt.result.path, wt.result.branch, session.id)
+          continue
+        }
+      }
+
       this.registerWorktreeSession(session.id, wt.result.path)
       this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)
 
@@ -1342,6 +1424,12 @@ export class AgentManagerProvider implements Disposable {
       const msg = messages[i]!
       if (text) {
         this.log(`Sending initial message to version ${i + 1} (session=${msg.sessionId})`)
+        this.naming.prompt({
+          sessionID: msg.sessionId,
+          text,
+          providerID: msg.providerID,
+          modelID: msg.modelID,
+        })
       }
       this.postToWebview({ type: "agentManager.sendInitialMessage", ...msg })
       if (text && i < messages.length - 1) {
@@ -1821,6 +1909,7 @@ export class AgentManagerProvider implements Disposable {
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
     this.diffs.stop()
+    this.naming.dispose()
     this.statsPoller.stop()
     this.gitOps.dispose()
     this.prBridge.poller.stop()

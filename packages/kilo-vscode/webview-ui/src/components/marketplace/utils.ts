@@ -1,4 +1,12 @@
-import type { MarketplaceInstalledMetadata, MarketplaceItem } from "../../types/marketplace"
+import type {
+  MarketplaceInstalledMetadata,
+  MarketplaceItem,
+  MarketplaceRelevanceMetadata,
+} from "../../types/marketplace"
+
+export function hasRelevantItems(items: MarketplaceItem[], relevance: MarketplaceRelevanceMetadata): boolean {
+  return items.some((item) => !!relevance[`${item.type}:${item.id}`])
+}
 
 export function retain<T>(selected: T[], available: T[]): T[] {
   const values = new Set(available)
@@ -48,6 +56,8 @@ export function filterItems(
   categories: string[],
   types: MarketplaceItem["type"][],
   labels: Partial<Record<MarketplaceItem["type"], string>> = {},
+  relevant = false,
+  relevance: MarketplaceRelevanceMetadata = {},
 ): MarketplaceItem[] {
   const query = search.trim().toLowerCase()
   return items
@@ -56,6 +66,7 @@ export function filterItems(
       if (status === "notInstalled" && isInstalled(item.id, item.type, metadata)) return false
       if (types.length > 0 && !types.includes(item.type)) return false
       if (categories.length > 0 && !categories.includes(item.category)) return false
+      if (relevant && !relevance[`${item.type}:${item.id}`]) return false
       if (!query) return true
       return matches(item, query, labels)
     })

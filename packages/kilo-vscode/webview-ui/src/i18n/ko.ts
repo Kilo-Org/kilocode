@@ -1,8 +1,62 @@
 import { dict as en } from "./en"
 
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop 연결",
+  "provider.anaconda.title.manage": "Anaconda Desktop 관리",
+  "provider.anaconda.status.checking": "Anaconda Desktop 확인 중...",
+  "provider.anaconda.status.opening": "Anaconda Desktop 여는 중...",
+  "provider.anaconda.status.syncing": "공급자 모델 새로 고치는 중...",
+  "provider.anaconda.status.ready": "연결할 준비됨",
+  "provider.anaconda.status.waiting": "Desktop 대기 중",
+  "provider.anaconda.status.attention": "주의 필요",
+  "provider.anaconda.status.unavailable": "사용할 수 없음",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop은 {{platform}}에서 지원되지 않습니다.",
+  "provider.anaconda.state.notInstalled":
+    "이 컴퓨터에 Anaconda Desktop을 설치한 후 여기로 돌아오세요. Kilo는 설치 프로그램을 대신 실행하지 않습니다.",
+  "provider.anaconda.state.notRunning":
+    "Anaconda Desktop을 열고 설정을 완료한 후 로그인한 다음 다시 확인을 선택하세요.",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop 설정이 완료되지 않았습니다. Desktop을 열고 설정을 완료한 후 필요하면 다시 시작하세요.",
+  "provider.anaconda.state.signedOut": "Kilo를 연결하기 전에 Anaconda Desktop을 열고 로그인하세요.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo가 Anaconda Desktop에 접근할 수 없습니다. Desktop을 열고 다시 로그인한 후 필요하면 다시 시작하세요.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop이 아직 응답하지 않습니다. 열어서 애플리케이션이 완전히 시작될 때까지 기다리세요.",
+  "provider.anaconda.state.noModel":
+    "Anaconda Desktop에서 텍스트 생성 모델을 다운로드하세요. 가능하면 도구 호출을 지원하는 모델을 선택한 후 서버를 시작하세요.",
+  "provider.anaconda.state.noServer_one":
+    "다운로드된 텍스트 생성 모델 1개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.noServer_other":
+    "다운로드된 텍스트 생성 모델 {{count}}개를 사용할 수 있습니다. Anaconda Desktop에서 모델 서버를 시작하세요. 도구 호출을 지원하는 모델을 강력히 권장합니다.",
+  "provider.anaconda.state.unhealthy":
+    "활성 추론 서버가 아직 정상이 아닙니다. Anaconda Desktop에서 확인하고 필요하면 서버를 다시 시작하세요.",
+  "provider.anaconda.state.ready":
+    "Kilo가 정상적인 로컬 텍스트 생성 서버를 찾았으며 현재 연결 설정을 가져올 수 있습니다.",
+  "provider.anaconda.server": "활성 추론 서버",
+  "provider.anaconda.context": "컨텍스트 창",
+  "provider.anaconda.contextValue": "{{count}} 토큰",
+  "provider.anaconda.tools": "도구 호출",
+  "provider.anaconda.tools.supported": "지원됨",
+  "provider.anaconda.tools.unsupported": "사용 안 함",
+  "provider.anaconda.tools.unknown": "알 수 없음",
+  "provider.anaconda.warning.title": "도구 지원이 제한적입니다",
+  "provider.anaconda.warning.description":
+    "이 서버는 도구 호출을 확인하지 않습니다. 코딩 에이전트 작업이 실패하거나 사용할 수 없을 수 있습니다. 이러한 제한을 감수하는 경우에만 계속하세요.",
+  "provider.anaconda.action.download": "Anaconda Desktop 다운로드",
+  "provider.anaconda.action.open": "Anaconda Desktop 열기",
+  "provider.anaconda.action.checkAgain": "다시 확인",
+  "provider.anaconda.action.continue": "계속하기",
+  "provider.anaconda.action.manage": "관리 / 새로 고침",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop 새로 고침됨",
+  "provider.anaconda.toast.refreshed.description": "활성 로컬 서버와 모델이 Kilo에서 최신 상태입니다.",
+  "settings.providers.note.anacondaDesktop": "Anaconda Desktop이 로컬에서 제공하는 모델을 실행합니다.",
+  "settings.providers.tag.local": "로컬",
+} as const
+
 type Keys = keyof typeof en
 
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "추천",
   "command.category.view": "보기",
   "command.category.project": "프로젝트",
@@ -98,6 +152,30 @@ export const dict = {
   "command.session.unshare.description": "이 세션 공유 중지",
   "command.session.export": "세션 기록 내보내기",
 
+  "agentRequirements.skill.installed": "설치됨",
+  "agentRequirements.skill.checkFailed": "스킬 확인에 실패했습니다",
+  "agentRequirements.skill.missing": "설치되지 않음",
+  "agentRequirements.mcp.connected": "연결됨",
+  "agentRequirements.mcp.checkFailed": "MCP 확인에 실패했습니다",
+  "agentRequirements.mcp.missing": "연결되지 않음",
+  "agentRequirements.extension.installed": "설치됨",
+  "agentRequirements.extension.checkFailed": "VS Code 확장 확인에 실패했습니다",
+  "agentRequirements.extension.missing": "설치되지 않음",
+  "agentRequirements.extension.description": "VS Code에서 누락된 확장을 설치하세요.",
+  "agentRequirements.group.skills": "스킬",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "VS Code 확장",
+  "agentRequirements.blocked.title": "{{agent}} 에이전트 필수 조건",
+  "agentRequirements.blocked.description": "이 에이전트를 실행하려면 다음 도구가 필요합니다.",
+  "agentRequirements.prompt.blocked": "이 에이전트를 사용하려면 먼저 필요한 확인을 완료하세요",
+  "agentRequirements.action.openMarketplace": "Marketplace 열기",
+  "agentRequirements.error.unknownAgent": "선택한 에이전트를 찾을 수 없습니다.",
+  "agentRequirements.error.malformedDeclaration": "이 에이전트의 요구 사항 선언이 올바르지 않습니다.",
+  "agentRequirements.error.discoveryFailed": "Kilo가 사용 가능한 스킬을 확인하지 못했습니다.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo가 MCP 서버 상태를 확인하지 못했습니다.",
+  "agentRequirements.error.scopeMismatch": "이 에이전트 요구 사항 확인은 더 이상 활성 상태가 아닙니다.",
+  "agentRequirements.error.requestFailed": "Kilo가 에이전트 요구 사항을 확인하지 못했습니다.",
+
   "palette.search.placeholder": "파일, 명령어 및 세션 검색",
   "palette.empty": "결과 없음",
   "palette.group.commands": "명령어",
@@ -177,6 +255,7 @@ export const dict = {
   "model.tag.free": "무료",
   "model.tag.dataCollected": "데이터가 학습에 사용될 수 있습니다",
   "model.tag.latest": "최신",
+  "model.group.auto": "자동 모델",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
   "model.group.collapse": "{{group}} 접기",
@@ -205,6 +284,7 @@ export const dict = {
   "model.preview.label.average": "예상 평균 비용",
   "model.preview.label.context": "컨텍스트",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "모델 선택지",
   "model.preview.label.completion": "완료율",
   "model.preview.label.costAttempt": "시도당 비용",
   "model.preview.value.notSupported": "미지원",
@@ -1117,6 +1197,10 @@ export const dict = {
   "profile.balance.title": "잔액",
   "profile.balance.refresh": "잔액 새로고침",
   "profile.action.dashboard": "대시보드",
+  "profile.action.topUp": "충전",
+  "profile.pass.subscribe": "Kilo Pass를 구독하여 크레딧을 추가하고 보너스를 받으세요",
+  "profile.pass.bonus": "보너스",
+  "profile.pass.renews": "갱신",
   "profile.action.logout": "로그아웃",
 
   "settings.section.configuration": "구성",
@@ -1193,6 +1277,10 @@ export const dict = {
   "session.outcome.interrupted": "턴이 중단되었습니다",
   "session.outcome.error": "턴이 실패했습니다",
   "session.outcome.finish": "종료 이유: {{reason}}",
+  "session.costAlert.header": "세션 비용 알림",
+  "session.costAlert.continue": "계속",
+  "session.costAlert.question": "이 세션이 세션별 알림 기준 {{limit}}을 방금 넘었고 비용은 {{cost}}입니다. 계속할까요?",
+  "session.costAlert.stop": "중지",
 
   "ui.sessionTurn.cancel": "취소",
   "ui.sessionTurn.status.thinking": "생각 중...",
@@ -1237,6 +1325,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "이 기능은 VS Code 확장 프로그램 전용 설정만 기본값으로 초기화합니다. 모드 및 자동 승인 규칙과 같이 CLI와 공유되는 설정은 CLI 구성에 저장되며 초기화되지 않습니다.",
   "settings.aboutKiloCode.resetSettings.button": "모든 설정 초기화",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "설정 이전",
   "settings.aboutKiloCode.settingsTransfer.description":
     "VS Code 인스턴스 간에 설정을 전송하려면 내보내기 또는 가져오기하세요.",
@@ -1326,6 +1415,9 @@ export const dict = {
     "Speech to Text를 사용하려면 Kilo 제공자를 활성화하고 로그인하세요. 현재 Speech to Text는 Kilo Gateway에서만 지원됩니다.",
   "settings.models.speechToTextModel.title": "음성 텍스트 변환 모델",
   "settings.models.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
+  "settings.experimental.nativeNotebookTools.title": "네이티브 노트북 도구",
+  "settings.experimental.nativeNotebookTools.description":
+    "VS Code 노트북을 읽고, 편집하고, 실행하는 실험적 도구를 활성화합니다",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.sandboxing.title": "샌드박스",
@@ -1467,6 +1559,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "도구 실행 허용 방식을 정의합니다. 대부분의 도구 기본값은 '허용'입니다. doom_loop 및 external_directory의 기본값은 '확인'입니다.",
+  "settings.autoApprove.maxCost.title": "세션 비용 알림",
+  "settings.autoApprove.maxCost.description":
+    "세션 지출이 이 USD 금액을 초과한 뒤 계속하기 전에 알립니다. 정수 달러 금액을 사용하세요. 비활성화하려면 비워 두세요.",
   "settings.autoApprove.level.allow": "허용",
   "settings.autoApprove.level.ask": "확인",
   "settings.autoApprove.level.deny": "거부",

@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Підключити Anaconda Desktop",
+  "provider.anaconda.title.manage": "Керувати Anaconda Desktop",
+  "provider.anaconda.status.checking": "Перевірка Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Відкриття Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Оновлення моделей провайдера...",
+  "provider.anaconda.status.ready": "Готово до підключення",
+  "provider.anaconda.status.waiting": "Очікування Desktop",
+  "provider.anaconda.status.attention": "Потребує уваги",
+  "provider.anaconda.status.unavailable": "Недоступно",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop не підтримується на {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Встановіть Anaconda Desktop на цьому комп'ютері, а потім поверніться сюди. Kilo не запускає інсталятор за вас.",
+  "provider.anaconda.state.notRunning":
+    "Відкрийте Anaconda Desktop, завершіть налаштування та увійдіть, потім виберіть «Перевірити ще раз».",
+  "provider.anaconda.state.invalidConfig":
+    "Налаштування Anaconda Desktop неповне. Відкрийте Desktop, завершіть налаштування та перезапустіть його за потреби.",
+  "provider.anaconda.state.signedOut": "Відкрийте Anaconda Desktop та увійдіть перед підключенням Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo не вдалося отримати доступ до Anaconda Desktop. Відкрийте Desktop, увійдіть знову та перезапустіть його за потреби.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop ще не відповідає. Відкрийте його та зачекайте, доки програма завершить запуск.",
+  "provider.anaconda.state.noModel":
+    "В Anaconda Desktop завантажте модель генерації тексту. За можливості виберіть модель із підтримкою виклику інструментів, потім запустіть її сервер.",
+  "provider.anaconda.state.noServer_one":
+    "Доступна 1 завантажена модель генерації тексту. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.noServer_other":
+    "Доступно завантажених моделей генерації тексту: {{count}}. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.unhealthy":
+    "Активний сервер інференсу ще не справний. Перевірте його в Anaconda Desktop та перезапустіть сервер за потреби.",
+  "provider.anaconda.state.ready":
+    "Kilo знайшов справний локальний сервер генерації тексту та може імпортувати його поточні налаштування підключення.",
+  "provider.anaconda.server": "Активний сервер інференсу",
+  "provider.anaconda.context": "Вікно контексту",
+  "provider.anaconda.contextValue": "{{count}} токенів",
+  "provider.anaconda.tools": "Виклик інструментів",
+  "provider.anaconda.tools.supported": "Підтримується",
+  "provider.anaconda.tools.unsupported": "Не увімкнено",
+  "provider.anaconda.tools.unknown": "Невідомо",
+  "provider.anaconda.warning.title": "Підтримка інструментів обмежена",
+  "provider.anaconda.warning.description":
+    "Цей сервер не підтверджує виклик інструментів. Дії агента кодування можуть не спрацювати або бути недоступними. Продовжуйте, лише якщо приймаєте ці обмеження.",
+  "provider.anaconda.action.download": "Завантажити Anaconda Desktop",
+  "provider.anaconda.action.open": "Відкрити Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Перевірити ще раз",
+  "provider.anaconda.action.continue": "Усе одно продовжити",
+  "provider.anaconda.action.manage": "Керувати / Оновити",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop оновлено",
+  "provider.anaconda.toast.refreshed.description": "Активний локальний сервер та моделі актуальні в Kilo.",
+  "settings.providers.note.anacondaDesktop": "Запустіть модель, що обслуговується локально через Anaconda Desktop.",
+  "settings.providers.tag.local": "Локальний",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Запропоновані",
   "command.category.view": "Вигляд",
   "command.category.project": "Проєкт",
@@ -94,6 +148,30 @@ export const dict = {
   "command.session.unshare.description": "Закрити доступ до цієї сесії",
   "command.session.export": "Експортувати запис сеансу",
 
+  "agentRequirements.skill.installed": "Встановлено",
+  "agentRequirements.skill.checkFailed": "Не вдалося перевірити навичку",
+  "agentRequirements.skill.missing": "Не встановлено",
+  "agentRequirements.mcp.connected": "Підключено",
+  "agentRequirements.mcp.checkFailed": "Не вдалося перевірити MCP",
+  "agentRequirements.mcp.missing": "Не підключено",
+  "agentRequirements.extension.installed": "Встановлено",
+  "agentRequirements.extension.checkFailed": "Не вдалося перевірити розширення VS Code",
+  "agentRequirements.extension.missing": "Не встановлено",
+  "agentRequirements.extension.description": "Встановіть відсутні розширення у VS Code.",
+  "agentRequirements.group.skills": "Навички",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "Розширення VS Code",
+  "agentRequirements.blocked.title": "Передумови агента {{agent}}",
+  "agentRequirements.blocked.description": "Цьому агенту потрібні такі інструменти, перш ніж він зможе працювати.",
+  "agentRequirements.prompt.blocked": "Спочатку завершіть необхідні перевірки, щоб використати цього агента",
+  "agentRequirements.action.openMarketplace": "Відкрити Marketplace",
+  "agentRequirements.error.unknownAgent": "Вибраного агента не знайдено.",
+  "agentRequirements.error.malformedDeclaration": "Цей агент має недійсну декларацію вимог.",
+  "agentRequirements.error.discoveryFailed": "Kilo не зміг перевірити доступні навички.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo не зміг перевірити стан сервера MCP.",
+  "agentRequirements.error.scopeMismatch": "Ця перевірка вимог агента більше не активна.",
+  "agentRequirements.error.requestFailed": "Kilo не зміг перевірити вимоги агента.",
+
   "palette.search.placeholder": "Пошук файлів, команд і сесій",
   "palette.empty": "Результатів не знайдено",
   "palette.group.commands": "Команди",
@@ -175,6 +253,7 @@ export const dict = {
   "model.tag.free": "Безкоштовно",
   "model.tag.dataCollected": "Дані можуть використовуватися для навчання",
   "model.tag.latest": "Остання",
+  "model.group.auto": "Автоматичні моделі",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
   "model.group.collapse": "Згорнути {{group}}",
@@ -202,6 +281,7 @@ export const dict = {
   "model.preview.label.average": "Орієнт. сер. вартість",
   "model.preview.label.context": "Контекст",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Варіанти моделей",
   "model.preview.label.completion": "Виконання",
   "model.preview.label.costAttempt": "Вартість / спроба",
   "model.preview.value.notSupported": "Не підтримується",
@@ -1120,6 +1200,10 @@ export const dict = {
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Оновити баланс",
   "profile.action.dashboard": "Панель керування",
+  "profile.action.topUp": "Поповнити",
+  "profile.pass.subscribe": "Отримайте Kilo Pass, щоб додати кредити та заробляти бонуси",
+  "profile.pass.bonus": "Бонус",
+  "profile.pass.renews": "Поновлюється",
   "profile.action.logout": "Вийти",
 
   "settings.section.configuration": "Конфігурація",
@@ -1190,6 +1274,11 @@ export const dict = {
   "session.outcome.interrupted": "Хід перервано",
   "session.outcome.error": "Хід не вдався",
   "session.outcome.finish": "Причина завершення: {{reason}}",
+  "session.costAlert.header": "Сповіщення про вартість сесії",
+  "session.costAlert.continue": "Продовжити",
+  "session.costAlert.question":
+    "Ця сесія щойно перевищила поріг сповіщення для сесії {{limit}} і коштує {{cost}}. Продовжити?",
+  "session.costAlert.stop": "Зупинити",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1234,6 +1323,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Це скине лише налаштування, специфічні для розширення VS Code, до стандартних значень. Налаштування, що зберігаються в конфігурації CLI (такі як режими та правила автоматичного схвалення), не будуть скинуті.",
   "settings.aboutKiloCode.resetSettings.button": "Скинути всі налаштування",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Перенесення налаштувань",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Експортуйте або імпортуйте налаштування для перенесення між екземплярами VS Code.",
@@ -1330,6 +1420,9 @@ export const dict = {
     "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Модель мовлення в текст",
   "settings.models.speechToTextModel.description": "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
+  "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
+  "settings.experimental.nativeNotebookTools.description":
+    "Увімкнути експериментальні інструменти для читання, редагування та виконання блокнотів VS Code",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.sandboxing.title": "Пісочниця",
@@ -1440,6 +1533,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
+  "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
+  "settings.autoApprove.maxCost.description":
+    "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",
   "settings.autoApprove.level.allow": "Дозволити",
   "settings.autoApprove.level.ask": "Запитувати",
   "settings.autoApprove.level.deny": "Відхилити",

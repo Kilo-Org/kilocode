@@ -23,10 +23,8 @@ export const ServeCommand = effectCmd({
     const urls = server.urls
 
     console.log(`kilo server listening on ${urls.bind}`)
-    if (urls.network) {
-      console.log(`  Local:   ${urls.local}`)
-      console.log(`  Network: ${urls.network}`)
-    }
+    if (urls.local !== urls.bind) console.log(`  Local:   ${urls.local}`)
+    if (urls.network) console.log(`  Network: ${urls.network}`)
     // kilocode_change end
 
     // kilocode_change start - graceful signal shutdown

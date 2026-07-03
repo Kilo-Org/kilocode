@@ -146,6 +146,31 @@ describe("daemon manager", () => {
     ).toStrictEqual(["/tmp/bun", "--conditions=browser", "/tmp/kilo/src/index.ts"])
   })
 
+  test("does not reuse legacy fixed-password daemons", () => {
+    const input = {
+      hostname: "127.0.0.1",
+      port: 4097,
+      mdns: false,
+      mdnsDomain: "kilo.local",
+      cors: [],
+    }
+    const state: Daemon.State = {
+      pid: 1,
+      hostname: input.hostname,
+      port: input.port,
+      url: "http://127.0.0.1:4097",
+      username: "kilo",
+      password: "kilo",
+      token: Buffer.from("kilo:kilo").toString("base64"),
+      version: "test",
+      startedAt: new Date(0).toISOString(),
+      log: "/tmp/daemon.log",
+      options: input,
+    }
+
+    expect(Daemon.matches(state, input, [])).toBe(false)
+  })
+
   test("reuses one daemon across caller directories", async () => {
     await using tmp = await tmpdir()
     const env = opts(tmp.path)
@@ -169,6 +194,8 @@ describe("daemon manager", () => {
     expect(started.running).toBe(true)
     expect(started.state?.pid).toBeGreaterThan(0)
     expect(started.state?.token).toBeTruthy()
+    expect(started.state?.password).not.toBe("kilo")
+    expect(started.state?.token).not.toBe(Buffer.from("kilo:kilo").toString("base64"))
     expect(started.state?.port).toBeGreaterThan(0)
 
     const blocked = await fetch(`${started.state!.url}/config?directory=${encodeURIComponent(tmp.path)}`)

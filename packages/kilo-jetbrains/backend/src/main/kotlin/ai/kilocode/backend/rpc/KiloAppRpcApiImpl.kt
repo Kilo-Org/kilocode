@@ -9,12 +9,7 @@ import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
-import ai.kilocode.jetbrains.api.model.AgentConfig
-import ai.kilocode.jetbrains.api.model.Config
-import ai.kilocode.jetbrains.api.model.ConfigAgent
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
-import ai.kilocode.rpc.dto.AgentConfigDto
-import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.ConfigWarningDto
@@ -30,6 +25,7 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileKiloPassDto
 import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
@@ -131,7 +127,7 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
                     else ProfileStatusDto.NOT_LOGGED_IN,
             ),
             warnings = state.data.warnings.map(::warning),
-            config = config(state.data.config),
+            config = state.data.config,
             profile = state.data.profile?.let(::profileDto),
         )
         is KiloAppState.Error -> KiloAppStateDto(
@@ -148,6 +144,14 @@ internal fun profileDto(p: KiloProfile200Response): ProfileDto = ProfileDto(
         ProfileOrganizationDto(id = org.id, name = org.name, role = org.role)
     },
     balance = p.balance?.let { ProfileBalanceDto(balance = it.balance) },
+    kiloPass = p.kiloPass?.let {
+        ProfileKiloPassDto(
+            currentPeriodBaseCreditsUsd = it.currentPeriodBaseCreditsUsd,
+            currentPeriodUsageUsd = it.currentPeriodUsageUsd,
+            currentPeriodBonusCreditsUsd = it.currentPeriodBonusCreditsUsd,
+            nextBillingAt = it.nextBillingAt,
+        )
+    },
     currentOrgId = p.currentOrgId,
 )
 
@@ -171,35 +175,4 @@ private fun warning(w: ConfigWarning) = ConfigWarningDto(
     path = w.path,
     message = w.message,
     detail = w.detail,
-)
-
-private fun config(c: Config) = ConfigDto(
-    model = c.model,
-    smallModel = c.smallModel,
-    subagentModel = c.subagentModel,
-    subagentVariant = c.subagentVariant,
-    agent = agents(c.agent),
-)
-
-private fun agents(cfg: ConfigAgent?): Map<String, AgentConfigDto> {
-    if (cfg == null) return emptyMap()
-    val known = listOf(
-        "plan" to cfg.plan,
-        "build" to cfg.build,
-        "debug" to cfg.debug,
-        "orchestrator" to cfg.orchestrator,
-        "ask" to cfg.ask,
-        "general" to cfg.general,
-        "explore" to cfg.explore,
-        "title" to cfg.title,
-        "summary" to cfg.summary,
-        "compaction" to cfg.compaction,
-    ).mapNotNull { (name, item) -> item?.let { name to agent(it) } }.toMap()
-    val extra = cfg.entries.associate { (name, item) -> name to agent(item) }
-    return known + extra
-}
-
-private fun agent(cfg: AgentConfig) = AgentConfigDto(
-    model = cfg.model,
-    variant = cfg.variant,
 )

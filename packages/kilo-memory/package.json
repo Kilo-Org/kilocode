@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-memory",
+  "version": "7.4.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Project memory storage, indexing, recall, and command helpers for Kilo Code",
+  "keywords": [
+    "kilo",
+    "kilocode",
+    "memory",
+    "agent"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./capture": "./src/capture/capture.ts",
+    "./commands": "./src/commands.ts",
+    "./digest": "./src/capture/digest.ts",
+    "./effect": "./src/effect/index.ts",
+    "./effect/capture": "./src/effect/capture.ts",
+    "./effect/config": "./src/effect/config.ts",
+    "./effect/errors": "./src/effect/errors.ts",
+    "./effect/events": "./src/effect/events.ts",
+    "./effect/instance": "./src/effect/instance.ts",
+    "./effect/log": "./src/effect/log.ts",
+    "./effect/paths": "./src/effect/paths.ts",
+    "./effect/ports": "./src/effect/ports.ts",
+    "./effect/service": "./src/effect/service.ts",
+    "./effect/timers": "./src/effect/timers.ts",
+    "./effect/turn": "./src/effect/turn.ts",
+    "./memory": "./src/memory.ts",
+    "./ops": "./src/capture/ops.ts",
+    "./paths": "./src/storage/paths.ts",
+    "./recall": "./src/recall/recall.ts",
+    "./redact": "./src/capture/redact.ts",
+    "./schema": "./src/schema.ts",
+    "./shared": "./src/recall/shared.ts",
+    "./store": "./src/storage/store.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "build": "tsc",
+    "test": "bun test --timeout 30000",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
+  },
+  "dependencies": {
+    "effect": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {}
+}

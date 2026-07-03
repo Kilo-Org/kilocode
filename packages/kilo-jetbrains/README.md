@@ -84,30 +84,33 @@ See [RELEASING.md](RELEASING.md) for the full release process, including how to 
 
 ## Run the plugin
 
-Use the `runIde` Gradle task (available in the Gradle tool window or via `./gradlew runIde` from `packages/kilo-jetbrains/`) to launch a sandboxed IntelliJ instance with the plugin installed.
+Use the checked-in `Run IDE (Split Mode)` run configuration (or `./gradlew --no-configuration-cache runIdeSplitMode` from `packages/kilo-jetbrains/`) to launch the backend and frontend halves of a local split-mode sandbox. The task prepares the local-platform CLI binary automatically when `backend/build/generated/cli/cli/` does not contain the expected binary.
 
-`runIde` does not prepare the CLI binary automatically. Run `bun run build --prepare-cli` from `packages/kilo-jetbrains/` first to copy the local-platform binary into `backend/build/generated/cli/cli/`.
+Use `runIde` only when you need a monolithic sandboxed IntelliJ instance. `runIde` does not prepare the CLI binary automatically, so run `bun run build --prepare-cli` from `packages/kilo-jetbrains/` first to copy the local-platform binary into `backend/build/generated/cli/cli/`.
 
 Production packaging still requires running `bun run build:production` so all platform binaries are present.
 
 ### Run the split backend
 
-Use the checked-in `Run IDE (Backend)` run configuration (or `./gradlew runIdeBackend`) to launch just the backend half of a split-mode session. It prepares the local-platform CLI binary automatically when `backend/build/generated/cli/cli/` does not contain the expected binary.
+Use the checked-in `Run IDE (Backend)` run configuration (or `./gradlew --no-configuration-cache runIdeBackend`) to launch just the backend half of a split-mode session. It prepares the local-platform CLI binary automatically when `backend/build/generated/cli/cli/` does not contain the expected binary.
 
 If `Run IDE (Backend)` exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting the backend.
 
-Use `Run IDE (Split Mode)` to launch both halves at once (composes `Run IDE (Backend)` + `Run IDE (Frontend)`).
+Use `Run IDE (Frontend)` (or `./gradlew --no-configuration-cache runIdeFrontend`) with a running backend when you need frontend JVM debugging; `Run IDE (Split Mode)` launches the frontend itself and does not attach frontend debugging.
 
-### Backend Gradle properties
+### Development Gradle properties
 
 All properties below are passed with `-P` on the Gradle command line or in the run configuration's script parameters field.
 
 | Property | Default | Description |
 |---|---|---|
-| `kilo.splitModeServerPort` | random high port | Backend split-mode server port. `0` or omitted picks a random port from 49152-65535. |
-| `kilo.dev.storage.isolated` | `false` | When `true`, CLI runs with `XDG_*_HOME` pointing to `.kilo-dev/` in the worktree root, fully isolating dev storage from your real Kilo installation. Enabled by default in `Run IDE (Backend)`. |
+| `kilo.splitModeServerPort` | `0` | Backend split-mode server port. `0` or omitted lets the IntelliJ Platform Gradle Plugin pick a free port when the task runs. |
+| `kilo.dev.storage.isolated` | `false` | When `true`, CLI runs with `XDG_*_HOME` pointing to `.kilo-dev/` in the worktree root, fully isolating dev storage from your real Kilo installation. Enabled by default in the checked-in split-mode run configurations. |
 | `kilo.dev.worktree.root` | monorepo root | Worktree root used to resolve `.kilo-dev/`. Auto-detected from the Gradle project directory; override only when the auto-detection is wrong. |
 | `kilo.bun.path` | `bun` on `$PATH` | Absolute path to Bun. Set this when IntelliJ-launched Gradle cannot find Bun automatically. |
+
+The checked-in IDE run configurations pass `--no-configuration-cache` because the IntelliJ Platform Gradle Plugin run-IDE tasks are not configuration-cache compatible in this setup.
+They also pass `--purge-old-log-directories` so stale sandbox logs do not hide the current backend and frontend `kilo-dev.log` files.
 
 Example with a fixed split-mode port:
 
@@ -129,7 +132,7 @@ When `kilo.dev.storage.isolated=true`, the CLI subprocess receives standard `XDG
 
 This keeps all development data isolated from your real Kilo installation. The `.kilo-dev/` directory is gitignored and created automatically on first run.
 
-The `Run IDE (Backend)` run configuration enables this by default. To disable it:
+The checked-in `Run IDE (Backend)`, `Run IDE (Frontend)`, and `Run IDE (Split Mode)` run configurations enable this by default. To disable it:
 
 ```text
 -Pkilo.dev.storage.isolated=false
@@ -139,7 +142,7 @@ The `Run IDE (Backend)` run configuration enables this by default. To disable it
 
 ### Debug logging properties
 
-The plugin supports a few JVM system properties for local debugging. These are most useful with `runIde` in sandbox mode because the logs are mirrored to `kilo-dev.log` files for frontend and backend.
+The plugin supports a few JVM system properties for local debugging. These are most useful with sandbox runs because the logs are mirrored to `kilo-dev.log` files for frontend and backend.
 
 `kilo.dev.log.level`
 
@@ -164,7 +167,7 @@ The plugin supports a few JVM system properties for local debugging. These are m
 
 Where to find the log files:
 
-- In sandbox `runIde` runs, Kilo writes separate dev log files for each side under the IDE sandbox log directory reported by `PathManager.getLogDir()`.
+- In sandbox runs, Kilo writes separate dev log files for each side under the IDE sandbox log directory reported by `PathManager.getLogDir()`.
 - Frontend log file: `<sandbox log dir>/kilo-frontend/kilo-dev.log`
 - Backend log file: `<sandbox log dir>/kilo-backend/kilo-dev.log`
 - In practice these sit under the current `log_run*` sandbox logs for the active run.

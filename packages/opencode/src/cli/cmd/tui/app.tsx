@@ -33,6 +33,7 @@ import { SDKProvider, useSDK } from "@tui/context/sdk"
 import { StartupLoading } from "@tui/component/startup-loading"
 import { SyncProvider, useSync } from "@tui/context/sync"
 import { SyncProviderV2 } from "@tui/context/sync-v2"
+import { NudgeProvider } from "@/kilocode/cli/cmd/tui/context/nudge" // kilocode_change
 import { LocalProvider, useLocal } from "@tui/context/local"
 import { DialogModel } from "@tui/component/dialog-model"
 import { useConnected } from "@tui/component/use-connected"
@@ -267,15 +268,19 @@ async function mountTui(input: TuiInput & { keymap: ReturnType<typeof createDefa
                                 <LocalProvider>
                                   <PromptStashProvider>
                                     <DialogProvider>
-                                      <FrecencyProvider>
-                                        <PromptHistoryProvider>
-                                          <PromptRefProvider>
-                                            <EditorContextProvider>
-                                              <App onSnapshot={input.onSnapshot} />
-                                            </EditorContextProvider>
-                                          </PromptRefProvider>
-                                        </PromptHistoryProvider>
-                                      </FrecencyProvider>
+                                      {/* kilocode_change start */}
+                                      <NudgeProvider>
+                                        <FrecencyProvider>
+                                          <PromptHistoryProvider>
+                                            <PromptRefProvider>
+                                              <EditorContextProvider>
+                                                <App onSnapshot={input.onSnapshot} />
+                                              </EditorContextProvider>
+                                            </PromptRefProvider>
+                                          </PromptHistoryProvider>
+                                        </FrecencyProvider>
+                                      </NudgeProvider>
+                                      {/* kilocode_change end */}
                                     </DialogProvider>
                                   </PromptStashProvider>
                                 </LocalProvider>

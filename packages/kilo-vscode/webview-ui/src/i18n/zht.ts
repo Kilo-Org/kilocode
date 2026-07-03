@@ -2,7 +2,58 @@ import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "連接 Anaconda Desktop",
+  "provider.anaconda.title.manage": "管理 Anaconda Desktop",
+  "provider.anaconda.status.checking": "正在檢查 Anaconda Desktop...",
+  "provider.anaconda.status.opening": "正在開啟 Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "正在重新整理供應商模型...",
+  "provider.anaconda.status.ready": "已準備好連接",
+  "provider.anaconda.status.waiting": "正在等待 Desktop",
+  "provider.anaconda.status.attention": "需要注意",
+  "provider.anaconda.status.unavailable": "無法使用",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop 不支援 {{platform}}。",
+  "provider.anaconda.state.notInstalled":
+    "請在此機器上安裝 Anaconda Desktop，然後返回此處。Kilo 不會為您執行安裝程式。",
+  "provider.anaconda.state.notRunning": "請開啟 Anaconda Desktop，完成設定並登入，然後選擇再次檢查。",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop 設定尚未完成。請開啟 Desktop，完成設定，並在需要時重新啟動它。",
+  "provider.anaconda.state.signedOut": "請開啟 Anaconda Desktop 並登入，然後再連接 Kilo。",
+  "provider.anaconda.state.unauthorized":
+    "Kilo 無法存取 Anaconda Desktop。請開啟 Desktop，重新登入，並在需要時重新啟動它。",
+  "provider.anaconda.state.unavailable": "Anaconda Desktop 尚未回應。請開啟它並等待應用程式完成啟動。",
+  "provider.anaconda.state.noModel":
+    "請在 Anaconda Desktop 中下載一個文字生成模型。可能的話請選擇支援工具呼叫的模型，然後啟動其伺服器。",
+  "provider.anaconda.state.noServer_one":
+    "有 1 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
+  "provider.anaconda.state.noServer_other":
+    "有 {{count}} 個已下載的文字生成模型可用。請在 Anaconda Desktop 中啟動一個模型伺服器。強烈建議使用支援工具呼叫的模型。",
+  "provider.anaconda.state.unhealthy":
+    "使用中的推論伺服器尚未正常運作。請在 Anaconda Desktop 中檢查它，並在需要時重新啟動伺服器。",
+  "provider.anaconda.state.ready": "Kilo 找到了一個正常運作的本機文字生成伺服器，並可匯入其目前的連接設定。",
+  "provider.anaconda.server": "使用中的推論伺服器",
+  "provider.anaconda.context": "上下文視窗",
+  "provider.anaconda.contextValue": "{{count}} 個權杖",
+  "provider.anaconda.tools": "工具呼叫",
+  "provider.anaconda.tools.supported": "支援",
+  "provider.anaconda.tools.unsupported": "未啟用",
+  "provider.anaconda.tools.unknown": "未知",
+  "provider.anaconda.warning.title": "工具支援有限",
+  "provider.anaconda.warning.description":
+    "此伺服器未確認支援工具呼叫。編碼代理程式的動作可能會失敗或無法使用。只有在您接受這些限制的情況下才繼續。",
+  "provider.anaconda.action.download": "下載 Anaconda Desktop",
+  "provider.anaconda.action.open": "開啟 Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "再次檢查",
+  "provider.anaconda.action.continue": "仍要繼續",
+  "provider.anaconda.action.manage": "管理 / 重新整理",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop 已重新整理",
+  "provider.anaconda.toast.refreshed.description": "使用中的本機伺服器與模型在 Kilo 中已是最新狀態。",
+  "settings.providers.note.anacondaDesktop": "執行由 Anaconda Desktop 在本機提供的模型。",
+  "settings.providers.tag.local": "本機",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "建議",
   "command.category.view": "檢視",
   "command.category.project": "專案",
@@ -98,6 +149,30 @@ export const dict = {
   "command.session.unshare.description": "停止分享此工作階段",
   "command.session.export": "匯出會話紀錄",
 
+  "agentRequirements.skill.installed": "已安裝",
+  "agentRequirements.skill.checkFailed": "技能檢查失敗",
+  "agentRequirements.skill.missing": "未安裝",
+  "agentRequirements.mcp.connected": "已連線",
+  "agentRequirements.mcp.checkFailed": "MCP 檢查失敗",
+  "agentRequirements.mcp.missing": "未連線",
+  "agentRequirements.extension.installed": "已安裝",
+  "agentRequirements.extension.checkFailed": "VS Code 擴充功能檢查失敗",
+  "agentRequirements.extension.missing": "未安裝",
+  "agentRequirements.extension.description": "在 VS Code 中安裝缺少的擴充功能。",
+  "agentRequirements.group.skills": "技能",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "VS Code 擴充功能",
+  "agentRequirements.blocked.title": "{{agent}} 代理前置需求",
+  "agentRequirements.blocked.description": "此代理需要以下工具後才能執行。",
+  "agentRequirements.prompt.blocked": "請先完成必要檢查，才能使用此代理",
+  "agentRequirements.action.openMarketplace": "開啟 Marketplace",
+  "agentRequirements.error.unknownAgent": "找不到所選代理。",
+  "agentRequirements.error.malformedDeclaration": "此代理的需求宣告無效。",
+  "agentRequirements.error.discoveryFailed": "Kilo 無法檢查可用技能。",
+  "agentRequirements.error.mcpStatusFailed": "Kilo 無法檢查 MCP 伺服器狀態。",
+  "agentRequirements.error.scopeMismatch": "此代理需求檢查已不再有效。",
+  "agentRequirements.error.requestFailed": "Kilo 無法檢查代理需求。",
+
   "palette.search.placeholder": "搜尋檔案、命令和工作階段",
   "palette.empty": "找不到結果",
   "palette.group.commands": "命令",
@@ -174,6 +249,7 @@ export const dict = {
   "model.tag.free": "免費",
   "model.tag.dataCollected": "資料可能會用於訓練",
   "model.tag.latest": "最新",
+  "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
   "model.group.collapse": "折疊 {{group}}",
@@ -202,6 +278,7 @@ export const dict = {
   "model.preview.label.average": "預估平均成本",
   "model.preview.label.context": "上下文",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "模型選擇",
   "model.preview.label.completion": "完成率",
   "model.preview.label.costAttempt": "成本 / 次嘗試",
   "model.preview.value.notSupported": "不支援",
@@ -1100,6 +1177,10 @@ export const dict = {
   "profile.balance.title": "餘額",
   "profile.balance.refresh": "重新整理餘額",
   "profile.action.dashboard": "控制面板",
+  "profile.action.topUp": "儲值",
+  "profile.pass.subscribe": "訂閱 Kilo Pass 以新增額度並賺取獎勵",
+  "profile.pass.bonus": "獎勵",
+  "profile.pass.renews": "續訂",
   "profile.action.logout": "登出",
 
   "settings.section.configuration": "設定",
@@ -1136,6 +1217,10 @@ export const dict = {
   "session.outcome.interrupted": "回合已中斷",
   "session.outcome.error": "回合失敗",
   "session.outcome.finish": "結束原因：{{reason}}",
+  "session.costAlert.header": "工作階段費用提醒",
+  "session.costAlert.continue": "繼續",
+  "session.costAlert.question": "此工作階段剛剛超過每工作階段提醒門檻 {{limit}}，目前費用為 {{cost}}。是否繼續？",
+  "session.costAlert.stop": "停止",
 
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",
@@ -1180,6 +1265,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "此操作僅將 VS Code 擴充功能專屬設定重置為預設值。與 CLI 共享的設定（例如模式和自動核准規則）儲存在 CLI 設定中，不會被重置。",
   "settings.aboutKiloCode.resetSettings.button": "重置所有設定",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "設定轉移",
   "settings.aboutKiloCode.settingsTransfer.description": "匯出或匯入設定，以便在 VS Code 實例之間轉移。",
   "settings.aboutKiloCode.exportSettings": "匯出",
@@ -1264,6 +1350,8 @@ export const dict = {
     "啟用並登入 Kilo 供應商以使用 Speech to Text。Speech to Text 目前僅支援透過 Kilo Gateway 使用。",
   "settings.models.speechToTextModel.title": "語音轉文字模型",
   "settings.models.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
+  "settings.experimental.nativeNotebookTools.title": "原生筆記本工具",
+  "settings.experimental.nativeNotebookTools.description": "啟用用於讀取、編輯和執行 VS Code 筆記本的實驗性工具",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.sandboxing.title": "沙盒",
@@ -1398,6 +1486,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "定義工具的執行權限。大多數工具預設為允許。doom_loop 與 external_directory 預設為詢問。",
+  "settings.autoApprove.maxCost.title": "工作階段費用提醒",
+  "settings.autoApprove.maxCost.description":
+    "當工作階段花費超過此美元金額後，在繼續前提醒。請使用整數美元；留空則停用。",
   "settings.autoApprove.level.allow": "允許",
   "settings.autoApprove.level.ask": "詢問",
   "settings.autoApprove.level.deny": "拒絕",

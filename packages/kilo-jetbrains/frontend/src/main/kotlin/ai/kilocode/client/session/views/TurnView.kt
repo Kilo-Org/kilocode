@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.ui.SessionLayoutPanel
@@ -25,7 +26,7 @@ import javax.swing.JComponent
  */
 class TurnView(
     val id: String,
-    private val openFile: (String) -> Unit,
+    private val openFile: SessionFileOpener,
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
@@ -34,8 +35,6 @@ class TurnView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
 ) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), Disposable, SessionEditorStyleTarget {
-
-    constructor(id: String, openFile: (String) -> Unit) : this(id, openFile, SessionEditorStyle.current())
 
     private val messages = LinkedHashMap<String, MessageView>()
 

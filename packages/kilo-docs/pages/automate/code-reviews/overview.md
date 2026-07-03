@@ -120,25 +120,24 @@ Code Reviewer is also available locally. This is valuable for developers who wan
 {% tabs %}
 {% tab label="VSCode" %}
 
-Two slash commands are available for local code reviews:
+Use `/review` for all local code reviews:
 
-- **`/local-review`** — Review all changes on your current branch vs the base branch
-- **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
+- **`/review`** — Review uncommitted changes (staged, unstaged, and untracked) when run without arguments
+- **`/review uncommitted [guidance]`** — Review uncommitted changes with optional guidance
+- **`/review branch [base] [guidance]`** — Review your current branch vs. its detected or specified base, with optional guidance
+- **`/review <commit-hash>`** — Review a specific commit
+- **`/review <PR URL or number>`** — Review a pull request
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Two slash commands are available for local code reviews:
+Use `/review` for all local code reviews:
 
-- **`/local-review`** — Review all changes on your current branch vs the base branch
-- **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Select 'Review' from the mode dropdown after making local changes, and click 'Send' for AI-powered feedback and suggestions.
-
-{% image src="/docs/img/code-reviewer/review-mode.png" alt="VS Code interface showing Review option in mode dropdown" width="800" caption="Review Mode" /%}
+- **`/review`** — Review uncommitted changes (staged, unstaged, and untracked) when run without arguments
+- **`/review uncommitted [guidance]`** — Review uncommitted changes with optional guidance
+- **`/review branch [base] [guidance]`** — Review your current branch vs. its detected or specified base, with optional guidance
+- **`/review <commit-hash>`** — Review a specific commit
+- **`/review <PR URL or number>`** — Review a pull request
 
 {% /tab %}
 {% /tabs %}

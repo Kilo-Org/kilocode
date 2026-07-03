@@ -386,6 +386,9 @@ test("direct footer shows subagent indicator while prompt is running", async () 
           onRows={() => {}}
           onLayout={() => {}}
           onStatus={() => {}}
+          onTerminalWrite={async () => {}} // kilocode_change
+          onTerminalResize={async () => {}} // kilocode_change
+          onTerminalClose={async () => {}} // kilocode_change
         />
       </box>
     ),

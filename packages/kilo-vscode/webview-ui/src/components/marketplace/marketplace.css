@@ -17,6 +17,32 @@
   gap: 12px;
 }
 
+.marketplace-intro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.marketplace-intro .link,
+.install-modal-links .link {
+  all: unset;
+  color: var(--text-interactive-base);
+  cursor: pointer;
+}
+
+.marketplace-intro .link:hover,
+.install-modal-links .link:hover {
+  text-decoration: underline;
+}
+
+.marketplace-intro .link:focus-visible,
+.install-modal-links .link:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
 .marketplace-filters {
   display: flex;
   gap: 8px;
@@ -25,6 +51,11 @@
 
 .marketplace-search-field {
   flex: 1;
+}
+
+.marketplace-relevance-filter {
+  display: flex;
+  align-items: center;
 }
 
 /* Type and category filters */
@@ -272,6 +303,57 @@
   gap: 6px;
 }
 
+.install-modal-about,
+.install-modal-warning,
+.install-modal-destination {
+  padding: 10px;
+  border: 1px solid var(--border-base, var(--vscode-widget-border));
+  border-radius: 4px;
+  background: var(--surface-raised-base, var(--vscode-editorWidget-background));
+}
+
+.install-modal-about p,
+.install-modal-warning p,
+.install-modal-help,
+.install-modal-result-path {
+  margin: 0;
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-12);
+}
+
+.install-modal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 6px;
+  font-size: var(--kilo-font-size-12);
+}
+
+.install-modal-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-color: var(--border-warning-base);
+}
+
+.install-modal-destination {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.install-modal-destination span {
+  color: var(--text-weak);
+  font-size: var(--kilo-font-size-11);
+}
+
+.install-modal-destination code {
+  color: var(--text-base);
+  font-size: var(--kilo-font-size-12);
+  overflow-wrap: anywhere;
+}
+
 .install-modal-label {
   font-weight: 600;
   font-size: var(--kilo-font-size-13);
@@ -304,7 +386,12 @@
   color: var(--text-on-success-base);
   font-size: var(--kilo-font-size-14);
   font-weight: 600;
-  margin: 0 0 16px;
+  margin: 0 0 6px;
+}
+
+.install-modal-result-path {
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
 }
 
 .install-modal-error-msg {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { isAbsolutePath } from "../../src/path-utils"
+import { contains, escapeGlob, isAbsolutePath } from "../../src/path-utils"
 
 describe("isAbsolutePath", () => {
   // ── Unix absolute paths ──────────────────────────────────────────────
@@ -161,5 +161,49 @@ describe("isAbsolutePath", () => {
     it("rejects path starting with single dot", () => {
       expect(isAbsolutePath(".")).toBe(false)
     })
+  })
+})
+
+describe("contains", () => {
+  it("accepts relative paths inside the root", () => {
+    expect(contains("/work", "src/a.ts")).toBe(true)
+    expect(contains("/work", "./src/a.ts")).toBe(true)
+    expect(contains("/work", "a.ts")).toBe(true)
+  })
+
+  it("rejects parent traversal that escapes the root", () => {
+    expect(contains("/work", "../etc/passwd")).toBe(false)
+    expect(contains("/work", "../../secret.ts")).toBe(false)
+  })
+
+  it("rejects absolute paths outside the root", () => {
+    expect(contains("/work", "/etc/passwd")).toBe(false)
+  })
+
+  it("rejects UNC candidates", () => {
+    expect(contains("/work", "\\\\server\\share\\file.ts")).toBe(false)
+    expect(contains("/work", "//server/share/file.ts")).toBe(false)
+  })
+
+  it("rejects empty inputs", () => {
+    expect(contains("", "a.ts")).toBe(false)
+    expect(contains("/work", "")).toBe(false)
+  })
+})
+
+describe("escapeGlob", () => {
+  it("bracket-escapes dynamic-route filenames", () => {
+    expect(escapeGlob("[id].tsx")).toBe("[[]id[]].tsx")
+    expect(escapeGlob("[...slug].tsx")).toBe("[[]...slug[]].tsx")
+  })
+
+  it("escapes wildcard and brace metacharacters", () => {
+    expect(escapeGlob("a*b?.ts")).toBe("a[*]b[?].ts")
+    expect(escapeGlob("{x,y}.ts")).toBe("[{]x,y[}].ts")
+  })
+
+  it("leaves ordinary filenames unchanged", () => {
+    expect(escapeGlob("index.ts")).toBe("index.ts")
+    expect(escapeGlob("file-path.test.ts")).toBe("file-path.test.ts")
   })
 })

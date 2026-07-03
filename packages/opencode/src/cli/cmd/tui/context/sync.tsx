@@ -20,6 +20,7 @@ import type {
   ProviderAuthMethod,
   VcsInfo,
   BackgroundProcessInfo, // kilocode_change
+  InteractiveTerminalSnapshot, // kilocode_change
 } from "@kilocode/sdk/v2"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useProject } from "@tui/context/project"
@@ -32,6 +33,7 @@ import { useExit } from "./exit"
 import { useArgs } from "./args"
 import { batch, createEffect, on, onMount } from "solid-js" // kilocode_change - add createEffect/on for workspace re-bootstrap
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
+import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output" // kilocode_change
 import { useToast } from "@tui/ui/toast" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log"
 import { emptyConsoleState, type ConsoleState } from "@/config/console-state"
@@ -82,6 +84,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       background_process: {
         [sessionID: string]: BackgroundProcessInfo[]
       }
+      interactive_terminal: {
+        [sessionID: string]: InteractiveTerminalSnapshot[]
+      }
       // kilocode_change end
       message: {
         [sessionID: string]: Message[]
@@ -126,6 +131,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       session_diff: {},
       todo: {},
       background_process: {}, // kilocode_change
+      interactive_terminal: {}, // kilocode_change
       message: {},
       part: {},
       lsp: [],
@@ -143,6 +149,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     const kv = useKV()
 
     // kilocode_change start
+    function processScope(scope: string) {
+      const current = project.instance.path()
+      return scope === current.directory || scope === current.worktree || scope === project.data.project.worktree
+    }
+
     function evict(sessionID: string) {
       // Collect child session IDs so we can evict them too.
       const children = store.session.filter((s) => s.parentID === sessionID).map((s) => s.id)
@@ -156,7 +167,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           delete draft.session_diff[sessionID]
           delete draft.session_status[sessionID]
           delete draft.todo[sessionID]
-          delete draft.background_process[sessionID] // kilocode_change
+          const processes = draft.background_process[sessionID]?.filter((item) => item.lifetime === "persistent")
+          if (processes?.length) draft.background_process[sessionID] = processes
+          else delete draft.background_process[sessionID]
+          delete draft.interactive_terminal[sessionID] // kilocode_change
           delete draft.permission[sessionID]
           delete draft.question[sessionID]
           delete draft.suggestion[sessionID]
@@ -177,6 +191,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
     const fullSyncedSessions = new Set<string>()
     const deleted = new Set<string>() // kilocode_change
+    const terminalDeleted = new Set<string>() // kilocode_change
     let syncedWorkspace = project.workspace.current()
     let vcsVersion = 0 // kilocode_change
 
@@ -201,7 +216,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         case "server.instance.disposed":
           // kilocode_change start
           deleted.clear()
+          terminalDeleted.clear()
           setStore("background_process", {})
+          setStore("interactive_terminal", {})
           // kilocode_change end
           void bootstrap()
           break
@@ -354,36 +371,92 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         // kilocode_change start
         case "background_process.updated": {
+          if (!processScope(event.properties.scope)) break
           const info = event.properties.info
           deleted.delete(info.id)
-          const list = store.background_process[info.sessionID]
-          if (!list) {
-            setStore("background_process", info.sessionID, [info])
-            break
-          }
-          const result = Binary.search(list, info.id, (item) => item.id)
-          if (result.found) {
-            setStore("background_process", info.sessionID, result.index, reconcile(info))
-            break
-          }
           setStore(
             "background_process",
-            info.sessionID,
             produce((draft) => {
-              draft.splice(result.index, 0, info)
+              for (const [sessionID, list] of Object.entries(draft)) {
+                const index = list.findIndex((item) => item.id === info.id)
+                if (index < 0) continue
+                list.splice(index, 1)
+                if (list.length === 0) delete draft[sessionID]
+              }
+              const list = draft[info.sessionID] ?? []
+              const result = Binary.search(list, info.id, (item) => item.id)
+              list.splice(result.index, 0, info)
+              draft[info.sessionID] = list
             }),
           )
           break
         }
 
         case "background_process.deleted": {
+          if (!processScope(event.properties.scope)) break
           deleted.add(event.properties.processID)
-          const list = store.background_process[event.properties.sessionID]
-          if (!list) break
-          const result = Binary.search(list, event.properties.processID, (item) => item.id)
-          if (!result.found) break
           setStore(
             "background_process",
+            produce((draft) => {
+              for (const [sessionID, list] of Object.entries(draft)) {
+                const index = list.findIndex((item) => item.id === event.properties.processID)
+                if (index < 0) continue
+                list.splice(index, 1)
+                if (list.length === 0) delete draft[sessionID]
+              }
+            }),
+          )
+          break
+        }
+
+        case "interactive_terminal.updated": {
+          const info = event.properties.info
+          terminalDeleted.delete(info.id)
+          const list = store.interactive_terminal[info.sessionID]
+          if (!list) {
+            setStore("interactive_terminal", info.sessionID, [{ info, output: "", cursor: 0 }])
+            break
+          }
+          const result = Binary.search(list, info.id, (item) => item.info.id)
+          if (result.found) {
+            setStore("interactive_terminal", info.sessionID, result.index, "info", reconcile(info))
+            break
+          }
+          setStore(
+            "interactive_terminal",
+            info.sessionID,
+            produce((draft) => {
+              draft.splice(result.index, 0, { info, output: "", cursor: 0 })
+            }),
+          )
+          break
+        }
+
+        case "interactive_terminal.data": {
+          const list = store.interactive_terminal[event.properties.sessionID]
+          if (!list) break
+          const result = Binary.search(list, event.properties.terminalID, (item) => item.info.id)
+          if (!result.found) break
+          setStore(
+            "interactive_terminal",
+            event.properties.sessionID,
+            result.index,
+            produce((draft) => {
+              draft.output = appendTerminalOutput(draft.output, event.properties.data)
+              draft.cursor = event.properties.cursor
+            }),
+          )
+          break
+        }
+
+        case "interactive_terminal.deleted": {
+          terminalDeleted.add(event.properties.terminalID)
+          const list = store.interactive_terminal[event.properties.sessionID]
+          if (!list) break
+          const result = Binary.search(list, event.properties.terminalID, (item) => item.info.id)
+          if (!result.found) break
+          setStore(
+            "interactive_terminal",
             event.properties.sessionID,
             produce((draft) => {
               draft.splice(result.index, 1)
@@ -587,7 +660,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         fullSyncedSessions.clear()
         // kilocode_change start
         deleted.clear()
+        terminalDeleted.clear()
         setStore("background_process", {})
+        setStore("interactive_terminal", {})
         // kilocode_change end
         syncedWorkspace = workspace
       }
@@ -695,16 +770,42 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               setStore(
                 "background_process",
                 produce((draft) => {
+                  const items = new Map(
+                    Object.values(draft)
+                      .flat()
+                      .map((item) => [item.id, item]),
+                  )
+                  for (const item of Object.values(next).flat()) {
+                    if (deleted.has(item.id)) continue
+                    const prev = items.get(item.id)
+                    if (!prev || item.time.updated > prev.time.updated) items.set(item.id, item)
+                  }
+                  for (const sessionID of Object.keys(draft)) delete draft[sessionID]
+                  for (const item of items.values()) {
+                    if (!draft[item.sessionID]) draft[item.sessionID] = []
+                    draft[item.sessionID].push(item)
+                  }
+                  for (const list of Object.values(draft)) list.sort((a, b) => a.id.localeCompare(b.id))
+                }),
+              )
+            }),
+            sdk.client.interactiveTerminal.list({ workspace }).then((x) => {
+              const next: Record<string, InteractiveTerminalSnapshot[]> = {}
+              for (const item of x.data ?? []) {
+                if (terminalDeleted.has(item.info.id)) continue
+                if (!next[item.info.sessionID]) next[item.info.sessionID] = []
+                next[item.info.sessionID].push(item)
+              }
+              for (const list of Object.values(next)) list.sort((a, b) => a.info.id.localeCompare(b.info.id))
+              setStore(
+                "interactive_terminal",
+                produce((draft) => {
                   for (const [sessionID, list] of Object.entries(next)) {
-                    const items = new Map((draft[sessionID] ?? []).map((item) => [item.id, item]))
+                    const items = new Map((draft[sessionID] ?? []).map((item) => [item.info.id, item]))
                     for (const item of list) {
-                      if (deleted.has(item.id)) continue
-                      const prev = items.get(item.id)
-                      if (!prev || item.time.updated >= prev.time.updated) items.set(item.id, item)
+                      if (!items.has(item.info.id)) items.set(item.info.id, item)
                     }
-                    const value = Array.from(items.values()).toSorted((a, b) => a.id.localeCompare(b.id))
-                    if (value.length === 0) delete draft[sessionID]
-                    else draft[sessionID] = value
+                    draft[sessionID] = Array.from(items.values()).toSorted((a, b) => a.info.id.localeCompare(b.info.id))
                   }
                 }),
               )

@@ -4,6 +4,7 @@ import path from "path"
 import { array, check, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
+import { anacondaDesktopScenarios } from "../anaconda-desktop/httpapi-exercise-scenarios"
 
 function directory(ctx: ScenarioContext) {
   if (!ctx.directory) throw new Error("scenario needs a project directory")
@@ -33,6 +34,7 @@ const edit = {
 }
 
 export const kiloScenarios: Scenario[] = [
+  ...anacondaDesktopScenarios,
   http.protected.get("/background-process", "backgroundProcess.list").json(200, array),
   http.protected
     .get("/background-process/{processID}", "backgroundProcess.get")
@@ -69,6 +71,37 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "session process stop should return true")),
+  http.protected.get("/interactive-terminal", "interactiveTerminal.list").json(200, array),
+  http.protected
+    .get("/interactive-terminal/{terminalID}", "interactiveTerminal.get")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/input", "interactiveTerminal.write")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/input", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: { data: "x" },
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/resize", "interactiveTerminal.resize")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/resize", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: { cols: 1, rows: 1 },
+    }))
+    .status(404),
+  http.protected
+    .post("/interactive-terminal/{terminalID}/close", "interactiveTerminal.close")
+    .at((ctx) => ({
+      path: route("/interactive-terminal/{terminalID}/close", { terminalID: "itx_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404),
   http.protected.get("/config/warnings", "config.warnings").json(200, array),
   http.protected.get("/config/effective", "config.effective").json(200, object),
   http.protected.get("/config/model-state", "config.modelState").json(200, object),
@@ -87,6 +120,33 @@ export const kiloScenarios: Scenario[] = [
     .put("/config/rules", "config.rulesUpdate")
     .mutating()
     .at((ctx) => ({ path: "/config/rules", headers: ctx.headers(), body: { content: "Use small changes." } }))
+    .json(200, object),
+  http.protected
+    .put("/auth/{providerID}", "auth.set")
+    .mutating()
+    .at((ctx) => ({
+      path: route("/auth/{providerID}", { providerID: "openai" }),
+      headers: ctx.headers(),
+      body: { type: "api", key: "sk-httpapi-test" },
+    }))
+    .json(200, (body) => check(body === true, "provider auth set should return true")),
+  http.protected
+    .post("/mcp", "mcp.add")
+    .mutating()
+    .at((ctx) => ({
+      path: "/mcp",
+      headers: ctx.headers(),
+      body: { name: "httpapi-mcp", config: { type: "remote", url: "https://mcp.example.test" } },
+    }))
+    .json(200, object),
+  http.protected
+    .post("/mcp", "mcp.add")
+    .mutating()
+    .at((ctx) => ({
+      path: "/mcp",
+      headers: ctx.headers(),
+      body: { name: "httpapi-mcp", config: { type: "remote", url: "https://mcp-edit.example.test" } },
+    }))
     .json(200, object),
   http.protected.get("/config/sources", "config.sources").json(200, object),
   http.protected.get("/tui/config", "tui.config.get").json(200, object),
@@ -189,6 +249,10 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
     }))
     .json(200, (body) => check(body === true, "missing network reject should remain a no-op success")),
+  http.protected.get("/sandbox/support", "sandbox.support").json(200, (body) => {
+    object(body)
+    check(typeof body.available === "boolean", "sandbox support should report backend availability")
+  }),
   http.protected
     .get("/session/{sessionID}/sandbox", "sandbox.status")
     .seeded((ctx) => ctx.session({ title: "Sandbox status" }))
@@ -252,9 +316,30 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/commit-message", headers: ctx.headers(), body: {} }))
     .status(400),
   http.protected
+    .post("/session/{sessionID}/branch-name", "branchName.generate")
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/branch-name", { sessionID: "ses_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: {},
+    }))
+    .status(400),
+  http.protected
     .post("/enhance-prompt", "enhancePrompt.enhance")
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
+  http.protected
+    .get("/session/{sessionID}/model-usage", "kilocode.sessionModelUsage")
+    .seeded((ctx) => ctx.session({ title: "Model usage" }))
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/model-usage", { sessionID: ctx.state.id }),
+      headers: ctx.headers(),
+    }))
+    .json(200, (body) => {
+      object(body)
+      array(body.models)
+      object(body.totals)
+      check(body.models.length === 0, "a new session should have no model usage")
+    }),
   http.protected
     .post("/kilocode/heap/snapshot", "kilocode.heap.snapshot")
     .mutating()
@@ -265,6 +350,19 @@ export const kiloScenarios: Scenario[] = [
       }),
     ),
   http.protected
+    .get("/kilocode/agent/requirements", "kilocode.agentRequirements")
+    .at((ctx) => ({ path: "/kilocode/agent/requirements?agent=httpapi-agent", headers: ctx.headers() }))
+    .json(200, (body, ctx) => {
+      object(body)
+      check(body.agent === "httpapi-agent", "agent requirements should echo the requested agent")
+      check(body.directory === ctx.directory, "agent requirements should use the routed workspace directory")
+      check(body.enabled === false, "agent requirements should report disabled when the experiment is off")
+      check(body.state === "disabled", "agent requirements should return the disabled state")
+      array(body.skills)
+      array(body.mcps)
+      array(body.vscode_extensions)
+    }),
+  http.protected
     .post("/kilocode/skill/remove", "kilocode.removeSkill")
     .mutating()
     .preserveDatabase()
@@ -272,10 +370,10 @@ export const kiloScenarios: Scenario[] = [
       Effect.gen(function* () {
         const location = yield* file(
           ctx,
-          ".opencode/skill/httpapi-remove/SKILL.md",
+          ".kilo/skill/httpapi-remove/SKILL.md",
           "---\nname: httpapi-remove\ndescription: HTTP API removal fixture.\n---\n# HTTP API remove\n",
         )
-        const sentinel = yield* file(ctx, ".opencode/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
+        const sentinel = yield* file(ctx, ".kilo/skill/httpapi-remove/KEEP.txt", "synthetic sentinel\n")
         return { location, sentinel }
       }),
     )
@@ -300,9 +398,7 @@ export const kiloScenarios: Scenario[] = [
   http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .mutating()
-    .seeded((ctx) =>
-      file(ctx, ".opencode/agent/httpapi-remove.md", "---\ndescription: HTTP API remove\n---\nRemove me.\n"),
-    )
+    .seeded((ctx) => file(ctx, ".kilo/agent/httpapi-remove.md", "---\ndescription: HTTP API remove\n---\nRemove me.\n"))
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-remove" } }))
     .jsonEffect(200, (body, ctx) =>
       Effect.gen(function* () {
@@ -310,6 +406,10 @@ export const kiloScenarios: Scenario[] = [
         check(!(yield* Effect.promise(() => Bun.file(ctx.state).exists())), "removed agent should not remain on disk")
       }),
     ),
+  http.protected
+    .post("/kilocode/agent/remove", "kilocode.removeAgent")
+    .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-missing" } }))
+    .status(400),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()
@@ -415,7 +515,7 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
       body: { enable: true, sessionID: ctx.state.id },
     }))
-    .json(200, (body) => check(body === true, "allow everything should return true")),
+    .status(401),
   http.protected
     .post("/session/viewed", "session.viewed")
     .at((ctx) => ({ path: "/session/viewed", headers: ctx.headers(), body: { focused: [], open: [] } }))

@@ -26,7 +26,6 @@ describe("standalone Marketplace architecture", () => {
   })
 
   it("keeps sidebar removal behind a narrow adapter", () => {
-    expect(kilo).toContain("removeAgent(this.removeConfigItemCtx, name)")
     expect(kilo).toContain("removeMcp(this.removeConfigItemCtx, name)")
     expect(remove).toContain("createMarketplaceRemover")
     expect(remove).not.toContain("new MarketplaceService()")

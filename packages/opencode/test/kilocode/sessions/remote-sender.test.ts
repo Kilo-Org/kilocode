@@ -1119,8 +1119,8 @@ describe("RemoteSender", () => {
       {
         id: "sug_1",
         sessionID: "ses_target",
-        text: "Review?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        text: "Continue?",
+        actions: [{ label: "Continue", prompt: "Continue with the task" }],
       } as any,
       {
         id: "sug_2",
@@ -1152,8 +1152,8 @@ describe("RemoteSender", () => {
       data: {
         id: "sug_1",
         sessionID: "ses_target",
-        text: "Review?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        text: "Continue?",
+        actions: [{ label: "Continue", prompt: "Continue with the task" }],
       },
     })
   })

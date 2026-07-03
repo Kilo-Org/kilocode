@@ -22,6 +22,7 @@ import { useSDK } from "@tui/context/sdk"
 import { useRoute } from "@tui/context/route"
 import { useProject } from "@tui/context/project"
 import { useSync } from "@tui/context/sync"
+import { useNudge } from "@/kilocode/cli/cmd/tui/context/nudge" // kilocode_change
 import { useEvent } from "@tui/context/event"
 import { editorSelectionKey, useEditorContext, type EditorSelection } from "@tui/context/editor"
 import { MessageID, PartID } from "@/session/schema"
@@ -61,6 +62,8 @@ import { useArgs } from "@tui/context/args"
 // kilocode_change start
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
+import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
+import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
@@ -152,6 +155,7 @@ export function Prompt(props: PromptProps) {
   const tuiConfig = useTuiConfig()
   const dialog = useDialog()
   const toast = useToast()
+  const nudge = useNudge() // kilocode_change
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
   const history = usePromptHistory()
   const stash = usePromptStash()
@@ -511,6 +515,20 @@ export function Prompt(props: PromptProps) {
           dialog.clear()
         },
       },
+      // kilocode_change start
+      {
+        title: "Cost alert",
+        desc: "Set Kilo's cost alert",
+        name: "cost_alert",
+        category: "Session",
+        slashName: "cost-alert",
+        slashAliases: ["cost"],
+        run: () => {
+          costAlert.start()
+          dialog.clear()
+        },
+      },
+      // kilocode_change end
       {
         title: "Open editor",
         category: "Session",
@@ -1074,6 +1092,9 @@ export function Prompt(props: PromptProps) {
     if (workspaceCreating()) return false
     if (auto()?.visible) return false
     if (!store.prompt.input) return false
+    // kilocode_change start - in-memory cost alert command
+    if (costAlert.handle(store.prompt.input.trim())) return true
+    // kilocode_change end
     const agent = local.agent.current()
     if (!agent) return false
     const trimmed = store.prompt.input.trim()
@@ -1086,6 +1107,29 @@ export function Prompt(props: PromptProps) {
       void promptModelWarning()
       return false
     }
+
+    // kilocode_change start - gate TUI sends on declared agent requirements
+    const requirements = await AgentRequirements.check({
+      client: sdk.client,
+      agent: agent.name,
+      directory: project.instance.directory() || sdk.directory || process.cwd(),
+    }).catch((error) => {
+      toast.show({
+        message: errorMessage(error),
+        variant: "error",
+      })
+      return undefined
+    })
+    if (!requirements) return false
+    if (!requirements.ok) {
+      toast.show({
+        title: "Agent requirements",
+        message: requirements.error.data.message,
+        variant: "error",
+      })
+      return false
+    }
+    // kilocode_change end
 
     const workspaceSession = props.sessionID ? sync.session.get(props.sessionID) : undefined
     const workspaceID = workspaceSession?.workspaceID
@@ -1437,6 +1481,21 @@ export function Prompt(props: PromptProps) {
     })
     setStore("extmarkToPartIndex", new Map())
   }
+
+  // kilocode_change start - cost-alert logic lives under kilocode/; only prompt mutation stays here
+  const costAlert = createCostAlertController({
+    prefill: () => {
+      const value = "/cost-alert "
+      input.setText(value)
+      setStore("prompt", { input: value, parts: [] })
+      input.gotoBufferEnd()
+    },
+    clearPrompt,
+    toast,
+    nudge,
+    sessionID: () => props.sessionID,
+  })
+  // kilocode_change end
 
   const highlight = createMemo(() => {
     if (leader()) return theme.border

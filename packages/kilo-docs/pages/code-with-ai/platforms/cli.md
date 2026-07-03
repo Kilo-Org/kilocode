@@ -133,8 +133,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | Command | Description |
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
-| `/local-review` | Review code changes |
-| `/local-review-uncommitted` | Review uncommitted changes |
+| `/review` | Review code changes |
 
 ## Local Code Reviews
 
@@ -144,8 +143,11 @@ Review your code locally before pushing — catch issues early without waiting f
 
 | Command | Description |
 |---|---|
-| `/local-review` | Review current branch changes vs base branch |
-| `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged) |
+| `/review` | Review staged, unstaged, and untracked changes (the default with no arguments) |
+| `/review uncommitted [guidance]` | Review uncommitted changes with optional guidance |
+| `/review branch [base] [guidance]` | Review the current branch against its detected or specified base, with optional guidance |
+| `/review <commit-hash>` | Review a specific commit |
+| `/review <PR URL or number>` | Review a pull request |
 
 ## Config Reference
 
@@ -210,10 +212,6 @@ There is no notification slash command or command-palette toggle. Use Kilo Conso
 ## Slash Commands
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
-
-{% callout type="tip" %}
-**Confused about /newtask vs /smol in the IDE?** See the [Using Agents](/docs/code-with-ai/agents/using-agents#understanding-newtask-vs-smol) documentation for details.
-{% /callout %}
 
 ## Permissions
 
@@ -335,8 +333,8 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 
 | Scope | Path |
 |---|---|
-| **Global** | `~/.config/kilo/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
-| **Project** | `./opencode.json` or `./.opencode/` in project root |
+| **Global** | `~/.config/kilo/kilo.json[c]` or legacy `opencode.json[c]` (Windows config dir may vary) |
+| **Project** | `./kilo.json[c]`, legacy `./opencode.json[c]`, or config inside `./.kilo/` (legacy `./.kilocode/` is also read) |
 
 Project-level configuration takes precedence over global settings.
 
