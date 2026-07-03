@@ -669,21 +669,35 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   }
   const adaptiveOpus = anthropicOpus47OrLater(model.api.id)
   const adaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
+  if (glm52 && model.api.npm === "@kilocode/kilo-gateway") {
+    // kilocode_change - mirror the cloud's none/high/xhigh GLM-5.2 variants
+    // (see REASONING_VARIANTS_NONE_HIGH_XHIGH in cloud model-settings.ts) so the
+    // computed fallback matches the config the gateway pushes. Without this the
+    // generic GLM binary toggle (instant/thinking) below is used instead.
+    return {
+      none: { reasoning: { enabled: false, effort: "none" } },
+      high: { reasoning: { enabled: true, effort: "high" } },
+      xhigh: { reasoning: { enabled: true, effort: "xhigh" } },
+    }
+  }
   if (glm52 && model.api.npm === "@openrouter/ai-sdk-provider") {
     // OpenRouter maps xhigh to GLM-5.2's native max effort.
     return {
+      none: { reasoning: { enabled: false } },
       high: { reasoning: { effort: "high" } },
       xhigh: { reasoning: { effort: "xhigh" } },
     }
   }
   if (glm52 && model.api.npm === "@ai-sdk/openai-compatible") {
     return {
+      none: { reasoningEffort: "none" },
       high: { reasoningEffort: "high" },
       max: { reasoningEffort: "max" },
     }
   }
   if (glm52 && model.api.npm === "@ai-sdk/anthropic") {
     return {
+      none: { thinking: { type: "disabled" } },
       high: { effort: "high" },
       max: { effort: "max" },
     }

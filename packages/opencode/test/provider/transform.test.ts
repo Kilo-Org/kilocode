@@ -2539,6 +2539,7 @@ describe("ProviderTransform.variants", () => {
       },
     })
     expect(ProviderTransform.variants(model)).toEqual({
+      none: { reasoningEffort: "none" },
       high: { reasoningEffort: "high" },
       max: { reasoningEffort: "max" },
     })
@@ -2555,6 +2556,7 @@ describe("ProviderTransform.variants", () => {
         },
       })
       expect(ProviderTransform.variants(model)).toEqual({
+        none: { reasoningEffort: "none" },
         high: { reasoningEffort: "high" },
         max: { reasoningEffort: "max" },
       })
@@ -2571,6 +2573,7 @@ describe("ProviderTransform.variants", () => {
       },
     })
     expect(ProviderTransform.variants(model)).toEqual({
+      none: { reasoningEffort: "none" },
       high: { reasoningEffort: "high" },
       max: { reasoningEffort: "max" },
     })
@@ -2587,8 +2590,26 @@ describe("ProviderTransform.variants", () => {
       },
     })
     expect(ProviderTransform.variants(model)).toEqual({
+      none: { reasoning: { enabled: false } },
       high: { reasoning: { effort: "high" } },
       xhigh: { reasoning: { effort: "xhigh" } },
+    })
+  })
+
+  test("glm-5.2 returns effort variants for the kilo gateway", () => {
+    const model = createMockModel({
+      id: "kilo/z-ai/glm-5.2",
+      providerID: "kilo",
+      api: {
+        id: "z-ai/glm-5.2",
+        url: "https://gateway.kilo.ai",
+        npm: "@kilocode/kilo-gateway",
+      },
+    })
+    expect(ProviderTransform.variants(model)).toEqual({
+      none: { reasoning: { enabled: false, effort: "none" } },
+      high: { reasoning: { enabled: true, effort: "high" } },
+      xhigh: { reasoning: { enabled: true, effort: "xhigh" } },
     })
   })
 
@@ -2603,6 +2624,7 @@ describe("ProviderTransform.variants", () => {
       },
     })
     expect(ProviderTransform.variants(model)).toEqual({
+      none: { thinking: { type: "disabled" } },
       high: { effort: "high" },
       max: { effort: "max" },
     })
