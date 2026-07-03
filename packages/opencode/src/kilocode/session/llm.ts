@@ -40,7 +40,15 @@ export namespace KiloLLM {
 
   /**
    * Caps `maxOutputTokens` to fit within the model's context window after
-   * accounting for the actual estimated input tokens (messages + tool schemas).
+   * accounting for the context the outgoing request will consume.
+   *
+   * Like opencode, the provider is the source of truth: when the last finished
+   * turn reported usage, `reported` carries that provider-tokenized context size
+   * (input + output + cache), which already accounts for image/vision input the
+   * client cannot see. The client-side media-normalized estimate (encoded bytes
+   * excluded) is used as a floor so newly added text or tool schemas still cap
+   * output, and as the sole basis on the first turn before any usage is reported.
+   * The larger of the two is used so the cap never under-counts.
    *
    * Many small models (e.g. qwen 7B, 32K context) ship with a default
    * max_output of 32K, leaving no room for input once tools are included.
@@ -52,21 +60,18 @@ export namespace KiloLLM {
     messages: ModelMessage[]
     tools: Record<string, { description?: string; inputSchema?: unknown }>
     configured: number | undefined
-    contextTokens?: number
-    contextMedia?: number
+    usage?: ReturnType<typeof KiloSessionOverflow.measure>
+    reported?: number
   }): number | undefined {
     if (input.configured == null) return input.configured
     if (input.configured <= 0) return undefined
     const { context } = input.model.limit
     if (!context) return input.configured
 
-    const usage =
-      input.contextTokens === undefined || input.contextMedia === undefined
-        ? KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools })
-        : undefined
-    const tokens = input.contextTokens ?? usage?.normalized ?? 0
-    const media = input.contextMedia ?? usage?.media ?? 0
-    const available = context - tokens - media * MEDIA_OUTPUT_RESERVE - SAFETY
+    const usage = input.usage ?? KiloSessionOverflow.measure({ messages: input.messages, tools: input.tools })
+    const estimated = usage.normalized + usage.media * MEDIA_OUTPUT_RESERVE
+    const tokens = Math.max(input.reported ?? 0, estimated)
+    const available = context - tokens - SAFETY
     // If available is ≤0 the input alone exceeds context — return the original
     // value so the provider returns a natural overflow error which triggers
     // compaction (compactionAttempts guard stops the loop eventually).

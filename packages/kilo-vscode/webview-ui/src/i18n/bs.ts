@@ -1293,6 +1293,11 @@ export const dict = {
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",
+  "session.costAlert.header": "Upozorenje o trošku sesije",
+  "session.costAlert.continue": "Nastavi",
+  "session.costAlert.question":
+    "Ova sesija je upravo prešla prag upozorenja po sesiji od {{limit}} i košta {{cost}}. Nastaviti?",
+  "session.costAlert.stop": "Zaustavi",
 
   "ui.sessionTurn.cancel": "Otkaži",
   "ui.sessionTurn.status.thinking": "Razmišljam...",
@@ -1576,6 +1581,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
+  "settings.autoApprove.maxCost.title": "Upozorenje o trošku sesije",
+  "settings.autoApprove.maxCost.description":
+    "Upozori prije nastavka sesije nakon što potrošnja premaši ovaj iznos u USD. Koristite cijele dolare; ostavite prazno za isključivanje.",
   "settings.autoApprove.level.allow": "Dozvoli",
   "settings.autoApprove.level.ask": "Pitaj",
   "settings.autoApprove.level.deny": "Odbij",

@@ -5,7 +5,7 @@ import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
-import ai.kilocode.jetbrains.api.model.Config
+import ai.kilocode.rpc.dto.ConfigDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -59,7 +59,7 @@ class KiloAppStateTest {
 
     @Test
     fun `AppData construction`() {
-        val cfg = Config(model = "test")
+        val cfg = ConfigDto(model = "test")
         val data =
           AppData(profile = null, config = cfg, notifications = emptyList())
         assertNull(data.profile)

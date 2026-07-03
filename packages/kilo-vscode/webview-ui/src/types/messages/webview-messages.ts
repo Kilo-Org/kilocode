@@ -326,6 +326,13 @@ export interface QuestionRejectRequest {
   sessionID?: string
 }
 
+export interface SessionCostAlertResponseRequest {
+  type: "sessionCostAlertResponse"
+  sessionID: string
+  limit: number
+  response: "continue" | "stop"
+}
+
 export interface SuggestionAcceptRequest {
   type: "suggestionAccept"
   requestID: string
@@ -1060,6 +1067,15 @@ export interface RequestRecentsMessage {
   type: "requestRecents"
 }
 
+export interface PersistModelSelectorExpandedRequest {
+  type: "persistModelSelectorExpanded"
+  value: boolean
+}
+
+export interface RequestModelSelectorExpandedMessage {
+  type: "requestModelSelectorExpanded"
+}
+
 export interface ToggleFavoriteRequest {
   type: "toggleFavorite"
   action: "add" | "remove"
@@ -1208,6 +1224,7 @@ export type WebviewMessage =
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
+  | SessionCostAlertResponseRequest
   | SuggestionAcceptRequest
   | SuggestionDismissRequest
   | DeleteSessionRequest
@@ -1341,6 +1358,8 @@ export type WebviewMessage =
   | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
+  | PersistModelSelectorExpandedRequest
+  | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | PersistModelSelectionRequest

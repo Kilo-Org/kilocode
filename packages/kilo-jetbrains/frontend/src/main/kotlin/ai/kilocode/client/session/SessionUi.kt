@@ -25,6 +25,7 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.prompt.SlashAction
 import ai.kilocode.client.session.ui.prompt.mentionParts as promptMentionParts
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
+import ai.kilocode.client.session.ui.popup.HeaderPopupController
 import ai.kilocode.client.session.ui.SessionDropOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
@@ -52,6 +53,7 @@ import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import com.intellij.util.ui.JBUI
@@ -149,6 +151,7 @@ class SessionUi(
 
 
     private lateinit var root: SessionRootPanel
+    private lateinit var fileLinks: SessionFileLinks
     private lateinit var account: SessionAccountOverlay
     private lateinit var drop: SessionDropOverlay
     private lateinit var overlay: SessionHoverCopyOverlay
@@ -182,6 +185,7 @@ class SessionUi(
     private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
     private val selection = SessionSelection()
+    private val popup = HeaderPopupController(timers)
     private val provider = object : TextCopyProvider() {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
 
@@ -195,6 +199,7 @@ class SessionUi(
     private var disposed = false
 
     init {
+        Disposer.register(this, popup)
         buildUi()
         Disposer.register(this, selection)
         scroll.show(body(controller.model.state))
@@ -264,6 +269,7 @@ class SessionUi(
 
     private fun buildUi() {
         root = SessionRootPanel()
+        fileLinks = SessionFileLinks(workspace.directory, workspaces, cs, root, ::openUrl)
         SessionContextMenu.install(root, this)
 
         migrationOverlay = MigrationOverlayPanel().apply {
@@ -331,17 +337,22 @@ class SessionUi(
             question,
             permission,
             login,
-            ::openFile,
+            fileLinks::open,
             ::openUrl,
             selection,
             ::openAttachment,
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
-        )
+        ).also {
+            it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
+        }
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
-        scroll.onScroll = overlay::clear
+        scroll.onScroll = {
+            overlay.clear()
+            popup.hideAll()
+        }
 
         completion = KiloPromptCompletionProvider(
             workspace = workspace,
@@ -430,10 +441,22 @@ class SessionUi(
                             display = it.display,
                             provider = it.provider,
                             providerName = it.providerName,
+                            inputPrice = it.inputPrice,
+                            outputPrice = it.outputPrice,
+                            contextLength = it.contextLength,
+                            releaseDate = it.releaseDate,
+                            latest = it.latest,
                             recommendedIndex = it.recommendedIndex,
                             free = it.free,
                             byok = it.byok,
                             variants = it.variants,
+                            limit = it.limit?.let { limit -> ModelLimitDto(limit.context, limit.input, limit.output) },
+                            cost = it.cost,
+                            capabilities = it.capabilities,
+                            options = it.options,
+                            autoRouting = it.autoRouting,
+                            terminalBench = it.terminalBench,
+                            reasoning = it.reasoning,
                             attachment = it.attachment,
                             mayTrainOnYourPrompts = it.mayTrainOnYourPrompts,
                         )
@@ -469,7 +492,7 @@ class SessionUi(
 
                 is SessionControllerEvent.ViewChanged.ShowSession -> {
                     empty = null
-                    scroll.show(messageBody)
+                    scroll.show(body(controller.model.state))
                 }
 
                 is SessionControllerEvent.AppChanged -> {
@@ -553,7 +576,10 @@ class SessionUi(
     private fun bindStyle() {
         addHierarchyListener { event ->
             if ((event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong()) == 0L) return@addHierarchyListener
-            if (!isShowing) return@addHierarchyListener
+            if (!isShowing) {
+                popup.hideAll()
+                return@addHierarchyListener
+            }
             applyStyleIfThemeChanged()
         }
 
@@ -600,6 +626,7 @@ class SessionUi(
     private fun resumeOpen() {
         if (!pending || !opening || !this::scroll.isInitialized) return
         if (width <= 0 || height <= 0) return
+        if (body(controller.model.state) !== messageBody) return
         pending = false
         scroll.openBottom {
             opening = false
@@ -679,12 +706,6 @@ class SessionUi(
         )
     }
 
-    private fun openFile(path: String) {
-        cs.launch {
-            workspaces.openPath(workspace.directory, path)
-        }
-    }
-
     private fun openUrl(url: String) {
         BrowserUtil.browse(url)
     }
@@ -721,7 +742,7 @@ class SessionUi(
                 return
             }
             LOG.info("kind=attachment-open route=file session=${controller.id ?: "none"} message=$messageId part=${item.id} path=$path")
-            openFile(path)
+            fileLinks.open(path, null)
             return
         }
         LOG.info("kind=attachment-open route=browser session=${controller.id ?: "none"} message=$messageId part=${item.id} url=${attachmentUrl(url)}")
@@ -807,6 +828,7 @@ class SessionUi(
     override fun dispose() {
         disposed = true
         hide.stop()
+        popup.hideAll()
         modalFocus = null
         empty = null
         if (this::root.isInitialized) root.setModalContent(null)

@@ -474,7 +474,13 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               <div class="prompt-input-hint">
                 <div class="prompt-input-hint-selectors">
                   <Show when={session.agents().length > 1}>
-                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} deferDismiss />
+                    <ModeSwitcherBase
+                      agents={session.agents()}
+                      value={agent()}
+                      onSelect={setAgent}
+                      portal={false}
+                      deferDismiss
+                    />
                   </Show>
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
@@ -490,6 +496,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      portal={false}
                       deferDismiss
                     />
                     <Show when={overridden()}>

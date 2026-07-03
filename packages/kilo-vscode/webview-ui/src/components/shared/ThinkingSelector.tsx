@@ -32,6 +32,8 @@ export interface ThinkingSelectorBaseProps {
   clearLabel?: string
   /** Popover placement — defaults to top-start. */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
+  /** Render inline instead of through a portal when nested in a dialog. */
+  portal?: boolean
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
   /** Listen for the global prompt trigger event. Defaults to true. */
@@ -138,6 +140,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
         placement={props.placement ?? "top-start"}
         preferredWidth={180}
         minHeight={100}
+        portal={props.portal}
         deferDismiss={props.deferDismiss}
         open={open()}
         onOpenChange={onOpen}

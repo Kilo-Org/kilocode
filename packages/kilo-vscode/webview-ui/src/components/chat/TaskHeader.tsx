@@ -22,7 +22,6 @@ import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
 import { hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
-import { BalanceChip } from "../shared/BalanceChip"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
@@ -185,7 +184,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
         <div data-slot="task-header-stats">
-          <BalanceChip />
           <Show when={cost()}>
             {(c) => (
               <Tooltip value={costTooltip()} placement="bottom">

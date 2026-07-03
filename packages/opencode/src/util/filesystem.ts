@@ -23,7 +23,13 @@ export async function isDir(p: string): Promise<boolean> {
 }
 
 export function stat(p: string): ReturnType<typeof statSync> | undefined {
-  return statSync(p, { throwIfNoEntry: false }) ?? undefined
+  // kilocode_change start - also treat ENOTDIR/EACCES as absent, every caller expects undefined
+  try {
+    return statSync(p, { throwIfNoEntry: false }) ?? undefined
+  } catch {
+    return undefined
+  }
+  // kilocode_change end
 }
 
 export async function statAsync(p: string): Promise<ReturnType<typeof statSync> | undefined> {

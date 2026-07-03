@@ -2,6 +2,8 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
+import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
+import ai.kilocode.client.settings.providers.ProvidersConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
@@ -25,6 +27,11 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
 
     fun `test child models id matches xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.models", ModelsConfigurable.ID)
+    }
+
+    fun `test child provider and behavior ids match xml registration`() {
+        assertEquals("ai.kilocode.jetbrains.settings.providers", ProvidersConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior", AgentBehaviorConfigurable.ID)
     }
 
     fun `test root implements SearchableConfigurable but not Parent`() {
@@ -72,12 +79,12 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test profile link appears before models link`() {
+    fun `test createComponent contains settings links in order`() {
         val cfg = KiloSettingsConfigurable()
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertTrue("User Profile should appear before Models", labels.indexOf("User Profile") < labels.indexOf("Models"))
+            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior"), labels)
         }
     }
 

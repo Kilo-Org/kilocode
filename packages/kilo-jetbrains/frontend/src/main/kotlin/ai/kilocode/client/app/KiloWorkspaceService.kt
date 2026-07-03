@@ -158,10 +158,10 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
-    suspend fun openPath(directory: String, path: String): Boolean {
+    suspend fun openPath(directory: String, path: String, line: Int? = null, column: Int? = null): Boolean {
         val match = files(directory, path).firstOrNull() ?: return false
         return try {
-            call { openFile(match.path) }
+            call { openFile(match.path, line, column) }
         } catch (e: Exception) {
             LOG.warn("workspace file open failed for path=${match.path}", e)
             false
