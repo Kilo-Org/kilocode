@@ -180,7 +180,7 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
         )
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is QuestionResultView)
     }
@@ -190,14 +190,14 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = emptyMap(),
             metadata = emptyMap(),
         )
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is ToolView)
     }
 
     fun `test view factory falls back to tool view for running question`() {
         val tool = runningTool("question")
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is ToolView)
     }

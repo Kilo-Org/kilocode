@@ -36,13 +36,39 @@ async function disableAnimations(page: Page) {
   await page.addStyleTag({
     content: `
       *, *::before, *::after {
+        animation: none !important;
         animation-duration: 0s !important;
         animation-delay: 0s !important;
+        transition: none !important;
         transition-duration: 0s !important;
         transition-delay: 0s !important;
       }
     `,
   })
+}
+
+async function settle(page: Page) {
+  const frames = () =>
+    page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        }),
+    )
+
+  await page.evaluate(async () => {
+    await document.fonts.ready
+  })
+  await frames()
+  await page.waitForFunction(
+    () => {
+      const root = document.querySelector("#storybook-root")
+      return root && !root.querySelector('pre > code[data-lang]:not([data-lang="mermaid"])')
+    },
+    undefined,
+    { timeout: 5_000 },
+  )
+  await frames()
 }
 
 // Stories to skip from visual regression (add IDs here if needed)
@@ -96,9 +122,10 @@ for (const story of stories) {
     )
     await disableAnimations(page)
     await page.waitForSelector("#storybook-root *", { state: "attached" })
+    await settle(page)
 
     const [component, variant] = story.id.split("--")
     const root = page.locator("#storybook-root")
-    await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant}-chromium-linux.png`])
+    await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant!}-chromium-linux.png`])
   })
 }

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -51,7 +52,7 @@ class SessionMessageListPanel(
     private val question: QuestionView? = null,
     private val permission: PermissionView? = null,
     private val login: LoginRequiredView? = null,
-    private val openFile: (String) -> Unit,
+    private val openFile: SessionFileOpener,
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
     private val openAttachment: (String, FileAttachment) -> Unit = { _, item -> ai.kilocode.client.session.views.AttachmentView.openDefault(item, openFile, openUrl) },
@@ -73,6 +74,8 @@ class SessionMessageListPanel(
     private var style = SessionEditorStyle.current()
     private var hiddenTool: ToolCallRef? = null
     private var hovered: PartView? = null
+
+    var onHover: ((PartView, Boolean) -> Unit)? = null
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
@@ -365,15 +368,19 @@ class SessionMessageListPanel(
             if (prev === view) return
             hovered = view
             prev?.setHovered(false)
+            onHover?.invoke(view, true)
             return
         }
-        if (hovered === view) hovered = null
+        if (hovered !== view) return
+        hovered = null
+        onHover?.invoke(view, false)
     }
 
     private fun clearHover() {
         val view = hovered ?: return
         hovered = null
         view.setHovered(false)
+        onHover?.invoke(view, false)
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
@@ -396,6 +403,7 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
+        onHover = null
         removeAll()
     }
 }

@@ -1292,6 +1292,11 @@ export const dict = {
   "session.outcome.interrupted": "Раунд прерван",
   "session.outcome.error": "Раунд завершился с ошибкой",
   "session.outcome.finish": "Причина завершения: {{reason}}",
+  "session.costAlert.header": "Оповещение о стоимости сессии",
+  "session.costAlert.continue": "Продолжить",
+  "session.costAlert.question":
+    "Эта сессия только что превысила порог оповещения на сессию {{limit}} и стоит {{cost}}. Продолжить?",
+  "session.costAlert.stop": "Остановить",
 
   "ui.sessionTurn.cancel": "Отмена",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1574,6 +1579,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
+  "settings.autoApprove.maxCost.title": "Оповещение о стоимости сессии",
+  "settings.autoApprove.maxCost.description":
+    "Предупреждать перед продолжением сессии, если ее стоимость превышает эту сумму в USD. Используйте целые доллары; оставьте пустым, чтобы отключить.",
   "settings.autoApprove.level.allow": "Разрешить",
   "settings.autoApprove.level.ask": "Спросить",
   "settings.autoApprove.level.deny": "Отклонить",

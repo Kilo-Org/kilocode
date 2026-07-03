@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.Text
@@ -21,7 +22,7 @@ import javax.swing.RepaintManager
  */
 @Suppress("UnstableApiUsage")
 class TurnViewTest : BasePlatformTestCase() {
-    private val openFile: (String) -> Unit = {}
+    private val openFile: SessionFileOpener = { _, _ -> }
 
     // ------ TurnView ------
 

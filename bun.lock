@@ -341,6 +341,7 @@
         "@kilocode/kilo-ui": "workspace:*",
         "@kilocode/plugin": "workspace:*",
         "@kilocode/sdk": "workspace:*",
+        "@opencode-ai/core": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
         "@pierre/diffs": "catalog:",
         "@thisbeyond/solid-dnd": "0.7.5",

@@ -4,6 +4,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import com.intellij.openapi.Disposable
 import java.awt.Color
+import java.awt.Component
 import java.awt.Font
 import java.awt.Point
 import javax.swing.JComponent
@@ -37,6 +38,7 @@ interface MdView : Disposable {
     data class LinkEvent(
         val href: String,
         val point: Point? = null,
+        val component: Component? = null,
     )
 
     fun interface LinkListener {

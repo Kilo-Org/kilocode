@@ -13,6 +13,7 @@ import ai.kilocode.backend.workspace.KiloWorkspaceState
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
+import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -181,17 +182,11 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
     override suspend fun files(directory: String, path: String): List<WorkspaceFileDto> {
         val item = clean(path) ?: return emptyList()
         val file = file(item) ?: return emptyList()
-        val bases = listOf(directory) + ProjectManager.getInstance().openProjects
-            .asSequence()
-            .filter { !it.isDefault }
-            .mapNotNull { it.basePath }
-            .filter { it != directory }
-            .toList()
-        val paths = if (file.isAbsolute) listOf(file) else bases.mapNotNull { base ->
-            file(base)?.resolve(file)?.normalize()
-        }
+        val base = file(clean(directory) ?: directory) ?: return emptyList()
+        val paths = if (file.isAbsolute) listOf(file) else listOf(base.resolve(file).normalize())
         val found = linkedMapOf<String, WorkspaceFileDto>()
         for (target in paths) {
+            relativeWithinWorkspace(base, target) ?: continue
             val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: continue
             found[vf.path] = WorkspaceFileDto(vf.path, vf.name, vf.isDirectory)
         }
@@ -223,7 +218,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         text.takeIf { it.isNotBlank() }?.take(DIFF_CAP)
     }
 
-    override suspend fun openFile(path: String): Boolean {
+    override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
         val item = clean(path) ?: return false
         val target = file(item)?.takeIf { it.isAbsolute } ?: return false
         val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(target.toString()) ?: return false
@@ -231,7 +226,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
             LOG.warn("No project available to open file: $path")
             return false
         }
-        navigate(project, vf)
+        navigate(project, vf, line, column)
         return true
     }
 
@@ -302,9 +297,19 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         null
     }
 
-    private suspend fun navigate(project: Project, file: VirtualFile) = suspendCancellableCoroutine { cont ->
+    private suspend fun navigate(project: Project, file: VirtualFile, line: Int? = null, column: Int? = null) = suspendCancellableCoroutine { cont ->
         ApplicationManager.getApplication().invokeLater({
-            OpenFileDescriptor(project, file).navigate(true)
+            val descriptor = if (line == null) {
+                OpenFileDescriptor(project, file)
+            } else {
+                OpenFileDescriptor(
+                    project,
+                    file,
+                    (line - 1).coerceAtLeast(0),
+                    (column?.minus(1))?.coerceAtLeast(0) ?: 0,
+                )
+            }
+            descriptor.navigate(true)
             if (cont.isActive) cont.resume(Unit)
         }, ModalityState.any())
     }
@@ -329,7 +334,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
             override fun acceptItem(item: NavigationItem): Boolean {
                 val psi = item as? PsiFileSystemItem ?: return false
                 val path = file(psi.virtualFile.path) ?: return false
-                return path.startsWith(base) && super.acceptItem(item)
+                return relativeWithinWorkspace(base, path) != null && super.acceptItem(item)
             }
 
             override fun loadInitialCheckBoxState(): Boolean = false
@@ -390,7 +395,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
 
     private fun fileDto(base: Path, vf: VirtualFile): WorkspaceFileDto? {
         val path = file(vf.path) ?: return null
-        val rel = relativeWithinBase(base, path) ?: return null
+        val rel = relativeWithinWorkspace(base, path) ?: return null
         return WorkspaceFileDto(rel, vf.name, vf.isDirectory)
     }
 
@@ -487,4 +492,10 @@ internal fun relativeWithinBase(base: Path, target: Path): String? {
     if (!path.startsWith(base)) return null
     val rel = base.relativize(path).toString().replace('\\', '/')
     return rel.ifBlank { null }
+}
+
+internal fun relativeWithinWorkspace(base: Path, target: Path): String? {
+    val rel = relativeWithinBase(base, target) ?: return null
+    if (isManagedWorktreeStorage(rel)) return null
+    return rel
 }

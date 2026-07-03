@@ -5,6 +5,7 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.ProviderConnectDto
 import ai.kilocode.rpc.dto.ProviderDisconnectDto
 import ai.kilocode.rpc.dto.ProviderEnableDto
 import kotlinx.coroutines.async
@@ -56,6 +57,32 @@ class KiloBackendProviderSettingsManagerTest {
         assertNull(mock.lastConfigPatchBody)
         assertNull(mock.lastAuthDeletePath)
         assertEquals(0, mock.requestCount("/global/dispose"))
+    }
+
+    @Test
+    fun `connecting provider stores credentials and reloads connected state`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"openai","name":"OpenAI","source":"custom","models":{}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        mock.providersAfterAuthPut = """{
+            "all":[{"id":"openai","name":"OpenAI","source":"custom","models":{}}],
+            "default":{},
+            "connected":["openai"],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.connect(ProviderConnectDto("/test", "openai", "sk-test", mapOf("baseURL" to "https://api.openai.com/v1")))
+
+        assertNull(result.error)
+        assertContains(mock.lastAuthPutBody.orEmpty(), "\"key\":\"sk-test\"")
+        assertContains(mock.lastAuthPutBody.orEmpty(), "\"baseURL\":\"https://api.openai.com/v1\"")
+        assertEquals(listOf("openai"), result.state.connected)
+        assertEquals(1, mock.requestCount("/global/dispose"))
     }
 
     @Test

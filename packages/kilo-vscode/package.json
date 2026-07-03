@@ -945,6 +945,12 @@
           "default": false,
           "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically."
         },
+        "kilo-code.new.maxCost": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; set to 0 to disable."
+        },
         "kilo-code.new.fontSize": {
           "type": "number",
           "default": 13,
@@ -1127,6 +1133,7 @@
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
+    "@opencode-ai/core": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@thisbeyond/solid-dnd": "0.7.5",

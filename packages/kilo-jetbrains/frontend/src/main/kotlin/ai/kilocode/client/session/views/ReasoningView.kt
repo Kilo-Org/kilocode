@@ -3,6 +3,8 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.openSessionLink
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -29,13 +31,14 @@ import javax.swing.SwingUtilities
 /** Renders reasoning as a secondary collapsible block. */
 class ReasoningView(
     reasoning: Reasoning,
+    private val openFile: SessionFileOpener = { _, _ -> },
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
     private val parts: ReasoningParts = reasoningParts(selection),
 ) :
     SecondarySessionPartView(
         parts.header,
-        { parts.scroll(openUrl) },
+        { parts.scroll(openFile, openUrl) },
         expanded = reasoning.content.isNotBlank() && !reasoning.done,
     ) {
 
@@ -46,7 +49,7 @@ class ReasoningView(
         @RequiresEdt
         get() {
             val fresh = !parts.bodyCreated()
-            val view = parts.md(openUrl)
+            val view = parts.md(openFile, openUrl)
             if (!fresh) return view
             registerBody(view)
             view.set(source)
@@ -277,16 +280,16 @@ class ReasoningParts(
 
     fun bodyCreated() = body != null
 
-    fun md(openUrl: (String) -> Unit): MdView = body(openUrl).md
+    fun md(openFile: SessionFileOpener, openUrl: (String) -> Unit): MdView = body(openFile, openUrl).md
 
-    fun scroll(openUrl: (String) -> Unit): JBScrollPane = body(openUrl).scroll
+    fun scroll(openFile: SessionFileOpener, openUrl: (String) -> Unit): JBScrollPane = body(openFile, openUrl).scroll
 
-    private fun body(openUrl: (String) -> Unit): ReasoningBody {
+    private fun body(openFile: SessionFileOpener, openUrl: (String) -> Unit): ReasoningBody {
         val item = body
         if (item != null) return item
         val md = MdViewFactory.create(SessionEditorStyle.current(), selection).apply {
             opaque = false
-            addLinkListener { openUrl(it.href) }
+            addLinkListener { openSessionLink(it, openFile, openUrl) }
         }
         val panel = TrackPanel().apply {
             isOpaque = true

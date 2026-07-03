@@ -4,6 +4,9 @@ import ai.kilocode.client.app.KiloProviderService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsPanel
+import ai.kilocode.client.settings.base.SettingsListConfig
+import ai.kilocode.client.settings.base.SettingsToolbarAction
+import ai.kilocode.client.settings.base.SettingsListView
 import ai.kilocode.client.settings.auth.DeviceOAuthInfo
 import ai.kilocode.client.settings.auth.DeviceOAuthPanel
 import ai.kilocode.client.settings.auth.DeviceOAuthText
@@ -25,8 +28,6 @@ import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonShortcuts
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
@@ -35,7 +36,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
-import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.ValidationInfo
@@ -60,14 +61,12 @@ import java.awt.BorderLayout
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JList
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
 import javax.swing.event.DocumentEvent
-import javax.swing.Icon
 import javax.swing.Timer
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
@@ -84,13 +83,13 @@ internal class ProvidersSettingsUi(
         val LOG = KiloLog.create(ProvidersSettingsUi::class.java)
     }
 
-    private val add = ProviderToolbarAction(
+    private val add = SettingsToolbarAction(
         KiloBundle.message("settings.providers.addCustom"),
         KiloBundle.message("settings.providers.addCustom.description"),
         AllIcons.General.Add,
         { !busy },
     ) { custom() }
-    private val refresh = ProviderToolbarAction(
+    private val refresh = SettingsToolbarAction(
         KiloBundle.message("settings.providers.refresh"),
         KiloBundle.message("settings.providers.refresh.description"),
         AllIcons.Actions.Refresh,
@@ -421,36 +420,14 @@ internal class ProvidersContent(
     private val disconnect: (ProviderSettingsProviderDto) -> Unit,
     private val enable: (ProviderSettingsProviderDto) -> Unit,
 ) : BaseContentPanel() {
-    private val model = CollectionListModel<ProviderListRow>()
-    private val list = JBList(model).apply {
-        selectionMode = ListSelectionModel.SINGLE_SELECTION
-        emptyText.text = KiloBundle.message("settings.providers.noMatches")
+    private val view = SettingsListView(KiloBundle.message("settings.providers.noMatches"), SettingsListConfig.Preferred) { key, id ->
+        activate(key, id)
     }
     private var state = ProviderSettingsDto()
-    private var filter = ""
     private var busy = false
 
     init {
-        list.cellRenderer = ProviderListRenderer(model)
-        list.registerKeyboardAction(
-            { primary() },
-            KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
-            JComponent.WHEN_FOCUSED,
-        )
-        list.addMouseListener(object : MouseAdapter() {
-            override fun mouseReleased(e: MouseEvent) {
-                if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_RELEASED, true)) return
-                val idx = list.locationToIndex(e.point)
-                val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return
-                if (!bounds.contains(e.point)) return
-                val row = model.getElementAt(idx)
-                val action = ProviderListRenderer.actionAt(list, bounds, e.point, row, idx == list.selectedIndex) ?: return
-                activate(row, action)
-                e.consume()
-            }
-        })
-        ScrollingUtil.installActions(list)
-        next(list)
+        next(view)
     }
 
     @RequiresEdt
@@ -459,8 +436,9 @@ internal class ProvidersContent(
         val notes = state.providers.count { providerDescription(it).isNotBlank() }
         ProvidersSettingsUi.LOG.info("provider settings content update: start providers=${state.providers.size} connected=${state.connected.size} disabled=${state.disabled.size} descriptions=$notes")
         this.state = state
-        sync()
-        ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${model.size}")
+        val rows = providerListRows(state, "", disabledRows = busy)
+        view.update(rows)
+        ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${rows.size}")
     }
 
     @RequiresEdt
@@ -468,58 +446,33 @@ internal class ProvidersContent(
         checkEdt()
         if (busy == next) return
         busy = next
-        list.isEnabled = !next
-        sync()
+        view.setBusy(next)
+        view.update(providerListRows(state, "", disabledRows = busy))
     }
 
     @RequiresEdt
     fun filter(text: String) {
         checkEdt()
-        if (filter == text) return
-        filter = text
-        sync()
-    }
-
-    @RequiresEdt
-    private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null) {
-        checkEdt()
-        val rows = providerListRows(state, filter, disabledRows = busy)
-        model.replaceAll(rows)
-        val idx = at?.let { providerListIndex(rows, it) }?.takeIf { it >= 0 }
-            ?: providerListIndex(rows, prefer).takeIf { it >= 0 }
-            ?: rows.indices.firstOrNull()
-            ?: -1
-        if (idx >= 0) choose(idx)
-        else list.clearSelection()
-    }
-
-    @RequiresEdt
-    private fun choose(idx: Int) {
-        checkEdt()
-        list.selectedIndex = idx
-        ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        view.filter(text)
     }
 
     @RequiresEdt
     fun move(step: Int) {
         checkEdt()
-        val size = model.size
-        if (size <= 0) return
-        val idx = ((list.selectedIndex.takeIf { it >= 0 } ?: 0) + step).coerceIn(0, size - 1)
-        choose(idx)
+        view.move(step)
     }
 
     @RequiresEdt
     fun primary() {
         checkEdt()
-        val row = list.selectedValue ?: return
-        val action = ProviderListRenderer.visibleActions(row, true).firstOrNull() ?: return
-        activate(row, action)
+        view.primary()
     }
 
     @RequiresEdt
-    private fun activate(row: ProviderListRow, action: ProviderListAction) {
+    private fun activate(key: String, id: String) {
         checkEdt()
+        val row = providerListRows(state, "", disabledRows = busy).firstOrNull { it.key == key } ?: return
+        val action = ProviderListAction.entries.firstOrNull { it.name == id } ?: return
         if (!row.enabled(action)) return
         when (action) {
             ProviderListAction.CONNECT -> connect(row.provider)
@@ -531,25 +484,6 @@ internal class ProvidersContent(
 
     private fun checkEdt() {
         check(ApplicationManager.getApplication().isDispatchThread) { "Provider settings content updates must run on EDT" }
-    }
-}
-
-private class ProviderToolbarAction(
-    text: String,
-    description: String,
-    icon: Icon,
-    private val enabled: () -> Boolean,
-    private val action: () -> Unit,
-) : DumbAwareAction(text, description, icon) {
-    override fun getActionUpdateThread() = ActionUpdateThread.EDT
-
-    override fun actionPerformed(e: AnActionEvent) {
-        if (!enabled()) return
-        action()
-    }
-
-    override fun update(e: AnActionEvent) {
-        e.presentation.isEnabled = enabled()
     }
 }
 
@@ -571,7 +505,7 @@ private class ApiKeyDialog(title: String, method: ProviderAuthMethodDto?) : Dial
     @RequiresEdt
     fun metadata(): Map<String, String> = fields.mapValues { (_, field) ->
         when (field) {
-            is JComboBox<*> -> (field.selectedItem as? ProviderAuthOptionDto)?.value ?: field.selectedItem?.toString().orEmpty()
+            is ComboBox<*> -> (field.selectedItem as? ProviderAuthOptionDto)?.value ?: field.selectedItem?.toString().orEmpty()
             is JBTextField -> field.text
             else -> ""
         }
@@ -593,8 +527,8 @@ private class ApiKeyDialog(title: String, method: ProviderAuthMethodDto?) : Dial
         return null
     }
 
-    private fun optionBox(options: List<ProviderAuthOptionDto>): JComboBox<ProviderAuthOptionDto> {
-        val box = JComboBox(options.toTypedArray())
+    private fun optionBox(options: List<ProviderAuthOptionDto>): ComboBox<ProviderAuthOptionDto> {
+        val box = ComboBox(options.toTypedArray())
         box.renderer = object : DefaultListCellRenderer() {
             override fun getListCellRendererComponent(list: JList<*>?, value: Any?, index: Int, selected: Boolean, focus: Boolean): java.awt.Component {
                 val item = value as? ProviderAuthOptionDto
