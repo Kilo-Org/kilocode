@@ -1,4 +1,4 @@
-import { Show, type Component, createMemo } from "solid-js"
+import { Show, type Component, createMemo, createEffect, on } from "solid-js"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -13,6 +13,20 @@ interface PermissionDiffProps {
 
 export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
   const vscode = useVSCode()
+  let scrollerRef: HTMLDivElement | undefined
+
+  createEffect(
+    on(
+      () => props.filediff,
+      () => {
+        if (scrollerRef) {
+          scrollerRef.scrollTop = 0
+        }
+      },
+      { defer: true },
+    ),
+  )
+
   const filename = createMemo(() => {
     const parts = props.filediff.file.split("/")
     return parts[parts.length - 1] ?? props.filediff.file
@@ -71,7 +85,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
           </Tooltip>
         </div>
       </div>
-      <div data-slot="permission-diff-content">
+      <div data-slot="permission-diff-content" ref={(el) => (scrollerRef = el)}>
         <Show
           when={view()}
           fallback={<div data-slot="permission-diff-empty">Diff preview unavailable for this file.</div>}
