@@ -67,8 +67,11 @@ const openRouterModelsResponseSchema = z.object({
 })
 
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
+type AutoRouting = NonNullable<OpenRouterModel["autoRouting"]>
 
 const AUTO_EFFICIENT_ID = "kilo-auto/efficient"
+const AUTO_ROUTING_TTL_MS = 5 * 60 * 1000
+const autoRoutingCache = new Map<string, { routing: AutoRouting; expires: number }>()
 
 function modelsEndpoint(baseURL: string) {
   return `${baseURL.replace(/\/+$/, "")}/models`
@@ -177,8 +180,7 @@ async function mergeAutoRouting(models: Record<string, any>, baseURL: string) {
     return
   }
 
-  const result = await fetchKiloModels({ baseURL })
-  const routing = result.models[AUTO_EFFICIENT_ID]?.autoRouting
+  const routing = await getAutoRouting(baseURL)
 
   if (!routing) {
     return
@@ -188,6 +190,23 @@ async function mergeAutoRouting(models: Record<string, any>, baseURL: string) {
     ...models[AUTO_EFFICIENT_ID],
     autoRouting: routing,
   }
+}
+
+async function getAutoRouting(baseURL: string): Promise<AutoRouting | undefined> {
+  const cached = autoRoutingCache.get(baseURL)
+  if (cached && cached.expires > Date.now()) {
+    return cached.routing
+  }
+  if (cached) {
+    autoRoutingCache.delete(baseURL)
+  }
+
+  const result = await fetchKiloModels({ baseURL })
+  const routing = result.models[AUTO_EFFICIENT_ID]?.autoRouting
+  if (routing) {
+    autoRoutingCache.set(baseURL, { routing, expires: Date.now() + AUTO_ROUTING_TTL_MS })
+  }
+  return routing
 }
 
 /**

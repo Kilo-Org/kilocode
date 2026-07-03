@@ -344,6 +344,49 @@ test("merges Auto Efficient routing metadata from token-derived public catalog e
   })
 })
 
+test("caches Auto Efficient routing metadata by configured public catalog endpoint", async () => {
+  const orig = globalThis.fetch
+  const urls: string[] = []
+
+  stubFetch(async (input) => {
+    const url = String(input)
+    urls.push(url)
+
+    if (url.includes("/api/openrouter/")) {
+      return new Response(VALID_AUTO_ROUTING_RESPONSE, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    }
+
+    return new Response(ORG_AUTO_ROUTING_MISSING_RESPONSE, {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })
+  })
+
+  const opts = {
+    kilocodeOrganizationId: "org-cache",
+    baseURL: "https://cache.test/api/organizations/org-cache",
+  }
+  const first = await fetchKiloModels(opts)
+  const second = await fetchKiloModels(opts)
+
+  ;(globalThis as any).fetch = orig
+
+  expect(urls).toEqual([
+    "https://cache.test/api/organizations/org-cache/models",
+    "https://cache.test/api/openrouter/models",
+    "https://cache.test/api/organizations/org-cache/models",
+  ])
+  expect(first.models["kilo-auto/efficient"].autoRouting).toEqual({
+    models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
+  })
+  expect(second.models["kilo-auto/efficient"].autoRouting).toEqual({
+    models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
+  })
+})
+
 test("omits malformed Terminal Bench metadata without rejecting the catalog", async () => {
   const orig = globalThis.fetch
   stubFetch(
