@@ -120,6 +120,7 @@ export const AskInput = Schema.Struct({
   id: Schema.optional(PermissionID),
   ruleset: Ruleset,
   hardRuleset: Schema.optional(Ruleset), // kilocode_change
+  nonInteractive: Schema.optional(Schema.Boolean), // kilocode_change
 }).annotate({ identifier: "PermissionAskInput" })
 export type AskInput = Schema.Schema.Type<typeof AskInput>
 
@@ -245,7 +246,7 @@ export const layer = Layer.effect(
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       // kilocode_change start
-      const { ruleset, hardRuleset, ...request } = input
+      const { ruleset, hardRuleset, nonInteractive, ...request } = input
       const s = yield* InstanceState.get(state)
       const local = s.session[request.sessionID] ?? []
       // kilocode_change end
@@ -275,6 +276,12 @@ export const layer = Layer.effect(
       }
 
       if (!needsAsk) return
+
+      // kilocode_change start - subagents cannot answer permission prompts
+      if (nonInteractive) {
+        return yield* new DeniedError({ ruleset: subset(request.permission, ruleset) })
+      }
+      // kilocode_change end
 
       const id = request.id ?? PermissionID.ascending()
       const info: Request = {

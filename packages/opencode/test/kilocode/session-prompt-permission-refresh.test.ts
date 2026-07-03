@@ -12,6 +12,7 @@ import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Env } from "../../src/env"
 import { Format } from "../../src/format"
@@ -288,5 +289,40 @@ it.live("active tool calls use permissions changed after model streaming starts"
         permission: { edit: "ask" },
       }),
     },
+  ),
+)
+
+it.live("subagent permission asks fail instead of waiting for a human reply", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const permission = yield* Permission.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Parent" })
+      const agent = {
+        name: "general",
+        mode: "subagent" as const,
+        permission: Permission.fromConfig({ bash: "ask" }),
+        options: {},
+      }
+
+      const err = yield* KiloSessionPrompt.askPermission({
+        permission,
+        agents: { get: () => Effect.succeed(agent) },
+        sessions,
+        agent,
+        session: chat,
+        request: {
+          sessionID: chat.id,
+          permission: "bash",
+          patterns: ["echo 1"],
+          always: ["echo 1"],
+          metadata: {},
+        },
+      }).pipe(Effect.flip)
+
+      expect(err).toBeInstanceOf(Permission.DeniedError)
+      expect(yield* permission.list()).toEqual([])
+    }),
+    { git: true },
   ),
 )

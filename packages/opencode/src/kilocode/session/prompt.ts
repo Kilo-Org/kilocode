@@ -176,6 +176,7 @@ export namespace KiloSessionPrompt {
       ...input.request,
       ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
       hardRuleset: hardPermissions({ agent }),
+      nonInteractive: agent.mode === "subagent",
     })
   })
 
