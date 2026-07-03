@@ -1,9 +1,11 @@
 package ai.kilocode.client.settings
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ide.DataManager
 import com.intellij.openapi.options.SearchableConfigurable
@@ -33,10 +35,10 @@ class KiloSettingsConfigurable : SearchableConfigurable {
 
     override fun createComponent(): JComponent {
         val panel = Stack.vertical()
-        panel.border = JBUI.Borders.empty(8, 0, 0, 0)
+        panel.border = JBUI.Borders.empty(UiStyle.Gap.lg(), 0, 0, 0)
 
         val desc = JBLabel(KiloBundle.message("settings.kilo.description"))
-        desc.border = JBUI.Borders.emptyBottom(12)
+        desc.border = JBUI.Borders.emptyBottom(UiStyle.Gap.pad())
         panel.next(desc)
 
         val link = ActionLink(KiloBundle.message("settings.profile.displayName")) { e ->
@@ -44,7 +46,7 @@ class KiloSettingsConfigurable : SearchableConfigurable {
             val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
             open(settings, UserProfileConfigurable.ID)
         }
-        link.border = JBUI.Borders.emptyBottom(4)
+        link.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(link)
 
         val models = ActionLink(KiloBundle.message("settings.models.displayName")) { e ->
@@ -52,7 +54,7 @@ class KiloSettingsConfigurable : SearchableConfigurable {
             val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
             open(settings, ModelsConfigurable.ID)
         }
-        models.border = JBUI.Borders.emptyBottom(4)
+        models.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(models)
 
         val providers = ActionLink(KiloBundle.message("settings.providers.displayName")) { e ->
@@ -60,8 +62,16 @@ class KiloSettingsConfigurable : SearchableConfigurable {
             val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
             open(settings, ProvidersConfigurable.ID)
         }
-        providers.border = JBUI.Borders.emptyBottom(4)
+        providers.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(providers)
+
+        val behavior = ActionLink(KiloBundle.message("settings.agentBehavior.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, AgentBehaviorConfigurable.ID)
+        }
+        behavior.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(behavior)
 
         return panel
     }

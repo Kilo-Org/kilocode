@@ -4,7 +4,6 @@ import * as KiloAgent from "@/kilocode/agent"
 import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
-import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
@@ -53,8 +52,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const instance = yield* InstanceState.context
       const agent = yield* agents.get(ctx.payload.name)
       const dirs = yield* config.directories()
-      yield* EffectBridge.fromPromise(() =>
-        KiloAgent.remove({ name: ctx.payload.name, agent, dirs, directory: instance.directory }),
+      yield* Effect.tryPromise({
+        try: () => KiloAgent.remove({ name: ctx.payload.name, agent, dirs, directory: instance.directory }),
+        catch: (err) => err,
+      }).pipe(
+        Effect.catch((err) => {
+          if (KiloAgent.RemoveError.isInstance(err)) return Effect.fail(new HttpApiError.BadRequest({}))
+          return Effect.die(err)
+        }),
       )
       yield* store.dispose(instance)
       return true

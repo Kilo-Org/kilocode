@@ -1,9 +1,9 @@
 package ai.kilocode.backend.app
 
-import ai.kilocode.jetbrains.api.model.Config
 import ai.kilocode.jetbrains.api.model.KiloNotifications200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.backend.migration.LegacyMigrationDetection
+import ai.kilocode.rpc.dto.ConfigDto
 
 /**
  * Full application lifecycle state, combining CLI transport connection
@@ -54,7 +54,7 @@ data class ConfigWarning(
  */
 data class AppData(
     val profile: KiloProfile200Response?,
-    val config: Config,
+    val config: ConfigDto,
     val notifications: List<KiloNotifications200ResponseInner>,
     val warnings: List<ConfigWarning> = emptyList(),
 )

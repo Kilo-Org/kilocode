@@ -121,6 +121,19 @@ class ModelsSettingsUiTest : BasePlatformTestCase() {
         edt { assertSelected(panel, "kilo/new") }
     }
 
+    fun `test stale config update result keeps applied selection visible`() {
+        val panel = requireUi()
+        rpc.configUpdateReturnStale = true
+
+        edt {
+            select(panel, "new")
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() && !edt { panel.modified() } }
+        edt { assertSelected(panel, "kilo/new") }
+    }
+
     fun `test pickers are disabled during pending save`() {
         val panel = requireUi()
         rpc.configUpdateGate = CompletableDeferred()

@@ -437,6 +437,7 @@ class KiloBackendWorkspaceTest {
 
             val first = results[0]
             results.forEach { assertTrue(it === first) }
+            loaded(first)
         } finally {
             manager.stop()
             KiloBackendHttpClients.shutdown(http)

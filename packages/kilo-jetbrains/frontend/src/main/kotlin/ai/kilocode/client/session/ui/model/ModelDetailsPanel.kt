@@ -17,6 +17,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Cursor
 import java.awt.FlowLayout
 import java.text.NumberFormat
@@ -268,7 +269,7 @@ private class TagsSection(title: String) {
             val tag = tag(idx)
             val icon = tag.icon as? FilledBadgeIcon
             if (icon?.text != value) {
-                tag.icon = FilledBadgeIcon(value, tagBackground(idx), UiStyle.Colors.fg())
+                tag.icon = FilledBadgeIcon(value, tagStyle(idx))
             }
             if (tag.toolTipText != value) tag.toolTipText = value
             tag.isVisible = true
@@ -368,11 +369,20 @@ private fun descriptionText(value: String): String = value
         "[$url]($url)$tail"
     }
 
-private fun tagBackground(index: Int) = when (index % 4) {
-    0 -> UiStyle.Colors.badgeBg()
-    1 -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), UiStyle.Colors.fg(), 0.12f)
-    2 -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), JBUI.CurrentTheme.Link.Foreground.ENABLED, 0.18f)
-    else -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), UiStyle.Colors.activityBadgeBg(), 0.18f)
+private class TagStyle(private val bg: Color) : UiStyle.Badge.Style {
+    override fun bg() = bg
+
+    override fun fg() = UiStyle.Colors.fg()
+}
+
+private fun tagStyle(index: Int): UiStyle.Badge.Style {
+    if (index % 4 == 0) return UiStyle.Badge.Secondary
+    val bg = when (index % 4) {
+        1 -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), UiStyle.Colors.fg(), 0.12f)
+        2 -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), JBUI.CurrentTheme.Link.Foreground.ENABLED, 0.18f)
+        else -> UiStyle.Colors.blend(UiStyle.Colors.contentBackground(), UiStyle.Badge.Primary.bg(), 0.18f)
+    }
+    return TagStyle(bg)
 }
 
 private fun format(value: Double): String = NumberFormat.getNumberInstance(Locale.getDefault()).apply {
