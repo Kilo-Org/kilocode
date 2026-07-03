@@ -4,6 +4,32 @@
 
 ### Minor Changes
 
+- [#11870](https://github.com/Kilo-Org/kilocode/pull/11870) [`ad746f2`](https://github.com/Kilo-Org/kilocode/commit/ad746f22af3f4fd24c26a36f4eaf803fff1173b3) - Show expandable model details in the JetBrains model picker.
+
+### Patch Changes
+
+- [#11871](https://github.com/Kilo-Org/kilocode/pull/11871) [`73bdb92`](https://github.com/Kilo-Org/kilocode/commit/73bdb923c75ccadf56759e1311468d6cfada6de7) - Render JetBrains todo checklists with consistent text weight and higher-contrast checkboxes.
+
+- [#11850](https://github.com/Kilo-Org/kilocode/pull/11850) [`d4db9c9`](https://github.com/Kilo-Org/kilocode/commit/d4db9c9be29102eca82668ded35db4348efb43da) - Show resolved JetBrains config file paths, float connection status above the prompt, and offer retry, restart, and reinstall recovery actions from connection errors. JetBrains now opens the same global config directory used by the CLI; macOS and Windows users who previously created global config from JetBrains may need to move files from the old platform-specific location to `~/.config/kilo`.
+
+- [#11871](https://github.com/Kilo-Org/kilocode/pull/11871) [`07f1e27`](https://github.com/Kilo-Org/kilocode/commit/07f1e27b09dc484dd97c37da1c54b39f5ec2b31a) - Match JetBrains inline code and file-reference link styling with VS Code, and render quotes with muted theme-aware styling.
+
+- [#11871](https://github.com/Kilo-Org/kilocode/pull/11871) [`521a8ff`](https://github.com/Kilo-Org/kilocode/commit/521a8ff310ed4273bc4127a9e145c0693a637de5) - Show JetBrains missing-file warnings without animation and always show shell command header popups for collapsed shell runs.
+
+- [#11871](https://github.com/Kilo-Org/kilocode/pull/11871) [`95b1d54`](https://github.com/Kilo-Org/kilocode/commit/95b1d54b57f8ff46f239f2b09726dabd6c448af0) - Open JetBrains session file links in the active workspace and hide sibling worktree matches.
+
+- [#11871](https://github.com/Kilo-Org/kilocode/pull/11871) [`06231f9`](https://github.com/Kilo-Org/kilocode/commit/06231f97a35afdfef6ea5d697104b6c2c8df8644) - Clear stale session link hover styling when the transcript is scrolled.
+
+- [#11871](https://github.com/Kilo-Org/kilocode/pull/11871) [`112e7d7`](https://github.com/Kilo-Org/kilocode/commit/112e7d7beea1179dfaf0d0826fdad3daf99a784b) - Keep JetBrains tool headers to a single clipped line.
+
+- [#11813](https://github.com/Kilo-Org/kilocode/pull/11813) [`a824c4c`](https://github.com/Kilo-Org/kilocode/commit/a824c4cba9604e85f857215ef772efec13af2278) - Keep JetBrains sessions scoped to the correct worktree when multiple IntelliJ windows are open.
+
+- [#11553](https://github.com/Kilo-Org/kilocode/pull/11553) [`3847122`](https://github.com/Kilo-Org/kilocode/commit/3847122555cf9d8ec723ec9d62753b0e9c72ccbc) - Improve JetBrains agent, MCP, provider, and model settings so changes are staged until Apply, persist through the CLI, reload accurately, and hide unsupported removal actions.
+
+## 7.4.0
+
+### Minor Changes
+
 - [#11327](https://github.com/Kilo-Org/kilocode/pull/11327) [`1a812ea`](https://github.com/Kilo-Org/kilocode/commit/1a812ea5a0efea2647b1676c907d9a08afab9be7) - Add `/` slash commands and `@` file/git-changes mentions to the JetBrains chat prompt with native completion.
 
 ### Patch Changes
@@ -129,13 +155,15 @@
 ## [7.0.1-rc.14] - 2026-07-02
 
 ### Added
-- Add Agent Behavior settings 
+
+- Add Agent Behavior settings
 - Show richer model picker details, including routed model information and clearer model badges.
 - Show Kilo Pass usage, bonus credits, renewal dates, and top-up actions in the JetBrains user profile.
 
 ### Fixed
+
 - Recover backend startup more reliably when event streams stall, reconnect, or are interrupted by stale failures.
-- Resolve  workspaces by project ID to avoid cross-project session confusion.
+- Resolve workspaces by project ID to avoid cross-project session confusion.
 - Improve CLI recovery, config paths, and `.kilo` config directory handling.
 
 ## [7.0.1-rc.13] - 2026-06-23
