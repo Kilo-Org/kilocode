@@ -33,6 +33,29 @@ export interface NotificationsContext {
   notify: (id: string) => void
 }
 
+const MOBILE_APP_NOTICE_ID = "mobile-app-promo"
+const MOBILE_APP_NOTICE_URL = "https://blog.kilo.ai/p/kilo-app-for-ios-and-android-is-live"
+
+/**
+ * Purely local (non-server-fetched) notice promoting the Kilo mobile app. Gated by the
+ * local `kilo serve` instance's `kilocode.mobileAppNotice()` endpoint, which is only true
+ * for users who have previously enabled a Cloud Agent / remote session relay from the CLI
+ * (see `Notices.markCloudAgentUsed()` in `packages/opencode/src/kilocode/notices.ts`).
+ * Dismissal reuses the existing `kilo.dismissedNotificationIds` globalState flow below.
+ */
+async function localNotifications(client: KiloClient): Promise<NotificationItem[]> {
+  const res = await client.kilocode.mobileAppNotice().catch(() => null)
+  if (!res?.data?.show) return []
+  return [
+    {
+      id: MOBILE_APP_NOTICE_ID,
+      title: "Kilo Mobile App",
+      message: "Continue your /remote sessions in the Kilo mobile app.",
+      action: { actionText: "Open", actionURL: MOBILE_APP_NOTICE_URL },
+    },
+  ]
+}
+
 export async function fetchAndSendNotifications(ctx: NotificationsContext): Promise<void> {
   if (!ctx.client) {
     const cached = ctx.cached()
@@ -48,8 +71,11 @@ export async function fetchAndSendNotifications(ctx: NotificationsContext): Prom
   }
 
   try {
-    const { data: all } = await retry(() => ctx.client!.kilo.notifications(undefined, { throwOnError: true }))
-    const notifications = all.filter((n) => !n.showIn || n.showIn.includes("extension"))
+    const [{ data: all }, local] = await Promise.all([
+      retry(() => ctx.client!.kilo.notifications(undefined, { throwOnError: true })),
+      localNotifications(ctx.client),
+    ])
+    const notifications = [...local, ...all.filter((n) => !n.showIn || n.showIn.includes("extension"))]
     const existing = ctx.context?.globalState.get<string[]>(KEY, []) ?? []
     const active = new Set(notifications.map((n) => n.id))
     const dismissedIds = notifications.length > 0 ? existing.filter((id) => active.has(id)) : existing
@@ -66,6 +92,10 @@ export async function dismissNotification(ctx: NotificationsContext, id: string)
   if (!ctx.context) return
   const existing = ctx.context.globalState.get<string[]>(KEY, [])
   if (!existing.includes(id)) await ctx.context.globalState.update(KEY, [...existing, id])
+
+  // Also persist dismissal on the local kilo serve instance so the CLI/TUI (which shares
+  // the same machine-global notice flag) stops showing it too.
+  if (id === MOBILE_APP_NOTICE_ID) await ctx.client?.kilocode.dismissMobileAppNotice().catch(() => undefined)
 
   const cached = ctx.cached()
   if (cached && !cached.dismissedIds.includes(id)) {

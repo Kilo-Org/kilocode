@@ -116,6 +116,7 @@ import { getScrollAcceleration } from "../../util/scroll"
 import { collapseToolOutput } from "../../util/collapse-tool-output"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import { DialogRetryAction } from "../../component/dialog-retry-action"
+import { useMobileAppNotice } from "@/kilocode/cli/cmd/tui/routes/session/mobile-app-notice" // kilocode_change
 import { SessionRetry } from "@/session/retry"
 import { getRevertDiffFiles } from "../../util/revert-diff"
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useOpencodeKeymap } from "../../keymap"
@@ -459,6 +460,8 @@ export function Session() {
     const title = Locale.truncate(session()?.title ?? "", 50)
     return exit.message.set(banner(title, session()?.id, UI.Style.TEXT_DIM, UI.Style.TEXT_NORMAL))
   })
+
+  useMobileAppNotice({ sdk, dialog })
 
   const [exitPress, setExitPress] = createSignal(0)
   useBindings(() => ({
