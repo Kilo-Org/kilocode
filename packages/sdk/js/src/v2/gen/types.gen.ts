@@ -9807,6 +9807,42 @@ export type BackgroundProcessStopSessionResponses = {
 export type BackgroundProcessStopSessionResponse =
   BackgroundProcessStopSessionResponses[keyof BackgroundProcessStopSessionResponses]
 
+export type BranchNameGenerateData = {
+  body?: {
+    prompt: string
+    providerID?: string
+    modelID?: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/branch-name"
+}
+
+export type BranchNameGenerateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type BranchNameGenerateError = BranchNameGenerateErrors[keyof BranchNameGenerateErrors]
+
+export type BranchNameGenerateResponses = {
+  /**
+   * Generated branch name or null when the task is not clear yet
+   */
+  200: {
+    branch: string | null
+  }
+}
+
+export type BranchNameGenerateResponse = BranchNameGenerateResponses[keyof BranchNameGenerateResponses]
+
 export type CommitMessageGenerateData = {
   body?: {
     /**

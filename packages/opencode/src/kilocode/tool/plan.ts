@@ -28,7 +28,25 @@ export const PlanExitTool = Tool.define(
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
           const info = yield* session.get(ctx.sessionID)
-          const file = PlanFile.resolve(params.path, instance) ?? Session.plan(info, instance)
+          // resolved may be undefined even for a legit path (e.g. the non-git
+          // global plans dir), so still fall through to locate()'s recovery.
+          const resolved = params.path ? PlanFile.resolve(params.path, instance) : undefined
+          const target = resolved ?? Session.plan(info, instance)
+          // fetch fresh messages so written() sees a write from this same turn
+          const messages = yield* session.messages({ sessionID: ctx.sessionID })
+          const file = yield* Effect.promise(() => PlanFile.locate(target, messages, info, instance, ctx.agent))
+          if (!file) {
+            const plan = PlanFile.display(target, instance)
+            const rejected = params.path && !resolved
+            const hint = rejected
+              ? `The path "${params.path}" you passed can't be used directly — it's outside the project, or it's a directory rather than a file. `
+              : ""
+            return yield* Effect.fail(
+              new Error(
+                `Plan file not found at ${plan}. ${hint}Write the plan file first, or call plan_exit with the exact path of the file you wrote.`,
+              ),
+            )
+          }
           const plan = PlanFile.display(file, instance)
           return {
             title: "Planning complete",

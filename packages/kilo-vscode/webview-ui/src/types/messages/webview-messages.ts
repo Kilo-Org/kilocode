@@ -1071,6 +1071,15 @@ export interface RequestRecentsMessage {
   type: "requestRecents"
 }
 
+export interface PersistModelSelectorExpandedRequest {
+  type: "persistModelSelectorExpanded"
+  value: boolean
+}
+
+export interface RequestModelSelectorExpandedMessage {
+  type: "requestModelSelectorExpanded"
+}
+
 export interface ToggleFavoriteRequest {
   type: "toggleFavorite"
   action: "add" | "remove"
@@ -1353,6 +1362,8 @@ export type WebviewMessage =
   | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
+  | PersistModelSelectorExpandedRequest
+  | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | PersistModelSelectionRequest

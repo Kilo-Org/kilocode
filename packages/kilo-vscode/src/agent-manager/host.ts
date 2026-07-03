@@ -99,6 +99,9 @@ export interface Host {
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
 
+  /** Read the user's automatic branch naming preferences. */
+  autoBranchNaming(): { enabled: boolean; prefix: string }
+
   /** Show an error notification. */
   showError(msg: string): void
 

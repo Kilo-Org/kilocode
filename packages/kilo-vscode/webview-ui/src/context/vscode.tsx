@@ -3,12 +3,11 @@
  * Provides access to the VS Code webview API for posting messages
  */
 
-import { createContext, useContext, onCleanup, ParentComponent } from "solid-js"
+import { createContext, useContext, onCleanup, ParentComponent, createSignal } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
-const EXPANDED = "modelSelectorExpanded"
 
 export function getVSCodeAPI(): VSCodeAPI {
   if (!vscodeApi) {
@@ -44,6 +43,11 @@ export const VSCodeProvider: ParentComponent = (props) => {
   const api = getVSCodeAPI()
   const handlers = new Set<(message: ExtensionMessage) => void>()
 
+  // Model-selector expand/collapse preference. Stored in extension globalState
+  // so it is shared across webviews (sidebar + agent-manager panel); a local
+  // signal mirrors it for synchronous reads.
+  const [expanded, setExpanded] = createSignal(true)
+
   // Listen for messages from the extension
   const messageListener = (event: MessageEvent) => {
     const message = event.data as ExtensionMessage
@@ -51,6 +55,10 @@ export const VSCodeProvider: ParentComponent = (props) => {
   }
 
   window.addEventListener("message", messageListener)
+  handlers.add((message) => {
+    if (message?.type === "modelSelectorExpandedLoaded") setExpanded(message.value)
+  })
+  api.postMessage({ type: "requestModelSelectorExpanded" })
 
   onCleanup(() => {
     window.removeEventListener("message", messageListener)
@@ -67,13 +75,10 @@ export const VSCodeProvider: ParentComponent = (props) => {
     },
     getState: <T,>() => api.getState() as T | undefined,
     setState: <T,>(state: T) => api.setState(state),
-    getModelSelectorExpanded: () => {
-      const state = api.getState() as Record<string, unknown> | undefined
-      return state?.[EXPANDED] !== false
-    },
+    getModelSelectorExpanded: expanded,
     setModelSelectorExpanded: (value: boolean) => {
-      const state = (api.getState() as Record<string, unknown> | undefined) ?? {}
-      api.setState({ ...state, [EXPANDED]: value })
+      setExpanded(value)
+      api.postMessage({ type: "persistModelSelectorExpanded", value })
     },
   }
 

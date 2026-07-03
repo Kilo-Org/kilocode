@@ -11800,6 +11800,106 @@
         ]
       }
     },
+    "/session/{sessionID}/branch-name": {
+      "post": {
+        "tags": ["branch-name"],
+        "operationId": "branchName.generate",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses.*"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generated branch name or null when the task is not clear yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "branch": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["branch"],
+                  "additionalProperties": false,
+                  "description": "Generated branch name or null when the task is not clear yet"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Generate a task-focused branch name from the current conversation.",
+        "summary": "Generate branch name",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "providerID": {
+                    "type": "string"
+                  },
+                  "modelID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["prompt"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.branchName.generate({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/commit-message": {
       "post": {
         "tags": ["commit-message"],
@@ -33046,6 +33146,10 @@
     {
       "name": "background-process",
       "description": "Kilo background process routes."
+    },
+    {
+      "name": "branch-name",
+      "description": "Kilo branch name routes."
     },
     {
       "name": "commit-message",
