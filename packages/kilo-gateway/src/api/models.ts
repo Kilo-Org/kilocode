@@ -202,11 +202,16 @@ async function getAutoRouting(baseURL: string): Promise<AutoRouting | undefined>
     autoRoutingCache.delete(baseURL)
   }
 
-  const routing = fetchKiloModels({ baseURL }).then((result) => {
-    const found = result.models[AUTO_EFFICIENT_ID]?.autoRouting
-    if (!found) autoRoutingCache.delete(baseURL)
-    return found
-  })
+  const routing = fetchKiloModels({ baseURL })
+    .then((result) => {
+      const found = result.models[AUTO_EFFICIENT_ID]?.autoRouting
+      if (!found) autoRoutingCache.delete(baseURL)
+      return found
+    })
+    .catch(() => {
+      autoRoutingCache.delete(baseURL)
+      return undefined
+    })
   autoRoutingCache.set(baseURL, { routing, expires: now + AUTO_ROUTING_TTL_MS })
   return routing
 }
