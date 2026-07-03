@@ -53,7 +53,7 @@ import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
-import { createMarketplaceRemover, removeAgent, removeMcp } from "./kilo-provider/remove-config-item"
+import { createMarketplaceRemover, removeMcp } from "./kilo-provider/remove-config-item"
 import { AgentRequirementsController } from "./kilo-provider/agent-requirements-controller"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
@@ -1505,6 +1505,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // for the busy-session warning on Save.
           if (event.type === "session.status") return true
 
+          // session.deleted must always pass through so the webview can run its cleanup
+          // (messages, parts, stash, todos, permissions, drafts, etc.) — including for
+          // sessions that were never explicitly tracked here (e.g. child sessions
+          // cascade-deleted with the parent, or external CLI deletions). We deliberately
+          // do NOT re-track the deleted id: handleLoadMessages intentionally drops late
+          // responses for sessions that have been pruned, and re-tracking would let an
+          // in-flight messagesLoaded response resurrect transcript state for a session
+          // the webview just cleaned up.
+          if (event.type === "session.deleted") return true
+
           return this.trackedSessionIds.has(sessionId)
         },
         (payload, directory) => {
@@ -1950,6 +1960,43 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /**
+   * Drops every per-session cache entry we hold for the given id. Shared between
+   * the user-initiated delete path (handleDeleteSession, after the backend
+   * confirms) and the SSE session.deleted path (cascaded child deletes and
+   * external CLI/TUI deletes that arrive via the event stream), so both paths
+   * leave trackedSessionIds, sessionDirectories, and the related Maps in the
+   * same state — including currentSession / contextSessionID / focused-session
+   * registration. Without clearing those three, resolveSession() would still
+   * see the deleted id via this.currentSession and the next send would target
+   * a session the backend has already deleted.
+   */
+  private pruneDeletedSession(sessionID: string): void {
+    this.trackedSessionIds.delete(sessionID)
+    this.streams.drop(sessionID)
+    this.visibleTaskStreams.delete(sessionID)
+    this.syncedChildSessions.delete(sessionID)
+    this.sessionDirectories.delete(sessionID)
+    this.aborts.delete(sessionID)
+    this.lastReconciledAt.delete(sessionID)
+    this.checkpoints.delete(sessionID)
+    this.revisions.delete(sessionID)
+    this.refreshes.delete(sessionID)
+    this.sessionStatusMap.delete(sessionID)
+    this.costs.onSessionDeleted(sessionID)
+    const deletedAlertLimit = this.activeAlerts.get(sessionID)
+    if (deletedAlertLimit !== undefined) {
+      this.activeAlerts.delete(sessionID)
+      this.postMessage({ type: "sessionCostAlertResolved", sessionID: sessionID, limit: deletedAlertLimit })
+    }
+    this.connectionService.pruneSession(sessionID)
+    if (this.currentSession?.id === sessionID) {
+      this.contextSessionID = undefined
+      this.setCurrentSession(null)
+    }
+    if (this.streams.focused === sessionID) this.focusSession(undefined)
+  }
+
+  /**
    * Handle deleting a session.
    */
   private async handleDeleteSession(sessionID: string): Promise<void> {
@@ -1965,23 +2012,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
       await stopSessionProcesses(this.client, sessionID, workspaceDir)
       await this.client.session.delete({ sessionID, directory: workspaceDir }, { throwOnError: true })
-      this.trackedSessionIds.delete(sessionID)
-      this.streams.drop(sessionID)
-      this.visibleTaskStreams.delete(sessionID)
-      this.syncedChildSessions.delete(sessionID)
-      this.costs.onSessionDeleted(sessionID)
-      const deletedAlertLimit = this.activeAlerts.get(sessionID)
-      if (deletedAlertLimit !== undefined) {
-        this.activeAlerts.delete(sessionID)
-        this.postMessage({ type: "sessionCostAlertResolved", sessionID: sessionID, limit: deletedAlertLimit })
-      }
-      this.sessionDirectories.delete(sessionID)
-      this.aborts.delete(sessionID)
-      this.lastReconciledAt.delete(sessionID)
-      this.checkpoints.delete(sessionID)
-      this.revisions.delete(sessionID)
-      this.refreshes.delete(sessionID)
-      this.connectionService.pruneSession(sessionID)
+      this.pruneDeletedSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.contextSessionID = undefined
         this.setCurrentSession(null)
@@ -2280,23 +2311,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return true
   }
 
-  /** Remove an agent via CLI, falling back to kilo.json removal. */
+  /** Remove an agent via the CLI backend, then refresh. */
   private async handleRemoveAgent(name: string): Promise<void> {
     if (!this.client) return
     try {
       const result = await this.client.kilocode.removeAgent({ name, directory: this.getWorkspaceDirectory() })
-      if (!result.error) {
-        this.cachedAgentsMessage = null
-        await this.fetchAndSendAgents()
-        this.requirements.clear()
-        return
+      if (result.error) {
+        console.error("[Kilo New] removeAgent returned error:", result.error)
       }
-    } catch {
-      // fall through to kilo.json removal
+    } catch (err) {
+      console.error("[Kilo New] Failed to remove agent:", err)
     }
-    if (!(await removeAgent(this.removeConfigItemCtx, name))) {
-      console.error("[Kilo New] KiloProvider: Failed to remove agent:", name)
-    }
+    this.cachedAgentsMessage = null
+    await this.fetchAndSendAgents()
+    this.requirements.clear()
   }
 
   private async handleRemoveMcp(name: string): Promise<void> {
@@ -3730,9 +3758,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // message.part.* events are always session-scoped; drop if session unknown.
     if (!sessionID && isSessionScopedPartEvent(event.type)) return
     if (this.postModelUsageChanged(event, sessionID)) return
-    if (event.type !== "indexing.status" && sessionID && !this.trackedSessionIds.has(sessionID)) {
+    if (
+      event.type !== "indexing.status" &&
+      event.type !== "session.deleted" &&
+      sessionID &&
+      !this.trackedSessionIds.has(sessionID)
+    )
       return
-    }
 
     if (event.type === "session.updated" && typeof event.properties.info.cost === "number") {
       const cost = this.costs.setSessionCost(event.properties.sessionID, event.properties.info.cost)
@@ -3819,6 +3851,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         console.log("[Kilo New] KiloProvider: 🔗 Auto-adopting child session from task tool", { childId })
         void this.handleSyncSession(childId, part.sessionID ?? sessionID)
       }
+    }
+
+    // Drop the per-session caches for deleted sessions so a late
+    // handleLoadMessages response (or any other guarded read) can't resurrect
+    // transcript state for a session the webview just cleaned up. The
+    // prefilter lets session.deleted through without re-tracking, and the
+    // handleEvent guard does the same — this is the matching prune.
+    if (event.type === "session.deleted" && sessionID) {
+      this.pruneDeletedSession(sessionID)
     }
 
     if (!isLegacySyncEvent(event)) {

@@ -7,9 +7,19 @@ on:
       - closed
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Merged JetBrains release PR number to publish
+        required: true
+        type: string
+      merge_commit:
+        description: Merge commit SHA from the reviewed release PR
+        required: true
+        type: string
 
 concurrency:
-  group: publish-jetbrains-pr-${{ github.event.pull_request.number }}
+  group: publish-jetbrains-pr-${{ github.event.pull_request.number || inputs.pr }}
   cancel-in-progress: false
 
 permissions:
@@ -23,17 +33,23 @@ jobs:
   publish:
     if: >-
       github.repository == 'Kilo-Org/kilocode' &&
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
-      contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (
+        (
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.merged == true &&
+          startsWith(github.event.pull_request.head.ref, 'jetbrains/release/') &&
+          contains(github.event.pull_request.labels.*.name, 'jetbrains-release') &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        ) ||
+        github.event_name == 'workflow_dispatch'
+      )
     runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
       - name: Checkout merged release PR
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
 
       - name: Setup Bun for validation
         uses: ./.github/actions/setup-bun
@@ -44,7 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
 
       - name: Save reviewed release metadata
         run: |
@@ -86,6 +102,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y patchelf zip
+          curl --fail --location \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
 
       - name: Validate publishing secrets
         run: |

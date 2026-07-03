@@ -9,6 +9,7 @@ import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -109,24 +110,37 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
+  // Everything below is a blocklist layered on the allowlist above: it catches ways
+  // an "allowed" read-only command can still write files, chain commands, or exec an
+  // arbitrary program. This is defense-in-depth, not a sandbox — the durable fix is
+  // OS-level sandboxing, not command-line string matching.
+  // `*` matches any run of characters (including spaces and empty), so each rule
+  // catches its operator anywhere. Broad forms subsume narrow ones: `*&*` covers
+  // `&&`, and `*>*` covers `>`, `>>`, `>|`, and `>(` in any spacing.
   "*\n*": "deny",
   "*<(*": "deny",
   "*|*": "deny",
   "*;*": "deny",
-  "*&&*": "deny",
   "*&*": "deny",
   "*$(*": "deny",
   "*`*": "deny",
   "*>*": "deny",
-  "* > *": "deny",
-  "*>>*": "deny",
-  "* >> *": "deny",
-  "*>|*": "deny",
-  "* >| *": "deny",
+  // Short -o is space-anchored (two forms) so it never matches filenames like
+  // `foo-o bar`; long flags use `*--flag*`, which is specific enough to bridge both
+  // "flag first" and "flag after args" positions in one rule.
   "sort -o *": "deny",
   "sort * -o *": "deny",
-  "sort --output*": "deny",
-  "sort * --output*": "deny",
+  "sort *--output*": "deny",
+  // Flags that make otherwise "read-only" commands exec an arbitrary program.
+  "sort *--compress-program*": "deny",
+  "sort *--files0-from*": "deny",
+  "rg *--pre *": "deny",
+  "rg *--pre=*": "deny",
+  "rg *--hostname-bin*": "deny",
+  "ag *--pager*": "deny",
+  "man *-P*": "deny",
+  "man *--pager*": "deny",
+  "man *-H*": "deny",
 }
 
 function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
@@ -499,8 +513,8 @@ export const RemoveError = NamedError.create("AgentRemoveError", {
 })
 
 /**
- * Remove a custom agent by deleting its markdown source file and/or
- * removing it from legacy .kilocodemodes YAML files.
+ * Remove a custom agent by deleting its markdown source file, removing it from
+ * config-backed agent entries, and/or removing it from legacy .kilocodemodes YAML files.
  * Scans all config directories for agent/mode .md files matching the name,
  * then also checks the .kilocodemodes files the ModesMigrator reads.
  */
@@ -530,6 +544,8 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
       }
     }
   }
+
+  if (await removeConfigAgent(input.name, input.directory)) found = true
 
   // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
   const { ModesMigrator } = await import("@/kilocode/modes-migrator")
@@ -561,4 +577,33 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
   }
 
   if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
+}
+
+async function removeConfigAgent(name: string, directory: string) {
+  const { KilocodeConfigOverlay } = await import("@/kilocode/config/overlay")
+  const files = [
+    KilocodeConfigOverlay.globalTarget(),
+    await KilocodeConfigOverlay.projectTarget({ directory }),
+  ]
+  let found = false
+
+  for (const file of new Set(files)) {
+    const cfg = Bun.file(file)
+    if (!(await cfg.exists())) continue
+
+    const text = await cfg.text()
+    const root = parseJsonc(text)
+    if (!root?.agent || !Object.hasOwn(root.agent, name)) continue
+
+    const opts = { formattingOptions: { insertSpaces: true, tabSize: 2 } }
+    const next = applyEdits(text, modify(text, ["agent", name], undefined, opts))
+    const parsed = parseJsonc(next)
+    const final = parsed.default_agent === name
+      ? applyEdits(next, modify(next, ["default_agent"], undefined, opts))
+      : next
+    await Bun.write(file, final)
+    found = true
+  }
+
+  return found
 }

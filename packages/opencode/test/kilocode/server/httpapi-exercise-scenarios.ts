@@ -121,6 +121,33 @@ export const kiloScenarios: Scenario[] = [
     .mutating()
     .at((ctx) => ({ path: "/config/rules", headers: ctx.headers(), body: { content: "Use small changes." } }))
     .json(200, object),
+  http.protected
+    .put("/auth/{providerID}", "auth.set")
+    .mutating()
+    .at((ctx) => ({
+      path: route("/auth/{providerID}", { providerID: "openai" }),
+      headers: ctx.headers(),
+      body: { type: "api", key: "sk-httpapi-test" },
+    }))
+    .json(200, (body) => check(body === true, "provider auth set should return true")),
+  http.protected
+    .post("/mcp", "mcp.add")
+    .mutating()
+    .at((ctx) => ({
+      path: "/mcp",
+      headers: ctx.headers(),
+      body: { name: "httpapi-mcp", config: { type: "remote", url: "https://mcp.example.test" } },
+    }))
+    .json(200, object),
+  http.protected
+    .post("/mcp", "mcp.add")
+    .mutating()
+    .at((ctx) => ({
+      path: "/mcp",
+      headers: ctx.headers(),
+      body: { name: "httpapi-mcp", config: { type: "remote", url: "https://mcp-edit.example.test" } },
+    }))
+    .json(200, object),
   http.protected.get("/config/sources", "config.sources").json(200, object),
   http.protected.get("/tui/config", "tui.config.get").json(200, object),
   http.protected.get("/tui/keybinds", "tui.keybind.list").json(200, object),
@@ -289,6 +316,14 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/commit-message", headers: ctx.headers(), body: {} }))
     .status(400),
   http.protected
+    .post("/session/{sessionID}/branch-name", "branchName.generate")
+    .at((ctx) => ({
+      path: route("/session/{sessionID}/branch-name", { sessionID: "ses_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: {},
+    }))
+    .status(400),
+  http.protected
     .post("/enhance-prompt", "enhancePrompt.enhance")
     .at((ctx) => ({ path: "/enhance-prompt", headers: ctx.headers(), body: { text: "" } }))
     .status(400),
@@ -371,6 +406,10 @@ export const kiloScenarios: Scenario[] = [
         check(!(yield* Effect.promise(() => Bun.file(ctx.state).exists())), "removed agent should not remain on disk")
       }),
     ),
+  http.protected
+    .post("/kilocode/agent/remove", "kilocode.removeAgent")
+    .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-missing" } }))
+    .status(400),
   http.protected
     .post("/kilocode/session-import/project", "kilocode.sessionImport.project")
     .mutating()

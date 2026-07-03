@@ -7,6 +7,11 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelAutoRoutingDto
+import ai.kilocode.rpc.dto.ModelCapabilitiesDto
+import ai.kilocode.rpc.dto.ModelCostDto
+import ai.kilocode.rpc.dto.ModelOptionsDto
+import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.TodoDto
@@ -606,11 +611,22 @@ data class ModelItem(
     val display: String,
     val provider: String,
     val providerName: String,
+    val inputPrice: Double? = null,
+    val outputPrice: Double? = null,
+    val contextLength: Long? = null,
+    val releaseDate: String? = null,
+    val latest: Boolean? = null,
     val recommendedIndex: Double?,
     val free: Boolean,
     val byok: Boolean = false,
     val variants: List<String>,
     val limit: ModelLimitItem?,
+    val cost: ModelCostDto? = null,
+    val capabilities: ModelCapabilitiesDto? = null,
+    val options: ModelOptionsDto? = null,
+    val autoRouting: ModelAutoRoutingDto? = null,
+    val terminalBench: ModelTerminalBenchDto? = null,
+    val reasoning: Boolean = false,
     val attachment: Boolean = false,
     val mayTrainOnYourPrompts: Boolean = false,
 ) {

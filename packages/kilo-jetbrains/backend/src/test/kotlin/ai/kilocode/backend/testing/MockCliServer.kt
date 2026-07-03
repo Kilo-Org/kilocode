@@ -2,6 +2,11 @@ package ai.kilocode.backend.testing
 
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
@@ -58,10 +63,21 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastWorkspaceConfigPatchPath: String? = null
     @Volatile var lastWorkspaceConfigPatchBody: String? = null
     @Volatile var lastOrganizationSetBody: String? = null
+    @Volatile var mcp = "[]"
+    @Volatile var mcpStatus = 200
+    @Volatile var mcpActionStatus = 200
+    @Volatile var agentRemoveStatus = 200
+    @Volatile var agentBuilderStatus = 200
+    @Volatile var lastMcpActionPath: String? = null
+    @Volatile var lastAgentRemoveBody: String? = null
+    @Volatile var lastAgentBuilderPath: String? = null
+    @Volatile var lastAgentBuilderBody: String? = null
+    @Volatile var lastAgentBuilderMethod: String? = null
 
     // Project-scoped REST responses
     @Volatile var providers = """{"all":[],"default":{},"connected":[],"failed":[]}"""
     @Volatile var providerAuth = "{}"
+    @Volatile var providersAfterAuthPut: String? = null
     @Volatile var agents = "[]"
     @Volatile var commands = "[]"
     @Volatile var skills = "[]"
@@ -290,6 +306,7 @@ class MockCliServer : AutoCloseable {
                 bare == "/global/config" && method == "GET" -> respond(output, configStatus, config)
                 bare == "/global/config" && method == "PATCH" -> {
                     lastConfigPatchBody = body
+                    config = mergeConfig(config, body)
                     respond(output, configStatus, config)
                 }
                 bare == "/global/dispose" && method == "POST" -> respond(output, disposeStatus, "true")
@@ -297,6 +314,7 @@ class MockCliServer : AutoCloseable {
                 bare == "/config" && method == "PATCH" -> {
                     lastWorkspaceConfigPatchPath = path
                     lastWorkspaceConfigPatchBody = body
+                    workspaceConfig = mergeConfig(workspaceConfig, body)
                     respond(output, workspaceConfigStatus, workspaceConfig)
                 }
                 bare == "/config" -> respond(output, workspaceConfigStatus, workspaceConfig)
@@ -322,6 +340,7 @@ class MockCliServer : AutoCloseable {
                 }
                 bare.matches(Regex("/auth/[^/]+")) && method == "PUT" -> {
                     lastAuthPutBody = body
+                    providersAfterAuthPut?.let { providers = it }
                     respond(output, authPutStatus, "true")
                 }
                 bare == "/kilo/organization" && method == "POST" -> {
@@ -333,8 +352,27 @@ class MockCliServer : AutoCloseable {
                 bare == "/provider" -> respond(output, providersStatus, providers)
                 bare == "/provider/auth" -> respond(output, providerAuthStatus, providerAuth)
                 bare == "/agent" -> respond(output, agentsStatus, agents)
+                bare == "/agent-builder" || bare.startsWith("/agent-builder/") -> {
+                    lastAgentBuilderPath = path
+                    lastAgentBuilderBody = body
+                    lastAgentBuilderMethod = method
+                    respond(output, agentBuilderStatus, """{"id":"test","scope":"project","path":"/tmp/test.md","markdown":"---\n---\n"}""")
+                }
+                bare == "/kilocode/agent/remove" && method == "POST" -> {
+                    lastAgentRemoveBody = body
+                    respond(output, agentRemoveStatus, if (agentRemoveStatus == 200) "true" else """{"error":"Agent not found"}""")
+                }
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
+                bare == "/mcp" -> respond(output, mcpStatus, mcp)
+                bare.matches(Regex("/mcp/[^/]+/(connect|disconnect)")) && method == "POST" -> {
+                    lastMcpActionPath = path
+                    respond(output, mcpActionStatus, "true")
+                }
+                bare.matches(Regex("/mcp/[^/]+/auth/authenticate")) && method == "POST" -> {
+                    lastMcpActionPath = path
+                    respond(output, mcpActionStatus, "true")
+                }
                 bare == "/experimental/session" -> {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
@@ -403,6 +441,33 @@ class MockCliServer : AutoCloseable {
         writer.flush()
     }
 
+    private fun mergeConfig(raw: String, patch: String): String {
+        val base = runCatching { JSON.parseToJsonElement(raw).jsonObject.toMutableMap() }.getOrNull()
+            ?: mutableMapOf()
+        val next = runCatching { JSON.parseToJsonElement(patch).jsonObject }.getOrNull() ?: return raw
+        for ((key, value) in next) {
+            if (value is JsonNull) {
+                base.remove(key)
+                continue
+            }
+            base[key] = merge(base[key], value)
+        }
+        return JsonObject(base).toString()
+    }
+
+    private fun merge(base: JsonElement?, patch: JsonElement): JsonElement {
+        if (base !is JsonObject || patch !is JsonObject) return patch
+        val out = base.toMutableMap()
+        for ((key, value) in patch) {
+            if (value is JsonNull) {
+                out.remove(key)
+                continue
+            }
+            out[key] = merge(out[key], value)
+        }
+        return JsonObject(out)
+    }
+
     private fun handleSse(writer: BufferedWriter, latch: CountDownLatch) {
         writer.write("HTTP/1.1 200 OK\r\n")
         writer.write("Content-Type: text/event-stream\r\n")
@@ -416,5 +481,9 @@ class MockCliServer : AutoCloseable {
         sseConnected.countDown()
         // Block until SSE is closed or server shuts down
         latch.await()
+    }
+
+    private companion object {
+        val JSON = Json { ignoreUnknownKeys = true }
     }
 }

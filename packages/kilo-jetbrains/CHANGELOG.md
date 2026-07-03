@@ -126,6 +126,18 @@
 
 ## [Unreleased]
 
+## [7.0.1-rc.14] - 2026-07-02
+
+### Added
+- Add Agent Behavior settings 
+- Show richer model picker details, including routed model information and clearer model badges.
+- Show Kilo Pass usage, bonus credits, renewal dates, and top-up actions in the JetBrains user profile.
+
+### Fixed
+- Recover backend startup more reliably when event streams stall, reconnect, or are interrupted by stale failures.
+- Resolve  workspaces by project ID to avoid cross-project session confusion.
+- Improve CLI recovery, config paths, and `.kilo` config directory handling.
+
 ## [7.0.1-rc.13] - 2026-06-23
 
 ### Added
