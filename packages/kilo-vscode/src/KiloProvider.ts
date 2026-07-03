@@ -172,6 +172,10 @@ let maxCost = 0
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 type ContextMessage = { contextDirectory?: unknown }
+type TypedWebviewMessage = {
+  type: string
+  value?: unknown
+}
 type SandboxSupportClient = {
   support: (
     parameters: { directory?: string },
@@ -392,6 +396,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeLanguageChange: (() => void) | null = null
   private unsubscribeProfileChange: (() => void) | null = null
   private unsubscribeFavoritesChange: (() => void) | null = null
+  private unsubscribeModelSelectorExpanded: (() => void) | null = null
   private unsubscribeMigrationComplete: (() => void) | null = null // legacy-migration
   private unsubscribeClearPendingPrompts: (() => void) | null = null
   private unsubscribeDirectoryProvider: (() => void) | null = null
@@ -924,6 +929,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       ) {
         return
       }
+      if (await this.handleModelSelectorExpandedMessage(message)) return
       this.visibleTaskStreams.handle(message)
       switch (message.type) {
         case "webviewReady":
@@ -1426,6 +1432,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  private async handleModelSelectorExpandedMessage(message: TypedWebviewMessage): Promise<boolean> {
+    if (message.type === "persistModelSelectorExpanded") {
+      if (typeof message.value !== "boolean") return true
+      await this.extensionContext?.globalState.update("modelSelectorExpanded", message.value)
+      this.connectionService.notifyModelSelectorExpandedChanged(message.value)
+      return true
+    }
+    if (message.type === "requestModelSelectorExpanded") {
+      const value = this.extensionContext?.globalState.get("modelSelectorExpanded", true) ?? true
+      this.postMessage({ type: "modelSelectorExpandedLoaded", value })
+      return true
+    }
+    return false
+  }
+
   private async toggleFavorite(message: {
     action: "add" | "remove"
     providerID: string
@@ -1472,6 +1493,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
     this.unsubscribeFavoritesChange?.()
+    this.unsubscribeModelSelectorExpanded?.()
     this.unsubscribeClearPendingPrompts?.()
     this.unsubscribeDirectoryProvider?.()
 
@@ -1572,6 +1594,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Subscribe to favorites change broadcast from other KiloProvider instances
       this.unsubscribeFavoritesChange = this.connectionService.onFavoritesChanged((favorites) => {
         this.postMessage({ type: "favoritesLoaded", favorites })
+      })
+
+      // Subscribe to model-selector expand/collapse broadcast from other KiloProvider instances
+      this.unsubscribeModelSelectorExpanded = this.connectionService.onModelSelectorExpandedChanged((value) => {
+        this.postMessage({ type: "modelSelectorExpandedLoaded", value })
       })
 
       // legacy-migration start
@@ -4218,6 +4245,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.unsubscribeLanguageChange?.()
     this.unsubscribeProfileChange?.()
     this.unsubscribeFavoritesChange?.()
+    this.unsubscribeModelSelectorExpanded?.()
     this.unsubscribeMigrationComplete?.()
     this.unsubscribeClearPendingPrompts?.()
     this.unsubscribeDirectoryProvider?.()

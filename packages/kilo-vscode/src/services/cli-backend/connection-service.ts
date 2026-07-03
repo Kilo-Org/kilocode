@@ -15,6 +15,7 @@ type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
 type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
+type ModelSelectorExpandedListener = (value: boolean) => void
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
 
@@ -70,6 +71,7 @@ export class KiloConnectionService {
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
   private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
+  private readonly modelSelectorExpandedListeners: Set<ModelSelectorExpandedListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
   private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
@@ -439,6 +441,25 @@ export class KiloConnectionService {
   notifyFavoritesChanged(favorites: Array<{ providerID: string; modelID: string }>): void {
     for (const listener of this.favoritesChangeListeners) {
       listener(favorites)
+    }
+  }
+
+  /**
+   * Subscribe to model-selector expand/collapse changes broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onModelSelectorExpandedChanged(listener: ModelSelectorExpandedListener): () => void {
+    this.modelSelectorExpandedListeners.add(listener)
+    return () => {
+      this.modelSelectorExpandedListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a model-selector expand/collapse change to all subscribed KiloProvider instances.
+   */
+  notifyModelSelectorExpandedChanged(value: boolean): void {
+    for (const listener of this.modelSelectorExpandedListeners) {
+      listener(value)
     }
   }
 
