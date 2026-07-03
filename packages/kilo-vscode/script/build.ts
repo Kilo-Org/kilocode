@@ -2,7 +2,11 @@
 import { $ } from "bun"
 import { join } from "node:path"
 import { existsSync, mkdirSync, rmSync, chmodSync } from "node:fs"
-import { copyKiloSandboxWorker, copySandboxResources, copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import {
+  copyKiloSandboxWorker,
+  copySandboxResources,
+  copyTreeSitterResources,
+} from "../src/services/cli-backend/cli-resources"
 import { ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const packageJsonPath = join(import.meta.dir, "..", "package.json")
