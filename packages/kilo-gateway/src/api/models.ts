@@ -71,7 +71,7 @@ type AutoRouting = NonNullable<OpenRouterModel["autoRouting"]>
 
 const AUTO_EFFICIENT_ID = "kilo-auto/efficient"
 const AUTO_ROUTING_TTL_MS = 5 * 60 * 1000
-const autoRoutingCache = new Map<string, { routing: AutoRouting; expires: number }>()
+const autoRoutingCache = new Map<string, { routing: Promise<AutoRouting | undefined>; expires: number }>()
 
 function modelsEndpoint(baseURL: string) {
   return `${baseURL.replace(/\/+$/, "")}/models`
@@ -193,19 +193,21 @@ async function mergeAutoRouting(models: Record<string, any>, baseURL: string) {
 }
 
 async function getAutoRouting(baseURL: string): Promise<AutoRouting | undefined> {
+  const now = Date.now()
   const cached = autoRoutingCache.get(baseURL)
-  if (cached && cached.expires > Date.now()) {
+  if (cached && cached.expires > now) {
     return cached.routing
   }
   if (cached) {
     autoRoutingCache.delete(baseURL)
   }
 
-  const result = await fetchKiloModels({ baseURL })
-  const routing = result.models[AUTO_EFFICIENT_ID]?.autoRouting
-  if (routing) {
-    autoRoutingCache.set(baseURL, { routing, expires: Date.now() + AUTO_ROUTING_TTL_MS })
-  }
+  const routing = fetchKiloModels({ baseURL }).then((result) => {
+    const found = result.models[AUTO_EFFICIENT_ID]?.autoRouting
+    if (!found) autoRoutingCache.delete(baseURL)
+    return found
+  })
+  autoRoutingCache.set(baseURL, { routing, expires: now + AUTO_ROUTING_TTL_MS })
   return routing
 }
 
