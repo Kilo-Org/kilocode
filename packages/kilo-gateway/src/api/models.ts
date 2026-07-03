@@ -67,6 +67,8 @@ const openRouterModelsResponseSchema = z.object({
 
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
+const AUTO_EFFICIENT_ID = "kilo-auto/efficient"
+
 /**
  * Parse API price string to number, converting from per-token to per-million-tokens.
  * The API returns prices in $/token, but downstream cost calculation (getUsage)
@@ -157,7 +159,29 @@ export async function fetchKiloModels(options?: {
     models[model.id] = transformedModel
   }
 
+  if (organizationId) {
+    await mergeAutoRouting(models)
+  }
+
   return { models }
+}
+
+async function mergeAutoRouting(models: Record<string, any>) {
+  if (!models[AUTO_EFFICIENT_ID] || models[AUTO_EFFICIENT_ID].autoRouting) {
+    return
+  }
+
+  const result = await fetchKiloModels({})
+  const routing = result.models[AUTO_EFFICIENT_ID]?.autoRouting
+
+  if (!routing) {
+    return
+  }
+
+  models[AUTO_EFFICIENT_ID] = {
+    ...models[AUTO_EFFICIENT_ID],
+    autoRouting: routing,
+  }
 }
 
 /**

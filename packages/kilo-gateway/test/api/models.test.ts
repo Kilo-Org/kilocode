@@ -61,6 +61,23 @@ const VALID_AUTO_ROUTING_RESPONSE = JSON.stringify({
   ],
 })
 
+const ORG_AUTO_ROUTING_MISSING_RESPONSE = JSON.stringify({
+  data: [
+    {
+      id: "kilo-auto/efficient",
+      name: "Org Kilo Auto Efficient",
+      context_length: 64000,
+      max_completion_tokens: 8192,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: ["tools", "temperature"],
+      isFree: true,
+    },
+  ],
+})
+
 const INVALID_BENCH_RESPONSE = JSON.stringify({
   data: [
     {
@@ -210,6 +227,49 @@ test("preserves Auto Efficient routing metadata as a dedicated model field", asy
   expect(result.error).toBeUndefined()
   expect(result.models["kilo-auto/efficient"].autoRouting).toEqual({
     models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
+  })
+})
+
+test("merges missing Auto Efficient routing metadata into organization catalog from public catalog", async () => {
+  const orig = globalThis.fetch
+  const urls: string[] = []
+
+  stubFetch(async (input) => {
+    urls.push(String(input))
+
+    if (urls.length === 1) {
+      return new Response(ORG_AUTO_ROUTING_MISSING_RESPONSE, {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    }
+
+    return new Response(VALID_AUTO_ROUTING_RESPONSE, {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })
+  })
+
+  const result = await fetchKiloModels({
+    kilocodeOrganizationId: "org-123",
+  })
+
+  ;(globalThis as any).fetch = orig
+
+  expect(urls).toHaveLength(2)
+  expect(urls[0]).toContain("/api/organizations/org-123/models")
+  expect(urls[1]).toContain("/api/openrouter/models")
+  expect(result.error).toBeUndefined()
+  expect(result.models["kilo-auto/efficient"]).toMatchObject({
+    name: "Org Kilo Auto Efficient",
+    isFree: true,
+    limit: {
+      context: 64000,
+      output: 8192,
+    },
+    autoRouting: {
+      models: ["google/gemini-2.5-flash", "anthropic/claude-sonnet-4.6"],
+    },
   })
 })
 
