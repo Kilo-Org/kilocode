@@ -204,7 +204,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
 type ProviderInternals = {
   connectionState: State
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
-  currentSession: { id: string; directory?: string; revert?: { messageID: string } } | null
+  currentSession: { id: string; directory?: string; cost?: number; revert?: { messageID: string } } | null
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
@@ -217,6 +217,8 @@ type ProviderInternals = {
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
   handleAbort: (sid?: string) => Promise<void>
+  handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
+  setMaxCost: (value: unknown) => void
   handleRevertSession: (sid: string, messageID: string) => Promise<void>
   handleSendMessage: (text: string, messageID?: string, sessionID?: string, draftID?: string) => Promise<void>
   fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
@@ -238,6 +240,10 @@ function makeProvider(client: ReturnType<typeof createClient>) {
     },
   }
   return { provider, internal, sent }
+}
+
+function mockMaxCost(internal: ProviderInternals, value: number) {
+  internal.setMaxCost(value)
 }
 
 describe("KiloProvider.handleAbort", () => {
@@ -834,6 +840,234 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
 })
 
 describe("KiloProvider.handleLoadMessages / slim payload", () => {
+  it("shows a cost alert even when cost arrives after the session is idle", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent({
+      type: "session.status",
+      properties: { sessionID: "s1", status: { type: "idle" } },
+    })
+
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+
+    expect(sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.46",
+    })
+  })
+
+  it("shares the in-memory limit across provider instances", () => {
+    const settings = makeProvider(createClient())
+    const chat = makeProvider(createClient())
+    mockMaxCost(settings.internal, 1)
+    chat.internal.trackedSessionIds.add("s1")
+
+    chat.internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+
+    expect(chat.sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.50",
+    })
+  })
+
+  it("remembers continue for that session and limit", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+
+    await internal.handleCostAlertResponse("s1", 1, "continue")
+    sent.length = 0
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+
+    expect(
+      sent.some((msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "sessionCostAlert"),
+    ).toBe(false)
+  })
+
+  it("re-alerts after stop when the session reruns above the limit", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+    await internal.handleCostAlertResponse("s1", 1, "stop")
+
+    // Same run: alert already shown, no duplicate within same run
+    sent.length = 0
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+    expect(
+      sent.some((msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "sessionCostAlert"),
+    ).toBe(false)
+
+    // New run (busy rearms): alert fires again since stop does not ack the limit
+    sent.length = 0
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+
+    expect(sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.46",
+    })
+  })
+
+  it("alerts from message.updated assistant cost — the reliable cost signal", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+
+    expect(sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.50",
+    })
+  })
+
+  it("does not re-alert on repeated busy status while already active", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }, "/repo")
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+    sent.length = 0
+
+    internal.handleEvent({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }, "/repo")
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+
+    expect(
+      sent.some((msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "sessionCostAlert"),
+    ).toBe(false)
+  })
+
+  it("does not block sends above the limit", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.currentSession = { ...mkSession(), cost: 2 }
+    internal.gatherEditorContext = async () => ({})
+
+    await internal.handleSendMessage("hello", "m1", "s1")
+
+    expect(client.prompted).toHaveLength(1)
+  })
+
+  it("aborts when the cost alert is stopped", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }, "/repo")
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 2 },
+      },
+    })
+
+    await internal.handleCostAlertResponse("s1", 1, "stop")
+
+    expect(client.aborted).toContainEqual({ sessionID: "s1", directory: "/repo" })
+    expect(sent).toContainEqual({ type: "sessionCostAlertResolved", sessionID: "s1", limit: 1 })
+    expect(sent).toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+  })
+
   it("strips transcript-only metadata before posting messages to the webview", async () => {
     const user = mkMessage("m1", "user", 1)
     const assistant = mkMessage("m2", "assistant", 2)

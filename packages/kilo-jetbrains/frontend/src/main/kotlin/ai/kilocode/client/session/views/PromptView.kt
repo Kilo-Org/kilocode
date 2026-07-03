@@ -1,22 +1,26 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileLinks
+import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.anchor
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.model.Content
+import ai.kilocode.client.ui.md.MdView
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.util.ui.JBUI
 
 class PromptView(
     text: Text,
-    private val openFile: (String) -> Unit = {},
+    private val openFile: SessionFileOpener = { _, _ -> },
     private val openAttachment: (FileAttachment) -> Unit = {},
     openUrl: (String) -> Unit = {},
     selection: SessionSelection? = null,
     mentions: List<PromptMention> = emptyList(),
-) : TextView(text, transparent = true, openUrl = openUrl, selection = selection) {
+) : TextView(text, transparent = true, openFile = openFile, openUrl = openUrl, selection = selection) {
 
     private var mentions = mentions
     private val buffer = StringBuilder(text.content)
@@ -48,17 +52,17 @@ class PromptView(
         sync()
     }
 
-    override fun onLink(href: String) {
-        val mention = mentions.firstOrNull { it.path == href || path(it.path) == href }
+    override fun onLink(event: MdView.LinkEvent) {
+        val mention = mentions.firstOrNull { it.path == event.href || path(it.path) == event.href }
         if (mention != null) {
             mention.attachment?.let {
                 openAttachment(it)
                 return
             }
-            openFile(mention.path)
+            openFile(mention.path, event.anchor())
             return
         }
-        super.onLink(href)
+        super.onLink(event)
     }
 
     override fun applyStyle(style: SessionEditorStyle) {

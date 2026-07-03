@@ -736,6 +736,13 @@ button.am-section-toggle:hover .am-section-label {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .am-pr-badge[data-pending] {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
 .am-worktree-item-active .am-pr-badge {
   background: color-mix(in srgb, var(--pr-accent) 18%, transparent);
 }

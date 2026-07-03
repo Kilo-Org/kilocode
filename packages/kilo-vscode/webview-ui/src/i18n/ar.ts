@@ -1190,6 +1190,10 @@ export const dict = {
   "profile.balance.title": "الرصيد",
   "profile.balance.refresh": "تحديث الرصيد",
   "profile.action.dashboard": "لوحة التحكم",
+  "profile.action.topUp": "إضافة رصيد",
+  "profile.pass.subscribe": "احصل على Kilo Pass لإضافة رصيد وكسب مكافآت",
+  "profile.pass.bonus": "مكافأة",
+  "profile.pass.renews": "يتجدد",
   "profile.action.logout": "تسجيل الخروج",
 
   "settings.section.configuration": "الإعدادات",
@@ -1262,6 +1266,11 @@ export const dict = {
   "session.outcome.interrupted": "تمت مقاطعة الدور",
   "session.outcome.error": "فشل الدور",
   "session.outcome.finish": "سبب الإنهاء: {{reason}}",
+  "session.costAlert.header": "تنبيه تكلفة الجلسة",
+  "session.costAlert.continue": "متابعة",
+  "session.costAlert.question":
+    "تجاوزت هذه الجلسة للتو حد التنبيه لكل جلسة البالغ {{limit}} وبلغت تكلفتها {{cost}}. هل تريد المتابعة؟",
+  "session.costAlert.stop": "إيقاف",
 
   "ui.sessionTurn.cancel": "إلغاء",
   "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
@@ -1538,6 +1547,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
+  "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
+  "settings.autoApprove.maxCost.description":
+    "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",
   "settings.autoApprove.level.allow": "سماح",
   "settings.autoApprove.level.ask": "سؤال",
   "settings.autoApprove.level.deny": "رفض",

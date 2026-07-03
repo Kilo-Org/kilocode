@@ -1208,6 +1208,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Odśwież saldo",
   "profile.action.dashboard": "Panel",
+  "profile.action.topUp": "Doładuj",
+  "profile.pass.subscribe": "Zdobądź Kilo Pass, aby dodać środki i zdobywać bonusy",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Odnawia się",
   "profile.action.logout": "Wyloguj się",
 
   "settings.section.configuration": "Konfiguracja",
@@ -1245,6 +1249,11 @@ export const dict = {
   "session.outcome.interrupted": "Tura przerwana",
   "session.outcome.error": "Tura nie powiodła się",
   "session.outcome.finish": "Powód zakończenia: {{reason}}",
+  "session.costAlert.header": "Alert kosztu sesji",
+  "session.costAlert.continue": "Kontynuuj",
+  "session.costAlert.question":
+    "Ta sesja właśnie przekroczyła próg alertu na sesję wynoszący {{limit}} i kosztuje {{cost}}. Kontynuować?",
+  "session.costAlert.stop": "Zatrzymaj",
 
   "ui.sessionTurn.cancel": "Anuluj",
   "ui.sessionTurn.status.thinking": "Myślę...",
@@ -1569,6 +1578,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Zdefiniuj, jak narzędzia mogą być uruchamiane. Większość narzędzi domyślnie ma ustawienie Zezwalaj. doom_loop i external_directory domyślnie mają ustawienie Pytaj.",
+  "settings.autoApprove.maxCost.title": "Alert kosztu sesji",
+  "settings.autoApprove.maxCost.description":
+    "Ostrzegaj przed kontynuowaniem sesji, gdy jej koszt przekroczy tę kwotę w USD. Używaj pełnych dolarów; pozostaw puste, aby wyłączyć.",
   "settings.autoApprove.level.allow": "Zezwól",
   "settings.autoApprove.level.ask": "Pytaj",
   "settings.autoApprove.level.deny": "Odmów",

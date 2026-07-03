@@ -55,7 +55,7 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
     suspend fun gitChanges(directory: String): String?
 
     /** Open an absolute backend file path in the IDE. */
-    suspend fun openFile(path: String): Boolean
+    suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean
 
     /** Resolve the editable local config target. */
     suspend fun localConfigTarget(directory: String): ConfigTargetDto

@@ -304,7 +304,7 @@ internal fun buildKiloCliEnv(
     put("KILO_PLATFORM", "jetbrains")
     put("KILO_APP_NAME", "kilo-code")
     put("KILO_TELEMETRY_LEVEL", if (KiloDevMode.enabled()) "off" else "all")
-    put("KILO_DISABLE_CLAUDE_CODE", "true")
+    if (!KiloClaudeCompatSettings.get()) put("KILO_DISABLE_CLAUDE_CODE", "true")
     put("KILOCODE_FEATURE", "jetbrains-plugin")
     putIfAbsent("KILO_CONFIG_CONTENT", DEFAULT_CONFIG)
     ideEnv(log).forEach { entry -> put(entry.key, entry.value) }

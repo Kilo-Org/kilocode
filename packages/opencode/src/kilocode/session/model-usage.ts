@@ -94,19 +94,13 @@ export namespace ModelUsage {
     FROM family
     ORDER BY id`
 
-  const USAGE_SQL = `
-    WITH RECURSIVE family(id) AS (
-      SELECT id
-      FROM session
-      WHERE id = ? AND project_id = ?
-
-      UNION
-
-      SELECT child.id
-      FROM session AS child
-      JOIN family AS parent ON child.parent_id = parent.id
-      WHERE child.project_id = ?
-    ), step AS (
+  // Scope aggregation to the already-resolved family session IDs via an IN list.
+  // Re-deriving the family with an inline recursive CTE prevents SQLite from
+  // using part_session_idx and forces a full scan of the entire part table
+  // (seconds on large histories), which blocks the single-threaded server on
+  // every session open. A concrete IN list lets the planner seek the index.
+  const usageSql = (placeholders: string) => `
+    WITH step AS (
       SELECT
         coalesce(json_extract(part.data, '$.model.providerID'), json_extract(message.data, '$.providerID')) AS providerID,
         coalesce(json_extract(part.data, '$.model.modelID'), json_extract(message.data, '$.modelID')) AS modelID,
@@ -116,10 +110,10 @@ export namespace ModelUsage {
         max(0, cast(coalesce(json_extract(part.data, '$.tokens.reasoning'), 0) AS INTEGER)) AS reasoning,
         max(0, cast(coalesce(json_extract(part.data, '$.tokens.cache.read'), 0) AS INTEGER)) AS cache_read,
         max(0, cast(coalesce(json_extract(part.data, '$.tokens.cache.write'), 0) AS INTEGER)) AS cache_write
-      FROM family
-      JOIN part ON part.session_id = family.id
+      FROM part
       JOIN message ON message.id = part.message_id AND message.session_id = part.session_id
-      WHERE json_extract(part.data, '$.type') = 'step-finish'
+      WHERE part.session_id IN (${placeholders})
+        AND json_extract(part.data, '$.type') = 'step-finish'
         AND json_extract(message.data, '$.role') = 'assistant'
     )
     SELECT
@@ -163,7 +157,10 @@ export namespace ModelUsage {
         .prepare<{ id: SessionID }, [string, string, string]>(FAMILY_SQL)
         .all(...familyArgs)
         .map((item) => item.id)
-      const rows = db.prepare<Row, [string, string, string]>(USAGE_SQL).all(...familyArgs)
+      const rows =
+        sessionIDs.length === 0
+          ? []
+          : db.prepare<Row, string[]>(usageSql(sessionIDs.map(() => "?").join(","))).all(...sessionIDs)
       const totals = empty()
       const models = rows.map((row): Model => {
         totals.steps += row.steps

@@ -1205,6 +1205,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Saldo vernieuwen",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Opwaarderen",
+  "profile.pass.subscribe": "Schaf Kilo Pass aan om tegoed toe te voegen en bonussen te verdienen",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Vernieuwt",
   "profile.action.logout": "Uitloggen",
 
   "settings.section.configuration": "Configuratie",
@@ -1277,6 +1281,11 @@ export const dict = {
   "session.outcome.interrupted": "Beurt onderbroken",
   "session.outcome.error": "Beurt mislukt",
   "session.outcome.finish": "Voltooiingsreden: {{reason}}",
+  "session.costAlert.header": "Sessiekostenwaarschuwing",
+  "session.costAlert.continue": "Doorgaan",
+  "session.costAlert.question":
+    "Deze sessie is net boven je waarschuwingsdrempel per sessie van {{limit}} gekomen en kost {{cost}}. Doorgaan?",
+  "session.costAlert.stop": "Stoppen",
 
   "ui.sessionTurn.cancel": "Annuleren",
   "ui.sessionTurn.status.thinking": "Denken...",
@@ -1538,6 +1547,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
+  "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
+  "settings.autoApprove.maxCost.description":
+    "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",
   "settings.autoApprove.level.allow": "Toestaan",
   "settings.autoApprove.level.ask": "Vragen",
   "settings.autoApprove.level.deny": "Weigeren",

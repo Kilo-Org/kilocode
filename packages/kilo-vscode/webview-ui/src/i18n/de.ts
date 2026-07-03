@@ -1266,6 +1266,10 @@ export const dict = {
   "profile.balance.title": "Guthaben",
   "profile.balance.refresh": "Guthaben aktualisieren",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Aufladen",
+  "profile.pass.subscribe": "Hol dir Kilo Pass, um Guthaben hinzuzufügen und Boni zu verdienen",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Verlängert sich",
   "profile.action.logout": "Abmelden",
 
   "settings.section.configuration": "Konfiguration",
@@ -1303,6 +1307,11 @@ export const dict = {
   "session.outcome.interrupted": "Zug unterbrochen",
   "session.outcome.error": "Zug fehlgeschlagen",
   "session.outcome.finish": "Abschlussgrund: {{reason}}",
+  "session.costAlert.header": "Sitzungskostenwarnung",
+  "session.costAlert.continue": "Fortfahren",
+  "session.costAlert.question":
+    "Diese Sitzung hat gerade deinen Warnschwellenwert pro Sitzung von {{limit}} überschritten und kostet {{cost}}. Weitermachen?",
+  "session.costAlert.stop": "Stopp",
 
   "ui.sessionTurn.cancel": "Abbrechen",
   "ui.sessionTurn.status.thinking": "Denke nach...",
@@ -1599,6 +1608,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Legen Sie fest, wie Tools ausgeführt werden dürfen. Die meisten Tools sind standardmäßig auf Zulassen eingestellt. doom_loop und external_directory sind standardmäßig auf Fragen eingestellt.",
+  "settings.autoApprove.maxCost.title": "Sitzungskostenwarnung",
+  "settings.autoApprove.maxCost.description":
+    "Vor dem Fortsetzen einer Sitzung warnen, wenn ihre Kosten diesen USD-Betrag überschreiten. Ganze Dollarbeträge verwenden; zum Deaktivieren leer lassen.",
   "settings.autoApprove.level.allow": "Erlauben",
   "settings.autoApprove.level.ask": "Fragen",
   "settings.autoApprove.level.deny": "Ablehnen",

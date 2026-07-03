@@ -58,7 +58,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.AnimatedIcon
-import com.intellij.ui.JBColor
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
 import com.intellij.util.ui.JBDimension
@@ -294,7 +293,7 @@ class PromptPanel(
     override fun updateUI() {
         super.updateUI()
         border = JBUI.Borders.compound(
-            JBUI.Borders.customLineTop(separator()),
+            JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator()),
             JBUI.Borders.empty(),
         )
     }
@@ -790,8 +789,6 @@ class PromptPanel(
         if (line.isNotEmpty()) return KiloBundle.message("prompt.placeholder.with.newline", line)
         return KiloBundle.message("prompt.placeholder")
     }
-
-    private fun separator() = JBColor.namedColor("EditorTabs.underTabsBorderColor", JBUI.CurrentTheme.EditorTabs.borderColor())
 
     @RequiresEdt
     private fun syncEditorHeight() {

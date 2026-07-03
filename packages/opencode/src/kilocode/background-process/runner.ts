@@ -64,23 +64,23 @@ export namespace BackgroundProcessRunner {
     let size = (await file.stat()).size
     let queue = Promise.resolve()
     const append = (chunk: Buffer) => {
-      if (!process.stdout.destroyed) process.stdout.write(chunk)
       queue = queue.then(async () => {
         if (size + chunk.length <= MAX) {
           await file.write(chunk)
           size += chunk.length
-          return
+        } else {
+          await file.close()
+          const source = Bun.file(input.log)
+          const old = size
+            ? Buffer.from(await source.slice(Math.max(0, size - KEEP), size).arrayBuffer())
+            : Buffer.alloc(0)
+          const next = Buffer.concat([old, chunk])
+          const tail = next.subarray(Math.max(0, next.length - KEEP))
+          await Filesystem.write(input.log, tail, MODE)
+          file = await open(input.log, "a", MODE)
+          size = tail.length
         }
-        await file.close()
-        const source = Bun.file(input.log)
-        const old = size
-          ? Buffer.from(await source.slice(Math.max(0, size - KEEP), size).arrayBuffer())
-          : Buffer.alloc(0)
-        const next = Buffer.concat([old, chunk])
-        const tail = next.subarray(Math.max(0, next.length - KEEP))
-        await Filesystem.write(input.log, tail, MODE)
-        file = await open(input.log, "a", MODE)
-        size = tail.length
+        if (!process.stdout.destroyed) process.stdout.write(chunk)
       })
     }
     return {

@@ -1213,6 +1213,10 @@ export const dict = {
   "profile.balance.title": "余额",
   "profile.balance.refresh": "刷新余额",
   "profile.action.dashboard": "控制面板",
+  "profile.action.topUp": "充值",
+  "profile.pass.subscribe": "订阅 Kilo Pass 以添加额度并赚取奖励",
+  "profile.pass.bonus": "奖励",
+  "profile.pass.renews": "续订",
   "profile.action.logout": "退出登录",
 
   "settings.section.configuration": "配置",
@@ -1249,6 +1253,10 @@ export const dict = {
   "session.outcome.interrupted": "回合已中断",
   "session.outcome.error": "回合失败",
   "session.outcome.finish": "结束原因：{{reason}}",
+  "session.costAlert.header": "会话费用提醒",
+  "session.costAlert.continue": "继续",
+  "session.costAlert.question": "此会话刚刚超过每会话提醒阈值 {{limit}}，当前费用为 {{cost}}。是否继续？",
+  "session.costAlert.stop": "停止",
 
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",
@@ -1512,6 +1520,8 @@ export const dict = {
 
   "settings.autoApprove.description":
     "定义工具的运行权限。大多数工具默认为「允许」。doom_loop 和 external_directory 默认为「询问」。",
+  "settings.autoApprove.maxCost.title": "会话费用提醒",
+  "settings.autoApprove.maxCost.description": "当会话花费超过此美元金额后，在继续前提醒。请使用整数美元；留空则禁用。",
   "settings.autoApprove.level.allow": "允许",
   "settings.autoApprove.level.ask": "询问",
   "settings.autoApprove.level.deny": "拒绝",

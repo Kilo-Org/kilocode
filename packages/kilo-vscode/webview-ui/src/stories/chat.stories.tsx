@@ -152,7 +152,7 @@ const reviewSuggestion: SuggestionRequest = {
   id: "s-review-001",
   sessionID: SESSION_ID,
   text: "Start a code review of uncommitted changes?",
-  actions: [{ label: "Start review", description: "Run a local review now", prompt: "/local-review-uncommitted" }],
+  actions: [{ label: "Start review", description: "Run a local review now", prompt: "/review uncommitted" }],
   tool: { messageID: "asst-msg-002", callID: "call-suggest-001" },
 }
 

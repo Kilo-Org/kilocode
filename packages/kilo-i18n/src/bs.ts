@@ -118,6 +118,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implementiraj u novoj sesiji s čistim kontekstom",
   "plan.followup.answer.continue": "Nastavi ovdje",
   "plan.followup.answer.continue.description": "Implementiraj plan u ovoj sesiji",
+  "plan.followup.answer.keepRefining": "Nastavi dorađivati",
+  "plan.followup.answer.keepRefining.description": "Nastavi planirati bez implementacije za sada",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Snapshot je spor",

@@ -42,11 +42,17 @@ import org.commonmark.renderer.html.HtmlRenderer
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Point
+import java.awt.event.HierarchyEvent
+import java.awt.event.MouseEvent
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JViewport
 import javax.swing.ScrollPaneConstants
+import javax.swing.SwingUtilities
+import javax.swing.event.ChangeListener
 import javax.swing.event.HyperlinkEvent
 import javax.swing.text.html.StyleSheet
 
@@ -64,6 +70,7 @@ internal open class MdViewHybrid(
     private val source = StringBuilder()
     private var style = style
     private var rendered = ""
+    private var htmlCache: HtmlCache? = null
     private var disposed = false
     private val blocks = mutableListOf<View>()
     private var openFence: Fence? = null
@@ -274,6 +281,7 @@ internal open class MdViewHybrid(
         if (source.isEmpty() && rendered.isEmpty() && root.componentCount == 0) return
         source.clear()
         rendered = ""
+        htmlCache = null
         openFence = null
         stale = false
         clearBlocks()
@@ -293,12 +301,13 @@ internal open class MdViewHybrid(
     override fun markdown(): String = source.toString()
 
     override fun html(): String {
-        if (!stale) return rendered
-        val out = project(source.toString())
-        rendered = out.html
-        openFence = out.open
-        stale = false
-        return rendered
+        if (stale) {
+            val out = project(source.toString())
+            rendered = out.html
+            openFence = out.open
+            stale = false
+        }
+        return process(rendered, opts())
     }
 
     override fun overrideSheet(): String = MdCommon.rules(opts())
@@ -313,6 +322,7 @@ internal open class MdViewHybrid(
         listeners.clear()
         source.clear()
         rendered = ""
+        htmlCache = null
         openFence = null
         stale = false
         clearBlocks()
@@ -412,29 +422,82 @@ internal open class MdViewHybrid(
         val opts = opts()
         return object : JBHtmlPane(
             JBHtmlPaneStyleConfiguration {
-                enableInlineCodeBackground = true
+                enableInlineCodeBackground = false
                 enableCodeBlocksBackground = true
             },
             JBHtmlPaneConfiguration {
                 customStyleSheetProvider { sheet() }
             },
         ), UiDataProvider {
+            private var viewport: JViewport? = null
+            private val scroll = ChangeListener { hover() }
+            private val hierarchy = java.awt.event.HierarchyListener { event ->
+                if (event.changeFlags and HierarchyEvent.PARENT_CHANGED.toLong() != 0L) attach()
+            }
+
+            init {
+                addHierarchyListener(hierarchy)
+                Disposer.register(disposable) {
+                    viewport?.removeChangeListener(scroll)
+                    removeHierarchyListener(hierarchy)
+                }
+            }
+
+            override fun addNotify() {
+                super.addNotify()
+                attach()
+            }
+
+            override fun removeNotify() {
+                viewport?.removeChangeListener(scroll)
+                viewport = null
+                super.removeNotify()
+            }
+
             override fun uiDataSnapshot(sink: DataSink) {
                 selection?.provideCopy(sink) { document.getText(0, document.length).trim() }
+            }
+
+            private fun attach() {
+                val next = SwingUtilities.getAncestorOfClass(JViewport::class.java, this) as? JViewport
+                if (viewport === next) return
+                viewport?.removeChangeListener(scroll)
+                viewport = next
+                next?.addChangeListener(scroll)
+            }
+
+            private fun hover() {
+                val pt = runCatching { mousePosition }.getOrNull()
+                val event = if (pt == null) {
+                    MouseEvent(this, MouseEvent.MOUSE_EXITED, System.currentTimeMillis(), 0, -1, -1, 0, false, MouseEvent.NOBUTTON)
+                } else {
+                    MouseEvent(this, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, pt.x, pt.y, 0, false, MouseEvent.NOBUTTON)
+                }
+                dispatchEvent(event)
             }
         }.apply {
             isEditable = false
             isOpaque = opts.opaque
             background = opts.background
-            text = "<html><body>$body</body></html>"
+            text = html(body, opts)
             selection?.register(this, disposable)
             addHyperlinkListener { e ->
                 if (e.eventType != HyperlinkEvent.EventType.ACTIVATED) return@addHyperlinkListener
                 val href = e.description ?: return@addHyperlinkListener
-                val pt = (e.inputEvent as? java.awt.event.MouseEvent)?.point
-                dispatch(MdView.LinkEvent(href, pt))
+                val pt = linkPoint(e) ?: (e.inputEvent as? java.awt.event.MouseEvent)?.point
+                dispatch(MdView.LinkEvent(href, pt, this))
             }
         }
+    }
+
+    private fun JBHtmlPane.linkPoint(event: HyperlinkEvent): Point? {
+        val elem = event.sourceElement ?: return null
+        return runCatching {
+            val start = modelToView2D(elem.startOffset)?.bounds ?: return@runCatching null
+            val end = modelToView2D((elem.endOffset - 1).coerceAtLeast(elem.startOffset))?.bounds ?: start
+            val bounds = start.union(end)
+            Point(bounds.x + bounds.width / 2, bounds.y)
+        }.getOrNull()
     }
 
     private fun codeBlock(text: String, file: FileType, disposable: Disposable): JBScrollPane {
@@ -523,6 +586,7 @@ internal open class MdViewHybrid(
                 MdCodeBlockBorder.All -> JBUI.Borders.customLine(opts.codeBorder, width)
                 MdCodeBlockBorder.Horizontal -> JBUI.Borders.customLine(opts.codeBorder, width, 0, width, 0)
                 MdCodeBlockBorder.Bottom -> JBUI.Borders.customLine(opts.codeBorder, 0, 0, width, 0)
+                MdCodeBlockBorder.None -> JBUI.Borders.empty()
             }
             viewportBorder = JBUI.Borders.empty(
                 SessionUiStyle.View.Code.topPadding(),
@@ -761,6 +825,17 @@ internal open class MdViewHybrid(
         )
     }
 
+    private fun html(body: String, opts: MdStyle): String = "<html><body>${process(body, opts)}</body></html>"
+
+    private fun process(body: String, opts: MdStyle): String {
+        val color = opts.inlineCodeFg.rgb
+        val cached = htmlCache
+        if (cached != null && cached.body == body && cached.color == color) return cached.html
+        val html = MdCommon.inlineCode(body, opts)
+        htmlCache = HtmlCache(body, color, html)
+        return html
+    }
+
     private fun collect(doc: Node): List<Desc> {
         val visitor = Visitor()
         doc.accept(visitor)
@@ -906,6 +981,8 @@ internal open class MdViewHybrid(
 
     private data class Projection(val html: String, val blocks: List<Desc>, val open: Fence?)
 
+    private data class HtmlCache(val body: String, val color: Int, val html: String)
+
     private data class Line(val text: String, val end: String)
 
     private data class Fence(val char: Char, val size: Int, val info: String)
@@ -928,7 +1005,7 @@ internal open class MdViewHybrid(
         override fun update(desc: Desc) {
             if (this.desc == desc) return
             this.desc = desc
-            pane.text = "<html><body>${(desc as Desc.Html).body}</body></html>"
+            pane.text = html((desc as Desc.Html).body, opts())
         }
 
         override fun style(opts: MdStyle) {
@@ -936,7 +1013,7 @@ internal open class MdViewHybrid(
             pane.background = opts.background
             pane.reloadCssStylesheets()
             val item = desc as Desc.Html
-            pane.text = "<html><body>${item.body}</body></html>"
+            pane.text = html(item.body, opts)
         }
     }
 

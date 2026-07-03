@@ -10,6 +10,7 @@ import {
   createSignal,
   createMemo,
   createEffect,
+  on,
   onMount,
   onCleanup,
   batch,
@@ -22,6 +23,7 @@ import { useServer } from "./server"
 import { useProvider } from "./provider"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
+import { createCostAlertHandler } from "./cost-alert"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
   SessionInfo,
@@ -274,6 +276,7 @@ interface SessionContextValue {
   ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
+  closeQuestion: (requestID: string) => void
   acceptSuggestion: (requestID: string, index: number) => void
   dismissSuggestion: (requestID: string) => void
   createSession: () => void
@@ -359,6 +362,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
+  const cah = createCostAlertHandler(vscode.postMessage, handleQuestionRequest, handleQuestionResolved, language.t)
 
   // Tracks question IDs that failed so the UI can reset sending state
   const [questionErrors, setQuestionErrors] = createSignal<Set<string>>(new Set())
@@ -1049,6 +1053,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (handleModelUsageMessage(message)) return
     refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
+    cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
         handleSessionCreated(message.session, message.draftID)
@@ -2255,7 +2260,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const suggestion = scopedSuggestions(sid)[0]
     if (suggestion) dismissSuggestion(suggestion.id)
     for (const q of scopedQuestions(sid)) {
-      rejectQuestion(q.id)
+      dismissQuestion(q.id)
     }
 
     const scope = draftID ?? sid
@@ -2323,7 +2328,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const suggestion = scopedSuggestions(sid)[0]
     if (suggestion) dismissSuggestion(suggestion.id)
     for (const q of scopedQuestions(sid)) {
-      rejectQuestion(q.id)
+      dismissQuestion(q.id)
     }
 
     const scope = draftID ?? sid
@@ -2434,6 +2439,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    if (cah.reply(requestID, "continue")) return
     vscode.postMessage({
       type: "questionReply",
       requestID,
@@ -2442,10 +2448,20 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  function dismissQuestion(requestID: string) {
+    questions().find((item) => item.id === requestID)?.dismissResponse === "continue"
+      ? replyToQuestion(requestID, [])
+      : rejectQuestion(requestID)
+  }
+
+  function closeQuestion(id: string) {
+    cah.close(id, dismissQuestion)
+  }
   function rejectQuestion(requestID: string) {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    if (cah.reply(requestID, "stop")) return
     vscode.postMessage({
       type: "questionReject",
       requestID,
@@ -2519,26 +2535,60 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  // Session whose message fetch was deferred because the backend was offline at
+  // selection time. Replayed by the reconnect effect below.
+  let deferredFetch: string | undefined
+
   function selectSession(id: string) {
-    if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot select session: not connected")
-      return
-    }
+    // Cloud preview sessions use a separate keyed path (selectCloudSession).
     if (id.startsWith("cloud:")) {
       console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
       return
     }
     const ready = loaded().has(id)
+    // Reflect the selection locally and synchronously so the chat always tracks
+    // the sidebar/tab selection. These are local signals and need no backend, so
+    // they update even while disconnected. Bailing out here when not connected
+    // froze the chat on the previous session while the side diff (resolved from
+    // the worktree selection) still moved (the reported "only the diff changes").
     setCurrentSessionID(id)
     setDraftSessionID(id)
     setLoading(!ready)
-    if (ready) {
-      vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "focus" })
+    if (!ready) patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
+    // Only the message fetch needs the backend. Defer it while offline and let
+    // the reconnect effect replay it. We defer even for cached sessions: the
+    // load message is what re-focuses the backend (focusSession, contextSessionID,
+    // SSE tracking, active worktree) and runs the reconcile self-heal, so skipping
+    // it would leave the extension focused on the previously selected session.
+    if (!server.isConnected()) {
+      deferredFetch = id
       return
     }
-    patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
-    vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "replace", limit: MESSAGE_PAGE_LIMIT })
+    deferredFetch = undefined
+    loadFocusedMessages(id, ready)
   }
+
+  function loadFocusedMessages(id: string, ready: boolean) {
+    vscode.postMessage(
+      ready
+        ? { type: "loadMessages", sessionID: id, mode: "focus" }
+        : { type: "loadMessages", sessionID: id, mode: "replace", limit: MESSAGE_PAGE_LIMIT },
+    )
+  }
+
+  // Replay a fetch deferred while offline once the backend reconnects. Scoped to
+  // the still-current session so the normal connected path never double-fetches.
+  // Uses the same focus/replace choice as a live selection so a reconnect after
+  // a cached-session switch still re-focuses the backend and reconciles.
+  createEffect(
+    on(server.isConnected, (connected) => {
+      if (!connected) return
+      const id = deferredFetch
+      deferredFetch = undefined
+      if (!id || id !== currentSessionID()) return
+      loadFocusedMessages(id, loaded().has(id))
+    }),
+  )
 
   function selectCloudSession(cloudSessionId: string) {
     if (!server.isConnected()) {
@@ -2894,6 +2944,7 @@ export const SessionProvider: ParentComponent = (props) => {
     respondToPermission,
     replyToQuestion,
     rejectQuestion,
+    closeQuestion,
     acceptSuggestion,
     dismissSuggestion,
     createSession,

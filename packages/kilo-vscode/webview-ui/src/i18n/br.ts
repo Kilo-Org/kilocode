@@ -1211,6 +1211,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Atualizar saldo",
   "profile.action.dashboard": "Painel",
+  "profile.action.topUp": "Adicionar créditos",
+  "profile.pass.subscribe": "Obtenha o Kilo Pass para adicionar créditos e ganhar bônus",
+  "profile.pass.bonus": "Bônus",
+  "profile.pass.renews": "Renova",
   "profile.action.logout": "Sair",
 
   "settings.section.configuration": "Configuração",
@@ -1286,6 +1290,11 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrompido",
   "session.outcome.error": "Turno falhou",
   "session.outcome.finish": "Motivo da conclusão: {{reason}}",
+  "session.costAlert.header": "Alerta de custo da sessão",
+  "session.costAlert.continue": "Continuar",
+  "session.costAlert.question":
+    "Esta sessão acabou de ultrapassar o limite de alerta por sessão de {{limit}} e custou {{cost}}. Continuar?",
+  "session.costAlert.stop": "Parar",
 
   "ui.sessionTurn.cancel": "Cancelar",
   "ui.sessionTurn.status.thinking": "Pensando...",
@@ -1580,6 +1589,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Defina como as ferramentas têm permissão para serem executadas. A maioria das ferramentas tem o padrão Permitir. doom_loop e external_directory têm o padrão Perguntar.",
+  "settings.autoApprove.maxCost.title": "Alerta de custo da sessão",
+  "settings.autoApprove.maxCost.description":
+    "Alerte antes de continuar uma sessão depois que o gasto exceder este valor em USD. Use valores inteiros em dólares; deixe em branco para desativar.",
   "settings.autoApprove.level.allow": "Permitir",
   "settings.autoApprove.level.ask": "Perguntar",
   "settings.autoApprove.level.deny": "Negar",

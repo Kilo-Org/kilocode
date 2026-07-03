@@ -1012,6 +1012,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Aggiorna saldo",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Ricarica",
+  "profile.pass.subscribe": "Ottieni Kilo Pass per aggiungere crediti e guadagnare bonus",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Si rinnova",
   "profile.action.logout": "Esci",
   "settings.section.configuration": "Configurazione",
   "settings.agentBehaviour.title": "Comportamento agente",
@@ -1379,6 +1383,9 @@ export const dict = {
     "Le regole vengono valutate in ordine: l'ultima regola corrispondente vince. Questo è il set di regole risolto dal backend CLI.",
   "settings.autoApprove.description":
     "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. doom_loop e external_directory usano Chiedi di default.",
+  "settings.autoApprove.maxCost.title": "Avviso costo sessione",
+  "settings.autoApprove.maxCost.description":
+    "Avvisa prima di continuare una sessione quando la spesa supera questo importo in USD. Usa dollari interi; lascia vuoto per disattivare.",
   "settings.autoApprove.level.allow": "Consenti",
   "settings.autoApprove.level.ask": "Chiedi",
   "settings.autoApprove.level.deny": "Nega",
@@ -1610,6 +1617,11 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrotto.",
   "session.outcome.error": "Turno fallito.",
   "session.outcome.finish": "Motivo tecnico di fine: {{reason}}",
+  "session.costAlert.header": "Avviso costo sessione",
+  "session.costAlert.continue": "Continua",
+  "session.costAlert.question":
+    "Questa sessione ha appena superato la soglia di avviso per sessione di {{limit}} e costa {{cost}}. Continuare?",
+  "session.costAlert.stop": "Interrompi",
 
   // Speech to Text
   "settings.experimental.speechToText.title": "Da voce a testo",

@@ -1245,6 +1245,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Opdatér saldo",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Fyld op",
+  "profile.pass.subscribe": "Få Kilo Pass for at tilføje kredit og optjene bonusser",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Fornyes",
   "profile.action.logout": "Log ud",
 
   "settings.section.configuration": "Konfiguration",
@@ -1282,6 +1286,11 @@ export const dict = {
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",
+  "session.costAlert.header": "Advarsel om sessionsomkostning",
+  "session.costAlert.continue": "Fortsæt",
+  "session.costAlert.question":
+    "Denne session er lige kommet over din advarselsgrænse pr. session på {{limit}} og koster {{cost}}. Fortsæt?",
+  "session.costAlert.stop": "Stop",
 
   "ui.sessionTurn.cancel": "Annuller",
   "ui.sessionTurn.status.thinking": "Tænker...",
@@ -1565,6 +1574,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
+  "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
+  "settings.autoApprove.maxCost.description":
+    "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",

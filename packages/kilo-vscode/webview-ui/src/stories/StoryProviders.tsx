@@ -255,6 +255,7 @@ export function mockSessionValue(overrides?: {
     respondToPermission: noop,
     replyToQuestion: noop,
     rejectQuestion: noop,
+    closeQuestion: noop,
     acceptSuggestion: noop,
     dismissSuggestion: noop,
     createSession: noop,

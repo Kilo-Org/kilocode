@@ -5,7 +5,7 @@ import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { MessageV2 } from "@/session/message-v2"
 import { isRecord } from "@/util/record"
-import { isReviewCommand, parseReviewCommand } from "@/kilocode/review/command"
+import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -27,8 +27,9 @@ export namespace KiloSessionProcessor {
     "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
 
   export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
-    if (!isReviewCommand(command)) return
-    return { mode: "review", feature: "code_reviews", command }
+    const cmd = reviewCommandName(command)
+    if (!cmd) return
+    return { mode: "review", feature: "code_reviews", command: cmd }
   }
 
   /**

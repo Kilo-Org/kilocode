@@ -255,6 +255,15 @@ class TextViewTest : BasePlatformTestCase() {
         assertEquals(listOf("https://kilocode.ai/docs"), urls)
     }
 
+    fun `test file link opens file callback`() {
+        val files = mutableListOf<String>()
+        val view = TextView(Text("p1"), openFile = { href, _ -> files.add(href) })
+
+        view.simulateLink("src/Foo.kt:12")
+
+        assertEquals(listOf("src/Foo.kt:12"), files)
+    }
+
     fun `test linkifyMentions rewrites tracked token`() {
         val out = linkifyMentions(
             "read @src/a.kt",
@@ -341,7 +350,7 @@ class TextViewTest : BasePlatformTestCase() {
         val text = Text("p1").also { it.content.append("read @src/a file.kt") }
         val view = PromptView(
             text,
-            openFile = { files.add(it) },
+            openFile = { href, _ -> files.add(href) },
             openUrl = { urls.add(it) },
             mentions = listOf(PromptMention("@src/a file.kt", "src/a file.kt", 5, 19)),
         )
@@ -362,7 +371,7 @@ class TextViewTest : BasePlatformTestCase() {
         val text = Text("p1").also { it.content.append("review @git-changes") }
         val view = PromptView(
             text,
-            openFile = { error("should not open file") },
+            openFile = { _, _ -> error("should not open file") },
             openAttachment = { opened.add(it) },
             mentions = listOf(PromptMention("@git-changes", "git-changes", 7, 19, item)),
         )
@@ -383,7 +392,7 @@ class TextViewTest : BasePlatformTestCase() {
 
     fun `test message view syncs prompt mentions from hidden part`() {
         val msg = Message(MessageDto("m1", "ses", "user", MessageTimeDto(0.0)))
-        val view = MessageView(msg, openFile = {})
+        val view = MessageView(msg, openFile = { _, _ -> })
         val text = Text("p1").also { it.content.append("read @src/a.kt") }
         msg.parts["p1"] = text
         view.upsertPart(text)
