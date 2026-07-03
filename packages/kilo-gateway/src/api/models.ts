@@ -2,6 +2,7 @@ import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
 import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
+import { resolveKiloOpenRouterBaseUrl } from "./url.js"
 
 export type KiloModelsResult = {
   models: Record<string, any>
@@ -69,6 +70,10 @@ type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
 const AUTO_EFFICIENT_ID = "kilo-auto/efficient"
 
+function modelsEndpoint(baseURL: string) {
+  return `${baseURL.replace(/\/+$/, "")}/models`
+}
+
 /**
  * Parse API price string to number, converting from per-token to per-million-tokens.
  * The API returns prices in $/token, but downstream cost calculation (getUsage)
@@ -104,7 +109,8 @@ export async function fetchKiloModels(options?: {
   const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
 
   // Construct models endpoint
-  const modelsURL = `${finalBaseURL}/models`
+  const modelsURL = modelsEndpoint(finalBaseURL)
+  const publicBaseURL = resolveKiloOpenRouterBaseUrl({ baseURL: finalBaseURL })
 
   const response = await fetch(modelsURL, {
     headers: {
@@ -122,7 +128,7 @@ export async function fetchKiloModels(options?: {
   if (!response.ok) {
     // 401 with auth credentials: fall back to unauthenticated public endpoint
     if (response.status === 401 && (token || organizationId)) {
-      return fetchKiloModels({})
+      return fetchKiloModels({ baseURL: publicBaseURL })
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
     return { models: {}, error: { kind, status: response.status } }
@@ -160,18 +166,18 @@ export async function fetchKiloModels(options?: {
   }
 
   if (organizationId) {
-    await mergeAutoRouting(models)
+    await mergeAutoRouting(models, publicBaseURL)
   }
 
   return { models }
 }
 
-async function mergeAutoRouting(models: Record<string, any>) {
+async function mergeAutoRouting(models: Record<string, any>, baseURL: string) {
   if (!models[AUTO_EFFICIENT_ID] || models[AUTO_EFFICIENT_ID].autoRouting) {
     return
   }
 
-  const result = await fetchKiloModels({})
+  const result = await fetchKiloModels({ baseURL })
   const routing = result.models[AUTO_EFFICIENT_ID]?.autoRouting
 
   if (!routing) {
