@@ -614,9 +614,16 @@ function anthropicOpus47OrLater(apiId: string) {
   return major > 4 || (major === 4 && minor >= 7)
 }
 
+// kilocode_change start - fable and sonnet-5 models are adaptive thinking models like opus-4.7/4.8
+function anthropicClaude5(apiId: string) {
+  const id = apiId.toLowerCase()
+  return id.includes("fable") || /sonnet[.-]5/.test(id)
+}
+// kilocode_change end
+
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
-  // kilocode_change start - treat opus-4.8 like opus-4.7
-  if (anthropicOpus47OrLater(apiId)) {
+  // kilocode_change start - treat opus-4.8 and fable like opus-4.7
+  if (anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId)) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
   // kilocode_change end
@@ -667,7 +674,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       thinking: { thinking: { type: "adaptive" } },
     }
   }
-  const adaptiveOpus = anthropicOpus47OrLater(model.api.id)
+  const adaptiveOpus = anthropicOpus47OrLater(model.api.id) || anthropicClaude5(model.api.id) // kilocode_change - fable/sonnet-5
   const adaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
   if (glm52 && model.api.npm === "@openrouter/ai-sdk-provider") {
     // OpenRouter maps xhigh to GLM-5.2's native max effort.
@@ -915,8 +922,8 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {
-          // kilocode_change start - treat opus-4.8 like opus-4.7
-          if (model.api.id.includes("opus-4.7") || model.api.id.includes("opus-4.8")) {
+          // kilocode_change start - treat opus-4.8 and fable like opus-4.7
+          if (model.api.id.includes("opus-4.7") || model.api.id.includes("opus-4.8") || anthropicClaude5(model.api.id)) {
             efforts = ["medium"]
           }
           // kilocode_change end

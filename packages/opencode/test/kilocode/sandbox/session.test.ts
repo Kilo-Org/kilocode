@@ -92,8 +92,8 @@ describe("sandbox session cleanup", () => {
 
       yield* provideInstance(dir)(SandboxPolicy.toggle(info.id))
       yield* provideInstance(worktree)(SandboxPolicy.toggle(info.id))
-      expect((yield* Effect.promise(() => SandboxStore.read(dir, info.id)))?.enabled).toBe(false)
-      expect((yield* Effect.promise(() => SandboxStore.read(worktree, info.id)))?.enabled).toBe(false)
+      expect((yield* Effect.promise(() => SandboxStore.read(dir, info.id)))?.enabled).toBe(true)
+      expect((yield* Effect.promise(() => SandboxStore.read(worktree, info.id)))?.enabled).toBe(true)
       yield* session.remove(info.id)
       expect(yield* Effect.promise(() => SandboxStore.read(dir, info.id))).toBeUndefined()
       expect(yield* Effect.promise(() => SandboxStore.read(worktree, info.id))).toBeUndefined()

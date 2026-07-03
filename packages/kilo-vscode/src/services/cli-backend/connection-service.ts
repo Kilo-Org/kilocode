@@ -15,6 +15,7 @@ type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
 type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
+type ModelSelectorExpandedListener = (value: boolean) => void
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
 
@@ -70,6 +71,7 @@ export class KiloConnectionService {
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
   private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
+  private readonly modelSelectorExpandedListeners: Set<ModelSelectorExpandedListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
   private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
@@ -257,11 +259,25 @@ export class KiloConnectionService {
    * Remove all messageID → sessionID entries for a given session.
    * Called when a session is deleted or otherwise pruned so the map
    * does not grow unbounded over the extension lifetime.
+   *
+   * Also drops the session from any provider's focused or opened set
+   * so the server's `viewed` notification stops advertising a deleted
+   * id after external (CLI/TUI/cascade) deletes arrive via SSE.
    */
   pruneSession(sessionId: string): void {
     for (const [mid, sid] of this.messageSessionIdsByMessageId) {
       if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
     }
+    for (const [key, sid] of this.focused) {
+      if (sid === sessionId) this.focused.delete(key)
+    }
+    for (const [key, ids] of this.opened) {
+      if (!ids.includes(sessionId)) continue
+      const next = ids.filter((id) => id !== sessionId)
+      if (next.length === 0) this.opened.delete(key)
+      else this.opened.set(key, next)
+    }
+    this.flushViewed()
   }
 
   /**
@@ -425,6 +441,25 @@ export class KiloConnectionService {
   notifyFavoritesChanged(favorites: Array<{ providerID: string; modelID: string }>): void {
     for (const listener of this.favoritesChangeListeners) {
       listener(favorites)
+    }
+  }
+
+  /**
+   * Subscribe to model-selector expand/collapse changes broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onModelSelectorExpandedChanged(listener: ModelSelectorExpandedListener): () => void {
+    this.modelSelectorExpandedListeners.add(listener)
+    return () => {
+      this.modelSelectorExpandedListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a model-selector expand/collapse change to all subscribed KiloProvider instances.
+   */
+  notifyModelSelectorExpandedChanged(value: boolean): void {
+    for (const listener of this.modelSelectorExpandedListeners) {
+      listener(value)
     }
   }
 

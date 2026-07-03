@@ -155,9 +155,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const [open, setOpen] = createSignal(false)
-  const [expanded, setExpanded] = createSignal(vscode.getModelSelectorExpanded())
-  // Persist the user's expand/collapse choice so it is restored on reopen.
-  createEffect(() => vscode.setModelSelectorExpanded(expanded()))
+  // Shared, host-persisted expand/collapse preference (see VSCodeProvider).
+  const expanded = vscode.getModelSelectorExpanded
+  const setExpanded = vscode.setModelSelectorExpanded
   const [search, setSearch] = createSignal("")
   const [debouncedSearch, setDebouncedSearch] = createSignal("")
   const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)
@@ -828,13 +828,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                     aria-expanded={expanded()}
                     aria-controls={previewID}
                     onClick={() => {
-                      setExpanded((v) => {
-                        if (v) {
-                          setPreActiveKey(null)
-                          setPreviewKey(null)
-                        }
-                        return !v
-                      })
+                      if (expanded()) {
+                        setPreActiveKey(null)
+                        setPreviewKey(null)
+                      }
+                      setExpanded(!expanded())
                       requestAnimationFrame(() => {
                         searchRef?.focus()
                         scrollRow(preActiveKey() ?? selectedKey(), "nearest")

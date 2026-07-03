@@ -6,6 +6,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
@@ -1684,6 +1685,16 @@ export const layer = Layer.effect(
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
+            // kilocode_change start - feed the provider-reported context size from the last finished
+            // turn into the output-token cap, so image/vision input is measured by the provider
+            // rather than by encoded payload bytes (see KiloLLM.capOutputTokens). Summary messages
+            // are skipped like in the isOverflow check above: their reported input reflects the
+            // pre-compaction history, not the trimmed context of the next request.
+            reportedContextTokens:
+              lastFinished && lastFinished.summary !== true
+                ? KiloSessionOverflow.count(lastFinished.tokens)
+                : undefined,
+            // kilocode_change end
           })
 
           if (structured !== undefined) {

@@ -70,6 +70,7 @@ function createMockHost(): Host {
   return {
     openPanel: vi.fn(),
     workspacePath: () => "/repo",
+    autoBranchNaming: () => ({ enabled: true, prefix: "" }),
     showError: vi.fn(),
     openDocument: vi.fn().mockResolvedValue(undefined),
     openFile: vi.fn(),
@@ -100,6 +101,8 @@ function createHarness() {
     panel: { sessions: { registerSession: ReturnType<typeof vi.fn> } } | undefined
     prBridge: { handleMessage: ReturnType<typeof vi.fn> }
     activeSessionId: string | undefined
+    naming: { prompt: ReturnType<typeof vi.fn> }
+    terminalRouter: { handle: ReturnType<typeof vi.fn> }
     stateReady: Promise<void> | undefined
     contextTarget: ReturnType<typeof vi.fn>
     createWorktreeOnDisk: ReturnType<typeof vi.fn>
@@ -109,7 +112,7 @@ function createHarness() {
     registerWorktreeSession: ReturnType<typeof vi.fn>
     notifyWorktreeReady: ReturnType<typeof vi.fn>
     log: ReturnType<typeof vi.fn>
-    onCreateWorktree: () => Promise<null>
+    onCreateWorktree: (baseBranch?: string, branchName?: string) => Promise<null>
     onMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
   }
 
@@ -121,12 +124,14 @@ function createHarness() {
   }
   manager.prBridge = { handleMessage: vi.fn().mockReturnValue(false) }
   manager.activeSessionId = undefined
+  manager.naming = { prompt: vi.fn() }
+  manager.terminalRouter = { handle: vi.fn().mockReturnValue(false) }
   manager.stateReady = Promise.resolve()
   manager.contextTarget = vi.fn()
   manager.createWorktreeOnDisk = vi.fn()
   manager.runSetupScriptForWorktree = vi.fn().mockResolvedValue(undefined)
   manager.createSessionInWorktree = vi.fn()
-  manager.getStateManager = vi.fn().mockReturnValue({ addSession: vi.fn() })
+  manager.getStateManager = vi.fn().mockReturnValue({ addSession: vi.fn(), armAutoName: vi.fn() })
   manager.registerWorktreeSession = vi.fn()
   manager.notifyWorktreeReady = vi.fn()
   manager.log = vi.fn()
@@ -142,7 +147,7 @@ describe("AgentManagerProvider worktree creation", () => {
       result: { path: "/repo/.kilo/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
     }
     const session = { id: "session-1" }
-    const state = { addSession: vi.fn() }
+    const state = { addSession: vi.fn(), armAutoName: vi.fn() }
 
     manager.createWorktreeOnDisk.mockResolvedValue(created)
     manager.createSessionInWorktree.mockResolvedValue(session)
@@ -151,7 +156,23 @@ describe("AgentManagerProvider worktree creation", () => {
     await manager.onCreateWorktree()
 
     expect(state.addSession).toHaveBeenCalledWith("session-1", "wt-1")
+    expect(state.armAutoName).toHaveBeenCalledWith("wt-1", "session-1")
     expect(manager.panel!.sessions.registerSession).toHaveBeenCalledWith(session)
+  })
+
+  it("does not arm automatic naming for a custom branch", async () => {
+    const manager = createHarness()
+    const state = { addSession: vi.fn(), armAutoName: vi.fn() }
+    manager.createWorktreeOnDisk.mockResolvedValue({
+      worktree: { id: "wt-1" },
+      result: { path: "/repo/.kilo/worktrees/custom", branch: "my-custom-branch", parentBranch: "main" },
+    })
+    manager.createSessionInWorktree.mockResolvedValue({ id: "session-1" })
+    manager.getStateManager.mockReturnValue(state)
+
+    await manager.onCreateWorktree(undefined, "my-custom-branch")
+
+    expect(state.armAutoName).not.toHaveBeenCalled()
   })
 
   // Regression for #8983: notifyWorktreeReady must push agentManager.state before
@@ -164,7 +185,7 @@ describe("AgentManagerProvider worktree creation", () => {
       result: { path: "/repo/.kilo/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
     })
     manager.createSessionInWorktree.mockResolvedValue({ id: "session-1" })
-    manager.getStateManager.mockReturnValue({ addSession: vi.fn() })
+    manager.getStateManager.mockReturnValue({ addSession: vi.fn(), armAutoName: vi.fn() })
 
     await manager.onCreateWorktree()
 
@@ -183,7 +204,7 @@ describe("AgentManagerProvider worktree creation", () => {
       result: { path: "/repo/.kilo/worktrees/wt-2", branch: "feature/wt-2", parentBranch: "main" },
     })
     manager.createSessionInWorktree.mockResolvedValue({ id: "session-2" })
-    manager.getStateManager.mockReturnValue({ addSession: vi.fn() })
+    manager.getStateManager.mockReturnValue({ addSession: vi.fn(), armAutoName: vi.fn() })
 
     const pending = manager.onCreateWorktree()
     await Promise.resolve()
@@ -226,6 +247,28 @@ describe("AgentManagerProvider worktree creation", () => {
       agentManagerContext: "wt-1",
       draftID: "draft-1",
       contextDirectory: "/repo/.kilo/worktrees/wt-1",
+    })
+    expect(manager.naming.prompt).toHaveBeenCalledWith({
+      sessionID: "draft-1",
+      text: "continue",
+      providerID: undefined,
+      modelID: undefined,
+    })
+  })
+
+  it("retries branch naming when the user answers a clarification", async () => {
+    const manager = createHarness()
+    manager.activeSessionId = "session-wt"
+
+    await manager.onMessage({
+      type: "questionReply",
+      requestID: "question-1",
+      answers: [["Node.js", "Use JWT"]],
+    })
+
+    expect(manager.naming.prompt).toHaveBeenCalledWith({
+      sessionID: "session-wt",
+      text: "Node.js\nUse JWT",
     })
   })
 

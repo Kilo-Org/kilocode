@@ -384,56 +384,58 @@ describe("Kilo task nesting", () => {
   )
 
   it.live("refreshes inherited restrictions when resuming a task child", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const { chat, assistant } = yield* seed()
-        const support = yield* SandboxPolicy.status(chat.id)
-        yield* sessions.setPermission({
-          sessionID: chat.id,
-          permission: [{ permission: "bash", pattern: "*", action: "deny" }],
-        })
-        const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
-        if (support.available) {
-          yield* SandboxPolicy.toggle(child.id)
-          expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(false)
-        }
-        const tool = yield* TaskTool
-        const def = yield* tool.init()
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const { chat, assistant } = yield* seed()
+          const support = yield* SandboxPolicy.status(chat.id)
+          yield* sessions.setPermission({
+            sessionID: chat.id,
+            permission: [{ permission: "bash", pattern: "*", action: "deny" }],
+          })
+          const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+          if (support.available) {
+            yield* SandboxPolicy.toggle(child.id)
+            expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(false)
+          }
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
 
-        const exec = () =>
-          def.execute(
-            {
-              description: "inspect bug",
-              prompt: "look into the cache key path",
-              subagent_type: "explore",
-              task_id: child.id,
-            },
-            {
-              sessionID: chat.id,
-              messageID: assistant.id,
-              agent: "build",
-              abort: new AbortController().signal,
-              extra: { promptOps: stubOps() },
-              messages: [],
-              metadata: () => Effect.void,
-              ask: () => Effect.void,
-            },
+          const exec = () =>
+            def.execute(
+              {
+                description: "inspect bug",
+                prompt: "look into the cache key path",
+                subagent_type: "explore",
+                task_id: child.id,
+              },
+              {
+                sessionID: chat.id,
+                messageID: assistant.id,
+                agent: "build",
+                abort: new AbortController().signal,
+                extra: { promptOps: stubOps() },
+                messages: [],
+                metadata: () => Effect.void,
+                ask: () => Effect.void,
+              },
+            )
+
+          yield* exec()
+          const first = yield* sessions.get(child.id)
+          if (support.available) expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
+          const count = first.permission?.filter((rule) => rule.permission === "bash").length
+          yield* exec()
+
+          const resumed = yield* sessions.get(child.id)
+          expect(resumed.permission).toEqual(
+            expect.arrayContaining([{ permission: "bash", pattern: "*", action: "deny" }]),
           )
-
-        yield* exec()
-        const first = yield* sessions.get(child.id)
-        if (support.available) expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
-        const count = first.permission?.filter((rule) => rule.permission === "bash").length
-        yield* exec()
-
-        const resumed = yield* sessions.get(child.id)
-        expect(resumed.permission).toEqual(
-          expect.arrayContaining([{ permission: "bash", pattern: "*", action: "deny" }]),
-        )
-        expect(count).toBeGreaterThan(0)
-        expect(resumed.permission?.filter((rule) => rule.permission === "bash")).toHaveLength(count ?? 0)
-      }),
+          expect(count).toBeGreaterThan(0)
+          expect(resumed.permission?.filter((rule) => rule.permission === "bash")).toHaveLength(count ?? 0)
+        }),
+      { config: { experimental: { sandbox: true } } },
     ),
   )
 
