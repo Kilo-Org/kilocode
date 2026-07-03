@@ -2,16 +2,9 @@ export namespace MemorySchema {
   export const VERSION = 1
 
   export const Sources = ["project.md", "environment.md", "corrections.md"] as const
-  export const Topics = [
-    "project",
-    "constraints",
-    "workflow",
-    "environment",
-    "quality",
-    "ui",
-    "integration",
-    "corrections",
-  ] as const
+  // Only the buckets MemoryTopics.assign can actually emit. Topics are assigned by rule (never by the
+  // LLM) and never persisted with any other value, so unreachable buckets were trimmed rather than kept.
+  export const Topics = ["project", "constraints", "environment", "corrections"] as const
 
   export type Source = (typeof Sources)[number]
   export type Topic = (typeof Topics)[number]
@@ -44,6 +37,10 @@ export namespace MemorySchema {
     lastConsolidationCost: number
     lastConsolidationTokens: number
     lastOperationCount: number
+    // Last active recall (model calling kilo_memory_recall), for status surfaces.
+    lastRecallAt: number | null
+    lastRecallCount: number
+    lastRecallSessionID: string | null
   }
 
   export type State = {
@@ -85,6 +82,9 @@ export namespace MemorySchema {
     lastConsolidationCost: 0,
     lastConsolidationTokens: 0,
     lastOperationCount: 0,
+    lastRecallAt: null,
+    lastRecallCount: 0,
+    lastRecallSessionID: null,
   }
 
   function rec(input: unknown): input is Record<string, unknown> {
@@ -192,9 +192,12 @@ export namespace MemorySchema {
         turnClose: bool(cap.turnClose, base.capture.turnClose),
         explicit: bool(cap.explicit, base.capture.explicit),
         maxOpsPerRun: Math.max(1, num(cap.maxOpsPerRun, base.capture.maxOpsPerRun)),
-        minIntervalMs: num(cap.minIntervalMs, base.capture.minIntervalMs),
-        timeoutMs: num(cap.timeoutMs, base.capture.timeoutMs),
+        // Floor both intervals to a small positive minimum: timeoutMs=0 would make every model call
+        // abort instantly (permanent silent no-capture), and minIntervalMs=0 removes all throttling.
+        minIntervalMs: Math.max(1000, num(cap.minIntervalMs, base.capture.minIntervalMs)),
+        timeoutMs: Math.max(1000, num(cap.timeoutMs, base.capture.timeoutMs)),
       },
+      // `limits` are hardcoded and never persisted (persist() omits them); always reset from defaults.
       limits: { ...base.limits },
       stats: {
         lastInjectedAt: nullable(stat.lastInjectedAt, base.stats.lastInjectedAt),
@@ -206,6 +209,9 @@ export namespace MemorySchema {
         lastConsolidationCost: num(stat.lastConsolidationCost, base.stats.lastConsolidationCost),
         lastConsolidationTokens: num(stat.lastConsolidationTokens, base.stats.lastConsolidationTokens),
         lastOperationCount: num(stat.lastOperationCount, base.stats.lastOperationCount),
+        lastRecallAt: nullable(stat.lastRecallAt, base.stats.lastRecallAt),
+        lastRecallCount: num(stat.lastRecallCount, base.stats.lastRecallCount),
+        lastRecallSessionID: str(stat.lastRecallSessionID, base.stats.lastRecallSessionID),
       },
     }
   }

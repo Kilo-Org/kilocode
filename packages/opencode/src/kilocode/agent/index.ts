@@ -249,6 +249,8 @@ export function prepare(cfg: Config.Info): KiloData {
     ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.native_notebook_tools === true
       ? { notebook_read: "ask" as const, notebook_edit: "ask" as const, notebook_execute: "ask" as const }
       : {}),
+    kilo_memory_recall: "ask",
+    kilo_memory_save: "ask",
   })
   return { mcpRules, defaultsPatch }
 }

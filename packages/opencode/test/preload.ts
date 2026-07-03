@@ -70,6 +70,8 @@ process.env["KILO_DB"] = ":memory:"
 // Now safe to import from src/
 const { Log } = await import("@opencode-ai/core/util/log")
 const { initProjectors } = await import("../src/server/projectors")
+// kilocode_change: bind the package memory effect layer to opencode for tests (paths/instance/log/events)
+const { installMemoryRuntime } = await import("../src/kilocode/memory/runtime") // kilocode_change
 
 void Log.init({
   print: false,
@@ -78,3 +80,4 @@ void Log.init({
 })
 
 initProjectors()
+installMemoryRuntime() // kilocode_change

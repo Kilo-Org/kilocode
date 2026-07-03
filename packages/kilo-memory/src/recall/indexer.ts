@@ -24,6 +24,8 @@ export namespace MemoryIndexer {
   const reserved = {
     facts: 8,
     environment: 12,
+    decisions: 6,
+    constraints: 6,
   }
 
   function session(input: Digest, opts: { limits: MemorySchema.Limits; latest?: boolean }) {
@@ -84,7 +86,8 @@ export namespace MemoryIndexer {
     max: number
     current: string[]
     corrections: string[]
-    important: string[]
+    importantTop: string[]
+    importantRest: string[]
     top: string[]
     topEnv: string[]
     hints: string[]
@@ -93,11 +96,13 @@ export namespace MemoryIndexer {
     sessions: string[]
   }) {
     const keep = input.current
+    // Reserved decisions/constraints lead so bulk corrections can't starve them under tail truncation.
     // Topic hints are compact recall routing (topic -> source files); keep them ahead of older sessions and bulk facts.
     const primary = [
+      ...input.importantTop,
       ...input.corrections,
       ...input.current,
-      ...input.important,
+      ...input.importantRest,
       ...input.top,
       ...input.topEnv,
       ...input.hints,
@@ -111,9 +116,10 @@ export namespace MemoryIndexer {
       root: input.root,
       limits: input.limits,
       lines: [
+        ...input.importantTop,
         ...input.current,
         ...input.corrections,
-        ...input.important,
+        ...input.importantRest,
         ...input.top,
         ...input.topEnv,
         ...input.hints,
@@ -142,7 +148,11 @@ export namespace MemoryIndexer {
       max: state.limits.maxLineChars,
       inventory,
     })
-    const important = MemoryIndexFormat.project(projectItems, { include: ["PROJECT_DECISION", "PROJECT_CONSTRAINT"] })
+    const decisions = MemoryIndexFormat.project(projectItems, { include: ["PROJECT_DECISION"] })
+    const constraints = MemoryIndexFormat.project(projectItems, { include: ["PROJECT_CONSTRAINT"] })
+    // Reserve a minimum slice of decisions/constraints (like facts/env) so corrections can't push them out.
+    const importantTop = [...decisions.slice(0, reserved.decisions), ...constraints.slice(0, reserved.constraints)]
+    const importantRest = [...decisions.slice(reserved.decisions), ...constraints.slice(reserved.constraints)]
     const facts = MemoryIndexFormat.project(projectItems, { exclude: ["PROJECT_DECISION", "PROJECT_CONSTRAINT"] })
     const top = facts.slice(0, reserved.facts)
     const rest = facts.slice(reserved.facts)
@@ -164,23 +174,43 @@ export namespace MemoryIndexer {
     )
     // The continuity pointer must be the true newest session. Only older bulk digests are curated by empty().
     const current = recent[0] ? [session(recent[0], { limits: state.limits, latest: true })] : []
-    const sessions = distinct(recent.slice(1).filter((item) => !MemoryDigest.empty(item)))
-      .filter((item) => !covered({ digest: item, items: durable }))
+    const candidates = distinct(recent.slice(1).filter((item) => !MemoryDigest.empty(item)))
+    const uncovered = candidates.filter((item) => !covered({ digest: item, items: durable }))
+    const coveredDigests = candidates.filter((item) => covered({ digest: item, items: durable }))
+    const sessions = uncovered
       .slice(0, Math.max(0, state.limits.maxRecentSessions - current.length))
       .map((item) => session(item, { limits: state.limits }))
+    // Covered digests are dropped from the index body (their topic already lives in typed memory), but
+    // their session ids stay targetable. Keep one compact pointer row so a model still knows they exist
+    // and can pull the full digest by id via kilo_memory_recall mode=digest session=<id>.
+    const pointer =
+      coveredDigests.length > 0
+        ? [
+            MemoryIndexFormat.record({
+              kind: "COVERED_SESSION_POINTER",
+              id: "session.covered",
+              source: "sessions",
+              updated: Math.max(...coveredDigests.map((item) => Date.parse(item.time) || 0)) || "unknown",
+              text: `covered by typed memory; recall mode=digest session=<id> :: ${coveredDigests
+                .map((item) => `session=${item.id}`)
+                .join(" ")}`,
+            }),
+          ]
+        : []
     return assemble({
       root: input.root,
       limits: state.limits,
       max,
       current,
       corrections,
-      important,
+      importantTop,
+      importantRest,
       top,
       topEnv,
       hints: MemoryIndexFormat.hints(all),
       rest,
       environment: restEnv,
-      sessions,
+      sessions: [...sessions, ...pointer],
     })
   }
 

@@ -9,6 +9,7 @@ export type CaptureSourceItem = {
   text: string
   file?: MemoryOperations.Add["file"]
   section?: string
+  key?: string
 }
 
 export type CaptureDetail = {
@@ -157,6 +158,7 @@ export function duplicateOps(input: {
   items: CaptureSourceItem[]
 }) {
   const skipped = [...input.skipped]
+  const existing = new Set(input.items.map((item) => item.id))
   const ops = input.ops.filter((item) => {
     if (item.action !== "add") return true
     const rejected = MemoryOperations.reject(item)
@@ -164,6 +166,9 @@ export function duplicateOps(input: {
       skipped.push(rejected)
       return false
     }
+    // Exact-key upsert: same file/section/key as an existing entry is an update, not a duplicate —
+    // route it to apply (which updates the line in place) instead of dropping it here.
+    if (item.file && existing.has(`${item.file}:${item.section ?? ""}:${item.key}`)) return true
     const source = duplicate({
       text: `${item.key} ${item.text}`,
       items: input.items,

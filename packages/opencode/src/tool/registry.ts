@@ -62,6 +62,7 @@ import { Reference } from "@/reference/reference"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as ToolNetwork from "@/kilocode/sandbox/network" // kilocode_change
+import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -159,7 +160,7 @@ export const layer: Layer.Layer<
     // kilocode_change start
     const suggesttool = yield* SuggestTool
     const notebook = Option.getOrUndefined(yield* Effect.serviceOption(Notebook.Service))
-    const kiloToolInfos = yield* KiloToolRegistry.infos(notebook)
+    const kiloToolInfos = yield* KiloToolRegistry.infos(notebook).pipe(Effect.provide(MemoryService.layer))
     // kilocode_change end
 
     const state = yield* InstanceState.make<State>(
@@ -374,9 +375,10 @@ export const layer: Layer.Layer<
 
         return true
       })
+      const kiloFiltered = yield* KiloToolRegistry.applyVisibility(filtered) // kilocode_change
 
       return yield* Effect.forEach(
-        filtered,
+        kiloFiltered, // kilocode_change
         Effect.fnUntraced(function* (tool: Tool.Def) {
           using _ = log.time(tool.id)
           const output = {
@@ -459,6 +461,7 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Notebook.defaultLayer),
         Layer.provide(RuntimeFlags.defaultLayer),
         Layer.provide(SessionStatus.defaultLayer),
+        Layer.provide(MemoryService.layer),
       ),
   // kilocode_change end
 )

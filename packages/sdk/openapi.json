@@ -13121,6 +13121,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
           }
         },
         "description": "List active human-driven terminal sessions for the current instance.",
@@ -13128,7 +13138,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.list({\n  ...\n})"
           }
         ]
       }
@@ -13174,6 +13184,16 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -13190,7 +13210,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.get({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.get({\n  ...\n})"
           }
         ]
       }
@@ -13237,6 +13257,16 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -13262,7 +13292,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.write({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.write({\n  ...\n})"
           }
         ]
       }
@@ -13309,6 +13339,16 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -13334,7 +13374,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.resize({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.resize({\n  ...\n})"
           }
         ]
       }
@@ -13381,6 +13421,16 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -13397,7 +13447,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.close({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.interactiveTerminal.close({\n  ...\n})"
           }
         ]
       }
@@ -17861,6 +17911,1985 @@
         ]
       }
     },
+    "/memory/status": {
+      "get": {
+        "tags": ["memory"],
+        "operationId": "memory.status",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "root": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": ["project"]
+                        },
+                        "autoInject": {
+                          "type": "boolean"
+                        },
+                        "autoConsolidate": {
+                          "type": "boolean"
+                        },
+                        "capture": {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": ["selective"]
+                            },
+                            "turnClose": {
+                              "type": "boolean"
+                            },
+                            "explicit": {
+                              "type": "boolean"
+                            },
+                            "maxOpsPerRun": {
+                              "type": "number"
+                            },
+                            "minIntervalMs": {
+                              "type": "number"
+                            },
+                            "timeoutMs": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["mode", "turnClose", "explicit", "maxOpsPerRun", "minIntervalMs", "timeoutMs"],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "maxProjectIndexBytes": {
+                              "type": "number"
+                            },
+                            "maxSessionFiles": {
+                              "type": "number"
+                            },
+                            "maxRecentSessions": {
+                              "type": "number"
+                            },
+                            "maxConsolidationInputBytes": {
+                              "type": "number"
+                            },
+                            "maxLineChars": {
+                              "type": "number"
+                            },
+                            "maxSessionLineChars": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "maxProjectIndexBytes",
+                            "maxSessionFiles",
+                            "maxRecentSessions",
+                            "maxConsolidationInputBytes",
+                            "maxLineChars",
+                            "maxSessionLineChars"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "lastInjectedAt": {
+                              "type": "number"
+                            },
+                            "lastInjectedBytes": {
+                              "type": "number"
+                            },
+                            "lastInjectedTokens": {
+                              "type": "number"
+                            },
+                            "lastInjectedSessionID": {
+                              "type": "string"
+                            },
+                            "lastConsolidatedAt": {
+                              "type": "number"
+                            },
+                            "lastConsolidationCost": {
+                              "type": "number"
+                            },
+                            "lastConsolidationTokens": {
+                              "type": "number"
+                            },
+                            "lastOperationCount": {
+                              "type": "number"
+                            },
+                            "lastRecallAt": {
+                              "type": "number"
+                            },
+                            "lastRecallCount": {
+                              "type": "number"
+                            },
+                            "lastRecallSessionID": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "lastInjectedAt",
+                            "lastInjectedBytes",
+                            "lastInjectedTokens",
+                            "lastInjectedSessionID",
+                            "lastConsolidatedAt",
+                            "lastConsolidationCost",
+                            "lastConsolidationTokens",
+                            "lastOperationCount",
+                            "lastRecallAt",
+                            "lastRecallCount",
+                            "lastRecallSessionID"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "enabled",
+                        "scope",
+                        "autoInject",
+                        "autoConsolidate",
+                        "capture",
+                        "limits",
+                        "stats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "exists": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "boolean"
+                        },
+                        "index": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["state", "index"],
+                      "additionalProperties": false
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "bytes": {
+                          "type": "number"
+                        },
+                        "estimatedTokens": {
+                          "type": "number"
+                        },
+                        "preview": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["bytes", "estimatedTokens", "preview"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["root", "state", "exists", "index"],
+                  "additionalProperties": false,
+                  "description": "Memory status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return memory state, index preview, and token estimate for the active workspace.",
+        "summary": "Get memory status",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/show": {
+      "get": {
+        "tags": ["memory"],
+        "operationId": "memory.show",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory source and index",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "root": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": ["project"]
+                        },
+                        "autoInject": {
+                          "type": "boolean"
+                        },
+                        "autoConsolidate": {
+                          "type": "boolean"
+                        },
+                        "capture": {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": ["selective"]
+                            },
+                            "turnClose": {
+                              "type": "boolean"
+                            },
+                            "explicit": {
+                              "type": "boolean"
+                            },
+                            "maxOpsPerRun": {
+                              "type": "number"
+                            },
+                            "minIntervalMs": {
+                              "type": "number"
+                            },
+                            "timeoutMs": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["mode", "turnClose", "explicit", "maxOpsPerRun", "minIntervalMs", "timeoutMs"],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "maxProjectIndexBytes": {
+                              "type": "number"
+                            },
+                            "maxSessionFiles": {
+                              "type": "number"
+                            },
+                            "maxRecentSessions": {
+                              "type": "number"
+                            },
+                            "maxConsolidationInputBytes": {
+                              "type": "number"
+                            },
+                            "maxLineChars": {
+                              "type": "number"
+                            },
+                            "maxSessionLineChars": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "maxProjectIndexBytes",
+                            "maxSessionFiles",
+                            "maxRecentSessions",
+                            "maxConsolidationInputBytes",
+                            "maxLineChars",
+                            "maxSessionLineChars"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "lastInjectedAt": {
+                              "type": "number"
+                            },
+                            "lastInjectedBytes": {
+                              "type": "number"
+                            },
+                            "lastInjectedTokens": {
+                              "type": "number"
+                            },
+                            "lastInjectedSessionID": {
+                              "type": "string"
+                            },
+                            "lastConsolidatedAt": {
+                              "type": "number"
+                            },
+                            "lastConsolidationCost": {
+                              "type": "number"
+                            },
+                            "lastConsolidationTokens": {
+                              "type": "number"
+                            },
+                            "lastOperationCount": {
+                              "type": "number"
+                            },
+                            "lastRecallAt": {
+                              "type": "number"
+                            },
+                            "lastRecallCount": {
+                              "type": "number"
+                            },
+                            "lastRecallSessionID": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "lastInjectedAt",
+                            "lastInjectedBytes",
+                            "lastInjectedTokens",
+                            "lastInjectedSessionID",
+                            "lastConsolidatedAt",
+                            "lastConsolidationCost",
+                            "lastConsolidationTokens",
+                            "lastOperationCount",
+                            "lastRecallAt",
+                            "lastRecallCount",
+                            "lastRecallSessionID"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "enabled",
+                        "scope",
+                        "autoInject",
+                        "autoConsolidate",
+                        "capture",
+                        "limits",
+                        "stats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "sources": {
+                      "type": "object",
+                      "properties": {
+                        "project": {
+                          "type": "string"
+                        },
+                        "environment": {
+                          "type": "string"
+                        },
+                        "corrections": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["project", "environment", "corrections"],
+                      "additionalProperties": false
+                    },
+                    "index": {
+                      "type": "string"
+                    },
+                    "items": {
+                      "type": "string"
+                    },
+                    "changes": {
+                      "type": "string"
+                    },
+                    "decisions": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["root", "state", "sources", "index", "items", "changes", "decisions"],
+                  "additionalProperties": false,
+                  "description": "Memory source and index"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Return source memory files, generated index, recent decision summary, and memory save decisions.",
+        "summary": "Show memory",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.show({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/enable": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.enable",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory enabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "root": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": ["project"]
+                        },
+                        "autoInject": {
+                          "type": "boolean"
+                        },
+                        "autoConsolidate": {
+                          "type": "boolean"
+                        },
+                        "capture": {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": ["selective"]
+                            },
+                            "turnClose": {
+                              "type": "boolean"
+                            },
+                            "explicit": {
+                              "type": "boolean"
+                            },
+                            "maxOpsPerRun": {
+                              "type": "number"
+                            },
+                            "minIntervalMs": {
+                              "type": "number"
+                            },
+                            "timeoutMs": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["mode", "turnClose", "explicit", "maxOpsPerRun", "minIntervalMs", "timeoutMs"],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "maxProjectIndexBytes": {
+                              "type": "number"
+                            },
+                            "maxSessionFiles": {
+                              "type": "number"
+                            },
+                            "maxRecentSessions": {
+                              "type": "number"
+                            },
+                            "maxConsolidationInputBytes": {
+                              "type": "number"
+                            },
+                            "maxLineChars": {
+                              "type": "number"
+                            },
+                            "maxSessionLineChars": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "maxProjectIndexBytes",
+                            "maxSessionFiles",
+                            "maxRecentSessions",
+                            "maxConsolidationInputBytes",
+                            "maxLineChars",
+                            "maxSessionLineChars"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "lastInjectedAt": {
+                              "type": "number"
+                            },
+                            "lastInjectedBytes": {
+                              "type": "number"
+                            },
+                            "lastInjectedTokens": {
+                              "type": "number"
+                            },
+                            "lastInjectedSessionID": {
+                              "type": "string"
+                            },
+                            "lastConsolidatedAt": {
+                              "type": "number"
+                            },
+                            "lastConsolidationCost": {
+                              "type": "number"
+                            },
+                            "lastConsolidationTokens": {
+                              "type": "number"
+                            },
+                            "lastOperationCount": {
+                              "type": "number"
+                            },
+                            "lastRecallAt": {
+                              "type": "number"
+                            },
+                            "lastRecallCount": {
+                              "type": "number"
+                            },
+                            "lastRecallSessionID": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "lastInjectedAt",
+                            "lastInjectedBytes",
+                            "lastInjectedTokens",
+                            "lastInjectedSessionID",
+                            "lastConsolidatedAt",
+                            "lastConsolidationCost",
+                            "lastConsolidationTokens",
+                            "lastOperationCount",
+                            "lastRecallAt",
+                            "lastRecallCount",
+                            "lastRecallSessionID"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "enabled",
+                        "scope",
+                        "autoInject",
+                        "autoConsolidate",
+                        "capture",
+                        "limits",
+                        "stats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "bytes": {
+                          "type": "number"
+                        },
+                        "tokens": {
+                          "type": "number"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["text", "bytes", "tokens", "truncated"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["root", "state", "index"],
+                  "additionalProperties": false,
+                  "description": "Memory enabled"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Scaffold and enable project memory for the active workspace.",
+        "summary": "Enable memory",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.enable({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/disable": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.disable",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "root": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": ["project"]
+                        },
+                        "autoInject": {
+                          "type": "boolean"
+                        },
+                        "autoConsolidate": {
+                          "type": "boolean"
+                        },
+                        "capture": {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": ["selective"]
+                            },
+                            "turnClose": {
+                              "type": "boolean"
+                            },
+                            "explicit": {
+                              "type": "boolean"
+                            },
+                            "maxOpsPerRun": {
+                              "type": "number"
+                            },
+                            "minIntervalMs": {
+                              "type": "number"
+                            },
+                            "timeoutMs": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["mode", "turnClose", "explicit", "maxOpsPerRun", "minIntervalMs", "timeoutMs"],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "maxProjectIndexBytes": {
+                              "type": "number"
+                            },
+                            "maxSessionFiles": {
+                              "type": "number"
+                            },
+                            "maxRecentSessions": {
+                              "type": "number"
+                            },
+                            "maxConsolidationInputBytes": {
+                              "type": "number"
+                            },
+                            "maxLineChars": {
+                              "type": "number"
+                            },
+                            "maxSessionLineChars": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "maxProjectIndexBytes",
+                            "maxSessionFiles",
+                            "maxRecentSessions",
+                            "maxConsolidationInputBytes",
+                            "maxLineChars",
+                            "maxSessionLineChars"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "lastInjectedAt": {
+                              "type": "number"
+                            },
+                            "lastInjectedBytes": {
+                              "type": "number"
+                            },
+                            "lastInjectedTokens": {
+                              "type": "number"
+                            },
+                            "lastInjectedSessionID": {
+                              "type": "string"
+                            },
+                            "lastConsolidatedAt": {
+                              "type": "number"
+                            },
+                            "lastConsolidationCost": {
+                              "type": "number"
+                            },
+                            "lastConsolidationTokens": {
+                              "type": "number"
+                            },
+                            "lastOperationCount": {
+                              "type": "number"
+                            },
+                            "lastRecallAt": {
+                              "type": "number"
+                            },
+                            "lastRecallCount": {
+                              "type": "number"
+                            },
+                            "lastRecallSessionID": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "lastInjectedAt",
+                            "lastInjectedBytes",
+                            "lastInjectedTokens",
+                            "lastInjectedSessionID",
+                            "lastConsolidatedAt",
+                            "lastConsolidationCost",
+                            "lastConsolidationTokens",
+                            "lastOperationCount",
+                            "lastRecallAt",
+                            "lastRecallCount",
+                            "lastRecallSessionID"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "enabled",
+                        "scope",
+                        "autoInject",
+                        "autoConsolidate",
+                        "capture",
+                        "limits",
+                        "stats"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["root", "state"],
+                  "additionalProperties": false,
+                  "description": "Memory disabled"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Disable project memory without deleting local memory files.",
+        "summary": "Disable memory",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.disable({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/configure": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.configure",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "root": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": ["project"]
+                        },
+                        "autoInject": {
+                          "type": "boolean"
+                        },
+                        "autoConsolidate": {
+                          "type": "boolean"
+                        },
+                        "capture": {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": ["selective"]
+                            },
+                            "turnClose": {
+                              "type": "boolean"
+                            },
+                            "explicit": {
+                              "type": "boolean"
+                            },
+                            "maxOpsPerRun": {
+                              "type": "number"
+                            },
+                            "minIntervalMs": {
+                              "type": "number"
+                            },
+                            "timeoutMs": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["mode", "turnClose", "explicit", "maxOpsPerRun", "minIntervalMs", "timeoutMs"],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "maxProjectIndexBytes": {
+                              "type": "number"
+                            },
+                            "maxSessionFiles": {
+                              "type": "number"
+                            },
+                            "maxRecentSessions": {
+                              "type": "number"
+                            },
+                            "maxConsolidationInputBytes": {
+                              "type": "number"
+                            },
+                            "maxLineChars": {
+                              "type": "number"
+                            },
+                            "maxSessionLineChars": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "maxProjectIndexBytes",
+                            "maxSessionFiles",
+                            "maxRecentSessions",
+                            "maxConsolidationInputBytes",
+                            "maxLineChars",
+                            "maxSessionLineChars"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "lastInjectedAt": {
+                              "type": "number"
+                            },
+                            "lastInjectedBytes": {
+                              "type": "number"
+                            },
+                            "lastInjectedTokens": {
+                              "type": "number"
+                            },
+                            "lastInjectedSessionID": {
+                              "type": "string"
+                            },
+                            "lastConsolidatedAt": {
+                              "type": "number"
+                            },
+                            "lastConsolidationCost": {
+                              "type": "number"
+                            },
+                            "lastConsolidationTokens": {
+                              "type": "number"
+                            },
+                            "lastOperationCount": {
+                              "type": "number"
+                            },
+                            "lastRecallAt": {
+                              "type": "number"
+                            },
+                            "lastRecallCount": {
+                              "type": "number"
+                            },
+                            "lastRecallSessionID": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "lastInjectedAt",
+                            "lastInjectedBytes",
+                            "lastInjectedTokens",
+                            "lastInjectedSessionID",
+                            "lastConsolidatedAt",
+                            "lastConsolidationCost",
+                            "lastConsolidationTokens",
+                            "lastOperationCount",
+                            "lastRecallAt",
+                            "lastRecallCount",
+                            "lastRecallSessionID"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "enabled",
+                        "scope",
+                        "autoInject",
+                        "autoConsolidate",
+                        "capture",
+                        "limits",
+                        "stats"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["root", "state"],
+                  "additionalProperties": false,
+                  "description": "Memory configured"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Update project memory settings such as automatic project fact capture.",
+        "summary": "Configure memory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "autoConsolidate": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.configure({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/rebuild": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.rebuild",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory rebuilt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "root": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "enum": ["project"]
+                        },
+                        "autoInject": {
+                          "type": "boolean"
+                        },
+                        "autoConsolidate": {
+                          "type": "boolean"
+                        },
+                        "capture": {
+                          "type": "object",
+                          "properties": {
+                            "mode": {
+                              "type": "string",
+                              "enum": ["selective"]
+                            },
+                            "turnClose": {
+                              "type": "boolean"
+                            },
+                            "explicit": {
+                              "type": "boolean"
+                            },
+                            "maxOpsPerRun": {
+                              "type": "number"
+                            },
+                            "minIntervalMs": {
+                              "type": "number"
+                            },
+                            "timeoutMs": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["mode", "turnClose", "explicit", "maxOpsPerRun", "minIntervalMs", "timeoutMs"],
+                          "additionalProperties": false
+                        },
+                        "limits": {
+                          "type": "object",
+                          "properties": {
+                            "maxProjectIndexBytes": {
+                              "type": "number"
+                            },
+                            "maxSessionFiles": {
+                              "type": "number"
+                            },
+                            "maxRecentSessions": {
+                              "type": "number"
+                            },
+                            "maxConsolidationInputBytes": {
+                              "type": "number"
+                            },
+                            "maxLineChars": {
+                              "type": "number"
+                            },
+                            "maxSessionLineChars": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "maxProjectIndexBytes",
+                            "maxSessionFiles",
+                            "maxRecentSessions",
+                            "maxConsolidationInputBytes",
+                            "maxLineChars",
+                            "maxSessionLineChars"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "lastInjectedAt": {
+                              "type": "number"
+                            },
+                            "lastInjectedBytes": {
+                              "type": "number"
+                            },
+                            "lastInjectedTokens": {
+                              "type": "number"
+                            },
+                            "lastInjectedSessionID": {
+                              "type": "string"
+                            },
+                            "lastConsolidatedAt": {
+                              "type": "number"
+                            },
+                            "lastConsolidationCost": {
+                              "type": "number"
+                            },
+                            "lastConsolidationTokens": {
+                              "type": "number"
+                            },
+                            "lastOperationCount": {
+                              "type": "number"
+                            },
+                            "lastRecallAt": {
+                              "type": "number"
+                            },
+                            "lastRecallCount": {
+                              "type": "number"
+                            },
+                            "lastRecallSessionID": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "lastInjectedAt",
+                            "lastInjectedBytes",
+                            "lastInjectedTokens",
+                            "lastInjectedSessionID",
+                            "lastConsolidatedAt",
+                            "lastConsolidationCost",
+                            "lastConsolidationTokens",
+                            "lastOperationCount",
+                            "lastRecallAt",
+                            "lastRecallCount",
+                            "lastRecallSessionID"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "version",
+                        "enabled",
+                        "scope",
+                        "autoInject",
+                        "autoConsolidate",
+                        "capture",
+                        "limits",
+                        "stats"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "bytes": {
+                          "type": "number"
+                        },
+                        "tokens": {
+                          "type": "number"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["text", "bytes", "tokens", "truncated"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["root", "state", "index"],
+                  "additionalProperties": false,
+                  "description": "Memory rebuilt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Regenerate index.kmem from source memory files.",
+        "summary": "Rebuild memory index",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.rebuild({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/remember": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.remember",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory operation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operationCount": {
+                      "type": "number"
+                    },
+                    "added": {
+                      "type": "number"
+                    },
+                    "removed": {
+                      "type": "number"
+                    },
+                    "skipped": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "reason": {
+                            "type": "string",
+                            "enum": ["self_referential", "out_of_scope", "secret"]
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["reason"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "bytes": {
+                          "type": "number"
+                        },
+                        "tokens": {
+                          "type": "number"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["text", "bytes", "tokens", "truncated"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["operationCount", "added", "removed", "skipped", "index"],
+                  "additionalProperties": false,
+                  "description": "Memory operation result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Persist explicit user-provided memory text through the deterministic operation pipeline.",
+        "summary": "Remember text",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "file": {
+                    "type": "string",
+                    "enum": ["project.md", "environment.md", "corrections.md"]
+                  },
+                  "section": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "pattern": "^[^\\x00-\\x1f\\x7f]*$"
+                  },
+                  "sessionID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["text"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.remember({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/correct": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.correct",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory correction result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operationCount": {
+                      "type": "number"
+                    },
+                    "added": {
+                      "type": "number"
+                    },
+                    "removed": {
+                      "type": "number"
+                    },
+                    "skipped": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "reason": {
+                            "type": "string",
+                            "enum": ["self_referential", "out_of_scope", "secret"]
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["reason"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "bytes": {
+                          "type": "number"
+                        },
+                        "tokens": {
+                          "type": "number"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["text", "bytes", "tokens", "truncated"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["operationCount", "added", "removed", "skipped", "index"],
+                  "additionalProperties": false,
+                  "description": "Memory correction result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Persist explicit corrective memory under corrections.md.",
+        "summary": "Remember correction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "sessionID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["text"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.correct({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/forget": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.forget",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory forget result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operationCount": {
+                      "type": "number"
+                    },
+                    "added": {
+                      "type": "number"
+                    },
+                    "removed": {
+                      "type": "number"
+                    },
+                    "skipped": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "reason": {
+                            "type": "string",
+                            "enum": ["self_referential", "out_of_scope", "secret"]
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["reason"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "index": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string"
+                        },
+                        "bytes": {
+                          "type": "number"
+                        },
+                        "tokens": {
+                          "type": "number"
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["text", "bytes", "tokens", "truncated"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["operationCount", "added", "removed", "skipped", "index"],
+                  "additionalProperties": false,
+                  "description": "Memory forget result"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Remove memory lines by exact key, id, or normalized key text and rebuild the index.",
+        "summary": "Forget memory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sessionID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["query"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.forget({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/memory/purge": {
+      "post": {
+        "tags": ["memory"],
+        "operationId": "memory.purge",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Memory purged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "root": {
+                      "type": "string"
+                    },
+                    "purged": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["root", "purged"],
+                  "additionalProperties": false,
+                  "description": "Memory purged"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "MemoryApiClientError | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MemoryApiClientError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "MemoryApiServerError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryApiServerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete all project memory files for the active workspace.",
+        "summary": "Purge memory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "confirm": {
+                    "type": "boolean",
+                    "enum": [true]
+                  }
+                },
+                "required": ["confirm"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.memory.purge({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/pty/{ptyID}/connect": {
       "get": {
         "tags": ["pty"],
@@ -18107,6 +20136,15 @@
           },
           {
             "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
+          },
+          {
+            "$ref": "#/components/schemas/EventMemoryStatus1"
+          },
+          {
+            "$ref": "#/components/schemas/EventMemoryUpdated1"
+          },
+          {
+            "$ref": "#/components/schemas/EventMemoryError1"
           },
           {
             "$ref": "#/components/schemas/EventWorkspaceReady"
@@ -21283,6 +23321,15 @@
                 "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
               },
               {
+                "$ref": "#/components/schemas/EventMemoryStatus"
+              },
+              {
+                "$ref": "#/components/schemas/EventMemoryUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventMemoryError"
+              },
+              {
                 "$ref": "#/components/schemas/EventWorkspaceReady"
               },
               {
@@ -22001,6 +24048,12 @@
           "mode": {
             "type": "string",
             "enum": ["subagent", "primary", "all"]
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
           },
           "hidden": {
             "type": "boolean"
@@ -24088,6 +26141,9 @@
             "type": "string"
           },
           "displayName": {
+            "type": "string"
+          },
+          "source": {
             "type": "string"
           },
           "description": {
@@ -26367,6 +28423,54 @@
         "required": ["ok", "id"],
         "additionalProperties": false
       },
+      "MemoryApiClientError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["MemoryApiClientError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
+      "MemoryApiServerError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["MemoryApiServerError"]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["code", "message"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["name", "data"],
+        "additionalProperties": false
+      },
       "effect_HttpApiError_Forbidden": {
         "type": "object",
         "properties": {
@@ -26376,6 +28480,90 @@
           }
         },
         "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "InteractiveTerminalInfo1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "pid": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["running", "closed"]
+          },
+          "cols": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "rows": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "exitCode": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "enum": ["NaN"]
+              },
+              {
+                "type": "string",
+                "enum": ["Infinity"]
+              },
+              {
+                "type": "string",
+                "enum": ["-Infinity"]
+              }
+            ]
+          },
+          "signal": {
+            "type": "string"
+          },
+          "closedBy": {
+            "type": "string",
+            "enum": ["exit", "user", "abort"]
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "started": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "updated": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ended": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["started", "updated"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "sessionID", "pid", "command", "cwd", "status", "cols", "rows", "time"],
         "additionalProperties": false
       },
       "SyncEventMessageUpdated": {
@@ -29558,6 +31746,897 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventMemoryStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["memory.status"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["idle", "checking", "injecting", "updating", "skipped", "error"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "project": {
+                "type": "object",
+                "properties": {
+                  "bytes": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "estimatedTokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "updatedAt": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["bytes", "estimatedTokens", "truncated"],
+                "additionalProperties": false
+              },
+              "consolidation": {
+                "type": "object",
+                "properties": {
+                  "trigger": {
+                    "type": "string",
+                    "enum": ["explicit", "turn-close", "rebuild"]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["trigger", "operationCount", "cost", "tokens"],
+                "additionalProperties": false
+              },
+              "detail": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["saved", "skipped", "recalled"]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "duplicateOf": {
+                    "type": "string"
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "skippedCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["type", "message"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["directory", "enabled", "state", "project"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMemoryUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["memory.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["idle", "checking", "injecting", "updating", "skipped", "error"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "project": {
+                "type": "object",
+                "properties": {
+                  "bytes": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "estimatedTokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "updatedAt": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["bytes", "estimatedTokens", "truncated"],
+                "additionalProperties": false
+              },
+              "consolidation": {
+                "type": "object",
+                "properties": {
+                  "trigger": {
+                    "type": "string",
+                    "enum": ["explicit", "turn-close", "rebuild"]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["trigger", "operationCount", "cost", "tokens"],
+                "additionalProperties": false
+              },
+              "detail": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["saved", "skipped", "recalled"]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "duplicateOf": {
+                    "type": "string"
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "skippedCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["type", "message"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["directory", "enabled", "state", "project"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMemoryError": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["memory.error"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["idle", "checking", "injecting", "updating", "skipped", "error"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "project": {
+                "type": "object",
+                "properties": {
+                  "bytes": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "estimatedTokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "updatedAt": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["bytes", "estimatedTokens", "truncated"],
+                "additionalProperties": false
+              },
+              "consolidation": {
+                "type": "object",
+                "properties": {
+                  "trigger": {
+                    "type": "string",
+                    "enum": ["explicit", "turn-close", "rebuild"]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["trigger", "operationCount", "cost", "tokens"],
+                "additionalProperties": false
+              },
+              "detail": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["saved", "skipped", "recalled"]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "duplicateOf": {
+                    "type": "string"
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "skippedCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity", "-Infinity", "NaN"]
+                      }
+                    ]
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["type", "message"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["directory", "enabled", "state", "project"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventWorkspaceReady": {
         "type": "object",
         "properties": {
@@ -32614,6 +35693,789 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventMemoryStatus1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["memory.status"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["idle", "checking", "injecting", "updating", "skipped", "error"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "project": {
+                "type": "object",
+                "properties": {
+                  "bytes": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "estimatedTokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "updatedAt": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["bytes", "estimatedTokens", "truncated"],
+                "additionalProperties": false
+              },
+              "consolidation": {
+                "type": "object",
+                "properties": {
+                  "trigger": {
+                    "type": "string",
+                    "enum": ["explicit", "turn-close", "rebuild"]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["trigger", "operationCount", "cost", "tokens"],
+                "additionalProperties": false
+              },
+              "detail": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["saved", "skipped", "recalled"]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "duplicateOf": {
+                    "type": "string"
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "skippedCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["type", "message"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["directory", "enabled", "state", "project"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMemoryUpdated1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["memory.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["idle", "checking", "injecting", "updating", "skipped", "error"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "project": {
+                "type": "object",
+                "properties": {
+                  "bytes": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "estimatedTokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "updatedAt": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["bytes", "estimatedTokens", "truncated"],
+                "additionalProperties": false
+              },
+              "consolidation": {
+                "type": "object",
+                "properties": {
+                  "trigger": {
+                    "type": "string",
+                    "enum": ["explicit", "turn-close", "rebuild"]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["trigger", "operationCount", "cost", "tokens"],
+                "additionalProperties": false
+              },
+              "detail": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["saved", "skipped", "recalled"]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "duplicateOf": {
+                    "type": "string"
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "skippedCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["type", "message"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["directory", "enabled", "state", "project"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventMemoryError1": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["memory.error"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "state": {
+                "type": "string",
+                "enum": ["idle", "checking", "injecting", "updating", "skipped", "error"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "project": {
+                "type": "object",
+                "properties": {
+                  "bytes": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "estimatedTokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "updatedAt": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["bytes", "estimatedTokens", "truncated"],
+                "additionalProperties": false
+              },
+              "consolidation": {
+                "type": "object",
+                "properties": {
+                  "trigger": {
+                    "type": "string",
+                    "enum": ["explicit", "turn-close", "rebuild"]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["trigger", "operationCount", "cost", "tokens"],
+                "additionalProperties": false
+              },
+              "detail": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["saved", "skipped", "recalled"]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "duplicateOf": {
+                    "type": "string"
+                  },
+                  "tokens": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "operationCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "skippedCount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["NaN"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["Infinity"]
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["-Infinity"]
+                      }
+                    ]
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["type", "message"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["directory", "enabled", "state", "project"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "ModelV2Info1": {
         "type": "object",
         "properties": {
@@ -33112,6 +36974,10 @@
     {
       "name": "telemetry",
       "description": "Kilo telemetry routes."
+    },
+    {
+      "name": "memory",
+      "description": "Kilo memory routes."
     },
     {
       "name": "pty",

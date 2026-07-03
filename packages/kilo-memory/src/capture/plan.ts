@@ -20,9 +20,16 @@ export function capturePlan(input: {
   lastConsolidatedAt: number | null | undefined
   bypassInterval?: boolean
   autoConsolidate: boolean
+  // Echo gates the DIGEST only. When the latest user text is non-trivial, still run the typed call —
+  // the canonical short recall-assisted correction flow lives here and must not be swallowed.
+  echoTypedAllowed?: boolean
 }) {
   const completed = !input.reason || input.reason === "completed"
-  const session = input.autoConsolidate && completed && !input.echo && Boolean(input.summary)
+  const base = input.autoConsolidate && completed && Boolean(input.summary)
+  const session = base && !input.echo
+  // Typed capture may still run under echo when the user text is substantive; the typed prompt itself
+  // rejects duplicates/self-referential content, so we trust it rather than block on the echo gate.
+  const typedSession = base && (!input.echo || input.echoTypedAllowed === true)
   const digestDue =
     session &&
     (!input.priorTime ||
@@ -36,11 +43,13 @@ export function capturePlan(input: {
       !input.durable,
   )
   const typed = typedCapture({ reason: input.reason, interval })
-  const typedCall = input.autoConsolidate && typed.call && session
-  const typedWork = input.autoConsolidate && typed.work && session
+  const typedCall = input.autoConsolidate && typed.call && typedSession
+  const typedWork = input.autoConsolidate && typed.work && typedSession
+  // Interrupted/error closes never call the model, but a non-LLM fallback digest still leaves a trace.
+  const fallbackDigest = input.autoConsolidate && !completed && Boolean(input.summary)
   const skipReason =
     !digestDue && !typedWork
-      ? input.echo && completed
+      ? input.echo && completed && !typedSession
         ? "memory_echo"
         : interval && (input.reason === undefined || input.reason === "completed")
           ? "interval"
@@ -53,6 +62,7 @@ export function capturePlan(input: {
     interval,
     typedCall,
     typedWork,
+    fallbackDigest,
     skipReason,
     idleFlush: skipReason === "interval" && session,
   }

@@ -20,6 +20,7 @@
     "./effect/capture": "./src/effect/capture.ts",
     "./effect/config": "./src/effect/config.ts",
     "./effect/errors": "./src/effect/errors.ts",
+    "./effect/httpapi": "./src/effect/httpapi.ts",
     "./effect/events": "./src/effect/events.ts",
     "./effect/instance": "./src/effect/instance.ts",
     "./effect/log": "./src/effect/log.ts",
@@ -35,7 +36,8 @@
     "./redact": "./src/capture/redact.ts",
     "./schema": "./src/schema.ts",
     "./shared": "./src/recall/shared.ts",
-    "./store": "./src/storage/store.ts"
+    "./store": "./src/storage/store.ts",
+    "./tool": "./src/tool.ts"
   },
   "files": [
     "dist",

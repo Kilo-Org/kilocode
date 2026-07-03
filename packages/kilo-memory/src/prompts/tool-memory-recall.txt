@@ -1,0 +1,27 @@
+Search project memory from Kilo's local memory files. Use this before reading full past session transcripts.
+Use this before Grep, Glob, Read, or other repo search tools when a user request or implementation task could depend on saved project memory: project history, prior rationale, conventions, setup, implementation preferences, or why/how something was chosen. After memory recall, inspect files only to verify current state or fill gaps.
+Use this generically when project facts, environment commands/paths/tooling, decisions, constraints, or corrections are likely relevant and the injected startup memory only hints at the answer.
+The injected startup memory block is an index and continuity summary, not the full memory store. If it shows a matching key, topic, summary, truncated record, or session digest but not the exact detail needed, use this tool before answering.
+
+Four modes:
+1. **typed** - Search durable typed memory from project.md, environment.md, and corrections.md.
+2. **digest** - Read saved session handoff digests from memory session files. Use this for continuation detail when startup memory includes `session=<id>`.
+3. **search** - Search both typed memory and session digests for a topic.
+4. **catalog** - List stored memory entries: typed keys and summaries plus saved session digests (session=<id>), optionally filtered by query. Use this to browse everything stored.
+
+Matching is keyword-based, not semantic. The query scores on words literally present in stored entries; there is no synonym expansion, so unrelated wording will not match:
+  - Query with words likely stored: concrete nouns, command names, file paths, tool names — not the user's phrasing.
+  - Tokenization lowercases, splits camelCase and _.- (getUserName -> get, user, name), and lightly stems plurals/tenses (tests~test, ranking~rank), so exact case and singular/plural usually do not matter. It is not guaranteed: prefer the stored word forms (singular, lowercase, the actual key) and do not rely on synonym or semantic matches.
+  - If a search returns nothing, use mode=catalog to scan stored keys for the right entry, then recall it by its own words.
+
+Usage notes:
+  - Provide a non-empty query for typed/search mode. Do not use an empty query to browse all memory.
+  - Digest mode may omit query to browse recent useful digests, but prefer sessionID when startup memory gives one.
+  - Use typed mode when the task needs durable project facts, commands, decisions, or corrections.
+  - Use digest mode with `sessionID` when memory points to a session and the injected summary is too thin.
+  - Do not use digest mode with the active/current session id. Current sessions do not have saved digests yet.
+  - Use search mode for topic-specific memory when you do not know whether it is typed memory or a session digest.
+  - Do not use this tool for current memory status, sidebar token accounting, or implementation debugging unless the user asks what prior memory says.
+  - Search, browsing, and exact `sessionID` reads omit empty session digests.
+  - This tool reads only Kilo memory files for the current project. It does not read full session transcripts.
+  - If saved memory is insufficient and transcript detail is actually needed, use kilo_local_recall read as the heavier fallback.

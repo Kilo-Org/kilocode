@@ -12,7 +12,10 @@ export namespace MemoryReject {
     /\balready\b[^.]{0,120}\b(?:captured|covered|recorded|tracked|represented|saved|known)\b[^.]{0,120}\bmemor(?:y|ies)\b/i,
     /\balready\b[^.]{0,120}\bin\b[^.]{0,120}\bmemor(?:y|ies)\b/i,
     /\bmemor(?:y|ies)\b[^.]{0,120}\balready\b[^.]{0,120}\b(?:captures?|covers?|records?|tracks?|represents?|saves?|knows?|contains?)\b/i,
-    /\b(?:was|were)\s+(?:investigated|checked|explored|reviewed)[.;:!?]?\s*$/i,
+    // Whole single-clause meta statement ("X was investigated."). Anchored at the start with no
+    // intervening sentence break so a real fact that merely ends a clause this way — "Refactored auth
+    // in src/auth.ts. The retry path was reviewed." — is not rejected as a suffix match.
+    /^[^.]*\b(?:was|were)\s+(?:investigated|checked|explored|reviewed)\b\.?$/i,
   ]
   const personal = [
     /^i\s+prefer\b/i,
@@ -29,7 +32,9 @@ export namespace MemoryReject {
 
   function provenance(input: string) {
     const count = sourceMarkers.reduce((sum, rule) => sum + (input.match(rule)?.length ?? 0), 0)
-    if (/(?:^|[~\/\s])\.claude\/claude\.md\b/i.test(input)) return true
+    // Only short-circuit when the value IS the source path (path-as-subject, e.g. describing what a
+    // rules file contains). A fact that merely cites `.claude/claude.md` mid-sentence stays eligible.
+    if (/^[~/]*\.claude\/claude\.md\b/i.test(input)) return true
     return count >= 3
   }
 

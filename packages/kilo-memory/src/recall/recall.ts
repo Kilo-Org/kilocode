@@ -153,11 +153,27 @@ export namespace MemoryRecall {
     return MemorySlug.safe(input, { max: MemorySlug.max.record, fallback: "memory" })
   }
 
+  // A digest is a restatement of a typed hit only when most of its summary (the part after `::`) is
+  // already covered by that typed hit — i.e. fewer than half its terms are net-new. A digest that
+  // shares the query anchor yet carries substantial new content (dates, decisions) is not a restatement.
+  function restates(digest: Hit, typed: Hit) {
+    const known = new Set(MemoryShared.terms(typed.text))
+    const terms = MemoryShared.terms(digest.text.split("::").slice(1).join("::"))
+    if (terms.length === 0) return true
+    const novel = terms.filter((term) => !known.has(term)).length
+    return novel * 2 < terms.length
+  }
+
   function dedupe(input: { hits: Hit[]; query: string }) {
     const typed = input.hits.filter((hit) => !session(hit))
     return input.hits.filter((hit) => {
       if (!session(hit)) return true
-      return !typed.some((item) => overlap(hit.text, item.text) >= 2 && overlap(item.text, input.query) >= 2)
+      // Suppress only genuine restatements: shares the query anchor with a typed hit AND is mostly
+      // covered by it. A digest with substantial net-new content survives.
+      return !typed.some(
+        (item) =>
+          overlap(hit.text, item.text) >= 2 && overlap(item.text, input.query) >= 2 && restates(hit, item),
+      )
     })
   }
 

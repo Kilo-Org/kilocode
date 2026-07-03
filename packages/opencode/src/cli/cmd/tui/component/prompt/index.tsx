@@ -64,6 +64,7 @@ import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync"
 import { slashMatches } from "@/kilocode/cli/cmd/command-display"
 import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
+import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
@@ -72,6 +73,7 @@ import { useTuiConfig } from "../../context/tui-config"
 
 export type PromptProps = {
   sessionID?: string
+  directory?: string // kilocode_change
   visible?: boolean
   disabled?: boolean
   onSubmit?: () => void
@@ -1102,6 +1104,31 @@ export function Prompt(props: PromptProps) {
       void exit()
       return true
     }
+    // kilocode_change start
+    const memory = await MemoryPrompt.run({
+      text: store.prompt.input,
+      client: sdk.client,
+      workspace: project.workspace.current(),
+      directory: props.directory,
+      toast,
+      dialog,
+      done: () => {
+        history.append({
+          ...store.prompt,
+          mode: store.mode,
+        })
+        input.extmarks.clear()
+        setStore("prompt", {
+          input: "",
+          parts: [],
+        })
+        setStore("extmarkToPartIndex", new Map())
+        props.onSubmit?.()
+        input.clear()
+      },
+    })
+    if (memory) return true
+    // kilocode_change end
     const selectedModel = local.model.current()
     if (!selectedModel) {
       void promptModelWarning()

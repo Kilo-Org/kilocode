@@ -35,7 +35,8 @@ export namespace MemoryOperations {
   }
 
   // Content gating lives in MemoryReject; re-exported so MemoryOperations.reject/Rejection stay the stable surface.
-  export type Rejection = MemoryReject.Rejection
+  // A secret-like op is skipped (not thrown) so one redacted op cannot abort the whole batch.
+  export type Rejection = MemoryReject.Rejection | { reason: "secret"; text: string }
   export const reject = MemoryReject.reject
 
   function key(input: string) {
@@ -44,10 +45,11 @@ export namespace MemoryOperations {
     return MemorySlug.hash(input, "memory")
   }
 
+  function secret(input: Add) {
+    return MemoryRedact.has(input.text) || MemoryRedact.has(input.key)
+  }
+
   function line(input: Add, max: number) {
-    if (MemoryRedact.has(input.text) || MemoryRedact.has(input.key)) {
-      throw new Error("memory operation rejected secret-like content")
-    }
     const id = key(input.key)
     const body = MemoryText.brief(input.text, max)
     if (!id) throw new Error("memory operation key is required")
@@ -122,6 +124,12 @@ export namespace MemoryOperations {
         const item = reject(op)
         if (!item) return true
         skipped.push(item)
+        return false
+      })
+      // Skip secret-like ops (record a `secret` skip) instead of throwing so the rest of the batch applies.
+      .filter((op) => {
+        if (!secret(op)) return true
+        skipped.push({ reason: "secret", text: op.text })
         return false
       })
       .map((op) => {
@@ -310,6 +318,33 @@ export namespace MemoryOperations {
     })
     await MemoryFiles.append(input.root, `apply ops=${input.count} removed=${input.removed}`)
     return index
+  }
+
+  /** Resolve an auto-capture batch into safe-to-apply adds plus the removes worth honoring.
+   * - adds pass through (an upsert on an existing key updates it in place during apply);
+   * - a remove superseded by a same-batch add on the same key is dropped (the add already updates it);
+   * - a remove whose query exactly matches an existing entry key/id is kept (bounded, auditable);
+   * - any fuzzy remove that matches no existing key is dropped (hard removes stay explicit-only). */
+  export function reconcile(input: { ops: Op[]; keys: Iterable<string> }): { ops: Add[]; removes: Remove[] } {
+    const keys = new Set(input.keys)
+    const adds = input.ops.filter((item): item is Add => item.action === "add")
+    const superseded = new Set<string>()
+    for (const add of adds) {
+      if (add.key) superseded.add(add.key.trim())
+      if (add.file) superseded.add(`${add.file}:${add.section ?? ""}:${add.key}`)
+    }
+    const seen = new Set<string>()
+    const removes: Remove[] = []
+    for (const item of input.ops) {
+      if (item.action !== "remove") continue
+      const query = item.query.trim()
+      if (!query || seen.has(query)) continue
+      if (superseded.has(query)) continue
+      if (!keys.has(query)) continue
+      seen.add(query)
+      removes.push({ action: "remove", query })
+    }
+    return { ops: adds, removes }
   }
 
   export async function apply(input: { root: string; ops: Op[] }) {

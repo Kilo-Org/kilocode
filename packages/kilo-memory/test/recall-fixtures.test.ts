@@ -153,6 +153,96 @@ describe("memory recall lexical fixtures", () => {
     })
   })
 
+  test("expected hit: distinct digest survives dedupe against an overlapping typed hit", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.remember({
+        root: t.root,
+        key: "release_process",
+        text: "Main is frozen for the release process.",
+      })
+      await Memory.recordSession({
+        root: t.root,
+        sessionID: "ses_freeze_date",
+        topic: "release process",
+        summary: "Release process freeze deadline set to April 3 with a new CI gate added.",
+        time: Date.UTC(2026, 0, 1, 0, 0),
+      })
+
+      const result = await MemoryRecall.search({ root: t.root, query: "release process freeze date", limit: 5 })
+
+      // The digest shares the release/process anchor with the typed hit but carries net-new content
+      // (freeze deadline, CI gate); it must not be suppressed as a restatement.
+      expect(result?.block).toContain("session=ses_freeze_date")
+      expect(result?.block).toContain("release_process")
+    })
+  })
+
+  test("expected hit: camelCase identifier matches a split query term", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.remember({
+        root: t.root,
+        key: "profile_helper",
+        text: "The getUserName helper returns the active profile.",
+      })
+
+      const result = await MemoryRecall.search({ root: t.root, query: "user" })
+
+      expect(result?.block).toContain("getUserName")
+    })
+  })
+
+  test("expected hit: suffix stemming bridges tests/test and ranking/rank", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.remember({
+        root: t.root,
+        key: "cli_runner",
+        text: "Runs the acceptance tests and reports ranking.",
+      })
+
+      const result = await MemoryRecall.search({ root: t.root, query: "test rank" })
+
+      expect(result?.block).toContain("cli_runner")
+    })
+  })
+
+  test("expected miss: stopword-only overlap does not leak unrelated memory", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.remember({ root: t.root, key: "unit_tests", text: "Run the unit tests before merge." })
+      await Memory.remember({ root: t.root, key: "the_the_note", text: "The the the the the config value." })
+
+      const result = await MemoryRecall.search({ root: t.root, query: "the tests" })
+
+      expect(result?.block).toContain("unit_tests")
+      expect(result?.block).not.toContain("the_the_note")
+    })
+  })
+
+  test("expected miss: relevance floor drops weak single-token matches on the recall caller", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.apply({
+        root: t.root,
+        ops: [
+          {
+            action: "add",
+            key: "deploy_release",
+            text: "Deploy the release with the staging checklist and rollback plan.",
+          },
+          { action: "add", key: "unrelated_note", text: "The staging server needs a plan." },
+        ],
+      })
+
+      const recall = await Memory.recall({ root: t.root, query: "deploy release staging checklist rollback" })
+
+      expect(recall.result?.block).toContain("deploy_release")
+      expect(recall.result?.block).not.toContain("unrelated_note")
+    })
+  })
+
   test("expected miss: oversized unrelated query does not leak memory", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })

@@ -13,7 +13,8 @@ export function hasDurableDiff(diffs: Pick<CaptureDiff, "file" | "additions" | "
     const file = item.file ?? ""
     if (!file) return false
     if (durable.test(file)) return true
-    return item.additions + item.deletions >= 20 && /\.(md|json|ya?ml|toml|ts|tsx|js)$/.test(file)
+    // Fall back to churn size so any language counts, not just files matching the pattern above.
+    return item.additions + item.deletions >= 20
   })
 }
 

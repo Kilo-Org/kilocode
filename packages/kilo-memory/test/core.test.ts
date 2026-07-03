@@ -209,7 +209,7 @@ describe("memory core package", () => {
     })
   })
 
-  test("apply upserts, removes, dedupes, and rejects secrets", async () => {
+  test("apply upserts, removes, dedupes, and skips secrets without aborting the batch", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
       await Memory.apply({
@@ -221,14 +221,23 @@ describe("memory core package", () => {
           { action: "add", key: "repo_tests", text: "Run CLI memory tests from packages/opencode." },
         ],
       })
-      await expect(
-        Memory.apply({
-          root: t.root,
-          ops: [{ action: "add", key: "bad", text: "api_key=sk-abcdefghijklmnopqrstuvwxyz" }],
-        }),
-      ).rejects.toThrow("secret-like content")
+      // A secret-like op is skipped (recorded), not thrown, so the sibling clean op still applies.
+      const mixed = await Memory.apply({
+        root: t.root,
+        ops: [
+          { action: "add", key: "bad", text: "api_key=sk-abcdefghijklmnopqrstuvwxyz" },
+          { action: "add", key: "safe_fact", text: "Memory ops keep applying past a secret op." },
+        ],
+      })
       const shown = await Memory.show({ root: t.root })
 
+      expect(mixed.result.added).toBe(1)
+      expect(mixed.result.skipped).toContainEqual({
+        reason: "secret",
+        text: "api_key=sk-abcdefghijklmnopqrstuvwxyz",
+      })
+      expect(shown.sources.project).toContain("safe_fact")
+      expect(shown.sources.project).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
       expect(shown.sources.project.match(/repo_tests/g)?.length).toBe(1)
       expect(shown.index).toContain("repo_tests")
     })
@@ -603,6 +612,54 @@ describe("memory core package", () => {
     })
   })
 
+  test("index reserves decisions and constraints against bulk correction pressure", async () => {
+    await use(async (t) => {
+      const enabled = await Memory.enable({ root: t.root })
+      const state = {
+        ...enabled.state,
+        limits: {
+          ...enabled.state.limits,
+          maxProjectIndexBytes: 640,
+        },
+      }
+      await MemoryFiles.writeSource(
+        t.root,
+        "corrections.md",
+        [
+          "# Corrective Memory",
+          "",
+          "## Corrections",
+          ...Array.from(
+            { length: 10 },
+            (_, idx) =>
+              `- correction_${idx} :: Reviewer correction ${idx} keeps ${"long guidance ".repeat(4)}visible in the index.`,
+          ),
+          "",
+        ].join("\n"),
+      )
+      await MemoryFiles.writeSource(
+        t.root,
+        "project.md",
+        [
+          "# Project Memory",
+          "",
+          "## Decisions",
+          "- architecture_choice :: Keep memory v0 file-based before adding databases.",
+          "",
+          "## Constraints",
+          "- project_only :: Memory v0 must stay project-only.",
+          "",
+        ].join("\n"),
+      )
+
+      const index = await MemoryIndexer.rebuild({ root: t.root, state })
+
+      expect(index.truncated).toBe(true)
+      expect(index.text).toContain("architecture_choice")
+      expect(index.text).toContain("project_only")
+    })
+  })
+
   test("index keeps recent session digests and recognizes stale formats", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
@@ -939,7 +996,11 @@ describe("memory core package", () => {
 
       expect(shown.index).toContain("small_model_call_sites")
       expect(shown.index).toContain("session=ses_latest")
-      expect(shown.index).not.toContain("session=ses_small_model")
+      // The bulky SESSION_DIGEST record for the covered session is dropped from the index body...
+      expect(shown.index).not.toContain("source=ses_small_model.md")
+      // ...but a compact pointer keeps its id targetable via kilo_memory_recall mode=digest.
+      expect(shown.index).toContain("covered_session_pointer")
+      expect(shown.index).toContain("session=ses_small_model")
     })
   })
 

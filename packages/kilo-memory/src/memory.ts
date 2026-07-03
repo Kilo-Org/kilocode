@@ -198,6 +198,16 @@ export namespace Memory {
     const trigger = input.trigger ?? "explicit"
     const inputOps = trigger === "explicit" ? input.ops : input.ops.filter((item) => item.action !== "remove")
     const result = await MemoryOperations.apply({ root: input.root, ops: inputOps })
+    // Auto-capture skips a secret-like op and applies the rest. An explicit save whose only effect
+    // was rejecting secret content must fail loudly rather than silently drop it; a mixed explicit
+    // batch that still applied something keeps the skip as a record.
+    if (
+      trigger === "explicit" &&
+      result.operationCount === 0 &&
+      result.skipped.some((item) => item.reason === "secret")
+    ) {
+      throw new Error("memory operation rejected secret-like content")
+    }
     const state = await MemoryFiles.readState(input.root)
     const ok = MemoryNotice.saved({ added: result.added, removed: result.removed })
     if (trigger === "explicit") {
@@ -296,7 +306,6 @@ export namespace Memory {
       query: input.query,
       state,
       currentSessionID: input.sessionID,
-      force: true,
     })
     const hits = result?.hits ?? []
     const files = [...new Set(hits.map((hit) => hit.source))]
