@@ -104,6 +104,13 @@ const extensions = [
   "toml",
   "yaml",
   "yml",
+
+  // Stack lang files
+  "prg",
+  "hdl",
+  "rpt",
+  "xdic",
+  "rx",
 ].map((e) => `.${e}`)
 
 export { extensions }
@@ -116,7 +123,7 @@ export async function parseSourceCodeDefinitionsForFile(filePath: string): Promi
   }
 
   const ext = path.extname(filePath).toLowerCase()
-  if (!extensions.includes(ext)) {
+  if (!extensions.includes(ext) && ext.indexOf("rx_") == -1) {
     return undefined
   }
 

@@ -41,6 +41,13 @@ export const fallbackExtensions = [
   // Documentation and query formats
   ".rst",
 
+  // Stack lang files
+  ".prg",
+  ".hdl",
+  ".rpt",
+  ".xdic",
+  ".rx",
+
   // Known unstable or intentionally disabled AST chunking
   ".scala",
   ".swift",
@@ -52,5 +59,5 @@ export const fallbackExtensions = [
  * @returns true if the extension should use fallback chunking
  */
 export function shouldUseFallbackChunking(extension: string): boolean {
-  return fallbackExtensions.includes(extension.toLowerCase())
+  return fallbackExtensions.includes(extension.toLowerCase()) || extension.toLowerCase().indexOf("rx_") != -1
 }
