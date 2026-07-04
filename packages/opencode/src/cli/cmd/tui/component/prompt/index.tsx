@@ -1112,6 +1112,7 @@ export function Prompt(props: PromptProps) {
       directory: props.directory,
       toast,
       dialog,
+      renderer,
       done: () => {
         history.append({
           ...store.prompt,

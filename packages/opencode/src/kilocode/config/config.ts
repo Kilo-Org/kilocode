@@ -57,28 +57,6 @@ export namespace KilocodeConfig {
     "/.kilocode/commands/",
   ] as const
 
-  const MEMORY_DATA_ENTRIES = new Set([
-    "memory",
-    ".gitignore",
-    "package.json",
-    "package-lock.json",
-    "pnpm-lock.yaml",
-    "bun.lock",
-    "yarn.lock",
-  ])
-
-  export function needsDependencyInstall(input: {
-    dir: string
-    entries: readonly string[]
-    global: string
-    config?: string
-  }) {
-    if (input.dir === input.global || input.dir === input.config) return true
-    if (input.entries.length === 0) return true
-    if (!input.entries.includes("memory")) return true
-    return input.entries.some((entry) => !MEMORY_DATA_ENTRIES.has(entry))
-  }
-
   /**
    * Choose the project config file that Config.update should patch.
    *

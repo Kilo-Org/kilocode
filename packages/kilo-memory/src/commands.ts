@@ -1,8 +1,10 @@
 export const MEMORY_USAGE =
-  "/memory [project] enable|status|show|inspect|auto status|auto on|auto off|remember <text>|correct <text>|forget <query>|purge confirm|rebuild|disable"
+  "/memory [project] enable|status|show|inspect|edit|auto status|auto on|auto off|remember <text>|correct <text>|forget <query>|purge confirm|rebuild|disable\nEdit sources, then run /memory rebuild."
 
 export const MEMORY_OPERATIONS = [
   "enable",
+  "status",
+  "edit",
   "disable",
   "rebuild",
   "remember",
@@ -81,7 +83,7 @@ function usage(reason: string): ParsedMemoryCommand {
 }
 
 function operation(verb: string, text: string): ParsedMemoryCommand | undefined {
-  if (verb === "enable" || verb === "disable" || verb === "rebuild") {
+  if (verb === "enable" || verb === "status" || verb === "edit" || verb === "disable" || verb === "rebuild") {
     return { kind: "operation", operation: verb }
   }
   if (verb === "purge") {
@@ -124,7 +126,7 @@ export function parseMemoryCommand(input: string): ParsedMemoryCommand | undefin
   const parts = split(picked.rest)
   const verb = parts.head
   if (!verb) return { kind: "inspect" }
-  if (verb === "status" || verb === "show" || verb === "inspect") return { kind: "inspect" }
+  if (verb === "show" || verb === "inspect") return { kind: "inspect" }
 
   const op = operation(verb, parts.tail)
   if (op) return op

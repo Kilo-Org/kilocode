@@ -12,11 +12,11 @@ let installed = false
 
 /** Wire the package's injectable seams to opencode at process startup: the instance-context binder
  * (so async package calls survive the host ALS), the diagnostic logger, host paths (resolved from
- * Global, defaulting to ~/.kilo), and the Bus-backed event sink. Idempotent. */
+ * Global), and the Bus-backed event sink. Idempotent. */
 export function installMemoryRuntime() {
   if (installed) return
   installed = true
-  MemoryPaths.configure(() => ({ home: Global.Path.home, config: Global.Path.config }))
+  MemoryPaths.configure(() => ({ data: Global.Path.data }))
   MemoryInstance.setBinder((fn) => bind(fn))
   MemoryLog.setWarn((message, meta) => log.warn(message, meta))
   MemoryEvents.install()

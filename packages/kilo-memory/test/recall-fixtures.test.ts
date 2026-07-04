@@ -4,6 +4,7 @@ import os from "os"
 import path from "path"
 import { Memory } from "../src/memory"
 import { MemoryRecall } from "../src/recall/recall"
+import { MemoryTopics } from "../src/recall/topics"
 
 async function tmp() {
   const dir = await mkdtemp(path.join(os.tmpdir(), "kilo-memory-recall-"))
@@ -26,6 +27,14 @@ async function use(fn: (input: Awaited<ReturnType<typeof tmp>>) => Promise<void>
 }
 
 describe("memory recall lexical fixtures", () => {
+  test("related does not match short shared stems", () => {
+    expect(MemoryTopics.related("was", "wasp")).toBe(false)
+  })
+
+  test("related does not match suffixes beyond the tolerance window", () => {
+    expect(MemoryTopics.related("test", "testimony")).toBe(false)
+  })
+
   test("expected hit: exact key match returns typed memory", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
@@ -193,7 +202,7 @@ describe("memory recall lexical fixtures", () => {
     })
   })
 
-  test("expected hit: suffix stemming bridges tests/test and ranking/rank", async () => {
+  test("expected hit: suffix tolerance bridges tests/test and ranking/rank", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
       await Memory.remember({
@@ -208,16 +217,70 @@ describe("memory recall lexical fixtures", () => {
     })
   })
 
-  test("expected miss: stopword-only overlap does not leak unrelated memory", async () => {
+  test("expected miss: ubiquitous-term overlap does not leak unrelated memory", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
       await Memory.remember({ root: t.root, key: "unit_tests", text: "Run the unit tests before merge." })
       await Memory.remember({ root: t.root, key: "the_the_note", text: "The the the the the config value." })
+      await Memory.remember({ root: t.root, key: "the_deploy", text: "The deploy command uses staging." })
+      await Memory.remember({ root: t.root, key: "the_docs", text: "The docs live in packages/kilo-docs." })
+      await Memory.remember({ root: t.root, key: "the_api", text: "The API base is configured locally." })
+      await Memory.remember({ root: t.root, key: "the_ui", text: "The UI package owns shared components." })
+      await Memory.remember({ root: t.root, key: "the_auth", text: "The auth token comes from the gateway." })
+      await Memory.remember({ root: t.root, key: "the_release", text: "The release process requires review." })
 
       const result = await MemoryRecall.search({ root: t.root, query: "the tests" })
 
       expect(result?.block).toContain("unit_tests")
       expect(result?.block).not.toContain("the_the_note")
+    })
+  })
+
+  test("expected miss: function-word filtering already works in a small corpus", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.remember({ root: t.root, key: "unit_tests", text: "Run the unit tests before merge." })
+      await Memory.remember({ root: t.root, key: "the_the_note", text: "The the the the the config value." })
+      await Memory.remember({ root: t.root, key: "the_deploy", text: "The deploy command uses staging." })
+      await Memory.remember({ root: t.root, key: "the_docs", text: "The docs live in packages/kilo-docs." })
+
+      const result = await MemoryRecall.search({ root: t.root, query: "the tests" })
+
+      expect(result?.block).toContain("unit_tests")
+      expect(result?.block).not.toContain("the_the_note")
+    })
+  })
+
+  test("expected hit: a topic word repeated in a small corpus is not dropped", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.remember({ root: t.root, key: "deploy_staging", text: "Deploy uses the staging cluster." })
+      await Memory.remember({ root: t.root, key: "deploy_prod", text: "Deploy to prod needs an approval." })
+      await Memory.remember({ root: t.root, key: "lint_rule", text: "Lint runs before the commit hook." })
+      await Memory.remember({ root: t.root, key: "test_rule", text: "Tests run from packages/opencode." })
+
+      const result = await MemoryRecall.search({ root: t.root, query: "deploy staging" })
+
+      expect(result?.block).toContain("deploy_staging")
+    })
+  })
+
+  test("expected miss: corpus-derived filtering drops non-English function words", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await Memory.remember({ root: t.root, key: "pruebas_cli", text: "El comando de pruebas usa bun test." })
+      await Memory.remember({ root: t.root, key: "nota_de_de", text: "De de de de config local." })
+      await Memory.remember({ root: t.root, key: "deploy_es", text: "El flujo de deploy usa staging." })
+      await Memory.remember({ root: t.root, key: "docs_es", text: "La ruta de docs vive en packages/kilo-docs." })
+      await Memory.remember({ root: t.root, key: "api_es", text: "La base de API se configura localmente." })
+      await Memory.remember({ root: t.root, key: "ui_es", text: "El paquete de UI contiene componentes." })
+      await Memory.remember({ root: t.root, key: "auth_es", text: "El token de auth viene del gateway." })
+      await Memory.remember({ root: t.root, key: "release_es", text: "El proceso de release requiere revisión." })
+
+      const result = await MemoryRecall.search({ root: t.root, query: "de pruebas" })
+
+      expect(result?.block).toContain("pruebas_cli")
+      expect(result?.block).not.toContain("nota_de_de")
     })
   })
 

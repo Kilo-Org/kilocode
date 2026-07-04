@@ -24,7 +24,7 @@ function text(parts: MessageV2.Part[]) {
   return parts
     .filter((part): part is MessageV2.TextPart => part.type === "text")
     .filter((part) => !part.synthetic && !part.ignored)
-    .map((part) => part.text.trim())
+    .map((part) => MemoryRedact.text(part.text.trim()))
     .filter(Boolean)
     .join("\n\n")
 }
@@ -171,7 +171,6 @@ async function memoryText(input: {
   options: Record<string, unknown>
   system: string
   prompt: string
-  maxOutputTokens: number | undefined
   timeoutMs: number
   temperature?: number
   topP?: number
@@ -187,7 +186,6 @@ async function memoryText(input: {
     ...(params.system ? { system: params.system } : {}),
     prompt: input.prompt,
     providerOptions: params.providerOptions,
-    maxOutputTokens: input.maxOutputTokens,
     abortSignal: input.signal ? AbortSignal.any([ctl.signal, input.signal]) : ctl.signal,
     temperature: input.temperature,
     topP: input.topP,
@@ -224,17 +222,12 @@ async function memoryText(input: {
 
 function modelOptions(model: Provider.Model, language: LanguageModelV3) {
   const options = consolidationOptions(model)
-  // No output cap for openai: the ChatGPT OAuth responses backend 400s on max_output_tokens.
-  // No 1024 clamp elsewhere: reasoning models reject caps below the thinking budget.
-  const maxOutputTokens =
-    (model.providerID === "openai" && model.api.npm === "@ai-sdk/openai") ||
-    (model.api.npm === "@ai-sdk/openai-compatible" && model.api.id.toLowerCase().includes("gpt-5"))
-      ? undefined
-      : ProviderTransform.maxOutputTokens(model)
+  // No explicit output cap: valid output is already bounded by the compact-JSON prompt, the parser's
+  // 64KB guard, and the capture timeout — and some backends reject explicit caps outright.
   const temperature = ProviderTransform.temperature(model)
   const topP = ProviderTransform.topP(model)
   const topK = ProviderTransform.topK(model)
-  return { source: model, language, options, maxOutputTokens, temperature, topP, topK }
+  return { source: model, language, options, temperature, topP, topK }
 }
 
 type ModelHandle = ReturnType<typeof modelOptions>
@@ -256,7 +249,14 @@ export namespace MemorySession {
           if (!turn) return undefined
           const diffs = yield* input.summary
             .computeDiff({ messages: [turn.user, ...turn.assistants] })
-            .pipe(Effect.catch(() => Effect.succeed([] as Snapshot.FileDiff[])))
+            .pipe(
+              Effect.catch((err) =>
+                Effect.sync(() => {
+                  log.warn("memory turn diff unavailable", { error: String(err) })
+                  return [] as Snapshot.FileDiff[]
+                }),
+              ),
+            )
           return {
             user: text(turn.user.parts),
             assistant: output(turn.assistant.parts),
@@ -319,7 +319,6 @@ export namespace MemoryModel {
           options: resolved.options,
           system,
           prompt,
-          maxOutputTokens: resolved.maxOutputTokens,
           timeoutMs,
           temperature: resolved.temperature,
           topP: resolved.topP,

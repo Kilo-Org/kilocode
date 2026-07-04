@@ -1,5 +1,8 @@
 import type { TuiPluginApi } from "@kilocode/plugin/tui"
 import { createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js"
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "tui.memory-sidebar" })
 
 /** Compact token count: 2031 -> "2.0k", 850 -> "850". */
 function compact(value: number) {
@@ -20,16 +23,16 @@ function ago(ts: number | null | undefined) {
   return `${Math.floor(hours / 24)}d ago`
 }
 
-type Stats = { lastConsolidatedAt: number | null; lastOperationCount: number }
+type Stats = { lastTypedConsolidationAt: number | null; lastOperationCount: number }
 
 /** Auto-capture status from the existing consolidation stats, rendered as its own dotted status line
  * (dot on when autoConsolidate is enabled). `detail` is the muted suffix; `saved` tints it green. */
 function autosave(state: { autoConsolidate: boolean; stats: Stats }): { detail: string; on: boolean; saved: boolean } {
   if (!state.autoConsolidate) return { detail: "off", on: false, saved: false }
-  const at = state.stats.lastConsolidatedAt
+  const at = state.stats.lastTypedConsolidationAt
   if (!at) return { detail: "watching…", on: true, saved: false }
   const count = state.stats.lastOperationCount
-  if (count > 0) return { detail: `saved ${count} ${count === 1 ? "fact" : "facts"} · ${ago(at)}`, on: true, saved: true }
+  if (count > 0) return { detail: `saved ${count} ${count === 1 ? "change" : "changes"} · ${ago(at)}`, on: true, saved: true }
   return { detail: `nothing new · ${ago(at)}`, on: true, saved: false }
 }
 
@@ -47,9 +50,12 @@ export function MemorySidebar(props: { api: TuiPluginApi; sessionID: string }) {
   const [data] = createResource(
     () => `${workspace() ?? "__default__"}:${dir()}:${tick()}`,
     async () => {
-      const status = await props.api.client.memory
-        .status(route({ workspace: workspace(), directory: dir() }))
-        .catch(() => undefined)
+      const status = await props.api.client.memory.status(route({ workspace: workspace(), directory: dir() })).catch(
+        (error: unknown) => {
+          log.warn("memory status unavailable", { error: String(error) })
+          return undefined
+        },
+      )
       if (!status) return
       if (status.error || !status.data) return
       return status.data

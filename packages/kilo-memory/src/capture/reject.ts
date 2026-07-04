@@ -12,10 +12,12 @@ export namespace MemoryReject {
     /\balready\b[^.]{0,120}\b(?:captured|covered|recorded|tracked|represented|saved|known)\b[^.]{0,120}\bmemor(?:y|ies)\b/i,
     /\balready\b[^.]{0,120}\bin\b[^.]{0,120}\bmemor(?:y|ies)\b/i,
     /\bmemor(?:y|ies)\b[^.]{0,120}\balready\b[^.]{0,120}\b(?:captures?|covers?|records?|tracks?|represents?|saves?|knows?|contains?)\b/i,
+  ]
+  const selfRaw = [
     // Whole single-clause meta statement ("X was investigated."). Anchored at the start with no
     // intervening sentence break so a real fact that merely ends a clause this way — "Refactored auth
     // in src/auth.ts. The retry path was reviewed." — is not rejected as a suffix match.
-    /^[^.]*\b(?:was|were)\s+(?:investigated|checked|explored|reviewed)\b\.?$/i,
+    /^[^.?!;\n]*\b(?:was|were)\s+(?:investigated|checked|explored|reviewed)\b\.?$/i,
   ]
   const personal = [
     /^i\s+prefer\b/i,
@@ -43,7 +45,7 @@ export namespace MemoryReject {
     const value = MemoryText.normalized(raw)
     if (personal.some((rule) => rule.test(value))) return { reason: "out_of_scope", text: input.text }
     if (provenance(raw)) return { reason: "out_of_scope", text: input.text }
-    if (!self.some((rule) => rule.test(value))) return
+    if (!self.some((rule) => rule.test(value)) && !selfRaw.some((rule) => rule.test(raw))) return
     return { reason: "self_referential", text: input.text }
   }
 }

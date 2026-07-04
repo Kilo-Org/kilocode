@@ -38,7 +38,6 @@ import { ConfigPlugin } from "@/config/plugin"
 import { AccountTest } from "../fake/account"
 import { AuthTest } from "../fake/auth"
 import { NpmTest } from "../fake/npm"
-import { Npm } from "@opencode-ai/core/npm" // kilocode_change - recording npm mock for memory-only dir test
 import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect" // kilocode_change
 import { isAtomicChatPlugin } from "@/kilocode/atomic-chat-feature" // kilocode_change
 
@@ -1024,50 +1023,6 @@ it.effect("installs dependencies in writable KILO_CONFIG_DIR", () =>
     expect(yield* AppFileSystem.use.readFileString(path.join(configDir, ".gitignore"))).toContain("package-lock.json")
   }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
 )
-
-// kilocode_change start
-test("does not install plugin dependencies for memory-only .kilo directory", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await fs.mkdir(path.join(dir, ".kilo", "memory"), { recursive: true })
-      await Filesystem.write(path.join(dir, ".kilo", "memory", "state.json"), "{}")
-    },
-  })
-
-  const installs: string[] = []
-  const npm = Layer.mock(Npm.Service)({
-    install: (dir) =>
-      Effect.sync(() => {
-        installs.push(dir)
-      }),
-    add: () => Effect.die("not implemented"),
-    which: () => Effect.succeed(Option.none()),
-  })
-  const testLayer = Config.layer.pipe(
-    Layer.provide(Git.defaultLayer), // kilocode_change
-    Layer.provide(testFlock),
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(Env.defaultLayer),
-    Layer.provide(AuthTest.empty),
-    Layer.provide(AccountTest.empty),
-    Layer.provideMerge(infra),
-    Layer.provide(npm),
-    Layer.provide(Layer.succeed(HttpClient.HttpClient, unexpectedHttp)),
-  )
-
-  await withTestInstance({
-    directory: tmp.path,
-    fn: async () => {
-      await Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(testLayer)))
-      await Effect.runPromise(
-        Config.Service.use((svc) => svc.waitForDependencies()).pipe(Effect.scoped, Effect.provide(testLayer)),
-      )
-    },
-  })
-
-  expect(installs).not.toContain(path.join(tmp.path, ".kilo"))
-})
-// kilocode_change end
 
 // Note: deduplication and serialization of npm installs is now handled by the
 // core Npm.Service (via EffectFlock). Those behaviors are tested in the core

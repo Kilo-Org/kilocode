@@ -1,7 +1,7 @@
 import { MemoryFiles } from "./storage/store"
 import { MemoryIndexer } from "./recall/indexer"
 import { MemoryNotice } from "./memory-notice"
-import { MemoryOperations } from "./capture/ops"
+import { MemoryOperations } from "./capture/operations"
 import { MemoryPaths } from "./storage/paths"
 import { MemoryRecall } from "./recall/recall"
 import { MemorySchema } from "./schema"

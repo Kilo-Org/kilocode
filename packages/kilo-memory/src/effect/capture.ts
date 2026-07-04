@@ -28,7 +28,7 @@ import {
   type CaptureSourceItem,
 } from "../capture/capture"
 import { MemoryDigest } from "../capture/digest"
-import { MemoryOperations } from "../capture/ops"
+import { MemoryOperations } from "../capture/operations"
 import { MemoryRedact } from "../capture/redact"
 import { MemorySchema } from "../schema"
 import { MemoryShared } from "../recall/shared"
@@ -39,11 +39,6 @@ import { MemoryService } from "./service"
 import { MemoryTimers } from "./timers"
 
 const MESSAGE_WINDOW = 24
-
-// Correction intent in the latest user turn: lets a short recall-assisted correction still run typed
-// capture on an echo turn, while pure lookups ("what is the release rule?") stay silent.
-const CORRECTION_INTENT =
-  /\b(actually|instead|rather|wrong|incorrect|correction|isn'?t|aren'?t|wasn'?t|weren'?t|doesn'?t|don'?t|didn'?t|not|no)\b|scratch that|never ?mind/i
 
 /** Heuristic: an assistant answer that mostly restates injected instructions/source files is not
  * durable project memory and should not be consolidated. */
@@ -158,10 +153,8 @@ export namespace MemoryCapture {
     // Echo = short lookup answered from memory with no file changes. Long recall-assisted answers
     // (research, investigations) carry new content and must still be digested.
     const echo = !durable && assistant.length < 1200 && view.recalledMemory
-    // Echo gates the digest only; typed capture still runs when the latest user turn signals a
-    // correction, so the canonical short correction-on-echo flow is not dropped — while pure
-    // lookups stay silent (no model call, no save).
-    const echoTypedAllowed = CORRECTION_INTENT.test(user)
+    // Echo gates the digest only. Typed capture is bounded by the interval throttle, and the typed
+    // prompt is the language-agnostic content filter for lookup/correction turns.
     const sourced = provenance({ assistant }) && !editsInstructionDocs(diffs)
     const session = completed && !echo && Boolean(summary)
     const prior = session
@@ -176,10 +169,9 @@ export namespace MemoryCapture {
       priorTime,
       now,
       minIntervalMs: state.capture.minIntervalMs,
-      lastConsolidatedAt: state.stats.lastConsolidatedAt,
+      lastTypedConsolidationAt: state.stats.lastTypedConsolidationAt,
       bypassInterval: input.bypassInterval,
       autoConsolidate: state.autoConsolidate,
-      echoTypedAllowed,
     })
     const digestDue = plan.digestDue
     const typedCall = plan.typedCall
@@ -487,11 +479,9 @@ export namespace MemoryCapture {
     const ops = reconciled.ops.slice(0, state.capture.maxOpsPerRun)
     const project =
       ops.length > 0 ? yield* memory.apply({ root, ops, trigger: "turn-close", tokens: generated.tokens }) : undefined
-    // Secret-like ops are skipped at apply time (never thrown); surface them in the typed audit record.
-    const applied: CaptureSkip[] = [
-      ...generated.skipped,
-      ...(project?.skipped ?? []).filter((item) => item.reason === "secret"),
-    ]
+    // Apply-time skips (content gate + secret, both redacted at creation) surface in the typed audit
+    // record alongside the model's own declared skips.
+    const applied: CaptureSkip[] = [...generated.skipped, ...(project?.skipped ?? [])]
     const count = project?.operationCount ?? 0
     if (typedCall) {
       yield* memory.decide({

@@ -75,7 +75,7 @@ export const MemoryApi = HttpApi.make("memory")
         HttpApiEndpoint.post("configure", MemoryPaths.configure, {
           query: MemoryQuery,
           payload: MemoryConfigurePayload,
-          success: described(MemoryContract.Disable, "Memory configured"),
+          success: described(MemoryContract.Configure, "Memory configured"),
           error: MemoryErrors,
         }).annotateMerge(
           OpenApi.annotations({

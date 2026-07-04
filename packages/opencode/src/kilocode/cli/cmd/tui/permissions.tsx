@@ -22,5 +22,10 @@ export namespace MemoryPermission {
         body: <MemoryBody request={request} />,
       }
     })
+    MemoryPermissionRegistry.register("kilo_memory_recall", (request) => ({
+      icon: "◇",
+      title: "Memory recall",
+      body: <MemoryBody request={request} />,
+    }))
   }
 }

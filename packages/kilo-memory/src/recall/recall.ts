@@ -30,8 +30,14 @@ export namespace MemoryRecall {
     tokens: number
   }
 
+  function includes(terms: string[], term: string) {
+    const found = new Set(terms)
+    if (found.has(term)) return true
+    return terms.some((item) => MemoryTopics.related(item, term))
+  }
+
   function has(input: string, term: string) {
-    return MemoryShared.terms(input).includes(term)
+    return includes(MemoryShared.terms(input), term)
   }
 
   function typed(input: {
@@ -142,7 +148,10 @@ export namespace MemoryRecall {
 
   function overlap(a: string, b: string) {
     const right = MemoryShared.terms(b)
-    return MemoryShared.terms(a).filter((term) => right.includes(term)).length
+    const found = new Set(right)
+    return MemoryShared.terms(a).filter(
+      (term) => found.has(term) || right.some((item) => MemoryTopics.related(item, term)),
+    ).length
   }
 
   function session(input: Hit) {
@@ -156,11 +165,14 @@ export namespace MemoryRecall {
   // A digest is a restatement of a typed hit only when most of its summary (the part after `::`) is
   // already covered by that typed hit — i.e. fewer than half its terms are net-new. A digest that
   // shares the query anchor yet carries substantial new content (dates, decisions) is not a restatement.
-  function restates(digest: Hit, typed: Hit) {
-    const known = new Set(MemoryShared.terms(typed.text))
-    const terms = MemoryShared.terms(digest.text.split("::").slice(1).join("::"))
+  function restates(left: Hit, right: Hit) {
+    const known = MemoryShared.terms(right.text)
+    const found = new Set(known)
+    const terms = MemoryShared.terms(left.text.split("::").slice(1).join("::"))
     if (terms.length === 0) return true
-    const novel = terms.filter((term) => !known.has(term)).length
+    const novel = terms.filter(
+      (term) => !found.has(term) && !known.some((item) => MemoryTopics.related(item, term)),
+    ).length
     return novel * 2 < terms.length
   }
 
@@ -168,6 +180,7 @@ export namespace MemoryRecall {
     const typed = input.hits.filter((hit) => !session(hit))
     return input.hits.filter((hit) => {
       if (!session(hit)) return true
+      // Dedupe is hit-to-hit symmetric, so corpus-wide function words do not favor one hit over another.
       // Suppress only genuine restatements: shares the query anchor with a typed hit AND is mostly
       // covered by it. A digest with substantial net-new content survives.
       return !typed.some(
@@ -222,6 +235,10 @@ export namespace MemoryRecall {
     return hits.filter((hit) => hit.score >= Math.max(1, top - 2)).slice(0, input.limit)
   }
 
+  function noise(hits: Hit[]) {
+    return MemoryTopics.ubiquitous(hits.map((hit) => MemoryShared.terms(hit.text)))
+  }
+
   export async function search(input: {
     root: string
     query: string
@@ -261,7 +278,8 @@ export namespace MemoryRecall {
         tokens: MemoryToken.estimate(block),
       }
     }
-    const keys = MemoryTopics.expand(MemoryShared.terms(query))
+    // Query terms absent from the corpus add zero to every hit; only corpus-ubiquitous terms need removal.
+    const keys = MemoryTopics.expand(MemoryShared.terms(query, { drop: noise([...typedItems, ...digestItems]) }))
     const hits = dedupe({
       hits: select({ hits: [...typedItems, ...digestItems], keys, limit, force: input.force }),
       query,

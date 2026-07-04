@@ -37,7 +37,7 @@ describe("memory TUI command parser", () => {
     await runMemoryCommand({ ...base, text: "/memory correct old test command is wrong" })
     await runMemoryCommand({ ...base, text: "/memory forget old test command" })
 
-    expect(shown).toEqual(["Memory saved · 1 op", "Correction saved · 1 op", "Memory updated · 1 removed"])
+    expect(shown).toEqual(["Memory saved · 1 change", "Correction saved · 1 change", "Memory updated · 1 removed"])
     expect(shown.join("\n")).not.toContain("1,234")
     expect(shown.join("\n")).not.toContain("memory tokens")
   })
@@ -82,6 +82,35 @@ describe("memory TUI command parser", () => {
     expect(shown[2]).toContain("Purge requires confirmation")
     expect(shown[3]).toBe("Memory purged")
     expect(calls).toEqual([{ autoConsolidate: false }, { confirm: true }])
+  })
+
+  test("status toast includes storage root", async () => {
+    const shown: string[] = []
+    const client = {
+      memory: {
+        status: async () => ({
+          data: {
+            root: "/tmp/kilo-data/memory/repo-abc123",
+            state: { enabled: true },
+            index: { estimatedTokens: 42 },
+          },
+        }),
+      },
+    } as unknown as KiloClient
+
+    await runMemoryCommand({
+      text: "/memory status",
+      client,
+      toast: {
+        show(input: { message: string }) {
+          shown.push(input.message)
+        },
+      },
+      show() {},
+      usage() {},
+    })
+
+    expect(shown).toEqual(["Memory enabled · 42 memory tokens · /tmp/kilo-data/memory/repo-abc123"])
   })
 
   test("memory commands route to session directory when no workspace is active", async () => {

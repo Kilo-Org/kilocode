@@ -1,4 +1,8 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
+import type { CliRenderer } from "@opentui/core"
+import path from "path"
+import { Process } from "@/util/process"
+import { splitCommand } from "@/kilocode/util/split-command"
 import {
   MEMORY_USAGE,
   parseMemoryCommand,
@@ -43,12 +47,35 @@ function tokens(count: number) {
   return `${count.toLocaleString()} memory ${count === 1 ? "token" : "tokens"}`
 }
 
-function ops(count: number) {
-  return `${count} ${count === 1 ? "op" : "ops"}`
+function changeCount(count: number) {
+  return `${count} ${count === 1 ? "change" : "changes"}`
 }
 
 function auto(input: boolean) {
   return `Memory auto-save ${input ? "on" : "off"}`
+}
+
+async function edit(input: { file: string; cwd?: string; renderer?: CliRenderer }) {
+  const editor = process.env["VISUAL"] || process.env["EDITOR"]
+  if (!editor) throw new Error("Set $VISUAL or $EDITOR to use /memory edit")
+
+  input.renderer?.suspend()
+  input.renderer?.currentRenderBuffer.clear()
+  try {
+    const proc = Process.spawn([...splitCommand(editor), input.file], {
+      cwd: input.cwd,
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: "inherit",
+      shell: process.platform === "win32",
+    })
+    const code = await proc.exited
+    if (code !== 0) throw new Error(`Editor exited with code ${code}`)
+  } finally {
+    input.renderer?.currentRenderBuffer.clear()
+    input.renderer?.resume()
+    input.renderer?.requestRender()
+  }
 }
 
 export function parseMemoryInput(input: string): MemoryCommand | undefined {
@@ -61,6 +88,7 @@ export async function runMemoryCommand(input: {
   workspace?: string
   directory?: string
   toast: Toast
+  renderer?: CliRenderer
   show(): void
   usage(message: string): void
 }) {
@@ -81,8 +109,24 @@ export async function runMemoryCommand(input: {
       const result = read(await input.client.memory.enable(route(input)))
       input.toast.show({
         variant: "success",
-        message: `${name} enabled (${tokens(result.index.tokens)}). Storage is local and project-scoped. Auto-save sends best-effort-redacted turn context to your configured model provider (up to 2 extra calls/turn) to consolidate durable facts; disable with /memory auto off.`,
+        message: `${name} enabled (${tokens(result.index.tokens)}). Files: ${result.root}. Edit sources, then run /memory rebuild. Auto-save sends best-effort-redacted turn context to your configured model provider; disable with /memory auto off.`,
       })
+      return true
+    }
+    if (parsed.operation === "status") {
+      const result = read(await input.client.memory.status(route(input)))
+      input.toast.show({
+        variant: "info",
+        message: `${name} ${result.state.enabled ? "enabled" : "disabled"} · ${tokens(result.index.estimatedTokens)} · ${result.root}`,
+      })
+      return true
+    }
+    if (parsed.operation === "edit") {
+      const status = read(await input.client.memory.status(route(input)))
+      if (!status.state.enabled) throw new Error("Memory is disabled. Run /memory enable first.")
+      await edit({ file: path.join(status.root, "project.md"), cwd: input.directory, renderer: input.renderer })
+      const result = read(await input.client.memory.rebuild(route(input)))
+      input.toast.show({ variant: "success", message: `${name} rebuilt (${tokens(result.index.tokens)})` })
       return true
     }
     if (parsed.operation === "auto") {
@@ -116,12 +160,12 @@ export async function runMemoryCommand(input: {
     // Wording mirrors the server memory event messages so chat-intent and command saves read the same.
     if (parsed.operation === "remember") {
       const result = read(await input.client.memory.remember({ ...route(input), text: parsed.text }))
-      input.toast.show({ variant: "success", message: `Memory saved · ${ops(result.operationCount)}` })
+      input.toast.show({ variant: "success", message: `Memory saved · ${changeCount(result.operationCount)}` })
       return true
     }
     if (parsed.operation === "correct") {
       const result = read(await input.client.memory.correct({ ...route(input), text: parsed.text }))
-      input.toast.show({ variant: "success", message: `Correction saved · ${ops(result.operationCount)}` })
+      input.toast.show({ variant: "success", message: `Correction saved · ${changeCount(result.operationCount)}` })
       return true
     }
 

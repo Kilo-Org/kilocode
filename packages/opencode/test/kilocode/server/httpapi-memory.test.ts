@@ -40,7 +40,7 @@ function keys(input: unknown) {
 function expectStats(input: unknown) {
   expect(keys(input)).toEqual(
     [
-      "lastConsolidatedAt",
+      "lastTypedConsolidationAt",
       "lastConsolidationCost",
       "lastConsolidationTokens",
       "lastInjectedAt",
@@ -93,7 +93,7 @@ describe("HttpApi memory", () => {
     expectStats(stats)
     expect(stats.lastInjectedAt).toBe(0)
     expect(stats.lastInjectedSessionID).toBe("")
-    expect(stats.lastConsolidatedAt).toBe(0)
+    expect(stats.lastTypedConsolidationAt).toBe(0)
 
     const enable = await json("POST", MemoryPaths.enable)
     expectStats(rec(rec(enable.state).stats))
@@ -251,7 +251,7 @@ describe("HttpApi memory", () => {
     expect(invalidResp.status).toBeLessThan(500)
     const invalidBody = rec(await invalidResp.json())
     // Schema validation or MemoryInvalidInputError — either returns a 4xx with a body
-    expect(invalidResp.status).toBeLessThan(500)
+    expect(typeof invalidBody.name).toBe("string")
   })
 
   test("rejects malformed HTTP payloads without corrupting memory files", async () => {
@@ -283,8 +283,16 @@ describe("HttpApi memory", () => {
     await reject(MemoryPaths.remember, { key: "bad_section", section: "Bad\n## Injected", text: "bad section" })
     await reject(MemoryPaths.remember, { key: "control_section", section: "Bad\u0000", text: "control section" })
     await reject(MemoryPaths.remember, { key: "long_section", section: "x".repeat(81), text: "long section" })
+    await reject(MemoryPaths.remember, { key: "long_text", text: "x".repeat(12_001) })
+    await reject(MemoryPaths.remember, { key: "x".repeat(257), text: "long key" })
+    await reject(MemoryPaths.remember, { key: "long_session", text: "long session", sessionID: "x".repeat(129) })
+    await reject(MemoryPaths.correct, { text: "x".repeat(12_001) })
+    await reject(MemoryPaths.correct, { key: "x".repeat(257), text: "long key" })
+    await reject(MemoryPaths.correct, { text: "long session", sessionID: "x".repeat(129) })
     await reject(MemoryPaths.forget, {})
     await reject(MemoryPaths.forget, { query: "" })
+    await reject(MemoryPaths.forget, { query: "x".repeat(12_001) })
+    await reject(MemoryPaths.forget, { query: "long session", sessionID: "x".repeat(129) })
     await reject(MemoryPaths.purge, {})
     await reject(MemoryPaths.purge, { confirm: false })
 

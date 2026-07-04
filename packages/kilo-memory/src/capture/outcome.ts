@@ -1,4 +1,4 @@
-import { MemoryOperations } from "./ops"
+import { MemoryOperations } from "./operations"
 import { MemoryRedact } from "./redact"
 import { MemoryShared } from "../recall/shared"
 import type { MemoryFiles } from "../storage/store"

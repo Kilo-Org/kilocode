@@ -1,5 +1,5 @@
 import { Memory } from "../memory"
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemorySchema } from "../schema"
 import { MemoryFiles } from "../storage/store"
 import { MemoryToken } from "../recall/token"

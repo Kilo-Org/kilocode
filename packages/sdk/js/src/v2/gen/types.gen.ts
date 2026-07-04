@@ -12544,7 +12544,7 @@ export type MemoryStatusResponses = {
         lastInjectedBytes: number
         lastInjectedTokens: number
         lastInjectedSessionID: string
-        lastConsolidatedAt: number
+        lastTypedConsolidationAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12623,7 +12623,7 @@ export type MemoryShowResponses = {
         lastInjectedBytes: number
         lastInjectedTokens: number
         lastInjectedSessionID: string
-        lastConsolidatedAt: number
+        lastTypedConsolidationAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12702,7 +12702,7 @@ export type MemoryEnableResponses = {
         lastInjectedBytes: number
         lastInjectedTokens: number
         lastInjectedSessionID: string
-        lastConsolidatedAt: number
+        lastTypedConsolidationAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12778,7 +12778,7 @@ export type MemoryDisableResponses = {
         lastInjectedBytes: number
         lastInjectedTokens: number
         lastInjectedSessionID: string
-        lastConsolidatedAt: number
+        lastTypedConsolidationAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12850,7 +12850,7 @@ export type MemoryConfigureResponses = {
         lastInjectedBytes: number
         lastInjectedTokens: number
         lastInjectedSessionID: string
-        lastConsolidatedAt: number
+        lastTypedConsolidationAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12920,7 +12920,7 @@ export type MemoryRebuildResponses = {
         lastInjectedBytes: number
         lastInjectedTokens: number
         lastInjectedSessionID: string
-        lastConsolidatedAt: number
+        lastTypedConsolidationAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number

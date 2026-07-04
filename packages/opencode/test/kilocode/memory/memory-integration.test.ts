@@ -59,11 +59,24 @@ function ctx(dir: string): InstanceContext {
 
 async function withConfig<T>(dir: string, fn: () => Promise<T> | T) {
   const prior = Global.Path.config
+  const data = Global.Path.data
   ;(Global.Path as { config: string }).config = dir
+  ;(Global.Path as { data: string }).data = path.basename(dir) === ".kilo" ? path.dirname(dir) : dir
   try {
     return await fn()
   } finally {
     ;(Global.Path as { config: string }).config = prior
+    ;(Global.Path as { data: string }).data = data
+  }
+}
+
+async function withData<T>(dir: string, fn: () => Promise<T> | T) {
+  const prior = Global.Path.data
+  ;(Global.Path as { data: string }).data = dir
+  try {
+    return await fn()
+  } finally {
+    ;(Global.Path as { data: string }).data = prior
   }
 }
 
@@ -84,9 +97,9 @@ function expectRoot(root: string, dir: string, name: string) {
 }
 
 describe("KiloMemory integration", () => {
-  test("resolves project memory to global .kilo repo folder", async () => {
+  test("resolves project memory to global data folder", async () => {
     await using tmp = await tmpdir()
-    await withConfig(path.join(tmp.path, ".kilo"), () => {
+    await withData(path.join(tmp.path, "data"), () => {
       const root = MemoryPaths.root({
         ctx: {
           directory: path.join("/repo", "packages", "opencode"),
@@ -94,16 +107,16 @@ describe("KiloMemory integration", () => {
         },
       })
 
-      expectRoot(root, path.join(tmp.path, ".kilo"), "repo")
+      expectRoot(root, path.join(tmp.path, "data"), "repo")
       expect(root).not.toContain(path.join("/repo", ".kilo", "memory"))
     })
   })
 
-  test("resolves project memory under home .kilo when global config is xdg", async () => {
+  test("resolves project memory under data when global config is xdg", async () => {
     await using tmp = await tmpdir()
-    const home = path.join(tmp.path, "home")
-    await withConfig(path.join(tmp.path, "xdg", "kilo"), () =>
-      withHome(home, () => {
+    const data = path.join(tmp.path, "xdg", "kilo")
+    await withData(data, () =>
+      withHome(path.join(tmp.path, "home"), () => {
         const root = MemoryPaths.root({
           ctx: {
             directory: path.join("/repo", "packages", "opencode"),
@@ -111,8 +124,7 @@ describe("KiloMemory integration", () => {
           },
         })
 
-        expectRoot(root, path.join(home, ".kilo"), "repo")
-        expect(root).not.toContain(path.join(tmp.path, "xdg", "kilo", "memory"))
+        expectRoot(root, data, "repo")
         expect(root).not.toContain(path.join("/repo", ".kilo", "memory"))
       }),
     )
@@ -123,7 +135,7 @@ describe("KiloMemory integration", () => {
     const main = path.join(tmp.path, "main")
     const work = path.join(tmp.path, "work")
     const next = path.join(tmp.path, "next")
-    const global = path.join(tmp.path, "global", ".kilo")
+    const global = path.join(tmp.path, "global")
     const git = path.join(main, ".git", "worktrees")
     await Filesystem.write(path.join(main, ".git", "HEAD"), "ref: refs/heads/main\n")
     await Filesystem.write(path.join(git, "work", "commondir"), "../..\n")
@@ -133,7 +145,7 @@ describe("KiloMemory integration", () => {
     await Filesystem.write(path.join(work, ".git"), `gitdir: ${path.join(git, "work")}\n`)
     await Filesystem.write(path.join(next, ".git"), `gitdir: ${path.join(git, "next")}\n`)
 
-    await withConfig(global, async () => {
+    await withData(global, async () => {
       await KiloMemory.enable({ ctx: { directory: work, worktree: work } })
       await KiloMemory.configure({ ctx: { directory: work, worktree: work }, settings: { autoConsolidate: false } })
       const status = await KiloMemory.status({ ctx: { directory: next, worktree: next } })
@@ -156,7 +168,7 @@ describe("KiloMemory integration", () => {
         stats: {
           ...base.stats,
           lastInjectedAt: Date.UTC(2026, 0, 1),
-          lastConsolidatedAt: Date.UTC(2026, 0, 2),
+          lastTypedConsolidationAt: Date.UTC(2026, 0, 2),
         },
       },
       index: { bytes: 12, tokens: 3, truncated: false },
@@ -189,17 +201,19 @@ describe("KiloMemory integration", () => {
 
   test("missing or disabled state does not enable the memory recall tool", async () => {
     await using tmp = await tmpdir()
-    const memory = { directory: tmp.path, worktree: tmp.path }
-    const root = MemoryPaths.root({ ctx: memory })
+    await withData(path.join(tmp.path, "data"), async () => {
+      const memory = { directory: tmp.path, worktree: tmp.path }
+      const root = MemoryPaths.root({ ctx: memory })
 
-    expect(await KiloMemory.toolEnabled({ ctx: memory })).toBe(false)
-    expect(await Filesystem.exists(root)).toBe(false)
+      expect(await KiloMemory.toolEnabled({ ctx: memory })).toBe(false)
+      expect(await Filesystem.exists(root)).toBe(false)
 
-    await KiloMemory.enable({ ctx: memory })
-    expect(await KiloMemory.toolEnabled({ ctx: memory })).toBe(true)
+      await KiloMemory.enable({ ctx: memory })
+      expect(await KiloMemory.toolEnabled({ ctx: memory })).toBe(true)
 
-    await KiloMemory.disable({ ctx: memory })
-    expect(await KiloMemory.toolEnabled({ ctx: memory })).toBe(false)
+      await KiloMemory.disable({ ctx: memory })
+      expect(await KiloMemory.toolEnabled({ ctx: memory })).toBe(false)
+    })
   })
 
   test("memory tool resolution degrades to false when the memory path is invalid", async () => {

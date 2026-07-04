@@ -52,11 +52,14 @@ afterEach(async () => {
 
 async function withConfig<T>(dir: string, fn: () => Promise<T> | T) {
   const prior = Global.Path.config
+  const data = Global.Path.data
   ;(Global.Path as { config: string }).config = dir
+  ;(Global.Path as { data: string }).data = path.basename(dir) === ".kilo" ? path.dirname(dir) : dir
   try {
     return await fn()
   } finally {
     ;(Global.Path as { config: string }).config = prior
+    ;(Global.Path as { data: string }).data = data
   }
 }
 
@@ -199,6 +202,32 @@ describe("kilo_memory_recall", () => {
       expect(all.output).toContain("vscode_tests")
       expect(filtered.output).toContain("kilo_was_originally_a_fork")
       expect(filtered.output).not.toContain("vscode_tests")
+    })
+  })
+
+  test("catalog mode truncates multi-byte content by byte budget", async () => {
+    await using dir = await tmpdir({ git: true })
+    await withConfig(path.join(dir.path, "global", ".kilo"), async () => {
+      const memory = { directory: dir.path, worktree: dir.path }
+      const enabled = await KiloMemory.enable({ ctx: memory })
+      await MemoryFiles.writeSource(
+        enabled.root,
+        "project.md",
+        [
+          "# Project Memory",
+          "",
+          "## Facts",
+          ...Array.from({ length: 260 }, (_, idx) => `- emoji_${idx} :: ${"界".repeat(80)}`),
+          "",
+        ].join("\n"),
+      )
+
+      const result = await execute(dir.path, { mode: "catalog" })
+      const inner = result.output.split("\n").slice(1, -1).join("\n")
+      const body = inner.split("\n[truncated: refine with a query filter]")[0]
+
+      expect(result.output).toContain("[truncated: refine with a query filter]")
+      expect(Buffer.byteLength(body)).toBeLessThanOrEqual(8192)
     })
   })
 

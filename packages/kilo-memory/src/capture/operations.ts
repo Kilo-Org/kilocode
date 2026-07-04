@@ -120,16 +120,18 @@ export namespace MemoryOperations {
     const skipped: Rejection[] = []
     const adds = input.ops
       .filter((item): item is Add => item.action === "add")
+      // Redact rejected text too: this filter runs before the secret one, so a rejected op never
+      // reaches it, and skips flow into the persistent decisions audit (/memory/show, TUI).
       .filter((op) => {
         const item = reject(op)
         if (!item) return true
-        skipped.push(item)
+        skipped.push({ ...item, text: MemoryRedact.text(item.text) })
         return false
       })
       // Skip secret-like ops (record a `secret` skip) instead of throwing so the rest of the batch applies.
       .filter((op) => {
         if (!secret(op)) return true
-        skipped.push({ reason: "secret", text: op.text })
+        skipped.push({ reason: "secret", text: MemoryRedact.text(op.text) })
         return false
       })
       .map((op) => {
@@ -331,7 +333,7 @@ export namespace MemoryOperations {
     const superseded = new Set<string>()
     for (const add of adds) {
       if (add.key) superseded.add(add.key.trim())
-      if (add.file) superseded.add(`${add.file}:${add.section ?? ""}:${add.key}`)
+      if (add.file) superseded.add(`${add.file}:${add.section ?? ""}:${add.key.trim()}`)
     }
     const seen = new Set<string>()
     const removes: Remove[] = []

@@ -6,7 +6,7 @@ import { Memory } from "../src/memory"
 import { MemoryDigest } from "../src/capture/digest"
 import { MemoryFiles } from "../src/storage/store"
 import { MemoryIndexer } from "../src/recall/indexer"
-import { MemoryOperations } from "../src/capture/ops"
+import { MemoryOperations } from "../src/capture/operations"
 import { MemoryPaths } from "../src/storage/paths"
 import { MemoryRecall } from "../src/recall/recall"
 import { MemorySchema } from "../src/schema"
@@ -65,7 +65,7 @@ describe("memory core package", () => {
       limits: { maxSessionFiles: 50, maxRecentSessions: 10, maxSessionLineChars: 160, maxProjectIndexBytes: 1 },
       stats: {
         lastInjectedAt: Number.NaN,
-        lastConsolidatedAt: Number.POSITIVE_INFINITY,
+        lastTypedConsolidationAt: Number.POSITIVE_INFINITY,
       },
     })
 
@@ -78,7 +78,7 @@ describe("memory core package", () => {
     expect(state.limits.maxProjectIndexBytes).toBe(8192)
     expect(state.limits.maxSessionLineChars).toBe(480)
     expect(state.stats.lastInjectedAt).toBeNull()
-    expect(state.stats.lastConsolidatedAt).toBeNull()
+    expect(state.stats.lastTypedConsolidationAt).toBeNull()
   })
 
   test("state writes omit code-owned limits", async () => {
@@ -177,6 +177,22 @@ describe("memory core package", () => {
     })
   })
 
+  test("resolves memory roots under host data storage", async () => {
+    await use(async (t) => {
+      const project = path.join(t.dir, "repo")
+      const data = path.join(t.dir, "data")
+      await mkdir(project)
+
+      const root = MemoryPaths.root({
+        ctx: { directory: project, worktree: project },
+        data,
+      })
+
+      expect(path.dirname(root)).toBe(path.join(data, "memory"))
+      expect(path.basename(root)).toMatch(/^repo-[a-f0-9]{12}$/)
+    })
+  })
+
   test("does not trust workspace-controlled gitdir pointers for project identity", async () => {
     await use(async (t) => {
       const victim = path.join(t.dir, "victim")
@@ -232,10 +248,9 @@ describe("memory core package", () => {
       const shown = await Memory.show({ root: t.root })
 
       expect(mixed.result.added).toBe(1)
-      expect(mixed.result.skipped).toContainEqual({
-        reason: "secret",
-        text: "api_key=sk-abcdefghijklmnopqrstuvwxyz",
-      })
+      // The skip record is redacted: it flows into the persistent decisions audit.
+      expect(mixed.result.skipped).toContainEqual({ reason: "secret", text: "[redacted]" })
+      expect(JSON.stringify(mixed.result.skipped)).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
       expect(shown.sources.project).toContain("safe_fact")
       expect(shown.sources.project).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
       expect(shown.sources.project.match(/repo_tests/g)?.length).toBe(1)
@@ -840,6 +855,49 @@ describe("memory core package", () => {
       expect(saved).toContain("mode=typed")
       expect(saved).not.toContain("mode=catalog")
       expect(saved).not.toContain("session=ses_budget_00")
+    })
+  })
+
+  test("index caps covered session pointer ids", async () => {
+    await use(async (t) => {
+      const enabled = await Memory.enable({ root: t.root })
+      const state = {
+        ...enabled.state,
+        limits: {
+          ...enabled.state.limits,
+          maxProjectIndexBytes: 100_000,
+          maxSessionFiles: 50,
+          maxRecentSessions: 50,
+        },
+      }
+      await MemoryFiles.writeSource(
+        t.root,
+        "project.md",
+        [
+          "# Project Memory",
+          "",
+          "## Facts",
+          ...Array.from(
+            { length: 40 },
+            (_, idx) => `- covered_${idx} :: Covered Session ${idx} facts are stored in typed memory.`,
+          ),
+          "",
+        ].join("\n"),
+      )
+      for (let idx = 0; idx < 40; idx++) {
+        await MemoryFiles.writeSession(t.root, {
+          sessionID: `ses_covered_${idx}`,
+          topic: `Covered Session ${idx}`,
+          summary: `Covered Session ${idx} summary is already typed.`,
+          max: state.limits.maxSessionLineChars,
+          time: Date.UTC(2026, 0, 1, 0, idx),
+        })
+      }
+
+      const index = await MemoryIndexer.rebuild({ root: t.root, state })
+      const row = index.text.split("\n").find((line) => line.includes("covered by typed memory")) ?? ""
+
+      expect(row.match(/session=ses_covered_/g)).toHaveLength(32)
     })
   })
 

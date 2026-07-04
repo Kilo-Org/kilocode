@@ -1,6 +1,4 @@
 import { Cause, Effect } from "effect"
-import type { CaptureReason } from "@kilocode/kilo-memory/capture"
-import { MemoryCapture as CaptureCore } from "@kilocode/kilo-memory/effect/capture"
 import { MemoryTurn as TurnCore } from "@kilocode/kilo-memory/effect/turn"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
@@ -21,32 +19,6 @@ const log = Log.create({ service: "memory.lifecycle" })
 function brief(cause: Cause.Cause<unknown>) {
   const err = Cause.squash(cause)
   return (err instanceof Error ? err.message : String(err)).slice(0, 200)
-}
-
-/** Host entry for turn-close consolidation: resolves the memory root from the instance context and
- * adapts opencode's session/provider services into the package capture ports. */
-export namespace MemoryCapture {
-  export const turn = Effect.fn("MemoryCapture.turn")(function* (input: {
-    sessionID: SessionID
-    sessions: Session.Interface
-    summary: SessionSummary.Interface
-    provider: Provider.Interface
-    reason?: CaptureReason
-    bypassInterval?: boolean
-    memoryModel?: string
-  }) {
-    const ctx = yield* InstanceState.context
-    const root = MemoryPaths.root({ ctx })
-    return yield* CaptureCore.turn({
-      root,
-      sessionID: input.sessionID,
-      session: MemorySession.port({ sessions: input.sessions, summary: input.summary }),
-      model: MemoryModel.port({ provider: input.provider }),
-      reason: input.reason,
-      bypassInterval: input.bypassInterval,
-      memoryModel: input.memoryModel,
-    })
-  })
 }
 
 /** Host turn-open/turn-close hooks: adapt opencode's session/provider services into the package

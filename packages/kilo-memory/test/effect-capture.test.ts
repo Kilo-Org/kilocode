@@ -131,6 +131,39 @@ describe("MemoryCapture (fake ports)", () => {
       expect(shown.sources.environment).toContain("cli_tests")
       expect(shown.sources.environment).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz1234567890")
       expect(shown.decisions).toContain('"reason":"secret"')
+      // The audit record itself must not carry the raw secret (decisions are exposed via /memory/show).
+      expect(shown.decisions).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz1234567890")
+    } finally {
+      await t.done()
+    }
+  })
+
+  test("turn-close surfaces content-gate rejections in the audit with redacted text", async () => {
+    const t = await tmp()
+    try {
+      await KiloMemory.enable({ root: t.root })
+      await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
+
+      const result = await run({
+        root: t.root,
+        session: session(view()),
+        model: model({
+          digest: '{"topic":"repo","summary":"Explored repo setup. Next: verify."}',
+          typed:
+            '{"operations":[' +
+            '{"op":"upsert_project_fact","key":"gate_check","value":"The password=hunter2 flow was investigated."},' +
+            '{"op":"upsert_environment_fact","section":"Commands","key":"cli_tests","value":"Run bun test ./test."}' +
+            '],"skipped":[]}',
+        }),
+      })
+
+      expect(result).toMatchObject({ skipped: false, operationCount: 1 })
+      const shown = await KiloMemory.show({ root: t.root })
+      expect(shown.sources.project).not.toContain("gate_check")
+      // The apply-time content gate is visible in the audit, and its recorded text is redacted.
+      expect(shown.decisions).toContain('"reason":"self_referential"')
+      expect(shown.decisions).toContain("[redacted]")
+      expect(shown.decisions).not.toContain("password=hunter2")
     } finally {
       await t.done()
     }
@@ -199,7 +232,7 @@ describe("MemoryCapture (fake ports)", () => {
     }
   })
 
-  test("recall echo still runs typed capture for a short correction", async () => {
+  test("recall echo still runs typed capture for a short lookup", async () => {
     const t = await tmp()
     try {
       await KiloMemory.enable({ root: t.root })
@@ -210,8 +243,8 @@ describe("MemoryCapture (fake ports)", () => {
         root: t.root,
         session: session(
           view({
-            user: "No, run package tests from packages/opencode, not the repo root.",
-            assistant: "Got it, corrected.",
+            user: "What is the repo test rule?",
+            assistant: "Use package-level tests.",
             recalledMemory: true,
             diffs: [],
           }),
@@ -219,7 +252,7 @@ describe("MemoryCapture (fake ports)", () => {
         model: model({
           digest: '{"topic":"x","summary":"should not be digested under echo"}',
           typed:
-            '{"operations":[{"op":"append_correction","key":"root_tests","value":"Do not run bun test from the repo root."}],"skipped":[]}',
+            '{"operations":[{"op":"upsert_environment_fact","section":"Commands","key":"package_tests","value":"Run package-level tests."}],"skipped":[]}',
           onRun: () => runs++,
         }),
       })
@@ -227,7 +260,7 @@ describe("MemoryCapture (fake ports)", () => {
       expect(result).toMatchObject({ skipped: false, operationCount: 1 })
       expect(runs).toBe(1) // typed ran; digest did not
       const shown = await KiloMemory.show({ root: t.root })
-      expect(shown.sources.corrections).toContain("root_tests")
+      expect(shown.sources.environment).toContain("package_tests")
     } finally {
       await t.done()
     }
@@ -416,15 +449,15 @@ describe("MemoryService digest-only commit", () => {
           }),
         )
 
-      // P1.8: digest-only commit must not advance lastConsolidatedAt (shared across sessions).
+      // P1.8: digest-only commit must not advance lastTypedConsolidationAt (shared across sessions).
       await commit({})
       const afterDigest = await MemoryFiles.readState(t.root)
-      expect(afterDigest.stats.lastConsolidatedAt).toBeNull()
+      expect(afterDigest.stats.lastTypedConsolidationAt).toBeNull()
 
       // A typed attempt does advance it.
       await commit({ typed: true })
       const afterTyped = await MemoryFiles.readState(t.root)
-      expect(afterTyped.stats.lastConsolidatedAt).toBe(9000)
+      expect(afterTyped.stats.lastTypedConsolidationAt).toBe(9000)
     } finally {
       await t.done()
     }

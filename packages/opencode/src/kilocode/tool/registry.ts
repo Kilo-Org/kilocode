@@ -197,6 +197,7 @@ export namespace KiloToolRegistry {
 
   // Re-keyed to root string so invalidate() works across ctx identities.
   const memoryEnabledCache = new Map<string, { enabled: boolean; deadline: number }>()
+  const MEMORY_ENABLED_CACHE_MAX = 512
   const MEMORY_ENABLED_TTL_MS = 5_000
 
   /** Drop the cached enabled flag for a root so the next probe re-reads fresh state.
@@ -216,8 +217,19 @@ export namespace KiloToolRegistry {
       const enabled = yield* Effect.tryPromise({
         try: () => KiloMemory.toolEnabled({ ctx: input.ctx }),
         catch: (err) => err,
-      }).pipe(Effect.catch(() => Effect.succeed(false)))
+      }).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            log.warn("memory tools unavailable", { error: String(err) })
+            return false
+          }),
+        ),
+      )
       memoryEnabledCache.set(root, { enabled, deadline: Date.now() + MEMORY_ENABLED_TTL_MS })
+      if (memoryEnabledCache.size > MEMORY_ENABLED_CACHE_MAX) {
+        const oldest = memoryEnabledCache.keys().next().value
+        if (oldest !== undefined) memoryEnabledCache.delete(oldest)
+      }
       return enabled
     })
   }

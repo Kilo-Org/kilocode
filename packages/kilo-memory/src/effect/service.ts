@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Semaphore } from "effect"
 import { skipLine, type CaptureSkip } from "../capture/capture"
 import type { Memory } from "../memory"
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemoryRecall } from "../recall/recall"
 import { MemorySchema } from "../schema"
 import { MemoryFiles } from "../storage/store"
@@ -99,7 +99,7 @@ type CommitInput = RootInput & {
   count: number
   digest: boolean
   // Whether a typed consolidation was actually attempted this commit. Only a typed attempt advances the
-  // shared typed-interval clock (lastConsolidatedAt); a digest-only commit must leave it untouched so a
+  // shared typed-interval clock (lastTypedConsolidationAt); a digest-only commit must leave it untouched so a
   // digest in one session cannot throttle another session's typed capture.
   typed: boolean
   skipped: CaptureSkip[]
@@ -213,7 +213,7 @@ export namespace MemoryService {
               stats: {
                 ...state.stats,
                 // Digest-only commits leave the typed-interval clock where it was.
-                lastConsolidatedAt: input.typed ? input.now : state.stats.lastConsolidatedAt,
+                lastTypedConsolidationAt: input.typed ? input.now : state.stats.lastTypedConsolidationAt,
                 lastConsolidatedMessageID: input.messageID,
                 lastConsolidationCost: input.cost ?? state.stats.lastConsolidationCost,
                 lastConsolidationTokens: input.tokens,

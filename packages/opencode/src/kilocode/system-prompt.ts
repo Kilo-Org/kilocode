@@ -8,6 +8,9 @@ import type { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import type { Provider } from "@/provider/provider"
 import type { InstanceContext } from "@/project/instance-context"
+import * as Log from "@opencode-ai/core/util/log"
+
+const log = Log.create({ service: "kilocode.system-prompt" })
 
 export namespace KilocodeSystemPrompt {
   export function environment(input: { ctx: InstanceContext; model: Provider.Model; editor?: EditorContext }) {
@@ -43,7 +46,14 @@ export namespace KilocodeSystemPrompt {
                 sessionID: input.sessionID,
                 record: input.record,
               }),
-            ).pipe(Effect.catch(() => Effect.succeed(undefined)))
+            ).pipe(
+              Effect.catch((err) =>
+                Effect.sync(() => {
+                  log.warn("memory context unavailable", { error: String(err) })
+                  return undefined
+                }),
+              ),
+            )
       const blocks = project?.blocks ?? []
       // Emit the memory guidance once per prompt, not repeated per injected block.
       const guidance = [

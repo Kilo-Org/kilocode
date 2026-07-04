@@ -16,7 +16,7 @@ import {
   verifySkips,
   digestSchema,
 } from "../src/capture/capture"
-import { MemoryOperations } from "../src/capture/ops"
+import { MemoryOperations } from "../src/capture/operations"
 import { MemoryRedact } from "../src/capture/redact"
 
 describe("memory capture parsing", () => {
@@ -106,6 +106,37 @@ describe("memory capture parsing", () => {
     expect(parsed.skipped.some((item) => item.reason === "duplicate")).toBe(true)
   })
 
+  test("redacts secrets in salvaged unsupported ops before they reach the audit", () => {
+    const parsed = salvageTyped(
+      `{"operations":[{"op":"not_a_real_op","key":"leak","value":"key is sk-abcdefghijklmnopqrstuvwxyz"}],"skipped":[]}`,
+    )
+
+    const salvaged = parsed.skipped.find((item) => item.reason === "unsupported")
+    expect(salvaged?.text).toContain("[redacted]")
+    expect(JSON.stringify(parsed.skipped)).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
+  })
+
+  test("salvages non-empty sibling fields when typed op value is empty", () => {
+    const parsed = salvageTyped(
+      `{"operations":[{"op":"not_a_real_op","key":"fallback key text","value":""}],"skipped":[]}`,
+    )
+
+    expect(parsed.skipped).toContainEqual({ reason: "unsupported", text: "fallback key text" })
+  })
+
+  test("redacts a secret that straddles the 500-char salvage truncation boundary", () => {
+    const secret = "sk-" + "a".repeat(40)
+    // Positioned so truncate-then-redact would leave only "sk-" + 19 a's — below the regex's {20,} minimum.
+    const padding = "x".repeat(478)
+    const value = padding + secret
+    const parsed = salvageTyped(`{"operations":[{"op":"not_a_real_op","key":"leak","value":"${value}"}],"skipped":[]}`)
+
+    const salvaged = parsed.skipped.find((item) => item.reason === "unsupported")
+    expect(salvaged?.text.length ?? 0).toBeLessThanOrEqual(500)
+    expect(JSON.stringify(parsed.skipped)).not.toContain(secret)
+    expect(JSON.stringify(parsed.skipped)).not.toContain(secret.slice(0, 20))
+  })
+
   test("truncates typed batches beyond the op cap instead of failing", () => {
     const ops = Array.from(
       { length: 20 },
@@ -126,6 +157,9 @@ describe("memory capture parsing", () => {
         // Remove superseded by a same-batch add on the same key → dropped (the add updates it).
         { action: "add", file: "project.md", section: "Facts", key: "replaced", text: "New value." },
         { action: "remove", query: "replaced" },
+        // File-qualified supersede keys trim generated key whitespace too.
+        { action: "add", file: "project.md", section: "Facts", key: " replaced_file ", text: "New file value." },
+        { action: "remove", query: "project.md:Facts:replaced_file" },
         // Exact existing key with no replacing add → kept as a bounded removal.
         { action: "remove", query: "stale_fact" },
         // Fuzzy query that matches no existing key → dropped (hard removes stay explicit-only).
@@ -133,7 +167,7 @@ describe("memory capture parsing", () => {
       ],
     })
 
-    expect(reconciled.ops.map((op) => op.key)).toEqual(["kept_fact", "replaced"])
+    expect(reconciled.ops.map((op) => op.key)).toEqual(["kept_fact", "replaced", " replaced_file "])
     expect(reconciled.removes).toEqual([{ action: "remove", query: "stale_fact" }])
   })
 
@@ -245,7 +279,7 @@ describe("memory capture parsing", () => {
       priorTime: 0,
       now: 1_000,
       minIntervalMs: 500,
-      lastConsolidatedAt: undefined,
+      lastTypedConsolidationAt: undefined,
       autoConsolidate: true,
     }
     const cases = [
@@ -256,22 +290,17 @@ describe("memory capture parsing", () => {
       },
       {
         name: "expected idle flush: completed turn inside interval skips now",
-        input: { ...base, priorTime: 900, lastConsolidatedAt: 900 },
+        input: { ...base, priorTime: 900, lastTypedConsolidationAt: 900 },
         expected: { digestDue: false, typedCall: false, skipReason: "interval", idleFlush: true },
       },
       {
         name: "expected work: bypass interval lets idle flush run typed capture",
-        input: { ...base, priorTime: 900, lastConsolidatedAt: 900, bypassInterval: true },
+        input: { ...base, priorTime: 900, lastTypedConsolidationAt: 900, bypassInterval: true },
         expected: { digestDue: false, typedCall: true, skipReason: undefined, idleFlush: false },
       },
       {
-        name: "expected skip: recall echo with no durable diff",
+        name: "expected work: recall echo skips digest but still runs typed capture",
         input: { ...base, echo: true },
-        expected: { session: false, digestDue: false, typedCall: false, skipReason: "memory_echo" },
-      },
-      {
-        name: "expected work: recall echo still runs typed capture when user text is substantive",
-        input: { ...base, echo: true, echoTypedAllowed: true },
         expected: { session: false, digestDue: false, typedCall: true, typedWork: true, skipReason: undefined },
       },
       {
@@ -332,6 +361,14 @@ describe("memory capture parsing", () => {
     expect(hasDurableDiff([{ file: "src/plain.ts", additions: 1, deletions: 0 }])).toBe(false)
     // P1.5: a substantial edit is durable regardless of language — no JS/TS extension allowlist.
     expect(hasDurableDiff([{ file: "src/service.py", additions: 20, deletions: 0 }])).toBe(true)
+    // Generated output never counts, even with heavy churn or a durable-looking basename...
+    expect(hasDurableDiff([{ file: "dist/service.py", additions: 200, deletions: 0 }])).toBe(false)
+    expect(hasDurableDiff([{ file: "src/generated/client.ts", additions: 200, deletions: 0 }])).toBe(false)
+    expect(hasDurableDiff([{ file: "sdk/src/gen/types.gen.ts", additions: 200, deletions: 0 }])).toBe(false)
+    expect(hasDurableDiff([{ file: "dist/package.json", additions: 1, deletions: 0 }])).toBe(false)
+    expect(hasDurableDiff([{ file: "vendor/docs/readme.md", additions: 30, deletions: 0 }])).toBe(false)
+    // ...while the durable allowlist still wins over churn size elsewhere (lockfiles are a real dep-change signal).
+    expect(hasDurableDiff([{ file: "packages/app/package.json", additions: 1, deletions: 0 }])).toBe(true)
     expect(hasDurableDiff([{ file: "internal/server/main.go", additions: 12, deletions: 10 }])).toBe(true)
     expect(hasDurableDiff([{ file: "src/lib.rs", additions: 5, deletions: 5 }])).toBe(false)
     expect(summarizeDiffs(diffs)).toContain("modified README.md +1 -0")
@@ -584,28 +621,29 @@ describe("memory capture parsing", () => {
 
   test("assignment redaction avoids prose false positives but still catches real secrets", () => {
     // P1.6: keyword-boundary + secret-shaped-value guards. These prose phrases must NOT redact.
-    const clean = [
-      "author: Jane",
-      "auth_mode=none",
-      "the token expiry is 1h",
-      "secret: enabled",
-      "password: required",
-      "authored=today",
-      "tokenizer=fast",
-    ]
+    const clean = ["author: Jane", "auth_mode=none", "the token expiry is 1h", "authored=today", "tokenizer=fast"]
     for (const item of clean) {
       expect(MemoryRedact.has(item), item).toBe(false)
       expect(MemoryRedact.text(item), item).toBe(item)
     }
 
     // Real secrets (incl. compound underscore keys and short-but-entropic values) still redact.
-    // A strong keyword assigned with `=` redacts even a low-entropy all-letter value.
+    // A strong keyword assigned with `:` or `=` redacts even a low-entropy all-letter value, so
+    // `secret: enabled` / `password: required` redact too — see redact.ts for the tradeoff.
     const secrets = [
       "password=hunter2",
       "password=hunterx",
+      "password: hunterx",
+      "passwords: hunterx",
+      "secret: enabled",
+      "secrets: enabled",
+      "password: required",
       "client_secret=super-secret-value",
       "refresh_token=abcdefghijklmnopqrstuvwxyz",
+      "refresh_tokens: abcdefghijklmnopqrstuvwxyz",
       "api_key=sk-abcdefghijklmnopqrstuvwxyz",
+      "api_keys=sk-abcdefghijklmnopqrstuvwxyz",
+      "credentials: abcdefghijklmnopqrstuvwxyz",
     ]
     for (const item of secrets) {
       expect(MemoryRedact.has(item), item).toBe(true)
@@ -633,6 +671,9 @@ describe("memory capture parsing", () => {
     expect(
       MemoryOperations.reject({ text: "Refactored auth in src/auth.ts. The retry path was reviewed." }),
     ).toBeUndefined()
+    expect(MemoryOperations.reject({ text: "Was auth reviewed? The retry path was checked." })).toBeUndefined()
+    expect(MemoryOperations.reject({ text: "Fixed the timeout bug; the retry path was reviewed." })).toBeUndefined()
+    expect(MemoryOperations.reject({ text: "Fixed the timeout bug\nthe retry path was reviewed." })).toBeUndefined()
 
     // A statement whose subject IS the source file is provenance...
     expect(MemoryOperations.reject({ text: "~/.claude/CLAUDE.md is user-level context for concise replies." })).toMatchObject(

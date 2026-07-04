@@ -18037,7 +18037,7 @@
                             "lastInjectedSessionID": {
                               "type": "string"
                             },
-                            "lastConsolidatedAt": {
+                            "lastTypedConsolidationAt": {
                               "type": "number"
                             },
                             "lastConsolidationCost": {
@@ -18064,7 +18064,7 @@
                             "lastInjectedBytes",
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
-                            "lastConsolidatedAt",
+                            "lastTypedConsolidationAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -18288,7 +18288,7 @@
                             "lastInjectedSessionID": {
                               "type": "string"
                             },
-                            "lastConsolidatedAt": {
+                            "lastTypedConsolidationAt": {
                               "type": "number"
                             },
                             "lastConsolidationCost": {
@@ -18315,7 +18315,7 @@
                             "lastInjectedBytes",
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
-                            "lastConsolidatedAt",
+                            "lastTypedConsolidationAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -18538,7 +18538,7 @@
                             "lastInjectedSessionID": {
                               "type": "string"
                             },
-                            "lastConsolidatedAt": {
+                            "lastTypedConsolidationAt": {
                               "type": "number"
                             },
                             "lastConsolidationCost": {
@@ -18565,7 +18565,7 @@
                             "lastInjectedBytes",
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
-                            "lastConsolidatedAt",
+                            "lastTypedConsolidationAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -18779,7 +18779,7 @@
                             "lastInjectedSessionID": {
                               "type": "string"
                             },
-                            "lastConsolidatedAt": {
+                            "lastTypedConsolidationAt": {
                               "type": "number"
                             },
                             "lastConsolidationCost": {
@@ -18806,7 +18806,7 @@
                             "lastInjectedBytes",
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
-                            "lastConsolidatedAt",
+                            "lastTypedConsolidationAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -19001,7 +19001,7 @@
                             "lastInjectedSessionID": {
                               "type": "string"
                             },
-                            "lastConsolidatedAt": {
+                            "lastTypedConsolidationAt": {
                               "type": "number"
                             },
                             "lastConsolidationCost": {
@@ -19028,7 +19028,7 @@
                             "lastInjectedBytes",
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
-                            "lastConsolidatedAt",
+                            "lastTypedConsolidationAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -19238,7 +19238,7 @@
                             "lastInjectedSessionID": {
                               "type": "string"
                             },
-                            "lastConsolidatedAt": {
+                            "lastTypedConsolidationAt": {
                               "type": "number"
                             },
                             "lastConsolidationCost": {
@@ -19265,7 +19265,7 @@
                             "lastInjectedBytes",
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
-                            "lastConsolidatedAt",
+                            "lastTypedConsolidationAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -19474,10 +19474,12 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 12000
                   },
                   "key": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 256
                   },
                   "file": {
                     "type": "string",
@@ -19489,7 +19491,8 @@
                     "pattern": "^[^\\x00-\\x1f\\x7f]*$"
                   },
                   "sessionID": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                   }
                 },
                 "required": ["text"],
@@ -19627,13 +19630,16 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 12000
                   },
                   "key": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 256
                   },
                   "sessionID": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                   }
                 },
                 "required": ["text"],
@@ -19771,10 +19777,12 @@
                 "properties": {
                   "query": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 12000
                   },
                   "sessionID": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 128
                   }
                 },
                 "required": ["query"],

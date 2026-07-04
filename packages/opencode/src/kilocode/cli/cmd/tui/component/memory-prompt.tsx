@@ -1,4 +1,5 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
+import type { CliRenderer } from "@opentui/core"
 import type { DialogContext } from "@/cli/cmd/tui/ui/dialog"
 import { DialogAlert } from "@/cli/cmd/tui/ui/dialog-alert"
 import type { ToastContext } from "@/cli/cmd/tui/ui/toast"
@@ -13,6 +14,7 @@ export namespace MemoryPrompt {
     directory?: string
     toast: ToastContext
     dialog: DialogContext
+    renderer?: CliRenderer
     done(): void
   }) {
     const handled = await runMemoryCommand({
@@ -21,6 +23,7 @@ export namespace MemoryPrompt {
       workspace: input.workspace,
       directory: input.directory,
       toast: input.toast,
+      renderer: input.renderer,
       show: () => showMemoryDialog(input.dialog, { workspace: input.workspace, directory: input.directory }),
       usage: (message) => DialogAlert.show(input.dialog, "Memory", message || MEMORY_USAGE),
     })

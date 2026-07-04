@@ -4,6 +4,7 @@ import { MemoryFiles } from "../storage/store"
 import { MemoryIndexFormat } from "./index-format"
 import { MemorySchema } from "../schema"
 import { MemoryShared } from "./shared"
+import { MemoryTopics } from "./topics"
 
 export namespace MemoryIndexer {
   // Budget/envelope concerns live in MemoryBudget; re-exported here to keep MemoryIndexer.* the stable facade.
@@ -27,6 +28,9 @@ export namespace MemoryIndexer {
     decisions: 6,
     constraints: 6,
   }
+  const guard = {
+    covered: 32,
+  }
 
   function session(input: Digest, opts: { limits: MemorySchema.Limits; latest?: boolean }) {
     const topic = input.topic.replaceAll('"', "'")
@@ -43,7 +47,7 @@ export namespace MemoryIndexer {
 
   function hits(left: string[], right: string[]) {
     const found = new Set(right)
-    return left.filter((item) => found.has(item)).length
+    return left.filter((item) => found.has(item) || right.some((term) => MemoryTopics.related(term, item))).length
   }
 
   function covered(input: { digest: Digest; items: Item[] }) {
@@ -175,23 +179,27 @@ export namespace MemoryIndexer {
     // The continuity pointer must be the true newest session. Only older bulk digests are curated by empty().
     const current = recent[0] ? [session(recent[0], { limits: state.limits, latest: true })] : []
     const candidates = distinct(recent.slice(1).filter((item) => !MemoryDigest.empty(item)))
-    const uncovered = candidates.filter((item) => !covered({ digest: item, items: durable }))
-    const coveredDigests = candidates.filter((item) => covered({ digest: item, items: durable }))
-    const sessions = uncovered
+    const split = { uncovered: [] as typeof candidates, coveredDigests: [] as typeof candidates }
+    for (const item of candidates) {
+      const list = covered({ digest: item, items: durable }) ? split.coveredDigests : split.uncovered
+      list.push(item)
+    }
+    const sessions = split.uncovered
       .slice(0, Math.max(0, state.limits.maxRecentSessions - current.length))
       .map((item) => session(item, { limits: state.limits }))
     // Covered digests are dropped from the index body (their topic already lives in typed memory), but
     // their session ids stay targetable. Keep one compact pointer row so a model still knows they exist
     // and can pull the full digest by id via kilo_memory_recall mode=digest session=<id>.
     const pointer =
-      coveredDigests.length > 0
+      split.coveredDigests.length > 0
         ? [
             MemoryIndexFormat.record({
               kind: "COVERED_SESSION_POINTER",
               id: "session.covered",
               source: "sessions",
-              updated: Math.max(...coveredDigests.map((item) => Date.parse(item.time) || 0)) || "unknown",
-              text: `covered by typed memory; recall mode=digest session=<id> :: ${coveredDigests
+              updated: Math.max(...split.coveredDigests.map((item) => Date.parse(item.time) || 0)) || "unknown",
+              text: `covered by typed memory; recall mode=digest session=<id> :: ${split.coveredDigests
+                .slice(0, guard.covered)
                 .map((item) => `session=${item.id}`)
                 .join(" ")}`,
             }),

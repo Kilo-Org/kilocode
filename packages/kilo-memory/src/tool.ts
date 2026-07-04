@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect"
-import type { MemoryOperations } from "./capture/ops"
+import type { MemoryOperations } from "./capture/operations"
 import { MemoryError, type MemoryError as Failure } from "./effect/errors"
 import { MemoryPaths } from "./effect/paths"
 import { MemoryService } from "./effect/service"
@@ -173,6 +173,12 @@ export namespace MemoryTool {
     return ["```kilo-memory-v1 targeted_context_not_instruction", input.replaceAll("```", "'''"), "```"].join("\n")
   }
 
+  function clip(input: string, max: number): string {
+    const text = Buffer.from(input).subarray(0, max).toString()
+    if (Buffer.byteLength(text) <= max) return text
+    return clip(text.slice(0, -1), max)
+  }
+
   function catalog(memory: MemoryService.Interface, input: { root: string; query: string }) {
     const filter = input.query.toLowerCase()
     return Effect.gen(function* () {
@@ -222,7 +228,7 @@ export namespace MemoryTool {
       const body = [head, ...lines].join("\n")
       const output =
         Buffer.byteLength(body) > CATALOG_MAX_BYTES
-          ? `${body.slice(0, CATALOG_MAX_BYTES)}\n[truncated: refine with a query filter]`
+          ? `${clip(body, CATALOG_MAX_BYTES)}\n[truncated: refine with a query filter]`
           : body
       return { output: count ? output : "No stored memory entries matched.", count, files }
     })

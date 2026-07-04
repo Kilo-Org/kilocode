@@ -199,7 +199,11 @@ describe("memory ports", () => {
     ] satisfies Snapshot.FileDiff[]
     const seen: string[] = []
     const messages = [
-      user({ sessionID, id: uid, body: "remember the package test command" }),
+      user({
+        sessionID,
+        id: uid,
+        body: "remember the package test command with OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuvwxyz1234567890",
+      }),
       assistant({
         sessionID,
         id: recall,
@@ -247,7 +251,7 @@ describe("memory ports", () => {
     )
 
     expect(view).toMatchObject({
-      user: "remember the package test command",
+      user: "remember the package test command with [redacted]",
       assistant: "Run bun test from packages/opencode for CLI memory tests.",
       lastAssistantID: final,
       sessionModel: ref,
@@ -257,6 +261,7 @@ describe("memory ports", () => {
     expect(view?.recent).toContain("Tool kilo_memory_recall completed")
     expect(view?.recent).toContain("command=[redacted]")
     expect(view?.recent).not.toContain("sk-proj-abcdefghijklmnopqrstuvwxyz1234567890")
+    expect(view?.user).not.toContain("sk-proj-abcdefghijklmnopqrstuvwxyz1234567890")
     expect(seen).toEqual([uid, recall, shell, final])
   })
 

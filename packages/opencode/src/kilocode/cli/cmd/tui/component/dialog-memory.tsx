@@ -25,7 +25,7 @@ function fmt(value: number) {
 }
 
 function saved(value: number) {
-  if (value > 0) return `${fmt(value)} ${value === 1 ? "op" : "ops"}`
+  if (value > 0) return `${fmt(value)} ${value === 1 ? "change" : "changes"}`
   return "checked · no new memory"
 }
 
@@ -81,7 +81,8 @@ function unique(input: string[]) {
   return [...new Set(input.filter(Boolean))]
 }
 
-function ops(input: Decision | undefined) {
+/** Summarizes the memory operations (adds/removes) applied in a save decision, e.g. "project.md:deploy_target". */
+function savedOperations(input: Decision | undefined) {
   const items = input?.operations ?? []
   const text = items
     .map((item) => {
@@ -122,7 +123,7 @@ function audit(text: string) {
   ).join(", ")
   return [
     `last save attempt: ${save ? `${save.result ?? "unknown"}${save.reason ? ` (${save.reason})` : ""}` : "none"}`,
-    `latest saved ops: ${ops(save)}`,
+    `latest saved changes: ${savedOperations(save)}`,
     `latest skipped: ${skip(save)}`,
     `accepted saves: ${accepted} · skipped candidates: ${skipped}`,
     `fallback used: ${fallback ? "yes" : "no"} · files updated: ${files}`,
@@ -205,7 +206,7 @@ export function DialogMemory(props: { workspace?: string; directory?: string }) 
                     {item().state.enabled ? "Enabled" : "Disabled"} · {item().state.scope}
                   </text>
                   <text fg={theme.textMuted}>{item().root.replace(Global.Path.home, "~")}</text>
-                  <text fg={theme.textMuted}>startup context on</text>
+                  <text fg={theme.textMuted}>startup context {item().state.autoInject ? "on" : "off"}</text>
                   <text fg={theme.textMuted}>
                     last startup context {fmt(item().state.stats.lastInjectedTokens)} tokens · stored index{" "}
                     {fmt(item().index.length)} chars
@@ -248,7 +249,9 @@ export function DialogMemory(props: { workspace?: string; directory?: string }) 
                     when={tail(item().decisions).length > 0}
                     fallback={<text fg={theme.textMuted}>No decisions</text>}
                   >
+                    <text fg={theme.textMuted}>Summary</text>
                     <For each={audit(item().decisions)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
+                    <text fg={theme.textMuted}>Recent</text>
                     <For each={tail(item().decisions)}>{(line) => <text fg={theme.textMuted}>{line}</text>}</For>
                   </Show>
                 </box>

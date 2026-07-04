@@ -12,29 +12,28 @@ export namespace MemoryTopics {
     terms: 6,
     expanded: 24,
   }
+  const corpus = {
+    // A term must recur in at least `floor` entries to be dropped, so a topic word repeated in a
+    // couple of entries of a small corpus stays matchable; below `floor` entries nothing qualifies.
+    floor: 3,
+    ratio: 0.4,
+  }
   const matcher = /[\p{L}\p{N}][\p{L}\p{N}_.-]{1,}/gu
 
-  // Recall tuning is English-first. The matcher above is Unicode-aware, so any language tokenizes and
-  // matches; but the stopwords and stem() rules below are English. Non-English content simply falls back
-  // to plain token-overlap (functional, lower precision) — nothing breaks. stem() is applied symmetrically
-  // to query and stored terms, so same-language matches still line up even when a suffix is mis-stemmed.
+  export type WordOptions = { max?: number; drop?: ReadonlySet<string> }
 
-  // ~30 English function words that carry no recall signal ("how do we run the tests" must score on run/tests only).
-  const stopwords = new Set([
-    "a", "an", "and", "or", "but", "of", "to", "in", "on", "at", "for", "with", "from", "by", "as",
-    "is", "are", "was", "were", "be", "been", "it", "its", "this", "that", "these", "those",
-    "i", "we", "you", "our", "us", "my", "me", "your", "how", "what", "when", "where", "why",
-    "which", "who", "do", "does", "did", "the",
-  ])
-
-  // Light suffix stemming so "tests"~"test" and "ranking"~"rank"; only for tokens long enough to keep a real stem.
-  function stem(token: string) {
-    if (token.length < 5) return token
-    if (token.endsWith("ing")) return token.slice(0, -3)
-    if (token.endsWith("ed")) return token.slice(0, -2)
-    if (token.endsWith("es")) return token.slice(0, -2)
-    if (token.endsWith("s")) return token.slice(0, -1)
-    return token
+  // Tokens that appear across much of the user's own corpus are non-discriminative in any language.
+  export function ubiquitous(docs: string[][]) {
+    const drop = new Set<string>()
+    const counts = new Map<string, number>()
+    for (const doc of docs) {
+      for (const term of new Set(doc)) counts.set(term, (counts.get(term) ?? 0) + 1)
+    }
+    const needed = Math.max(corpus.floor, Math.ceil(docs.length * corpus.ratio))
+    for (const [term, count] of counts) {
+      if (count >= needed) drop.add(term)
+    }
+    return drop
   }
 
   // Split a raw token on _ . - and camelCase, yielding its lowercase parts (getUserName -> get, user, name).
@@ -65,25 +64,35 @@ export namespace MemoryTopics {
     return ["project"]
   }
 
-  export function words(input: string, max?: number) {
+  function options(input: number | WordOptions | undefined) {
+    return typeof input === "number" ? { max: input } : (input ?? {})
+  }
+
+  export function words(input: string, opts?: number | WordOptions) {
+    const cfg = options(opts)
     // NFKC folds compatibility variants, such as full-width letters, before lexical recall matching.
     const tokens = input.normalize("NFKC").match(matcher) ?? []
     const result: string[] = []
     const seen = new Set<string>()
-    const push = (term: string) => {
-      if (!term || stopwords.has(term)) return
-      const value = stem(term)
-      if (!value || seen.has(value)) return
+    const push = (value: string) => {
+      if (!value || cfg.drop?.has(value) || seen.has(value)) return
       seen.add(value)
       result.push(value)
     }
     for (const raw of tokens) {
       // Emit the whole compound (separators folded to _, trimmed) plus each camelCase/`_.-` part so
-      // getUserName matches "user" and "tests" matches "test".
+      // getUserName matches "user".
       push(raw.replaceAll(/[_.-]+/g, "_").replaceAll(/^_+|_+$/g, "").toLowerCase())
       for (const part of parts(raw)) push(part)
     }
-    return max === undefined ? result : result.slice(0, max)
+    return cfg.max === undefined ? result : result.slice(0, cfg.max)
+  }
+
+  // Suffix-tolerant matching so inflected forms match across languages without language-specific stemming rules.
+  export function related(a: string, b: string) {
+    if (a === b) return true
+    const shared = Math.min(a.length, b.length)
+    return shared >= 4 && Math.abs(a.length - b.length) <= 3 && (a.startsWith(b) || b.startsWith(a))
   }
 
   export function terms(input: Input, max = limit.terms) {

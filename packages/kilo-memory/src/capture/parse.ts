@@ -1,5 +1,6 @@
 import z from "zod"
-import { MemoryOperations } from "./ops"
+import { MemoryOperations } from "./operations"
+import { MemoryRedact } from "./redact"
 import digest from "../prompts/session-digest.txt"
 import typed from "../prompts/typed-consolidation.txt"
 
@@ -127,13 +128,15 @@ export function parseJson<T>(schema: z.ZodType<T>, input: string) {
   return schema.parse(decode(input))
 }
 
-function opText(item: unknown): string | undefined {
+function salvageText(item: unknown): string | undefined {
   if (!item || typeof item !== "object") return undefined
   const record = item as Record<string, unknown>
-  const raw = [record.value, record.query, record.key].find((field) => typeof field === "string") as
+  const raw = [record.value, record.query, record.key].find((field) => typeof field === "string" && field.trim()) as
     | string
     | undefined
-  const text = raw?.trim().slice(0, 500)
+  if (!raw) return undefined
+  // Redact before truncating, or a straddling secret could be cut below the regex's match minimum and leak.
+  const text = MemoryRedact.text(raw.trim()).slice(0, 500)
   return text || undefined
 }
 
@@ -154,7 +157,7 @@ export function salvageTyped(input: string): z.infer<typeof typedSchema> {
       operations.push(parsed.data)
       continue
     }
-    const text = opText(item)
+    const text = salvageText(item) // already redacted
     if (text) salvage.push({ reason: "unsupported", text })
   }
   const rawSkips = Array.isArray(root.skipped) ? root.skipped : []

@@ -1,4 +1,4 @@
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemoryFiles } from "../storage/store"
 import { MemoryMarkdown } from "../storage/markdown"
 import { MemorySchema } from "../schema"
@@ -35,8 +35,8 @@ export namespace MemoryShared {
     return { key, text }
   }
 
-  export function terms(input: string) {
-    return MemoryTopics.words(input)
+  export function terms(input: string, opts?: MemoryTopics.WordOptions) {
+    return MemoryTopics.words(input, opts)
   }
 
   export function source(input: { file: MemorySchema.Source; text: string }): SourceItem[] {

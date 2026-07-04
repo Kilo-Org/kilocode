@@ -11,7 +11,7 @@ Four modes:
 
 Matching is keyword-based, not semantic. The query scores on words literally present in stored entries; there is no synonym expansion, so unrelated wording will not match:
   - Query with words likely stored: concrete nouns, command names, file paths, tool names — not the user's phrasing.
-  - Tokenization lowercases, splits camelCase and _.- (getUserName -> get, user, name), and lightly stems plurals/tenses (tests~test, ranking~rank), so exact case and singular/plural usually do not matter. It is not guaranteed: prefer the stored word forms (singular, lowercase, the actual key) and do not rely on synonym or semantic matches.
+  - Tokenization lowercases and splits camelCase and _.- (getUserName -> get, user, name). Matching tolerates short suffix differences without language-specific stemming (tests~test, pruebas~prueba, corrections~correction), so exact case and simple inflections usually do not matter. It is not guaranteed: prefer the stored word forms (singular, lowercase, the actual key) and do not rely on synonym or semantic matches.
   - If a search returns nothing, use mode=catalog to scan stored keys for the right entry, then recall it by its own words.
 
 Usage notes:

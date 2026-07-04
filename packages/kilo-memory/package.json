@@ -30,7 +30,7 @@
     "./effect/timers": "./src/effect/timers.ts",
     "./effect/turn": "./src/effect/turn.ts",
     "./memory": "./src/memory.ts",
-    "./ops": "./src/capture/ops.ts",
+    "./operations": "./src/capture/operations.ts",
     "./paths": "./src/storage/paths.ts",
     "./recall": "./src/recall/recall.ts",
     "./redact": "./src/capture/redact.ts",

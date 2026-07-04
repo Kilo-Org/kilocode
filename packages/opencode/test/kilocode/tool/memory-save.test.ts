@@ -50,11 +50,14 @@ afterEach(async () => {
 
 async function withConfig<T>(dir: string, fn: () => Promise<T> | T) {
   const prior = Global.Path.config
+  const data = Global.Path.data
   ;(Global.Path as { config: string }).config = dir
+  ;(Global.Path as { data: string }).data = path.basename(dir) === ".kilo" ? path.dirname(dir) : dir
   try {
     return await fn()
   } finally {
     ;(Global.Path as { config: string }).config = prior
+    ;(Global.Path as { data: string }).data = data
   }
 }
 

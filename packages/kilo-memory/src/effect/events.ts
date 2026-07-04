@@ -84,7 +84,7 @@ export namespace MemoryEvents {
     consolidation?: Status["consolidation"]
     detail?: Status["detail"]
   }): Status {
-    const updated = latest(input.state.stats.lastInjectedAt, input.state.stats.lastConsolidatedAt)
+    const updated = latest(input.state.stats.lastInjectedAt, input.state.stats.lastTypedConsolidationAt)
     const current = metric(input.index, updated)
     return {
       directory: input.root,

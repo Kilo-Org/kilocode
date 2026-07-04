@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemorySchema } from "../schema"
 
 /** Effect Schema mirror of the memory data model, shared by host HTTP contracts so it stays next to
@@ -32,7 +32,7 @@ export namespace MemoryContract {
     lastInjectedBytes: Schema.Finite,
     lastInjectedTokens: Schema.Finite,
     lastInjectedSessionID: Schema.String,
-    lastConsolidatedAt: Schema.Finite,
+    lastTypedConsolidationAt: Schema.Finite,
     lastConsolidationCost: Schema.Finite,
     lastConsolidationTokens: Schema.Finite,
     lastOperationCount: Schema.Finite,
@@ -103,6 +103,11 @@ export namespace MemoryContract {
     state: State,
   })
 
+  export const Configure = Schema.Struct({
+    root: Schema.String,
+    state: State,
+  })
+
   export const Operation = Schema.Struct({
     operationCount: Schema.Finite,
     added: Schema.Finite,
@@ -116,23 +121,30 @@ export namespace MemoryContract {
     purged: Schema.Boolean,
   })
 
+  // CLI/API strings are user-typed, not persisted line limits; keep the cap generous but finite.
+  const PayloadText = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(12_000))
+  // Keys are clamped to 80 chars downstream; cap the wire payload generously above that.
+  const PayloadKey = Schema.String.check(Schema.isMaxLength(256))
+  // Session ids are short host-generated identifiers.
+  const PayloadSessionID = Schema.String.check(Schema.isMaxLength(128))
+
   export const RememberPayload = Schema.Struct({
-    text: Schema.String.check(Schema.isMinLength(1)),
-    key: Schema.optional(Schema.String),
+    text: PayloadText,
+    key: Schema.optional(PayloadKey),
     file: Schema.optional(Source),
     section: Schema.optional(Section),
-    sessionID: Schema.optional(Schema.String),
+    sessionID: Schema.optional(PayloadSessionID),
   })
 
   export const CorrectPayload = Schema.Struct({
-    text: Schema.String.check(Schema.isMinLength(1)),
-    key: Schema.optional(Schema.String),
-    sessionID: Schema.optional(Schema.String),
+    text: PayloadText,
+    key: Schema.optional(PayloadKey),
+    sessionID: Schema.optional(PayloadSessionID),
   })
 
   export const ForgetPayload = Schema.Struct({
-    query: Schema.String.check(Schema.isMinLength(1)),
-    sessionID: Schema.optional(Schema.String),
+    query: PayloadText,
+    sessionID: Schema.optional(PayloadSessionID),
   })
 
   export const ConfigurePayload = Schema.Struct({
@@ -161,14 +173,14 @@ export namespace MemoryContract {
       MemorySchema.Stats,
       | "lastInjectedAt"
       | "lastInjectedSessionID"
-      | "lastConsolidatedAt"
+      | "lastTypedConsolidationAt"
       | "lastConsolidatedMessageID"
       | "lastRecallAt"
       | "lastRecallSessionID"
     > & {
       lastInjectedAt: number
       lastInjectedSessionID: string
-      lastConsolidatedAt: number
+      lastTypedConsolidationAt: number
       lastRecallAt: number
       lastRecallSessionID: string
     }
@@ -184,7 +196,7 @@ export namespace MemoryContract {
         lastInjectedBytes: input.stats.lastInjectedBytes,
         lastInjectedTokens: input.stats.lastInjectedTokens,
         lastInjectedSessionID: input.stats.lastInjectedSessionID ?? "",
-        lastConsolidatedAt: input.stats.lastConsolidatedAt ?? 0,
+        lastTypedConsolidationAt: input.stats.lastTypedConsolidationAt ?? 0,
         lastConsolidationCost: input.stats.lastConsolidationCost,
         lastConsolidationTokens: input.stats.lastConsolidationTokens,
         lastOperationCount: input.stats.lastOperationCount,

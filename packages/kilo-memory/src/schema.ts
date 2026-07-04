@@ -32,7 +32,7 @@ export namespace MemorySchema {
     lastInjectedBytes: number
     lastInjectedTokens: number
     lastInjectedSessionID: string | null
-    lastConsolidatedAt: number | null
+    lastTypedConsolidationAt: number | null
     lastConsolidatedMessageID: string | null
     lastConsolidationCost: number
     lastConsolidationTokens: number
@@ -77,7 +77,7 @@ export namespace MemorySchema {
     lastInjectedBytes: 0,
     lastInjectedTokens: 0,
     lastInjectedSessionID: null,
-    lastConsolidatedAt: null,
+    lastTypedConsolidationAt: null,
     lastConsolidatedMessageID: null,
     lastConsolidationCost: 0,
     lastConsolidationTokens: 0,
@@ -204,7 +204,7 @@ export namespace MemorySchema {
         lastInjectedBytes: num(stat.lastInjectedBytes, base.stats.lastInjectedBytes),
         lastInjectedTokens: num(stat.lastInjectedTokens, base.stats.lastInjectedTokens),
         lastInjectedSessionID: str(stat.lastInjectedSessionID, base.stats.lastInjectedSessionID),
-        lastConsolidatedAt: nullable(stat.lastConsolidatedAt, base.stats.lastConsolidatedAt),
+        lastTypedConsolidationAt: nullable(stat.lastTypedConsolidationAt, base.stats.lastTypedConsolidationAt),
         lastConsolidatedMessageID: str(stat.lastConsolidatedMessageID, base.stats.lastConsolidatedMessageID),
         lastConsolidationCost: num(stat.lastConsolidationCost, base.stats.lastConsolidationCost),
         lastConsolidationTokens: num(stat.lastConsolidationTokens, base.stats.lastConsolidationTokens),

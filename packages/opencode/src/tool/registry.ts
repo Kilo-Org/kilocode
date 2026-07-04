@@ -461,7 +461,6 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Notebook.defaultLayer),
         Layer.provide(RuntimeFlags.defaultLayer),
         Layer.provide(SessionStatus.defaultLayer),
-        Layer.provide(MemoryService.layer),
       ),
   // kilocode_change end
 )

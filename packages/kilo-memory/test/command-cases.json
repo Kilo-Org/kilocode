@@ -20,9 +20,16 @@
     "result": "inspect"
   },
   {
-    "name": "status opens inspect",
+    "name": "status operation",
     "input": "/memory status",
-    "result": "inspect"
+    "result": "operation",
+    "operation": "status"
+  },
+  {
+    "name": "edit operation",
+    "input": "/memory edit",
+    "result": "operation",
+    "operation": "edit"
   },
   {
     "name": "enable operation",

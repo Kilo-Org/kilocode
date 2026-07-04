@@ -1,5 +1,5 @@
 import { MemoryShared } from "./recall/shared"
-import type { MemoryOperations } from "./capture/ops"
+import type { MemoryOperations } from "./capture/operations"
 
 /** Human-facing messages and audit views describing an explicit apply result. */
 export namespace MemoryNotice {

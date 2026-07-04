@@ -17,19 +17,16 @@ export function capturePlan(input: {
   priorTime: number
   now: number
   minIntervalMs: number
-  lastConsolidatedAt: number | null | undefined
+  lastTypedConsolidationAt: number | null | undefined
   bypassInterval?: boolean
   autoConsolidate: boolean
-  // Echo gates the DIGEST only. When the latest user text is non-trivial, still run the typed call —
-  // the canonical short recall-assisted correction flow lives here and must not be swallowed.
-  echoTypedAllowed?: boolean
 }) {
   const completed = !input.reason || input.reason === "completed"
   const base = input.autoConsolidate && completed && Boolean(input.summary)
+  // Echo only suppresses session digests; lookup answers should not create digest noise.
   const session = base && !input.echo
-  // Typed capture may still run under echo when the user text is substantive; the typed prompt itself
-  // rejects duplicates/self-referential content, so we trust it rather than block on the echo gate.
-  const typedSession = base && (!input.echo || input.echoTypedAllowed === true)
+  // Typed capture trusts the prompt as the content filter and remains bounded by the interval throttle.
+  const typedSession = base
   const digestDue =
     session &&
     (!input.priorTime ||
@@ -38,8 +35,8 @@ export function capturePlan(input: {
       input.durable)
   const interval = Boolean(
     !input.bypassInterval &&
-      input.lastConsolidatedAt &&
-      input.now - input.lastConsolidatedAt < input.minIntervalMs &&
+      input.lastTypedConsolidationAt &&
+      input.now - input.lastTypedConsolidationAt < input.minIntervalMs &&
       !input.durable,
   )
   const typed = typedCapture({ reason: input.reason, interval })
@@ -48,13 +45,11 @@ export function capturePlan(input: {
   // Interrupted/error closes never call the model, but a non-LLM fallback digest still leaves a trace.
   const fallbackDigest = input.autoConsolidate && !completed && Boolean(input.summary)
   const skipReason =
-    !digestDue && !typedWork
-      ? input.echo && completed && !typedSession
-        ? "memory_echo"
-        : interval && (input.reason === undefined || input.reason === "completed")
-          ? "interval"
-          : "no_work"
-      : undefined
+    digestDue || typedWork
+      ? undefined
+      : interval && (input.reason === undefined || input.reason === "completed")
+        ? "interval"
+        : "no_work"
   return {
     completed,
     session,

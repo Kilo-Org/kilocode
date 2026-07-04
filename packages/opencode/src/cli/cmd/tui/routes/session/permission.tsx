@@ -434,7 +434,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 <text fg={theme.text}>{current.title}</text>
               </box>
               {/* kilocode_change start - explain config file edits always require approval */}
-              <Show when={props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]}>
+              <Show when={props.request.metadata?.[ConfigProtection.CONFIG_PROTECTED_KEY]}>
                 <box paddingLeft={4} flexShrink={0}>
                   <text fg={theme.textMuted}>Config file edits always require approval</text>
                 </box>
