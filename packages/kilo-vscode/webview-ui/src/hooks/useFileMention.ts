@@ -15,6 +15,12 @@ import {
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
 
+const rtl = (textarea: HTMLTextAreaElement): boolean => {
+  if (textarea.matches(":dir(rtl)")) return true
+  if (textarea.matches(":dir(ltr)")) return false
+  return getComputedStyle(textarea).direction === "rtl"
+}
+
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -280,13 +286,14 @@ export function useFileMention(
     // Only when there's no active selection
     if (textarea.selectionStart !== textarea.selectionEnd) return false
 
+    const forward = e.key === (rtl(textarea) ? "ArrowLeft" : "ArrowRight")
     // Check where the cursor WOULD land after the native move
-    const next = e.key === "ArrowRight" ? cursor + 1 : cursor - 1
+    const next = forward ? cursor + 1 : cursor - 1
     const range = findMentionRange(textarea.value, next, mentionedPaths())
     if (!range) return false
 
     e.preventDefault()
-    const pos = e.key === "ArrowRight" ? range.end : range.start
+    const pos = forward ? range.end : range.start
     textarea.setSelectionRange(pos, pos)
     return true
   }

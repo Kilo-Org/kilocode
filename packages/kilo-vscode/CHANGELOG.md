@@ -1,5 +1,15 @@
 # kilo-code
 
+## 7.4.1
+
+### Patch Changes
+
+- [#11918](https://github.com/Kilo-Org/kilocode/pull/11918) [`4e4e41f`](https://github.com/Kilo-Org/kilocode/commit/4e4e41f6ce29b59730f3b66262bf4c6b13b7c80b) Thanks [@mjnaderi](https://github.com/mjnaderi)! - Support bidirectional text in the prompt input.
+
+- [#11926](https://github.com/Kilo-Org/kilocode/pull/11926) [`e79b751`](https://github.com/Kilo-Org/kilocode/commit/e79b75126c3da34a6aa6ac83cbf24672497c0910) Thanks [@trim21](https://github.com/trim21)! - Fix missing kilo-sandbox-mutation-worker.js in VS Code extension bundle, which caused sandboxed file operations to fail with "Module not found".
+
+- [#11924](https://github.com/Kilo-Org/kilocode/pull/11924) [`1755f56`](https://github.com/Kilo-Org/kilocode/commit/1755f567fc8cbf4e8b950a3f862ff4e72ab77d70) - Fix the reasoning-variant (and mode) picker in the New Worktree dialog so selecting a variant actually applies. The pickers portaled their popover to the page body, where the dialog's modal overlay intercepted pointer events and swallowed the click before the option handler ran. Render the popovers inline (`portal={false}`), matching the model picker already fixed for the same reason.
+
 ## 7.4.0
 
 ### Minor Changes

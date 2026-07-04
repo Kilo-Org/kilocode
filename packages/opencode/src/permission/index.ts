@@ -18,6 +18,7 @@ import { PermissionV2 } from "@opencode-ai/core/permission"
 import { PermissionID } from "./schema"
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
@@ -275,6 +276,12 @@ export const layer = Layer.effect(
       }
 
       if (!needsAsk) return
+
+      // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
+      if (KiloHeadless.denies(request.sessionID)) {
+        return yield* new DeniedError({ ruleset: subset(request.permission, ruleset) })
+      }
+      // kilocode_change end
 
       const id = request.id ?? PermissionID.ascending()
       const info: Request = {

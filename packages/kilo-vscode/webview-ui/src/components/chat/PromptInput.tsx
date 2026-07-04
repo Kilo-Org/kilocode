@@ -1186,7 +1186,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </Show>
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
-          <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true">
+          <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true" dir="auto">
             <Index each={buildHighlightSegments(text(), highlightMentions())}>
               {(seg) => (
                 <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
@@ -1236,6 +1236,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             aria-disabled={isDisabled()}
             aria-describedby={props.blockedReason?.() ? blockedHelpId() : undefined}
             rows={1}
+            dir="auto"
           />
         </div>
       </div>

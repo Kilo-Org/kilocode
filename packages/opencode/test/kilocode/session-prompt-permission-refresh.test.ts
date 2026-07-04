@@ -44,8 +44,10 @@ import { SyncEvent } from "../../src/sync"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
+import { KiloHeadless } from "../../src/kilocode/permission/headless"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 import { provideTmpdirServer } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 
 void Log.init({ print: false })
@@ -288,5 +290,125 @@ it.live("active tool calls use permissions changed after model streaming starts"
         permission: { edit: "ask" },
       }),
     },
+  ),
+)
+
+const worker = (mode: "subagent" | "all"): AgentSvc.Info => ({
+  name: "worker",
+  mode,
+  permission: Permission.fromConfig({ bash: "ask" }),
+  options: {},
+})
+
+const bash = (sessionID: Session.Info["id"]) => ({
+  sessionID,
+  permission: "bash",
+  patterns: ["echo 1"],
+  always: ["echo 1"],
+  metadata: {},
+})
+
+// Reproduces #11903: a sync subagent hitting an "ask" rule in a headless run
+// used to block forever on a permission prompt no client would ever answer.
+it.live("headless run: subagent permission asks fail instead of waiting forever", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const permission = yield* Permission.Service
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "Root" })
+      const child = yield* sessions.create({ parentID: root.id, title: "Subagent" })
+      KiloHeadless.mark(root.id)
+
+      // mode "all" agents are valid subagents too; the deny must not key off agent mode
+      const agent = worker("all")
+      const err = yield* awaitWithTimeout(
+        KiloSessionPrompt.askPermission({
+          permission,
+          agents: { get: () => Effect.succeed(agent) },
+          sessions,
+          agent,
+          session: child,
+          request: bash(child.id),
+        }).pipe(Effect.flip),
+        "subagent permission ask queued waiting for a human reply instead of failing",
+      )
+
+      expect(err).toBeInstanceOf(Permission.DeniedError)
+      expect(yield* permission.list()).toEqual([])
+      expect(KiloHeadless.denies(child.id)).toBe(true)
+      expect(KiloHeadless.denies(root.id)).toBe(false)
+
+      KiloHeadless.clear(root.id)
+    }),
+    { git: true },
+  ),
+)
+
+it.live("interactive run: subagent permission asks still queue for a human reply", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const permission = yield* Permission.Service
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "Root" })
+      const child = yield* sessions.create({ parentID: root.id, title: "Subagent" })
+
+      const agent = worker("subagent")
+      const fiber = yield* KiloSessionPrompt.askPermission({
+        permission,
+        agents: { get: () => Effect.succeed(agent) },
+        sessions,
+        agent,
+        session: child,
+        request: bash(child.id),
+      }).pipe(Effect.forkScoped)
+
+      const pending = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const list = yield* permission.list()
+          return list.find((item) => item.sessionID === child.id)
+        }),
+        "subagent permission ask was never surfaced",
+      )
+      yield* permission.reply({ requestID: pending.id, reply: "reject" })
+
+      const exit = yield* Fiber.await(fiber)
+      expect(Exit.isFailure(exit)).toBe(true)
+    }),
+    { git: true },
+  ),
+)
+
+it.live("headless run: root session permission asks still queue (only subagents fail)", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const permission = yield* Permission.Service
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "Root" })
+      KiloHeadless.mark(root.id)
+
+      const agent = { ...worker("subagent"), mode: "primary" as const }
+      const fiber = yield* KiloSessionPrompt.askPermission({
+        permission,
+        agents: { get: () => Effect.succeed(agent) },
+        sessions,
+        agent,
+        session: root,
+        request: bash(root.id),
+      }).pipe(Effect.forkScoped)
+
+      const pending = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const list = yield* permission.list()
+          return list.find((item) => item.sessionID === root.id)
+        }),
+        "root permission ask was never surfaced",
+      )
+      yield* permission.reply({ requestID: pending.id, reply: "reject" })
+
+      const exit = yield* Fiber.await(fiber)
+      expect(Exit.isFailure(exit)).toBe(true)
+      KiloHeadless.clear(root.id)
+    }),
+    { git: true },
   ),
 )
