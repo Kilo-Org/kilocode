@@ -563,7 +563,7 @@ it.instance("handles environment variable substitution", () =>
   ),
 )
 
-it.instance("injects $schema into config without schema exactly once", () =>
+it.instance("injects $schema into config without schema ", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     // Config without $schema - should trigger auto-add
