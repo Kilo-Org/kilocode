@@ -849,7 +849,7 @@ export function UserMessageDisplay(props: {
             <div data-slot="user-message-body">
               {props.header}
               <Show when={text()}>
-                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
               </Show>

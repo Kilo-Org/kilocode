@@ -18,7 +18,9 @@ import fs from "node:fs"
 import path from "node:path"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
+const KILO_VSCODE_DIR = path.join(MONOREPO_ROOT, "packages/kilo-vscode")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
+const HAPPY_DOM_FILE = Bun.resolveSync("happy-dom", KILO_VSCODE_DIR)
 const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/basic-tool.tsx")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
@@ -156,6 +158,61 @@ describe("Assistant Markdown streaming contract (source)", () => {
   it("passes active text streams through Markdown's streaming mode", () => {
     expect(block).not.toBe("")
     expect(block).toContain("streaming={streaming()}")
+  })
+})
+
+describe("Markdown bidirectional rendering contract", () => {
+  it("adds dir to direction-owning markdown blocks without nesting it inside containers", () => {
+    const result = check(`
+      import { Window } from ${JSON.stringify(HAPPY_DOM_FILE)}
+
+      const window = new Window()
+      globalThis.window = window
+      globalThis.document = window.document
+      globalThis.Node = window.Node
+      globalThis.HTMLElement = window.HTMLElement
+      globalThis.HTMLAnchorElement = window.HTMLAnchorElement
+      globalThis.customElements = window.customElements
+
+      const { markBidi } = await import("@opencode-ai/ui/markdown")
+      const root = document.createElement("div")
+      root.innerHTML = \`
+        <h1>عنوان ۱</h1>
+        <h2>عنوان ۲</h2>
+        <h3>عنوان ۳</h3>
+        <h4>عنوان ۴</h4>
+        <h5>عنوان ۵</h5>
+        <h6>عنوان ۶</h6>
+        <p>متن فارسی با <code>inline</code></p>
+        <blockquote><p>نقل قول فارسی</p></blockquote>
+        <ul><li>مورد اول<ul><li>مورد دوم</li></ul></li></ul>
+        <table><thead><tr><th>ستون</th></tr></thead><tbody><tr><td>کیلو</td></tr></tbody></table>
+        <pre><code data-lang="ts">const value = "کیلو"</code></pre>
+      \`
+
+      markBidi(root)
+
+      const assert = (condition, message) => {
+        if (condition) return
+        throw new Error(message)
+      }
+
+      for (const tag of ["h1", "h2", "h3", "h4", "h5", "h6"]) {
+        assert(root.querySelector(tag)?.getAttribute("dir") === "auto", tag + " dir missing")
+      }
+      assert(root.querySelector("p")?.getAttribute("dir") === "auto", "paragraph dir missing")
+      assert(root.querySelector("blockquote")?.getAttribute("dir") === "auto", "blockquote dir missing")
+      assert(root.querySelector("ul")?.getAttribute("dir") === "auto", "list dir missing")
+      assert(root.querySelector("table")?.getAttribute("dir") === "auto", "table dir missing")
+      assert(root.querySelector("pre")?.getAttribute("dir") === "auto", "fenced code dir missing")
+      assert(root.querySelector(":not(pre) > code")?.getAttribute("dir") === "auto", "inline code dir missing")
+
+      assert(!root.querySelector("blockquote p")?.hasAttribute("dir"), "nested blockquote paragraph should not own dir")
+      assert(!root.querySelector("li")?.hasAttribute("dir"), "list item should not own dir")
+      assert(!root.querySelector("td")?.hasAttribute("dir"), "table cell should not own dir")
+    `)
+
+    expect(result.ok, `Markdown bidi check failed: ${result.output}`).toBe(true)
   })
 })
 

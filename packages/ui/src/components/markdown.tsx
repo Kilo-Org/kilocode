@@ -182,12 +182,29 @@ function markCodeLinks(root: HTMLDivElement) {
   }
 }
 
+// kilocode_change start: add bidi direction after Marked renders, so we keep
+// Marked's HTML generation intact while avoiding nested dir="auto" on list,
+// quote, and table contents.
+export function markBidi(root: HTMLElement) {
+  const blocks = "p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table"
+  for (const child of Array.from(root.children)) {
+    if (child.matches(blocks)) child.setAttribute("dir", "auto")
+  }
+
+  const code = Array.from(root.querySelectorAll("pre, :not(pre) > code"))
+  for (const node of code) {
+    node.setAttribute("dir", "auto")
+  }
+}
+// kilocode_change end
+
 function decorate(root: HTMLDivElement, labels: CopyLabels) {
   const blocks = Array.from(root.querySelectorAll("pre"))
   for (const block of blocks) {
     ensureCodeWrapper(block, labels)
   }
   markCodeLinks(root)
+  markBidi(root) // kilocode_change
 }
 
 function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {

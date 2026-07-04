@@ -153,6 +153,8 @@ function replaceWithHighlighted(block: Element, html: string, sourceHash: string
   temp.innerHTML = html
   const highlighted = temp.firstElementChild
   if (!highlighted) return
+  const dir = pre.getAttribute("dir") // kilocode_change
+  if (dir) highlighted.setAttribute("dir", dir) // kilocode_change
   // Store a hash of the source code so the morphdom guard in Markdown can detect
   // mid-stream content changes without keeping the full source in the DOM.
   highlighted.setAttribute("data-source-hash", sourceHash)

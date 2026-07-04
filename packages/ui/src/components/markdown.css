@@ -61,7 +61,7 @@
     margin-top: 8px;
     margin-bottom: 12px;
     margin-left: 0;
-    padding-left: 32px;
+    padding-inline-start: 32px; /* kilocode_change */
     list-style-position: outside;
   }
 
@@ -71,7 +71,7 @@
 
   ol {
     list-style-type: decimal;
-    padding-left: 2.25rem;
+    padding-inline-start: 2.25rem; /* kilocode_change */
   }
 
   li {
@@ -97,18 +97,18 @@
   li > ol {
     margin-top: 0.25rem;
     margin-bottom: 0.25rem;
-    padding-left: 1rem; /* Minimal indent for nesting only */
+    padding-inline-start: 1rem; /* Minimal indent for nesting only */  /* kilocode_change */
   }
 
   li > ol {
-    padding-left: 1.75rem;
+    padding-inline-start: 1.75rem; /* kilocode_change */
   }
 
   /* Blockquotes */
   blockquote {
-    border-left: 2px solid var(--border-weak-base);
+    border-inline-start: 2px solid var(--border-weak-base); /* kilocode_change */
     margin: 1.5rem 0;
-    padding-left: 0.5rem;
+    padding-inline-start: 0.5rem; /* kilocode_change */
     color: var(--text-weak);
     font-style: normal;
   }
@@ -255,7 +255,7 @@
     /* Minimal borders for structure, matching TUI "lines" roughly but keeping it web-clean */
     border-bottom: 1px solid var(--border-weaker-base);
     padding: 12px;
-    text-align: left;
+    text-align: start; /* kilocode_change */
     vertical-align: top;
   }
 
