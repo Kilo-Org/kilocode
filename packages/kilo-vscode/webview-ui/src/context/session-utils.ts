@@ -1,5 +1,5 @@
 import { reconcile } from "solid-js/store"
-import type { Message, Part, ToolPart } from "../types/messages"
+import type { ContextUsage, Message, Part, ToolPart } from "../types/messages"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -174,9 +174,30 @@ export function calcContextUsage(
   const percentage = contextLimit ? Math.round((total / contextLimit) * 100) : null
   return { tokens: total, percentage }
 }
+export type ContextLimitModel = {
+  limit?: { context?: number }
+  contextLength?: number
+}
+
+export function latestContextUsage(
+  messages: TokenUsageMessage[],
+  model: ContextLimitModel | undefined,
+): ContextUsage | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]
+    if (msg.role !== "assistant" || !msg.tokens) continue
+    const usage = calcContextUsage(msg.tokens, undefined)
+    if (usage.tokens === 0) continue
+    const limit = model?.limit?.context ?? model?.contextLength
+    return calcContextUsage(msg.tokens, limit)
+  }
+  return undefined
+}
 
 export type TokenUsageMessage = {
   role: string
+  providerID?: string
+  modelID?: string
   tokens?: {
     input: number
     output: number
