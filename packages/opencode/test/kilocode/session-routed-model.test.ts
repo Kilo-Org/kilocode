@@ -181,6 +181,15 @@ describe("session routed model", () => {
       providerID: ProviderID.kilo,
       modelID: ModelID.make("openai/gpt-5.5-20260423"),
     })
+    expect(
+      KiloRoutedModel.readSession(meta, {
+        providerID: ProviderID.kilo,
+        modelID: "kilo-auto/efficient",
+      }),
+    ).toEqual({
+      providerID: ProviderID.kilo,
+      modelID: ModelID.make("openai/gpt-5.5-20260423"),
+    })
 
     expect(
       KiloRoutedModel.readAuto(meta, {
@@ -192,6 +201,33 @@ describe("session routed model", () => {
       KiloRoutedModel.readAuto(meta, {
         providerID: ProviderID.openai,
         modelID: "gpt-5.5",
+      }),
+    ).toBeUndefined()
+  })
+
+  test("reads fallback model for selected fable models", () => {
+    const meta = { kilocode: { routedModelID: "claude-opus-4-5-20251101" } }
+
+    expect(
+      KiloRoutedModel.readSession(meta, {
+        providerID: ProviderID.make("anthropic"),
+        modelID: "claude-fable-5",
+      }),
+    ).toEqual({
+      providerID: ProviderID.make("anthropic"),
+      modelID: ModelID.make("claude-opus-4-5-20251101"),
+    })
+
+    expect(
+      KiloRoutedModel.readSession(meta, {
+        providerID: ProviderID.make("anthropic"),
+        modelID: "claude-sonnet-5",
+      }),
+    ).toBeUndefined()
+    expect(
+      KiloRoutedModel.readSession({ kilocode: { routedModelID: "claude-fable-5" } }, {
+        providerID: ProviderID.make("anthropic"),
+        modelID: "claude-fable-5",
       }),
     ).toBeUndefined()
   })

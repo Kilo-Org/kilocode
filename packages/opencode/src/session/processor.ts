@@ -687,7 +687,7 @@ export const layer = Layer.effect(
               metadata: value.providerMetadata,
             })
             // kilocode_change start
-            const model = KiloRoutedModel.readAuto(value.providerMetadata, {
+            const model = KiloRoutedModel.readSession(value.providerMetadata, {
               providerID: ctx.model.providerID,
               modelID: ctx.model.id,
               selected: ctx.assistantMessage.modelID,
