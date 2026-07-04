@@ -563,6 +563,63 @@ it.instance("handles environment variable substitution", () =>
   ),
 )
 
+it.instance("injects $schema into config without schema exactly once", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // Config without $schema - should trigger auto-add
+    yield* AppFileSystem.use.writeWithDirs(
+      path.join(test.directory, "kilo.json"),
+      JSON.stringify({ username: "test-user" }),
+    )
+    const config = yield* Config.use.get()
+    expect(config.username).toBe("test-user")
+    expect(config.$schema).toBe("https://app.kilo.ai/config.json")
+
+    // Read the file to verify $schema was injected
+    const content = yield* AppFileSystem.use.readFileString(path.join(test.directory, "kilo.json"))
+    expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
+  }),
+)
+
+it.instance("injects $schema into comment-first JSONC config", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    // Config with leading comment - regex-based injection would fail
+    yield* AppFileSystem.use.writeWithDirs(
+      path.join(test.directory, "kilo.jsonc"),
+      '// project config\n{\n  "model": "test/model"\n}\n',
+    )
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("test/model")
+    expect(config.$schema).toBe("https://app.kilo.ai/config.json")
+
+    // Read the file to verify $schema was injected correctly
+    const content = yield* AppFileSystem.use.readFileString(path.join(test.directory, "kilo.jsonc"))
+    expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
+    expect(content).toContain("// project config")
+  }),
+)
+
+it.instance("does not write config when $schema already present", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const filepath = path.join(test.directory, "kilo.json")
+    // Config already has $schema - should not rewrite file
+    yield* AppFileSystem.use.writeWithDirs(
+      filepath,
+      JSON.stringify({ $schema: "https://app.kilo.ai/config.json", username: "test-user" }),
+    )
+    const before = yield* Effect.promise(() => fs.stat(filepath))
+
+    const config = yield* Config.use.get()
+    expect(config.username).toBe("test-user")
+
+    const after = yield* Effect.promise(() => fs.stat(filepath))
+    expect(after.mtimeMs).toBe(before.mtimeMs)
+  }),
+)
+
+
 it.instance("preserves env variables when adding $schema to config", () =>
   withProcessEnv(
     "PRESERVE_VAR",
