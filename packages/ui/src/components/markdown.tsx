@@ -8,6 +8,7 @@ import { ComponentProps, createEffect, createResource, createSignal, onCleanup, 
 import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
+import { markBidi } from "../kilocode/markdown-bidi" // kilocode_change
 import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid" // kilocode_change
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight" // kilocode_change
 import { createIncrementalMarkdown, type MarkdownBlock } from "../kilocode/markdown-incremental-dom" // kilocode_change
@@ -181,22 +182,6 @@ function markCodeLinks(root: HTMLDivElement) {
     link.appendChild(code)
   }
 }
-
-// kilocode_change start: add bidi direction after Marked renders, so we keep
-// Marked's HTML generation intact while avoiding nested dir="auto" on list,
-// quote, and table contents.
-export function markBidi(root: HTMLElement) {
-  const blocks = "p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, table"
-  for (const child of Array.from(root.children)) {
-    if (child.matches(blocks)) child.setAttribute("dir", "auto")
-  }
-
-  const code = Array.from(root.querySelectorAll("pre, :not(pre) > code"))
-  for (const node of code) {
-    node.setAttribute("dir", "auto")
-  }
-}
-// kilocode_change end
 
 function decorate(root: HTMLDivElement, labels: CopyLabels) {
   const blocks = Array.from(root.querySelectorAll("pre"))

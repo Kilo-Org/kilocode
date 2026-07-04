@@ -60,7 +60,7 @@
   ol {
     margin-top: 8px;
     margin-bottom: 12px;
-    margin-left: 0;
+    margin-inline-start: 0; /* kilocode_change */
     padding-inline-start: 32px; /* kilocode_change */
     list-style-position: outside;
   }
