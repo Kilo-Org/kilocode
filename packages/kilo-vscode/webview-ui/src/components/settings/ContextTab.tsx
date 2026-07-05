@@ -1,4 +1,4 @@
-import { Component, For, createSignal } from "solid-js"
+import { Component, For, Show, createSignal } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -7,10 +7,12 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useMemory } from "../../context/memory"
 import SettingsRow from "./SettingsRow"
 
 const ContextTab: Component = () => {
   const { config, updateConfig } = useConfig()
+  const memory = useMemory()
   const language = useLanguage()
   const [newPattern, setNewPattern] = createSignal("")
 
@@ -50,9 +52,85 @@ const ContextTab: Component = () => {
     updateConfig({ watcher: { ignore: current } })
   }
 
+  const memoryStats = () => {
+    const status = memory.status()
+    if (!status) return language.t("settings.context.memory.status.notLoaded")
+    if (!status.state.enabled) return language.t("settings.context.memory.status.disabled")
+    const tokens = status.index.estimatedTokens.toLocaleString(language.locale())
+    const session = memory.sessionTokens().toLocaleString(language.locale())
+    const ops = status.state.stats.lastOperationCount.toLocaleString(language.locale())
+    return language.t("settings.context.memory.status.enabledTokensOps", { session, tokens, ops })
+  }
+
   return (
     <div>
+      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>{language.t("settings.context.memory.title")}</h4>
+      <Card>
+        <SettingsRow title={language.t("settings.context.memory.project.title")} description={memoryStats()}>
+          <Switch
+            checked={memory.enabled()}
+            onChange={(checked) => (checked ? memory.enable() : memory.disable())}
+            hideLabel
+            disabled={memory.pending()}
+          >
+            {language.t("settings.context.memory.project.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.context.memory.autoSave.title")}
+          description={language.t("settings.context.memory.autoSave.description")}
+        >
+          <Switch
+            checked={memory.status()?.state.autoConsolidate ?? true}
+            onChange={(checked) => memory.auto(checked ? "on" : "off")}
+            hideLabel
+            disabled={memory.pending() || !memory.status()}
+          >
+            {language.t("settings.context.memory.autoSave.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.context.memory.index.title")}
+          description={
+            memory.status()?.root
+              ? language.t("settings.context.memory.index.path", { path: memory.status()!.root })
+              : language.t("settings.context.memory.index.enable")
+          }
+          last
+        >
+          <div style={{ display: "flex", gap: "6px", "align-items": "center" }}>
+            <Button variant="secondary" size="small" icon="eye" onClick={() => memory.showMemory()}>
+              {language.t("settings.context.memory.inspect")}
+            </Button>
+            <IconButton
+              size="small"
+              variant="ghost"
+              icon="reset"
+              disabled={memory.pending()}
+              onClick={() => memory.rebuild()}
+              aria-label={language.t("settings.context.memory.rebuild")}
+            />
+          </div>
+        </SettingsRow>
+        <Show when={memory.error()}>
+          {(err) => (
+            <div
+              style={{
+                padding: "8px 12px",
+                color: "var(--vscode-errorForeground)",
+                "font-size": "var(--kilo-font-size-12)",
+              }}
+            >
+              {err()}
+            </div>
+          )}
+        </Show>
+      </Card>
+
       {/* Compaction settings */}
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.context.compaction.title")}
+      </h4>
       <Card>
         <SettingsRow
           title={language.t("settings.context.autoCompaction.title")}

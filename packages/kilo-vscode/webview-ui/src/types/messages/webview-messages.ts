@@ -15,6 +15,7 @@ import type {
   SkipLegacyMigrationMessage,
   StartMigrationMessage,
 } from "./migration"
+import type { MemoryShowMessage, MemoryOperationMessage, MemoryPromptMessage, RequestMemoryMessage } from "./memory"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1369,6 +1370,10 @@ export type WebviewMessage =
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage
   | ContinueInWorktreeRequest
+  | RequestMemoryMessage
+  | MemoryShowMessage
+  | MemoryOperationMessage
+  | MemoryPromptMessage
   | CreateSectionRequest
   | RenameSectionRequest
   | DeleteSectionRequest

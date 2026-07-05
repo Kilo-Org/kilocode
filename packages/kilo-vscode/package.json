@@ -196,6 +196,16 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.showMemory",
+        "title": "Show Project Memory",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.toggleMemory",
+        "title": "Toggle Project Memory",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"
@@ -1142,6 +1152,7 @@
     "@kilocode/kilo-gateway": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",
+    "@kilocode/kilo-memory": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
