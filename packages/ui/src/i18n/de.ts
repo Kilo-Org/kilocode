@@ -176,9 +176,9 @@ export const dict = {
   "ui.patch.action.patched": "Gepatched",
 
   "ui.question.subtitle.answered": "{{count}} beantwortet",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(keine Antwort)",
-  "ui.question.answer.dismissed": "Dismissed",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(nicht beantwortet)",
   "ui.question.multiHint": "Alle zutreffenden auswählen",
   "ui.question.singleHint": "Eine Antwort auswählen",
