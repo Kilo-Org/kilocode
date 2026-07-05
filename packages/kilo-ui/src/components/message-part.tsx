@@ -1176,11 +1176,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
-              // kilocode_change: dismissed questions render through the normal
-              // question tool renderer so users can review the content.
+              // kilocode_change start - dismissed questions fall through
+              // to the normal question renderer so users can review content.
               if (part.tool === "question" && cleaned.includes("dismissed this question")) {
                 // Let the question tool renderer handle it
               } else {
+              // kilocode_change end
               const hint =
                 cleaned.includes("before overwriting it. Use the Read tool first") ||
                 cleaned.includes("has been modified since it was last read") ||
