@@ -4,6 +4,7 @@ import { MemoryMarkdown } from "../storage/markdown"
 import { MemorySchema } from "../schema"
 import { MemoryText } from "../text"
 import { MemoryTopics } from "./topics"
+import { MemoryRedact } from "../capture/redact"
 
 export namespace MemoryShared {
   export type TypedItem = {
@@ -104,7 +105,7 @@ export namespace MemoryShared {
           }
         : {
             action: item.action,
-            query: brief(item.query, 120),
+            query: brief(MemoryRedact.text(item.query), 120),
           },
     )
   }

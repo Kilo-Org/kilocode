@@ -187,7 +187,7 @@ describe("KiloMemory integration", () => {
       cache,
       result: {
         output: "Project memory recall output.",
-        metadata: { files: ["project.md", "environment.md"], count: 2 },
+        metadata: { sources: ["project.md", "environment.md"], count: 2 },
       },
     })
 

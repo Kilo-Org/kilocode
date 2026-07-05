@@ -1,5 +1,6 @@
 import { MemoryShared } from "./recall/shared"
 import type { MemoryOperations } from "./capture/operations"
+import { MemoryRedact } from "./capture/redact"
 
 /** Human-facing messages and audit views describing an explicit apply result. */
 export namespace MemoryNotice {
@@ -31,6 +32,8 @@ export namespace MemoryNotice {
 
   export function ops(input: { ops: MemoryOperations.Op[]; skipped: MemoryOperations.Rejection[] }) {
     const blocked = new Set(input.skipped.filter((item) => item.reason === "out_of_scope").map((item) => item.text))
-    return MemoryShared.audit(input.ops.filter((item) => item.action !== "add" || !blocked.has(item.text)))
+    return MemoryShared.audit(
+      input.ops.filter((item) => item.action !== "add" || !blocked.has(MemoryRedact.text(item.text))),
+    )
   }
 }

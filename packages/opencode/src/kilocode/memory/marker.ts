@@ -3,50 +3,18 @@ import { Identifier } from "@/id/id"
 import type { MessageV2 } from "@/session/message-v2"
 import { PartID, type SessionID } from "@/session/schema"
 import type { KiloMemory } from "@kilocode/kilo-memory/effect"
+import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
 
 export namespace MemoryMarker {
-  export type Info = {
-    type: "recall" | "startup"
-    bytes: number
-    tokens: number
-    count: number
-    files: string[]
-  }
+  export type Info = MemoryMarkerMeta.Info
 
   export type Cache = {
     marker?: Info
     marked?: boolean
   }
 
-  function header(line: string) {
-    if (!line.startsWith("record ")) return
-    return line
-  }
-
-  function source(line: string) {
-    for (const field of line.split(" ")) {
-      if (!field.startsWith("source=")) continue
-      const value = field.slice("source=".length)
-      if (value && value !== "metadata") return value
-    }
-  }
-
   export function fromBlocks(blocks: KiloMemory.Block[]): Info | undefined {
-    const records = blocks.flatMap((block) =>
-      block.text
-        .split("\n")
-        .map(header)
-        .filter((line) => line !== undefined),
-    )
-    if (records.length === 0) return
-    const files = [...new Set(records.map(source).filter((file) => file !== undefined))]
-    return {
-      type: "startup",
-      bytes: blocks.reduce((sum, block) => sum + block.bytes, 0),
-      tokens: blocks.reduce((sum, block) => sum + block.estimatedTokens, 0),
-      count: records.length,
-      files,
-    }
+    return MemoryMarkerMeta.fromBlocks(blocks)
   }
 
   export function startup(input: { marker?: Info; cache: Cache }) {
@@ -56,17 +24,13 @@ export namespace MemoryMarker {
   }
 
   export function recall(input: { result: { output?: string; metadata?: Record<string, unknown> }; cache: Cache }) {
-    const meta = input.result.metadata
-    const files = Array.isArray(meta?.files) ? meta.files.filter((file) => typeof file === "string") : []
-    if (files.length === 0) return
-    const text = input.result.output ?? ""
-    input.cache.marker = {
-      type: "recall",
-      bytes: Buffer.byteLength(text),
-      tokens: Token.estimate(text),
-      count: typeof meta?.count === "number" ? meta.count : files.length,
-      files: [...new Set(files)],
-    }
+    const marker = MemoryMarkerMeta.fromRecall({
+      output: input.result.output,
+      metadata: input.result.metadata,
+      tokens: Token.estimate(input.result.output ?? ""),
+    })
+    if (!marker) return
+    input.cache.marker = marker
     input.cache.marked = false
   }
 
@@ -83,16 +47,7 @@ export namespace MemoryMarker {
       text: "",
       synthetic: true,
       ignored: true,
-      metadata: {
-        kiloMemory: {
-          type: marker.type,
-          bytes: marker.bytes,
-          tokens: marker.tokens,
-          count: marker.count,
-          files: marker.files,
-          sources: marker.files,
-        },
-      },
+      metadata: MemoryMarkerMeta.metadata(marker),
     } satisfies MessageV2.TextPart
   }
 }

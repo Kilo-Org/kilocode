@@ -75,7 +75,7 @@ export const typedSchema = z
 export const digestSchema = z
   .object({
     topic: z.string().max(160).default(""),
-    summary: z.string().max(4_000).default(""),
+    summary: z.string().max(64_000).default(""),
   })
   .strict()
 
@@ -143,11 +143,12 @@ function salvageText(item: unknown): string | undefined {
 /** Per-op salvage: parse the batch leniently, validate each op individually, keep the valid ones, and
  * record the rest as `unsupported` skips. One malformed op, an over-cap op, or an over-length value no
  * longer voids the whole typed batch; the >16 overflow is truncated instead of failing. Invalid JSON
- * still throws so the caller's fallback path fires. */
+ * and shapes without an `operations` array still throw so the caller's fallback path fires. */
 export function salvageTyped(input: string): z.infer<typeof typedSchema> {
   const decoded = decode(input)
   const root = (decoded && typeof decoded === "object" ? decoded : {}) as Record<string, unknown>
-  const rawOps = Array.isArray(root.operations) ? root.operations : []
+  if (!Array.isArray(root.operations)) throw new Error("memory model output has no operations array")
+  const rawOps = root.operations
   const operations: z.infer<typeof opSchema>[] = []
   const salvage: CaptureSkip[] = []
   for (const item of rawOps) {
@@ -164,7 +165,10 @@ export function salvageTyped(input: string): z.infer<typeof typedSchema> {
   const skipped: CaptureSkip[] = []
   for (const item of rawSkips) {
     const parsed = skipEntrySchema.safeParse(item)
-    if (parsed.success) skipped.push(parsed.data)
+    if (parsed.success) {
+      // Redact model-emitted skip text before it reaches callers.
+      skipped.push(parsed.data.text ? { ...parsed.data, text: MemoryRedact.text(parsed.data.text) } : parsed.data)
+    }
   }
   return { operations, skipped: [...skipped, ...salvage].slice(0, 32) }
 }

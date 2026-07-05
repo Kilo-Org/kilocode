@@ -27,8 +27,10 @@ export function capturePlan(input: {
   const session = base && !input.echo
   // Typed capture trusts the prompt as the content filter and remains bounded by the interval throttle.
   const typedSession = base
+  const trivial = Boolean(input.summary) && !input.durable && input.summary.length < 80
   const digestDue =
     session &&
+    !trivial &&
     (!input.priorTime ||
       !Number.isFinite(input.priorTime) ||
       input.now - input.priorTime >= input.minIntervalMs ||
@@ -43,12 +45,14 @@ export function capturePlan(input: {
   const typedCall = input.autoConsolidate && typed.call && typedSession
   const typedWork = input.autoConsolidate && typed.work && typedSession
   // Interrupted/error closes never call the model, but a non-LLM fallback digest still leaves a trace.
-  const fallbackDigest = input.autoConsolidate && !completed && Boolean(input.summary)
+  const fallbackDigest = input.autoConsolidate && !completed && Boolean(input.summary) && !trivial
   const skipReason =
     digestDue || typedWork
       ? undefined
-      : interval && (input.reason === undefined || input.reason === "completed")
-        ? "interval"
+      : trivial
+        ? "trivial"
+        : interval && (input.reason === undefined || input.reason === "completed")
+          ? "interval"
         : "no_work"
   return {
     completed,

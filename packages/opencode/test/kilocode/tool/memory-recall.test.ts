@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import { MemoryFiles } from "@kilocode/kilo-memory/store"
+import { MemorySchema } from "@kilocode/kilo-memory/schema"
 import { MemoryTool } from "@kilocode/kilo-memory/tool"
 import path from "path"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
@@ -96,6 +97,15 @@ describe("kilo_memory_recall description", () => {
 })
 
 describe("kilo_memory_recall", () => {
+  test("rejects oversized model-controlled strings", () => {
+    expect(() =>
+      Schema.decodeUnknownSync(MemoryTool.RecallParameters)({ mode: "search", query: "x".repeat(12_001) }),
+    ).toThrow()
+    expect(() =>
+      Schema.decodeUnknownSync(MemoryTool.RecallParameters)({ mode: "digest", sessionID: "s".repeat(129) }),
+    ).toThrow()
+  })
+
   test("does not prompt for permission when memory is disabled", async () => {
     await using dir = await tmpdir({ git: true })
     await withConfig(path.join(dir.path, "global", ".kilo"), async () => {
@@ -167,6 +177,37 @@ describe("kilo_memory_recall", () => {
       expect(decisions).toContain('"query":"sessionID=ses_memory_only"')
       expect(decisions).toContain('"summary":"memory recall returned 1 typed hits"')
       expect(decisions).toContain('"summary":"memory recall returned 1 digest hits"')
+    })
+  })
+
+  test("digest sessionID recall returns full summaries while index stays brief", async () => {
+    await using dir = await tmpdir({ git: true })
+    await withConfig(path.join(dir.path, "global", ".kilo"), async () => {
+      const memory = { directory: dir.path, worktree: dir.path }
+      const enabled = await KiloMemory.enable({ ctx: memory })
+      const tail = "OPENCODE_FULL_DETAIL_AFTER_480"
+      const summary = `Long tool digest start. ${"session continuity detail ".repeat(45)}${tail}`
+      await KiloMemory.recordSession({
+        ctx: memory,
+        sessionID: "ses_full_tool_digest",
+        topic: "full tool digest",
+        summary,
+        time: Date.UTC(2026, 0, 1, 0, 0),
+      })
+
+      const saved = await MemoryFiles.readSession(enabled.root, {
+        sessionID: "ses_full_tool_digest",
+        max: MemorySchema.maxStoredDigestSummary,
+      })
+      const shown = await KiloMemory.show({ ctx: memory })
+      const result = await execute(dir.path, { mode: "digest", sessionID: "ses_full_tool_digest" })
+      const latest = shown.index.match(/type=latest_session_digest[^\n]*\ntext: ([^\n]+)/)?.[1] ?? ""
+      const brief = latest.split(":: ").slice(1).join(":: ")
+
+      expect(saved?.summary.length).toBeGreaterThan(480)
+      expect(brief.length).toBeLessThanOrEqual(480)
+      expect(result.output).toContain(tail)
+      expect(result.output.length).toBeGreaterThan(480)
     })
   })
 
@@ -460,7 +501,7 @@ describe("kilo_memory_recall", () => {
     })
   })
 
-  test("handles oversized unmatched recall queries without returning stored memory", async () => {
+  test("handles large unmatched recall queries without returning stored memory", async () => {
     await using dir = await tmpdir({ git: true })
     await withConfig(path.join(dir.path, "global", ".kilo"), async () => {
       const memory = { directory: dir.path, worktree: dir.path }
@@ -470,12 +511,12 @@ describe("kilo_memory_recall", () => {
         ops: [{ action: "add", key: "cli_tests", text: "Run CLI tests from packages/opencode with bun test." }],
       })
 
-      const result = await execute(dir.path, { mode: "search", query: "zzzz ".repeat(5000), limit: 50 })
+      const result = await execute(dir.path, { mode: "search", query: "zzzz ".repeat(2000), limit: 50 })
 
       expect(result.title).toBe("Kilo memory search: no results")
       expect(result.output).toContain("No search memory matched the query.")
       expect(result.output).not.toContain("cli_tests")
-      expect(result.metadata.files).toEqual([])
+      expect(result.metadata.sources).toEqual([])
     })
   })
 })

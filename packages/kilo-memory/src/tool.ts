@@ -12,16 +12,19 @@ import saveDescription from "./prompts/tool-memory-save.txt"
 export namespace MemoryTool {
   export const RecallDescription = recallDescription
   export const SaveDescription = saveDescription
+  const Text = Schema.String.check(Schema.isMaxLength(12_000))
+  const Key = Schema.String.check(Schema.isMaxLength(256))
+  const SessionID = Schema.String.check(Schema.isMaxLength(128))
 
   export const RecallParameters = Schema.Struct({
     mode: Schema.Literals(["search", "typed", "digest", "catalog"]).annotate({
       description:
         "'typed' to search durable memory, 'digest' to read saved session digests, 'search' to search both, 'catalog' to list all stored memory keys (use when the injected index or a search missed)",
     }),
-    query: Schema.optional(Schema.String).annotate({
+    query: Schema.optional(Text).annotate({
       description: "Topic query for typed memory or digest search; optional substring filter for catalog",
     }),
-    sessionID: Schema.optional(Schema.String).annotate({
+    sessionID: Schema.optional(SessionID).annotate({
       description: "Session ID for digest mode when startup memory shows session=<id>",
     }),
     limit: Schema.optional(Schema.Number).annotate({
@@ -33,13 +36,13 @@ export namespace MemoryTool {
     action: Schema.Literals(["remember", "correct", "forget", "skip"]).annotate({
       description: "Memory write action to perform.",
     }),
-    text: Schema.optional(Schema.String).annotate({
+    text: Schema.optional(Text).annotate({
       description: "Memory text for remember/correct. Keep it concise and durable.",
     }),
-    query: Schema.optional(Schema.String).annotate({
+    query: Schema.optional(Text).annotate({
       description: "Exact key, id, or query text for forget.",
     }),
-    key: Schema.optional(Schema.String).annotate({
+    key: Schema.optional(Key).annotate({
       description: "Optional stable key for remember/correct.",
     }),
     reason: Schema.optional(Schema.Literals(["out_of_scope"])).annotate({
@@ -50,8 +53,10 @@ export namespace MemoryTool {
   export type RecallParams = Schema.Schema.Type<typeof RecallParameters>
   export type SaveParams = Schema.Schema.Type<typeof SaveParameters>
 
+  // Named `sources` (not `files`): opencode's stripPartMetadata rewrites tool-part `metadata.files`
+  // assuming apply_patch record entries, which would mangle a string[] on every read path.
   type Metadata = {
-    files: string[]
+    sources: string[]
     count?: number
     operationCount?: number
     added?: number
@@ -98,7 +103,7 @@ export namespace MemoryTool {
     return {
       title: "Kilo memory: error",
       output: MemoryError.toToolOutput(err, action),
-      metadata: { files: [], ...(action === "recall" ? { count: 0 } : {}) },
+      metadata: { sources: [], ...(action === "recall" ? { count: 0 } : {}) },
     }
   }
 
@@ -106,7 +111,7 @@ export namespace MemoryTool {
     return {
       title: "Kilo memory: disabled",
       output: "Kilo memory is disabled for this project.",
-      metadata: { files: [], ...(count ? { count: 0 } : {}) },
+      metadata: { sources: [], ...(count ? { count: 0 } : {}) },
     }
   }
 
@@ -285,7 +290,7 @@ export namespace MemoryTool {
       return {
         title: `Kilo memory catalog: ${result.count} entr${result.count === 1 ? "y" : "ies"}`,
         output: safe.output,
-        metadata: { files: result.files, count: result.count },
+        metadata: { sources: result.files, count: result.count },
       } satisfies Result
     })
   }
@@ -304,7 +309,7 @@ export namespace MemoryTool {
       return {
         title: `Kilo memory ${input.params.mode}: no query`,
         output,
-        metadata: { files: [], count: 0 },
+        metadata: { sources: [], count: 0 },
       } satisfies Result
     })
   }
@@ -337,14 +342,14 @@ export namespace MemoryTool {
         return {
           title: `Kilo memory ${input.params.mode}: no results`,
           output,
-          metadata: { files: [], count: 0 },
+          metadata: { sources: [], count: 0 },
         } satisfies Result
       }
 
       return {
         title: `Kilo memory ${input.params.mode}: ${hits.length} hit${hits.length === 1 ? "" : "s"}`,
         output,
-        metadata: { files: [...new Set(hits.map((hit) => hit.source))], count: hits.length },
+        metadata: { sources: [...new Set(hits.map((hit) => hit.source))], count: hits.length },
       } satisfies Result
     })
   }
@@ -353,11 +358,11 @@ export namespace MemoryTool {
     return Effect.gen(function* () {
       const current = input.sessionID
       const root = yield* input.memory.prepare({ ctx: input.ctx })
-      const status = yield* input.memory.status({ root })
-      if (!status.state.enabled) return disabled(true)
+      const state = yield* input.memory.state({ root })
+      if (!state.enabled) return disabled(true)
       yield* approvalRecall(input)
 
-      const live = { root, current, state: status.state }
+      const live = { root, current, state }
       const query = input.params.query?.trim() ?? ""
       const mode = input.params.mode
       if (mode === "catalog") return yield* recallCatalog(input, live, query)
@@ -384,7 +389,7 @@ export namespace MemoryTool {
     return {
       title: "Kilo memory forget: no query",
       output: "Provide a key, id, or query text to forget.",
-      metadata: { files: [] },
+      metadata: { sources: [] },
     }
   }
 
@@ -392,7 +397,7 @@ export namespace MemoryTool {
     return {
       title: `Kilo memory ${action}: no text`,
       output: `Provide text to ${action}.`,
-      metadata: { files: [] },
+      metadata: { sources: [] },
     }
   }
 
@@ -401,7 +406,7 @@ export namespace MemoryTool {
       title: title({ action: "skip", added: 0, removed: 0 }),
       output: skipOutput(input),
       metadata: {
-        files: [],
+        sources: [],
         operationCount: 0,
         added: 0,
         removed: 0,
@@ -423,7 +428,7 @@ export namespace MemoryTool {
         tokens: input.result.index.tokens,
       }),
       metadata: {
-        files: touched,
+        sources: touched,
         operationCount: input.result.operationCount,
         added: input.result.added,
         removed: input.result.removed,
@@ -489,8 +494,8 @@ export namespace MemoryTool {
   export function save(input: Save) {
     return Effect.gen(function* () {
       const root = yield* input.memory.prepare({ ctx: input.ctx })
-      const status = yield* input.memory.status({ root })
-      if (!status.state.enabled) return disabled()
+      const state = yield* input.memory.state({ root })
+      if (!state.enabled) return disabled()
       if (input.params.action === "forget") return yield* forget(input, root)
       if (input.params.action === "skip") return yield* skip(input, root)
       return yield* write(input, root)

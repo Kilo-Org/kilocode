@@ -116,7 +116,7 @@ export namespace MemoryRecall {
       if (input.sessionID === input.currentSessionID) return [] as Hit[]
       const item = await MemoryFiles.readSession(input.root, {
         sessionID: input.sessionID,
-        max: input.state.limits.maxSessionLineChars,
+        max: MemorySchema.maxStoredDigestSummary,
       })
       if (!item || MemoryDigest.empty(item)) return [] as Hit[]
       return [digest(item)]
@@ -269,7 +269,7 @@ export namespace MemoryRecall {
     if (mode === "digest" && (input.sessionID || !query)) {
       const hits = digestItems.slice(0, limit)
       if (hits.length === 0) return
-      const block = format({ hits, max: input.maxBytes ?? 1200 })
+      const block = format({ hits, max: input.maxBytes ?? (input.sessionID ? 6000 : 1200) })
       if (!block) return
       return {
         block,

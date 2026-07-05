@@ -18040,6 +18040,9 @@
                             "lastTypedConsolidationAt": {
                               "type": "number"
                             },
+                            "lastSessionSavedAt": {
+                              "type": "number"
+                            },
                             "lastConsolidationCost": {
                               "type": "number"
                             },
@@ -18065,6 +18068,7 @@
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
                             "lastTypedConsolidationAt",
+                            "lastSessionSavedAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -18291,6 +18295,9 @@
                             "lastTypedConsolidationAt": {
                               "type": "number"
                             },
+                            "lastSessionSavedAt": {
+                              "type": "number"
+                            },
                             "lastConsolidationCost": {
                               "type": "number"
                             },
@@ -18316,6 +18323,7 @@
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
                             "lastTypedConsolidationAt",
+                            "lastSessionSavedAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -18541,6 +18549,9 @@
                             "lastTypedConsolidationAt": {
                               "type": "number"
                             },
+                            "lastSessionSavedAt": {
+                              "type": "number"
+                            },
                             "lastConsolidationCost": {
                               "type": "number"
                             },
@@ -18566,6 +18577,7 @@
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
                             "lastTypedConsolidationAt",
+                            "lastSessionSavedAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -18782,6 +18794,9 @@
                             "lastTypedConsolidationAt": {
                               "type": "number"
                             },
+                            "lastSessionSavedAt": {
+                              "type": "number"
+                            },
                             "lastConsolidationCost": {
                               "type": "number"
                             },
@@ -18807,6 +18822,7 @@
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
                             "lastTypedConsolidationAt",
+                            "lastSessionSavedAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -19004,6 +19020,9 @@
                             "lastTypedConsolidationAt": {
                               "type": "number"
                             },
+                            "lastSessionSavedAt": {
+                              "type": "number"
+                            },
                             "lastConsolidationCost": {
                               "type": "number"
                             },
@@ -19029,6 +19048,7 @@
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
                             "lastTypedConsolidationAt",
+                            "lastSessionSavedAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",
@@ -19241,6 +19261,9 @@
                             "lastTypedConsolidationAt": {
                               "type": "number"
                             },
+                            "lastSessionSavedAt": {
+                              "type": "number"
+                            },
                             "lastConsolidationCost": {
                               "type": "number"
                             },
@@ -19266,6 +19289,7 @@
                             "lastInjectedTokens",
                             "lastInjectedSessionID",
                             "lastTypedConsolidationAt",
+                            "lastSessionSavedAt",
                             "lastConsolidationCost",
                             "lastConsolidationTokens",
                             "lastOperationCount",

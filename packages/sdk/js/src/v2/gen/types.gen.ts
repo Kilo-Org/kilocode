@@ -12545,6 +12545,7 @@ export type MemoryStatusResponses = {
         lastInjectedTokens: number
         lastInjectedSessionID: string
         lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12624,6 +12625,7 @@ export type MemoryShowResponses = {
         lastInjectedTokens: number
         lastInjectedSessionID: string
         lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12703,6 +12705,7 @@ export type MemoryEnableResponses = {
         lastInjectedTokens: number
         lastInjectedSessionID: string
         lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12779,6 +12782,7 @@ export type MemoryDisableResponses = {
         lastInjectedTokens: number
         lastInjectedSessionID: string
         lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12851,6 +12855,7 @@ export type MemoryConfigureResponses = {
         lastInjectedTokens: number
         lastInjectedSessionID: string
         lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number
@@ -12921,6 +12926,7 @@ export type MemoryRebuildResponses = {
         lastInjectedTokens: number
         lastInjectedSessionID: string
         lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
         lastConsolidationCost: number
         lastConsolidationTokens: number
         lastOperationCount: number

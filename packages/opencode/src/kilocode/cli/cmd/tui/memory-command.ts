@@ -8,6 +8,7 @@ import {
   parseMemoryCommand,
   type ParsedMemoryCommand,
 } from "@kilocode/kilo-memory/commands"
+import { errorMessage } from "@/util/error"
 
 export { MEMORY_USAGE }
 export type MemoryCommand = ParsedMemoryCommand
@@ -21,23 +22,15 @@ type Result<T> = {
   error?: unknown
 }
 
-function msg(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "string") return error
-  try {
-    return JSON.stringify(error) ?? String(error)
-  } catch (_error) {
-    return String(error)
-  }
-}
-
 function read<T>(result: Result<T>) {
-  if (result.error) throw new Error(msg(result.error))
+  if (result.error) throw new Error(errorMessage(result.error))
   if (result.data === undefined) throw new Error("Memory command returned no data")
   return result.data
 }
 
-function route(input: { workspace?: string; directory?: string }) {
+/** Shared by the TUI memory command, dialog, and sidebar: routes an SDK call to the requested
+ * workspace or directory, falling back to the client's default scope when neither is set. */
+export function route(input: { workspace?: string; directory?: string }) {
   return {
     ...(input.workspace ? { workspace: input.workspace } : input.directory ? { directory: input.directory } : {}),
   }
@@ -56,7 +49,7 @@ function auto(input: boolean) {
 }
 
 async function edit(input: { file: string; cwd?: string; renderer?: CliRenderer }) {
-  const editor = process.env["VISUAL"] || process.env["EDITOR"]
+  const editor = (process.env["VISUAL"] || process.env["EDITOR"])?.trim()
   if (!editor) throw new Error("Set $VISUAL or $EDITOR to use /memory edit")
 
   input.renderer?.suspend()
@@ -90,18 +83,23 @@ export async function runMemoryCommand(input: {
   toast: Toast
   renderer?: CliRenderer
   show(): void
-  usage(message: string): void
+  status(): void
+  usage(message?: string): void
 }) {
   const parsed = parseMemoryInput(input.text)
   if (!parsed) return false
 
   try {
-    if (parsed.kind === "inspect") {
+    if (parsed.kind === "help") {
+      input.usage()
+      return true
+    }
+    if (parsed.kind === "show") {
       input.show()
       return true
     }
     if (parsed.kind === "usage") {
-      input.usage(`${parsed.reason}\n${MEMORY_USAGE}`)
+      input.usage(parsed.reason)
       return true
     }
     const name = "Memory"
@@ -114,31 +112,24 @@ export async function runMemoryCommand(input: {
       return true
     }
     if (parsed.operation === "status") {
-      const result = read(await input.client.memory.status(route(input)))
-      input.toast.show({
-        variant: "info",
-        message: `${name} ${result.state.enabled ? "enabled" : "disabled"} · ${tokens(result.index.estimatedTokens)} · ${result.root}`,
-      })
+      input.status()
       return true
     }
     if (parsed.operation === "edit") {
       const status = read(await input.client.memory.status(route(input)))
-      if (!status.state.enabled) throw new Error("Memory is disabled. Run /memory enable first.")
+      if (!status.state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
       await edit({ file: path.join(status.root, "project.md"), cwd: input.directory, renderer: input.renderer })
       const result = read(await input.client.memory.rebuild(route(input)))
       input.toast.show({ variant: "success", message: `${name} rebuilt (${tokens(result.index.tokens)})` })
       return true
     }
     if (parsed.operation === "auto") {
-      const result =
-        parsed.mode === "status"
-          ? read(await input.client.memory.status(route(input)))
-          : read(
-              await input.client.memory.configure({
-                ...route(input),
-                autoConsolidate: parsed.mode === "on",
-              }),
-            )
+      const result = read(
+        await input.client.memory.configure({
+          ...route(input),
+          autoConsolidate: parsed.mode === "on",
+        }),
+      )
       input.toast.show({ variant: "info", message: auto(result.state.autoConsolidate) })
       return true
     }
@@ -175,7 +166,7 @@ export async function runMemoryCommand(input: {
     }
     return true
   } catch (error) {
-    input.toast.show({ variant: "error", message: `Memory command failed: ${msg(error)}` })
+    input.toast.show({ variant: "error", message: `Memory command failed: ${errorMessage(error)}` })
     return true
   }
 }

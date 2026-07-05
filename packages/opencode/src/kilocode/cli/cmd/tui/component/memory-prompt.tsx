@@ -1,10 +1,13 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
 import type { CliRenderer } from "@opentui/core"
 import type { DialogContext } from "@/cli/cmd/tui/ui/dialog"
-import { DialogAlert } from "@/cli/cmd/tui/ui/dialog-alert"
 import type { ToastContext } from "@/cli/cmd/tui/ui/toast"
-import { showMemoryDialog } from "@/kilocode/cli/cmd/tui/component/dialog-memory"
-import { MEMORY_USAGE, runMemoryCommand } from "@/kilocode/cli/cmd/tui/memory-command"
+import {
+  showMemoryDialog,
+  showMemoryHelpDialog,
+  showMemoryStatusDialog,
+} from "@/kilocode/cli/cmd/tui/component/dialog-memory"
+import { runMemoryCommand } from "@/kilocode/cli/cmd/tui/memory-command"
 
 export namespace MemoryPrompt {
   export async function run(input: {
@@ -25,7 +28,8 @@ export namespace MemoryPrompt {
       toast: input.toast,
       renderer: input.renderer,
       show: () => showMemoryDialog(input.dialog, { workspace: input.workspace, directory: input.directory }),
-      usage: (message) => DialogAlert.show(input.dialog, "Memory", message || MEMORY_USAGE),
+      status: () => showMemoryStatusDialog(input.dialog, { workspace: input.workspace, directory: input.directory }),
+      usage: (message) => showMemoryHelpDialog(input.dialog, message),
     })
     if (!handled) return false
     input.done()

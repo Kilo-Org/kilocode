@@ -1,7 +1,12 @@
 import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
+import { MemoryAutosaveStatus } from "@kilocode/kilo-memory/autosave-status"
+import { MEMORY_COMMAND_CATALOG } from "@kilocode/kilo-memory/commands"
+import { MemoryDecisions } from "@kilocode/kilo-memory/decisions"
+import { MemoryToken } from "@kilocode/kilo-memory/token"
 import { Global } from "@opencode-ai/core/global"
 import { createMemo, createResource, For, Match, Show, Switch } from "solid-js"
+import { relativeTime } from "@/cli/cmd/tui/feature-plugins/session/util"
 import { useProject } from "@/cli/cmd/tui/context/project"
 import { useSDK } from "@/cli/cmd/tui/context/sdk"
 import { useTheme } from "@/cli/cmd/tui/context/theme"
@@ -9,28 +14,26 @@ import { useTuiConfig } from "@/cli/cmd/tui/context/tui-config"
 import { useBindings } from "@/cli/cmd/tui/keymap"
 import { useDialog, type DialogContext } from "@/cli/cmd/tui/ui/dialog"
 import { getScrollAcceleration } from "@/cli/cmd/tui/util/scroll"
-
-function msg(error: unknown) {
-  if (error instanceof Error) return error.message
-  if (typeof error === "string") return error
-  try {
-    return JSON.stringify(error) ?? String(error)
-  } catch (_error) {
-    return String(error)
-  }
-}
+import { route } from "@/kilocode/cli/cmd/tui/memory-command"
+import { errorMessage } from "@/util/error"
 
 function fmt(value: number) {
   return value.toLocaleString()
 }
 
-function saved(value: number) {
-  if (value > 0) return `${fmt(value)} ${value === 1 ? "change" : "changes"}`
-  return "checked · no new memory"
+function saved(state: { autoConsolidate: boolean; stats: MemoryAutosaveStatus.Stats }) {
+  const item = MemoryAutosaveStatus.summarize(state)
+  if (item.state === "saved") return `${fmt(item.count)} ${item.count === 1 ? "change" : "changes"}`
+  if (item.state === "handoff") return "session handoff"
+  return "no changes"
 }
 
 function count(text: string) {
   return text.split("\n").filter((line) => line.trim().startsWith("- ")).length
+}
+
+function records(text: string) {
+  return (text.match(/^record id=/gm) ?? []).length
 }
 
 function preview(text: string) {
@@ -47,101 +50,210 @@ function tail(text: string) {
     .slice(-8)
 }
 
-type Decision = {
-  kind?: string
-  result?: string
-  reason?: string
-  fallback?: boolean
-  operationCount?: number
-  skippedCount?: number
-  query?: string
-  topics?: string[]
-  files?: string[]
-  skipped?: { reason?: string; text?: string; duplicateOf?: string }[]
-  operations?: {
-    action?: string
-    file?: string
-    section?: string
-    key?: string
-    query?: string
-  }[]
-}
-
-function parse(line: string) {
-  try {
-    const value = JSON.parse(line) as unknown
-    if (!value || typeof value !== "object" || Array.isArray(value)) return
-    return value as Decision
-  } catch (_error) {
-    return undefined
-  }
-}
-
-function unique(input: string[]) {
-  return [...new Set(input.filter(Boolean))]
-}
-
-/** Summarizes the memory operations (adds/removes) applied in a save decision, e.g. "project.md:deploy_target". */
-function savedOperations(input: Decision | undefined) {
-  const items = input?.operations ?? []
-  const text = items
+function savedOperations(input: MemoryDecisions.Operation[]) {
+  const text = input
     .map((item) => {
-      if (item.action === "remove") return item.query ? `remove:${item.query}` : "remove"
-      if (!item.key) return ""
-      return `${item.file ?? "memory"}:${item.key}`
+      if (item.type === "remove") return item.query ? `remove:${item.query}` : "remove"
+      return `${item.file}:${item.key}`
     })
-    .filter(Boolean)
     .join(", ")
   return text || "none"
 }
 
-function skip(input: Decision | undefined) {
-  const item = input?.skipped?.at(-1)
+function skip(item: MemoryDecisions.Skipped | undefined) {
   if (!item) return "none"
   const dupe = item.duplicateOf ? ` duplicate of ${item.duplicateOf}` : ""
-  return `${item.reason ?? "skipped"}${dupe}`
+  return `${item.reason}${dupe}`
 }
 
 function audit(text: string) {
-  const items = text
-    .split("\n")
-    .map((line) => parse(line))
-    .filter((item): item is Decision => Boolean(item))
-  const saves = items.filter((item) => item.kind === "typed")
-  const recalls = items.filter((item) => item.kind === "recall")
-  const save = saves.at(-1)
-  const recall = recalls.at(-1)
-  const accepted = saves.reduce((sum, item) => sum + (item.operationCount ?? 0), 0)
-  const skipped = saves.reduce((sum, item) => sum + (item.skippedCount ?? 0), 0)
-  const fallback = saves.some((item) => item.fallback || item.result === "fallback")
-  const files = unique(saves.flatMap((item) => item.files ?? [])).join(", ") || "none"
-  const topics = unique(recall?.topics ?? []).join(", ") || "none"
-  const errors = unique(
-    items
-      .filter((item) => item.result === "error" || item.reason === "parse_error")
-      .map((item) => item.reason ?? "error"),
-  ).join(", ")
+  const item = MemoryDecisions.summarize(text)
   return [
-    `last save attempt: ${save ? `${save.result ?? "unknown"}${save.reason ? ` (${save.reason})` : ""}` : "none"}`,
-    `latest saved changes: ${savedOperations(save)}`,
-    `latest skipped: ${skip(save)}`,
-    `accepted saves: ${accepted} · skipped candidates: ${skipped}`,
-    `fallback used: ${fallback ? "yes" : "no"} · files updated: ${files}`,
-    `last recall query: ${recall?.query ?? "none"}`,
-    `matched topics: ${topics} · recalled files: ${(recall?.files ?? []).join(", ") || "none"}`,
-    `errors: ${errors || "none"}`,
+    `last save attempt: ${
+      item.lastSave ? `${item.lastSave.result}${item.lastSave.reason ? ` (${item.lastSave.reason})` : ""}` : "none"
+    }`,
+    `latest saved changes: ${savedOperations(item.latestOperations)}`,
+    `latest skipped: ${skip(item.latestSkipped)}`,
+    `accepted saves: ${item.accepted} · skipped candidates: ${item.skipped}`,
+    `fallback used: ${item.fallback ? "yes" : "no"} · files updated: ${item.files.join(", ") || "none"}`,
+    `last recall query: ${item.lastRecall?.query ?? "none"}`,
+    `matched topics: ${item.lastRecall?.topics.join(", ") || "none"} · recalled files: ${
+      item.lastRecall?.files.join(", ") || "none"
+    }`,
+    `errors: ${item.errors.join(", ") || "none"}`,
   ]
-}
-
-function route(input: { workspace?: string; directory?: string }) {
-  return {
-    ...(input.workspace ? { workspace: input.workspace } : input.directory ? { directory: input.directory } : {}),
-  }
 }
 
 export function showMemoryDialog(dialog: DialogContext, input?: { workspace?: string; directory?: string }) {
   dialog.setSize("large")
   dialog.replace(() => <DialogMemory workspace={input?.workspace} directory={input?.directory} />)
+}
+
+export function showMemoryHelpDialog(dialog: DialogContext, reason?: string) {
+  dialog.setSize("large")
+  dialog.replace(() => <DialogMemoryHelp reason={reason} />)
+}
+
+export function showMemoryStatusDialog(dialog: DialogContext, input?: { workspace?: string; directory?: string }) {
+  dialog.setSize("large")
+  dialog.replace(() => <DialogMemoryStatus workspace={input?.workspace} directory={input?.directory} />)
+}
+
+function autosave(state: { autoConsolidate: boolean; stats: MemoryAutosaveStatus.Stats }) {
+  const item = MemoryAutosaveStatus.summarize(state)
+  if (item.state === "off") return "off"
+  if (item.state === "watching") return "watching…"
+  if (item.state === "saved") {
+    return `${fmt(item.count)} ${item.count === 1 ? "change" : "changes"} · ${relativeTime(item.at)}`
+  }
+  if (item.state === "handoff") return `session handoff saved · ${relativeTime(item.at)}`
+  return `no changes · ${relativeTime(item.at)}`
+}
+
+function MemoryHeaderInfo(props: {
+  root: string
+  state: {
+    enabled: boolean
+    scope: string
+  }
+}) {
+  const { theme } = useTheme()
+  return (
+    <>
+      <text fg={theme.text}>
+        {props.state.enabled ? "Enabled" : "Disabled"} · {props.state.scope}
+      </text>
+      <text fg={theme.textMuted} wrapMode="word">
+        {props.root.replace(Global.Path.home, "~")}
+      </text>
+    </>
+  )
+}
+
+function MemorySourcesInfo(props: {
+  sources: {
+    project: string
+    environment: string
+    corrections: string
+  }
+}) {
+  const { theme } = useTheme()
+  return (
+    <box>
+      <text fg={theme.text}>Sources</text>
+      <text fg={theme.textMuted}>
+        project.md {count(props.sources.project)} · environment.md {count(props.sources.environment)} · corrections.md{" "}
+        {count(props.sources.corrections)}
+      </text>
+    </box>
+  )
+}
+
+export function DialogMemoryHelp(props: { reason?: string }) {
+  const dialog = useDialog()
+  const { theme } = useTheme()
+
+  return (
+    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
+      <box flexDirection="row" justifyContent="space-between">
+        <text fg={theme.text} attributes={TextAttributes.BOLD}>
+          Memory
+        </text>
+        <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+          esc
+        </text>
+      </box>
+      <Show when={props.reason}>
+        {(reason) => <text fg={theme.error}>{reason()}</text>}
+      </Show>
+      <box gap={0}>
+        <For each={MEMORY_COMMAND_CATALOG}>
+          {(item) => (
+            <box flexDirection="row" gap={2}>
+              <text fg={theme.text} flexShrink={0}>
+                /memory {item.usage}
+              </text>
+              <text fg={theme.textMuted} wrapMode="word">
+                {item.description}
+              </text>
+            </box>
+          )}
+        </For>
+      </box>
+    </box>
+  )
+}
+
+function DialogMemoryStatus(props: { workspace?: string; directory?: string }) {
+  const sdk = useSDK()
+  const project = useProject()
+  const dialog = useDialog()
+  const { theme } = useTheme()
+  const [data, api] = createResource(
+    () => `${props.workspace ?? project.workspace.current() ?? "__default__"}:${props.directory ?? ""}`,
+    async () => {
+      const workspace = props.workspace ?? project.workspace.current()
+      const result = await sdk.client.memory.show(route({ workspace, directory: props.directory }))
+      if (result.error) throw new Error(errorMessage(result.error))
+      if (!result.data) throw new Error("Memory response had no data")
+      return result.data
+    },
+  )
+
+  return (
+    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
+      <box flexDirection="row" justifyContent="space-between">
+        <text fg={theme.text} attributes={TextAttributes.BOLD}>
+          Memory Status
+        </text>
+        <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+          esc
+        </text>
+      </box>
+      <Switch>
+        <Match when={data.loading}>
+          <text fg={theme.textMuted}>Loading memory...</text>
+        </Match>
+        <Match when={data.error}>
+          <text fg={theme.error} wrapMode="word">
+            {errorMessage(data.error)}
+          </text>
+        </Match>
+        <Match when={data()}>
+          {(item) => (
+            <box gap={1}>
+              <box>
+                <MemoryHeaderInfo root={item().root} state={item().state} />
+              </box>
+              <box>
+                <text fg={theme.text}>Auto-save</text>
+                <text fg={theme.textMuted}>{autosave(item().state)}</text>
+              </box>
+              <box>
+                <text fg={theme.text}>Startup context</text>
+                <text fg={theme.textMuted}>
+                  {item().state.autoInject ? "on" : "off"} · last injected{" "}
+                  {fmt(item().state.stats.lastInjectedTokens)} tokens
+                </text>
+              </box>
+              <MemorySourcesInfo sources={item().sources} />
+              <box>
+                <text fg={theme.text}>Index</text>
+                <text fg={theme.textMuted}>
+                  {fmt(records(item().index))} entries · {fmt(MemoryToken.estimate(item().index))} estimated tokens
+                </text>
+              </box>
+            </box>
+          )}
+        </Match>
+      </Switch>
+      <box flexDirection="row" justifyContent="flex-start">
+        <text fg={theme.textMuted} onMouseUp={() => void api.refetch()}>
+          refresh
+        </text>
+      </box>
+    </box>
+  )
 }
 
 export function DialogMemory(props: { workspace?: string; directory?: string }) {
@@ -159,7 +271,7 @@ export function DialogMemory(props: { workspace?: string; directory?: string }) 
     async () => {
       const workspace = props.workspace ?? project.workspace.current()
       const result = await sdk.client.memory.show(route({ workspace, directory: props.directory }))
-      if (result.error) throw new Error(msg(result.error))
+      if (result.error) throw new Error(errorMessage(result.error))
       if (!result.data) throw new Error("Memory response had no data")
       return result.data
     },
@@ -195,17 +307,14 @@ export function DialogMemory(props: { workspace?: string; directory?: string }) 
           </Match>
           <Match when={data.error}>
             <text fg={theme.error} wrapMode="word">
-              {msg(data.error)}
+              {errorMessage(data.error)}
             </text>
           </Match>
           <Match when={data()}>
             {(item) => (
               <box gap={1}>
                 <box>
-                  <text fg={theme.text}>
-                    {item().state.enabled ? "Enabled" : "Disabled"} · {item().state.scope}
-                  </text>
-                  <text fg={theme.textMuted}>{item().root.replace(Global.Path.home, "~")}</text>
+                  <MemoryHeaderInfo root={item().root} state={item().state} />
                   <text fg={theme.textMuted}>startup context {item().state.autoInject ? "on" : "off"}</text>
                   <text fg={theme.textMuted}>
                     last startup context {fmt(item().state.stats.lastInjectedTokens)} tokens · stored index{" "}
@@ -213,18 +322,12 @@ export function DialogMemory(props: { workspace?: string; directory?: string }) 
                   </text>
                   <Show when={item().state.stats.lastConsolidationTokens > 0}>
                     <text fg={theme.textMuted}>
-                      last auto-save {saved(item().state.stats.lastOperationCount)} · model usage{" "}
+                      last auto-save {saved(item().state)} · model usage{" "}
                       {fmt(item().state.stats.lastConsolidationTokens)} tokens
                     </text>
                   </Show>
                 </box>
-                <box>
-                  <text fg={theme.text}>Sources</text>
-                  <text fg={theme.textMuted}>
-                    project.md {count(item().sources.project)} · environment.md {count(item().sources.environment)} ·
-                    corrections.md {count(item().sources.corrections)}
-                  </text>
-                </box>
+                <MemorySourcesInfo sources={item().sources} />
                 <box>
                   <text fg={theme.text}>Index</text>
                   <Show when={preview(item().index).length > 0} fallback={<text fg={theme.textMuted}>No entries</text>}>

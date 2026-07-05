@@ -30,6 +30,7 @@ describe("memory TUI command parser", () => {
         },
       },
       show() {},
+      status() {},
       usage() {},
     }
 
@@ -67,36 +68,28 @@ describe("memory TUI command parser", () => {
         },
       },
       show() {},
+      status() {},
       usage(message: string) {
         shown.push(message)
       },
     }
 
-    await runMemoryCommand({ ...base, text: "/memory auto status" })
     await runMemoryCommand({ ...base, text: "/memory auto off" })
+    await runMemoryCommand({ ...base, text: "/memory auto status" })
     await runMemoryCommand({ ...base, text: "/memory purge" })
     await runMemoryCommand({ ...base, text: "/memory purge confirm" })
 
-    expect(shown[0]).toBe("Memory auto-save on")
-    expect(shown[1]).toBe("Memory auto-save off")
+    expect(shown[0]).toBe("Memory auto-save off")
+    expect(shown[1]).toContain("Missing auto mode")
     expect(shown[2]).toContain("Purge requires confirmation")
     expect(shown[3]).toBe("Memory purged")
     expect(calls).toEqual([{ autoConsolidate: false }, { confirm: true }])
   })
 
-  test("status toast includes storage root", async () => {
+  test("status opens overview dialog", async () => {
     const shown: string[] = []
-    const client = {
-      memory: {
-        status: async () => ({
-          data: {
-            root: "/tmp/kilo-data/memory/repo-abc123",
-            state: { enabled: true },
-            index: { estimatedTokens: 42 },
-          },
-        }),
-      },
-    } as unknown as KiloClient
+    const opened: string[] = []
+    const client = { memory: {} } as unknown as KiloClient
 
     await runMemoryCommand({
       text: "/memory status",
@@ -107,10 +100,83 @@ describe("memory TUI command parser", () => {
         },
       },
       show() {},
+      status() {
+        opened.push("status")
+      },
       usage() {},
     })
 
-    expect(shown).toEqual(["Memory enabled · 42 memory tokens · /tmp/kilo-data/memory/repo-abc123"])
+    expect(opened).toEqual(["status"])
+    expect(shown).toEqual([])
+  })
+
+  test("bare memory command opens help", async () => {
+    const calls: unknown[] = []
+    const client = { memory: {} } as unknown as KiloClient
+
+    const result = await runMemoryCommand({
+      text: "/memory",
+      client,
+      toast: { show() {} },
+      show() {
+        calls.push("show")
+      },
+      status() {
+        calls.push("status")
+      },
+      usage(message?: string) {
+        calls.push(message)
+      },
+    })
+
+    expect(result).toBe(true)
+    expect(calls).toEqual([undefined])
+  })
+
+  test("on and off call enable and disable endpoints", async () => {
+    const shown: string[] = []
+    const calls: string[] = []
+    const client = {
+      memory: {
+        enable: async () => {
+          calls.push("enable")
+          return { data: { root: "/tmp/kilo-data/memory/repo-abc123", index: { tokens: 42 } } }
+        },
+        disable: async () => {
+          calls.push("disable")
+          return { data: { state: { enabled: false } } }
+        },
+      },
+    } as unknown as KiloClient
+
+    await runMemoryCommand({
+      text: "/memory on",
+      client,
+      toast: {
+        show(input: { message: string }) {
+          shown.push(input.message)
+        },
+      },
+      show() {},
+      status() {},
+      usage() {},
+    })
+    await runMemoryCommand({
+      text: "/memory off",
+      client,
+      toast: {
+        show(input: { message: string }) {
+          shown.push(input.message)
+        },
+      },
+      show() {},
+      status() {},
+      usage() {},
+    })
+
+    expect(calls).toEqual(["enable", "disable"])
+    expect(shown[0]).toContain("Memory enabled")
+    expect(shown[1]).toBe("Memory disabled")
   })
 
   test("memory commands route to session directory when no workspace is active", async () => {
@@ -128,6 +194,7 @@ describe("memory TUI command parser", () => {
       client,
       toast: { show() {} },
       show() {},
+      status() {},
       usage() {},
     }
 

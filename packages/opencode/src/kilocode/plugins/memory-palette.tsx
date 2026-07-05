@@ -1,6 +1,6 @@
 import type { TuiPlugin } from "@kilocode/plugin/tui"
 import type { InternalTuiPlugin } from "@/cli/cmd/tui/plugin/internal"
-import { DialogMemory } from "@/kilocode/cli/cmd/tui/component/dialog-memory"
+import { DialogMemoryHelp } from "@/kilocode/cli/cmd/tui/component/dialog-memory"
 
 const id = "internal:kilo-memory-palette"
 
@@ -9,14 +9,14 @@ const tui: TuiPlugin = async (api) => {
     commands: [
       {
         namespace: "palette",
-        name: "memory.show",
+        name: "memory.help",
         title: "Memory",
         slashName: "memory",
         slashAliases: ["mem"],
         category: "System",
         run() {
           api.ui.dialog.setSize("large")
-          api.ui.dialog.replace(() => <DialogMemory />)
+          api.ui.dialog.replace(() => <DialogMemoryHelp />)
         },
       },
     ],

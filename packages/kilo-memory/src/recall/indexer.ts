@@ -14,7 +14,7 @@ export namespace MemoryIndexer {
   export const stale = MemoryBudget.stale
 
   type Item = MemoryShared.TypedItem
-  type Digest = { id: string; topic: string; time: string; summary: string }
+  type Digest = { id: string; topic: string; time: string; summary: string; fallback?: boolean }
 
   export const digest = {
     recent: 240,
@@ -41,7 +41,7 @@ export namespace MemoryIndexer {
       id: `${opts?.latest ? "latest_session" : "session"}.${input.id}`,
       source: `${input.id}.md`,
       updated: input.time,
-      text: `session=${input.id} topic="${topic}" ${input.time} :: ${summary}`,
+      text: `session=${input.id} topic="${topic}" ${input.time}${input.fallback ? " (fallback)" : ""} :: ${summary}`,
     })
   }
 

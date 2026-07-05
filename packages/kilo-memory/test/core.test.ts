@@ -66,6 +66,7 @@ describe("memory core package", () => {
       stats: {
         lastInjectedAt: Number.NaN,
         lastTypedConsolidationAt: Number.POSITIVE_INFINITY,
+        lastSessionSavedAt: Number.POSITIVE_INFINITY,
       },
     })
 
@@ -79,6 +80,7 @@ describe("memory core package", () => {
     expect(state.limits.maxSessionLineChars).toBe(480)
     expect(state.stats.lastInjectedAt).toBeNull()
     expect(state.stats.lastTypedConsolidationAt).toBeNull()
+    expect(state.stats.lastSessionSavedAt).toBeNull()
   })
 
   test("state writes omit code-owned limits", async () => {
@@ -112,6 +114,20 @@ describe("memory core package", () => {
       expect(shown.decisions).not.toContain("hunter2")
       expect(shown.changes).toContain("[redacted]")
       expect(shown.decisions).toContain("provider error")
+    })
+  })
+
+  test("targeted recall redacts query before decision truncation", async () => {
+    await use(async (t) => {
+      const secret = "sk-" + "a".repeat(40)
+      await Memory.enable({ root: t.root })
+
+      await Memory.recall({ root: t.root, query: "x".repeat(220) + secret })
+      const shown = await Memory.show({ root: t.root })
+
+      expect(shown.decisions).toContain("[redacted]")
+      expect(shown.decisions).not.toContain(secret)
+      expect(shown.decisions).not.toContain(secret.slice(0, 20))
     })
   })
 
@@ -350,6 +366,23 @@ describe("memory core package", () => {
     })
   })
 
+  test("out-of-scope secret ops stay out of the operations audit", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+
+      const result = await Memory.apply({
+        root: t.root,
+        ops: [{ action: "add", key: "private_pref", text: "My preference is password=hunter2." }],
+      })
+      const shown = await Memory.show({ root: t.root })
+
+      expect(result.result.skipped).toEqual([{ reason: "out_of_scope", text: "My preference is [redacted]" }])
+      expect(shown.decisions).toContain('"reason":"out_of_scope"')
+      expect(shown.decisions).not.toContain("private_pref")
+      expect(shown.decisions).not.toContain("password=hunter2")
+    })
+  })
+
   test("normalizes unsafe memory keys", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
@@ -564,6 +597,67 @@ describe("memory core package", () => {
       expect(active).toBeUndefined()
       expect(prior?.block).toContain("session=ses_plan_memory")
       expect(prior?.block).toContain("token accounting")
+    })
+  })
+
+  test("direct digest recall returns full stored summaries while the index stays brief", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      const tail = "FULL_DETAIL_AFTER_480"
+      const summary = `Long digest start. ${"continuity detail ".repeat(45)}${tail}`
+      await Memory.recordSession({
+        root: t.root,
+        sessionID: "ses_full_digest",
+        topic: "full digest",
+        summary,
+        time: Date.UTC(2026, 0, 1),
+      })
+
+      const saved = await MemoryFiles.readSession(t.root, {
+        sessionID: "ses_full_digest",
+        max: MemorySchema.maxStoredDigestSummary,
+      })
+      const shown = await Memory.show({ root: t.root })
+      const recalled = await MemoryRecall.search({
+        root: t.root,
+        query: "",
+        mode: "digest",
+        sessionID: "ses_full_digest",
+      })
+      const latest = shown.index.match(/type=latest_session_digest[^\n]*\ntext: ([^\n]+)/)?.[1] ?? ""
+      const brief = latest.split(":: ").slice(1).join(":: ")
+
+      expect(saved?.summary.length).toBeGreaterThan(480)
+      expect(saved?.summary).toContain(tail)
+      expect(brief.length).toBeLessThanOrEqual(480)
+      expect(recalled?.block).toContain(tail)
+      expect(recalled?.block.length).toBeGreaterThan(480)
+    })
+  })
+
+  test("blank stored topic re-derives from User-prefixed summaries without splitting on colon", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await mkdir(MemoryPaths.files(t.root).sessions, { recursive: true })
+      await writeFile(
+        path.join(MemoryPaths.files(t.root).sessions, "2026-01-01T00-00-00.000Z_ses_topic_id.md"),
+        [
+          "# Session ses_topic",
+          "",
+          "Version: 1",
+          "Updated: 2026-01-01T00:00:00.000Z",
+          "Topic: ",
+          "",
+          "## Summary",
+          "User: x Result: y. Next: continue.",
+          "",
+        ].join("\n"),
+      )
+
+      const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_topic", max: 480 })
+
+      expect(saved?.topic).not.toBe("User")
+      expect(saved?.topic).toContain("User: x Result: y")
     })
   })
 

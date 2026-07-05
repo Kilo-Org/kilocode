@@ -45,7 +45,7 @@ export namespace MemoryOperations {
     return MemorySlug.hash(input, "memory")
   }
 
-  function secret(input: Add) {
+  export function secret(input: Add) {
     return MemoryRedact.has(input.text) || MemoryRedact.has(input.key)
   }
 
@@ -93,6 +93,11 @@ export namespace MemoryOperations {
   function source(input: Add) {
     if (input.file) return input.file
     return "project.md"
+  }
+
+  /** Canonical stored id for an add op: same file/section/key normalization apply uses to write the line. */
+  export function id(input: Add) {
+    return `${source(input)}:${heading(input)}:${key(input.key)}`
   }
 
   type Target = {

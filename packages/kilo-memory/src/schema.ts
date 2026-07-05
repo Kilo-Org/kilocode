@@ -1,5 +1,6 @@
 export namespace MemorySchema {
   export const VERSION = 1
+  export const maxStoredDigestSummary = 4_000
 
   export const Sources = ["project.md", "environment.md", "corrections.md"] as const
   // Only the buckets MemoryTopics.assign can actually emit. Topics are assigned by rule (never by the
@@ -33,6 +34,7 @@ export namespace MemorySchema {
     lastInjectedTokens: number
     lastInjectedSessionID: string | null
     lastTypedConsolidationAt: number | null
+    lastSessionSavedAt: number | null
     lastConsolidatedMessageID: string | null
     lastConsolidationCost: number
     lastConsolidationTokens: number
@@ -78,6 +80,7 @@ export namespace MemorySchema {
     lastInjectedTokens: 0,
     lastInjectedSessionID: null,
     lastTypedConsolidationAt: null,
+    lastSessionSavedAt: null,
     lastConsolidatedMessageID: null,
     lastConsolidationCost: 0,
     lastConsolidationTokens: 0,
@@ -205,6 +208,7 @@ export namespace MemorySchema {
         lastInjectedTokens: num(stat.lastInjectedTokens, base.stats.lastInjectedTokens),
         lastInjectedSessionID: str(stat.lastInjectedSessionID, base.stats.lastInjectedSessionID),
         lastTypedConsolidationAt: nullable(stat.lastTypedConsolidationAt, base.stats.lastTypedConsolidationAt),
+        lastSessionSavedAt: nullable(stat.lastSessionSavedAt, base.stats.lastSessionSavedAt),
         lastConsolidatedMessageID: str(stat.lastConsolidatedMessageID, base.stats.lastConsolidatedMessageID),
         lastConsolidationCost: num(stat.lastConsolidationCost, base.stats.lastConsolidationCost),
         lastConsolidationTokens: num(stat.lastConsolidationTokens, base.stats.lastConsolidationTokens),

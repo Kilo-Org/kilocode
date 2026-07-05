@@ -8,6 +8,7 @@ import { MemorySchema } from "./schema"
 import { MemoryShared } from "./recall/shared"
 import { MemoryToken } from "./recall/token"
 import { MemorySlug } from "./slug"
+import { MemoryRedact } from "./capture/redact"
 
 /** Root-bound package facade. External Kilo surfaces should derive root from workspace context first. */
 export namespace Memory {
@@ -197,6 +198,7 @@ export namespace Memory {
   }): Promise<Apply> {
     const trigger = input.trigger ?? "explicit"
     const inputOps = trigger === "explicit" ? input.ops : input.ops.filter((item) => item.action !== "remove")
+    const accepted = inputOps.filter((item) => item.action !== "add" || !MemoryOperations.secret(item))
     const result = await MemoryOperations.apply({ root: input.root, ops: inputOps })
     // Auto-capture skips a secret-like op and applies the rest. An explicit save whose only effect
     // was rejecting secret content must fail loudly rather than silently drop it; a mixed explicit
@@ -223,8 +225,8 @@ export namespace Memory {
         operationCount: result.operationCount,
         skippedCount: result.skipped.length || (ok ? 0 : 1),
         skipped: MemoryNotice.skip(result.skipped),
-        operations: MemoryNotice.ops({ ops: inputOps, skipped: result.skipped }),
-        files: MemoryShared.files(inputOps),
+        operations: MemoryNotice.ops({ ops: accepted, skipped: result.skipped }),
+        files: MemoryShared.files(accepted),
         summary: MemoryNotice.summary({ added: result.added, removed: result.removed, count: result.operationCount }),
       })
     }
@@ -238,14 +240,14 @@ export namespace Memory {
             detail: {
               type: "saved" as const,
               message: MemoryNotice.message({
-                ops: inputOps,
+                ops: accepted,
                 added: result.added,
                 removed: result.removed,
                 count: result.operationCount,
               }),
               operationCount: result.operationCount,
-              sources: MemoryShared.refs(inputOps),
-              files: MemoryShared.files(inputOps),
+              sources: MemoryShared.refs(accepted),
+              files: MemoryShared.files(accepted),
             },
           }
         : {}),
@@ -319,7 +321,7 @@ export namespace Memory {
       parsed: false,
       fallback: false,
       reason: result ? undefined : "no_matches",
-      query: MemoryShared.brief(input.query, 240),
+      query: MemoryShared.brief(MemoryRedact.text(input.query), 240),
       topics,
       files,
       tokens: result?.tokens ?? 0,
@@ -345,6 +347,7 @@ export namespace Memory {
     summary: string
     time?: number
     tokens?: number
+    fallback?: boolean
   }) {
     return MemoryFiles.queue(input.root, async () => {
       const state = await MemoryFiles.readState(input.root)
@@ -353,8 +356,9 @@ export namespace Memory {
         sessionID: input.sessionID,
         topic: input.topic,
         summary: input.summary,
-        max: state.limits.maxSessionLineChars,
+        max: MemorySchema.maxStoredDigestSummary,
         time: input.time,
+        fallback: input.fallback,
       })
       await MemoryFiles.pruneSessions(input.root, state.limits.maxSessionFiles)
       const index = await MemoryIndexer.rebuild({ root: input.root, state })

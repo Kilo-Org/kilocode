@@ -168,7 +168,7 @@ export function duplicateOps(input: {
     }
     // Exact-key upsert: same file/section/key as an existing entry is an update, not a duplicate —
     // route it to apply (which updates the line in place) instead of dropping it here.
-    if (item.file && existing.has(`${item.file}:${item.section ?? ""}:${item.key}`)) return true
+    if (item.file && existing.has(MemoryOperations.id(item))) return true
     const source = duplicate({
       text: `${item.key} ${item.text}`,
       items: input.items,
@@ -204,7 +204,8 @@ export function notice(input: {
   skipped: CaptureSkip[]
   tokens: number
 }): CaptureDetail | undefined {
-  const references = MemoryShared.refs(input.ops)
+  const ops = input.ops.filter((item) => item.action !== "add" || !MemoryOperations.secret(item))
+  const references = MemoryShared.refs(ops)
   if (input.count > 0) {
     return {
       type: "saved",
@@ -212,7 +213,7 @@ export function notice(input: {
       tokens: input.tokens,
       operationCount: input.count,
       sources: references,
-      files: MemoryShared.files(input.ops),
+      files: MemoryShared.files(ops),
     }
   }
   return {
@@ -222,6 +223,6 @@ export function notice(input: {
     operationCount: 0,
     skippedCount: input.skipped.length,
     sources: references,
-    files: MemoryShared.files(input.ops),
+    files: MemoryShared.files(ops),
   }
 }

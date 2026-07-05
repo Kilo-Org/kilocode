@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  auditOps,
   capturePlan,
   duplicateOps,
   fallbackDigest,
@@ -8,6 +9,7 @@ import {
   mergeOps,
   notice,
   parseJson,
+  parseDigest,
   parseOps,
   salvageTyped,
   skipLine,
@@ -106,6 +108,11 @@ describe("memory capture parsing", () => {
     expect(parsed.skipped.some((item) => item.reason === "duplicate")).toBe(true)
   })
 
+  test("throws on valid JSON that has no operations array instead of silently returning an empty batch", () => {
+    expect(() => salvageTyped(`[{"op":"upsert_project_fact","key":"good_one","value":"Keep this fact."}]`)).toThrow()
+    expect(() => salvageTyped(`{"op":"upsert_project_fact","key":"good_one","value":"Keep this fact."}`)).toThrow()
+  })
+
   test("redacts secrets in salvaged unsupported ops before they reach the audit", () => {
     const parsed = salvageTyped(
       `{"operations":[{"op":"not_a_real_op","key":"leak","value":"key is sk-abcdefghijklmnopqrstuvwxyz"}],"skipped":[]}`,
@@ -114,6 +121,16 @@ describe("memory capture parsing", () => {
     const salvaged = parsed.skipped.find((item) => item.reason === "unsupported")
     expect(salvaged?.text).toContain("[redacted]")
     expect(JSON.stringify(parsed.skipped)).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
+  })
+
+  test("redacts secrets in model-emitted skips before they reach callers", () => {
+    const secret = "sk-abcdefghijklmnopqrstuvwxyz"
+    const parsed = salvageTyped(
+      `{"operations":[],"skipped":[{"reason":"unsupported","text":"model skipped ${secret}"}]}`,
+    )
+
+    expect(parsed.skipped[0]?.text).toContain("[redacted]")
+    expect(parsed.skipped[0]?.text).not.toContain(secret)
   })
 
   test("salvages non-empty sibling fields when typed op value is empty", () => {
@@ -135,6 +152,17 @@ describe("memory capture parsing", () => {
     expect(salvaged?.text.length ?? 0).toBeLessThanOrEqual(500)
     expect(JSON.stringify(parsed.skipped)).not.toContain(secret)
     expect(JSON.stringify(parsed.skipped)).not.toContain(secret.slice(0, 20))
+  })
+
+  test("redacts remove audit queries before truncating", () => {
+    const secret = "sk-" + "a".repeat(40)
+    const query = "x".repeat(100) + secret
+    const audit = auditOps([{ action: "remove", query }])
+    const text = JSON.stringify(audit)
+
+    expect(text).toContain("[redacted]")
+    expect(text).not.toContain(secret)
+    expect(text).not.toContain(secret.slice(0, 20))
   })
 
   test("truncates typed batches beyond the op cap instead of failing", () => {
@@ -273,7 +301,7 @@ describe("memory capture parsing", () => {
 
   test("plans capture cadence from a state table", () => {
     const base = {
-      summary: "User: continue Result: updated code",
+      summary: "User: continue implementing digest robustness Result: updated capture and storage behavior",
       echo: false,
       durable: false,
       priorTime: 0,
@@ -342,6 +370,11 @@ describe("memory capture parsing", () => {
         input: { ...base, summary: "" },
         expected: { session: false, digestDue: false, typedCall: false, typedWork: false, skipReason: "no_work" },
       },
+      {
+        name: "expected skip: trivial completed turn writes no digest when typed is interval-gated",
+        input: { ...base, summary: "User: test Result: ok", lastTypedConsolidationAt: 900 },
+        expected: { digestDue: false, typedCall: false, fallbackDigest: false, skipReason: "trivial" },
+      },
     ]
 
     for (const item of cases) {
@@ -373,6 +406,7 @@ describe("memory capture parsing", () => {
     expect(hasDurableDiff([{ file: "src/lib.rs", additions: 5, deletions: 5 }])).toBe(false)
     expect(summarizeDiffs(diffs)).toContain("modified README.md +1 -0")
     expect(fallbackDigest({ prior: "Earlier state.", summary: "New state.", max: 80 })).toContain("Latest: New state.")
+    expect(parseDigest({ topic: "", summary: "User: x Result: y." }, "", 120).topic).not.toBe("User")
   })
 
   test("verifies duplicate skips and operation duplicates", () => {
@@ -426,6 +460,30 @@ describe("memory capture parsing", () => {
     // The exact-key upsert produces no NEW op-level duplicate skip; the only entry pointing at
     // repo_tests is the model's own confirmed duplicate claim carried through verifySkips.
     expect(deduped.skipped.filter((item) => item.duplicateOf === "project.md:Facts:repo_tests")).toHaveLength(1)
+  })
+
+  test("recognizes an exact-key upsert even when the model's key needs slugging", () => {
+    const items = [
+      {
+        id: MemoryOperations.id({ action: "add", file: "project.md", section: "Facts", key: "Deploy Target", text: "" }),
+        file: "project.md" as const,
+        section: "Facts",
+        key: "deploy_target",
+        text: "deploy_target Deploy to staging.",
+      },
+    ]
+    const deduped = duplicateOps({
+      items,
+      skipped: [],
+      ops: [
+        { action: "add", file: "project.md", section: "Facts", key: "Deploy Target", text: "Deploy to production now." },
+      ],
+    })
+
+    expect(deduped.ops).toEqual([
+      { action: "add", file: "project.md", section: "Facts", key: "Deploy Target", text: "Deploy to production now." },
+    ])
+    expect(deduped.skipped).toEqual([])
   })
 
   test("does not pre-skip similar operations from different memory scopes", () => {

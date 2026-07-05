@@ -1,45 +1,34 @@
 import type { TuiPluginApi } from "@kilocode/plugin/tui"
+import { MemoryAutosaveStatus } from "@kilocode/kilo-memory/autosave-status"
 import { createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js"
 import * as Log from "@opencode-ai/core/util/log"
+import { relativeTime } from "@/cli/cmd/tui/feature-plugins/session/util"
+import { route } from "@/kilocode/cli/cmd/tui/memory-command"
+import { errorMessage } from "@/util/error"
+import { Locale } from "@/util/locale"
 
 const log = Log.create({ service: "tui.memory-sidebar" })
 
-/** Compact token count: 2031 -> "2.0k", 850 -> "850". */
-function compact(value: number) {
-  if (value < 1000) return `${value}`
-  return `${(value / 1000).toFixed(1)}k`
-}
-
-/** Coarse relative time for a "· 5m ago" suffix. */
+/** Coarse relative time for a "· 5m ago" suffix; empty when there's no timestamp yet. */
 function ago(ts: number | null | undefined) {
-  if (!ts) return ""
-  const secs = Math.max(0, Math.floor((Date.now() - ts) / 1000))
-  if (secs < 45) return "just now"
-  const mins = Math.floor(secs / 60)
-  if (mins < 1) return "just now"
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
+  return ts ? relativeTime(ts) : ""
 }
-
-type Stats = { lastTypedConsolidationAt: number | null; lastOperationCount: number }
 
 /** Auto-capture status from the existing consolidation stats, rendered as its own dotted status line
  * (dot on when autoConsolidate is enabled). `detail` is the muted suffix; `saved` tints it green. */
-function autosave(state: { autoConsolidate: boolean; stats: Stats }): { detail: string; on: boolean; saved: boolean } {
-  if (!state.autoConsolidate) return { detail: "off", on: false, saved: false }
-  const at = state.stats.lastTypedConsolidationAt
-  if (!at) return { detail: "watching…", on: true, saved: false }
-  const count = state.stats.lastOperationCount
-  if (count > 0) return { detail: `saved ${count} ${count === 1 ? "change" : "changes"} · ${ago(at)}`, on: true, saved: true }
-  return { detail: `nothing new · ${ago(at)}`, on: true, saved: false }
-}
-
-function route(input: { workspace?: string; directory?: string }) {
-  return {
-    ...(input.workspace ? { workspace: input.workspace } : input.directory ? { directory: input.directory } : {}),
+function autosave(state: { autoConsolidate: boolean; stats: MemoryAutosaveStatus.Stats }) {
+  const item = MemoryAutosaveStatus.summarize(state)
+  if (item.state === "off") return { detail: "off", on: false, saved: false }
+  if (item.state === "watching") return { detail: "watching…", on: true, saved: false }
+  if (item.state === "saved") {
+    return {
+      detail: `${item.count} ${item.count === 1 ? "change" : "changes"} · ${ago(item.at)}`,
+      on: true,
+      saved: true,
+    }
   }
+  if (item.state === "handoff") return { detail: `session handoff saved · ${ago(item.at)}`, on: true, saved: true }
+  return { detail: `no changes · ${ago(item.at)}`, on: true, saved: false }
 }
 
 export function MemorySidebar(props: { api: TuiPluginApi; sessionID: string }) {
@@ -52,7 +41,7 @@ export function MemorySidebar(props: { api: TuiPluginApi; sessionID: string }) {
     async () => {
       const status = await props.api.client.memory.status(route({ workspace: workspace(), directory: dir() })).catch(
         (error: unknown) => {
-          log.warn("memory status unavailable", { error: String(error) })
+          log.warn("memory status unavailable", { error: errorMessage(error) })
           return undefined
         },
       )
@@ -87,7 +76,7 @@ export function MemorySidebar(props: { api: TuiPluginApi; sessionID: string }) {
     if (!item || !item.state.enabled) return undefined
     const stats = item.state.stats
     const loaded = stats.lastInjectedSessionID === props.sessionID && stats.lastInjectedTokens > 0
-    return loaded ? `${compact(stats.lastInjectedTokens)} tokens loaded` : "nothing loaded"
+    return loaded ? `${Locale.number(stats.lastInjectedTokens)} tokens loaded` : "nothing loaded"
   })
   // Active recall: the model called kilo_memory_recall this session — the strongest "working now" signal.
   const recall = createMemo(() => {

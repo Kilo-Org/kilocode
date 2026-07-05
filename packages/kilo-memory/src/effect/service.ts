@@ -54,6 +54,7 @@ type RecordInput = KiloMemory.Input & {
   summary: string
   time?: number
   tokens?: number
+  fallback?: boolean
 }
 
 type DecideInput = {
@@ -214,6 +215,7 @@ export namespace MemoryService {
                 ...state.stats,
                 // Digest-only commits leave the typed-interval clock where it was.
                 lastTypedConsolidationAt: input.typed ? input.now : state.stats.lastTypedConsolidationAt,
+                lastSessionSavedAt: input.digest ? input.now : state.stats.lastSessionSavedAt,
                 lastConsolidatedMessageID: input.messageID,
                 lastConsolidationCost: input.cost ?? state.stats.lastConsolidationCost,
                 lastConsolidationTokens: input.tokens,

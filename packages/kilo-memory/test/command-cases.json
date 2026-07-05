@@ -5,19 +5,19 @@
     "result": "none"
   },
   {
-    "name": "empty memory command opens inspect",
+    "name": "empty memory command opens help",
     "input": "/memory",
-    "result": "inspect"
+    "result": "help"
   },
   {
-    "name": "mem alias opens inspect",
+    "name": "mem alias opens show",
     "input": "/mem show",
-    "result": "inspect"
+    "result": "show"
   },
   {
-    "name": "project scope inspect",
+    "name": "project scope show",
     "input": "/memory project show",
-    "result": "inspect"
+    "result": "show"
   },
   {
     "name": "status operation",
@@ -32,13 +32,25 @@
     "operation": "edit"
   },
   {
-    "name": "enable operation",
+    "name": "on operation",
+    "input": "/memory on",
+    "result": "operation",
+    "operation": "enable"
+  },
+  {
+    "name": "off operation",
+    "input": "/memory off",
+    "result": "operation",
+    "operation": "disable"
+  },
+  {
+    "name": "enable alias",
     "input": "/memory enable",
     "result": "operation",
     "operation": "enable"
   },
   {
-    "name": "disable operation",
+    "name": "disable alias",
     "input": "/memory disable",
     "result": "operation",
     "operation": "disable"
@@ -63,11 +75,10 @@
     "confirm": true
   },
   {
-    "name": "auto status operation",
+    "name": "auto status usage",
     "input": "/memory auto status",
-    "result": "operation",
-    "operation": "auto",
-    "mode": "status"
+    "result": "usage",
+    "reason": "Missing auto mode"
   },
   {
     "name": "auto on operation",
@@ -116,6 +127,12 @@
     "result": "operation",
     "operation": "auto",
     "mode": "off"
+  },
+  {
+    "name": "inspect action is unknown",
+    "input": "/memory inspect",
+    "result": "usage",
+    "reason": "Unknown memory action"
   },
   {
     "name": "unknown action",

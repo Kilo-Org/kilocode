@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import path from "path"
 import * as KiloAgent from "@/kilocode/agent"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
+import { MemoryTool } from "@kilocode/kilo-memory/tool"
 import { MemorySaveTool } from "@/kilocode/tool/memory-save"
 import { MessageID, SessionID } from "@/session/schema"
 import { Permission } from "@/permission"
@@ -100,6 +101,14 @@ function denied(asks: Request[]): Tool.Context {
 }
 
 describe("kilo_memory_save", () => {
+  test("rejects oversized model-controlled strings", () => {
+    const decode = Schema.decodeUnknownSync(MemoryTool.SaveParameters)
+
+    expect(() => decode({ action: "remember", text: "x".repeat(12_001) })).toThrow()
+    expect(() => decode({ action: "forget", query: "x".repeat(12_001) })).toThrow()
+    expect(() => decode({ action: "remember", key: "k".repeat(257), text: "ok" })).toThrow()
+  })
+
   test("defaults mutating memory tool permission to ask", () => {
     const kilo = KiloAgent.prepare({})
 

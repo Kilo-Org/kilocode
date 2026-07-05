@@ -1,6 +1,7 @@
 import { Cause, Effect } from "effect"
 import { MemoryTurn as TurnCore } from "@kilocode/kilo-memory/effect/turn"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
+import { MemoryRedact } from "@kilocode/kilo-memory/redact"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Bus } from "@/bus"
@@ -18,7 +19,7 @@ const log = Log.create({ service: "memory.lifecycle" })
 
 function brief(cause: Cause.Cause<unknown>) {
   const err = Cause.squash(cause)
-  return (err instanceof Error ? err.message : String(err)).slice(0, 200)
+  return MemoryRedact.text(err instanceof Error ? err.message : String(err)).slice(0, 200)
 }
 
 /** Host turn-open/turn-close hooks: adapt opencode's session/provider services into the package

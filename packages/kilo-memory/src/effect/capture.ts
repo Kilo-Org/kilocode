@@ -39,6 +39,7 @@ import { MemoryService } from "./service"
 import { MemoryTimers } from "./timers"
 
 const MESSAGE_WINDOW = 24
+const FALLBACK_RETRY_MS = 60_000
 
 /** Heuristic: an assistant answer that mostly restates injected instructions/source files is not
  * durable project memory and should not be consolidated. */
@@ -160,7 +161,9 @@ export namespace MemoryCapture {
     const prior = session
       ? yield* memory.session({ root, sessionID: input.sessionID, max: state.limits.maxSessionLineChars })
       : undefined
-    const priorTime = prior?.time ? Date.parse(prior.time) : 0
+    const time = prior?.time ? Date.parse(prior.time) || 0 : 0
+    // Retry fallback stubs soon, but not every close while the model is failing.
+    const priorTime = prior?.fallback ? (now - time >= FALLBACK_RETRY_MS ? 0 : time) : time
     const plan = capturePlan({
       reason: input.reason,
       summary,
@@ -176,7 +179,11 @@ export namespace MemoryCapture {
     const digestDue = plan.digestDue
     const typedCall = plan.typedCall
     const fallback = MemoryRedact.text(
-      fallbackDigest({ prior: prior?.summary, summary, max: state.limits.maxSessionLineChars }),
+      fallbackDigest({
+        prior: prior?.fallback ? undefined : prior?.summary,
+        summary,
+        max: state.limits.maxSessionLineChars,
+      }),
     )
     const safe = MemoryDigest.empty(fallback) ? "" : fallback
 
@@ -191,6 +198,7 @@ export namespace MemoryCapture {
           summary: safe,
           time: now,
           tokens: 0,
+          fallback: true,
         })
         yield* memory.decide({
           root,
@@ -245,8 +253,8 @@ export namespace MemoryCapture {
               { title: "latest_user", body: user },
               { title: "latest_assistant", body: assistant || "(no assistant text)" },
               { title: "diff_summary", body: changed || "(none)" },
-              { title: "previous_digest", body: prior?.summary },
-              { title: "max_characters", body: String(state.limits.maxSessionLineChars) },
+              ...(prior?.summary && !prior.fallback ? [{ title: "previous_digest", body: prior.summary }] : []),
+              { title: "max_characters", body: String(MemorySchema.maxStoredDigestSummary) },
             ]),
             state.limits.maxConsolidationInputBytes,
           )
@@ -300,10 +308,25 @@ export namespace MemoryCapture {
           if (!parsed) {
             return { topic: "", summary: safe, tokens: usage(result.result.usage), reason: "parse_error" }
           }
-          const parsedDigest = parseDigest(parsed, fallback, state.limits.maxSessionLineChars)
+          const raw = MemoryRedact.text(parsed.summary)
+          const parsedDigest = parseDigest(
+            {
+              ...parsed,
+              topic: MemoryRedact.text(parsed.topic),
+              summary: raw,
+            },
+            fallback,
+            MemorySchema.maxStoredDigestSummary,
+          )
+          if (/^\s*User:\s/.test(raw) && /\bResult:\s/.test(raw)) {
+            return { topic: "", summary: safe, tokens: usage(result.result.usage), reason: "template_echo" }
+          }
+          if (!raw.trim() && parsedDigest.summary) {
+            return { topic: "", summary: safe, tokens: usage(result.result.usage), reason: "empty_digest" }
+          }
           return {
-            topic: MemoryRedact.text(parsedDigest.topic),
-            summary: MemoryRedact.text(parsedDigest.summary),
+            topic: parsedDigest.topic,
+            summary: parsedDigest.summary,
             tokens: usage(result.result.usage),
             reason: undefined as string | undefined,
           }
@@ -446,6 +469,7 @@ export namespace MemoryCapture {
         summary: digest.summary,
         time: now,
         tokens: digest.tokens,
+        fallback: Boolean(digest.reason),
       })
     }
     if (digestDue) {
@@ -556,7 +580,7 @@ export namespace MemoryCapture {
     // Brief message only: API errors carry response headers/bodies that would flood the host log.
     const err = Cause.squash(cause)
     MemoryLog.warn("memory capture failed", {
-      err: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+      err: MemoryRedact.text(err instanceof Error ? err.message : String(err)).slice(0, 200),
     })
   }
 }

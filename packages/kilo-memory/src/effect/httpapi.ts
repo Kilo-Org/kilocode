@@ -33,6 +33,7 @@ export namespace MemoryContract {
     lastInjectedTokens: Schema.Finite,
     lastInjectedSessionID: Schema.String,
     lastTypedConsolidationAt: Schema.Finite,
+    lastSessionSavedAt: Schema.Finite,
     lastConsolidationCost: Schema.Finite,
     lastConsolidationTokens: Schema.Finite,
     lastOperationCount: Schema.Finite,
@@ -174,6 +175,7 @@ export namespace MemoryContract {
       | "lastInjectedAt"
       | "lastInjectedSessionID"
       | "lastTypedConsolidationAt"
+      | "lastSessionSavedAt"
       | "lastConsolidatedMessageID"
       | "lastRecallAt"
       | "lastRecallSessionID"
@@ -181,6 +183,7 @@ export namespace MemoryContract {
       lastInjectedAt: number
       lastInjectedSessionID: string
       lastTypedConsolidationAt: number
+      lastSessionSavedAt: number
       lastRecallAt: number
       lastRecallSessionID: string
     }
@@ -197,6 +200,7 @@ export namespace MemoryContract {
         lastInjectedTokens: input.stats.lastInjectedTokens,
         lastInjectedSessionID: input.stats.lastInjectedSessionID ?? "",
         lastTypedConsolidationAt: input.stats.lastTypedConsolidationAt ?? 0,
+        lastSessionSavedAt: input.stats.lastSessionSavedAt ?? 0,
         lastConsolidationCost: input.stats.lastConsolidationCost,
         lastConsolidationTokens: input.stats.lastConsolidationTokens,
         lastOperationCount: input.stats.lastOperationCount,

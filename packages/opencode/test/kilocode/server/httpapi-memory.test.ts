@@ -41,6 +41,7 @@ function expectStats(input: unknown) {
   expect(keys(input)).toEqual(
     [
       "lastTypedConsolidationAt",
+      "lastSessionSavedAt",
       "lastConsolidationCost",
       "lastConsolidationTokens",
       "lastInjectedAt",
