@@ -2810,16 +2810,24 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
 function Question(props: ToolProps<typeof QuestionTool>) {
   const { theme } = useTheme()
   const count = createMemo(() => props.input.questions?.length ?? 0)
+  const dismissed = createMemo(
+    () =>
+      props.metadata.dismissed === true ||
+      (props.part.state.status === "error" && props.part.state.error?.includes("dismissed")),
+  )
 
   function format(answer?: ReadonlyArray<string>) {
+    if (dismissed()) return "Dismissed"
     if (!answer?.length) return "(no answer)"
     return answer.join(", ")
   }
 
+  const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
+
   return (
     <Switch>
-      <Match when={props.metadata.answers}>
-        <BlockTool title="# Questions" part={props.part}>
+      <Match when={props.metadata.answers || dismissed()}>
+        <BlockTool title={title()} part={props.part}>
           <box gap={1}>
             <For each={props.input.questions ?? []}>
               {(q, i) => (

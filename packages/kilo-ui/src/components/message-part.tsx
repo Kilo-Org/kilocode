@@ -1176,15 +1176,11 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
+              // kilocode_change: dismissed questions render through the normal
+              // question tool renderer so users can review the content.
               if (part.tool === "question" && cleaned.includes("dismissed this question")) {
-                return (
-                  <div style="width: 100%; display: flex; justify-content: flex-end;">
-                    <span class="text-13-regular text-text-weak cursor-default">
-                      {i18n.t("ui.messagePart.questions.dismissed")}
-                    </span>
-                  </div>
-                )
-              }
+                // Let the question tool renderer handle it
+              } else {
               const hint =
                 cleaned.includes("before overwriting it. Use the Read tool first") ||
                 cleaned.includes("has been modified since it was last read") ||
@@ -1229,6 +1225,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                   </div>
                 </Card>
               )
+              }
             }}
           </Match>
           <Match when={true}>
@@ -2786,12 +2783,15 @@ ToolRegistry.register({
     const i18n = useI18n()
     const questions = createMemo(() => (props.input.questions ?? []) as QuestionInfo[])
     const answers = createMemo(() => (props.metadata.answers ?? []) as QuestionAnswer[])
+    const dismissed = createMemo(() => props.metadata.dismissed === true || props.status === "error")
     const completed = createMemo(() => answers().length > 0)
     const pending = createMemo(() => busy(props.status))
+    const hasContent = createMemo(() => completed() || dismissed())
 
     const subtitle = createMemo(() => {
       const count = questions().length
       if (count === 0) return ""
+      if (dismissed()) return i18n.t("ui.question.subtitle.dismissed", { count })
       if (completed()) return i18n.t("ui.question.subtitle.answered", { count })
       return `${count} ${i18n.t(count > 1 ? "ui.common.question.other" : "ui.common.question.one")}`
     })
@@ -2810,15 +2810,19 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={completed()}>
-          <div data-component="question-answers">
+        <Show when={hasContent()}>
+          <div data-component="question-answers" data-dismissed={dismissed() ? "" : undefined}>
             <For each={questions()}>
               {(q, i) => {
                 const answer = () => answers()[i()] ?? []
+                const answerText = () => {
+                  if (dismissed()) return i18n.t("ui.question.answer.dismissed")
+                  return answer().join(", ") || i18n.t("ui.question.answer.none")
+                }
                 return (
                   <div data-slot="question-answer-item">
                     <div data-slot="question-text">{q.question}</div>
-                    <div data-slot="answer-text">{answer().join(", ") || i18n.t("ui.question.answer.none")}</div>
+                    <div data-slot="answer-text">{answerText()}</div>
                   </div>
                 )
               }}

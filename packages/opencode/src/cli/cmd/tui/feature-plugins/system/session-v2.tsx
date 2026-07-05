@@ -1010,16 +1010,29 @@ function Question(props: ToolProps) {
     arrayValue(props.input.questions).flatMap((item) => (isRecord(item) ? [item] : [])),
   )
   const answers = createMemo(() => arrayValue(props.metadata.answers))
+  const dismissed = createMemo(
+    () =>
+      props.metadata.dismissed === true ||
+      (props.part.state.status === "error" && String(props.part.state.error ?? "").includes("dismissed")),
+  )
+
+  function format(answer: unknown) {
+    if (dismissed()) return "Dismissed"
+    return formatAnswer(answer)
+  }
+
+  const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
+
   return (
     <Switch>
-      <Match when={answers().length > 0}>
-        <BlockTool title="# Questions" part={props.part}>
+      <Match when={answers().length > 0 || dismissed()}>
+        <BlockTool title={title()} part={props.part}>
           <box gap={1}>
             <For each={questions()}>
               {(question, index) => (
                 <box>
                   <text fg={theme.textMuted}>{stringValue(question.question)}</text>
-                  <text fg={theme.text}>{formatAnswer(answers()[index()])}</text>
+                  <text fg={theme.text}>{format(answers()[index()])}</text>
                 </box>
               )}
             </For>
