@@ -515,7 +515,7 @@ export const kiloScenarios: Scenario[] = [
       headers: ctx.headers(),
       body: { enable: true, sessionID: ctx.state.id },
     }))
-    .json(200, (body) => check(body === true, "allow everything should return true")),
+    .status(401),
   http.protected
     .post("/session/viewed", "session.viewed")
     .at((ctx) => ({ path: "/session/viewed", headers: ctx.headers(), body: { focused: [], open: [] } }))
