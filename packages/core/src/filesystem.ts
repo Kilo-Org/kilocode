@@ -8,6 +8,21 @@ import { Context, Effect, FileSystem, Layer, Schema } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Glob } from "./util/glob"
 import { serviceUse } from "./effect/service-use"
+const UTF8_BOM = new Uint8Array([0xef, 0xbb, 0xbf])
+const UTF8_BOM_CHAR = "\ufeff"
+
+function hasUtf8Bom(bytes: Uint8Array) {
+  return bytes.length >= UTF8_BOM.length && UTF8_BOM.every((byte, index) => bytes[index] === byte)
+}
+
+function hasStringBom(text: string) {
+  return text.charCodeAt(0) === 0xfeff
+}
+
+function withStringBom(text: string, bom: boolean) {
+  const stripped = hasStringBom(text) ? text.slice(1) : text
+  return bom ? UTF8_BOM_CHAR + stripped : stripped
+}
 
 export namespace AppFileSystem {
   export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()("FileSystemError", {
@@ -52,10 +67,33 @@ export namespace AppFileSystem {
         return yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false))
       })
 
+      const readFileString = Effect.fn("FileSystem.readFileString")(function* (path: string, encoding?: string) {
+        const bytes = yield* fs.readFile(path)
+        const text = yield* fs.readFileString(path, encoding)
+        return hasUtf8Bom(bytes) ? withStringBom(text, true) : text
+      })
+
+      const fileHasUtf8Bom = Effect.fn("FileSystem.fileHasUtf8Bom")(function* (path: string) {
+        return yield* fs.readFile(path).pipe(
+          Effect.map(hasUtf8Bom),
+          Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(false)),
+        )
+      })
+
+      const writeFileString = Effect.fn("FileSystem.writeFileString")(function* (
+        path: string,
+        content: string,
+        options?: Parameters<typeof fs.writeFileString>[2],
+      ) {
+        const shouldPreserveExistingBom = !options?.flag || options.flag.startsWith("w")
+        const bom = hasStringBom(content) || (shouldPreserveExistingBom && (yield* fileHasUtf8Bom(path)))
+        yield* fs.writeFileString(path, withStringBom(content, bom), options)
+      })
+
       const readFileStringSafe = Effect.fn("FileSystem.readFileStringSafe")(function* (path: string) {
-        return yield* fs
-          .readFileString(path)
-          .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
+        return yield* readFileString(path).pipe(
+          Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)),
+        )
       })
 
       const isDir = Effect.fn("FileSystem.isDir")(function* (path: string) {
@@ -84,13 +122,13 @@ export namespace AppFileSystem {
       })
 
       const readJson = Effect.fn("FileSystem.readJson")(function* (path: string) {
-        const text = yield* fs.readFileString(path)
+        const text = withStringBom(yield* readFileString(path), false)
         return JSON.parse(text)
       })
 
       const writeJson = Effect.fn("FileSystem.writeJson")(function* (path: string, data: unknown, mode?: number) {
         const content = JSON.stringify(data, null, 2)
-        yield* fs.writeFileString(path, content)
+        yield* writeFileString(path, content)
         if (mode) yield* fs.chmod(path, mode)
       })
 
@@ -103,7 +141,7 @@ export namespace AppFileSystem {
         content: string | Uint8Array,
         mode?: number,
       ) {
-        const write = typeof content === "string" ? fs.writeFileString(path, content) : fs.writeFile(path, content)
+        const write = typeof content === "string" ? writeFileString(path, content) : fs.writeFile(path, content)
 
         yield* write.pipe(
           Effect.catchIf(
@@ -173,6 +211,8 @@ export namespace AppFileSystem {
 
       return Service.of({
         ...fs,
+        readFileString,
+        writeFileString,
         existsSafe,
         readFileStringSafe,
         isDir,
