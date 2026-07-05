@@ -1158,6 +1158,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   const i18n = useI18n()
   const part = props.part as ToolPart
   const hideQuestion = createMemo(() => part.tool === "question" && busy(part.state.status))
+  const isDismissedQuestionError = createMemo(() => {
+    if (part.tool !== "question") return false
+    if (part.state.status !== "error" || !part.state.error) return false
+    const errStr = typeof part.state.error === "string" ? part.state.error : ""
+    return errStr.includes("dismissed this question")
+  })
 
   const emptyInput: Record<string, any> = {}
   const emptyMetadata: Record<string, any> = {}
@@ -1176,11 +1182,26 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
-              // dismissed questions fall through to the normal question
-              // tool renderer below so users can review the content.
-              if (part.tool === "question" && cleaned.includes("dismissed this question")) {
-                // Let the question tool renderer handle it
-              } else {
+              if (isDismissedQuestionError()) {
+                return (
+                  <Dynamic
+                    component={render()}
+                    input={input()}
+                    tool={part.tool}
+                    partID={part.id}
+                    callID={part.callID}
+                    metadata={meta()}
+                    partMetadata={top()}
+                    // @ts-expect-error
+                    output={part.state.output}
+                    status={part.state.status}
+                    hideDetails={props.hideDetails}
+                    defaultOpen={props.defaultOpen}
+                    animate
+                    reveal={props.animate}
+                  />
+                )
+              }
               const hint =
                 cleaned.includes("before overwriting it. Use the Read tool first") ||
                 cleaned.includes("has been modified since it was last read") ||
@@ -1225,7 +1246,6 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                   </div>
                 </Card>
               )
-              }
             }}
           </Match>
           <Match when={true}>

@@ -1015,7 +1015,7 @@ function Question(props: ToolProps) {
   const dismissed = createMemo(
     () =>
       props.metadata.dismissed === true ||
-      (props.part.state.status === "error" && String(props.part.state.error ?? "").includes("dismissed")),
+      (props.part.state.status === "error" && String(props.part.state.error?.message ?? "").includes("dismissed")),
   )
 
   function format(answer: unknown) {
@@ -1028,8 +1028,8 @@ function Question(props: ToolProps) {
 
   return (
     <Switch>
-      {/* kilocode_change start - use questions().length gate + dismissed-aware format */}
-      <Match when={questions().length > 0}>
+      {/* kilocode_change start - gate on dismissed or answers so dismissed/answered render, pending falls through to Asking... */}
+      <Match when={dismissed() || answers().length > 0}>
         <BlockTool title={title()} part={props.part}>
           <box gap={1}>
             <For each={questions()}>
