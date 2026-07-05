@@ -1028,6 +1028,7 @@ function Question(props: ToolProps) {
 
   return (
     <Switch>
+      {/* kilocode_change start - use questions().length gate + dismissed-aware format */}
       <Match when={questions().length > 0}>
         <BlockTool title={title()} part={props.part}>
           <box gap={1}>
@@ -1042,6 +1043,7 @@ function Question(props: ToolProps) {
           </box>
         </BlockTool>
       </Match>
+      {/* kilocode_change end */}
       <Match when={true}>
         <InlineTool icon="→" pending="Asking questions..." complete={questions().length} part={props.part}>
           Asked {questions().length} question{questions().length === 1 ? "" : "s"}

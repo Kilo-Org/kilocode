@@ -2837,6 +2837,7 @@ function Question(props: ToolProps<typeof QuestionTool>) {
 
   return (
     <Switch>
+      {/* kilocode_change start - toggle between one-liner and full block */}
       <Match when={count() > 0}>
         <Show
           when={expanded()}
@@ -2866,6 +2867,7 @@ function Question(props: ToolProps<typeof QuestionTool>) {
           </BlockTool>
         </Show>
       </Match>
+      {/* kilocode_change end */}
       <Match when={true}>
         <InlineTool icon="→" pending="Asking questions..." complete={count()} part={props.part}>
           Asked {count()} question{count() !== 1 ? "s" : ""}
