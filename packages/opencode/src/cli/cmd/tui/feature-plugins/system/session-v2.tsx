@@ -1010,7 +1010,8 @@ function Question(props: ToolProps) {
     arrayValue(props.input.questions).flatMap((item) => (isRecord(item) ? [item] : [])),
   )
   const answers = createMemo(() => arrayValue(props.metadata.answers))
-  // kilocode_change start - show dismissed question content
+  // kilocode_change start - show dismissed question content; use questions()
+  // presence (not answers) so dismissed/answered/error states all render content.
   const dismissed = createMemo(
     () =>
       props.metadata.dismissed === true ||
@@ -1023,10 +1024,11 @@ function Question(props: ToolProps) {
   }
 
   const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
+  // kilocode_change end
 
   return (
     <Switch>
-      <Match when={answers().length > 0 || dismissed()}>
+      <Match when={questions().length > 0}>
         <BlockTool title={title()} part={props.part}>
           <box gap={1}>
             <For each={questions()}>
@@ -1034,7 +1036,6 @@ function Question(props: ToolProps) {
                 <box>
                   <text fg={theme.textMuted}>{stringValue(question.question)}</text>
                   <text fg={theme.text}>{format(answers()[index()])}</text>
-                  {/* kilocode_change end */}
                 </box>
               )}
             </For>
