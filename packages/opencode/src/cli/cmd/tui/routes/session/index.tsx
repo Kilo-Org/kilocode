@@ -2810,6 +2810,7 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
 function Question(props: ToolProps<typeof QuestionTool>) {
   const { theme } = useTheme()
   const count = createMemo(() => props.input.questions?.length ?? 0)
+  // kilocode_change start - show dismissed question content
   const dismissed = createMemo(
     () =>
       props.metadata.dismissed === true ||
@@ -2823,11 +2824,14 @@ function Question(props: ToolProps<typeof QuestionTool>) {
   }
 
   const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
+  // kilocode_change end
 
   return (
     <Switch>
+      {/* kilocode_change start - match dismissed questions too */}
       <Match when={props.metadata.answers || dismissed()}>
         <BlockTool title={title()} part={props.part}>
+      {/* kilocode_change end */}
           <box gap={1}>
             <For each={props.input.questions ?? []}>
               {(q, i) => (

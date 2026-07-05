@@ -189,7 +189,9 @@ export const dict: Record<string, string> = {
   "ui.patch.action.patched": "Gepatcht",
 
   "ui.question.subtitle.answered": "{{count}} beantwoord",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.none": "(geen antwoord)",
+  "ui.question.answer.dismissed": "Dismissed",
   "ui.question.review.notAnswered": "(niet beantwoord)",
   "ui.question.multiHint": "Selecteer alle antwoorden die van toepassing zijn",
   "ui.question.singleHint": "Selecteer één antwoord",

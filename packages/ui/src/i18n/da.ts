@@ -170,7 +170,9 @@ export const dict = {
   "ui.patch.action.patched": "Patchet",
 
   "ui.question.subtitle.answered": "{{count}} besvaret",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.none": "(intet svar)",
+  "ui.question.answer.dismissed": "Dismissed",
   "ui.question.review.notAnswered": "(ikke besvaret)",
   "ui.question.multiHint": "Vælg alle der gælder",
   "ui.question.singleHint": "Vælg ét svar",

@@ -174,7 +174,9 @@ export const dict = {
   "ui.patch.action.patched": "已应用补丁",
 
   "ui.question.subtitle.answered": "{{count}} 已回答",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.none": "(无答案)",
+  "ui.question.answer.dismissed": "Dismissed",
   "ui.question.review.notAnswered": "(未回答)",
   "ui.question.multiHint": "可多选",
   "ui.question.singleHint": "选择一个答案",

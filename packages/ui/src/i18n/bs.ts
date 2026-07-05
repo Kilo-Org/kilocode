@@ -175,7 +175,9 @@ export const dict = {
   "ui.patch.action.patched": "Primijenjeno",
 
   "ui.question.subtitle.answered": "{{count}} odgovoreno",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.none": "(nema odgovora)",
+  "ui.question.answer.dismissed": "Dismissed",
   "ui.question.review.notAnswered": "(nije odgovoreno)",
   "ui.question.multiHint": "Odaberi sve što važi",
   "ui.question.singleHint": "Odaberi jedan odgovor",

@@ -177,7 +177,9 @@ export const dict = {
   "ui.patch.action.patched": "Yamalandı",
 
   "ui.question.subtitle.answered": "{{count}} cevaplandı",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed",
   "ui.question.answer.none": "(cevap yok)",
+  "ui.question.answer.dismissed": "Dismissed",
   "ui.question.review.notAnswered": "(cevaplanmadı)",
   "ui.question.multiHint": "Geçerli tüm cevapları seçin",
   "ui.question.singleHint": "Bir cevap seçin",

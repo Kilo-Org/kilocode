@@ -1010,6 +1010,7 @@ function Question(props: ToolProps) {
     arrayValue(props.input.questions).flatMap((item) => (isRecord(item) ? [item] : [])),
   )
   const answers = createMemo(() => arrayValue(props.metadata.answers))
+  // kilocode_change start - show dismissed question content
   const dismissed = createMemo(
     () =>
       props.metadata.dismissed === true ||
@@ -1033,6 +1034,7 @@ function Question(props: ToolProps) {
                 <box>
                   <text fg={theme.textMuted}>{stringValue(question.question)}</text>
                   <text fg={theme.text}>{format(answers()[index()])}</text>
+                  {/* kilocode_change end */}
                 </box>
               )}
             </For>
