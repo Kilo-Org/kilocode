@@ -326,6 +326,108 @@ describe("console systemd subcommands", () => {
     }
   })
 
+  test("install treats a compiled binary in node_modules as a single executable", async () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "kilo-console-install-binary-"))
+    const prevXdg = process.env.XDG_CONFIG_HOME
+    const prevExec = Object.getOwnPropertyDescriptor(process, "execPath")
+    const prevArgv = process.argv
+    const prevIsAvailable = Systemd.isAvailable
+    const prevRun = systemctlRunner.current
+    const calls: { cmd: string[]; scope: "user" | "system" }[] = []
+    process.env.XDG_CONFIG_HOME = tmp
+    Object.defineProperty(process, "execPath", {
+      value: "/home/user/.local/share/pnpm/node_modules/.pnpm/@kilocode+cli-linux-x64/bin/kilo-kilo-linux-x64",
+      configurable: true,
+    })
+    process.argv = [
+      "/home/user/.local/share/pnpm/node_modules/.pnpm/@kilocode+cli-linux-x64/bin/kilo-kilo-linux-x64",
+      "console",
+    ]
+    ;(Systemd as { isAvailable: () => boolean }).isAvailable = () => true
+    systemctlRunner.current = async (cmd, scope = "user") => {
+      calls.push({ cmd, scope })
+      return { code: 0, stdout: "", stderr: "" }
+    }
+    try {
+      await __test__.InstallCommand.handler({
+        hostname: "127.0.0.1",
+        port: 4097,
+        mdns: false,
+        "mdns-domain": "kilo.local",
+        cors: [],
+        "unit-name": "kilo-console.service",
+        system: false,
+        "--": [],
+      } as never)
+
+      const unit = readFileSync(
+        path.join(tmp, "systemd", "user", "kilo-console.service"),
+        "utf8",
+      )
+      expect(unit).toContain(
+        "ExecStart='/home/user/.local/share/pnpm/node_modules/.pnpm/@kilocode+cli-linux-x64/bin/kilo-kilo-linux-x64' console --foreground",
+      )
+      expect(calls).toContainEqual({ cmd: ["start", "kilo-console.service"], scope: "user" })
+    } finally {
+      systemctlRunner.current = prevRun
+      ;(Systemd as { isAvailable: () => boolean }).isAvailable = prevIsAvailable
+      process.argv = prevArgv
+      Object.defineProperty(process, "execPath", prevExec!)
+      if (prevXdg === undefined) delete process.env.XDG_CONFIG_HOME
+      else process.env.XDG_CONFIG_HOME = prevXdg
+      rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test("install uses just the binary when argv[1] is a bunfs virtual path", async () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "kilo-console-install-bunfs-"))
+    const prevXdg = process.env.XDG_CONFIG_HOME
+    const prevExec = Object.getOwnPropertyDescriptor(process, "execPath")
+    const prevArgv = process.argv
+    const prevIsAvailable = Systemd.isAvailable
+    const prevRun = systemctlRunner.current
+    const calls: { cmd: string[]; scope: "user" | "system" }[] = []
+    process.env.XDG_CONFIG_HOME = tmp
+    Object.defineProperty(process, "execPath", {
+      value: "/path/to/kilo",
+      configurable: true,
+    })
+    process.argv = ["/path/to/kilo", "/$bunfs/root/src/index.ts"]
+    ;(Systemd as { isAvailable: () => boolean }).isAvailable = () => true
+    systemctlRunner.current = async (cmd, scope = "user") => {
+      calls.push({ cmd, scope })
+      return { code: 0, stdout: "", stderr: "" }
+    }
+    try {
+      await __test__.InstallCommand.handler({
+        hostname: "127.0.0.1",
+        port: 4097,
+        mdns: false,
+        "mdns-domain": "kilo.local",
+        cors: [],
+        "unit-name": "kilo-console.service",
+        system: false,
+        "--": [],
+      } as never)
+
+      const unit = readFileSync(
+        path.join(tmp, "systemd", "user", "kilo-console.service"),
+        "utf8",
+      )
+      expect(unit).toContain("ExecStart=/path/to/kilo console --foreground")
+      expect(unit).not.toContain("/$bunfs/")
+      expect(calls).toContainEqual({ cmd: ["start", "kilo-console.service"], scope: "user" })
+    } finally {
+      systemctlRunner.current = prevRun
+      ;(Systemd as { isAvailable: () => boolean }).isAvailable = prevIsAvailable
+      process.argv = prevArgv
+      Object.defineProperty(process, "execPath", prevExec!)
+      if (prevXdg === undefined) delete process.env.XDG_CONFIG_HOME
+      else process.env.XDG_CONFIG_HOME = prevXdg
+      rmSync(tmp, { recursive: true, force: true })
+    }
+  })
+
   test("install toggles user/system unit paths via the --system flag", () => {
     const tmp = mkdtempSync(path.join(os.tmpdir(), "kilo-console-scope-"))
     const prevXdg = process.env.XDG_CONFIG_HOME

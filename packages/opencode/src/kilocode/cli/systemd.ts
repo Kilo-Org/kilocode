@@ -40,6 +40,11 @@ export namespace Systemd {
     }
   }
 
+  // POSIX shell-friendly escaping using adjacent single-quoted sections with
+  // the standard '\'' bridge. systemd.service(5) "Command lines" uses a
+  // shell-like grammar; backslash between quoted sections is treated as a
+  // literal single quote in unquoted context, matching the effect of sh.
+  // Empty string is quoted as '' so systemd does not swallow an empty arg.
   export function quoteArg(value: string): string {
     if (value === "") return "''"
     if (/^[a-zA-Z0-9_\-./:=@]+$/.test(value)) return value

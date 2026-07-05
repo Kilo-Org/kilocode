@@ -11,6 +11,7 @@ import {
   resolveNetworkOptionsNoConfig,
 } from "@/cli/network"
 import { serverUrls } from "@/kilocode/cli/server-urls"
+import { isBunfsPath } from "@/kilocode/cli/dev-setup"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Daemon } from "@/kilocode/daemon/daemon"
 import { warnPort } from "@/kilocode/cli/port-warning"
@@ -100,12 +101,13 @@ export type SystemctlResult = { code: number; stdout: string; stderr: string }
 export type SystemctlRunner = (
   args: string[],
   scope?: "user" | "system",
+  signal?: AbortSignal,
 ) => Promise<SystemctlResult>
 
 export const systemctlRunner: { current: SystemctlRunner } = {
-  current: async (args, scope: "user" | "system" = "user") => {
+  current: async (args, scope: "user" | "system" = "user", signal?: AbortSignal) => {
     const cmd = scope === "user" ? ["systemctl", "--user", ...args] : ["systemctl", ...args]
-    const out = await Process.run(cmd, { nothrow: true })
+    const out = await Process.run(cmd, { nothrow: true, abort: signal })
     return { code: out.code, stdout: out.stdout.toString(), stderr: out.stderr.toString() }
   },
 }
@@ -114,20 +116,21 @@ const STOP_TIMEOUT_MS = 10_000
 const stopTimeout: { current: number } = { current: STOP_TIMEOUT_MS }
 
 async function stopWithTimeout(name: string, scope: "user" | "system"): Promise<SystemctlResult> {
-  let timer: ReturnType<typeof setTimeout> | undefined
+  const controller = new AbortController()
   const timeout = new Promise<SystemctlResult>((resolve) => {
-    timer = setTimeout(
-      () =>
-        resolve({
-          code: 124,
-          stdout: "",
-          stderr: `systemctl stop timed out after ${stopTimeout.current}ms`,
-        }),
-      stopTimeout.current,
-    )
+    setTimeout(() => {
+      controller.abort()
+      resolve({
+        code: 124,
+        stdout: "",
+        stderr: `systemctl stop timed out after ${stopTimeout.current}ms`,
+      })
+    }, stopTimeout.current)
   })
-  const result = await Promise.race([systemctlRunner.current(["stop", name], scope), timeout])
-  clearTimeout(timer)
+  const result = await Promise.race([
+    systemctlRunner.current(["stop", name], scope, controller.signal),
+    timeout,
+  ])
   return result
 }
 
@@ -141,7 +144,7 @@ function requireSystemd(): boolean {
 }
 
 function isRoot(): boolean {
-  return process.platform !== "linux" || (typeof process.geteuid === "function" && process.geteuid() === 0)
+  return typeof process.geteuid === "function" && process.geteuid() === 0
 }
 
 function validateUnitName(name: string): void {
@@ -186,10 +189,26 @@ function resolveBinary(): string[] {
   // not need a populated PATH to run an absolute path to node.
   const exec = process.execPath
   const entry = process.argv[1]
-  if (entry && /node|bun/.test(exec ?? "")) return [exec, entry]
-  if (exec) return [exec]
-  const shim = Bun.which("kilo")
-  return shim ? [shim] : ["kilo"]
+  if (!exec) {
+    const shim = Bun.which("kilo")
+    return shim ? [shim] : ["kilo"]
+  }
+  if (entry && !isBunfsPath(entry)) {
+    const base = path.basename(exec).replace(/\.(exe|cmd|bat)$/i, "")
+    if (
+      base === "node" ||
+      base === "bun" ||
+      base === "deno" ||
+      base === "tsx" ||
+      base === "ts-node" ||
+      base === "bunx" ||
+      base === "node.exe" ||
+      base === "bun.exe"
+    ) {
+      return [exec, entry]
+    }
+  }
+  return [exec]
 }
 
 const InstallCommand = cmd({
