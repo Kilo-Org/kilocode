@@ -6,10 +6,12 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
+import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -1683,6 +1685,16 @@ export const layer = Layer.effect(
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
+            // kilocode_change start - feed the provider-reported context size from the last finished
+            // turn into the output-token cap, so image/vision input is measured by the provider
+            // rather than by encoded payload bytes (see KiloLLM.capOutputTokens). Summary messages
+            // are skipped like in the isOverflow check above: their reported input reflects the
+            // pre-compaction history, not the trimmed context of the next request.
+            reportedContextTokens:
+              lastFinished && lastFinished.summary !== true
+                ? KiloSessionOverflow.count(lastFinished.tokens)
+                : undefined,
+            // kilocode_change end
           })
 
           if (structured !== undefined) {
@@ -1833,6 +1845,69 @@ export const layer = Layer.effect(
         throw error
       }
       const agentName = cmd.agent ?? input.agent
+      // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
+      const legacy = legacyReviewMessage(input.command)
+      if (legacy) {
+        const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+        if (!agent) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        const model = yield* Effect.gen(function* () {
+          if (cmd.model) return Provider.parseModel(cmd.model)
+          if (cmd.agent && agent.model) return agent.model
+          if (input.model) return Provider.parseModel(input.model)
+          return yield* currentModel(input.sessionID)
+        })
+        yield* getModel(model.providerID, model.modelID, input.sessionID)
+        const text = `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`
+        const user = yield* createUserMessage({
+          sessionID: input.sessionID,
+          messageID: input.messageID,
+          model,
+          agent: agent.name,
+          variant: input.variant,
+          parts: [{ type: "text", text }, ...(input.parts ?? [])],
+        })
+        yield* sessions.touch(input.sessionID)
+        const ctx = yield* InstanceState.context
+        const completed = Date.now()
+        const info: MessageV2.Assistant = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: user.info.id,
+          sessionID: input.sessionID,
+          mode: agent.name,
+          agent: agent.name,
+          variant: user.info.model.variant,
+          path: { cwd: ctx.directory, root: ctx.worktree },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: user.info.model.modelID,
+          providerID: user.info.model.providerID,
+          time: { created: completed, completed },
+          finish: "stop",
+        })
+        const part: MessageV2.TextPart = yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: legacy,
+        })
+        const result = { info, parts: [part] }
+        yield* bus.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: result.info.id,
+        })
+        return result
+      }
+      // kilocode_change end
 
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))

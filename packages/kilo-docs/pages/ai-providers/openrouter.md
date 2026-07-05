@@ -83,9 +83,9 @@ The middle-out transform is not exposed as a dedicated UI control in the VS Code
 
 ## Provider Routing
 
-OpenRouter can route to many different inference providers. This can be controlled directly via OpenRouter's [`provider` routing parameter](https://openrouter.ai/docs/features/provider-routing).
+OpenRouter can route to many different inference providers. This can be controlled directly via OpenRouter's [`provider` routing parameter](https://openrouter.ai/docs/guides/routing/provider-selection).
 
-Provider routing is not exposed as dedicated UI controls in the VS Code extension. To configure it, set OpenRouter's `provider` routing fields under the model's `options` in your `kilo.json` config file. Everything under `options` is forwarded to the OpenRouter AI SDK as `providerOptions.openrouter`, so any field from the [OpenRouter provider routing docs](https://openrouter.ai/docs/features/provider-routing) can be used.
+Provider routing is not exposed as dedicated UI controls in the VS Code extension. To configure it, set OpenRouter's `provider` routing fields under the model's `options` in your `kilo.json` config file. Everything under `options` is forwarded to the OpenRouter AI SDK as `providerOptions.openrouter`, so any field from the [OpenRouter provider routing docs](https://openrouter.ai/docs/guides/routing/provider-selection) can be used.
 
 ```jsonc
 {

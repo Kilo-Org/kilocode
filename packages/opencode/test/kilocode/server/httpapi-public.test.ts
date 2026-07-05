@@ -3,6 +3,7 @@ import { Result, Schema as EffectSchema } from "effect"
 import { OpenApi } from "effect/unstable/httpapi"
 import { AgentBuilderPaths } from "../../../src/kilocode/server/httpapi/groups/agent-builder"
 import { BackgroundProcessPaths } from "../../../src/kilocode/server/httpapi/groups/background-process"
+import { BranchNamePaths } from "../../../src/kilocode/server/httpapi/groups/branch-name"
 import { ConfigConsolePaths } from "../../../src/kilocode/server/httpapi/groups/config-console"
 import { IndexingPaths, KiloEmbeddingModel } from "../../../src/kilocode/server/httpapi/groups/indexing"
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
@@ -138,6 +139,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.tuiKeybinds },
       { method: "patch", path: ConfigConsolePaths.tuiConfig },
       { method: "get", path: KilocodePaths.sessionModelUsage },
+      { method: "post", path: BranchNamePaths.generate },
     ] satisfies Array<{ method: Method; path: string }>
 
     for (const route of routes) {
@@ -155,6 +157,15 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const schema = body?.content?.["application/json"]?.schema
     const props = schema?.properties
     expect(props?.organizationId).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
+  })
+
+  test("keeps branch-name responses nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const path = BranchNamePaths.generate.replace(/:([A-Za-z0-9_]+)/g, "{$1}")
+    const body = spec.paths[path]?.post?.responses?.["200"] as Body | undefined
+    const branch = body?.content?.["application/json"]?.schema?.properties?.branch
+
+    expect(branch).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
   })
 
   test("keeps Kilo gateway responses nullable", () => {

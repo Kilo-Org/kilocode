@@ -33,6 +33,7 @@ import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.
 import { event as normalizeEvent } from "./run/event"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
+import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
 import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
 
 const runtimeTask = import("./run/runtime")
@@ -700,7 +701,10 @@ export const RunCommand = effectCmd({
           process.exit(1)
         }
         const sessionID = sess.id
-        const auto = KiloRunAuto.create(sessionID) // kilocode_change
+        // kilocode_change start - track Task children; plain headless runs deny subagent asks instead of hanging (#11903)
+        const auto = KiloRunAuto.create(sessionID)
+        if (!args.attach && !args.auto && !args["dangerously-skip-permissions"]) KiloHeadless.mark(sessionID)
+        // kilocode_change end
 
         function emit(type: string, data: Record<string, unknown>) {
           if (args.format === "json") {
@@ -746,8 +750,8 @@ export const RunCommand = effectCmd({
 
             if (event.type === "message.part.updated") {
               const part = event.properties.part
-              // kilocode_change start - track Task child sessions for --auto permission replies
-              if (args.auto) KiloRunAuto.track(auto, part)
+              // kilocode_change start - track Task child sessions so permission replies can target them
+              KiloRunAuto.track(auto, part)
               // kilocode_change end
               if (part.sessionID !== sessionID) continue
 
@@ -846,6 +850,31 @@ export const RunCommand = effectCmd({
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "once",
+                })
+                continue
+              }
+              // kilocode_change end
+
+              // kilocode_change start - answer tracked Task child asks too, so subagents don't hang (#11903)
+              // Covers daemon/attach modes where the server evaluates permissions in another
+              // process and the in-process KiloHeadless deny cannot apply.
+              if (permission.sessionID !== sessionID) {
+                if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
+                if (args["dangerously-skip-permissions"]) {
+                  await client.permission.reply({
+                    requestID: permission.id,
+                    reply: "once",
+                  })
+                  continue
+                }
+                UI.println(
+                  UI.Style.TEXT_WARNING_BOLD + "!",
+                  UI.Style.TEXT_NORMAL +
+                    `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
+                )
+                await client.permission.reply({
+                  requestID: permission.id,
+                  reply: "reject",
                 })
                 continue
               }

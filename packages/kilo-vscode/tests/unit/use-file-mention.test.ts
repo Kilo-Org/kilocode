@@ -5,6 +5,34 @@ import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/type
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+function textarea(value: string, cursor: number, dir: "ltr" | "rtl") {
+  const state = { cursor }
+  return {
+    value,
+    get selectionStart() {
+      return state.cursor
+    },
+    get selectionEnd() {
+      return state.cursor
+    },
+    matches: (selector: string) => selector === `:dir(${dir})`,
+    setSelectionRange: (start: number) => {
+      state.cursor = start
+    },
+  } as unknown as HTMLTextAreaElement
+}
+
+function key(key: "ArrowLeft" | "ArrowRight") {
+  const state = { prevented: 0 }
+  return {
+    state,
+    event: {
+      key,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent,
+  }
+}
+
 describe("useFileMention", () => {
   it("keeps previous file results visible while the next search is pending", async () => {
     const posted: WebviewMessage[] = []
@@ -183,6 +211,64 @@ describe("useFileMention", () => {
     mention.onInput("@gi", 3)
 
     expect(mention.mentionResults()).toEqual([{ type: "file", value: "src/git.ts" }])
+
+    dispose.fn?.()
+  })
+
+  it("keeps mention block arrow navigation aligned with left-to-right prompt direction", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "See @src/main.ts now"
+    mention.addPaths(["src/main.ts"], "/repo")
+
+    const right = key("ArrowRight")
+    const input = textarea(text, "See ".length, "ltr")
+    expect(mention.handleArrowKey(right.event, input)).toBe(true)
+    expect(input.selectionStart).toBe("See @src/main.ts".length)
+    expect(right.state.prevented).toBe(1)
+
+    const left = key("ArrowLeft")
+    expect(mention.handleArrowKey(left.event, input)).toBe(true)
+    expect(input.selectionStart).toBe("See ".length)
+    expect(left.state.prevented).toBe(1)
+
+    dispose.fn?.()
+  })
+
+  it("keeps mention block arrow navigation aligned for right-to-left languages", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "فایل @src/main.ts را ببین"
+    mention.addPaths(["src/main.ts"], "/repo")
+
+    const left = key("ArrowLeft")
+    const input = textarea(text, "فایل ".length, "rtl")
+    expect(mention.handleArrowKey(left.event, input)).toBe(true)
+    expect(input.selectionStart).toBe("فایل @src/main.ts".length)
+    expect(left.state.prevented).toBe(1)
+
+    const right = key("ArrowRight")
+    expect(mention.handleArrowKey(right.event, input)).toBe(true)
+    expect(input.selectionStart).toBe("فایل ".length)
+    expect(right.state.prevented).toBe(1)
 
     dispose.fn?.()
   })

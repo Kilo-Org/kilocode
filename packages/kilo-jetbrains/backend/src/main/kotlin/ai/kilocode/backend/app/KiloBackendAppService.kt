@@ -13,12 +13,12 @@ import ai.kilocode.jetbrains.api.infrastructure.ClientError
 import ai.kilocode.jetbrains.api.infrastructure.ClientException
 import ai.kilocode.jetbrains.api.infrastructure.ServerError
 import ai.kilocode.jetbrains.api.infrastructure.ServerException
-import ai.kilocode.jetbrains.api.model.Config
 import ai.kilocode.jetbrains.api.model.ConfigWarnings200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloNotifications200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.jetbrains.api.model.ProviderOauthAuthorizeRequest
 import ai.kilocode.jetbrains.api.model.ProviderOauthCallbackRequest
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.HealthDto
@@ -29,6 +29,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -39,6 +40,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -56,6 +58,8 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * App-level orchestrator that owns the CLI server lifecycle and
@@ -130,7 +134,7 @@ class KiloBackendAppService private constructor(
     @Volatile var profile: KiloProfile200Response? = null
         private set
 
-    @Volatile var config: Config? = null
+    @Volatile var config: ConfigDto? = null
         private set
 
     @Volatile var notifications: List<KiloNotifications200ResponseInner> = emptyList()
@@ -245,6 +249,7 @@ class KiloBackendAppService private constructor(
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppState {
         val http = connection.apiClient ?: throw IllegalStateException("Not connected")
         val current = _appState.value as? KiloAppState.Ready ?: throw IllegalStateException("Kilo backend is not ready")
+        val connected = connection.state.value as? ConnectionState.Connected
         val body = KiloCliDataParser.buildConfigPatch(patch)
         val summary = summary(patch)
         log.info("Global config patch: started $summary")
@@ -256,14 +261,23 @@ class KiloBackendAppService private constructor(
         withContext(Dispatchers.IO) {
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    val text = response.body?.string()
-                    log.warn("Global config patch failed: HTTP ${response.code} ${response.message} $summary ${text.orEmpty()}")
+                    log.warn("Global config patch failed: HTTP ${response.code} ${response.message} $summary")
                     throw IllegalStateException("Global config patch failed: HTTP ${response.code} ${response.message}")
                 }
             }
         }
         log.info("Global config patch: saved $summary")
-        refreshConfigState()
+        val cfg = fetchConfig().value
+        if (cfg == null) {
+            log.warn("Global config patch: config reload failed after save $summary")
+            return (_appState.value as? KiloAppState.Ready) ?: current
+        }
+        val warns = fetchWarnings()
+        val state = _appState.value
+        if (state is KiloAppState.Ready && state.data === current.data && connection.state.value == connected) {
+            config = cfg
+            setAppReady(current.data.copy(config = cfg, warnings = warns))
+        }
         log.info("Global config patch: state refreshed $summary")
         return (_appState.value as? KiloAppState.Ready) ?: current
     }
@@ -342,7 +356,7 @@ class KiloBackendAppService private constructor(
                 }
 
                 val errors = CopyOnWriteArrayList<LoadError>()
-                var cfg: Config? = null
+                var cfg: ConfigDto? = null
                 var prof: KiloProfile200Response? = null
                 var notifs: List<KiloNotifications200ResponseInner> = emptyList()
                 var warns: List<ConfigWarning> = emptyList()
@@ -553,14 +567,39 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private suspend fun fetchConfig(): FetchResult<Config> {
-        val client = connection.appLoadApi
+    private suspend fun fetchConfig(): FetchResult<ConfigDto> {
+        val http = connection.apiClient
             ?: return FetchResult.fail("config", detail = "Not connected")
         return try {
-            FetchResult.ok(client.globalConfigGet())
+            val request = Request.Builder()
+                .url("http://127.0.0.1:$port/global/config")
+                .header("Accept", "application/json")
+                .get()
+                .build()
+            val body = withContext(Dispatchers.IO) {
+                suspendCancellableCoroutine { cont ->
+                    val call = http.newCall(request)
+                    cont.invokeOnCancellation { call.cancel() }
+                    try {
+                        val text = call.execute().use { response ->
+                            val text = response.body?.string().orEmpty()
+                            if (!response.isSuccessful) {
+                                log.warn("Global config fetch failed: HTTP ${response.code} ${response.message} $text")
+                                throw IllegalStateException("Global config fetch failed: HTTP ${response.code} ${response.message}")
+                            }
+                            text
+                        }
+                        if (cont.isActive) cont.resume(text)
+                    } catch (e: Exception) {
+                        if (cont.isActive) cont.resumeWithException(e)
+                    }
+                }
+            }
+            FetchResult.ok(KiloCliDataParser.parseConfig(body))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("Global config fetch failed: ${e.message}", e)
-            logResponseBody("config", e)
             FetchResult.fail("config", e)
         }
     }
@@ -644,7 +683,7 @@ class KiloBackendAppService private constructor(
         return "${warn.path}: ${warn.message}$detail"
     }
 
-    private fun configSummary(cfg: Config): String {
+    private fun configSummary(cfg: ConfigDto): String {
         val text = cfg.toString()
         return "configChars=${text.length} configHash=${text.hashCode().toUInt().toString(16)}"
     }
@@ -740,11 +779,30 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    private fun clear() {
+    private suspend fun clear() {
+        synchronized(loadLock) {
+            val jobs = listOfNotNull(loader, eventWatcher)
+            loader = null
+            eventWatcher = null
+            jobs
+        }.forEach { job ->
+            // LLM note: restart/reinstall must not open a new CLI while old app-load requests are still unwinding.
+            job.cancelAndJoin()
+        }
+        reset()
+    }
+
+    private fun clearNow() {
         synchronized(loadLock) {
             loader?.cancel()
             eventWatcher?.cancel()
+            loader = null
+            eventWatcher = null
         }
+        reset()
+    }
+
+    private fun reset() {
         stopRuntime()
         profile = null
         config = null
@@ -852,7 +910,7 @@ class KiloBackendAppService private constructor(
         closed = true
         watcher?.cancel()
         watcher = null
-        clear()
+        clearNow()
         connection.dispose()
         server.dispose()
     }

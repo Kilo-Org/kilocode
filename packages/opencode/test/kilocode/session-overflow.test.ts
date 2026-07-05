@@ -134,6 +134,65 @@ describe("Kilo request estimation", () => {
     expect(KiloLLM.needsEstimate({ model: model({ context: 0, output: 32_000 }), configured: 32_000 })).toBe(false)
     expect(KiloLLM.needsEstimate({ model: mdl, configured: 32_000 })).toBe(true)
   })
+
+  test("does not reduce output for encoded media payload size", () => {
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const messages = [
+      {
+        role: "user",
+        content: [{ type: "image", image: `data:image/png;base64,${"x".repeat(600_000)}` }],
+      },
+    ] satisfies ModelMessage[]
+    const usage = KiloSessionOverflow.measure({ messages, tools: {} })
+
+    expect(usage.raw).toBeGreaterThan(usage.normalized)
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000, usage })).toBe(32_000)
+  })
+
+  test("still reduces output for oversized text", () => {
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const messages = [{ role: "user" as const, content: "x".repeat(600_000) }]
+
+    const cap = KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000 })
+    expect(cap).toBeGreaterThanOrEqual(1_024)
+    expect(cap).toBeLessThan(32_000)
+  })
+
+  test("prefers provider-reported context over the client estimate for images", () => {
+    // The client cannot price encoded image bytes, but the provider reported a
+    // large vision-token cost for the last turn.
+    const mdl = model({ context: 300_000, output: 32_000 })
+    const messages = [
+      {
+        role: "user",
+        content: [{ type: "image", image: `data:image/png;base64,${"x".repeat(600_000)}` }],
+      },
+    ] satisfies ModelMessage[]
+
+    // Without reported usage the media-normalized estimate leaves output untouched.
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000 })).toBe(32_000)
+
+    // With the provider-reported context size, output is capped to fit real usage.
+    expect(KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000, reported: 280_000 })).toBe(
+      17_952,
+    )
+  })
+
+  test("uses the media-normalized floor when reported usage is smaller", () => {
+    const mdl = model({ context: 200_000, output: 32_000 })
+    const messages = [{ role: "user" as const, content: "x".repeat(600_000) }]
+
+    const withoutReported = KiloLLM.capOutputTokens({ model: mdl, messages, tools: {}, configured: 32_000 })
+    const withStaleReported = KiloLLM.capOutputTokens({
+      model: mdl,
+      messages,
+      tools: {},
+      configured: 32_000,
+      reported: 1_000,
+    })
+    expect(withStaleReported).toBe(withoutReported)
+    expect(withStaleReported).toBeLessThan(32_000)
+  })
 })
 
 describe("Kilo preflight compaction", () => {

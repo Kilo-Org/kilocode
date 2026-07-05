@@ -27,7 +27,7 @@ function state(input: Partial<Daemon.Network> = {}) {
     port: options.port,
     url: `http://${options.hostname}:${options.port}`,
     username: "kilo",
-    password: "kilo",
+    password: "secret",
     token: "token",
     version: "test",
     startedAt: new Date(0).toISOString(),
@@ -102,6 +102,10 @@ describe("console daemon startup", () => {
 
   test("treats an explicit auto port as compatible", () => {
     expect(Daemon.matches(state(), opts({ port: 0 }), ["port"])).toBe(true)
+  })
+
+  test("rejects legacy fixed-password daemon state", () => {
+    expect(Daemon.matches({ ...state(), password: "kilo" }, opts(), [])).toBe(false)
   })
 
   test("supports daemon state written before network options were persisted", () => {

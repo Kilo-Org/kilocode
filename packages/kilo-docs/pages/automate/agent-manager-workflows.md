@@ -152,12 +152,14 @@ Put the remaining project-specific setup in `.kilo/setup-script`, for example co
 Layer review in before asking a teammate:
 
 - **Diff panel** (`Cmd+D`) — live diff against the parent branch. Drag filenames into the chat input for `@file` mentions. Inline-comment the lines you want revisited, then **Send to chat** to iterate.
-- **`/local-review-uncommitted`** — slash command, AI review of staged and unstaged changes in the worktree. Good as a last pass before committing.
-- **`/local-review`** — slash command, AI review of the whole branch vs. its base.
+- **`/review`** — slash command, AI review of staged, unstaged, and untracked changes in the worktree when run without arguments. Good as a last pass before committing.
+- **`/review uncommitted [guidance]`** — explicitly review uncommitted changes, optionally focusing the review with guidance.
+- **`/review branch [base] [guidance]`** — review the whole branch vs. its detected or specified base, with optional guidance.
+- **`/review <commit-hash>` or `/review <PR URL or number>`** — review a specific commit or pull request.
 - **`kilo review` in CI** — automated PR review. See [Code Reviews](/docs/automate/code-reviews/overview) for the setup.
 - **Human review** — push the branch from the session terminal and `gh pr create`. The PR badge appears on the worktree and stays in sync with CI and reviews.
 
-A typical sequence: self-review in the diff panel → `/local-review-uncommitted` → push → CI review → teammate review.
+A typical sequence: self-review in the diff panel → `/review` → push → CI review → teammate review.
 
 ## Merging worktree and parent branch
 

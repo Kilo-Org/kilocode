@@ -52,6 +52,7 @@ export type StreamInput = {
   retries?: number
   toolChoice?: "auto" | "required" | "none"
   preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
+  reportedContextTokens?: number // kilocode_change - provider-reported context size from the last finished turn, source of truth for the output cap
 }
 
 export type StreamRequest = StreamInput & {
@@ -141,7 +142,8 @@ const live: Layer.Layer<
         messages: estimated,
         tools: base.tools,
         configured: base.params.maxOutputTokens,
-        tokens: usage?.raw,
+        usage,
+        reported: input.reportedContextTokens,
       })
       if (
         preflight &&

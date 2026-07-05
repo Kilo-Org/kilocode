@@ -472,6 +472,19 @@ export interface QuestionErrorMessage {
   requestID: string
 }
 
+export interface SessionCostAlertMessage {
+  type: "sessionCostAlert"
+  sessionID: string
+  limit: number
+  cost: string
+}
+
+export interface SessionCostAlertResolvedMessage {
+  type: "sessionCostAlertResolved"
+  sessionID: string
+  limit: number
+}
+
 export interface SuggestionRequestMessage {
   type: "suggestionRequest"
   suggestion: SuggestionRequest
@@ -497,11 +510,17 @@ export interface ClaudeCompatSettingLoadedMessage {
   enabled: boolean
 }
 
+export interface ExtensionSettings {
+  maxCost?: number
+  [key: string]: unknown
+}
+
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  settings?: ExtensionSettings
   features: FeatureFlags
 }
 
@@ -510,6 +529,7 @@ export interface ConfigUpdatedMessage {
   config: Config
   globalConfig?: Config
   projectConfig?: Config
+  settings?: ExtensionSettings
   features: FeatureFlags
 }
 
@@ -716,6 +736,12 @@ export interface VariantsLoadedMessage {
 export interface RecentsLoadedMessage {
   type: "recentsLoaded"
   recents: ModelSelection[]
+}
+
+// Persisted model-selector expand/collapse preference (extension → webview)
+export interface ModelSelectorExpandedLoadedMessage {
+  type: "modelSelectorExpandedLoaded"
+  value: boolean
 }
 
 export interface FavoritesLoadedMessage {
@@ -1091,6 +1117,8 @@ export type ExtensionMessage =
   | QuestionRequestMessage
   | QuestionResolvedMessage
   | QuestionErrorMessage
+  | SessionCostAlertMessage
+  | SessionCostAlertResolvedMessage
   | SuggestionRequestMessage
   | SuggestionResolvedMessage
   | SuggestionErrorMessage
@@ -1178,6 +1206,7 @@ export type ExtensionMessage =
   | AnacondaDesktopExtensionMessage
   | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
+  | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage
   | ModelSelectionsLoadedMessage
   | LanguageChangedMessage

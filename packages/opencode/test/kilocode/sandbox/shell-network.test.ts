@@ -135,7 +135,7 @@ describe("model shell network integration", () => {
   )
 
   test.skipIf(process.platform !== "darwin" && process.platform !== "linux")(
-    "keeps spawned shell network denied without authenticated server control",
+    "honors configured shell network access without authenticated server control",
     async () => {
       const effect = Effect.gen(function* () {
         const root = yield* tmpdirScoped()
@@ -156,9 +156,9 @@ describe("model shell network integration", () => {
           provideInstance(root),
           Effect.provide(configured(true)),
         )
-        expect(allow.output).not.toContain("model-shell-network-ok")
-        expect(allow.metadata.exit).not.toBe(0)
-        expect(allowed.accepted()).toBe(0)
+        expect(allow.output).toContain("model-shell-network-ok")
+        expect(allow.metadata.exit).toBe(0)
+        expect(allowed.accepted()).toBe(1)
         expect(deny.output).not.toContain("model-shell-network-ok")
         expect(deny.metadata.exit).not.toBe(0)
         expect(denied.accepted()).toBe(0)

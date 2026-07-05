@@ -74,7 +74,7 @@ restricted.live("keeps network restriction enabled by default when the sandbox i
   }).pipe(Effect.ensuring(Effect.promise(() => target.server.stop(true))))
 })
 
-open.live("keeps network denied without authenticated server control", () => {
+open.live("allows network when restriction is disabled without authenticated server control", () => {
   const target = server()
   return Effect.gen(function* () {
     const http = yield* HttpClient.HttpClient
@@ -86,10 +86,11 @@ open.live("keeps network denied without authenticated server control", () => {
     )
     if (!backendSupport().available) {
       expect(Exit.isSuccess(exit)).toBe(true)
+      expect(target.requests()).toBe(1)
       return
     }
     expect(status.enabled).toBe(true)
-    expect(Exit.isFailure(exit)).toBe(true)
-    expect(target.requests()).toBe(0)
+    expect(Exit.isSuccess(exit)).toBe(true)
+    expect(target.requests()).toBe(1)
   }).pipe(Effect.ensuring(Effect.promise(() => target.server.stop(true))))
 })

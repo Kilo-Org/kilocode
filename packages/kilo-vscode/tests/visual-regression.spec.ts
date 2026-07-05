@@ -36,8 +36,10 @@ async function disableAnimations(page: Page) {
   await page.addStyleTag({
     content: `
       *, *::before, *::after {
+        animation: none !important;
         animation-duration: 0s !important;
         animation-delay: 0s !important;
+        transition: none !important;
         transition-duration: 0s !important;
         transition-delay: 0s !important;
       }
@@ -75,7 +77,6 @@ async function settle(page: Page) {
 const SKIP = new Set<string>([
   "agentmanager--worktree-item-busy",
   "agentmanager--full-screen-diff-agent-edit-scroll",
-  "agentmanager--pr-badge-checks-pending",
   "composite-webview--permission-dock-config-preloaded",
 ])
 

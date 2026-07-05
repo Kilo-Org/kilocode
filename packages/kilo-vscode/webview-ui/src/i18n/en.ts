@@ -1236,6 +1236,11 @@ export const dict = {
   "session.outcome.interrupted": "Turn interrupted.",
   "session.outcome.error": "Turn failed.",
   "session.outcome.finish": "Technical finish reason: {{reason}}",
+  "session.costAlert.header": "Session Cost Alert",
+  "session.costAlert.continue": "Continue",
+  "session.costAlert.question":
+    "This session just went above your {{limit}} per-session alert threshold and cost {{cost}}. Keep going?",
+  "session.costAlert.stop": "Stop",
   "sidebar.session.newSession": "New Session",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newSession.disabled": "This session is already new. Start chatting or create a worktree instead.",
@@ -1553,6 +1558,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
+  "settings.autoApprove.maxCost.title": "Session Cost Alert",
+  "settings.autoApprove.maxCost.description":
+    "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; leave empty to disable.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",

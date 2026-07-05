@@ -7,6 +7,8 @@ import ai.kilocode.backend.rpc.appStateDto
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.ConfigPatchDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -133,6 +135,35 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `update config patches model selections and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(
+            values = linkedMapOf(
+                "model" to "openai/gpt-5",
+                "small_model" to "openai/gpt-5-mini",
+                "subagent_model" to "anthropic/claude",
+                "subagent_variant" to "high",
+            ),
+            agents = linkedMapOf("code" to AgentConfigPatchDto(model = "google/gemini", variant = "fast")),
+        ))
+
+        assertEquals(
+            "{\"model\":\"openai/gpt-5\",\"small_model\":\"openai/gpt-5-mini\",\"subagent_model\":\"anthropic/claude\",\"subagent_variant\":\"high\",\"agent\":{\"code\":{\"model\":\"google/gemini\",\"variant\":\"fast\"}}}",
+            mock.lastConfigPatchBody,
+        )
+        val cfg = appStateDto(state).config
+        assertEquals("openai/gpt-5", cfg?.model)
+        assertEquals("openai/gpt-5-mini", cfg?.smallModel)
+        assertEquals("anthropic/claude", cfg?.subagentModel)
+        assertEquals("high", cfg?.subagentVariant)
+        assertEquals("google/gemini", cfg?.agent?.get("code")?.model)
+        assertEquals("fast", svc.config?.agent?.get("code")?.variant)
+    }
+
+    @Test
     fun `ready dto maps model config`() = runBlocking {
         mock.config = """{"model":"openai/gpt","agent":{"plan":{"model":"anthropic/claude","variant":"high"}}}"""
         val svc = create()
@@ -144,6 +175,60 @@ class KiloBackendAppServiceTest {
         assertEquals("openai/gpt", dto.config?.model)
         assertEquals("anthropic/claude", dto.config?.agent?.get("plan")?.model)
         assertEquals("high", dto.config?.agent?.get("plan")?.variant)
+    }
+
+    @Test
+    fun `mcp config is populated end to end`() = runBlocking {
+        mock.config = """{"mcp":{"sample":{"type":"local","command":["node","s.js"]},"remote":{"type":"remote","url":"https://mcp.example.test"}}}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        val dto = appStateDto(svc.appState.value)
+        assertEquals(listOf("node", "s.js"), dto.config?.mcp?.get("sample")?.command)
+        assertEquals("https://mcp.example.test", dto.config?.mcp?.get("remote")?.url)
+        assertEquals(listOf("node", "s.js"), svc.config?.mcp?.get("sample")?.command)
+    }
+
+    @Test
+    fun `agent config is populated end to end`() = runBlocking {
+        mock.config = """{"agent":{"build":{"model":"openai/gpt","mode":"subagent","permission":{"edit":"ask"}}}}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        val dto = appStateDto(svc.appState.value)
+        assertEquals("openai/gpt", dto.config?.agent?.get("build")?.model)
+        assertEquals("subagent", dto.config?.agent?.get("build")?.mode)
+        assertNotNull(dto.config?.agent?.get("build")?.permission?.get("edit"))
+    }
+
+    @Test
+    fun `disabled mcp config is populated end to end`() = runBlocking {
+        mock.config = """{"mcp":{"sample":{"enabled":false}}}"""
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        val mcp = appStateDto(svc.appState.value).config?.mcp?.get("sample")
+        assertNotNull(mcp)
+        assertNull(mcp.type)
+        assertEquals(false, mcp.enabled)
+    }
+
+    @Test
+    fun `malformed config body still reaches Ready`() = runBlocking {
+        mock.config = "garbage"
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        assertNull(svc.config?.model)
+        assertTrue(svc.config?.mcp?.isEmpty() == true)
     }
 
     @Test
