@@ -14,6 +14,7 @@ import KiloMemoryPalette from "@/kilocode/plugins/memory-palette" // kilocode_ch
 import KiloSidebarPr from "@/kilocode/plugins/sidebar-pr"
 import KiloSidebarUsage from "@/kilocode/plugins/sidebar-usage"
 import KiloSandbox from "@/kilocode/plugins/sandbox"
+import KiloRemote from "@/kilocode/plugins/remote"
 // kilocode_change end
 import SidebarContext from "../feature-plugins/sidebar/context"
 import SidebarMcp from "../feature-plugins/sidebar/mcp"
@@ -52,6 +53,7 @@ export function internalTuiPlugins(flags: Pick<RuntimeFlags.Info, "experimentalE
     KiloSidebarPr, // kilocode_change
     KiloSidebarUsage, // kilocode_change
     KiloSandbox, // kilocode_change
+    KiloRemote, // kilocode_change
     HomeFooter,
     HomeTips,
     SidebarContext,
