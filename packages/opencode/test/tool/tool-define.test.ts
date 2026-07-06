@@ -37,6 +37,19 @@ function makeTool(id: string, executeFn?: () => void) {
   }
 }
 
+// kilocode_change start
+function invalid(exit: Exit.Exit<unknown, unknown>) {
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (!Exit.isFailure(exit)) {
+    throw new Error("expected tool execution to fail")
+  }
+  const die = exit.cause.reasons.find(Cause.isDieReason)
+  const error = die?.defect
+  expect(error).toBeInstanceOf(Tool.InvalidArgumentsError)
+  return error as Tool.InvalidArgumentsError
+}
+// kilocode_change end
+
 describe("Tool.define", () => {
   it.effect("object-defined tool does not mutate the original init object", () =>
     Effect.gen(function* () {
@@ -135,19 +148,68 @@ describe("Tool.define", () => {
 
       // Missing required `question` field on the first questions[] entry.
       const exit = yield* execute({ questions: [{ options: ["a"] }] }, makeCtx()).pipe(Effect.exit)
-      expect(Exit.isFailure(exit)).toBe(true)
-      if (!Exit.isFailure(exit)) return
-
-      // The wrap ends with Effect.orDie, so the failure lives in the cause as a
-      // defect. Recover the typed instance from there.
-      const die = exit.cause.reasons.find(Cause.isDieReason)
-      const error = die?.defect
-      expect(error).toBeInstanceOf(Tool.InvalidArgumentsError)
-      const args = error as Tool.InvalidArgumentsError
+      const args = invalid(exit) // kilocode_change
       expect(args.tool).toBe("qtest")
       expect(args.message).toContain("qtest tool was called with invalid arguments")
       expect(args.message).toContain("Please rewrite the input")
       expect(args.message).toContain(`["questions"][0]["question"]`)
     }),
   )
+
+  // kilocode_change start
+  it.effect("invalid args explain missing required scalar fields without SchemaError jargon", () =>
+    Effect.gen(function* () {
+      const parameters = Schema.Struct({
+        pattern: Schema.String,
+      })
+      const info = yield* Tool.define(
+        "grep",
+        Effect.succeed({
+          description: "test tool",
+          parameters,
+          execute() {
+            return Effect.succeed({ title: "ok", output: "ok", metadata: { truncated: false } })
+          },
+        }),
+      )
+      const tool = yield* info.init()
+      const execute = tool.execute as unknown as (args: unknown, ctx: Tool.Context) => ReturnType<typeof tool.execute>
+
+      const exit = yield* execute({}, makeCtx()).pipe(Effect.exit)
+      const args = invalid(exit)
+      expect(args.message).toContain("grep tool was called with invalid arguments")
+      expect(args.message).toContain("Please rewrite the input")
+      expect(args.detail).toContain(`["pattern"]`)
+      expect(args.detail.toLowerCase()).toContain("missing")
+      expect(args.detail.toLowerCase()).toContain("required")
+      expect(args.message).not.toContain("SchemaError(")
+    }),
+  )
+
+  it.effect("invalid args enumerate multiple failing fields", () =>
+    Effect.gen(function* () {
+      const parameters = Schema.Struct({
+        pattern: Schema.String,
+        path: Schema.String,
+      })
+      const info = yield* Tool.define(
+        "multi",
+        Effect.succeed({
+          description: "test tool",
+          parameters,
+          execute() {
+            return Effect.succeed({ title: "ok", output: "ok", metadata: { truncated: false } })
+          },
+        }),
+      )
+      const tool = yield* info.init()
+      const execute = tool.execute as unknown as (args: unknown, ctx: Tool.Context) => ReturnType<typeof tool.execute>
+
+      const exit = yield* execute({}, makeCtx()).pipe(Effect.exit)
+      const args = invalid(exit)
+      expect(args.detail).toContain(`["pattern"]`)
+      expect(args.detail).toContain(`["path"]`)
+    }),
+  )
+  // kilocode_change end
 })
