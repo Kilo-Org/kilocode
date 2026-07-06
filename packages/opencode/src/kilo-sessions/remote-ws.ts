@@ -1,4 +1,5 @@
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
 export namespace RemoteWS {
   export type SessionInfo = RemoteProtocol.SessionInfo
@@ -58,7 +59,7 @@ export namespace RemoteWS {
             queued = false
             const sessions = await options.getSessions()
             if (closed) return
-            send({ type: "heartbeat", ...sessions })
+            send({ type: "heartbeat", protocolVersion: InstallationVersion, ...sessions })
           }
         }),
       ).finally(() => {
