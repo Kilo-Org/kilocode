@@ -1,7 +1,7 @@
 import type { AssistantMessage } from "@kilocode/sdk/v2"
 import type { TuiPlugin, TuiPluginApi } from "@kilocode/plugin/tui"
 import type { InternalTuiPlugin } from "../../plugin/internal"
-import { createMemo } from "solid-js"
+import { createMemo, createSignal, Show } from "solid-js" // kilocode_change
 
 const id = "internal:sidebar-context"
 
@@ -11,6 +11,9 @@ const money = new Intl.NumberFormat("en-US", {
 })
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
+  // kilocode_change start
+  const [open, setOpen] = createSignal(true)
+  // kilocode_change end
   const theme = () => props.api.theme.current
   const msg = createMemo(() => props.api.state.session.messages(props.session_id))
   const session = createMemo(() => props.api.state.session.get(props.session_id))
@@ -44,12 +47,25 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
 
   return (
     <box>
-      <text fg={theme().text}>
-        <b>Context</b>
-      </text>
-      <text fg={theme().textMuted}>{state().tokens.toLocaleString()} tokens</text>
-      <text fg={theme().textMuted}>{state().percent ?? 0}% used</text>
-      <text fg={theme().textMuted}>{money.format(cost())} spent</text>
+      {/* kilocode_change start */}
+      <box flexDirection="row" gap={1} onMouseDown={() => setOpen((x) => !x)}>
+        <text fg={theme().text}>
+          {open() ? "▼ " : "▶ "}
+          <b>Context</b>
+          <Show when={!open()}>
+            <span style={{ fg: theme().textMuted }}>
+              {" "}
+              ({state().tokens.toLocaleString()} tokens · {state().percent ?? 0}% used · {money.format(cost())} spent)
+            </span>
+          </Show>
+        </text>
+      </box>
+      <Show when={open()}>
+        <text fg={theme().textMuted}>{state().tokens.toLocaleString()} tokens</text>
+        <text fg={theme().textMuted}>{state().percent ?? 0}% used</text>
+        <text fg={theme().textMuted}>{money.format(cost())} spent</text>
+      </Show>
+      {/* kilocode_change end */}
     </box>
   )
 }
