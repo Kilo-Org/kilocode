@@ -59,15 +59,20 @@ function locate(text: string, ref: Ref, index: number): Ref | undefined {
   return { ...ref, source: { ...source, start, end: start + source.value.length } }
 }
 
-// Word characters, slashes, and hyphens unambiguously continue a path token.
-// A dot is handled separately (see continuesPath) since it is both a common
+// Any letter, digit, underscore, slash, or hyphen unambiguously continues a
+// path token. Uses Unicode property escapes rather than \w, which matches
+// ASCII letters/digits only in JavaScript regex — without this, a Cyrillic
+// or CJK mention (e.g. "@файл") would not be recognized as continuing into a
+// longer, distinct mention that starts the same way (e.g. "@файлы"),
+// reintroducing the same collision this check exists to prevent. A dot is
+// handled separately (see continuesPath) since it is both a common
 // sentence-ending character and a path/extension separator.
-const PATH_CONTINUATION = /[\w/-]/
+const PATH_CONTINUATION = /[\p{L}\p{N}_/-]/u
 
 /**
  * Whether `text[end]` extends a match into a longer, different path rather
- * than ending it. A dot only counts as a continuation when another word
- * character follows (e.g. "@report.csv" + ".bak", or the "x" in "@a.tsx"
+ * than ending it. A dot only counts as a continuation when another
+ * letter/digit follows (e.g. "@report.csv" + ".bak", or the "x" in "@a.tsx"
  * itself is already caught by PATH_CONTINUATION) — a lone trailing dot, as
  * in an ordinary sentence ending, does not.
  */
@@ -75,7 +80,7 @@ function continuesPath(text: string, end: number): boolean {
   const char = text[end]
   if (char === undefined) return false
   if (PATH_CONTINUATION.test(char)) return true
-  return char === "." && /\w/.test(text[end + 1] ?? "")
+  return char === "." && /[\p{L}\p{N}_]/u.test(text[end + 1] ?? "")
 }
 
 /**

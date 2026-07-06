@@ -231,6 +231,49 @@ describe("message highlight", () => {
     expect(segments).toEqual([{ text: "compare " }, { text: "@report.csv", type: "file" }, { text: " with backup @report.csv.bak" }])
   })
 
+  test("does not let a shorter Cyrillic mention's repeat-search collide with a longer, distinct one", () => {
+    // "@файл" is a literal prefix of "@файлы" (Cyrillic "ы" appended), the
+    // same structural collision as "@a.ts" inside "@a.tsx" but for a
+    // non-ASCII continuation character that \w alone would not recognize.
+    const text = "open @файл and also @файлы"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        { source: { type: "file", path: "файл", text: { value: "@файл", start: 5, end: 10 } } },
+        { source: { type: "file", path: "файлы", text: { value: "@файлы", start: 20, end: 26 } } },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "open " },
+      { text: "@файл", type: "file" },
+      { text: " and also " },
+      { text: "@файлы", type: "file" },
+    ])
+  })
+
+  test("does not let a shorter CJK mention's repeat-search collide with a longer, distinct one", () => {
+    // "@文件" is a literal prefix of "@文件夹" ("夹" appended).
+    const text = "check @文件 and also @文件夹 folder"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        { source: { type: "file", path: "文件", text: { value: "@文件", start: 6, end: 9 } } },
+        { source: { type: "file", path: "文件夹", text: { value: "@文件夹", start: 19, end: 23 } } },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "check " },
+      { text: "@文件", type: "file" },
+      { text: " and also " },
+      { text: "@文件夹", type: "file" },
+      { text: " folder" },
+    ])
+  })
+
   test("highlights every repeated occurrence of a mention containing a space when only one ref exists", () => {
     const text = "a @dup name.ts b @dup name.ts c"
     const segments = buildHighlightedTextSegments(
