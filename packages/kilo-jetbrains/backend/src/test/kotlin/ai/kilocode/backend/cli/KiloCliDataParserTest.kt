@@ -1260,6 +1260,26 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseSession - preserves revert boundary`() {
+            val raw = """{
+                "id": "ses_abc",
+                "projectID": "proj_1",
+                "directory": "/tmp/project",
+                "title": "Test session",
+                "version": "1",
+                "time": { "created": 1000.0, "updated": 2000.0 },
+                "revert": { "messageID": "msg_user", "partID": "prt_text", "snapshot": "abc", "diff": "patch" }
+            }"""
+
+            val result = KiloCliDataParser.parseSession(raw)
+
+            assertEquals("msg_user", result.revert?.messageID)
+            assertEquals("prt_text", result.revert?.partID)
+            assertEquals("abc", result.revert?.snapshot)
+            assertEquals("patch", result.revert?.diff)
+        }
+
+        @Test
         fun `parseSession - minimal session response`() {
             val raw = """{
                 "id": "ses_min",
@@ -2020,6 +2040,12 @@ class KiloCliDataParserTest {
         fun `buildSummarizeJson - writes provider and model`() {
             val result = KiloCliDataParser.buildSummarizeJson(ModelSelectionDto("anthropic", "claude-4"))
             assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", result)
+        }
+
+        @Test
+        fun `buildRevertJson - writes message and optional part`() {
+            assertEquals("""{"messageID":"msg_user"}""", KiloCliDataParser.buildRevertJson("msg_user", null))
+            assertEquals("""{"messageID":"msg_user","partID":"prt_text"}""", KiloCliDataParser.buildRevertJson("msg_user", "prt_text"))
         }
 
         // ---- buildConfigPartial ----

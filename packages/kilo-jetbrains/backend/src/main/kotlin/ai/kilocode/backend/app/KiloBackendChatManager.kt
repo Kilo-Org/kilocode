@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -254,6 +255,67 @@ class KiloBackendChatManager(
         } catch (e: Exception) {
             log.warn("${ChatLogSummary.sid(id)} kind=compact op=summarize dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             throw RuntimeException("summarize HTTP call failed: ${e.message}", e)
+        }
+    }
+
+    // ------ revert ------
+
+    fun revert(id: String, dir: String, messageID: String, partID: String?): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=revert ${ChatLogSummary.dir(dir)} msg=$messageID op=revert")
+        val http = requireClient()
+        val url = requireBase()
+        val body = KiloCliDataParser.buildRevertJson(messageID, partID)
+        val request = Request.Builder()
+            .url("$url/session/$id/revert?directory=${encode(dir)}")
+            .post(body.toRequestBody(JSON_TYPE))
+            .build()
+
+        try {
+            http.newCall(request).execute().use { response ->
+                val code = response.code
+                val raw = response.body?.string()
+                if (!response.isSuccessful) {
+                    log.warn("revert failed: HTTP $code")
+                    raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=revert op=revert error=${ChatLogSummary.body(it)}" } }
+                    throw RuntimeException("revert failed: HTTP $code")
+                }
+                log.debug { "${ChatLogSummary.sid(id)} kind=revert op=revert ok=true code=$code" }
+                return KiloCliDataParser.parseSession(raw ?: throw RuntimeException("revert response missing body"))
+            }
+        } catch (e: RuntimeException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("${ChatLogSummary.sid(id)} kind=revert op=revert dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
+            throw RuntimeException("revert HTTP call failed: ${e.message}", e)
+        }
+    }
+
+    fun unrevert(id: String, dir: String): SessionDto {
+        log.info("${ChatLogSummary.sid(id)} kind=unrevert ${ChatLogSummary.dir(dir)} op=unrevert")
+        val http = requireClient()
+        val url = requireBase()
+        val request = Request.Builder()
+            .url("$url/session/$id/unrevert?directory=${encode(dir)}")
+            .post("".toRequestBody(JSON_TYPE))
+            .build()
+
+        try {
+            http.newCall(request).execute().use { response ->
+                val code = response.code
+                val raw = response.body?.string()
+                if (!response.isSuccessful) {
+                    log.warn("unrevert failed: HTTP $code")
+                    raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=unrevert op=unrevert error=${ChatLogSummary.body(it)}" } }
+                    throw RuntimeException("unrevert failed: HTTP $code")
+                }
+                log.debug { "${ChatLogSummary.sid(id)} kind=unrevert op=unrevert ok=true code=$code" }
+                return KiloCliDataParser.parseSession(raw ?: throw RuntimeException("unrevert response missing body"))
+            }
+        } catch (e: RuntimeException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("${ChatLogSummary.sid(id)} kind=unrevert op=unrevert dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
+            throw RuntimeException("unrevert HTTP call failed: ${e.message}", e)
         }
     }
 

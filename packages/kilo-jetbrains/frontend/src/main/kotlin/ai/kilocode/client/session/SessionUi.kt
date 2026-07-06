@@ -343,6 +343,14 @@ class SessionUi(
             ::openAttachment,
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
+            revert = { id, text ->
+                if (text.isNotBlank()) prompt.setText(text)
+                controller.revert(id)
+            },
+            unrevert = {
+                prompt.clear()
+                controller.unrevert()
+            },
         ).also {
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }

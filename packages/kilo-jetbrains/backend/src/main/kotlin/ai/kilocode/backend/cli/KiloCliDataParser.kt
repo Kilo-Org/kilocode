@@ -63,6 +63,7 @@ import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -777,6 +778,15 @@ object KiloCliDataParser {
     fun buildSummarizeJson(model: ModelSelectionDto): String =
         """{"providerID":${escape(model.providerID)},"modelID":${escape(model.modelID)}}"""
 
+    /**
+     * Build the JSON body for `POST /session/{id}/revert`.
+     */
+    fun buildRevertJson(messageID: String, partID: String?): String {
+        val fields = mutableListOf("\"messageID\":${escape(messageID)}")
+        partID?.let { fields += "\"partID\":${escape(it)}" }
+        return "{${fields.joinToString(",")}}"
+    }
+
     fun buildCommandJson(command: String, args: String, prompt: PromptDto): String {
         val fields = mutableListOf(
             "\"command\":${escape(command)}",
@@ -1413,6 +1423,7 @@ object KiloCliDataParser {
     private fun parseSessionObject(obj: JsonObject): SessionDto {
         val time = obj["time"]?.jsonObject
         val summary = obj["summary"]?.jsonObject
+        val revert = obj["revert"]?.takeIf { it !is JsonNull }?.jsonObject
         return SessionDto(
             id = obj.str("id") ?: "",
             projectID = obj.str("projectID") ?: "",
@@ -1430,6 +1441,14 @@ object KiloCliDataParser {
                     additions = it.long("additions")?.safeInt() ?: 0,
                     deletions = it.long("deletions")?.safeInt() ?: 0,
                     files = it.long("files")?.safeInt() ?: 0,
+                )
+            },
+            revert = revert?.let {
+                SessionRevertDto(
+                    messageID = it.str("messageID") ?: return@let null,
+                    partID = it.str("partID"),
+                    snapshot = it.str("snapshot"),
+                    diff = it.str("diff"),
                 )
             },
         )

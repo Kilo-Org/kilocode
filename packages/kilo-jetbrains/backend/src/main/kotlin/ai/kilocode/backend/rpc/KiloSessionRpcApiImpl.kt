@@ -129,6 +129,12 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) =
         ready { chat.compact(id, directory, model) }
 
+    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?): SessionDto =
+        ready { chat.revert(id, directory, messageID, partID) }
+
+    override suspend fun unrevert(id: String, directory: String): SessionDto =
+        ready { chat.unrevert(id, directory) }
+
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> =
         ready { chat.messages(id, directory) }
 

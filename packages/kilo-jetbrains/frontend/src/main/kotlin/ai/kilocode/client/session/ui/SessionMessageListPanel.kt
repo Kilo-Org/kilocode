@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.FileAttachment
+import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -12,6 +13,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.RevertBanner
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
@@ -58,6 +60,8 @@ class SessionMessageListPanel(
     private val openAttachment: (String, FileAttachment) -> Unit = { _, item -> ai.kilocode.client.session.views.AttachmentView.openDefault(item, openFile, openUrl) },
     private val repo: String? = null,
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
+    private val revert: ((String, String) -> Unit)? = null,
+    private val unrevert: (() -> Unit)? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
@@ -74,6 +78,7 @@ class SessionMessageListPanel(
     private var style = SessionEditorStyle.current()
     private var hiddenTool: ToolCallRef? = null
     private var hovered: PartView? = null
+    private val banner = if (revert != null && unrevert != null) RevertBanner({ revert(it, promptText(it)) }, unrevert) else null
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
 
@@ -128,7 +133,17 @@ class SessionMessageListPanel(
 
                 is SessionModelEvent.StateChanged -> {
                     syncActive(event.state)
+                    syncRevertToolbars()
                     anchorFooter()
+                    refresh()
+                }
+
+                is SessionModelEvent.SessionUpdated -> {
+                    rebuild()
+                }
+
+                is SessionModelEvent.DiffUpdated -> {
+                    syncBanner()
                     refresh()
                 }
 
@@ -136,9 +151,7 @@ class SessionMessageListPanel(
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.MessageRemoved,
-                is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
-                is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
             }
@@ -196,23 +209,34 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
+        val ids = visible(turn.messageIds)
+        if (ids.isEmpty()) return
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert)
         turnViews[turn.id] = tv
-        for (msgId in turn.messageIds) {
+        for (msgId in ids) {
             val msg = model.message(msgId) ?: continue
             val mv = tv.addMessage(msg)
             register(msgId, tv, mv)
         }
         tv.syncCopyToolbars()
+        tv.syncRevertToolbars(model.state.isBusy())
         add(tv)
         anchorFooter()
         refresh()
     }
 
     private fun onTurnUpdated(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = turnViews[turn.id] ?: return
+        val next = visible(turn.messageIds)
+        val tv = turnViews[turn.id]
+        if (tv == null) {
+            onTurnAdded(turn)
+            return
+        }
+        if (next.isEmpty()) {
+            onTurnRemoved(turn.id)
+            return
+        }
         val prev = tv.messageIds().toSet()
-        val next = turn.messageIds
 
         // Remove messages no longer in this turn
         for (id in prev) {
@@ -230,6 +254,7 @@ class SessionMessageListPanel(
             register(id, tv, mv)
         }
         tv.syncCopyToolbars()
+        tv.syncRevertToolbars(model.state.isBusy())
 
         refresh()
     }
@@ -255,18 +280,22 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
+            val ids = visible(turn.messageIds)
+            if (ids.isEmpty()) continue
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert)
             turnViews[turn.id] = tv
-            for (msgId in turn.messageIds) {
+            for (msgId in ids) {
                 val msg = model.message(msgId) ?: continue
                 val mv = tv.addMessage(msg)
                 register(msgId, tv, mv)
             }
             tv.syncCopyToolbars()
+            tv.syncRevertToolbars(model.state.isBusy())
             add(tv)
         }
 
         syncActive(model.state)
+        syncBanner()
         anchorFooter()
         refresh()
     }
@@ -282,6 +311,7 @@ class SessionMessageListPanel(
         msgToView.clear()
         removeAll()
         syncActive(model.state)
+        syncBanner()
         anchorFooter()
         refresh()
     }
@@ -339,7 +369,9 @@ class SessionMessageListPanel(
         if (question != null) remove(question)
         if (permission != null) remove(permission)
         if (login != null) remove(login)
+        if (banner != null) remove(banner)
         remove(progress)
+        if (banner != null) add(banner)
         if (question != null) add(question)
         if (permission != null) add(permission)
         if (login != null) add(login)
@@ -350,6 +382,9 @@ class SessionMessageListPanel(
         msgToTurn[msgId] = tv
         msgToView[msgId] = mv
         mv.setHiddenQuestionTool(hiddenTool)
+        mv.setRevertState(answered(msgId), !model.state.isBusy())
+        val rev = model.revert
+        mv.setRevertPart(if (rev?.messageID == msgId) rev.partID else null)
     }
 
     private fun unregister(msgId: String) {
@@ -361,6 +396,43 @@ class SessionMessageListPanel(
         revalidate()
         repaint()
     }
+
+    private fun visible(ids: List<String>): List<String> {
+        val rev = model.revert ?: return ids
+        val index = ids.indexOf(rev.messageID)
+        if (index < 0) {
+            val boundary = model.messages().indexOfFirst { it.info.id == rev.messageID }
+            return ids.filter { id ->
+                val at = model.messages().indexOfFirst { it.info.id == id }
+                at >= 0 && (boundary < 0 || at < boundary)
+            }
+        }
+        return if (rev.partID != null) ids.take(index + 1) else ids.take(index)
+    }
+
+    private fun answered(id: String): Boolean {
+        val turn = msgToTurn[id] ?: return false
+        val ids = turn.messageIds()
+        val index = ids.indexOf(id)
+        if (index < 0) return false
+        return ids.drop(index + 1).any { model.message(it)?.info?.role == "assistant" }
+    }
+
+    private fun syncRevertToolbars() {
+        val busy = model.state.isBusy()
+        for (view in turnViews.values) view.syncRevertToolbars(busy)
+    }
+
+    private fun syncBanner() {
+        banner?.update(model.messages(), model.revert?.messageID, model.diff)
+    }
+
+    private fun promptText(id: String): String = model.message(id)
+        ?.parts
+        ?.values
+        ?.filterIsInstance<Text>()
+        ?.joinToString("") { it.content.toString() }
+        .orEmpty()
 
     private fun hover(view: PartView, value: Boolean) {
         if (value) {

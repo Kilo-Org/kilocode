@@ -90,6 +90,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val attachmentParts = mutableListOf<AttachmentCall>()
     val aborts = mutableListOf<Pair<String, String>>()
     val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
+    val reverts = mutableListOf<RevertCall>()
+    val unreverts = mutableListOf<Pair<String, String>>()
     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
@@ -109,6 +111,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
     data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
+    data class RevertCall(val id: String, val directory: String, val messageID: String, val partID: String?)
 
     // --- Implementation ---
 
@@ -212,6 +215,18 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) {
         assertNotEdt("compact")
         compacts.add(Triple(id, directory, model))
+    }
+
+    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?): SessionDto {
+        assertNotEdt("revert")
+        reverts.add(RevertCall(id, directory, messageID, partID))
+        return session
+    }
+
+    override suspend fun unrevert(id: String, directory: String): SessionDto {
+        assertNotEdt("unrevert")
+        unreverts.add(id to directory)
+        return session
     }
 
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> {

@@ -394,6 +394,14 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    fun setText(value: String) {
+        editor.text = value
+        syncEditorHeight()
+        syncHighlights()
+        focus()
+    }
+
+    @RequiresEdt
     private fun syncHighlights() {
         val provider = completion ?: return
         val ed = editor.getEditor(false) ?: return

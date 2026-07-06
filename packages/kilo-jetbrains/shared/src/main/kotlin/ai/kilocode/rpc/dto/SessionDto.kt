@@ -12,6 +12,7 @@ data class SessionDto(
     val version: String,
     val time: SessionTimeDto,
     val summary: SessionSummaryDto? = null,
+    val revert: SessionRevertDto? = null,
 )
 
 @Serializable
@@ -26,6 +27,14 @@ data class SessionSummaryDto(
     val additions: Int,
     val deletions: Int,
     val files: Int,
+)
+
+@Serializable
+data class SessionRevertDto(
+    val messageID: String,
+    val partID: String? = null,
+    val snapshot: String? = null,
+    val diff: String? = null,
 )
 
 @Serializable

@@ -93,6 +93,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionStatuses = "{}"
     @Volatile var summarizeResponse = "true"
+    @Volatile var revertResponse = """{"id":"ses_abc","slug":"test","projectID":"prj_test","directory":"/test","title":"Test","version":"1.0.0","time":{"created":1000,"updated":2000},"revert":{"messageID":"msg_user"}}"""
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
     @Volatile var sessionCreateStatus = 200
@@ -109,6 +110,12 @@ class MockCliServer : AutoCloseable {
     @Volatile var summarizeStatus = 200
     @Volatile var lastSummarizePath: String? = null
     @Volatile var lastSummarizeBody: String? = null
+    @Volatile var revertStatus = 200
+    @Volatile var lastRevertPath: String? = null
+    @Volatile var lastRevertBody: String? = null
+    @Volatile var unrevertStatus = 200
+    @Volatile var lastUnrevertPath: String? = null
+    @Volatile var lastUnrevertBody: String? = null
     @Volatile var promptStatus = 200
     @Volatile var promptResponse = "true"
     @Volatile var lastPromptPath: String? = null
@@ -403,6 +410,16 @@ class MockCliServer : AutoCloseable {
                     lastSummarizePath = path
                     lastSummarizeBody = body
                     respond(output, summarizeStatus, summarizeResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/revert")) && method == "POST" -> {
+                    lastRevertPath = path
+                    lastRevertBody = body
+                    respond(output, revertStatus, revertResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/unrevert")) && method == "POST" -> {
+                    lastUnrevertPath = path
+                    lastUnrevertBody = body
+                    respond(output, unrevertStatus, sessionCreate)
                 }
                 bare.matches(Regex("/session/ses_[^/]+/prompt_async")) && method == "POST" -> {
                     lastPromptPath = path

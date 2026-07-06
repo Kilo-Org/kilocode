@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.ModelOptionsDto
 import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
@@ -67,6 +68,9 @@ class SessionModel {
 
     var session: SessionDto? = null
         private set
+
+    val revert: SessionRevertDto?
+        get() = session?.revert
 
     var header: SessionHeaderSnapshot = emptyHeader()
         private set

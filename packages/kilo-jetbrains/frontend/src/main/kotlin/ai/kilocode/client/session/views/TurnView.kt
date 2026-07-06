@@ -34,6 +34,7 @@ class TurnView(
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
+    private val revert: ((String, String) -> Unit)? = null,
 ) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), Disposable, SessionEditorStyleTarget {
 
     private val messages = LinkedHashMap<String, MessageView>()
@@ -44,10 +45,11 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover)
+        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert)
         messages[msg.info.id] = view
         add(view)
         syncCopyToolbars()
+        syncRevertToolbars(false)
         revalidate()
         return view
     }
@@ -58,6 +60,7 @@ class TurnView(
         remove(view)
         Disposer.dispose(view)
         syncCopyToolbars()
+        syncRevertToolbars(false)
         revalidate()
     }
 
@@ -65,6 +68,15 @@ class TurnView(
     fun syncCopyToolbars() {
         val id = messages.values.reversed().firstNotNullOfOrNull { it.latestAssistantCopyId() }
         for (view in messages.values) view.syncCopyToolbar(id)
+    }
+
+    @RequiresEdt
+    fun syncRevertToolbars(busy: Boolean) {
+        val ids = messages.values.toList()
+        for ((index, view) in ids.withIndex()) {
+            val available = view.role == SessionUiStyle.View.Message.USER_ROLE && ids.drop(index + 1).any { it.role == SessionUiStyle.View.Message.ASSISTANT_ROLE }
+            view.setRevertState(available, !busy)
+        }
     }
 
     /** Look up a nested [MessageView] by message id. */
@@ -80,6 +92,7 @@ class TurnView(
         this.style = style
         for (view in messages.values) view.applyStyle(style)
         syncCopyToolbars()
+        syncRevertToolbars(false)
         revalidate()
         repaint()
     }

@@ -191,6 +191,12 @@ class KiloSessionService internal constructor(
         call { compact(id, dir, model) }
     }
 
+    suspend fun revert(id: String, dir: String, messageID: String, partID: String?): SessionDto =
+        call { revert(id, dir, messageID, partID) }
+
+    suspend fun unrevert(id: String, dir: String): SessionDto =
+        call { unrevert(id, dir) }
+
     /** Load message history for a session. */
     suspend fun messages(id: String, dir: String): List<MessageWithPartsDto> =
         call { messages(id, dir) }

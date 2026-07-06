@@ -52,6 +52,36 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
+    fun `revert posts message boundary and returns updated session`() {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        val session = chat.revert("ses_abc", "/test/project", "msg_user", "prt_text")
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/revert"))
+        assertNotNull(mock.lastRevertPath)
+        assertTrue(mock.lastRevertPath!!.startsWith("/session/ses_abc/revert?directory="))
+        assertEquals("""{"messageID":"msg_user","partID":"prt_text"}""", mock.lastRevertBody)
+        assertEquals("msg_user", session.revert?.messageID)
+    }
+
+    @Test
+    fun `unrevert posts empty body and returns updated session`() {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        val session = chat.unrevert("ses_abc", "/test/project")
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/unrevert"))
+        assertNotNull(mock.lastUnrevertPath)
+        assertTrue(mock.lastUnrevertPath!!.startsWith("/session/ses_abc/unrevert?directory="))
+        assertEquals("", mock.lastUnrevertBody)
+        assertEquals("ses_test", session.id)
+    }
+
+    @Test
     fun `enhance prompt posts scoped request and returns rewritten text`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())

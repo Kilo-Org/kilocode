@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
+import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.ToolExecState
@@ -52,6 +53,7 @@ class MessageView(
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
+    private val revert: ((String, String) -> Unit)? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -73,6 +75,9 @@ class MessageView(
     private var promptBox: JPanel? = null
     private var promptToolbar: MessageToolbar? = null
     private var promptHover = false
+    private var revertAvailable = false
+    private var revertEnabled = true
+    private var revertPart: String? = null
 
     init {
         isOpaque = false
@@ -270,6 +275,8 @@ class MessageView(
      * pending/running question tool part linked to the active question.
      */
     private fun isHidden(content: Content): Boolean {
+        val part = revertPart
+        if (part != null && reverted(content.id, part)) return true
         if (isPromptMention(content)) return true
         if (content !is Tool) return false
         if (role == SessionUiStyle.View.Message.USER_ROLE && content.name == "read") return true
@@ -279,6 +286,15 @@ class MessageView(
         if (content.name != "question") return false
         if (content.state != ToolExecState.PENDING && content.state != ToolExecState.RUNNING) return false
         return msg.info.id == ref.messageId && content.callId == ref.callId
+    }
+
+    private fun reverted(id: String, part: String): Boolean {
+        var hidden = false
+        for (key in msg.parts.keys) {
+            if (key == part) hidden = true
+            if (key == id) return hidden
+        }
+        return false
     }
 
     /**
@@ -386,6 +402,22 @@ class MessageView(
     fun promptToolbarAlignment() = promptToolbar?.alignment()
 
     @RequiresEdt
+    fun setRevertState(available: Boolean, enabled: Boolean) {
+        if (revertAvailable == available && revertEnabled == enabled) return
+        revertAvailable = available
+        revertEnabled = enabled
+        promptToolbar?.setRevertVisible(available)
+        promptToolbar?.setRevertEnabled(enabled)
+    }
+
+    @RequiresEdt
+    fun setRevertPart(id: String?) {
+        if (revertPart == id) return
+        revertPart = id
+        rebuildParts()
+    }
+
+    @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
@@ -408,6 +440,7 @@ class MessageView(
         promptToolbar = null
         promptHover = false
         hidden = null
+        revertPart = null
     }
 
     override fun paintComponent(g: Graphics) {
@@ -459,6 +492,8 @@ class MessageView(
     @RequiresEdt
     private fun syncPromptToolbar() {
         promptToolbar?.paint(promptHover)
+        promptToolbar?.setRevertVisible(revertAvailable)
+        promptToolbar?.setRevertEnabled(revertEnabled)
     }
 
     @RequiresEdt
@@ -466,7 +501,17 @@ class MessageView(
         if (role != SessionUiStyle.View.Message.USER_ROLE) return view
         if (view !is PromptView) return view
         prompt = view
-        val bar = promptToolbar ?: MessageToolbar(BorderLayout.LINE_END) { prompt?.copyMarkdown(trim = false) }.also { promptToolbar = it }
+        val bar = promptToolbar ?: MessageToolbar(
+            text = { prompt?.copyMarkdown(trim = false) },
+            align = BorderLayout.LINE_END,
+            revert = revert?.let { action ->
+                { action(msg.info.id, promptText()) }
+            },
+        ).also {
+            promptToolbar = it
+            it.setRevertVisible(revertAvailable)
+            it.setRevertEnabled(revertEnabled)
+        }
         val box = JPanel(BorderLayout()).also {
             it.isOpaque = false
             it.add(view, BorderLayout.CENTER)
@@ -480,6 +525,10 @@ class MessageView(
             installPromptHover(it)
         }
     }
+
+    private fun promptText(): String = msg.parts.values
+        .filterIsInstance<Text>()
+        .joinToString("") { it.content.toString() }
 
     @RequiresEdt
     private fun installPromptHover(root: JComponent) {

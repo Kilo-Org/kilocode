@@ -399,6 +399,50 @@ class SessionController(
         }
     }
 
+    fun revert(messageID: String, partID: String? = null) {
+        assertEdt()
+        val id = sid ?: return
+        if (model.state.isBusy()) return
+        LOG.debug { "${ChatLogSummary.sid(id)} kind=revert msg=$messageID" }
+        cs.launch {
+            try {
+                sessions.revert(id, directory, messageID, partID)
+                capture("Session Reverted", sessionProps(id))
+                LOG.debug { "${ChatLogSummary.sid(id)} kind=revert ok=true" }
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "revert", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=revert dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt {
+                    updateModel {
+                        model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.revert")))
+                    }
+                }
+            }
+        }
+    }
+
+    fun unrevert() {
+        assertEdt()
+        val id = sid ?: return
+        if (model.state.isBusy()) return
+        LOG.debug { "${ChatLogSummary.sid(id)} kind=unrevert" }
+        cs.launch {
+            try {
+                sessions.unrevert(id, directory)
+                capture("Session Unreverted", sessionProps(id))
+                LOG.debug { "${ChatLogSummary.sid(id)} kind=unrevert ok=true" }
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "unrevert", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=unrevert dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt {
+                    updateModel {
+                        model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.revert")))
+                    }
+                }
+            }
+        }
+    }
+
     fun retryConnection() {
         assertEdt()
         LOG.debug {
