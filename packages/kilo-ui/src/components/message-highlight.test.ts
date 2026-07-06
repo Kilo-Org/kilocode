@@ -80,4 +80,96 @@ describe("message highlight", () => {
       { text: "@src/index.ts", type: "file" },
     ])
   })
+
+  test("highlights filename with a space when source offsets are provided", () => {
+    const text = "check @org data.xlsx now"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        {
+          source: {
+            type: "file",
+            path: "org data.xlsx",
+            text: { value: "@org data.xlsx", start: 6, end: 20 },
+          },
+        },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "check " },
+      { text: "@org data.xlsx", type: "file" },
+      { text: " now" },
+    ])
+  })
+
+  test("highlights filename with a space via fallback regex detection", () => {
+    expect(buildHighlightedTextSegments("check @org data.xlsx now", [], [])).toEqual([
+      { text: "check " },
+      { text: "@org data.xlsx", type: "file" },
+      { text: " now" },
+    ])
+  })
+
+  test("highlights Cyrillic filename when source offsets are provided", () => {
+    const text = "open @файл.txt please"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        {
+          source: {
+            type: "file",
+            path: "файл.txt",
+            text: { value: "@файл.txt", start: 5, end: 14 },
+          },
+        },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([{ text: "open " }, { text: "@файл.txt", type: "file" }, { text: " please" }])
+  })
+
+  test("highlights Chinese filename when source offsets are provided", () => {
+    const text = "read @文件.txt"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        {
+          source: {
+            type: "file",
+            path: "文件.txt",
+            text: { value: "@文件.txt", start: 5, end: 11 },
+          },
+        },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([{ text: "read " }, { text: "@文件.txt", type: "file" }])
+  })
+
+  test("highlights filename with space in directory and source offsets", () => {
+    const text = "using @my folder/report.xlsx here"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        {
+          source: {
+            type: "file",
+            path: "my folder/report.xlsx",
+            text: { value: "@my folder/report.xlsx", start: 6, end: 28 },
+          },
+        },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "using " },
+      { text: "@my folder/report.xlsx", type: "file" },
+      { text: " here" },
+    ])
+  })
 })

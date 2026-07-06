@@ -21,8 +21,14 @@ type Ref = {
   type: "file" | "agent"
 }
 
-/** Match @path mentions: `@` followed by a path-like token (contains `/` or `.`). */
-const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
+/**
+ * Match @path mentions: `@` followed by a path-like token (contains `/` or `.`).
+ * The first alternative handles filenames with optional space-separated segments
+ * before the final `name.ext`, covering paths like `org data.xlsx` or
+ * `my folder/report q1.xlsx`. The second alternative handles slash-based paths.
+ * This regex is the fallback used only when no source position data is available.
+ */
+const MENTION_RE = /@((?:[\w./-]+ )*[\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
 
 function detect(text: string): Ref[] {
   return Array.from(text.matchAll(MENTION_RE), (match) => ({

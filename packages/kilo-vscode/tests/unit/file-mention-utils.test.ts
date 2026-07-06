@@ -300,6 +300,76 @@ describe("buildFileAttachments", () => {
     const result = buildFileAttachments("@foo.ts", paths, "C:\\Users\\workspace")
     expect(result[0]!.url).not.toContain("\\")
   })
+
+  it("includes source.text with correct position for a plain mention", () => {
+    const paths = new Set(["src/foo.ts"])
+    const text = "check @src/foo.ts here"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "src/foo.ts",
+      text: { value: "@src/foo.ts", start: 6, end: 17 },
+    })
+  })
+
+  it("includes source.text for a filename with spaces", () => {
+    const paths = new Set(["org data.xlsx"])
+    const text = "see @org data.xlsx now"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "org data.xlsx",
+      text: { value: "@org data.xlsx", start: 4, end: 18 },
+    })
+  })
+
+  it("includes source.text for a Cyrillic filename", () => {
+    const paths = new Set(["файл.txt"])
+    const text = "open @файл.txt"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source?.text.value).toBe("@файл.txt")
+    expect(result[0]!.source?.text.start).toBe(5)
+  })
+
+  it("includes source.text for a Chinese filename", () => {
+    const paths = new Set(["文件.txt"])
+    const text = "@文件.txt"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source?.text.value).toBe("@文件.txt")
+    expect(result[0]!.source?.text.start).toBe(0)
+  })
+
+  it("includes source.text for a path with spaces in both dir and filename", () => {
+    const paths = new Set(["my folder/org data.xlsx"])
+    const text = "using @my folder/org data.xlsx here"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "my folder/org data.xlsx",
+      text: { value: "@my folder/org data.xlsx", start: 6, end: 30 },
+    })
+  })
+
+  it("percent-encodes spaces in the file URL so the server can decode it correctly", () => {
+    const paths = new Set(["org data.xlsx"])
+    const result = buildFileAttachments("@org data.xlsx", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).not.toContain(" ")
+    expect(result[0]!.url).toContain("%20")
+  })
+
+  it("percent-encodes spaces in nested path segments", () => {
+    const paths = new Set(["my folder/my file.txt"])
+    const result = buildFileAttachments("@my folder/my file.txt", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).not.toContain(" ")
+    expect(result[0]!.url).toContain("my%20folder")
+    expect(result[0]!.url).toContain("my%20file.txt")
+  })
 })
 
 describe("getMentionRemovalRange", () => {

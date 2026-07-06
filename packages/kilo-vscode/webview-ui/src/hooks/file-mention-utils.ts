@@ -228,6 +228,10 @@ function isInsideWorkspace(abs: string, dir: string): boolean {
  * which enforces the normal external-directory permission checks. Every
  * resolved path (relative or absolute) is normalized before the containment
  * check so a "../" sequence can't slip past a literal string-prefix match.
+ *
+ * Includes source.text position data so the message renderer can highlight
+ * the full mention span (including paths with spaces or non-ASCII characters)
+ * without falling back to the regex-based detection that stops at spaces.
  */
 export function buildFileAttachments(
   text: string,
@@ -237,13 +241,32 @@ export function buildFileAttachments(
   const result: FileAttachment[] = []
   const dir = normalizeAbsolutePath(workspaceDir.replaceAll("\\", "/")).replace(/\/+$/, "")
   for (const path of mentionedPaths) {
-    if (text.includes(`@${path}`)) {
+    const token = `@${path}`
+    const idx = text.indexOf(token)
+    if (idx !== -1) {
       const raw = isAbsolutePath(path) ? path.replaceAll("\\", "/") : `${dir}/${path}`
       const abs = normalizeAbsolutePath(raw)
       if (!isInsideWorkspace(abs, dir)) continue
       const url = new URL("file://")
-      url.pathname = abs.startsWith("/") ? abs : `/${abs}`
-      result.push({ mime: "text/plain", url: url.href })
+      // Pre-encode spaces and literal percent signs before assigning to
+      // pathname: VS Code's webview (Chromium) does not percent-encode spaces
+      // in file:// URL pathnames, which causes Bun's fileURLToPath on the
+      // server to truncate the path at the first space. A literal "%" in the
+      // filename must also be escaped first (to "%25"), otherwise a name like
+      // "100%20real.txt" would be indistinguishable from an already-encoded
+      // space and get decoded back to "100 real.txt" server-side. Other
+      // non-ASCII characters are encoded correctly by the URL class, so only
+      // "%" and " " need this explicit treatment.
+      url.pathname = (abs.startsWith("/") ? abs : `/${abs}`).replace(/%/g, "%25").replace(/ /g, "%20")
+      result.push({
+        mime: "text/plain",
+        url: url.href,
+        source: {
+          type: "file",
+          path,
+          text: { value: token, start: idx, end: idx + token.length },
+        },
+      })
     }
   }
   return result
