@@ -231,15 +231,14 @@ export class KiloProviderMemory {
       return
     }
 
-    const directory = this.input.dir(sessionID ?? this.input.session()?.id)
-    if (!directory) {
-      this.input.post({ type: "memoryLoaded", sessionID, error: NO_PROJECT })
-      return
-    }
-
     try {
-      const { data: show } = await api.show({ directory }, { throwOnError: true })
-      const { data: status } = await api.status({ directory }, { throwOnError: true })
+      const directory = this.input.dir(sessionID ?? this.input.session()?.id)
+      if (!directory) {
+        this.input.post({ type: "memoryLoaded", sessionID, error: NO_PROJECT })
+        return
+      }
+      const { data: show } = await retry(() => api.show({ directory }, { throwOnError: true }))
+      const { data: status } = await retry(() => api.status({ directory }, { throwOnError: true }))
       const current = sessionID ?? this.input.session()?.id
       const startup =
         current && status.state.stats.lastInjectedSessionID === current ? status.state.stats.lastInjectedTokens : 0
@@ -249,7 +248,7 @@ export class KiloProviderMemory {
         `Root: ${show.root}`,
         `Enabled: ${show.state.enabled ? "yes" : "no"}`,
         `Auto-save: ${show.state.autoConsolidate ? "on" : "off"}`,
-        "Startup context: on",
+        `Startup context: ${show.state.autoInject ? "on" : "off"}`,
         `Stored index tokens: ${status.index.estimatedTokens}`,
         `Startup context tokens for this session: ${startup}`,
         `Last auto-save model usage: ${status.state.stats.lastConsolidationTokens} tokens`,
@@ -268,6 +267,9 @@ export class KiloProviderMemory {
         "",
         "## items",
         show.items.trim(),
+        "",
+        "## changes",
+        show.changes.trim(),
         "",
         "## decisions.jsonl",
         show.decisions.trim(),
@@ -357,8 +359,8 @@ export class KiloProviderMemory {
       }
       const data = await this.action(api, directory, message)
       const refreshed = await Promise.all([
-        api.status({ directory }, { throwOnError: true }),
-        api.show({ directory }, { throwOnError: true }),
+        retry(() => api.status({ directory }, { throwOnError: true })),
+        retry(() => api.show({ directory }, { throwOnError: true })),
       ]).catch((err: unknown) => {
         console.warn("[Kilo New] Memory changed but refresh failed:", err)
         return undefined
@@ -458,7 +460,7 @@ export class KiloProviderMemory {
   }
 
   private async edit(api: MemoryApi, directory: string) {
-    const { data: status } = await api.status({ directory }, { throwOnError: true })
+    const { data: status } = await retry(() => api.status({ directory }, { throwOnError: true }))
     if (!status.state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
     const uri = vscode.Uri.file(path.join(status.root, "project.md"))
     const doc = await vscode.workspace.openTextDocument(uri)
@@ -472,7 +474,7 @@ export class KiloProviderMemory {
   }
 
   private async auto(api: MemoryApi, directory: string, message: KiloProviderMemoryMessage) {
-    if (message.mode === "status") return (await api.status({ directory }, { throwOnError: true })).data
+    if (message.mode === "status") return (await retry(() => api.status({ directory }, { throwOnError: true }))).data
     if (message.mode === "on" || message.mode === "off") {
       return (await api.configure({ directory, autoConsolidate: message.mode === "on" }, { throwOnError: true })).data
     }

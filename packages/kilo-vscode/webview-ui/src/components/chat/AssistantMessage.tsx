@@ -27,6 +27,7 @@ import { useMemory } from "../../context/memory"
 import { useServer } from "../../context/server"
 import { snapshotProgress } from "../../context/session-utils"
 import { planDisplayPath } from "../../utils/plan-path"
+import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
@@ -133,34 +134,7 @@ type ToolStateProps = {
   status?: string
 }
 
-type MemoryMeta = {
-  type?: string
-  tokens?: number
-  count?: number
-  files?: string[]
-  sources?: string[]
-}
-
-function memoryMeta(parts: SDKPart[]) {
-  for (const part of parts) {
-    if (part.type !== "text") continue
-    const meta = (part as SDKPart & { metadata?: { kiloMemory?: unknown } }).metadata?.kiloMemory
-    if (!meta || typeof meta !== "object") continue
-    const item = meta as MemoryMeta
-    const files = Array.isArray(item.files)
-      ? item.files.filter((file) => typeof file === "string")
-      : Array.isArray(item.sources)
-        ? item.sources.filter((source) => typeof source === "string")
-        : []
-    const count = typeof item.count === "number" ? item.count : files.length
-    const tokens = typeof item.tokens === "number" ? item.tokens : 0
-    const type = item.type === "startup" ? "startup" : "recall"
-    return { type, count, tokens, files }
-  }
-  return undefined
-}
-
-type MemoryItem = NonNullable<ReturnType<typeof memoryMeta>>
+type MemoryItem = MemoryMarkerMeta.Decoded
 
 function TodoToolCard(props: { part: ToolPart }) {
   const render = ToolRegistry.render(props.part.tool)
@@ -231,7 +205,9 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       return !!matchToolRequest(part, "question", session.questions())
     })
   })
-  const meta = createMemo(() => memoryMeta((data.store.part?.[props.message.id] ?? []) as SDKPart[]))
+  const meta = createMemo(() =>
+    MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
+  )
   const fmt = (value: number) => value.toLocaleString(language.locale())
   const count = (item: MemoryItem) => fmt(item.count)
   const tokens = (item: MemoryItem) => fmt(item.tokens)
@@ -369,7 +345,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
-      <Show when={meta()}>
+      <Show when={mem.enabled() && meta()}>
         {(item) => (
           <Tooltip value={tip(item())} placement="top">
             <div data-component="assistant-memory-badge">

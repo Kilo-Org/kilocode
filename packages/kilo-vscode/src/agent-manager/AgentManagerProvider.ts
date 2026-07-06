@@ -1835,7 +1835,11 @@ export class AgentManagerProvider implements Disposable {
     }
     if (!(await this.waitForPanelReady(panel))) return
     if (this.activeSessionId !== sid) return
-    await panel.sessions.showMemory(sid)
+    try {
+      await panel.sessions.showMemory(sid)
+    } catch (error) {
+      this.host.showError(getErrorMessage(error) || "Failed to show memory")
+    }
   }
 
   public async toggleMemory(): Promise<void> {
@@ -1847,7 +1851,11 @@ export class AgentManagerProvider implements Disposable {
     }
     if (!(await this.waitForPanelReady(panel))) return
     if (this.activeSessionId !== sid) return
-    await panel.sessions.toggleMemory(sid)
+    try {
+      await panel.sessions.toggleMemory(sid)
+    } catch (error) {
+      this.host.showError(getErrorMessage(error) || "Failed to toggle memory")
+    }
   }
 
   /** Expose worktree session→directory mappings for the auto-approve toggle. */

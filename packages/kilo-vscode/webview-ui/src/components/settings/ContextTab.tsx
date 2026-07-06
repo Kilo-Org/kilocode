@@ -92,7 +92,7 @@ const ContextTab: Component = () => {
         <SettingsRow
           title={language.t("settings.context.memory.index.title")}
           description={
-            memory.status()?.root
+            memory.enabled()
               ? language.t("settings.context.memory.index.path", { path: memory.status()!.root })
               : language.t("settings.context.memory.index.enable")
           }

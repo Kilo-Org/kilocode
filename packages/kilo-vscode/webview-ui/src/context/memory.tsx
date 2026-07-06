@@ -8,7 +8,7 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import type { MemoryShowResponse, MemoryStatusResponse } from "@kilocode/sdk/v2"
 import type { ExtensionMessage } from "../types/messages"
 
-interface MemoryContextValue {
+export interface MemoryContextValue {
   status: Accessor<MemoryStatusResponse | undefined>
   show: Accessor<MemoryShowResponse | undefined>
   loading: Accessor<boolean>
@@ -27,7 +27,7 @@ interface MemoryContextValue {
   forget: () => void
 }
 
-const MemoryContext = createContext<MemoryContextValue>()
+export const MemoryContext = createContext<MemoryContextValue>()
 const EVENT_DEDUPE_MS = 1000
 
 export const MemoryProvider: ParentComponent = (props) => {
@@ -44,9 +44,10 @@ export const MemoryProvider: ParentComponent = (props) => {
   const id = () => session.currentSessionID()
   const key = (sid?: string) => sid ?? ""
   const current = (sid?: string) => {
-    const active = id()
     if (!sid) return true
-    return active === sid
+    // A response can be addressed to a draft session that hasn't been promoted to
+    // currentSessionID yet (PromptInput posts with the draft id), so match both.
+    return sid === id() || sid === session.draftSessionID()
   }
   let last: { key: string; time: number } | undefined
   let scope = ""
@@ -67,24 +68,28 @@ export const MemoryProvider: ParentComponent = (props) => {
   }
 
   const operation = (op: "enable" | "disable" | "rebuild") => {
+    if (!server.isConnected()) return
     setPending(key(id()))
     setError(undefined)
     vscode.postMessage({ type: "memoryOperation", operation: op, sessionID: id() })
   }
 
   const auto = (mode: "on" | "off") => {
+    if (!server.isConnected()) return
     setPending(key(id()))
     setError(undefined)
     vscode.postMessage({ type: "memoryOperation", operation: "auto", mode, sessionID: id() })
   }
 
   const prompt = (op: "remember" | "forget") => {
+    if (!server.isConnected()) return
     setPending(key(id()))
     setError(undefined)
     vscode.postMessage({ type: "memoryPrompt", operation: op, sessionID: id() })
   }
 
   const showMemory = () => {
+    if (!server.isConnected()) return
     setLoading(true)
     setError(undefined)
     vscode.postMessage({ type: "memoryShow", sessionID: id() })
@@ -94,10 +99,10 @@ export const MemoryProvider: ParentComponent = (props) => {
     if (!current(message.sessionID)) return
     if (message.detail.type === "skipped") return
     if (!message.detail.message) return
-    const key = `${message.sessionID ?? ""}:${message.detail.type ?? ""}:${message.detail.message}`
+    const dedupeKey = `${message.sessionID ?? ""}:${message.detail.type ?? ""}:${message.detail.message}`
     const now = Date.now()
-    if (last?.key === key && now - last.time < EVENT_DEDUPE_MS) return
-    last = { key, time: now }
+    if (last?.key === dedupeKey && now - last.time < EVENT_DEDUPE_MS) return
+    last = { key: dedupeKey, time: now }
     showToast({
       ...(message.detail.type === "saved"
         ? { variant: "success" as const }
@@ -173,11 +178,11 @@ export const MemoryProvider: ParentComponent = (props) => {
     refresh(false)
   })
 
-  const sessionTokens = (status?: MemoryStatusResponse) => {
+  const sessionTokens = (snapshot?: MemoryStatusResponse) => {
     const sid = id()
-    if (!status?.state.enabled) return 0
-    if (!sid || status?.state.stats.lastInjectedSessionID !== sid) return 0
-    return status.state.stats.lastInjectedTokens
+    if (!snapshot?.state.enabled) return 0
+    if (!sid || snapshot.state.stats.lastInjectedSessionID !== sid) return 0
+    return snapshot.state.stats.lastInjectedTokens
   }
 
   const total = createMemo(() => status()?.index.estimatedTokens ?? 0)

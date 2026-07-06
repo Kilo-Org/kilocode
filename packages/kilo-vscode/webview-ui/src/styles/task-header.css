@@ -353,7 +353,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.task-header-memory {
+[data-slot="task-header-memory"] {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -363,7 +363,14 @@
   min-width: 0;
 }
 
-.task-header-memory-status {
+/* Passed to the shared Tooltip via its `class` prop (no data-slot API), so the trigger stretches. */
+.task-header-memory-tooltip {
+  display: inline-flex;
+  flex: 1;
+  min-width: 0;
+}
+
+[data-slot="task-header-memory-status"] {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -372,13 +379,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.task-header-memory-status[data-enabled] {
   color: var(--vscode-foreground);
 }
 
-.task-header-memory-actions {
+[data-slot="task-header-memory-actions"] {
   display: inline-flex;
   align-items: center;
   gap: 2px;

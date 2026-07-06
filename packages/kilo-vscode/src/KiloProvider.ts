@@ -4335,6 +4335,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibleTaskStreams.clear()
     this.streams.dispose()
     this.isWebviewReady = false
+    // Release any waitForReady() awaiters so their callers don't hang after disposal.
+    this.readyResolvers.splice(0).forEach((r) => r())
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)
     this.trackedSessionIds.clear()

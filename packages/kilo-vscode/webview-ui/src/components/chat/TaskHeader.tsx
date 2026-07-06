@@ -87,14 +87,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const memoryLabel = createMemo(() => {
-    const status = memory.status()
-    if (!status) return memory.loading() ? language.t("chat.memory.loading") : undefined
-    if (!status.state.enabled) return language.t("chat.memory.off")
     const count = memory.sessionTokens()
     return count > 0
       ? language.t("chat.memory.label", { tokens: formatCompactCount(count) })
       : language.t("chat.memory.on")
   })
+
+  const memoryTooltip = createMemo(() =>
+    language.t("chat.memory.session.tokens", { tokens: formatCompactCount(memory.sessionTokens()) }),
+  )
 
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
@@ -248,13 +249,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
         </div>
       </Show>
-      <Show when={memory.status()}>
-        <div class="task-header-memory">
-          <span class="task-header-memory-status" data-enabled={memory.enabled() ? "" : undefined}>
-            <Icon name="brain" size="small" />
-            <span>{memoryLabel()}</span>
-          </span>
-          <span class="task-header-memory-actions">
+      <Show when={memory.enabled()}>
+        <div data-slot="task-header-memory">
+          <Tooltip value={memoryTooltip()} placement="bottom" class="task-header-memory-tooltip">
+            <span data-slot="task-header-memory-status">
+              <Icon name="brain" size="small" />
+              <span>{memoryLabel()}</span>
+            </span>
+          </Tooltip>
+          <span data-slot="task-header-memory-actions">
             <Tooltip value={language.t("chat.memory.inspect")} placement="bottom">
               <IconButton
                 icon="eye"
@@ -295,17 +298,15 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 aria-label={language.t("chat.memory.rebuild")}
               />
             </Tooltip>
-            <Tooltip
-              value={memory.enabled() ? language.t("chat.memory.disable") : language.t("chat.memory.enable")}
-              placement="bottom"
-            >
+            {/* Strip only mounts when enabled, so this is always the disable action; re-enable lives in Settings > Context. */}
+            <Tooltip value={language.t("chat.memory.disable")} placement="bottom">
               <IconButton
-                icon={memory.enabled() ? "circle-ban-sign" : "check-small"}
+                icon="circle-ban-sign"
                 size="small"
                 variant="ghost"
                 disabled={memory.pending()}
-                onClick={() => (memory.enabled() ? memory.disable() : memory.enable())}
-                aria-label={memory.enabled() ? language.t("chat.memory.disable") : language.t("chat.memory.enable")}
+                onClick={() => memory.disable()}
+                aria-label={language.t("chat.memory.disable")}
               />
             </Tooltip>
           </span>
