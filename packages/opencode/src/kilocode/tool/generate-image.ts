@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { Effect, Schema } from "effect"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import * as path from "path"
 import { readFile } from "fs/promises"
 import * as Tool from "../../tool/tool"
@@ -151,6 +152,7 @@ export const GenerateImageTool = Tool.define(
     const fs = yield* AppFileSystem.Service
     const authSvc = yield* Auth.Service
     const configSvc = yield* Config.Service
+    const http = yield* HttpClient.HttpClient
 
     return {
       description: DESCRIPTION,
@@ -196,26 +198,25 @@ export const GenerateImageTool = Tool.define(
           const model = params.model ?? cfg.experimental?.image_generation_model ?? DEFAULT_MODEL
           const req = buildRequest(resolved, params.prompt, model, inputImage)
 
-          const response = yield* Effect.tryPromise(() =>
-            fetch(req.url, {
-              method: "POST",
-              headers: req.headers,
-              body: req.body,
-              signal: ctx.abort,
-            }),
+          const response = yield* http.execute(
+            HttpClientRequest.post(req.url).pipe(
+              HttpClientRequest.setHeaders(req.headers),
+              HttpClientRequest.bodyText(req.body, "application/json"),
+            ),
           )
 
-          if (!response.ok) {
-            const errText = yield* Effect.tryPromise(() => response.text())
-            log.warn("image generation failed", { status: response.status, errText: errText.slice(0, 200) })
+          const status = response.status
+          if (status < 200 || status >= 300) {
+            const errText = yield* response.text
+            log.warn("image generation failed", { status, errText: errText.slice(0, 200) })
             return {
               title: "Image generation failed",
-              output: `Image generation request failed (HTTP ${response.status}).`,
+              output: `Image generation request failed (HTTP ${status}).`,
               metadata: { provider: resolved.provider, error: "http-error" } as Meta,
             }
           }
 
-          const text = yield* Effect.tryPromise(() => response.text())
+          const text = yield* response.text
           const parsed = parseImageResponse(text)
           if (!parsed) {
             return {
