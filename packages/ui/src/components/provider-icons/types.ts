@@ -110,7 +110,7 @@ export const iconNames = [
   "bailing",
   "azure",
   "azure-cognitive-services",
-  "atomic-chat", // kilocode_change
+  "atomic-chat",
   "anthropic",
   "amazon-bedrock",
   "alibaba",

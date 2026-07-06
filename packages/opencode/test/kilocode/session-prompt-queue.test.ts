@@ -4,11 +4,12 @@ import { Effect } from "effect"
 import { Bus } from "../../src/bus"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { InstanceRef } from "../../src/effect/instance-ref"
+import { KiloSessionCompaction } from "@/kilocode/session/compaction"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { InstanceStore } from "../../src/project/instance-store"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionCompaction } from "../../src/session/compaction"
@@ -19,6 +20,11 @@ import { provideInstance, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
+const store = {
+  updateMessage: <T extends MessageV2.Info>(msg: T) => Effect.promise(() => sessions.updateMessage(msg)),
+  updatePart: <T extends MessageV2.Part>(part: T) => Effect.promise(() => sessions.updatePart(part)),
+}
+
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
     Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
@@ -26,6 +32,8 @@ const sessions = {
     Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
   updateMessage: <T extends MessageV2.Info>(msg: T) =>
     Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+  updatePart: <T extends MessageV2.Part>(part: T) =>
+    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
 }
 
 function line(input: unknown) {
@@ -138,10 +146,10 @@ function assistant(sessionID: SessionID, id: MessageID, parentID: MessageID): Me
 describe("session prompt queue", () => {
   test("scopes queued turns without moving prior assistant history", async () => {
     const sessionID = SessionID.make("session_scope")
-    const one = MessageID.make("message_01")
-    const ans = MessageID.make("message_02")
-    const two = MessageID.make("message_03")
-    const three = MessageID.make("message_04")
+    const one = MessageID.make("msg_01")
+    const ans = MessageID.make("msg_02")
+    const two = MessageID.make("msg_03")
+    const three = MessageID.make("msg_04")
     const messages = [
       user(sessionID, one),
       assistant(sessionID, ans, one),
@@ -168,13 +176,13 @@ describe("session prompt queue", () => {
     // in the middle of the prior turn's messages, ending the next model request
     // with an assistant message and tripping Anthropic's prefill rejection.
     const sessionID = SessionID.make("session_queue_mid_turn")
-    const m1 = MessageID.make("message_10")
-    const a1 = MessageID.make("message_20")
-    const m2 = MessageID.make("message_30")
-    const a2step1 = MessageID.make("message_40")
-    const m3 = MessageID.make("message_50") // queued mid-turn
-    const a2step2 = MessageID.make("message_60")
-    const a2final = MessageID.make("message_70")
+    const m1 = MessageID.make("msg_10")
+    const a1 = MessageID.make("msg_20")
+    const m2 = MessageID.make("msg_30")
+    const a2step1 = MessageID.make("msg_40")
+    const m3 = MessageID.make("msg_50") // queued mid-turn
+    const a2step2 = MessageID.make("msg_60")
+    const a2final = MessageID.make("msg_70")
     const messages = [
       user(sessionID, m1),
       assistant(sessionID, a1, m1),
@@ -203,11 +211,11 @@ describe("session prompt queue", () => {
     // subsequent scope() calls should keep the target user together with its
     // own turn's assistants (not interleaved with a prior turn's tail).
     const sessionID = SessionID.make("session_queue_step_two")
-    const m1 = MessageID.make("message_01a")
-    const a1 = MessageID.make("message_02a")
-    const m2 = MessageID.make("message_03a") // queued mid-turn
-    const a1tail = MessageID.make("message_04a")
-    const a2step1 = MessageID.make("message_05a")
+    const m1 = MessageID.make("msg_01a")
+    const a1 = MessageID.make("msg_02a")
+    const m2 = MessageID.make("msg_03a") // queued mid-turn
+    const a1tail = MessageID.make("msg_04a")
+    const a2step1 = MessageID.make("msg_05a")
     const messages = [
       user(sessionID, m1),
       assistant(sessionID, a1, m1),
@@ -233,10 +241,10 @@ describe("session prompt queue", () => {
     // which unhid any user prompts queued between the base and the injected
     // follow-up. Exempt the follow-up without reopening the boundary.
     const sessionID = SessionID.make("session_retarget_hide")
-    const base = MessageID.make("message_b1")
-    const ans = MessageID.make("message_b2")
-    const queued = MessageID.make("message_b3") // queued while base was running
-    const injected = MessageID.make("message_b4") // injected follow-up
+    const base = MessageID.make("msg_b1")
+    const ans = MessageID.make("msg_b2")
+    const queued = MessageID.make("msg_b3") // queued while base was running
+    const injected = MessageID.make("msg_b4") // injected follow-up
     const messages = [
       user(sessionID, base),
       assistant(sessionID, ans, base),
@@ -244,21 +252,25 @@ describe("session prompt queue", () => {
       user(sessionID, injected),
     ]
 
-    const ids = await Effect.runPromise(
+    const result = await Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
         base,
         Effect.sync(() => {
           KiloSessionPromptQueue.retarget(sessionID, injected)
-          return KiloSessionPromptQueue.scope(sessionID, messages).map((item) => item.info.id)
+          return {
+            active: KiloSessionPromptQueue.active(sessionID),
+            ids: KiloSessionPromptQueue.scope(sessionID, messages).map((item) => item.info.id),
+          }
         }),
-        Effect.succeed([]),
+        Effect.succeed({ active: undefined, ids: [] }),
       ),
     )
 
-    expect(ids).not.toContain(queued)
-    expect(ids).toContain(injected)
-    expect(ids[ids.length - 1]).toBe(injected)
+    expect(result.active).toBe(base)
+    expect(result.ids).not.toContain(queued)
+    expect(result.ids).toContain(injected)
+    expect(result.ids[result.ids.length - 1]).toBe(injected)
   })
 
   test("keeps auto-compaction markers created during a queued turn visible", async () => {
@@ -267,7 +279,7 @@ describe("session prompt queue", () => {
     // scope() hides that marker, runLoop never processes the compaction task and
     // instead retries the same oversized request until compaction is exhausted.
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await sessions.create({ title: "Queued compaction regression" })
@@ -284,13 +296,16 @@ describe("session prompt queue", () => {
             session.id,
             queued,
             Effect.promise(async () => {
-              await SessionCompaction.create({
-                sessionID: session.id,
-                agent: "code",
-                model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
-                auto: true,
-                overflow: true,
-              })
+              await Effect.runPromise(
+                KiloSessionCompaction.create({
+                  session: store,
+                  sessionID: session.id,
+                  agent: "code",
+                  model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
+                  auto: true,
+                  overflow: true,
+                }),
+              )
               const messages = await sessions.messages({ sessionID: session.id })
               const compact = messages.find((msg) => msg.parts.some((part) => part.type === "compaction"))?.info.id
               return { compact, ids: KiloSessionPromptQueue.scope(session.id, messages).map((item) => item.info.id) }
@@ -317,7 +332,7 @@ describe("session prompt queue", () => {
     const first = Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
-        MessageID.make("message_followup_1"),
+        MessageID.make("msg_followup_1"),
         Effect.gen(function* () {
           observed.push({ where: "first:start", value: KiloSessionPromptQueue.hasFollowup(sessionID) })
           firstStarted.resolve()
@@ -336,7 +351,7 @@ describe("session prompt queue", () => {
     const second = Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
-        MessageID.make("message_followup_2"),
+        MessageID.make("msg_followup_2"),
         Effect.gen(function* () {
           observed.push({ where: "second:start", value: KiloSessionPromptQueue.hasFollowup(sessionID) })
           secondStarted.resolve()
@@ -355,7 +370,7 @@ describe("session prompt queue", () => {
     const third = Effect.runPromise(
       KiloSessionPromptQueue.enqueue(
         sessionID,
-        MessageID.make("message_followup_3"),
+        MessageID.make("msg_followup_3"),
         Effect.sync(() => {
           observed.push({ where: "third:start", value: KiloSessionPromptQueue.hasFollowup(sessionID) })
           return "third"
@@ -433,7 +448,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () =>
           scoped(tmp.path, async (prompt) => {
@@ -588,6 +603,25 @@ describe("session prompt queue", () => {
     }
   })
 
+  test("cancel on a session with no active tail is a no-op and does not leak state", async () => {
+    const sessionID = SessionID.make("session_cancel_noop")
+
+    await Effect.runPromise(KiloSessionPromptQueue.cancel(sessionID))
+
+    expect(KiloSessionPromptQueue._hasInternalState(sessionID)).toBe(false)
+
+    const result = await Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        MessageID.make("msg_probe"),
+        Effect.succeed("work executed"),
+        Effect.succeed("cancelled returned"),
+      ),
+    )
+
+    expect(result).toBe("work executed")
+  })
+
   test("cancel drops queued prompts and resets internal state", async () => {
     const ready = Promise.withResolvers<void>()
     const calls: number[] = []
@@ -626,7 +660,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
         fn: async () =>
           scoped(tmp.path, async (prompt) => {
@@ -673,7 +707,7 @@ describe("session prompt queue", () => {
             const ids = await Effect.runPromise(
               KiloSessionPromptQueue.enqueue(
                 session.id,
-                MessageID.make("message_probe"),
+                MessageID.make("msg_probe"),
                 Effect.succeed(KiloSessionPromptQueue.scope(session.id, []).map((item) => item.info.id)),
                 Effect.succeed([]),
               ),
@@ -692,7 +726,7 @@ describe("session prompt queue", () => {
     const dismissed = Promise.withResolvers<void>()
     await using tmp = await tmpdir({ git: true })
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () =>
         scoped(tmp.path, async (prompt) => {
@@ -707,8 +741,8 @@ describe("session prompt queue", () => {
           try {
             const base = Suggestion.show({
               sessionID: session.id,
-              text: "Run review?",
-              actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+              text: "Continue with the task?",
+              actions: [{ label: "Continue", prompt: "Continue with the task" }],
             }).catch((err) => {
               if (err instanceof Suggestion.DismissedError) return "dismissed"
               throw err
@@ -741,7 +775,7 @@ describe("session prompt queue", () => {
     // hasFollowup=true and reject synchronously, before any pending entry or
     // Shown event is published.
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_suggestion")
@@ -752,7 +786,7 @@ describe("session prompt queue", () => {
         const first = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_auto_sug_1"),
+            MessageID.make("msg_auto_sug_1"),
             Effect.gen(function* () {
               started.resolve()
               yield* Effect.promise(() => release.promise)
@@ -767,7 +801,7 @@ describe("session prompt queue", () => {
         const second = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_auto_sug_2"),
+            MessageID.make("msg_auto_sug_2"),
             Effect.succeed("second" as const),
             Effect.succeed("second-cancelled" as const),
           ),
@@ -783,8 +817,8 @@ describe("session prompt queue", () => {
           await expect(
             Suggestion.show({
               sessionID,
-              text: "Run review?",
-              actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+              text: "Continue with the task?",
+              actions: [{ label: "Continue", prompt: "Continue with the task" }],
             }),
           ).rejects.toBeInstanceOf(Suggestion.DismissedError)
         } finally {

@@ -23,11 +23,7 @@ process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
 process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
 process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
-// Tests assert exact skill counts from disk discovery; the built-in
-// customize-opencode skill is opt-in for stable channels and on by default
-// for unstable channels (including "local" where CI runs). Disable it here
-// so disk-discovery tests aren't off-by-one.
-process.env["KILO_EXPERIMENTAL_CUSTOMIZE_SKILL"] = "false"
+process.env["KILO_EXPERIMENTAL_WORKSPACES"] = "true"
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
@@ -38,7 +34,6 @@ process.env["KILO_TEST_HOME"] = testHome
 // Set test managed config directory to isolate tests from system managed settings
 const testManagedConfigDir = path.join(dir, "managed")
 process.env["KILO_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
-process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = "true"
 
 // Write the cache version file to prevent global/index.ts from clearing the cache
 const cacheDir = path.join(dir, "cache", "kilo")
@@ -75,6 +70,8 @@ process.env["KILO_DB"] = ":memory:"
 // Now safe to import from src/
 const { Log } = await import("@opencode-ai/core/util/log")
 const { initProjectors } = await import("../src/server/projectors")
+// kilocode_change: bind the package memory effect layer to opencode for tests (paths/instance/log/events)
+const { installMemoryRuntime } = await import("../src/kilocode/memory/runtime") // kilocode_change
 
 void Log.init({
   print: false,
@@ -83,3 +80,4 @@ void Log.init({
 })
 
 initProjectors()
+installMemoryRuntime() // kilocode_change

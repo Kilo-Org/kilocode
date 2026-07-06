@@ -174,7 +174,30 @@ internal class ModelsSettingsUi(
             .filter { it.id == KILO_PROVIDER || it.id in cfg.connected }
             .flatMap { provider ->
                 provider.models.mapNotNull { (id, model) ->
-                    val item = ModelPicker.Item(id, model.name, provider.id, provider.name, model.recommendedIndex, model.free, model.variants)
+                    val item = ModelPicker.Item(
+                        id = id,
+                        display = model.name,
+                        provider = provider.id,
+                        providerName = provider.name,
+                        inputPrice = model.inputPrice,
+                        outputPrice = model.outputPrice,
+                        contextLength = model.contextLength,
+                        releaseDate = model.releaseDate,
+                        latest = model.latest,
+                        recommendedIndex = model.recommendedIndex,
+                        free = model.free,
+                        byok = model.byok,
+                        variants = model.variants,
+                        limit = model.limit,
+                        cost = model.cost,
+                        capabilities = model.capabilities,
+                        options = model.options,
+                        autoRouting = model.autoRouting,
+                        terminalBench = model.terminalBench,
+                        reasoning = model.reasoning,
+                        attachment = model.attachment,
+                        mayTrainOnYourPrompts = model.mayTrainOnYourPrompts,
+                    )
                     if (!includeSmall && ModelText.small(item)) return@mapNotNull null
                     item
                 }
@@ -273,7 +296,8 @@ internal class ModelsSettingsContent(
             picker.picker.onFavoriteToggle = { app.toggleModelFavorite(it.provider, it.id) }
         }
 
-        val rows = section(KiloBundle.message("settings.models.displayName"))
+        val rows = SettingsRows()
+        next(rows)
         rows.row(SettingsRow(
             KiloBundle.message("settings.models.defaultModel.title"),
             KiloBundle.message("settings.models.defaultModel.description"),

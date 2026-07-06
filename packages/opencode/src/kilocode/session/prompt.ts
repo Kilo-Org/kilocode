@@ -7,10 +7,11 @@ import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
+import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Permission } from "@/permission"
@@ -19,11 +20,33 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
-import PROMPT_PLAN from "@/session/prompt/plan.txt"
+import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
+import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
+import { MemoryMarker } from "@/kilocode/memory/marker"
+import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
+import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
-  const modes = ["ask", "plan"]
+  const modes = ["ask", "plan", "architect"]
+
+  export function titleID(sessionID: SessionID) {
+    return `title-${sessionID}`
+  }
+
+  function mode(name: string) {
+    return name.toLowerCase()
+  }
+
+  function planning(input: { name: string; options?: Record<string, unknown> }) {
+    const id = typeof input.options?.id === "string" ? mode(input.options.id) : undefined
+    const name = mode(input.name)
+    return id === "architect" || name === "plan" || name === "architect"
+  }
+
+  function supportsPlanFollowup() {
+    return ["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)
+  }
 
   /**
    * Determines whether the plan follow-up prompt should be shown.
@@ -32,7 +55,7 @@ export namespace KiloSessionPrompt {
    */
   export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
-    if (!["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)) return false
+    if (!supportsPlanFollowup()) return false
     const idx = input.messages.findLastIndex((m) => m.info.role === "user")
     return input.messages
       .slice(idx + 1)
@@ -52,18 +75,18 @@ export namespace KiloSessionPrompt {
     question: Pick<Question.Interface, "ask" | "list" | "reject">
   }): Promise<"continue" | "break"> {
     if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
-    const ask = InstanceState.bind(PlanFollowup.ask)
+    const ask = Instance.bind(PlanFollowup.ask)
     const action = await ask({
       sessionID: input.sessionID,
       messages: input.messages,
       abort: input.abort,
       // Keep the request in the listener-local Question service so HTTP replies can resolve it.
       question: {
-        ask: InstanceState.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
+        ask: Instance.bind((request: Parameters<Question.Interface["ask"]>[0]) =>
           Effect.runPromise(input.question.ask(request)),
         ),
-        list: InstanceState.bind(() => Effect.runPromise(input.question.list())),
-        reject: InstanceState.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
+        list: Instance.bind(() => Effect.runPromise(input.question.list())),
+        reject: Instance.bind((requestID: Parameters<Question.Interface["reject"]>[0]) =>
           Effect.runPromise(input.question.reject(requestID)),
         ),
       },
@@ -123,7 +146,7 @@ export namespace KiloSessionPrompt {
     session: Pick<Session.Info, "permission">
   }) {
     const rules = input.session.permission ?? []
-    if (!modes.includes(input.agent.name)) return rules
+    if (!modes.includes(mode(input.agent.name))) return rules
     return Permission.merge(
       rules,
       input.agent.permission,
@@ -132,7 +155,7 @@ export namespace KiloSessionPrompt {
   }
 
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
-    if (!modes.includes(input.agent.name)) return
+    if (!modes.includes(mode(input.agent.name))) return
     return input.agent.permission
   }
 
@@ -167,6 +190,69 @@ export namespace KiloSessionPrompt {
   export interface EnvCache {
     block?: string
     user?: string
+  }
+
+  export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return KiloToolRegistry.memoryToolsEnabled({ ctx: input.ctx })
+  }
+
+  export function memoryCache(): MemoryMarker.Cache {
+    return {}
+  }
+
+  // Pin the injected memory block per session. Reading the live index every step/turn
+  // (each session digest rewrites it) busts the provider prompt cache for instructions +
+  // the whole history. Build once at session start and reuse the same block verbatim,
+  // which also excludes this session's own digest from its index.
+  type PinnedMemory = { blocks: string[]; enabled: boolean; marker?: MemoryMarker.Info }
+  const PINNED_MEMORY_MAX = 512
+  const pinnedMemory = new Map<string, PinnedMemory>()
+
+  function writePinnedMemory(sessionID: string, value: PinnedMemory) {
+    pinnedMemory.set(sessionID, value)
+    if (pinnedMemory.size > PINNED_MEMORY_MAX) {
+      const oldest = pinnedMemory.keys().next().value
+      if (oldest !== undefined) pinnedMemory.delete(oldest)
+    }
+  }
+
+  /** Test-only: drop the per-session pinned memory block cache. */
+  export function clearPinnedMemory() {
+    pinnedMemory.clear()
+  }
+
+  // Returns the injected memory blocks only; the caller keeps upstream's env line untouched and appends
+  // these. Pinned per session (built once at the first step, reused byte-identically after).
+  export const memoryInject = Effect.fn("KiloSessionPrompt.memoryInject")(function* (input: {
+    ctx: MemoryPaths.Ctx
+    sessionID: SessionID
+    record: boolean
+    cache: MemoryMarker.Cache
+  }) {
+    const enabled = yield* memoryToolEnabled({ ctx: input.ctx })
+    const cached = pinnedMemory.get(input.sessionID)
+    const built =
+      cached?.enabled === enabled
+        ? cached
+        : yield* KilocodeSystemPrompt.memoryBlocks({
+            ctx: input.ctx,
+            sessionID: input.sessionID,
+            record: input.record,
+            enabled,
+          }).pipe(
+            Effect.map((mem) => ({ blocks: mem.blocks, enabled, marker: mem.marker })),
+            Effect.tap((mem) => Effect.sync(() => writePinnedMemory(input.sessionID, mem))),
+          )
+    MemoryMarker.startup({ marker: built.marker, cache: input.cache })
+    return built.blocks
+  })
+
+  export function memoryPart(input: {
+    sessionID: SessionID
+    message: MessageV2.Assistant
+    cache: MemoryMarker.Cache
+  }) {
+    return MemoryMarker.part(input)
   }
 
   /**
@@ -250,32 +336,45 @@ export namespace KiloSessionPrompt {
     agent: { name: string; options?: Record<string, unknown> }
     session: Session.Info
     userMessage: MessageV2.WithParts
+    messages?: MessageV2.WithParts[]
   }) {
-    if (input.agent.name !== "plan" && input.agent.options?.id !== "architect") return
+    if (!planning(input.agent)) return
+    const add = (text: string) =>
+      input.userMessage.parts.push({
+        id: PartID.ascending(),
+        messageID: input.userMessage.info.id,
+        sessionID: input.userMessage.info.sessionID,
+        type: "text",
+        text,
+        synthetic: true,
+      })
+
     // keep bind(): inside Effect.promise the project context is lost, so Instance.current throws without it
-    const plan = InstanceState.bind(() => Session.plan(input.session, Instance.current))()
-    const exists = await Filesystem.exists(plan)
-    if (!exists) await ensurePlanDir(path.dirname(plan))
-    const info = exists
-      ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
-      : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
-    const limit =
-      input.agent.name === "plan"
-        ? "This is the ONLY file you are allowed to write to or edit."
-        : "Use this as the main plan file to write or edit. Do not write or edit other files unless the user explicitly asks and your permissions allow it."
-    const planFile = `## Plan File\n${info}\n${limit}`
-    const text =
-      input.agent.name === "plan"
-        ? `${PROMPT_PLAN}\n\n${planFile}`
-        : `<system-reminder>\n${planFile} Before writing this file or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan to this exact file, then call plan_exit with no arguments. If the user explicitly asks for additional plan files and your permissions allow it, you may create them and reference them from the main plan.\n</system-reminder>`
-    input.userMessage.parts.push({
-      id: PartID.ascending(),
-      messageID: input.userMessage.info.id,
-      sessionID: input.userMessage.info.sessionID,
-      type: "text",
-      text,
-      synthetic: true,
-    })
+    const ctx = Instance.bind(() => Instance.current)()
+    const plan = Session.plan(input.session, ctx)
+
+    if (mode(input.agent.name) === "plan") add(NATIVE_PLAN_PROMPT)
+
+    const file = input.messages ? PlanFile.latest(input.messages) : undefined
+    const saved = PlanFile.resolve(file, ctx)
+    const target = saved ?? plan
+    const time = input.session.time.created
+    const dir = path.dirname(target)
+    if (!saved || !(await Filesystem.exists(target))) await ensurePlanDir(dir)
+
+    const info = saved
+      ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
+      : `Use any exact plan file path from user or project instructions unchanged. If only a directory is specified, create the plan there; otherwise create it in ${dir}. For generated filenames, use ${time}-<concise-kebab-case-suffix>.md, choosing the suffix from the plan details, for example ${time}-database-cache-plan.md.`
+    const body = [
+      "## Plan File",
+      info,
+      "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
+      "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
+      supportsPlanFollowup()
+        ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
+        : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
+    ].join("\n")
+    add(`<system-reminder>\n${body}\n</system-reminder>`)
   }
 
   /**

@@ -1,12 +1,13 @@
 import { describe, expect, it } from "bun:test"
 import { mergeWorktreeDiffs } from "../../webview-ui/diff-viewer/diff-state"
 import {
-  EAGER_DIFF_REVIEW_LINES,
   EXTREME_DIFF_CHANGED_LINES,
   allOpenFiles,
-  eagerDiffFiles,
   expandableOpenFiles,
   initialOpenFiles,
+  isDiffExpandable,
+  sanitizeOpenFiles,
+  shouldVirtualizeDiff,
   toggleOpenFiles,
 } from "../../webview-ui/diff-viewer/diff-open-policy"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
@@ -40,6 +41,20 @@ describe("agent manager diff state", () => {
     expect(result.stale.size).toBe(0)
   })
 
+  it("preserves loaded image data when summary metadata is unchanged", () => {
+    const image = {
+      before: { mime: "image/png", bytes: 3, data: "b2xk" },
+      after: { mime: "image/png", bytes: 3, data: "bmV3" },
+    }
+    const prev = [diff({ file: "asset.png", kind: "image", summarized: false, image })]
+    const next = [diff({ file: "asset.png", kind: "image", summarized: true })]
+    const result = mergeWorktreeDiffs(prev, next)
+
+    expect(result.diffs[0]).toBe(prev[0])
+    expect(result.diffs[0]?.image).toBe(image)
+    expect(result.stale.size).toBe(0)
+  })
+
   it("replaces detailed content when patch anchors change", () => {
     const prev = [diff({ summarized: false, before: "old\n", after: "new\n", patch: "@@ -1 +1 @@\n-old\n+new\n" })]
     const next = [diff({ summarized: false, before: "old\n", after: "new\n", patch: "@@ -100 +100 @@\n-old\n+new\n" })]
@@ -67,89 +82,90 @@ describe("agent manager diff state", () => {
     expect(result.stale).toEqual(new Set(["src/app.ts"]))
   })
 
-  it("opens reviewable diffs initially", () => {
+  it("opens every diff initially", () => {
     expect(
       initialOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
         diff({ file: "node_modules/pkg/index.js", generatedLike: true, additions: 3 }),
+        diff({ file: "audio/notification.wav", summarized: false, additions: 0 }),
+        diff({ file: "assets/banner.png", kind: "image", summarized: true, additions: 0 }),
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
-    ).toEqual(["src/app.ts"])
+    ).toEqual(["src/app.ts", "node_modules/pkg/index.js", "src/huge.ts"])
 
     const many = Array.from({ length: 26 }, (_, i) => diff({ file: `src/${i}.ts` }))
     expect(initialOpenFiles(many)).toHaveLength(26)
   })
 
-  it("expands only reviewable files from the bulk action", () => {
+  it("keeps generated and large files in the expanded review", () => {
     expect(
       expandableOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
         diff({ file: "src/generated.ts", generatedLike: true, additions: 3 }),
+        diff({ file: "assets/archive.zip", summarized: false, additions: 0 }),
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
-    ).toEqual(["src/app.ts"])
+    ).toEqual(["src/app.ts", "src/generated.ts", "src/huge.ts"])
   })
 
-  it("toggles reviewable files based on whether every reviewable file is open", () => {
+  it("toggles all files based on whether every file is open", () => {
     const diffs = [
       diff({ file: "src/app.ts" }),
       diff({ file: "src/panel.ts" }),
       diff({ file: "src/generated.ts", generatedLike: true }),
+      diff({ file: "audio/alert.mp3", summarized: false, additions: 0 }),
       diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
     ]
 
     expect(allOpenFiles(diffs, [])).toBe(false)
     expect(allOpenFiles(diffs, ["stale.ts"])).toBe(false)
     expect(allOpenFiles(diffs, ["src/app.ts"])).toBe(false)
-    expect(allOpenFiles(diffs, ["src/app.ts", "src/panel.ts"])).toBe(true)
-    expect(allOpenFiles(diffs, ["stale.ts", "src/app.ts", "src/panel.ts", "src/generated.ts"])).toBe(true)
+    expect(allOpenFiles(diffs, ["src/app.ts", "src/panel.ts"])).toBe(false)
+    expect(allOpenFiles(diffs, ["stale.ts", "src/app.ts", "src/panel.ts", "src/generated.ts"])).toBe(false)
+    expect(
+      allOpenFiles(
+        diffs,
+        diffs.map((item) => item.file),
+      ),
+    ).toBe(true)
 
-    expect(toggleOpenFiles(diffs, [])).toEqual(["src/app.ts", "src/panel.ts"])
-    expect(toggleOpenFiles(diffs, ["stale.ts"])).toEqual(["src/app.ts", "src/panel.ts"])
-    expect(toggleOpenFiles(diffs, ["src/app.ts"])).toEqual(["src/app.ts", "src/panel.ts"])
-    expect(toggleOpenFiles(diffs, ["src/app.ts", "src/panel.ts"])).toEqual([])
+    const files = expandableOpenFiles(diffs)
+    expect(toggleOpenFiles(diffs, [])).toEqual(files)
+    expect(toggleOpenFiles(diffs, ["stale.ts"])).toEqual(files)
+    expect(toggleOpenFiles(diffs, ["src/app.ts"])).toEqual(files)
+    expect(toggleOpenFiles(diffs, files)).toEqual([])
+  })
+
+  it("opens images while preventing other non-text diffs from entering open state", () => {
+    const audio = diff({ file: "audio/alert.wav", summarized: false, additions: 0 })
+    const image = diff({ file: "assets/banner.png", kind: "image", summarized: true, additions: 0 })
+    const text = diff({ file: "src/app.ts" })
+
+    expect(isDiffExpandable(audio)).toBe(false)
+    expect(isDiffExpandable(image)).toBe(true)
+    expect(isDiffExpandable(text)).toBe(true)
+    expect(sanitizeOpenFiles([audio, image, text], [audio.file, image.file, text.file])).toEqual([
+      image.file,
+      text.file,
+    ])
   })
 })
 
-describe("eager diff files", () => {
-  it("renders hunk-bounded detailed patches eagerly", () => {
-    const diffs = [
-      diff({ file: "src/a.ts", patch: "@@ -1 +1 @@\n-a\n+b\n", additions: 10, deletions: 5 }),
-      diff({ file: "src/b.ts", patch: "@@ -1 +1 @@\n-a\n+b\n", additions: 3, deletions: 0 }),
-    ]
-    expect(eagerDiffFiles(diffs)).toEqual(new Set(["src/a.ts", "src/b.ts"]))
+describe("diff line virtualization", () => {
+  it("renders normal hunk patches directly inside virtual file rows", () => {
+    expect(
+      shouldVirtualizeDiff(diff({ file: "src/a.ts", patch: "@@ -1 +1 @@\n-a\n+b\n", additions: 10, deletions: 5 })),
+    ).toBe(false)
   })
 
-  it("virtualizes a full-content detail without a hunk-bounded patch", () => {
-    const diffs = [diff({ file: "src/large-source.ts", before: "a\n".repeat(4000), after: "b\n", additions: 1 })]
-    expect(eagerDiffFiles(diffs)).toEqual(new Set())
-  })
-
-  it("virtualizes files larger than the large-file threshold", () => {
-    const diffs = [
-      diff({ file: "src/big.ts", patch: "large", additions: EXTREME_DIFF_CHANGED_LINES + 1, deletions: 0 }),
-      diff({ file: "src/small.ts", patch: "small", additions: 5, deletions: 0 }),
-    ]
-    expect(eagerDiffFiles(diffs)).toEqual(new Set(["src/small.ts"]))
-  })
-
-  it("stops rendering eagerly once the review budget is exhausted", () => {
-    // Each file is under the large-file threshold, but together they exceed the
-    // aggregate budget, so the overflow falls back to virtualization.
-    const diffs = [
-      diff({ file: "src/a.ts", patch: "a", additions: 2000, deletions: 0 }),
-      diff({ file: "src/b.ts", patch: "b", additions: 2000, deletions: 0 }),
-      diff({ file: "src/c.ts", patch: "c", additions: 2000, deletions: 0 }),
-      diff({ file: "src/d.ts", patch: "d", additions: EAGER_DIFF_REVIEW_LINES - 6005, deletions: 0 }),
-      diff({ file: "src/e.ts", patch: "e", additions: 2000, deletions: 0 }),
-      diff({ file: "src/f.ts", patch: "f", additions: 5, deletions: 0 }),
-    ]
-    const eager = eagerDiffFiles(diffs)
-    expect(eager.has("src/a.ts")).toBe(true)
-    expect(eager.has("src/d.ts")).toBe(true)
-    // Budget exhausted, so the next sizeable file virtualizes.
-    expect(eager.has("src/e.ts")).toBe(false)
-    // A smaller later file still fits within the remaining budget.
-    expect(eager.has("src/f.ts")).toBe(true)
+  it("virtualizes full-content and extreme individual files", () => {
+    expect(
+      shouldVirtualizeDiff(diff({ file: "src/source.ts", before: "a\n".repeat(4000), after: "b\n", additions: 1 })),
+    ).toBe(true)
+    expect(
+      shouldVirtualizeDiff(
+        diff({ file: "src/big.ts", patch: "large", additions: EXTREME_DIFF_CHANGED_LINES + 1, deletions: 0 }),
+      ),
+    ).toBe(true)
   })
 })

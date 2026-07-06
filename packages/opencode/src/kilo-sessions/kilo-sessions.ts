@@ -20,7 +20,7 @@ import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
@@ -30,10 +30,12 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
 import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
+import { Snapshot } from "@/snapshot"
+import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
-  const { WithInstance } = await import("@/project/with-instance")
-  return WithInstance.provide(input)
+  const { provide } = await import("@/kilocode/instance")
+  return provide(input)
 }
 
 export namespace KiloSessions {
@@ -107,6 +109,9 @@ export namespace KiloSessions {
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
       if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
       if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
+
+      const key = process.env["KILO_API_KEY"]?.trim()
+      if (key) return key
       return undefined
     })
   }
@@ -195,7 +200,7 @@ export namespace KiloSessions {
   })
 
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
-  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; heartbeat: () => Promise<void> } | undefined
+  let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
   const focused = new Set<string>()
@@ -225,6 +230,13 @@ export namespace KiloSessions {
     await ingest.sync(sessionID, [{ type: "session_status", data: { status } }])
   }
 
+  async function cumulative(sessionId: string, local: Snapshot.FileDiff[]) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(
+      Storage.Service.use((storage) => cumulativeSessionDiff(storage, SessionID.make(sessionId), local)),
+    )
+  }
+
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
@@ -240,14 +252,18 @@ export namespace KiloSessions {
             fn: (evt: { properties: any }) => unknown | Promise<unknown>,
           ) =>
             bus.subscribe(def as never).pipe(
-              Stream.runForEach((evt) =>
-                EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
-                  Effect.catchCause((cause) =>
-                    Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
+              Effect.flatMap((stream) =>
+                stream.pipe(
+                  Stream.runForEach((evt) =>
+                    EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
+                      Effect.catchCause((cause) =>
+                        Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
+                      ),
+                    ),
                   ),
+                  Effect.forkScoped,
                 ),
               ),
-              Effect.forkScoped,
             )
 
           yield* watch(Session.Event.Created, (evt) => {
@@ -273,7 +289,9 @@ export namespace KiloSessions {
             ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
           )
           yield* watch(Session.Event.Diff, (evt) =>
-            ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: evt.properties.diff }]),
+            cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
+              ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
+            ),
           )
           yield* watch(Session.Event.TurnOpen, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
@@ -354,7 +372,7 @@ export namespace KiloSessions {
     if (ingestDisabled) return
     if (enabling) return enabling
     const seq = ++remoteSeq
-    void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: false })
+    void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: false })
     enabling = (async () => {
       const token = await kilocodeToken()
       if (!token) {
@@ -419,10 +437,10 @@ export namespace KiloSessions {
         getSessions,
         log,
         onOpen: () => {
-          void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: true })
+          void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: true })
         },
         onDisconnect: () => {
-          void Bus.publish(Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
+          void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
         },
         onMessage: (msg) => {
           // Must run inside Instance.provide so Bus.subscribeAll can access
@@ -438,24 +456,20 @@ export namespace KiloSessions {
         log,
       })
 
-      const heartbeat = async () => {
-        conn.send({ type: "heartbeat", ...(await getSessions()) })
-      }
-
       if (seq !== remoteSeq) {
         sender.dispose()
         conn.close()
         return
       }
 
-      remote = { conn, sender, heartbeat }
+      remote = { conn, sender }
       log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
-      void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
+      void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
     })()
       .catch((err) => {
         if (remoteSeq === seq && !remote)
-          void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+          void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
         throw err
       })
       .finally(() => {
@@ -470,14 +484,14 @@ export namespace KiloSessions {
     const pending = !!enabling
     enabling = undefined
     if (!remote) {
-      if (pending) void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+      if (pending) void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
       return
     }
     remote.sender.dispose()
     remote.conn.close()
     remote = undefined
     log.info("remote connection disabled")
-    void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+    void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
   }
 
   export function remoteStatus() {
@@ -495,7 +509,7 @@ export namespace KiloSessions {
     for (const id of input.open ?? []) {
       opened.add(id)
     }
-    if (remote) void remote.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
+    if (remote) void remote.conn.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
   }
 
   export async function create(sessionId: string) {
@@ -673,7 +687,7 @@ export namespace KiloSessions {
     log.info("full sync", { sessionId })
 
     const { AppRuntime } = await import("@/effect/app-runtime")
-    const [session, diffs] = await AppRuntime.runPromise(
+    const [session, local] = await AppRuntime.runPromise(
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const summary = yield* SessionSummary.Service
@@ -683,6 +697,7 @@ export namespace KiloSessions {
         ])
       }),
     )
+    const diffs = await cumulative(sessionId, local)
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const mdls = await models(

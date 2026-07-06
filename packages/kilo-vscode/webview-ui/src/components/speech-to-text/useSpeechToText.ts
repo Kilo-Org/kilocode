@@ -9,7 +9,6 @@ type VSCode = {
 }
 
 type Server = {
-  profileData: Accessor<unknown | null>
   goToLogin: () => void
 }
 
@@ -70,6 +69,10 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
     }
 
     if (msg.type === "speechToTextError") {
+      if (msg.code === "not_authenticated") {
+        login()
+        return
+      }
       fail(msg.error)
       return
     }
@@ -97,19 +100,6 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
     if (active()) return
     insert = opts.insert
     setError(undefined)
-
-    if (!server.profileData()) {
-      showToast({
-        variant: "error",
-        title: lang.t("speechToText.error.loginRequired"),
-        actions: [
-          { label: lang.t("common.signIn"), onClick: server.goToLogin },
-          { label: lang.t("common.dismiss"), onClick: "dismiss" },
-        ],
-      })
-      fail(lang.t("speechToText.error.loginRequired"), false)
-      return
-    }
 
     counter++
     request = `${prefix}-${counter}`
@@ -142,6 +132,19 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
     cleanup()
     setState("idle")
     setError(undefined)
+  }
+
+  function login() {
+    const message = lang.t("speechToText.error.loginRequired")
+    showToast({
+      variant: "error",
+      title: message,
+      actions: [
+        { label: lang.t("common.signIn"), onClick: server.goToLogin },
+        { label: lang.t("common.dismiss"), onClick: "dismiss" },
+      ],
+    })
+    fail(message, false)
   }
 
   function fail(message: string, toast = true) {

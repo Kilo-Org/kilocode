@@ -1,6 +1,8 @@
 import { describe, it, expect } from "bun:test"
 import {
   sessionToWebview,
+  applySessionPatch,
+  sessionPatchToWebview,
   indexProvidersById,
   filterVisibleAgents,
   buildSettingPath,
@@ -18,10 +20,11 @@ import type {
   Agent,
   Provider,
   Event,
-  EventMessagePartUpdated,
-  EventMessageUpdated,
+  SyncEventMessagePartUpdated,
+  SyncEventMessageUpdated,
   EventSessionStatus,
   EventSessionTurnClose,
+  EventSandboxStatusChanged,
   EventPermissionAsked,
   EventPermissionReplied,
   EventTodoUpdated,
@@ -31,8 +34,8 @@ import type {
   EventSuggestionShown,
   EventSuggestionAccepted,
   EventSuggestionDismissed,
-  EventSessionCreated,
-  EventSessionUpdated,
+  SyncEventSessionCreated,
+  SyncEventSessionUpdated,
   EventServerConnected,
   TextPart,
   AssistantMessage,
@@ -156,6 +159,121 @@ describe("sessionToWebview", () => {
     expect(() => new Date(result.createdAt)).not.toThrow()
     expect(new Date(result.createdAt).getTime()).toBe(1700000000000)
   })
+
+  it("clears optional state omitted from a full session snapshot", () => {
+    const result = sessionToWebview(makeSession())
+    expect(result.revert).toBeNull()
+    expect(result.summary).toBeNull()
+  })
+})
+
+describe("applySessionPatch", () => {
+  it("applies values without dropping unrelated session fields", () => {
+    const session = makeSession({
+      workspaceID: "workspace-1",
+      cost: 1,
+      tokens: { input: 1, output: 2, reasoning: 3, cache: { read: 4, write: 5 } },
+    })
+
+    const result = applySessionPatch(session, { title: "Updated", cost: 2, time: { updated: 1700002000000 } })
+
+    expect(result.title).toBe("Updated")
+    expect(result.cost).toBe(2)
+    expect(result.workspaceID).toBe("workspace-1")
+    expect(result.tokens).toEqual(session.tokens)
+    expect(result.time).toEqual({ created: 1700000000000, updated: 1700002000000 })
+  })
+
+  it("clears optional fields when the patch contains null", () => {
+    const session = makeSession({
+      workspaceID: "workspace-1",
+      summary: { additions: 1, deletions: 2, files: 3 },
+      cost: 4,
+      tokens: { input: 1, output: 2, reasoning: 3, cache: { read: 4, write: 5 } },
+      share: { url: "https://example.com" },
+      agent: "code",
+      model: { id: "model-1", providerID: "provider-1" },
+      permission: [],
+      revert: { messageID: "msg-1" },
+      time: { created: 1, updated: 2, compacting: 3, archived: 4 },
+    })
+
+    const result = applySessionPatch(session, {
+      workspaceID: null,
+      summary: null,
+      cost: null,
+      tokens: null,
+      share: { url: null },
+      agent: null,
+      model: null,
+      permission: null,
+      revert: null,
+      time: { compacting: null, archived: null },
+    })
+
+    expect(result.workspaceID).toBeUndefined()
+    expect(result.summary).toBeUndefined()
+    expect(result.cost).toBeUndefined()
+    expect(result.tokens).toBeUndefined()
+    expect(result.share).toBeUndefined()
+    expect(result.agent).toBeUndefined()
+    expect(result.model).toBeUndefined()
+    expect(result.permission).toBeUndefined()
+    expect(result.revert).toBeUndefined()
+    expect(result.time).toEqual({ created: 1, updated: 2 })
+  })
+
+  it("ignores null patches for required session fields", () => {
+    const session = makeSession()
+    const result = applySessionPatch(session, {
+      slug: null,
+      projectID: null,
+      directory: null,
+      title: null,
+      version: null,
+      time: { created: null, updated: null },
+    })
+
+    expect(result.slug).toBe(session.slug)
+    expect(result.projectID).toBe(session.projectID)
+    expect(result.directory).toBe(session.directory)
+    expect(result.title).toBe(session.title)
+    expect(result.version).toBe(session.version)
+    expect(result.time).toEqual(session.time)
+  })
+
+  it("does not mutate the original session", () => {
+    const session = makeSession({ revert: { messageID: "msg-1" }, time: { created: 1, updated: 2, compacting: 3 } })
+
+    applySessionPatch(session, { revert: null, time: { updated: 4, compacting: null } })
+
+    expect(session.revert).toEqual({ messageID: "msg-1" })
+    expect(session.time).toEqual({ created: 1, updated: 2, compacting: 3 })
+  })
+})
+
+describe("sessionPatchToWebview", () => {
+  it("converts relevant patch timestamps and preserves explicit clears", () => {
+    const result = sessionPatchToWebview("sess-1", {
+      parentID: null,
+      summary: null,
+      revert: null,
+      time: { created: 1700000000000, updated: 1700001000000 },
+    })
+
+    expect(result).toEqual({
+      id: "sess-1",
+      parentID: null,
+      summary: null,
+      revert: null,
+      createdAt: new Date(1700000000000).toISOString(),
+      updatedAt: new Date(1700001000000).toISOString(),
+    })
+  })
+
+  it("omits fields not present in the patch", () => {
+    expect(sessionPatchToWebview("sess-1", { cost: 2 })).toEqual({ id: "sess-1" })
+  })
 })
 
 describe("indexProvidersById", () => {
@@ -243,11 +361,17 @@ describe("buildSettingPath", () => {
 })
 
 describe("mapSSEEventToWebviewMessage", () => {
-  it("maps message.part.updated to partUpdated", () => {
-    const event: EventMessagePartUpdated = {
-      type: "message.part.updated",
-      properties: {
+  it("maps message.part.updated.1 to partUpdated", () => {
+    const event: SyncEventMessagePartUpdated = {
+      type: "sync",
+      name: "message.part.updated.1",
+      id: "evt-part",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: {
+        sessionID: "sess-1",
         part: makeTextPart({ text: "hello" }),
+        time: 1700000000000,
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -258,18 +382,33 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
-  it("returns null for message.part.updated when sessionID is undefined", () => {
-    const event: EventMessagePartUpdated = {
-      type: "message.part.updated",
-      properties: { part: makeTextPart({ text: "" }) },
+  it("maps message.part.updated.1 without a tracked sessionID", () => {
+    const event: SyncEventMessagePartUpdated = {
+      type: "sync",
+      name: "message.part.updated.1",
+      id: "evt-part",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: {
+        sessionID: "sess-1",
+        part: makeTextPart({ text: "" }),
+        time: 1700000000000,
+      },
     }
-    expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
+    const msg = mapSSEEventToWebviewMessage(event, undefined)
+    expect(msg?.type).toBe("partUpdated")
+    if (msg?.type === "partUpdated") expect(msg.sessionID).toBe("sess-1")
   })
 
-  it("maps message.updated to messageCreated with ISO date", () => {
-    const event: EventMessageUpdated = {
-      type: "message.updated",
-      properties: {
+  it("maps message.updated.1 to messageCreated with ISO date", () => {
+    const event: SyncEventMessageUpdated = {
+      type: "sync",
+      name: "message.updated.1",
+      id: "evt-message",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: {
+        sessionID: "sess-1",
         info: makeAssistantMessage({ cost: 0.001 }),
       },
     }
@@ -308,6 +447,23 @@ describe("mapSSEEventToWebviewMessage", () => {
       expect(msg.message).toBe("trying again")
       expect(msg.next).toBe(5000)
     }
+  })
+
+  it("maps sandbox status changes to effective button state", () => {
+    const event: EventSandboxStatusChanged = {
+      type: "sandbox.status.changed",
+      properties: { sessionID: "sess-1", directory: "/tmp", enabled: true, available: true, version: 3 },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sandboxStatus",
+      sessionID: "sess-1",
+      directory: "/tmp",
+      enabled: true,
+      available: true,
+      reason: undefined,
+      version: 3,
+    })
   })
 
   it("maps session.turn.close to its terminal reason", () => {
@@ -465,8 +621,8 @@ describe("mapSSEEventToWebviewMessage", () => {
       properties: {
         id: "sug-1",
         sessionID: "sess-1",
-        text: "Review changes?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        text: "Run tests?",
+        actions: [{ label: "Run tests", prompt: "Run the test suite" }],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -480,7 +636,7 @@ describe("mapSSEEventToWebviewMessage", () => {
         sessionID: "sess-1",
         requestID: "sug-1",
         index: 0,
-        action: { label: "Start", prompt: "/local-review-uncommitted" },
+        action: { label: "Run tests", prompt: "Run the test suite" },
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -496,10 +652,14 @@ describe("mapSSEEventToWebviewMessage", () => {
     expect(msg?.type).toBe("suggestionResolved")
   })
 
-  it("maps session.created to sessionCreated with ISO dates", () => {
-    const event: EventSessionCreated = {
-      type: "session.created",
-      properties: { info: makeSession() },
+  it("maps session.created.1 to sessionCreated with ISO dates", () => {
+    const event: SyncEventSessionCreated = {
+      type: "sync",
+      name: "session.created.1",
+      id: "evt-session",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: { sessionID: "sess-1", info: makeSession() },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
     expect(msg?.type).toBe("sessionCreated")
@@ -508,13 +668,16 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
-  it("maps session.updated to sessionUpdated with ISO dates", () => {
-    const event: EventSessionUpdated = {
-      type: "session.updated",
-      properties: { info: makeSession({ id: "sess-2" }) },
+  it("ignores session.updated.1 after backend state reconciliation", () => {
+    const event: SyncEventSessionUpdated = {
+      type: "sync",
+      name: "session.updated.1",
+      id: "evt-session",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: { sessionID: "sess-2", info: { id: "sess-2", time: { updated: 1700001000000 } } },
     }
-    const msg = mapSSEEventToWebviewMessage(event, "sess-2")
-    expect(msg?.type).toBe("sessionUpdated")
+    expect(mapSSEEventToWebviewMessage(event, "sess-2")).toBeNull()
   })
 
   it("returns null for server.connected (no webview message)", () => {
@@ -529,37 +692,46 @@ describe("mapSSEEventToWebviewMessage", () => {
 })
 
 describe("isEventFromForeignProject", () => {
-  const session = (projectID: string) =>
-    ({
-      id: "s1",
-      projectID,
-      title: "test",
-      directory: "/workspace",
-      time: { created: 0, updated: 0 },
-    }) as unknown as Session
+  function created(projectID: string): SyncEventSessionCreated {
+    return {
+      type: "sync",
+      name: "session.created.1",
+      id: "evt-session",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: { sessionID: "sess-1", info: makeSession({ projectID }) },
+    }
+  }
 
-  it("drops session.created from a different project", () => {
-    const event: Event = { type: "session.created", properties: { info: session("project-B") } }
-    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  function updated(projectID: string): SyncEventSessionUpdated {
+    return {
+      type: "sync",
+      name: "session.updated.1",
+      id: "evt-session",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: { sessionID: "sess-1", info: { projectID } },
+    }
+  }
+
+  it("drops session.created.1 from a different project", () => {
+    expect(isEventFromForeignProject(created("project-B"), "project-A")).toBe(true)
   })
 
-  it("drops session.updated from a different project", () => {
-    const event: Event = { type: "session.updated", properties: { info: session("project-B") } }
-    expect(isEventFromForeignProject(event, "project-A")).toBe(true)
+  it("drops session.updated.1 from a different project", () => {
+    expect(isEventFromForeignProject(updated("project-B"), "project-A")).toBe(true)
   })
 
-  it("keeps session.created from the same project", () => {
-    const event: Event = { type: "session.created", properties: { info: session("project-A") } }
-    expect(isEventFromForeignProject(event, "project-A")).toBe(false)
+  it("keeps session.created.1 from the same project", () => {
+    expect(isEventFromForeignProject(created("project-A"), "project-A")).toBe(false)
   })
 
   it("keeps all events when expectedProjectID is undefined", () => {
-    const event: Event = { type: "session.created", properties: { info: session("project-B") } }
-    expect(isEventFromForeignProject(event, undefined)).toBe(false)
+    expect(isEventFromForeignProject(created("project-B"), undefined)).toBe(false)
   })
 
   it("keeps non-session events regardless of project", () => {
-    const event = { type: "server.heartbeat", properties: {} } as unknown as Event
+    const event: EventServerConnected = { type: "server.connected", properties: {} }
     expect(isEventFromForeignProject(event, "project-A")).toBe(false)
   })
 })

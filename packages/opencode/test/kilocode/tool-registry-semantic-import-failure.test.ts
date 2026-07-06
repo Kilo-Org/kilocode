@@ -1,55 +1,73 @@
-import { afterEach, describe, expect, mock, spyOn } from "bun:test"
-import { Effect, Layer } from "effect"
+import { describe, expect, spyOn, test } from "bun:test"
+import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
-import { Instance } from "../../src/project/instance"
-import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
-import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { testEffect } from "../lib/effect"
+import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
+import { Agent } from "../../src/agent/agent"
+import * as Truncate from "../../src/tool/truncate"
+import type * as Tool from "../../src/tool/tool"
+import { provideTestInstance, tmpdir } from "../fixture/fixture"
 
-const err = new Error("semantic tool import failed")
-
-mock.module("@/kilocode/indexing", () => ({
-  KiloIndexing: {
-    ready: () => true,
-  },
-}))
-
-mock.module("@/kilocode/tool/semantic-search", () => {
-  throw err
-})
-
-const { ToolRegistry } = await import("../../src/tool/registry")
-
-const node = CrossSpawnSpawner.defaultLayer
-const it = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, node))
-
-afterEach(async () => {
-  await disposeAllInstances()
-})
+const logger = Log.create({ service: "kilocode-tool-registry" })
+const deps = { agent: {} as Agent.Interface, truncate: {} as Truncate.Interface }
 
 describe("kilocode tool registry semantic tool import failure", () => {
-  it.live("keeps non-indexing tools when the semantic search tool cannot load", () =>
-    provideTmpdirInstance(
-      () =>
-        Effect.gen(function* () {
-          const logger = Log.create({ service: "kilocode-tool-registry" })
-          const warn = spyOn(logger, "warn").mockImplementation(() => {})
+  test("omits semantic_search when the semantic search tool cannot load", async () => {
+    const err = new Error("semantic tool import failed")
+    const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
-          try {
-            const registry = yield* ToolRegistry.Service
-            const ids = yield* registry.ids()
+    await using tmp = await tmpdir({ git: true })
 
-            expect(ids).not.toContain("semantic_search")
-            expect(ids).toContain("question")
-            expect(ids).toContain("read")
-            expect(ids).toContain("suggest")
-            expect(warn.mock.calls[0]?.[0]).toBe("semantic search tool unavailable")
-            expect(warn.mock.calls[0]?.[1]?.err).toBeDefined()
-          } finally {
-            warn.mockRestore()
-          }
-        }),
-      { git: true },
-    ),
-  )
+    try {
+      const result = await provideTestInstance({
+        directory: tmp.path,
+        fn: () =>
+          Effect.runPromise(
+            KiloToolRegistry.build(infos(), deps, {
+              indexing: async () => ({
+                KiloIndexing: {
+                  ready: () => true,
+                },
+              }),
+              semantic: async () => {
+                throw err
+              },
+            }),
+          ),
+      })
+
+      expect(result.semantic).toBeUndefined()
+      expect(result.recall.id).toBe("recall")
+      expect(warn.mock.calls[0]?.[0]).toBe("semantic search tool unavailable")
+      expect(warn.mock.calls[0]?.[1]?.err).toBeDefined()
+    } finally {
+      warn.mockRestore()
+    }
+  })
 })
+
+function infos() {
+  return {
+    codebase: info("codebase_search"),
+    recall: info("recall"),
+    managerModels: info("agent_manager_models"),
+    memory: info("kilo_memory_recall"),
+    save: info("kilo_memory_save"),
+    manager: info("agent_manager"),
+    process: info("background_process"),
+    notebookRead: info("notebook_read"),
+    notebookEdit: info("notebook_edit"),
+    notebookExecute: info("notebook_execute"),
+  }
+}
+
+function info(id: string): Tool.Info {
+  return {
+    id,
+    init: () =>
+      Effect.succeed({
+        description: id,
+        parameters: Schema.String,
+        execute: () => Effect.succeed({ title: id, output: id, metadata: {} }),
+      }),
+  }
+}

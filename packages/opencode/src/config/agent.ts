@@ -1,12 +1,9 @@
 export * as ConfigAgent from "./agent"
 
-import path from "path" // kilocode_change
-import { Exit, Schema, SchemaGetter } from "effect"
-import { Bus } from "@/bus"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
+import path from "path"
+import { Schema, SchemaGetter } from "effect"
+import { PositiveInt } from "@opencode-ai/core/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { configEntryNameFromPath } from "./entry-name"
 import { ConfigError } from "./error"
@@ -16,8 +13,11 @@ import { ConfigParse } from "./parse"
 import { ConfigPermission } from "./permission"
 import { ConfigVariable } from "./variable" // kilocode_change
 // kilocode_change start
+import { Bus } from "@/bus"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
+import { Requirements } from "@/kilocode/agent-requirements"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
@@ -48,6 +48,14 @@ const AgentSchema = Schema.StructWithRest(
     }),
     // kilocode_change end
     mode: Schema.optional(Schema.Literals(["subagent", "primary", "all"])),
+    // kilocode_change start - typed metadata carriers so they never fall into `options` (provider params)
+    displayName: Schema.optional(Schema.String).annotate({
+      description: "Human-readable name shown in the UI (e.g. for organization or marketplace agents)",
+    }),
+    source: Schema.optional(Schema.String).annotate({
+      description: "Origin marker for managed agents (organization | global | project)",
+    }),
+    // kilocode_change end
     hidden: Schema.optional(Schema.Boolean).annotate({
       description: "Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)",
     }),
@@ -62,6 +70,7 @@ const AgentSchema = Schema.StructWithRest(
     // kilocode_change end
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
     permission: Schema.optional(ConfigPermission.Info),
+    requirements: Schema.optional(Requirements), // kilocode_change
   }),
   [Schema.Record(Schema.String, Schema.Any)],
 )
@@ -75,6 +84,8 @@ const KNOWN_KEYS = new Set([
   "temperature",
   "top_p",
   "mode",
+  "displayName", // kilocode_change
+  "source", // kilocode_change
   "hidden",
   "color",
   "steps",
@@ -83,6 +94,7 @@ const KNOWN_KEYS = new Set([
   "permission",
   "disable",
   "tools",
+  "requirements", // kilocode_change
 ])
 
 // Post-parse normalisation:
@@ -119,9 +131,7 @@ export const Info = AgentSchema.pipe(
     decode: SchemaGetter.transform(normalize),
     encode: SchemaGetter.passthrough({ strict: false }),
   }),
-)
-  .annotate({ identifier: "AgentConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+).annotate({ identifier: "AgentConfig" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 // kilocode_change start
@@ -141,30 +151,22 @@ export async function load(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load agent", { agent: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 
-    // kilocode_change start
-    const patterns = [
-      "/.kilo/agent/",
-      "/.kilo/agents/",
-      "/.kilocode/agent/",
-      "/.kilocode/agents/",
-      "/.opencode/agent/",
-      "/.opencode/agents/",
-      "/agent/",
-      "/agents/",
-    ]
-    // kilocode_change end
-    const name = configEntryNameFromPath(item, patterns)
+    const name = configEntryNameFromPath(path.relative(dir, item), ["agent/", "agents/"])
 
     // kilocode_change start - substitute agent prompt variables relative to the agent file
     const prompt = await ConfigVariable.substitute({
@@ -183,7 +185,7 @@ export async function load(dir: string, warnings?: Warning[]) {
     // kilocode_change end
     // kilocode_change start - use Effect schema (propertyOrder: original) + non-fatal handleInvalid
     try {
-      result[config.name] = ConfigParse.effectSchema(Info, config, item) as Info
+      result[config.name] = ConfigParse.schema(Info, config, item) as Info
     } catch (err) {
       if (ConfigError.InvalidError.isInstance(err)) {
         await KilocodeConfig.handleInvalid("agent", item, err.data.issues ?? [], err, warnings)
@@ -213,26 +215,30 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load mode", { mode: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 
     const config = {
-      name: configEntryNameFromPath(item, []),
+      name: configEntryNameFromPath(path.relative(dir, item), ["mode/", "modes/"]),
       ...md.data,
       prompt: md.content.trim(),
     }
     // kilocode_change start - use Effect schema (propertyOrder: original) + non-fatal handleInvalid
     try {
       result[config.name] = {
-        ...(ConfigParse.effectSchema(Info, config, item) as Info),
+        ...(ConfigParse.schema(Info, config, item) as Info),
         mode: "primary" as const,
       }
     } catch (err) {

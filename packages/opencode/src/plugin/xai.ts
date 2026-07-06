@@ -1,5 +1,4 @@
-// kilocode_change - new file
-import type { Hooks, PluginInput } from "@kilocode/plugin" // kilocode_change
+import type { Hooks, PluginInput } from "@kilocode/plugin"
 import * as Log from "@opencode-ai/core/util/log"
 import { OAUTH_DUMMY_KEY } from "../auth"
 import { createServer } from "http"
@@ -110,7 +109,7 @@ function authHeaders() {
   return {
     "Content-Type": "application/x-www-form-urlencoded",
     Accept: "application/json",
-    "User-Agent": `kilocode/${InstallationVersion}`,
+    "User-Agent": `kilocode/${InstallationVersion}`, // kilocode_change
   }
 }
 
@@ -145,7 +144,9 @@ export function buildAuthorizeUrl(
 ): string {
   // `plan=generic` opts the consent screen into xAI's generic OAuth plan tier;
   // without it, accounts.x.ai rejects loopback OAuth from non-allowlisted
+  // kilocode_change start
   // clients. `referrer=kilocode` lets xAI attribute kilocode-originated
+  // kilocode_change end
   // logins in their OAuth server logs (best-effort attribution while we
   // continue to reuse the Grok-CLI client_id).
   const params = new URLSearchParams({
@@ -158,7 +159,7 @@ export function buildAuthorizeUrl(
     state,
     nonce,
     plan: "generic",
-    referrer: "kilocode",
+    referrer: "kilocode", // kilocode_change
   })
   return `${options.authorizeUrl ?? AUTHORIZE_URL}?${params.toString()}`
 }
@@ -307,6 +308,7 @@ export async function pollDeviceCodeToken(
   throw new Error("xAI device authorization timed out")
 }
 
+// kilocode_change start
 const HTML_SUCCESS = `<!doctype html>
 <html>
   <head>
@@ -396,6 +398,7 @@ const HTML_ERROR = (error: string) => `<!doctype html>
     </div>
   </body>
 </html>`
+// kilocode_change end
 
 // CORS allowlist for the loopback callback. The redirect_uri itself is
 // already bound to 127.0.0.1 and gated by PKCE+state, so we only accept
@@ -508,7 +511,9 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
       // After listen() succeeds, install a permanent log-only listener so
       // that subsequent server errors (e.g. accept() failures, socket-level
       // errors) don't trip Node's default "unhandled error event = throw"
+      // kilocode_change start
       // behavior and crash the entire Kilocode process. Matches the silent-
+      // kilocode_change end
       // swallow behavior the Codex plugin gets from its permanent
       // `oauthServer!.on("error", reject)`.
       server.on("error", (err) => log.warn("xai oauth server error", { error: err }))
@@ -656,7 +661,7 @@ export async function XaiAuthPlugin(input: PluginInput, options: XaiAuthPluginOp
               }
             }
             headers.set("authorization", `Bearer ${currentAuth.access}`)
-            headers.set("User-Agent", `kilocode/${InstallationVersion}`)
+            headers.set("User-Agent", `kilocode/${InstallationVersion}`) // kilocode_change
 
             return fetch(requestInput, { ...init, headers })
           },

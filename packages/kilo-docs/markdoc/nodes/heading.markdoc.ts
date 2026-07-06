@@ -12,12 +12,7 @@ function generateID(children, attributes) {
   if (attributes.id && typeof attributes.id === "string") {
     return attributes.id
   }
-  return children
-    .map(text)
-    .join(" ")
-    .replace(/[?/]/g, "")
-    .replace(/\s+/g, "-")
-    .toLowerCase()
+  return children.map(text).join(" ").replace(/[?/]/g, "").replace(/\s+/g, "-").toLowerCase()
 }
 
 export const heading = {

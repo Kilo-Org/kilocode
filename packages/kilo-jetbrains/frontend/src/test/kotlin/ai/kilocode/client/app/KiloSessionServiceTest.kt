@@ -1,6 +1,8 @@
 package ai.kilocode.client.app
 
 import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.TestLog
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -8,8 +10,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlin.test.assertFailsWith
 
 @Suppress("UnstableApiUsage")
 class KiloSessionServiceTest : BasePlatformTestCase() {
@@ -87,6 +94,49 @@ class KiloSessionServiceTest : BasePlatformTestCase() {
         assertEquals(2, service.sessions.value.size)
         assertTrue(service.sessions.value.any { it.id == "ses_1" })
         assertTrue(service.sessions.value.any { it.id == "ses_2" })
+    }
+
+    fun `test enhance prompt delegates directory and text`() = runBlocking(Dispatchers.Default) {
+        rpc.enhanced = "Use a focused implementation plan"
+
+        val result = service.enhancePrompt("/workspace", "make a plan")
+
+        assertEquals("Use a focused implementation plan", result)
+        assertEquals(listOf("/workspace" to "make a plan"), rpc.enhancements)
+    }
+
+    fun `test events logs normal completion`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        service = KiloSessionService(project, scope, rpc, log)
+        rpc.eventFlow = { _, _ -> flowOf(ChatEventDto.TurnOpen("ses_test")) }
+
+        service.events("ses_test", "/test").toList()
+
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events start=true") })
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events stop=true cancelled=false") })
+    }
+
+    fun `test events logs cancelled completion`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        service = KiloSessionService(project, scope, rpc, log)
+        val job = launch { service.events("ses_test", "/test").collect {} }
+        assertTrue(log.awaitMessage { it.contains("route=client-events start=true") })
+
+        job.cancelAndJoin()
+
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events stop=true cancelled=true") })
+    }
+
+    fun `test events logs failed completion`() = runBlocking(Dispatchers.Default) {
+        val log = TestLog()
+        service = KiloSessionService(project, scope, rpc, log)
+        rpc.eventFlow = { _, _ -> flow { throw IllegalStateException("stream failed") } }
+
+        assertFailsWith<IllegalStateException> {
+            service.events("ses_test", "/test").toList()
+        }
+
+        assertTrue(log.messages.joinToString("\n"), log.messages.any { it.contains("route=client-events stop=true failed message=stream failed") })
     }
 
     private fun session(id: String, title: String) = SessionDto(

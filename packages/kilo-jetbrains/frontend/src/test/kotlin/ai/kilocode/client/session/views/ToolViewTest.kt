@@ -7,14 +7,32 @@ import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.image.BufferedImage
+import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
+import javax.swing.border.Border
 
 /**
  * Tests for [ToolView].
  */
 @Suppress("UnstableApiUsage")
 class ToolViewTest : BasePlatformTestCase() {
+    private val views = mutableListOf<ToolView>()
+
+    override fun tearDown() {
+        try {
+            views.forEach(Disposer::dispose)
+            views.clear()
+        } finally {
+            super.tearDown()
+        }
+    }
 
     // ---- state icons ------
 
@@ -47,14 +65,14 @@ class ToolViewTest : BasePlatformTestCase() {
 
     fun `test title shown instead of name when title is set`() {
         val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.RUNNING; it.title = "Install deps" }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
         assertTrue(view.labelText().contains("Install deps"))
         assertTrue(view.labelText().contains("Shell"))
     }
 
     fun `test blank title falls back to tool name`() {
         val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED; it.title = "   " }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
         assertTrue(view.labelText().contains("Shell"))
     }
 
@@ -64,7 +82,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.output = "origin git@example.com:repo.git"
         }
 
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         assertTrue(view.labelText().contains("Shell"))
         assertTrue(view.labelText().contains("View remotes"))
@@ -94,12 +112,25 @@ class ToolViewTest : BasePlatformTestCase() {
         assertTrue(base is SecondarySessionPartView)
     }
 
+    fun `test tool outline is drawn only while expanded`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "pwd")
+            it.output = "/tmp"
+        }))
+
+        assertEquals(0, paint(view.border).alpha)
+        view.toggle()
+        assertEquals(SessionUiStyle.View.Outline.color().rgb, paint(view.border).rgb)
+        view.toggle()
+        assertEquals(0, paint(view.border).alpha)
+    }
+
     fun `test bash toggle collapses and expands`() {
         val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
             it.input = mapOf("command" to "git log")
             it.output = "one\ntwo\nthree\nfour"
         }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         assertFalse(view.isExpanded())
         view.toggle()
@@ -113,7 +144,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.input = mapOf("command" to "git log")
             it.output = "one\ntwo\nthree\nfour"
         }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         assertEquals("$ git log\n\none\ntwo\nthree\nfour", view.bodyText())
         assertTrue(view.hasToggle())
@@ -127,23 +158,24 @@ class ToolViewTest : BasePlatformTestCase() {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
         }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         assertFalse(view.bodyCreated())
         view.toggle()
-        val font = view.bodyFont()
+        val body = view.bodyEditor()
+        assertNotNull(body)
         view.toggle()
         view.toggle()
 
-        assertSame(font, view.bodyFont())
+        assertSame(body, view.bodyEditor())
         assertTrue(view.bodyVisible())
     }
 
     fun `test collapsed update keeps lazy tool body uncreated`() {
-        val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING).also {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.RUNNING).also {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
-        })
+        }))
 
         view.update(tool("p1", "bash", ToolExecState.COMPLETED).also {
             it.input = mapOf("command" to "pwd")
@@ -155,10 +187,10 @@ class ToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test collapsed update after first expand reuses tool body text`() {
-        val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING).also {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.RUNNING).also {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
-        })
+        }))
 
         view.toggle()
         view.toggle()
@@ -177,7 +209,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.input = mapOf("command" to "pwd")
             it.output = "/tmp"
         }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         assertFalse(view.isExpanded())
         assertTrue(view.hasToggle())
@@ -191,7 +223,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.input = mapOf("path" to "/tmp", "pattern" to "**/*.kt")
             it.output = "/tmp/A.kt"
         }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         assertTrue(view.labelText().contains("Glob"))
         assertTrue(view.labelText().contains("/tmp"))
@@ -205,18 +237,21 @@ class ToolViewTest : BasePlatformTestCase() {
 
     fun `test bash output uses editor font settings`() {
         val style = SessionEditorStyle.current()
-        val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also { it.output = "done" }))
+        view.toggle()
 
-        assertEditorFont(view.bodyFont(), style)
+        assertCodeFont(view.bodyFont(), style)
         assertFalse(view.bodyEditable())
         assertFalse(view.bodyCaretVisible())
-        assertTrue(view.bodyWrap())
-        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, view.horizontalPolicy())
+        assertFalse(view.bodyWrap())
+        assertNotNull(view.bodyEditor())
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, view.horizontalPolicy())
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, view.verticalPolicy())
     }
 
     fun `test tool header uses editor-derived fonts`() {
         val style = SessionEditorStyle.current()
-        val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also { it.output = "done" }))
 
         assertEditorFont(view.titleFont(), style)
         assertTrue(view.titleFont().isBold)
@@ -224,13 +259,22 @@ class ToolViewTest : BasePlatformTestCase() {
         assertSmallEditorFont(view.stateFont(), style)
     }
 
+    fun `test tool header title subtitle gap uses standard medium gap`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also { it.output = "done" }))
+
+        assertEquals(UiStyle.Gap.md(), centerGap(view))
+    }
+
     fun `test applyStyle updates tool fonts in place`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
         val style = SessionEditorStyle.create(family = "Courier New", size = 25)
+        view.toggle()
+        val editor = view.bodyEditor()
 
         view.applyStyle(style)
 
-        assertEditorFont(view.bodyFont(), style)
+        assertSame(editor, view.bodyEditor())
+        assertCodeFont(view.bodyFont(), style)
         assertEditorFont(view.titleFont(), style)
         assertTrue(view.titleFont().isBold)
         assertSmallEditorFont(view.subtitleFont(), style)
@@ -243,7 +287,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.output = "/tmp"
         }
 
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         assertEquals(1, view.controlCount())
     }
@@ -253,7 +297,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.input = mapOf("command" to "log")
             it.output = (1..40).joinToString("\n") { line -> "line $line" }
         }
-        val view = ToolView(t)
+        val view = track(ToolView(t))
 
         view.toggle()
 
@@ -268,7 +312,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.output = out
         }
 
-        val view = ToolView(t)
+        val view = track(ToolView(t))
         view.toggle()
 
         assertEquals("$ log\n\n$out", view.bodyText())
@@ -282,7 +326,7 @@ class ToolViewTest : BasePlatformTestCase() {
             it.output = out
         }
 
-        val view = ToolView(t)
+        val view = track(ToolView(t))
         view.toggle()
 
         assertEquals(out, view.bodyText())
@@ -325,13 +369,39 @@ class ToolViewTest : BasePlatformTestCase() {
     private fun tool(id: String, name: String, state: ToolExecState, title: String? = null): Tool =
         Tool(id, name, toolKind(name)).also { it.state = state; it.title = title }
 
+    private fun track(view: ToolView): ToolView {
+        views.add(view)
+        return view
+    }
+
     private fun assertEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.transcriptFont.name, font.name)
+        assertEquals(style.editorSize, font.size)
+    }
+
+    private fun assertCodeFont(font: java.awt.Font, style: SessionEditorStyle) {
+        assertEquals(style.editorFont.name, font.name)
         assertEquals(style.editorSize, font.size)
     }
 
     private fun assertSmallEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.smallEditorFont.name, font.name)
         assertTrue(font.size < style.editorSize)
+    }
+
+    private fun centerGap(view: ToolView): Int {
+        val row = view.components.filterIsInstance<JPanel>().single()
+        val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+        val center = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+        return (center.layout as BorderLayout).hgap
+    }
+
+    private fun paint(border: Border): Color {
+        val image = BufferedImage(3, 3, BufferedImage.TYPE_INT_ARGB)
+        val item = JPanel()
+        val graphics = image.createGraphics()
+        border.paintBorder(item, graphics, 0, 0, image.width, image.height)
+        graphics.dispose()
+        return Color(image.getRGB(0, 0), true)
     }
 }

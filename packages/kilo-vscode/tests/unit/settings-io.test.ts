@@ -168,12 +168,23 @@ describe("parseImport", () => {
   })
 
   it("preserves task subagent model and variant settings", () => {
-    const json = JSON.stringify({ subagent_model: "anthropic/claude-sonnet-4", subagent_variant: "high" })
+    const json = JSON.stringify({
+      subagent_model: "anthropic/claude-sonnet-4",
+      subagent_variant: "high",
+      subagent_variant_overrides: {
+        "anthropic/claude-sonnet-4": "max",
+        "openai/gpt-5": "xhigh",
+      },
+    })
     const result = parseImport(json)
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.config.subagent_model).toBe("anthropic/claude-sonnet-4")
       expect(result.config.subagent_variant).toBe("high")
+      expect(result.config.subagent_variant_overrides).toEqual({
+        "anthropic/claude-sonnet-4": "max",
+        "openai/gpt-5": "xhigh",
+      })
     }
   })
 

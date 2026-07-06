@@ -4,7 +4,18 @@
  * Also owns global (extension-lifetime) model selection (provider context is catalog-only).
  */
 
-import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, batch } from "solid-js"
+import {
+  createContext,
+  useContext,
+  createSignal,
+  createMemo,
+  createEffect,
+  on,
+  onMount,
+  onCleanup,
+  batch,
+  untrack,
+} from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useVSCode } from "./vscode"
@@ -12,9 +23,12 @@ import { useServer } from "./server"
 import { useProvider } from "./provider"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
+import { createCostAlertHandler } from "./cost-alert"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type {
   SessionInfo,
+  SessionModelUsage,
+  SessionUpdate,
   Message,
   Part,
   PartDelta,
@@ -48,6 +62,7 @@ import {
   buildCostBreakdown,
   buildSessionToolParts,
   childID,
+  reconcileSessionToolParts,
   removeSessionToolPart,
   removeSessionToolPartsForMessage,
   upsertSessionToolPart,
@@ -60,11 +75,23 @@ import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
-import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
+import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
+import { deleteDraftsForSession } from "../utils/draft-store"
+import { createAbortState } from "./abort-state"
+import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
+import { isSameSessionTree } from "./model-usage"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
+
+/** Remove ids from a Set immutably, returning the original when nothing changed. */
+function dropSet(prev: Set<string>, ids: Iterable<string>): Set<string> {
+  const next = new Set(prev)
+  for (const id of ids) next.delete(id)
+  return next.size === prev.size ? prev : next
+}
 
 type MessageMutation = Exclude<MessageLoadMode, "focus"> | "append" | "update"
 
@@ -97,6 +124,7 @@ interface SessionStore {
   variantSelections: Record<string, string> // session/agent scoped variant key -> variant name
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
+  modelUsage: Record<string, { requestID: string; data?: SessionModelUsage }>
 }
 
 interface SessionContextValue {
@@ -114,6 +142,7 @@ interface SessionContextValue {
   closeReason: Accessor<SessionCloseReason | undefined>
   statusText: Accessor<string | undefined>
   busySince: Accessor<number | undefined>
+  submitting: Accessor<boolean>
   loading: Accessor<boolean>
   loadingOlderMessages: Accessor<boolean>
   hasOlderMessages: Accessor<boolean>
@@ -173,6 +202,7 @@ interface SessionContextValue {
 
   // Model selection (global, extension-lifetime)
   selected: (sessionID?: string) => ModelSelection | null
+  configModel: (sessionID?: string) => ModelSelection | null
   selectModel: (providerID: string, modelID: string, sessionID?: string) => void
   hasModelOverride: (sessionID?: string) => boolean
   clearModelOverride: (sessionID?: string) => void
@@ -180,6 +210,8 @@ interface SessionContextValue {
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
+  modelUsage: Accessor<SessionModelUsage | undefined>
+  refreshModelUsage: () => void
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -234,6 +266,7 @@ interface SessionContextValue {
     files?: FileAttachment[],
     draftID?: string,
     context?: string,
+    review?: ReviewMessageData,
   ) => void
   sendCommand: (
     command: string,
@@ -254,6 +287,7 @@ interface SessionContextValue {
   ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
+  closeQuestion: (requestID: string) => void
   acceptSuggestion: (requestID: string, index: number) => void
   dismissSuggestion: (requestID: string) => void
   createSession: () => void
@@ -271,6 +305,7 @@ interface SessionContextValue {
   selectCloudSession: (cloudSessionId: string) => void
   draftSessionID: Accessor<string | undefined>
   setDraftSessionID: (id: string | undefined) => void
+  userClearedSession: Accessor<boolean>
 }
 
 export const SessionContext = createContext<SessionContextValue>()
@@ -285,11 +320,15 @@ export const SessionProvider: ParentComponent = (props) => {
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
   const [draftSessionID, setDraftSessionID] = createSignal<string | undefined>()
+  const [userClearedSession, setUserClearedSession] = createSignal(false)
 
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
   const [closeMap, setCloseMap] = createStore<Record<string, SessionCloseReason | undefined>>({})
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
+  const [submissionMap, setSubmissionMap] = createStore<Record<string, number>>({})
+  const pendingSubmissions = new Map<string, string>()
+  const aborts = createAbortState()
 
   const idle: SessionStatusInfo = { type: "idle" }
 
@@ -310,8 +349,12 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
   const busySince = () => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? busySinceMap[id] : undefined
+  }
+  const submitting = () => {
+    const id = currentSessionID() ?? draftSessionID()
+    return id ? (submissionMap[id] ?? 0) > 0 : false
   }
 
   const [loading, setLoading] = createSignal(false)
@@ -332,6 +375,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Pending questions
   const [questions, setQuestions] = createSignal<QuestionRequest[]>([])
+  const cah = createCostAlertHandler(vscode.postMessage, handleQuestionRequest, handleQuestionResolved, language.t)
 
   // Tracks question IDs that failed so the UI can reset sending state
   const [questionErrors, setQuestionErrors] = createSignal<Set<string>>(new Set())
@@ -347,6 +391,12 @@ export const SessionProvider: ParentComponent = (props) => {
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
   const [allAgents, setAllAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
+  const [pendingKiloModel, setPendingKiloModel] = createSignal<{
+    modelID?: string
+    agent?: string
+    after: number
+  } | null>(null)
+  const [catalog, setCatalog] = createSignal(0)
 
   // Skills loaded from the CLI backend
   const [skills, setSkills] = createSignal<SkillInfo[]>([])
@@ -419,6 +469,46 @@ export const SessionProvider: ParentComponent = (props) => {
   // Prevents handleMessagesLoaded from wiping them when it replaces the array.
   const pendingOptimistic = new Map<string, Set<string>>()
 
+  const startSubmission = (sid: string, messageID: string) => {
+    pendingSubmissions.set(messageID, sid)
+    setSubmissionMap(sid, (count = 0) => count + 1)
+    if (!busySinceMap[sid]) setBusySinceMap(sid, Date.now())
+  }
+  const finishSubmission = (messageID: string) => {
+    aborts.finish(messageID)
+    const sid = pendingSubmissions.get(messageID)
+    if (!sid) return
+    pendingSubmissions.delete(messageID)
+    const count = submissionMap[sid] ?? 0
+    if (count > 1) {
+      setSubmissionMap(sid, count - 1)
+      return
+    }
+    setSubmissionMap(
+      produce((map) => {
+        delete map[sid]
+      }),
+    )
+    if ((statusMap[sid] ?? idle).type !== "idle") return
+    setBusySinceMap(
+      produce((map) => {
+        delete map[sid]
+      }),
+    )
+  }
+  const confirmSubmissions = (sid: string) => {
+    for (const [id, scope] of pendingSubmissions) {
+      if (scope !== sid) continue
+      aborts.finish(id)
+      pendingSubmissions.delete(id)
+    }
+    setSubmissionMap(
+      produce((map) => {
+        delete map[sid]
+      }),
+    )
+  }
+
   // Store for sessions, messages, parts, todos, modelSelections, agentSelections
   const [store, setStore] = createStore<SessionStore>({
     sessions: {},
@@ -432,7 +522,27 @@ export const SessionProvider: ParentComponent = (props) => {
     variantSelections: {},
     recentModels: [],
     favoriteModels: [],
+    modelUsage: {},
   })
+  const [modelUsageReady, setModelUsageReady] = createSignal(false)
+  let modelUsageQueued = false
+
+  function refreshModelUsage() {
+    const sessionID = currentSessionID()
+    if (!sessionID || sessionID.startsWith("cloud:")) return
+    const requestID = crypto.randomUUID()
+    setStore("modelUsage", sessionID, { requestID, data: store.modelUsage[sessionID]?.data })
+    vscode.postMessage({ type: "requestSessionModelUsage", sessionID, requestID })
+  }
+
+  function queueModelUsageRefresh() {
+    if (modelUsageQueued) return
+    modelUsageQueued = true
+    queueMicrotask(() => {
+      modelUsageQueued = false
+      refreshModelUsage()
+    })
+  }
 
   // Per-session agent selection
   const selectedAgentName = createMemo<string>(() => {
@@ -449,6 +559,8 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   const agentNames = createMemo(() => new Set(agents().map((agent) => agent.name)))
+
+  const { pendingCloudPrune, prune: pruneCloudOrphans } = createCloudPrune((m) => setStore("parts", produce(m)), stash)
 
   /** Per-mode model from config (e.g. config.agent.code.model). */
   function getModeModel(agentName: string): ModelSelection | null {
@@ -534,6 +646,37 @@ export const SessionProvider: ParentComponent = (props) => {
       hideErrors(sid)
     }
   }
+
+  function selectKiloModel(modelID?: string, agent?: string) {
+    if (!modelID && !agent) return
+    setPendingKiloModel({ ...(modelID && { modelID }), ...(agent && { agent }), after: catalog() })
+    if (modelID) vscode.postMessage({ type: "requestProviders" })
+  }
+
+  const unsubKiloModel = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type === "providersLoaded") {
+      setCatalog((value) => value + 1)
+      return
+    }
+    if (message.type === "selectKiloModel") selectKiloModel(message.modelID, message.agent)
+  })
+  onCleanup(unsubKiloModel)
+
+  createEffect(() => {
+    const pending = pendingKiloModel()
+    if (!pending || agents().length === 0 || (pending.modelID && catalog() <= pending.after)) return
+    setPendingKiloModel(null)
+    if (pending.modelID && !provider.providers()[KILO_PROVIDER_ID]?.models[pending.modelID]) {
+      console.warn("[Kilo New] Ignoring unavailable Kilo catalog model:", pending.modelID)
+      return
+    }
+    if (pending.agent && !agentNames().has(pending.agent)) {
+      console.warn("[Kilo New] Ignoring unavailable Kilo agent:", pending.agent)
+      return
+    }
+    if (pending.agent) selectAgent(pending.agent)
+    if (pending.modelID) selectModel(KILO_PROVIDER_ID, pending.modelID)
+  })
 
   function promptAgent(sessionID?: string) {
     const name = agentForScope(sessionID)
@@ -788,6 +931,64 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestFavorites" })
   onCleanup(unsubFavorites)
 
+  // Clear model overrides that match the previous config model (not intentional user overrides).
+  // When config.model changes, old overrides that were just default values should be cleared
+  // so sessions fall through to resolveModel() and pick up the new config model.
+  const [lastConfigModel, setLastConfigModel] = createSignal<ModelSelection | null>(getGlobalModel())
+  createEffect(() => {
+    const newConfigModel = getGlobalModel()
+    // Use untrack to read previous value without making this effect re-trigger on its own updates
+    const oldConfigModel = untrack(() => lastConfigModel())
+    if (oldConfigModel) {
+      // Also clear when newConfigModel is null (user removed model from config)
+      if (newConfigModel) {
+        const modelChanged =
+          oldConfigModel.providerID !== newConfigModel.providerID || oldConfigModel.modelID !== newConfigModel.modelID
+        if (modelChanged) {
+          // Clear overrides that match the OLD config model - these were likely defaults,
+          // not intentional user overrides. Overrides that differ from both old and new
+          // config are preserved (intentional user selections).
+          setStore(
+            "sessionOverrides",
+            produce((overrides) => {
+              for (const sid of Object.keys(overrides)) {
+                const override = overrides[sid]
+                if (
+                  override &&
+                  override.providerID === oldConfigModel.providerID &&
+                  override.modelID === oldConfigModel.modelID
+                ) {
+                  delete overrides[sid]
+                }
+              }
+            }),
+          )
+        }
+      } else {
+        // newConfigModel is null - clear all overrides that matched the old config model
+        // since the config no longer specifies a model. This ensures sessions fall through
+        // to provider defaults rather than using a stale removed model.
+        setStore(
+          "sessionOverrides",
+          produce((overrides) => {
+            for (const sid of Object.keys(overrides)) {
+              const override = overrides[sid]
+              if (
+                override &&
+                override.providerID === oldConfigModel.providerID &&
+                override.modelID === oldConfigModel.modelID
+              ) {
+                delete overrides[sid]
+              }
+            }
+          }),
+        )
+      }
+    }
+    // Update the tracked config model
+    setLastConfigModel(newConfigModel)
+  })
+
   function handleError(message: Extract<ExtensionMessage, { type: "error" }>) {
     if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
     if (message.sessionID) patchPage(message.sessionID, { loadingInitial: false, loadingOlder: false })
@@ -826,10 +1027,48 @@ export const SessionProvider: ParentComponent = (props) => {
     return false
   }
 
+  function handleModelUsageMessage(message: ExtensionMessage): boolean {
+    if (message.type !== "sessionModelUsageLoaded") return false
+    const state = store.modelUsage[message.sessionID]
+    if (state?.requestID === message.requestID) {
+      setStore("modelUsage", message.sessionID, { requestID: message.requestID, data: message.data })
+    }
+    return true
+  }
+
+  function refreshModelUsageForMessage(message: ExtensionMessage) {
+    if (message.type === "sessionModelUsageChanged") {
+      if (modelUsageRelated(message.sessionID)) queueModelUsageRefresh()
+      return
+    }
+    if (message.type === "partUpdated") {
+      if (message.part.type === "step-finish" && modelUsageRelated(message.sessionID)) queueModelUsageRefresh()
+      return
+    }
+    if (message.type === "partsUpdated") {
+      if (message.updates.some((item) => item.part.type === "step-finish" && modelUsageRelated(item.sessionID))) {
+        queueModelUsageRefresh()
+      }
+      return
+    }
+    if (message.type === "partRemoved" || message.type === "messageRemoved" || message.type === "sessionDeleted") {
+      if (modelUsageRelated(message.sessionID, store.sessions[message.sessionID]?.parentID)) queueModelUsageRefresh()
+      return
+    }
+    if (message.type === "sessionCreated" && modelUsageRelated(message.session.id, message.session.parentID)) {
+      queueModelUsageRefresh()
+      return
+    }
+    if (message.type === "extensionDataReady") queueModelUsageRefresh()
+  }
+
   function handleExtensionMessage(message: ExtensionMessage): void {
     // Route suggestion messages (extracted to stay within complexity limit)
     routeSuggestionMessage(message)
+    if (handleModelUsageMessage(message)) return
+    refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
+    cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
         handleSessionCreated(message.session, message.draftID)
@@ -932,10 +1171,33 @@ export const SessionProvider: ParentComponent = (props) => {
         handleCloudSessionImported(message.cloudSessionId, message.session)
         break
 
-      case "cloudSessionImportFailed":
-        setCloudPreviewId(null)
-        setCurrentSessionID(undefined)
-        setLoading(false)
+      case "cloudSessionImportFailed": {
+        const failedKey = `cloud:${message.cloudSessionId}`
+        pruneCloudOrphans(failedKey)
+        setStore(
+          "sessions",
+          produce((sessions) => {
+            delete sessions[failedKey]
+          }),
+        )
+        setStore(
+          "messages",
+          produce((messages) => {
+            delete messages[failedKey]
+          }),
+        )
+        setStore(
+          "toolParts",
+          produce((toolParts) => {
+            delete toolParts[failedKey]
+          }),
+        )
+        // cloudPreviewId stores the raw cloud session id (see selectCloudSession),
+        // not the synthetic "cloud:<id>" key used for session/draft ids.
+        clearIfOn(cloudPreviewId, () => setLoading(false), message.cloudSessionId)
+        clearIfOn(cloudPreviewId, () => setCloudPreviewId(null), message.cloudSessionId)
+        clearIfOn(currentSessionID, () => setCurrentSessionID(undefined), failedKey)
+        clearIfOn(draftSessionID, () => setDraftSessionID(undefined), failedKey)
         showToast({
           variant: "error",
           title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
@@ -943,6 +1205,7 @@ export const SessionProvider: ParentComponent = (props) => {
         })
         console.error("[Kilo New] Cloud session import failed:", message.error)
         break
+      }
 
       case "worktreeStatsLoaded":
         setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
@@ -953,13 +1216,72 @@ export const SessionProvider: ParentComponent = (props) => {
   // Handle messages from extension
   onMount(() => {
     const unsubscribe = vscode.onMessage(handleExtensionMessage)
+    setModelUsageReady(true)
     onCleanup(unsubscribe)
   })
 
   // Event handlers
   function handleSessionCreated(session: SessionInfo, draftID?: string) {
+    if (draftID) aborts.move(draftID, session.id)
     batch(() => {
       setStore("sessions", session.id, session)
+
+      if (draftID && submissionMap[draftID]) {
+        const submissions = submissionMap[draftID]
+        for (const [id, scope] of pendingSubmissions) {
+          if (scope === draftID) pendingSubmissions.set(id, session.id)
+        }
+        setSubmissionMap(session.id, (count = 0) => count + submissions)
+        setSubmissionMap(
+          produce((map) => {
+            delete map[draftID]
+          }),
+        )
+        if (busySinceMap[draftID] && !busySinceMap[session.id]) {
+          setBusySinceMap(session.id, busySinceMap[draftID])
+        }
+        setBusySinceMap(
+          produce((map) => {
+            delete map[draftID]
+          }),
+        )
+      }
+
+      const drafts = draftID ? store.messages[draftID] : undefined
+      if (draftID && drafts?.length) {
+        const current = store.messages[session.id] ?? []
+        const ids = new Set(current.map((message) => message.id))
+        const promoted = drafts
+          .filter((message) => !ids.has(message.id))
+          .map((message) => ({ ...message, sessionID: session.id }))
+        setStore("messages", session.id, [...current, ...promoted])
+        setStore(
+          "messages",
+          produce((messages) => {
+            delete messages[draftID]
+          }),
+        )
+
+        const pending = pendingOptimistic.get(draftID)
+        if (pending) {
+          const merged = pendingOptimistic.get(session.id) ?? new Set<string>()
+          for (const id of pending) merged.add(id)
+          pendingOptimistic.set(session.id, merged)
+          pendingOptimistic.delete(draftID)
+        }
+        setLoaded((prev) => {
+          if (prev.has(session.id)) return prev
+          const next = new Set(prev)
+          next.add(session.id)
+          return next
+        })
+        patchPage(session.id, { initialLoaded: true, lastMutation: "append" })
+        setPages(
+          produce((state) => {
+            delete state[draftID]
+          }),
+        )
+      }
 
       // Only initialize messages if none exist yet — a cloud session import
       // (handleCloudSessionImported) may have already populated messages for
@@ -1009,6 +1331,7 @@ export const SessionProvider: ParentComponent = (props) => {
       if (!draftID || draft === draftID || active === draftID) {
         setCurrentSessionID(session.id)
         setDraftSessionID(session.id)
+        setUserClearedSession(false)
       }
     })
   }
@@ -1076,12 +1399,16 @@ export const SessionProvider: ParentComponent = (props) => {
     return true
   }
 
+  function setTools(sessionID: string, tools: ToolPart[]) {
+    setStore("toolParts", sessionID, reconcileSessionToolParts(tools))
+  }
+
   function rebuildToolParts(sessionID: string, messages: Message[], parts?: Record<string, Part[]>) {
     const tools = buildSessionToolParts(
       messages,
       (msg) => parts?.[msg.id] ?? store.parts[msg.id] ?? stash.peek(msg.id) ?? msg.parts,
     )
-    setStore("toolParts", sessionID, tools)
+    setTools(sessionID, tools)
   }
 
   function messageParts(messages: Message[]): Record<string, Part[]> {
@@ -1096,16 +1423,17 @@ export const SessionProvider: ParentComponent = (props) => {
     const sid = sessionID ?? part.sessionID
     if (!sid) return
     if (part.type !== "tool") return
-    setStore("toolParts", sid, (tools = []) => upsertSessionToolPart(tools, part, { id: messageID, sessionID: sid }))
+    const tools = upsertSessionToolPart(store.toolParts[sid] ?? [], part, { id: messageID, sessionID: sid })
+    setTools(sid, tools)
   }
 
   function dropToolPart(sessionID: string | undefined, partID: string) {
     if (!sessionID) return
-    setStore("toolParts", sessionID, (tools = []) => removeSessionToolPart(tools, partID))
+    setTools(sessionID, removeSessionToolPart(store.toolParts[sessionID] ?? [], partID))
   }
 
   function dropMessageTools(sessionID: string, messageID: string) {
-    setStore("toolParts", sessionID, (tools = []) => removeSessionToolPartsForMessage(tools, messageID))
+    setTools(sessionID, removeSessionToolPartsForMessage(store.toolParts[sessionID] ?? [], messageID))
   }
 
   function handleMessagesLoaded(
@@ -1196,6 +1524,19 @@ export const SessionProvider: ParentComponent = (props) => {
       const revert = store.sessions[sessionID]?.revert ?? undefined
       if (revert) resetTodos(sessionID, revert)
       recoverPrefs(sessionID, merged)
+
+      const cloudIDs = pendingCloudPrune.get(sessionID)
+      if (cloudIDs?.size) {
+        const live = new Set(messages.map((m) => m.id))
+        setStore(
+          "parts",
+          produce((p) => {
+            for (const id of cloudIDs) if (!live.has(id)) delete p[id]
+          }),
+        )
+        for (const id of cloudIDs) stash.remove(id)
+        pendingCloudPrune.delete(sessionID)
+      }
     })
     if (reset) requestAnimationFrame(() => patchPage(sessionID, { lastMutation: undefined }))
   }
@@ -1327,6 +1668,8 @@ export const SessionProvider: ParentComponent = (props) => {
     message?: string,
     next?: number,
   ) {
+    const shouldAbort = aborts.update(sessionID, newStatus)
+    confirmSubmissions(sessionID)
     const prev = statusMap[sessionID] ?? { type: "idle" }
     const info: SessionStatusInfo =
       newStatus === "retry"
@@ -1338,7 +1681,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // Track busy start time and discard the previous turn's terminal state.
     if (prev.type === "idle" && newStatus !== "idle") {
       clearClose(sessionID)
-      setBusySinceMap(sessionID, Date.now())
+      if (!busySinceMap[sessionID]) setBusySinceMap(sessionID, Date.now())
     }
     if (newStatus === "idle") {
       setBusySinceMap(
@@ -1352,6 +1695,7 @@ export const SessionProvider: ParentComponent = (props) => {
       // messages themselves will be reconciled on the next messagesLoaded.
       pendingOptimistic.delete(sessionID)
     }
+    if (shouldAbort) vscode.postMessage({ type: "abort", sessionID })
   }
 
   function handlePermissionRequest(permission: PermissionRequest) {
@@ -1468,12 +1812,15 @@ export const SessionProvider: ParentComponent = (props) => {
    * by listening for the same sendMessageFailed event.
    */
   function handleSendMessageFailed(message: SendMessageFailedMessage) {
-    if (message.sessionID && message.messageID) {
-      pendingOptimistic.get(message.sessionID)?.delete(message.messageID)
+    const sid = message.sessionID ?? message.draftID
+    if (message.messageID) finishSubmission(message.messageID)
+    if (!message.messageID && sid) aborts.clear(sid)
+    if (sid && message.messageID) {
+      pendingOptimistic.get(sid)?.delete(message.messageID)
       stash.remove(message.messageID)
       batch(() => {
-        setStore("messages", message.sessionID!, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
-        dropMessageTools(message.sessionID!, message.messageID!)
+        setStore("messages", sid, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
+        dropMessageTools(sid, message.messageID!)
         setStore(
           "parts",
           produce((parts) => {
@@ -1532,9 +1879,24 @@ export const SessionProvider: ParentComponent = (props) => {
     return sessionIDs(rootID, (sid) => store.messages[sid] ?? [])
   }
 
+  function modelUsageRelated(sessionID: string, parentID?: string | null): boolean {
+    const current = currentSessionID()
+    if (!current) return false
+    const ids = store.modelUsage[current]?.data?.sessionIDs
+    if (ids?.includes(sessionID) || (!!parentID && ids?.includes(parentID))) return true
+    const family = sessionFamily(current)
+    if (family.has(sessionID) || (!!parentID && family.has(parentID))) return true
+    return isSameSessionTree(current, sessionID, (id) => store.sessions[id], parentID)
+  }
+
   function visibleFamily(rootID: string): Set<string> {
     return sessionIDs(rootID, visible)
   }
+
+  createEffect(() => {
+    if (!modelUsageReady() || !server.isConnected() || !currentSessionID()) return
+    untrack(refreshModelUsage)
+  })
 
   /** Return permissions scoped to the given session's family (self + subagents). */
   function scopedPermissions(sessionID: string | undefined): PermissionRequest[] {
@@ -1569,11 +1931,12 @@ export const SessionProvider: ParentComponent = (props) => {
     setStore("todos", sessionID, items)
   }
 
-  function handleSessionUpdated(session: SessionInfo) {
+  function handleSessionUpdated(session: SessionUpdate) {
+    const changed = session.revert !== undefined
     const prev = store.sessions[session.id]?.revert
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
-    if (prev?.messageID === next?.messageID && prev?.partID === next?.partID) return
+    if (!changed || (prev?.messageID === next?.messageID && prev?.partID === next?.partID)) return
     clearClose(session.id)
     resetTodos(session.id, next)
   }
@@ -1604,6 +1967,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
+    aborts.clear(sessionID)
+    confirmSubmissions(sessionID)
     batch(() => {
       // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
@@ -1612,96 +1977,61 @@ export const SessionProvider: ParentComponent = (props) => {
       clearHiddenErrors(msgIds)
 
       setStore(
-        "sessions",
-        produce((sessions) => {
-          delete sessions[sessionID]
-        }),
-      )
-      setStore(
-        "messages",
-        produce((messages) => {
-          delete messages[sessionID]
-        }),
-      )
-      setStore(
-        "parts",
-        produce((parts) => {
-          for (const id of msgIds) {
-            delete parts[id]
+        produce((s) => {
+          delete s.sessions[sessionID]
+          delete s.messages[sessionID]
+          for (const id of msgIds) delete s.parts[id]
+          delete s.toolParts[sessionID]
+          delete s.todos[sessionID]
+          for (const [id, state] of Object.entries(s.modelUsage)) {
+            if (id === sessionID || state.data?.sessionIDs.includes(sessionID)) delete s.modelUsage[id]
           }
+          delete s.agentSelections[sessionID]
+          delete s.sessionOverrides[sessionID]
+          for (const key of sessionVariantKeys(s.variantSelections, sessionID)) delete s.variantSelections[key]
         }),
       )
-      setStore(
-        "toolParts",
-        produce((parts) => {
-          delete parts[sessionID]
-        }),
-      )
-      setStore(
-        "todos",
-        produce((todos) => {
-          delete todos[sessionID]
-        }),
-      )
-      setPages(
-        produce((map) => {
-          delete map[sessionID]
-        }),
-      )
-      setStore(
-        "agentSelections",
-        produce((selections) => {
-          delete selections[sessionID]
-        }),
-      )
+      // prettier-ignore
+      setPages(produce((map) => { delete map[sessionID] }))
       // Clean up pending questions/errors for the deleted session
       const deleted = questions()
         .filter((q) => q.sessionID === sessionID)
         .map((q) => q.id)
       if (deleted.length > 0) {
         setQuestions((prev) => prev.filter((q) => q.sessionID !== sessionID))
-        setQuestionErrors((prev) => {
-          const next = new Set(prev)
-          for (const id of deleted) next.delete(id)
-          if (next.size === prev.size) return prev
-          return next
-        })
+        setQuestionErrors((prev) => dropSet(prev, deleted))
       }
       const gone = suggestions()
         .filter((item) => item.sessionID === sessionID)
         .map((item) => item.id)
       if (gone.length > 0) {
         setSuggestions((prev) => prev.filter((item) => item.sessionID !== sessionID))
-        setSuggestionErrors((prev) => {
-          const next = new Set(prev)
-          for (const id of gone) next.delete(id)
-          if (next.size === prev.size) return prev
-          return next
-        })
-        setRespondingSuggestions((prev) => {
-          const next = new Set(prev)
-          for (const id of gone) next.delete(id)
-          if (next.size === prev.size) return prev
-          return next
-        })
+        setSuggestionErrors((prev) => dropSet(prev, gone))
+        setRespondingSuggestions((prev) => dropSet(prev, gone))
       }
+      const staleResponding = permissions()
+        .filter((p) => p.sessionID === sessionID)
+        .map((p) => p.id)
       setPermissions((prev) => removeSessionPermissions(prev, sessionID))
-      setStatusMap(
-        produce((map) => {
-          delete map[sessionID]
-        }),
-      )
+      if (staleResponding.length > 0) {
+        setRespondingPermissions((prev) => dropSet(prev, staleResponding))
+      }
+      // prettier-ignore
+      setLoaded((prev) => { if (!prev.has(sessionID)) return prev; const next = new Set(prev); next.delete(sessionID); return next })
+      // prettier-ignore
+      setStatusMap(produce((map) => { delete map[sessionID] }))
       clearClose(sessionID)
-      setBusySinceMap(
-        produce((map) => {
-          delete map[sessionID]
-        }),
-      )
+      // prettier-ignore
+      setBusySinceMap(produce((map) => { delete map[sessionID] }))
       if (currentSessionID() === sessionID) {
         setCurrentSessionID(undefined)
         setLoading(false)
       }
+      // prettier-ignore
+      if (draftSessionID() === sessionID) { setDraftSessionID(undefined) }
     })
+    deleteDraftsForSession(sessionID)
+    pruneCloudOrphans(sessionID)
   }
 
   // Splices the message from the store and deletes its parts.
@@ -1724,6 +2054,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleCloudSessionDataLoaded(cloudSessionId: string, title: string, messages: Message[]) {
     if (cloudPreviewId() !== cloudSessionId) return
     const key = `cloud:${cloudSessionId}`
+    pendingCloudPrune.set(key, new Set(messages.map((m) => m.id)))
     batch(() => {
       setLoaded((prev) => {
         if (prev.has(key)) return prev
@@ -1773,31 +2104,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
       setCloudPreviewId(null)
       setCurrentSessionID(session.id)
+      setDraftSessionID(session.id)
 
-      // Clean up synthetic cloud: entries from sessions/messages stores.
-      //
-      // Why we do NOT delete cloud parts here:
-      //
-      // During preview, parts are stored keyed by the original cloud message IDs
-      // (e.g. store.parts["<cloud-msg-id>"] = [...]). When the import completes
-      // we carry cloudMessages into the new local session (above) so the UI
-      // renders immediately without a loading flash. Those carried-over message
-      // objects still hold their original cloud IDs, so every SessionTurn
-      // calls getParts("<cloud-msg-id>") — which means the parts must remain in
-      // the store for now.
-      //
-      // If we deleted them here, every message would temporarily render with no
-      // parts (parts().length === 0), showing only a loading shimmer until the
-      // real data arrives.
-      //
-      // Instead, right after this batch we dispatch a "loadMessages" request
-      // (below). When the extension responds with the "messagesLoaded" event,
-      // handleMessagesLoaded() replaces the messages array with server-assigned
-      // IDs and writes new parts keyed by those IDs. The old cloud-keyed part
-      // entries become orphans — no message in the store references them anymore.
-      // They remain in store.parts until the webview reloads or the store is
-      // reset, which is a bounded, one-session-worth amount of data that does
-      // not accumulate over time.
+      setUserClearedSession(false)
+
       setStore(
         "sessions",
         produce((sessions) => {
@@ -1817,6 +2127,11 @@ export const SessionProvider: ParentComponent = (props) => {
         }),
       )
     })
+    const cloudPruneIDs = pendingCloudPrune.get(cloudKey)
+    if (cloudPruneIDs) {
+      pendingCloudPrune.set(session.id, cloudPruneIDs)
+      pendingCloudPrune.delete(cloudKey)
+    }
     // Load real messages in the background (picks up server-assigned IDs
     // and the new user message once the send completes via SSE)
     patchPage(session.id, { loadingInitial: true, before: undefined, hasMore: false })
@@ -1854,7 +2169,13 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   /** Create an optimistic user message + parts in the store so the UI updates instantly. */
-  function addOptimistic(sid: string, messageID: string, text: string, files?: FileAttachment[]) {
+  function addOptimistic(
+    sid: string,
+    messageID: string,
+    text: string,
+    files?: FileAttachment[],
+    review?: ReviewMessageData,
+  ) {
     const now = Date.now()
     const temp: Message = {
       id: messageID,
@@ -1869,7 +2190,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const parts: Part[] = []
     if (text) {
-      parts.push({ type: "text" as const, id: Identifier.ascending("part"), messageID, text })
+      parts.push({
+        type: "text" as const,
+        id: Identifier.ascending("part"),
+        messageID,
+        text,
+        metadata: review ? reviewMetadata(review) : undefined,
+      })
     }
     for (const file of files ?? []) {
       parts.push({
@@ -1896,6 +2223,7 @@ export const SessionProvider: ParentComponent = (props) => {
     files?: FileAttachment[],
     draftID?: string,
     context?: string,
+    review?: ReviewMessageData,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -1918,6 +2246,7 @@ export const SessionProvider: ParentComponent = (props) => {
         agent,
         variant: currentVariant(scope),
         files,
+        review,
       })
       return
     }
@@ -1926,14 +2255,20 @@ export const SessionProvider: ParentComponent = (props) => {
     const suggestion = scopedSuggestions(sid)[0]
     if (suggestion) dismissSuggestion(suggestion.id)
     for (const q of scopedQuestions(sid)) {
-      rejectQuestion(q.id)
-    }
-    if (sid) {
-      clearClose(sid)
-      addOptimistic(sid, messageID, text, files)
+      dismissQuestion(q.id)
     }
 
-    const scope = draftID ?? sid
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
+    if (scope) {
+      clearClose(scope)
+      addOptimistic(scope, messageID, text, files, review)
+      startSubmission(scope, messageID)
+      if (!sid) {
+        setUserClearedSession(false)
+        setDraftSessionID(scope)
+      }
+    }
     const agent = promptAgent(scope)
 
     vscode.postMessage({
@@ -1941,12 +2276,13 @@ export const SessionProvider: ParentComponent = (props) => {
       text,
       messageID,
       sessionID: sid,
-      draftID,
+      draftID: effectiveDraftID,
       providerID,
       modelID,
       agent,
       variant: currentVariant(scope),
       files,
+      review,
       agentManagerContext: context,
     })
   }
@@ -1991,15 +2327,20 @@ export const SessionProvider: ParentComponent = (props) => {
     const suggestion = scopedSuggestions(sid)[0]
     if (suggestion) dismissSuggestion(suggestion.id)
     for (const q of scopedQuestions(sid)) {
-      rejectQuestion(q.id)
+      dismissQuestion(q.id)
     }
 
-    if (sid) {
-      clearClose(sid)
-      addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
+    const scope = effectiveDraftID ?? sid
+    if (scope) {
+      clearClose(scope)
+      addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
+      startSubmission(scope, messageID)
+      if (!sid) {
+        setUserClearedSession(false)
+        setDraftSessionID(scope)
+      }
     }
-
-    const scope = draftID ?? sid
     const agent = promptAgent(scope)
 
     vscode.postMessage({
@@ -2008,7 +2349,7 @@ export const SessionProvider: ParentComponent = (props) => {
       arguments: args,
       messageID,
       sessionID: sid,
-      draftID,
+      draftID: effectiveDraftID,
       providerID,
       modelID,
       agent,
@@ -2020,10 +2361,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function abort() {
     const sessionID = currentSessionID()
-    if (!sessionID) {
-      console.warn("[Kilo New] Cannot abort: no current session")
+    const scope = sessionID ?? draftSessionID()
+    if (!scope) {
+      console.warn("[Kilo New] Cannot abort: no current or pending session")
       return
     }
+    const messageID = [...pendingSubmissions].reverse().find(([, sid]) => sid === scope)?.[0]
+    if (!aborts.request(scope, status(), messageID) || !sessionID) return
 
     vscode.postMessage({
       type: "abort",
@@ -2098,6 +2442,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    if (cah.reply(requestID, "continue")) return
     vscode.postMessage({
       type: "questionReply",
       requestID,
@@ -2106,10 +2451,20 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  function dismissQuestion(requestID: string) {
+    questions().find((item) => item.id === requestID)?.dismissResponse === "continue"
+      ? replyToQuestion(requestID, [])
+      : rejectQuestion(requestID)
+  }
+
+  function closeQuestion(id: string) {
+    cah.close(id, dismissQuestion)
+  }
   function rejectQuestion(requestID: string) {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
     const sessionID = question?.sessionID ?? currentSessionID() ?? ""
+    if (cah.reply(requestID, "stop")) return
     vscode.postMessage({
       type: "questionReject",
       requestID,
@@ -2152,6 +2507,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function clearCurrentSession() {
+    setUserClearedSession(true)
     setCurrentSessionID(undefined)
     setDraftSessionID(undefined)
     setCloudPreviewId(null)
@@ -2183,26 +2539,61 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  // Session whose message fetch was deferred because the backend was offline at
+  // selection time. Replayed by the reconnect effect below.
+  let deferredFetch: string | undefined
+
   function selectSession(id: string) {
-    if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot select session: not connected")
-      return
-    }
+    // Cloud preview sessions use a separate keyed path (selectCloudSession).
     if (id.startsWith("cloud:")) {
       console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
       return
     }
     const ready = loaded().has(id)
+    // Reflect the selection locally and synchronously so the chat always tracks
+    // the sidebar/tab selection. These are local signals and need no backend, so
+    // they update even while disconnected. Bailing out here when not connected
+    // froze the chat on the previous session while the side diff (resolved from
+    // the worktree selection) still moved (the reported "only the diff changes").
     setCurrentSessionID(id)
     setDraftSessionID(id)
+    setUserClearedSession(false)
     setLoading(!ready)
-    if (ready) {
-      vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "focus" })
+    if (!ready) patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
+    // Only the message fetch needs the backend. Defer it while offline and let
+    // the reconnect effect replay it. We defer even for cached sessions: the
+    // load message is what re-focuses the backend (focusSession, contextSessionID,
+    // SSE tracking, active worktree) and runs the reconcile self-heal, so skipping
+    // it would leave the extension focused on the previously selected session.
+    if (!server.isConnected()) {
+      deferredFetch = id
       return
     }
-    patchPage(id, { loadingInitial: true, loadingOlder: false, before: undefined, hasMore: false })
-    vscode.postMessage({ type: "loadMessages", sessionID: id, mode: "replace", limit: MESSAGE_PAGE_LIMIT })
+    deferredFetch = undefined
+    loadFocusedMessages(id, ready)
   }
+
+  function loadFocusedMessages(id: string, ready: boolean) {
+    vscode.postMessage(
+      ready
+        ? { type: "loadMessages", sessionID: id, mode: "focus" }
+        : { type: "loadMessages", sessionID: id, mode: "replace", limit: MESSAGE_PAGE_LIMIT },
+    )
+  }
+
+  // Replay a fetch deferred while offline once the backend reconnects. Scoped to
+  // the still-current session so the normal connected path never double-fetches.
+  // Uses the same focus/replace choice as a live selection so a reconnect after
+  // a cached-session switch still re-focuses the backend and reconciles.
+  createEffect(
+    on(server.isConnected, (connected) => {
+      if (!connected) return
+      const id = deferredFetch
+      deferredFetch = undefined
+      if (!id || id !== currentSessionID()) return
+      loadFocusedMessages(id, loaded().has(id))
+    }),
+  )
 
   function selectCloudSession(cloudSessionId: string) {
     if (!server.isConnected()) {
@@ -2213,6 +2604,7 @@ export const SessionProvider: ParentComponent = (props) => {
     setCloudPreviewId(cloudSessionId)
     setCurrentSessionID(key)
     setDraftSessionID(key)
+    setUserClearedSession(false)
     setLoading(true)
     vscode.postMessage({ type: "requestCloudSessionData", sessionId: cloudSessionId })
   }
@@ -2235,6 +2627,7 @@ export const SessionProvider: ParentComponent = (props) => {
       next.delete(id)
       return next
     })
+    if (id === currentSessionID() || id === draftSessionID()) setUserClearedSession(true)
     vscode.postMessage({ type: "deleteSession", sessionID: id })
   }
 
@@ -2265,7 +2658,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   const pageState = () => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? (pages[id] ?? emptyPageState) : emptyPageState
   }
 
@@ -2274,7 +2667,7 @@ export const SessionProvider: ParentComponent = (props) => {
   const messageMutation = () => pageState().lastMutation
 
   const messages = () => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? store.messages[id] || [] : []
   }
 
@@ -2306,8 +2699,10 @@ export const SessionProvider: ParentComponent = (props) => {
   const userMessages = createMemo(() => messages().filter((m) => m.role === "user"))
 
   function visible(sessionID: string) {
-    return filterVisibleMessages(store.messages[sessionID] ?? [], store.sessions[sessionID]?.revert?.messageID, (msg) =>
-      getParts(msg.id),
+    return filterVisibleMessages(
+      store.messages[sessionID] ?? [],
+      store.sessions[sessionID]?.revert ?? undefined,
+      (msg) => getParts(msg.id),
     )
   }
 
@@ -2318,7 +2713,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   const visibleMessages = createMemo(() => {
-    const id = currentSessionID()
+    const id = currentSessionID() ?? draftSessionID()
     return id ? visible(id) : []
   })
 
@@ -2440,6 +2835,11 @@ export const SessionProvider: ParentComponent = (props) => {
     return fallback
   })
 
+  const modelUsage = createMemo<SessionModelUsage | undefined>(() => {
+    const id = currentSessionID()
+    return id ? store.modelUsage[id]?.data : undefined
+  })
+
   const contextUsage = createMemo<ContextUsage | undefined>(() => {
     const msgs = visibleMessages()
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -2465,6 +2865,7 @@ export const SessionProvider: ParentComponent = (props) => {
     closeReason,
     statusText,
     busySince,
+    submitting,
     loading,
     loadingOlderMessages,
     hasOlderMessages,
@@ -2489,11 +2890,14 @@ export const SessionProvider: ParentComponent = (props) => {
     scopedQuestions,
     scopedSuggestions,
     selected,
+    configModel,
     selectModel,
     hasModelOverride,
     clearModelOverride,
     costBreakdown,
     contextUsage,
+    modelUsage,
+    refreshModelUsage,
     agents,
     allAgents,
     skills,
@@ -2555,6 +2959,7 @@ export const SessionProvider: ParentComponent = (props) => {
     respondToPermission,
     replyToQuestion,
     rejectQuestion,
+    closeQuestion,
     acceptSuggestion,
     dismissSuggestion,
     createSession,
@@ -2570,6 +2975,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectCloudSession,
     draftSessionID,
     setDraftSessionID,
+    userClearedSession,
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>

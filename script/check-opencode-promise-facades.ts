@@ -26,33 +26,17 @@ const allow: Record<string, string> = {
   "cli/cmd/run/variant.shared.ts": "direct run variant persistence runtime boundary with test filesystem injection",
   "cli/cmd/tui/config/tui.ts": "separately tracked TUI config facade",
   "installation/index.ts": "existing installation facade outside #10655",
-  "session/compaction.ts": "existing compaction facade outside #10655",
-  "sync/index.ts": "sync event runtime boundary",
 }
 
 const testAllow: Record<string, { count: number; reason: string }> = {
-  "config/agent-color.test.ts": { count: 2, reason: "existing runtime integration test" },
-  "config/tui.test.ts": { count: 3, reason: "existing runtime integration test" },
-  "control-plane/workspace.test.ts": { count: 11, reason: "existing runtime integration test" },
-  "effect/app-runtime-logger.test.ts": { count: 6, reason: "tests AppRuntime behavior" },
   "kilocode/config-resilience.test.ts": { count: 4, reason: "existing runtime integration test" },
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/plan-followup.test.ts": { count: 4, reason: "existing runtime integration test" },
-  "kilocode/server/config-overlay.test.ts": { count: 3, reason: "server config cache integration test" },
-  "kilocode/session/platform-attribution.test.ts": { count: 5, reason: "existing runtime integration test" },
+  "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 5, reason: "prompt queue legacy instance bridge regression" },
-  "kilocode/session/session.test.ts": { count: 4, reason: "existing runtime integration test" },
-  "mcp/headers.test.ts": { count: 4, reason: "existing runtime integration test" },
-  "mcp/oauth-browser.test.ts": { count: 4, reason: "existing runtime integration test" },
-  "permission-task.test.ts": { count: 2, reason: "existing runtime integration test" },
-  "project/vcs.test.ts": { count: 14, reason: "existing runtime integration test" },
-  "provider/amazon-bedrock.test.ts": { count: 2, reason: "existing runtime integration test" },
-  "provider/provider.test.ts": { count: 3, reason: "existing runtime integration test" },
-  "pty/pty-output-isolation.test.ts": { count: 4, reason: "existing runtime integration test" },
-  "pty/pty-session.test.ts": { count: 3, reason: "existing runtime integration test" },
-  "pty/pty-shell.test.ts": { count: 4, reason: "existing runtime integration test" },
-  "session/llm.test.ts": { count: 2, reason: "existing runtime integration test" },
-  "tool/recall.test.ts": { count: 10, reason: "existing runtime integration test" },
+  "server/experimental-session-list.test.ts": { count: 2, reason: "Kilo session list integration test" },
+  "kilocode/server/listener-runtime.test.ts": { count: 3, reason: "listener and AppRuntime integration test" },
+  "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
 }
 
 const owned = (file: string) => file.startsWith("kilocode/") || file.startsWith("kilo-sessions/")

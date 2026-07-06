@@ -8,6 +8,11 @@ import {
   PROVIDER_ORDER,
   freeDataLabel,
   isDataCollectedModel,
+  hasByok,
+  isFree,
+  isAuto,
+  autoSummary,
+  autoChoices,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
@@ -102,11 +107,81 @@ describe("freeDataLabel", () => {
   })
 })
 
+describe("isFree", () => {
+  it("uses only explicit free metadata", () => {
+    expect(isFree({ isFree: true })).toBe(true)
+    expect(isFree({ isFree: false })).toBe(false)
+    expect(isFree({})).toBe(false)
+  })
+})
+
+describe("isAuto", () => {
+  it("matches only Kilo Auto model ids", () => {
+    expect(isAuto({ providerID: KILO_GATEWAY_ID, id: "kilo-auto/efficient" })).toBe(true)
+    expect(isAuto({ providerID: KILO_GATEWAY_ID, id: "auto-small" })).toBe(true)
+    expect(isAuto({ providerID: "anthropic", id: "kilo-auto/efficient" })).toBe(false)
+    expect(isAuto({ providerID: KILO_GATEWAY_ID, id: "anthropic/claude-sonnet" })).toBe(false)
+  })
+})
+
+describe("autoChoices", () => {
+  it("uses backend Auto Efficient routes and resolves names when available", () => {
+    expect(
+      autoChoices(
+        {
+          providerID: KILO_GATEWAY_ID,
+          id: "kilo-auto/efficient",
+          autoRouting: { models: ["provider/model", "missing/model"] },
+        },
+        [{ id: "provider/model", name: "Provider: Model" }],
+      ),
+    ).toEqual([
+      { id: "provider/model", name: "Model" },
+      { id: "missing/model", name: "missing/model" },
+    ])
+  })
+
+  it("ignores missing routes and non-efficient Auto models", () => {
+    expect(autoChoices({ providerID: KILO_GATEWAY_ID, id: "kilo-auto/efficient" })).toEqual([])
+    expect(
+      autoChoices({
+        providerID: KILO_GATEWAY_ID,
+        id: "kilo-auto/frontier",
+        autoRouting: { models: ["provider/model"] },
+      }),
+    ).toEqual([])
+  })
+})
+
+describe("autoSummary", () => {
+  it("uses the first description paragraph for compact tooltips", () => {
+    expect(
+      autoSummary({
+        options: {
+          description: "Routes through available models.\n\nLong details.",
+        },
+      }),
+    ).toBe("Routes through available models.")
+  })
+
+  it("falls back when there is no description", () => {
+    expect(autoSummary({})).toBe("Routes requests automatically.")
+  })
+})
+
 describe("isDataCollectedModel", () => {
-  it("only marks free Kilo Gateway models with the training disclosure", () => {
-    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: true })).toBe(true)
-    expect(isDataCollectedModel({ providerID: "openrouter", isFree: true })).toBe(false)
-    expect(isDataCollectedModel({ providerID: KILO_GATEWAY_ID, isFree: false })).toBe(false)
+  it("uses only explicit prompt training metadata", () => {
+    expect(isDataCollectedModel({ mayTrainOnYourPrompts: true })).toBe(true)
+    expect(isDataCollectedModel({ mayTrainOnYourPrompts: false })).toBe(false)
+    expect(isDataCollectedModel({})).toBe(false)
+  })
+})
+
+describe("hasByok", () => {
+  it("uses only explicit user BYOK metadata", () => {
+    expect(hasByok({ hasUserByokAvailable: true })).toBe(true)
+    expect(hasByok({ hasUserByokAvailable: false })).toBe(false)
+    expect(hasByok({})).toBe(false)
   })
 })
 

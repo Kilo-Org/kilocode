@@ -17,7 +17,7 @@ export const UpgradeCommand = {
         alias: "m",
         describe: "installation method to use",
         type: "string",
-        choices: ["curl", "npm", "pnpm", "bun", "brew", "choco", "scoop"],
+        choices: ["curl", "npm", "yarn", "pnpm", "bun", "brew", "choco", "scoop"], // kilocode_change
       })
   },
   handler: async (args: { target?: string; method?: string }) => {
@@ -43,7 +43,7 @@ export const UpgradeCommand = {
       }
     }
     prompts.log.info("Using method: " + method)
-    const target = args.target ? args.target.replace(/^v/, "") : await Installation.latest()
+    const target = args.target ? args.target.replace(/^v/, "") : await Installation.latest(method) // kilocode_change
 
     if (InstallationVersion === target) {
       prompts.log.warn(`kilo upgrade skipped: ${target} is already installed`) // kilocode_change

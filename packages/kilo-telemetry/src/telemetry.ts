@@ -10,7 +10,7 @@ export interface TelemetryProperties {
   vscodeVersion?: string
 }
 
-export type ReviewCommand = "review" | "local-review" | "local-review-uncommitted"
+export type ReviewCommand = "review"
 
 export interface IndexingTelemetryProperties extends Record<string, unknown> {
   source: "scan" | "watcher"
@@ -186,7 +186,10 @@ export namespace Telemetry {
     track(TelemetryEvent.AGENT_USED, { agent, sessionId })
   }
 
-  export function trackPlanFollowup(sessionId: string, choice: "new_session" | "continue" | "custom" | "dismissed") {
+  export function trackPlanFollowup(
+    sessionId: string,
+    choice: "new_session" | "continue" | "keep_refining" | "custom" | "dismissed",
+  ) {
     track(TelemetryEvent.PLAN_FOLLOWUP, { sessionId, choice })
   }
 
@@ -285,7 +288,7 @@ export namespace Telemetry {
     track(TelemetryEvent.FEEDBACK_SUBMITTED, props)
   }
 
-  export async function shutdown(): Promise<void> {
-    await Client.shutdown()
+  export async function shutdown(timeoutMs?: number): Promise<void> {
+    await Client.shutdown(timeoutMs)
   }
 }

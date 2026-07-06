@@ -1,17 +1,26 @@
 import { Effect, Layer, Schema, Context, Stream } from "effect"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
-import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { withTransientReadRetry } from "@/util/effect-http-client"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { errorMessage } from "@/util/error"
+import { ChildProcess } from "effect/unstable/process"
+import { AppProcess } from "@opencode-ai/core/process"
 import path from "path"
-import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import semver from "semver"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { NpmConfig } from "@opencode-ai/core/npm-config"
+// kilocode_change start
+import {
+  Brew as KiloBrew,
+  Choco as KiloChoco,
+  Npm as KiloNpm,
+  Release as KiloRelease,
+  Scoop as KiloScoop,
+} from "@/kilocode/installation"
+// kilocode_change end
 
 const log = Log.create({ service: "installation" })
 
@@ -45,17 +54,17 @@ export function getReleaseType(current: string, latest: string): ReleaseType {
   return "patch"
 }
 
-export const Info = z
-  .object({
-    version: z.string(),
-    latest: z.string(),
-  })
-  .meta({
-    ref: "InstallationInfo",
-  })
-export type Info = z.infer<typeof Info>
+export const Info = Schema.Struct({
+  version: Schema.String,
+  latest: Schema.String,
+}).annotate({ identifier: "InstallationInfo" })
+export type Info = Schema.Schema.Type<typeof Info>
 
-export const USER_AGENT = `kilo/${InstallationChannel}/${InstallationVersion}/${Flag.KILO_CLIENT}` // kilocode_change
+export function userAgent(client = "cli") {
+  return `kilo/${InstallationChannel}/${InstallationVersion}/${client}` // kilocode_change
+}
+
+export const USER_AGENT = userAgent()
 
 export function isPreview() {
   return InstallationChannel !== "latest"
@@ -67,17 +76,25 @@ export function isLocal() {
 
 export class UpgradeFailedError extends Schema.TaggedErrorClass<UpgradeFailedError>()("UpgradeFailedError", {
   stderr: Schema.String,
-}) {}
+}) {
+  override get message() {
+    return this.stderr
+  }
+}
 
 // Response schemas for external version APIs
 const GitHubRelease = Schema.Struct({ tag_name: Schema.String })
 const NpmPackage = Schema.Struct({ version: Schema.String })
-const BrewFormula = Schema.Struct({ versions: Schema.Struct({ stable: Schema.String }) })
+const BrewFormula = Schema.Struct({
+  versions: Schema.Struct({ stable: Schema.String }),
+})
 const BrewInfoV2 = Schema.Struct({
   formulae: Schema.Array(Schema.Struct({ versions: Schema.Struct({ stable: Schema.String }) })),
 })
 const ChocoPackage = Schema.Struct({
-  d: Schema.Struct({ results: Schema.Array(Schema.Struct({ Version: Schema.String })) }),
+  d: Schema.Struct({
+    results: Schema.Array(Schema.Struct({ Version: Schema.String })),
+  }),
 })
 const ScoopManifest = NpmPackage
 
@@ -90,251 +107,289 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Installation") {}
 
-export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildProcessSpawner.ChildProcessSpawner> =
-  Layer.effect(
-    Service,
-    Effect.gen(function* () {
-      const http = yield* HttpClient.HttpClient
-      const httpOk = HttpClient.filterStatusOk(withTransientReadRetry(http))
-      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+export const use = serviceUse(Service)
 
-      const text = Effect.fnUntraced(
-        function* (cmd: string[], opts?: { cwd?: string; env?: Record<string, string> }) {
-          const proc = ChildProcess.make(cmd[0], cmd.slice(1), {
+export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Service> = Layer.effect(
+  Service,
+  Effect.gen(function* () {
+    const http = yield* HttpClient.HttpClient
+    const httpOk = HttpClient.filterStatusOk(withTransientReadRetry(http))
+    const appProcess = yield* AppProcess.Service
+
+    const text = Effect.fnUntraced(
+      function* (cmd: string[], opts?: { cwd?: string; env?: Record<string, string> }) {
+        const result = yield* appProcess.run(
+          ChildProcess.make(cmd[0], cmd.slice(1), {
             cwd: opts?.cwd,
             env: opts?.env,
             extendEnv: true,
-          })
-          const handle = yield* spawner.spawn(proc)
-          const out = yield* Stream.mkString(Stream.decodeText(handle.stdout))
-          yield* handle.exitCode
-          return out
-        },
-        Effect.scoped,
-        Effect.catch(() => Effect.succeed("")),
-      )
+          }),
+        )
+        return result.stdout.toString("utf8")
+      },
+      Effect.catch(() => Effect.succeed("")),
+    )
 
-      const run = Effect.fnUntraced(
-        function* (cmd: string[], opts?: { cwd?: string; env?: Record<string, string> }) {
-          const proc = ChildProcess.make(cmd[0], cmd.slice(1), {
+    const run = Effect.fnUntraced(
+      function* (cmd: string[], opts?: { cwd?: string; env?: Record<string, string> }) {
+        const result = yield* appProcess.run(
+          ChildProcess.make(cmd[0], cmd.slice(1), {
             cwd: opts?.cwd,
             env: opts?.env,
             extendEnv: true,
-          })
-          const handle = yield* spawner.spawn(proc)
-          const [stdout, stderr] = yield* Effect.all(
-            [Stream.mkString(Stream.decodeText(handle.stdout)), Stream.mkString(Stream.decodeText(handle.stderr))],
-            { concurrency: 2 },
-          )
-          const code = yield* handle.exitCode
-          return { code, stdout, stderr }
-        },
-        Effect.scoped,
-        Effect.catch(() => Effect.succeed({ code: ChildProcessSpawner.ExitCode(1), stdout: "", stderr: "" })),
-      )
+          }),
+        )
+        return {
+          code: result.exitCode,
+          stdout: result.stdout.toString("utf8"),
+          stderr: result.stderr.toString("utf8"),
+        }
+      },
+      Effect.catch((err) => Effect.succeed({ code: 1, stdout: "", stderr: errorMessage(err) })),
+    )
 
-      const getBrewFormula = Effect.fnUntraced(function* () {
-        // kilocode_change start
-        const tapFormula = yield* text(["brew", "list", "--formula", "Kilo-Org/tap/kilo"])
-        if (tapFormula.includes("kilo")) return "Kilo-Org/tap/kilo"
-        const coreFormula = yield* text(["brew", "list", "--formula", "kilo"])
-        if (coreFormula.includes("kilo")) return "kilo"
-        return "kilo"
-        // kilocode_change end
-      })
+    const getBrewFormula = Effect.fnUntraced(function* () {
+      const tapFormula = yield* text(["brew", "list", "--formula", KiloBrew.formula]) // kilocode_change
+      if (tapFormula.includes(KiloBrew.name)) return KiloBrew.formula // kilocode_change
+      const coreFormula = yield* text(["brew", "list", "--formula", KiloBrew.name]) // kilocode_change
+      if (coreFormula.includes(KiloBrew.name)) return KiloBrew.name // kilocode_change
+      return KiloBrew.formula // kilocode_change
+    })
 
-      const upgradeCurl = Effect.fnUntraced(
-        function* (target: string) {
-          const response = yield* httpOk.execute(HttpClientRequest.get("https://kilo.ai/install")) // kilocode_change
-          const body = yield* response.text
-          const bodyBytes = new TextEncoder().encode(body)
-          const proc = ChildProcess.make("bash", [], {
+    const upgradeFailure = (method: Method, result?: { code: number; stdout: string; stderr: string }) => {
+      if (method === "choco") return "not running from an elevated command shell"
+      if (result) return `Upgrade failed for ${method} (exit code ${result.code}).`
+      return `Upgrade failed for ${method}.`
+    }
+
+    const upgradeCurl = Effect.fnUntraced(
+      function* (target: string) {
+        const response = yield* httpOk.execute(HttpClientRequest.get(KiloRelease.install)) // kilocode_change
+        const body = yield* response.text
+        const bodyBytes = new TextEncoder().encode(body)
+        const result = yield* appProcess.run(
+          ChildProcess.make("bash", [], {
             stdin: Stream.make(bodyBytes),
             env: { VERSION: target },
             extendEnv: true,
-          })
-          const handle = yield* spawner.spawn(proc)
-          const [stdout, stderr] = yield* Effect.all(
-            [Stream.mkString(Stream.decodeText(handle.stdout)), Stream.mkString(Stream.decodeText(handle.stderr))],
-            { concurrency: 2 },
-          )
-          const code = yield* handle.exitCode
-          return { code, stdout, stderr }
-        },
-        Effect.scoped,
-        Effect.orDie,
-      )
+          }),
+        )
+        return {
+          code: result.exitCode,
+          stdout: result.stdout.toString("utf8"),
+          stderr: result.stderr.toString("utf8"),
+        }
+      },
+      Effect.mapError(() => new UpgradeFailedError({ stderr: upgradeFailure("curl") })),
+    )
 
-      const result: Interface = {
-        info: Effect.fn("Installation.info")(function* () {
-          return {
-            version: InstallationVersion,
-            latest: yield* result.latest(),
+    const result: Interface = {
+      info: Effect.fn("Installation.info")(function* () {
+        return {
+          version: InstallationVersion,
+          latest: yield* result.latest(),
+        }
+      }),
+      method: Effect.fn("Installation.method")(function* () {
+        if (process.execPath.includes(path.join(".kilo", "bin"))) return "curl" as Method // kilocode_change
+        if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl" as Method
+        if (process.execPath.includes(path.join(".local", "bin"))) return "curl" as Method
+        const exec = process.execPath.toLowerCase()
+
+        const checks: Array<{
+          name: Method
+          command: () => Effect.Effect<string>
+        }> = [
+          {
+            name: "npm",
+            command: () => text(["npm", "list", "-g", "--depth=0"]),
+          },
+          { name: "yarn", command: () => text(["yarn", "global", "list"]) },
+          {
+            name: "pnpm",
+            command: () => text(["pnpm", "list", "-g", "--depth=0"]),
+          },
+          { name: "bun", command: () => text(["bun", "pm", "ls", "-g"]) },
+          {
+            name: "brew",
+            command: () => text(["brew", "list", "--formula", KiloBrew.formula]),
+          }, // kilocode_change
+          {
+            name: "scoop",
+            command: () => text(["scoop", "list", KiloScoop.name]),
+          }, // kilocode_change
+          {
+            name: "choco",
+            command: () => text(["choco", "list", "--limit-output", KiloChoco.name]),
+          }, // kilocode_change
+        ]
+
+        checks.sort((a, b) => {
+          const aMatches = exec.includes(a.name)
+          const bMatches = exec.includes(b.name)
+          if (aMatches && !bMatches) return -1
+          if (!aMatches && bMatches) return 1
+          return 0
+        })
+
+        for (const check of checks) {
+          const output = yield* check.command()
+          // kilocode_change start
+          const installedName =
+            check.name === "brew"
+              ? KiloBrew.name
+              : check.name === "choco"
+                ? KiloChoco.name
+                : check.name === "scoop"
+                  ? KiloScoop.name
+                  : KiloNpm.name
+          // kilocode_change end
+          if (output.includes(installedName)) {
+            return check.name
           }
-        }),
-        method: Effect.fn("Installation.method")(function* () {
-          if (process.execPath.includes(path.join(".kilo", "bin"))) return "curl" as Method // kilocode_change
-          if (process.execPath.includes(path.join(".local", "bin"))) return "curl" as Method
-          const exec = process.execPath.toLowerCase()
+        }
 
-          const checks: Array<{ name: Method; command: () => Effect.Effect<string> }> = [
-            { name: "npm", command: () => text(["npm", "list", "-g", "--depth=0"]) },
-            { name: "yarn", command: () => text(["yarn", "global", "list"]) },
-            { name: "pnpm", command: () => text(["pnpm", "list", "-g", "--depth=0"]) },
-            { name: "bun", command: () => text(["bun", "pm", "ls", "-g"]) },
-            // kilocode_change start
-            { name: "brew", command: () => text(["brew", "list", "--formula", "kilo"]) },
-            { name: "scoop", command: () => text(["scoop", "list", "kilo"]) },
-            { name: "choco", command: () => text(["choco", "list", "--limit-output", "kilo"]) },
-            // kilocode_change end
-          ]
+        return "unknown" as Method
+      }),
+      latest: Effect.fn("Installation.latest")(function* (installMethod?: Method) {
+        const detectedMethod = installMethod || (yield* result.method())
 
-          checks.sort((a, b) => {
-            const aMatches = exec.includes(a.name)
-            const bMatches = exec.includes(b.name)
-            if (aMatches && !bMatches) return -1
-            if (!aMatches && bMatches) return 1
-            return 0
-          })
-
-          for (const check of checks) {
-            const output = yield* check.command()
-            const installedName =
-              check.name === "brew" || check.name === "choco" || check.name === "scoop" ? "kilo" : "kilo" // kilocode_change
-            if (output.includes(installedName)) {
-              return check.name
-            }
+        if (detectedMethod === "brew") {
+          const formula = yield* getBrewFormula()
+          if (formula.includes("/")) {
+            const infoJson = yield* text(["brew", "info", "--json=v2", formula])
+            const info = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(BrewInfoV2))(infoJson)
+            return info.formulae[0].versions.stable
           }
-
-          return "unknown" as Method
-        }),
-        latest: Effect.fn("Installation.latest")(function* (installMethod?: Method) {
-          const detectedMethod = installMethod || (yield* result.method())
-
-          if (detectedMethod === "brew") {
-            const formula = yield* getBrewFormula()
-            if (formula.includes("/")) {
-              const infoJson = yield* text(["brew", "info", "--json=v2", formula])
-              const info = yield* Schema.decodeUnknownEffect(Schema.fromJsonString(BrewInfoV2))(infoJson)
-              return info.formulae[0].versions.stable
-            }
-            const response = yield* httpOk.execute(
-              HttpClientRequest.get("https://formulae.brew.sh/api/formula/kilo.json").pipe(
-                // kilocode_change
-                HttpClientRequest.acceptJson,
-              ),
-            )
-            const data = yield* HttpClientResponse.schemaBodyJson(BrewFormula)(response)
-            return data.versions.stable
-          }
-
-          if (detectedMethod === "npm" || detectedMethod === "bun" || detectedMethod === "pnpm") {
-            const response = yield* httpOk.execute(
-              HttpClientRequest.get(
-                `${yield* NpmConfig.registry(process.cwd())}/@kilocode%2Fcli/${InstallationChannel}`, // kilocode_change
-              ).pipe(HttpClientRequest.acceptJson),
-            )
-            const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
-            return data.version
-          }
-
-          if (detectedMethod === "choco") {
-            const response = yield* httpOk.execute(
-              HttpClientRequest.get(
-                "https://community.chocolatey.org/api/v2/Packages?$filter=Id%20eq%20%27kilo%27%20and%20IsLatestVersion&$select=Version", // kilocode_change
-              ).pipe(HttpClientRequest.setHeaders({ Accept: "application/json;odata=verbose" })),
-            )
-            const data = yield* HttpClientResponse.schemaBodyJson(ChocoPackage)(response)
-            return data.d.results[0].Version
-          }
-
-          if (detectedMethod === "scoop") {
-            const response = yield* httpOk.execute(
-              HttpClientRequest.get(
-                "https://raw.githubusercontent.com/ScoopInstaller/Main/master/bucket/kilo.json", // kilocode_change
-              ).pipe(HttpClientRequest.setHeaders({ Accept: "application/json" })),
-            )
-            const data = yield* HttpClientResponse.schemaBodyJson(ScoopManifest)(response)
-            return data.version
-          }
-
           const response = yield* httpOk.execute(
-            HttpClientRequest.get("https://api.github.com/repos/Kilo-Org/kilocode/releases/latest").pipe(
-              // kilocode_change
-              HttpClientRequest.acceptJson,
+            HttpClientRequest.get(KiloBrew.api).pipe(HttpClientRequest.acceptJson), // kilocode_change
+          )
+          const data = yield* HttpClientResponse.schemaBodyJson(BrewFormula)(response)
+          return data.versions.stable
+        }
+
+        if (
+          detectedMethod === "npm" ||
+          detectedMethod === "yarn" ||
+          detectedMethod === "bun" ||
+          detectedMethod === "pnpm"
+        ) {
+          // kilocode_change
+          const response = yield* httpOk.execute(
+            HttpClientRequest.get(
+              `${yield* NpmConfig.registry(process.cwd())}/${KiloNpm.path}/${InstallationChannel}`, // kilocode_change
+            ).pipe(HttpClientRequest.acceptJson),
+          )
+          const data = yield* HttpClientResponse.schemaBodyJson(NpmPackage)(response)
+          return data.version
+        }
+
+        if (detectedMethod === "choco") {
+          const response = yield* httpOk.execute(
+            HttpClientRequest.get(
+              KiloChoco.api, // kilocode_change
+            ).pipe(
+              HttpClientRequest.setHeaders({
+                Accept: "application/json;odata=verbose",
+              }),
             ),
           )
-          const data = yield* HttpClientResponse.schemaBodyJson(GitHubRelease)(response)
-          return data.tag_name.replace(/^v/, "")
-        }, Effect.orDie),
-        upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
-          let upgradeResult: { code: ChildProcessSpawner.ExitCode; stdout: string; stderr: string } | undefined
-          switch (m) {
-            case "curl":
-              upgradeResult = yield* upgradeCurl(target)
-              break
-            case "npm":
-              upgradeResult = yield* run(["npm", "install", "-g", `@kilocode/cli@${target}`]) // kilocode_change
-              break
-            case "pnpm":
-              upgradeResult = yield* run(["pnpm", "install", "-g", `@kilocode/cli@${target}`]) // kilocode_change
-              break
-            case "bun":
-              upgradeResult = yield* run(["bun", "install", "-g", `@kilocode/cli@${target}`]) // kilocode_change
-              break
-            case "brew": {
-              const formula = yield* getBrewFormula()
-              const env = { HOMEBREW_NO_AUTO_UPDATE: "1" }
-              if (formula.includes("/")) {
-                const tap = yield* run(["brew", "tap", "Kilo-Org/tap"], { env }) // kilocode_change
-                if (tap.code !== 0) {
-                  upgradeResult = tap
+          const data = yield* HttpClientResponse.schemaBodyJson(ChocoPackage)(response)
+          return data.d.results[0].Version
+        }
+
+        if (detectedMethod === "scoop") {
+          const response = yield* httpOk.execute(
+            HttpClientRequest.get(
+              KiloScoop.manifest, // kilocode_change
+            ).pipe(HttpClientRequest.setHeaders({ Accept: "application/json" })),
+          )
+          const data = yield* HttpClientResponse.schemaBodyJson(ScoopManifest)(response)
+          return data.version
+        }
+
+        const response = yield* httpOk.execute(
+          HttpClientRequest.get(KiloRelease.api).pipe(HttpClientRequest.acceptJson), // kilocode_change
+        )
+        const data = yield* HttpClientResponse.schemaBodyJson(GitHubRelease)(response)
+        return data.tag_name.replace(/^v/, "")
+      }, Effect.orDie),
+      upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
+        let upgradeResult: { code: number; stdout: string; stderr: string } | undefined
+        switch (m) {
+          case "curl":
+            upgradeResult = yield* upgradeCurl(target)
+            break
+          // kilocode_change start
+          case "npm":
+            upgradeResult = yield* run(["npm", "install", "-g", `${KiloNpm.name}@${target}`])
+            break
+          case "yarn":
+            upgradeResult = yield* run(["yarn", "global", "add", `${KiloNpm.name}@${target}`])
+            break
+          // kilocode_change end
+          case "pnpm":
+            upgradeResult = yield* run(["pnpm", "install", "-g", `${KiloNpm.name}@${target}`]) // kilocode_change
+            break
+          case "bun":
+            upgradeResult = yield* run(["bun", "install", "-g", `${KiloNpm.name}@${target}`]) // kilocode_change
+            break
+          case "brew": {
+            const formula = yield* getBrewFormula()
+            const env = { HOMEBREW_NO_AUTO_UPDATE: "1" }
+            if (formula.includes("/")) {
+              const tap = yield* run(["brew", "tap", KiloBrew.tap], { env }) // kilocode_change
+              if (tap.code !== 0) {
+                upgradeResult = tap
+                break
+              }
+              const repo = yield* text(["brew", "--repo", KiloBrew.tap]) // kilocode_change
+              const dir = repo.trim()
+              if (dir) {
+                const pull = yield* run(["git", "pull", "--ff-only"], {
+                  cwd: dir,
+                  env,
+                })
+                if (pull.code !== 0) {
+                  upgradeResult = pull
                   break
                 }
-                const repo = yield* text(["brew", "--repo", "Kilo-Org/tap"]) // kilocode_change
-                const dir = repo.trim()
-                if (dir) {
-                  const pull = yield* run(["git", "pull", "--ff-only"], { cwd: dir, env })
-                  if (pull.code !== 0) {
-                    upgradeResult = pull
-                    break
-                  }
-                }
               }
-              upgradeResult = yield* run(["brew", "upgrade", formula], { env })
-              break
             }
-            case "choco":
-              upgradeResult = yield* run(["choco", "upgrade", "kilo", `--version=${target}`, "-y"]) // kilocode_change
-              break
-            case "scoop":
-              upgradeResult = yield* run(["scoop", "install", `kilo@${target}`]) // kilocode_change
-              break
-            default:
-              return yield* new UpgradeFailedError({ stderr: `Unknown method: ${m}` })
+            upgradeResult = yield* run(["brew", "upgrade", formula], { env })
+            break
           }
-          if (!upgradeResult || upgradeResult.code !== 0) {
-            const stderr = m === "choco" ? "not running from an elevated command shell" : upgradeResult?.stderr || ""
-            return yield* new UpgradeFailedError({ stderr })
-          }
-          log.info("upgraded", {
-            method: m,
-            target,
-            stdout: upgradeResult.stdout,
-            stderr: upgradeResult.stderr,
+          case "choco":
+            upgradeResult = yield* run(["choco", "upgrade", KiloChoco.name, `--version=${target}`, "-y"]) // kilocode_change
+            break
+          case "scoop":
+            upgradeResult = yield* run(["scoop", "install", `${KiloScoop.name}@${target}`]) // kilocode_change
+            break
+          default:
+            return yield* new UpgradeFailedError({
+              stderr: `Unknown installation method: ${m}`,
+            })
+        }
+        if (!upgradeResult || upgradeResult.code !== 0) {
+          return yield* new UpgradeFailedError({
+            stderr: upgradeFailure(m, upgradeResult),
           })
-          yield* text([process.execPath, "--version"])
-        }),
-      }
+        }
+        log.info("upgraded", {
+          method: m,
+          target,
+          stdout: upgradeResult.stdout,
+          stderr: upgradeResult.stderr,
+        })
+        yield* text([process.execPath, "--version"])
+      }),
+    }
 
-      return Service.of(result)
-    }),
-  )
-
-export const defaultLayer = layer.pipe(
-  Layer.provide(FetchHttpClient.layer),
-  Layer.provide(CrossSpawnSpawner.defaultLayer),
+    return Service.of(result)
+  }),
 )
+
+export const defaultLayer = layer.pipe(Layer.provide(FetchHttpClient.layer), Layer.provide(AppProcess.defaultLayer))
 
 const { runPromise } = makeRuntime(Service, defaultLayer)
 

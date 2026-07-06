@@ -1,7 +1,11 @@
 export const FreeModelDisclosure = {
   label: "May train",
-  panel: "Free - data may be used for training",
-  collectsData(model: { isFree?: boolean; api?: { npm?: string } }): boolean {
-    return model.isFree === true && model.api?.npm === "@kilocode/kilo-gateway"
+  panel: "Data may be used for training",
+  byok: "BYOK",
+  collectsData(model: { mayTrainOnYourPrompts?: boolean }): boolean {
+    return model.mayTrainOnYourPrompts === true
+  },
+  hasByok(model: { hasUserByokAvailable?: boolean }): boolean {
+    return model.hasUserByokAvailable === true
   },
 } as const

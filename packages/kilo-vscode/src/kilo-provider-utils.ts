@@ -1,4 +1,16 @@
-import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import type {
+  Session,
+  Agent,
+  Event,
+  ProviderListResponse,
+  SyncEventMessageUpdated,
+  SyncEventMessageRemoved,
+  SyncEventMessagePartUpdated,
+  SyncEventMessagePartRemoved,
+  SyncEventSessionCreated,
+  SyncEventSessionUpdated,
+  SyncEventSessionDeleted,
+} from "@kilocode/sdk/v2/client"
 import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
@@ -200,6 +212,73 @@ export function sessionToWebview(session: Session) {
   }
 }
 
+type SessionPatch = SyncEventSessionUpdated["data"]["info"]
+export type WebviewSessionPatch = Partial<ReturnType<typeof sessionToWebview>> & { id: string }
+
+function set<T extends object, K extends keyof T>(target: T, key: K, value: T[K] | null | undefined): void {
+  if (value === undefined || value === null) return
+  target[key] = value
+}
+
+function update<T extends object, K extends keyof T>(target: T, key: K, value: T[K] | null | undefined): void {
+  if (value === undefined) return
+  if (value === null) {
+    Reflect.deleteProperty(target, key)
+    return
+  }
+  target[key] = value
+}
+
+function share(session: Session, url: string | null | undefined): void {
+  if (url === undefined) return
+  if (url === null) {
+    delete session.share
+    return
+  }
+  session.share = { url }
+}
+
+export function applySessionPatch(current: Session, patch: SessionPatch): Session {
+  const next: Session = { ...current, time: { ...current.time } }
+
+  set(next, "slug", patch.slug)
+  set(next, "projectID", patch.projectID)
+  set(next, "directory", patch.directory)
+  set(next, "title", patch.title)
+  set(next, "version", patch.version)
+  update(next, "workspaceID", patch.workspaceID)
+  update(next, "path", patch.path)
+  update(next, "parentID", patch.parentID)
+  update(next, "summary", patch.summary)
+  update(next, "cost", patch.cost)
+  update(next, "tokens", patch.tokens)
+  share(next, patch.share?.url)
+  update(next, "agent", patch.agent)
+  update(next, "model", patch.model)
+  update(next, "permission", patch.permission)
+  update(next, "revert", patch.revert)
+  set(next.time, "created", patch.time?.created)
+  set(next.time, "updated", patch.time?.updated)
+  update(next.time, "compacting", patch.time?.compacting)
+  update(next.time, "archived", patch.time?.archived)
+
+  return next
+}
+
+export function sessionPatchToWebview(sessionID: string, patch: SessionPatch): WebviewSessionPatch {
+  return {
+    id: sessionID,
+    ...(patch.parentID !== undefined && { parentID: patch.parentID }),
+    ...(patch.title !== undefined && patch.title !== null && { title: patch.title }),
+    ...(patch.time?.created !== undefined &&
+      patch.time.created !== null && { createdAt: new Date(patch.time.created).toISOString() }),
+    ...(patch.time?.updated !== undefined &&
+      patch.time.updated !== null && { updatedAt: new Date(patch.time.updated).toISOString() }),
+    ...(patch.revert !== undefined && { revert: patch.revert }),
+    ...(patch.summary !== undefined && { summary: patch.summary }),
+  }
+}
+
 export function indexProvidersById(all: ProviderInfo[]): Record<string, ProviderInfo> {
   const normalized: Record<string, ProviderInfo> = {}
   for (const provider of all) {
@@ -375,6 +454,17 @@ export function sameDirectory(a: string, b: string): boolean {
   return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
 }
 
+type SyncEvent =
+  | SyncEventMessageUpdated
+  | SyncEventMessageRemoved
+  | SyncEventMessagePartUpdated
+  | SyncEventMessagePartRemoved
+  | SyncEventSessionCreated
+  | SyncEventSessionUpdated
+  | SyncEventSessionDeleted
+
+type StreamEvent = Event | SyncEvent
+
 export type WebviewMessage =
   | PartUpdate
   | PartBatch
@@ -424,85 +514,103 @@ export type WebviewMessage =
   | { type: "permissionResolved"; permissionID: string }
   | { type: "permissionError"; permissionID: string; stale?: boolean }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
-  | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "sessionUpdated"; session: WebviewSessionPatch }
+  | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }
+  | {
+      type: "sandboxStatus"
+      sessionID: string
+      directory: string
+      enabled: boolean
+      available: boolean
+      reason?: string
+      version: number
+    }
   | null
 
-type PartEvent = Extract<Event, { type: "message.part.updated" | "message.part.delta" | "message.part.removed" }>
+type PartEvent =
+  | Extract<Event, { type: "message.part.delta" }>
+  | SyncEventMessagePartUpdated
+  | SyncEventMessagePartRemoved
 
 function mapPartEvent(event: PartEvent, sessionID: string | undefined): WebviewMessage {
+  if (event.type === "sync") {
+    if (event.name === "message.part.updated.1") {
+      const part = event.data.part
+      return {
+        type: "partUpdated",
+        sessionID: event.data.sessionID,
+        messageID: part.messageID,
+        part,
+      }
+    }
+    return {
+      type: "partRemoved",
+      sessionID: event.data.sessionID,
+      messageID: event.data.messageID,
+      partID: event.data.partID,
+    }
+  }
   if (!sessionID) return null
-  if (event.type === "message.part.updated") {
-    const part = event.properties.part as { messageID?: string; sessionID?: string }
-    return {
-      type: "partUpdated",
-      sessionID,
-      messageID: part.messageID || "",
-      part: event.properties.part,
-    }
-  }
-  if (event.type === "message.part.delta") {
-    const props = event.properties
-    return {
-      type: "partUpdated",
-      sessionID: props.sessionID,
-      messageID: props.messageID,
-      part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
-      delta: { type: "text-delta", textDelta: props.delta },
-    }
-  }
   const props = event.properties
   return {
-    type: "partRemoved",
+    type: "partUpdated",
     sessionID: props.sessionID,
     messageID: props.messageID,
-    partID: props.partID,
+    part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
+    delta: { type: "text-delta", textDelta: props.delta },
   }
 }
 
-export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
-  if (
-    event.type === "message.part.updated" ||
-    event.type === "message.part.delta" ||
-    event.type === "message.part.removed"
-  ) {
-    return mapPartEvent(event, sessionID)
+function statusExtra(info: Extract<Event, { type: "session.status" }>["properties"]["status"]) {
+  if (info.type === "retry") return { attempt: info.attempt, message: info.message, next: info.next }
+  if (info.type === "offline") return { message: info.message }
+  return {}
+}
+
+export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: string | undefined): WebviewMessage {
+  if (event.type === "sync") {
+    switch (event.name) {
+      case "message.updated.1": {
+        const info = event.data.info
+        return {
+          type: "messageCreated",
+          message: {
+            ...info,
+            createdAt: new Date(info.time.created).toISOString(),
+          },
+        }
+      }
+      case "message.removed.1":
+        return {
+          type: "messageRemoved",
+          sessionID: event.data.sessionID,
+          messageID: event.data.messageID,
+        }
+      case "message.part.updated.1":
+      case "message.part.removed.1":
+        return mapPartEvent(event, sessionID)
+      case "session.created.1":
+        return {
+          type: "sessionCreated",
+          session: sessionToWebview(event.data.info),
+        }
+      case "session.updated.1":
+        return null
+      case "session.deleted.1":
+        return {
+          type: "sessionDeleted",
+          sessionID: event.data.sessionID,
+        }
+    }
   }
+  if (event.type === "message.part.delta") return mapPartEvent(event, sessionID)
   switch (event.type) {
-    case "message.updated": {
-      const info = event.properties.info
-      return {
-        type: "messageCreated",
-        message: {
-          ...info,
-          createdAt: new Date(info.time.created).toISOString(),
-        },
-      }
-    }
-    case "message.removed": {
-      const props = event.properties as { sessionID: string; messageID: string }
-      return {
-        type: "messageRemoved",
-        sessionID: props.sessionID,
-        messageID: props.messageID,
-      }
-    }
     case "session.status": {
       const info = event.properties.status
-      // "offline" is not yet in the SDK SessionStatus type (pending SDK regeneration),
-      // so we use string comparison to forward the message field for offline status.
-      const status = info.type as string
-      const extra =
-        status === "retry"
-          ? {
-              attempt: (info as any).attempt as number,
-              message: (info as any).message as string,
-              next: (info as any).next as number,
-            }
-          : status === "offline"
-            ? { message: (info as any).message as string }
-            : {}
+      const status = info.type
+      const extra = statusExtra(info)
       return {
         type: "sessionStatus" as const,
         sessionID: event.properties.sessionID,
@@ -583,15 +691,15 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
         error: event.properties.error,
       }
     }
-    case "session.created":
+    case "sandbox.status.changed":
       return {
-        type: "sessionCreated",
-        session: sessionToWebview(event.properties.info),
-      }
-    case "session.updated":
-      return {
-        type: "sessionUpdated",
-        session: sessionToWebview(event.properties.info),
+        type: "sandboxStatus",
+        sessionID: event.properties.sessionID,
+        directory: event.properties.directory,
+        enabled: event.properties.enabled,
+        available: event.properties.available,
+        reason: event.properties.reason,
+        version: event.properties.version,
       }
     case "indexing.status":
       return {
@@ -623,10 +731,12 @@ export function mapCloudSessionMessageToWebviewMessage(message: CloudSessionMess
  * Returns true when the event carries a projectID that does not match the expected one.
  * When expectedProjectID is undefined (not yet resolved), nothing is filtered.
  */
-export function isEventFromForeignProject(event: Event, expectedProjectID: string | undefined): boolean {
-  if (!expectedProjectID) return false
-  if (event.type === "session.created" || event.type === "session.updated") {
-    return event.properties.info.projectID !== expectedProjectID
+export function isEventFromForeignProject(event: StreamEvent, expectedProjectID: string | undefined): boolean {
+  if (!expectedProjectID || event.type !== "sync") return false
+  if (event.name === "session.created.1" || event.name === "session.deleted.1") {
+    return event.data.info.projectID !== expectedProjectID
   }
-  return false
+  if (event.name !== "session.updated.1") return false
+  const project = event.data.info.projectID
+  return project !== undefined && project !== expectedProjectID
 }

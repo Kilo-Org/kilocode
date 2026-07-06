@@ -13,7 +13,9 @@ const { values } = parseArgs({
 })
 
 if (values.help) {
-  console.log(`Usage: bun .kilo/skills/release-jetbrains/script/resolve-version.ts --spec <next rc|next stable|version>`)
+  console.log(
+    `Usage: bun .kilo/skills/release-jetbrains/script/resolve-version.ts --spec <next rc|next stable|version>`,
+  )
   process.exit(0)
 }
 

@@ -32,6 +32,7 @@ export function ConfigSidebar() {
   const href = (path: string) => `${path === "/" ? base() : `${base()}${path}`}${loc.search}`
   const current = (path: string) => path === active() || (path !== "/" && active().startsWith(`${path}/`))
   const group = (item: ConfigNode): item is ConfigGroup => "items" in item
+  const navigation = createMemo(() => configNav.filter((item) => !project() || !group(item) || !item.globalOnly))
 
   return (
     <aside class="config-sidebar" aria-label="Configuration sections">
@@ -42,7 +43,7 @@ export function ConfigSidebar() {
         </span>
       </div>
       <nav class="config-options">
-        <For each={configNav}>
+        <For each={navigation()}>
           {(item) => {
             if (!group(item)) {
               return (

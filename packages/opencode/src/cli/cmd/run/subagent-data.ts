@@ -1,4 +1,5 @@
-import type { Event, Message, Part, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
+import type { Message, Part, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
+import type { Event } from "./event"
 import * as Locale from "@/util/locale"
 import {
   bootstrapSessionData,
@@ -420,9 +421,26 @@ function ensureBlockerTab(
   title: string | undefined,
   kind: "permission" | "question",
 ) {
-  if (data.tabs.has(sessionID)) {
+  const current = data.tabs.get(sessionID)
+  if (current) {
     ensureDetail(data, sessionID)
-    return false
+    if (current.status !== "running") {
+      return false
+    }
+
+    const next = {
+      ...current,
+      description: kind === "permission" ? "Pending permission" : "Pending question",
+      status: "running" as const,
+      title: current.title ?? title,
+      lastUpdatedAt: Date.now(),
+    }
+    if (sameSubagentTab(current, next)) {
+      return false
+    }
+
+    data.tabs.set(sessionID, next)
+    return true
   }
 
   data.tabs.set(sessionID, {

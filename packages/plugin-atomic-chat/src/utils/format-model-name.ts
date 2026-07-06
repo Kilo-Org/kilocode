@@ -1,7 +1,7 @@
-import type { AtomicChatModel } from '../types'
+import type { AtomicChatModel } from "../types"
 
 export function extractModelOwner(modelId: string): string | undefined {
-  const parts = modelId.split('/')
+  const parts = modelId.split("/")
   if (parts.length > 1) {
     return parts[0]
   }
@@ -10,9 +10,9 @@ export function extractModelOwner(modelId: string): string | undefined {
 
 export function formatModelName(model: AtomicChatModel): string {
   const { id } = model
-  const parts = id.split('/')
+  const parts = id.split("/")
   const modelPart = parts.length > 1 ? parts[1] : parts[0]
-  const acronyms = new Set(['gpt', 'oss', 'api', 'gguf', 'ggml', 'nomic', 'vl', 'it', 'mlx'])
+  const acronyms = new Set(["gpt", "oss", "api", "gguf", "ggml", "nomic", "vl", "it", "mlx"])
 
   const tokens = modelPart
     .split(/[-_]/)
@@ -36,7 +36,7 @@ export function formatModelName(model: AtomicChatModel): string {
       }
       return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase()
     })
-    .join(' ')
+    .join(" ")
 
   return tokens
 }

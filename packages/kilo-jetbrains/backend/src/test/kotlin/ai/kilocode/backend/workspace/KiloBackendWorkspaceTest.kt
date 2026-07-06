@@ -2,22 +2,31 @@ package ai.kilocode.backend.workspace
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.KiloBackendSessionManager
+import ai.kilocode.backend.app.SseEvent
+import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.workspace.KiloBackendWorkspace
 import ai.kilocode.backend.workspace.KiloWorkspaceState
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -31,22 +40,44 @@ class KiloBackendWorkspaceTest {
     private val mock = MockCliServer()
     private val log = TestLog()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val apps = mutableListOf<KiloBackendAppService>()
 
     @AfterTest
     fun tearDown() {
-        scope.cancel()
-        mock.close()
+        runBlocking {
+            apps.forEach { it.dispose() }
+            apps.clear()
+            scope.cancel()
+            mock.close()
+            withTimeout(10_000) { scope.coroutineContext[Job]?.join() }
+        }
     }
 
     private fun setup(): KiloBackendAppService =
-        KiloBackendAppService.create(scope, FakeCliServer(mock), log)
+        KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
+
+    private suspend fun connect(app: KiloBackendAppService) {
+        app.connect()
+        val state = assertNotNull(
+            withTimeoutOrNull(35_000) {
+                app.appState.first {
+                    it is KiloAppState.Ready || it is KiloAppState.Error || it is KiloAppState.MigrationRequired
+                }
+            },
+            "App startup timed out in ${app.appState.value}; logs=${log.messages}",
+        )
+        assertIs<KiloAppState.Ready>(state, "App startup failed; logs=${log.messages}")
+    }
 
     private suspend fun ready(app: KiloBackendAppService): KiloBackendWorkspace {
-        app.connect()
-        withTimeout(10_000) {
-            app.appState.first { it is KiloAppState.Ready }
-        }
+        connect(app)
         return app.workspaces.get("/test/project")
+    }
+
+    private suspend fun loaded(ws: KiloBackendWorkspace) {
+        withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Ready }
+        }
     }
 
     // ------ Workspace manager lifecycle ------
@@ -81,22 +112,25 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `same directory returns same workspace instance`() = runBlocking {
         val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        connect(app)
 
         val ws1 = app.workspaces.get("/test")
         val ws2 = app.workspaces.get("/test")
+        // LLM note: get() starts background loading; settle it so teardown is not racing active HTTP calls in CI.
+        loaded(ws1)
         assertTrue(ws1 === ws2)
     }
 
     @Test
     fun `different directories return different workspaces`() = runBlocking {
         val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        connect(app)
 
         val ws1 = app.workspaces.get("/project-a")
         val ws2 = app.workspaces.get("/project-b")
+        // LLM note: get() starts background loading; settle both loads before the scope-cancelling teardown.
+        loaded(ws1)
+        loaded(ws2)
         assertTrue(ws1 !== ws2)
         assertEquals("/project-a", ws1.directory)
         assertEquals("/project-b", ws2.directory)
@@ -152,8 +186,7 @@ class KiloBackendWorkspaceTest {
     @Test
     fun `workspace reaches Ready after creation`() = runBlocking {
         val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        connect(app)
 
         // get() creates workspace and starts loading immediately
         val ws = app.workspaces.get("/test")
@@ -296,11 +329,14 @@ class KiloBackendWorkspaceTest {
 
     @Test
     fun `agents response filters hidden and subagent`() = runBlocking {
+        mock.providers = PROVIDERS_JSON
         mock.agents = """[
             {"name":"code","mode":"primary","permission":[],"options":{}},
             {"name":"helper","mode":"subagent","permission":[],"options":{}},
             {"name":"secret","mode":"primary","hidden":true,"permission":[],"options":{}}
         ]"""
+        mock.commands = COMMANDS_JSON
+        mock.skills = SKILLS_JSON
         val app = setup()
         val ws = ready(app)
 
@@ -361,6 +397,7 @@ class KiloBackendWorkspaceTest {
         ]"""
         val app = setup()
         val ws = ready(app)
+        loaded(ws)
 
         val result = ws.sessions()
         assertEquals(1, result.sessions.size)
@@ -372,6 +409,7 @@ class KiloBackendWorkspaceTest {
         mock.sessionCreate = """{"id":"ses_new","slug":"n","projectID":"p","directory":"/test/project","title":"New","version":"1","time":{"created":1,"updated":1}}"""
         val app = setup()
         val ws = ready(app)
+        loaded(ws)
 
         val session = ws.createSession()
         assertEquals("ses_new", session.id)
@@ -382,20 +420,28 @@ class KiloBackendWorkspaceTest {
 
     @Test
     fun `concurrent get for same directory returns same instance`() = runBlocking {
-        val app = setup()
-        app.connect()
-        withTimeout(10_000) { app.appState.first { it is KiloAppState.Ready } }
+        val port = mock.start()
+        val http = KiloBackendHttpClients.api(mock.password)
+        val api = DefaultApi(basePath = "http://127.0.0.1:$port", client = http)
+        val events = MutableSharedFlow<SseEvent>()
+        val sessions = KiloBackendSessionManager(scope, log)
+        val manager = KiloBackendWorkspaceManager(scope, sessions, log)
+        manager.start(api, http, port, events)
 
-        // Launch many concurrent get() calls for the same directory
-        val results = (1..10).map {
-            async(Dispatchers.Default) {
-                app.workspaces.get("/same/dir")
-            }
-        }.awaitAll()
+        try {
+            val results = (1..10).map {
+                async(Dispatchers.Default) {
+                    manager.get("/same/dir")
+                }
+            }.awaitAll()
 
-        // All must return the exact same instance
-        val first = results[0]
-        results.forEach { assertTrue(it === first) }
+            val first = results[0]
+            results.forEach { assertTrue(it === first) }
+            loaded(first)
+        } finally {
+            manager.stop()
+            KiloBackendHttpClients.shutdown(http)
+        }
     }
 
     @Test
@@ -440,7 +486,7 @@ class KiloBackendWorkspaceTest {
         mock.skills = SKILLS_JSON
 
         val app = setup()
-        ready(app)
+        val initial = ready(app)
 
         // Change providers response then fire disposed event
         mock.providers = """{
@@ -456,26 +502,16 @@ class KiloBackendWorkspaceTest {
             "connected": ["openai"]
         }"""
 
-        mock.awaitSseConnection()
-        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
-
-        // global.disposed triggers full app reload which restarts the
-        // workspace manager (stop + start), clearing all cached workspaces.
-        // Wait for app to reach Ready again after reload.
-        withTimeout(15_000) {
-            // App may briefly leave Ready during reload
-            while (true) {
-                val state = app.appState.value
-                if (state is KiloAppState.Ready) {
-                    delay(300)
-                    if (app.appState.value is KiloAppState.Ready) break
-                }
-                delay(100)
-            }
+        assertTrue(mock.awaitSseConnection())
+        val reload = async(start = CoroutineStart.UNDISPATCHED) {
+            app.appState.drop(1).first { it is KiloAppState.Ready }
         }
+        mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        withTimeout(15_000) { reload.await() }
 
         // Get a fresh workspace — old one was stopped during reload
         val ws = app.workspaces.get("/test/project")
+        assertTrue(ws !== initial)
         withTimeout(15_000) {
             ws.state.first { it is KiloWorkspaceState.Ready }
         }

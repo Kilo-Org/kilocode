@@ -6,9 +6,11 @@ import { Database } from "@/storage/db"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { InstanceRef } from "@/effect/instance-ref"
 import { EOL } from "os"
-import { Filesystem } from "@/util/filesystem"
+import path from "path"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+import type { InstanceContext } from "@/project/instance-context"
 
 const log = Log.create({ service: "import" }) // kilocode_change
 
@@ -131,11 +133,13 @@ export const ImportCommand = effectCmd({
   handler: Effect.fn("Cli.import")(function* (args) {
     const ctx = yield* InstanceRef
     if (!ctx) return yield* Effect.die("InstanceRef not provided")
-    return yield* runImport(args.file, ctx.project.id)
+    return yield* runImport(args.file, ctx)
   }),
 })
 
-const runImport = Effect.fn("Cli.import.body")(function* (file: string, projectID: string) {
+const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: InstanceContext) {
+  const fs = yield* AppFileSystem.Service
+
   let exportData: ExportData | undefined
 
   const isUrl = file.startsWith("http://") || file.startsWith("https://")
@@ -178,9 +182,9 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, projectI
     exportData = data
     // kilocode_change end
   } else {
-    exportData = yield* Effect.promise(() =>
-      Filesystem.readJson<NonNullable<typeof exportData>>(file).catch(() => undefined),
-    )
+    exportData = (yield* fs.readJson(file).pipe(Effect.orElseSucceed(() => undefined))) as
+      | NonNullable<typeof exportData>
+      | undefined
     if (!exportData) {
       process.stdout.write(`File not found: ${file}`)
       process.stdout.write(EOL)
@@ -196,14 +200,19 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, projectI
 
   const info = Schema.decodeUnknownSync(Session.Info)({
     ...exportData.info,
-    projectID,
+    projectID: ctx.project.id,
+    directory: ctx.directory,
+    path: path.relative(path.resolve(ctx.worktree), ctx.directory).replaceAll("\\", "/"),
   }) as Session.Info
   const row = Session.toRow(info)
   Database.use((db) =>
     db
       .insert(SessionTable)
       .values(row)
-      .onConflictDoUpdate({ target: SessionTable.id, set: { project_id: row.project_id } })
+      .onConflictDoUpdate({
+        target: SessionTable.id,
+        set: { project_id: row.project_id, directory: row.directory, path: row.path },
+      })
       .run(),
   )
 

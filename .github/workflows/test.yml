@@ -21,51 +21,116 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # kilocode_change start
+  changes:
+    name: detect general unit test changes
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      settings: ${{ steps.matrix.outputs.settings }}
+    steps:
+      - name: Checkout repository
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/checkout@v6
+
+      - name: Detect general unit test changes
+        if: github.event_name != 'workflow_dispatch'
+        id: filter
+        uses: Kilo-Org/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # v3
+        with:
+          predicate-quantifier: every
+          filters: |
+            general:
+              - '**'
+              - '!.changeset/**'
+              - '!packages/kilo-jetbrains/**'
+              - '!packages/kilo-vscode/**'
+              - '!packages/kilo-docs/**'
+              - '!packages/extensions/zed/**'
+              - '!specs/**'
+              - '!perf/**'
+
+      - name: Configure unit matrix
+        id: matrix
+        env:
+          GENERAL: ${{ github.event_name != 'pull_request' || steps.filter.outputs.general == 'true' }}
+        run: |
+          if [ "$GENERAL" = "true" ]; then
+            echo 'settings=[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404","run":true},{"name":"macos","host":"macos-15","run":true},{"name":"windows","host":"blacksmith-4vcpu-windows-2025","run":true}]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'settings=[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404","run":false}]' >> "$GITHUB_OUTPUT"
+
   unit:
     name: unit (${{ matrix.settings.name }})
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
-        settings:
-          - name: linux
-            host: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
-          - name: windows
-            host: blacksmith-4vcpu-windows-2025 # kilocode_change
+        settings: ${{ fromJSON(needs.changes.outputs.settings) }}
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 45 # kilocode_change
     defaults:
       run:
         shell: bash
     steps:
+      - name: Skip unchanged general unit tests
+        if: ${{ !matrix.settings.run }}
+        run: echo "Only isolated product, documentation, or metadata files changed; general unit tests are unchanged."
+
       - name: Checkout repository
+        if: matrix.settings.run
         uses: actions/checkout@v6 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # kilocode_change start
       - name: Setup Node
+        if: matrix.settings.run
         id: setup-node
         continue-on-error: ${{ runner.os == 'Windows' }}
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
 
       - name: Retry Setup Node on Windows
-        if: runner.os == 'Windows' && steps.setup-node.outcome == 'failure'
+        if: matrix.settings.run && runner.os == 'Windows' && steps.setup-node.outcome == 'failure'
         uses: actions/setup-node@v6
         with:
           node-version: "24"
       # kilocode_change end
 
       - name: Setup Bun
+        if: matrix.settings.run
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
+      - name: Setup Zig for Linux sandbox helper
+        if: matrix.settings.run && runner.os == 'Linux'
+        run: |
+          curl --fail --location --retry 3 \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+
+      - name: Build Linux sandbox helper
+        if: matrix.settings.run && runner.os == 'Linux'
+        run: |
+          bun packages/opencode/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
+          echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
+      # kilocode_change end
       - name: Configure git identity
+        if: matrix.settings.run
         run: |
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
 
       - name: Cache Turbo
+        if: matrix.settings.run
         uses: actions/cache@v5 # kilocode_change
         with:
           path: node_modules/.cache/turbo
@@ -75,18 +140,22 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Run unit tests
+        if: matrix.settings.run
         run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
+          KILO_TEST_PROFILE: ${{ runner.os == 'macOS' && github.event_name == 'pull_request' && 'darwin' || '' }} # kilocode_change
 
+      # kilocode_change start
       - name: Run HttpApi exerciser gates
-        if: runner.os == 'Linux'
+        if: matrix.settings.run && runner.os == 'Linux'
         working-directory: packages/opencode
         run: bun run test:httpapi
+      # kilocode_change end
 
-      - name: Publish unit reports
-        if: always()
-        uses: mikepenz/action-junit-report@v6
+      - name: Publish unit reports # kilocode_change
+        if: always() && matrix.settings.run
+        uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
         with:
           report_paths: packages/*/.artifacts/unit/junit.xml
           check_name: "unit results (${{ matrix.settings.name }})"
@@ -95,7 +164,7 @@ jobs:
           fail_on_failure: false
 
       - name: Upload unit artifacts
-        if: always()
+        if: always() && matrix.settings.run
         uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: unit-${{ matrix.settings.name }}-${{ github.run_attempt }}
@@ -103,59 +172,19 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: packages/*/.artifacts/unit/junit.xml
+  # kilocode_change end
 
   # kilocode_change start
   jetbrains:
     name: jetbrains
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Bun
-        uses: ./.github/actions/setup-bun
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-
-      - name: Run JetBrains unit tests
-        run: bun script/test-ci.ts
-        working-directory: packages/kilo-jetbrains
-
-      - name: Publish JetBrains unit reports
-        if: always()
-        uses: mikepenz/action-junit-report@v6
-        with:
-          report_paths: packages/kilo-jetbrains/.artifacts/unit/junit.xml
-          check_name: "unit results (jetbrains)"
-          detailed_summary: true
-          include_time_in_summary: true
-          fail_on_failure: false
-
-      - name: Upload JetBrains unit artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: unit-jetbrains-${{ github.run_attempt }}
-          include-hidden-files: true
-          if-no-files-found: ignore
-          retention-days: 7
-          path: packages/kilo-jetbrains/.artifacts/unit/junit.xml
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: read
+    uses: ./.github/workflows/test-jetbrains.yml
   # kilocode_change end
 
+  # kilocode_change start
   required:
     name: test (linux)
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -170,3 +199,4 @@ jobs:
           echo "jetbrains=${{ needs.jetbrains.result }}"
           test "${{ needs.unit.result }}" = "success"
           test "${{ needs.jetbrains.result }}" = "success"
+  # kilocode_change end

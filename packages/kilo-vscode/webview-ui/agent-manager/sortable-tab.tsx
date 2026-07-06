@@ -52,6 +52,7 @@ export const SortableTab: Component<{
   onSelect: () => void
   onMiddleClick: (e: MouseEvent) => void
   onClose: () => void
+  onCloseOthers: () => void
   onFork?: () => void
 }> = (props) => {
   const { t } = useLanguage()
@@ -114,7 +115,7 @@ export const SortableTab: Component<{
           <ContextMenu.Content class="am-ctx-menu">
             <Show when={props.onFork}>
               <ContextMenu.Item onSelect={() => props.onFork?.()}>
-                <Icon name="branch" size="small" />
+                <Icon name="fork" size="small" />
                 <ContextMenu.ItemLabel>{t("agentManager.tab.forkSession")}</ContextMenu.ItemLabel>
               </ContextMenu.Item>
               <ContextMenu.Separator />
@@ -129,6 +130,10 @@ export const SortableTab: Component<{
                   ))}
                 </span>
               </Show>
+            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={props.onCloseOthers}>
+              <Icon name="close" size="small" />
+              <ContextMenu.ItemLabel>{t("agentManager.tab.closeOthers")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>

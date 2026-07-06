@@ -1,14 +1,19 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { APICallError } from "ai"
-import { Effect, Layer, ManagedRuntime } from "effect"
+import { Effect, Layer, ManagedRuntime, Scope } from "effect"
 import * as Stream from "effect/Stream"
+import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { Image } from "../../src/image/image"
 import { KiloCompactionPayloadRecovery } from "../../src/kilocode/session/compaction-payload-recovery"
+import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Snapshot } from "../../src/snapshot"
 import { LLM } from "../../src/session/llm"
@@ -16,9 +21,11 @@ import { MessageV2 } from "../../src/session/message-v2"
 import * as SessionProcessorModule from "../../src/session/processor"
 import { Session as SessionNs } from "../../src/session/session"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import { Reference } from "../../src/reference/reference"
 import { SessionCompaction } from "../../src/session/compaction"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
+import { SyncEvent } from "../../src/sync"
 import { ProviderTest } from "../fake/provider"
 import { tmpdir } from "../fixture/fixture"
 
@@ -109,12 +116,10 @@ async function assistant(sessionID: SessionID, parentID: MessageID, root: string
 }
 
 function llm() {
-  const queue: Array<
-    Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)
-  > = []
+  const queue: Array<Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)> = []
 
   return {
-    push(stream: Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)) {
+    push(stream: Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)) {
       queue.push(stream)
     },
     layer: Layer.succeed(
@@ -133,48 +138,30 @@ function llm() {
 function reply(
   text: string,
   capture?: (input: LLM.StreamInput) => void,
-): (input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown> {
+): (input: LLM.StreamInput) => Stream.Stream<Event, unknown> {
   return (input) => {
     capture?.(input)
+    const usage = { inputTokens: 1, outputTokens: 1, totalTokens: 2 }
     return Stream.make(
-      { type: "start" } as LLM.Event,
-      { type: "text-start", id: "txt-0" } as LLM.Event,
-      { type: "text-delta", id: "txt-0", delta: text, text } as LLM.Event,
-      { type: "text-end", id: "txt-0" } as LLM.Event,
-      {
-        type: "finish-step",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        response: { id: "res", modelId: "test-model", timestamp: new Date() },
-        providerMetadata: undefined,
-        usage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
-      {
-        type: "finish",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        totalUsage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
+      LLMEvent.textStart({ id: "txt-0" }),
+      LLMEvent.textDelta({ id: "txt-0", text }),
+      LLMEvent.textEnd({ id: "txt-0" }),
+      LLMEvent.stepFinish({ index: 0, reason: "stop", usage }),
+      LLMEvent.finish({ reason: "stop", usage }),
     )
   }
 }
 
+const scope = Layer.effect(Scope.Scope, Scope.make())
+
 function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) {
   const bus = Bus.layer
   const status = SessionStatus.layer.pipe(Layer.provide(bus))
-  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(Layer.provide(summary))
+  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
+    Layer.provide(summary),
+    Layer.provide(Image.defaultLayer),
+    Layer.provide(SyncEvent.defaultLayer),
+  )
   const model = ProviderTest.model({ providerID, id: modelID, limit: { context: 100_000, output: 32_000 } })
   return ManagedRuntime.make(
     Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
@@ -188,6 +175,12 @@ function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) 
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(config),
+      Layer.provide(RuntimeFlags.layer()),
+      Layer.provide(scope),
+      Layer.provide(Reference.defaultLayer),
+      Layer.provide(SyncEvent.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(Reference.defaultLayer),
     ),
   )
 }
@@ -283,20 +276,16 @@ describe("KiloCompactionPayloadRecovery", () => {
     const captures: string[] = []
     stub.push((input) => {
       captures.push(JSON.stringify(input.messages))
-      return Stream.make({ type: "start" } as LLM.Event).pipe(
-        Stream.concat(
-          Stream.fail(
-            new APICallError({
-              message: "Request Entity Too Large",
-              url: "https://api.kilo.ai/api/openrouter/responses",
-              requestBodyValues: {},
-              statusCode: 413,
-              responseHeaders: { "content-type": "text/plain" },
-              responseBody: "Request Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE",
-              isRetryable: false,
-            }),
-          ),
-        ),
+      return Stream.fail(
+        new APICallError({
+          message: "Request Entity Too Large",
+          url: "https://api.kilo.ai/api/openrouter/responses",
+          requestBodyValues: {},
+          statusCode: 413,
+          responseHeaders: { "content-type": "text/plain" },
+          responseBody: "Request Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE",
+          isRetryable: false,
+        }),
       )
     })
     stub.push(
@@ -305,7 +294,7 @@ describe("KiloCompactionPayloadRecovery", () => {
       }),
     )
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -355,12 +344,18 @@ describe("KiloCompactionPayloadRecovery", () => {
             time: { start: Date.now(), end: Date.now() },
           },
         })
-        await SessionCompaction.create({
-          sessionID: session.id,
-          agent: "build",
-          model: ref,
-          auto: false,
-        })
+        await Effect.runPromise(
+          KiloSessionCompaction.create({
+            session: {
+              updateMessage: (msg) => Effect.promise(() => svc.updateMessage(msg)),
+              updatePart: (part) => Effect.promise(() => svc.updatePart(part)),
+            },
+            sessionID: session.id,
+            agent: "build",
+            model: ref,
+            auto: false,
+          }),
+        )
 
         const rt = runtime(stub.layer, Config.defaultLayer)
         try {

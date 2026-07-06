@@ -44,6 +44,7 @@ internal class SessionScroll(
     internal val bar: JScrollBar get() = component.verticalScrollBar
     internal val jump: JBLabel
     val view: JComponent? get() = component.viewport.view as? JComponent
+    var onScroll: (() -> Unit)? = null
 
     private var style = SessionEditorStyle.current()
     private var tail = true
@@ -51,10 +52,10 @@ internal class SessionScroll(
     private var opening = false
     private var stable = -1
     private var seq = 0
+    private var pause = false
     private var user = false
     private var value = 0
     private var question = false
-    private var restoring = false
 
     init {
         jump = JBLabel(ScrollButtonIcon.create()).apply {
@@ -73,7 +74,6 @@ internal class SessionScroll(
                 user = true
             }
         })
-        component.viewport.addChangeListener { onViewport() }
         component.verticalScrollBar.addAdjustmentListener { onScroll() }
         root.addOverlay(jump) { _, child ->
             val size = child.preferredSize
@@ -98,11 +98,10 @@ internal class SessionScroll(
 
     @RequiresEdt
     fun atBottom(): Boolean {
-        val bar = component.verticalScrollBar
         return when {
             component.viewport.view !== messages -> tail
-            bar.maximum <= bar.visibleAmount -> true
-            else -> bar.value + bar.visibleAmount >= bar.maximum - JBUI.scale(THRESHOLD)
+            !tail -> false
+            else -> near()
         }
     }
 
@@ -114,6 +113,7 @@ internal class SessionScroll(
             return
         }
         user = false
+        pause = false
         tail = true
         stable = -1
         auto = true
@@ -140,10 +140,43 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
+    fun preserve(anchor: JComponent, action: () -> Unit) {
+        if (component.viewport.view !== messages) {
+            action()
+            return
+        }
+        val pos = SwingUtilities.convertPoint(anchor, Point(0, 0), messages)
+        val delta = pos.y - component.viewport.viewPosition.y
+        seq++
+        stable = -1
+        user = false
+        pause = false
+        auto = true
+        try {
+            action()
+            layoutScroll()
+            val next = SwingUtilities.convertPoint(anchor, Point(0, 0), messages)
+            val y = (next.y - delta).coerceIn(0, bottom())
+            component.viewport.viewPosition = Point(0, y)
+            bar.value = y
+        } finally {
+            auto = false
+        }
+        tail = atBottom()
+        syncValue()
+        updateJump()
+        if (tail) {
+            stable = -1
+            seq++
+        }
+    }
+
+    @RequiresEdt
     fun openBottom(done: () -> Unit) {
         opening = true
         stable = -1
         user = false
+        pause = false
         tail = true
         auto = true
         show(messages)
@@ -169,8 +202,8 @@ internal class SessionScroll(
     @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        component.background = SessionUiStyle.View.transcript()
-        component.viewport.background = SessionUiStyle.View.transcript()
+        component.background = SessionUiStyle.Transcript.bgColor()
+        component.viewport.background = SessionUiStyle.Transcript.bgColor()
         syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view
@@ -189,6 +222,7 @@ internal class SessionScroll(
         opening = false
         stable = -1
         user = false
+        pause = false
         tail = true
         auto = true
         show(messages)
@@ -272,48 +306,62 @@ internal class SessionScroll(
     }
 
     @RequiresEdt
-    private fun onViewport() {
-        if (restoring || auto || opening || user || tail || component.viewport.view !== messages) return
-        val y = value.coerceIn(0, bottom())
-        if (component.viewport.viewPosition.y == y && bar.value == y) return
-        restoring = true
-        try {
-            component.viewport.viewPosition = Point(0, y)
-            bar.value = y
-        } finally {
-            restoring = false
-        }
-        updateJump()
-    }
-
-    @RequiresEdt
     private fun bottom(): Int {
         val bar = component.verticalScrollBar
         return (bar.maximum - bar.visibleAmount).coerceAtLeast(bar.minimum)
     }
 
     @RequiresEdt
+    private fun near(): Boolean {
+        val bar = component.verticalScrollBar
+        return bar.maximum <= bar.visibleAmount || bar.value + bar.visibleAmount >= bar.maximum - JBUI.scale(THRESHOLD)
+    }
+
+    @RequiresEdt
     private fun onScroll() {
+        val prev = value
         val moved = bar.value != value
+        val down = bar.value > value
         syncValue()
+        if (moved) onScroll?.invoke()
         if (auto || opening) {
             updateJump()
             return
         }
         if (component.viewport.view === messages) {
-            val bottom = atBottom()
+            val bottom = near()
             if (bottom) {
-                tail = true
+                if (user && moved && !down) {
+                    tail = false
+                    pause = true
+                } else if (!tail && !user) {
+                    if (moved) {
+                        auto = true
+                        try {
+                            bar.value = prev.coerceIn(bar.minimum, bottom())
+                        } finally {
+                            auto = false
+                        }
+                        syncValue()
+                    }
+                    tail = false
+                } else if (pause && !user) {
+                    tail = false
+                } else {
+                    tail = true
+                    pause = false
+                }
                 user = false
                 updateJump()
                 return
             }
-            if (tail && (!user || !moved)) {
+            if (tail && !user && !moved) {
                 user = false
                 followBottom(true)
                 return
             }
             tail = false
+            pause = false
             user = false
             seq++
         }

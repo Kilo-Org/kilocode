@@ -1,9 +1,7 @@
 import { Schema } from "effect"
 import { JsonSchema, MessageRole, ProviderMetadata } from "./ids"
-import { CacheHint, GenerationOptions, HttpOptions, ModelRef, ProviderOptions } from "./options"
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
+import { CacheHint, CachePolicy, GenerationOptions, HttpOptions, ModelSchema, ProviderOptions } from "./options"
+import { isRecord } from "../utils/record"
 
 const systemPartSchema = Schema.Struct({
   type: Schema.Literal("text"),
@@ -41,20 +39,53 @@ export const MediaPart = Schema.Struct({
 }).annotate({ identifier: "LLM.Content.Media" })
 export type MediaPart = Schema.Schema.Type<typeof MediaPart>
 
-const isToolResultValue = (value: unknown): value is ToolResultValue =>
-  isRecord(value) && (value.type === "text" || value.type === "json" || value.type === "error") && "value" in value
+export const ToolResultMediaPart = Schema.Struct({
+  type: Schema.Literal("media"),
+  mediaType: Schema.String,
+  data: Schema.String,
+  filename: Schema.optional(Schema.String),
+  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
+}).annotate({ identifier: "LLM.ToolResult.Media" })
+export type ToolResultMediaPart = Schema.Schema.Type<typeof ToolResultMediaPart>
 
-export const ToolResultValue = Object.assign(
+export const ToolResultContentPart = Schema.Union([TextPart, ToolResultMediaPart])
+export type ToolResultContentPart = Schema.Schema.Type<typeof ToolResultContentPart>
+
+// kilocode_change start - avoid circular inference rejected by Kilo's newer tsgo
+const toolResultValueSchema = Schema.Union([
   Schema.Struct({
-    type: Schema.Literals(["json", "text", "error"]),
+    type: Schema.Literal("json"),
     value: Schema.Unknown,
-  }).annotate({ identifier: "LLM.ToolResult" }),
-  {
-    make: (value: unknown, type: ToolResultValue["type"] = "json"): ToolResultValue =>
-      isToolResultValue(value) ? value : { type, value },
+  }),
+  Schema.Struct({
+    type: Schema.Literal("text"),
+    value: Schema.Unknown,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("error"),
+    value: Schema.Unknown,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("content"),
+    value: Schema.Array(ToolResultContentPart),
+  }),
+]).annotate({ identifier: "LLM.ToolResult" })
+export type ToolResultValue = Schema.Schema.Type<typeof toolResultValueSchema>
+
+const isToolResultValue = (value: unknown): value is ToolResultValue =>
+  isRecord(value) &&
+  (value.type === "text" || value.type === "json" || value.type === "error" || value.type === "content") &&
+  "value" in value
+
+export const ToolResultValue = Object.assign(toolResultValueSchema, {
+  is: isToolResultValue,
+  make: (value: unknown, type: ToolResultValue["type"] = "json"): ToolResultValue => {
+    if (isToolResultValue(value)) return value
+    if (type === "content") return { type, value: Array.isArray(value) ? value : [] }
+    return { type, value }
   },
-)
-export type ToolResultValue = Schema.Schema.Type<typeof ToolResultValue>
+})
+// kilocode_change end
 
 export const ToolCallPart = Object.assign(
   Schema.Struct({
@@ -79,6 +110,7 @@ export const ToolResultPart = Object.assign(
     name: Schema.String,
     result: ToolResultValue,
     providerExecuted: Schema.optional(Schema.Boolean),
+    cache: Schema.optional(CacheHint),
     metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
     providerMetadata: Schema.optional(ProviderMetadata),
   }).annotate({ identifier: "LLM.Content.ToolResult" }),
@@ -94,6 +126,7 @@ export const ToolResultPart = Object.assign(
       name: input.name,
       result: ToolResultValue.make(input.result, input.resultType),
       providerExecuted: input.providerExecuted,
+      cache: input.cache,
       metadata: input.metadata,
       providerMetadata: input.providerMetadata,
     }),
@@ -151,6 +184,7 @@ export class ToolDefinition extends Schema.Class<ToolDefinition>("LLM.ToolDefini
   name: Schema.String,
   description: Schema.String,
   inputSchema: JsonSchema,
+  cache: Schema.optional(CacheHint),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
   native: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 }) {}
@@ -194,7 +228,7 @@ export type ResponseFormat = Schema.Schema.Type<typeof ResponseFormat>
 
 export class LLMRequest extends Schema.Class<LLMRequest>("LLM.Request")({
   id: Schema.optional(Schema.String),
-  model: ModelRef,
+  model: ModelSchema,
   system: Schema.Array(SystemPart),
   messages: Schema.Array(Message),
   tools: Schema.Array(ToolDefinition),
@@ -203,6 +237,7 @@ export class LLMRequest extends Schema.Class<LLMRequest>("LLM.Request")({
   providerOptions: Schema.optional(ProviderOptions),
   http: Schema.optional(HttpOptions),
   responseFormat: Schema.optional(ResponseFormat),
+  cache: Schema.optional(CachePolicy),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 }) {}
 
@@ -220,6 +255,7 @@ export namespace LLMRequest {
     providerOptions: request.providerOptions,
     http: request.http,
     responseFormat: request.responseFormat,
+    cache: request.cache,
     metadata: request.metadata,
   })
 

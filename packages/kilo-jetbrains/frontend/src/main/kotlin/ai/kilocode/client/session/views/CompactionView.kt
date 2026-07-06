@@ -37,10 +37,11 @@ class CompactionView(@Suppress("UNUSED_PARAMETER") compaction: Compaction) : Par
     init {
         layout = BorderLayout()
         isOpaque = false
+        border = JBUI.Borders.empty(UiStyle.Gap.md(), 0)
         applyStyle(SessionEditorStyle.current())
 
         val line = { JPanel().apply {
-            background = SessionUiStyle.View.line()
+            background = SessionUiStyle.View.Outline.color()
             isOpaque = true
             preferredSize = JBDimension(0, JBUI.scale(1))
         } }

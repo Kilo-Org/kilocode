@@ -1,6 +1,6 @@
 package ai.kilocode.client.settings
 
-import ai.kilocode.client.settings.profile.QrCode
+import ai.kilocode.client.settings.auth.QrCode
 import java.awt.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals

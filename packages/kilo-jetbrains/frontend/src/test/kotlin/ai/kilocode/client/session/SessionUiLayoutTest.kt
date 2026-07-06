@@ -10,6 +10,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
+import ai.kilocode.client.session.ui.SessionDropOverlay
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
@@ -44,16 +45,68 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(root.blocker.isVisible)
     }
 
-    fun `test bottom stack contains connection and prompt only`() {
+    fun `test prompt is docked and connection is overlaid`() {
         val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
-        assertSame(root.content, stack.parent)
-        assertSame(stack, connection.parent)
+        assertSame(root.content, prompt.parent)
+        assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
-        assertEquals(listOf(connection, prompt), stack.components.toList())
+        assertFalse(root.content.components.contains(connection))
+    }
+
+    fun `test drop overlay is attached under root overlay layer`() {
+        val root = find<SessionRootPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+
+        assertSame(root.overlay, drop.parent)
+        assertTrue(drop.isVisible)
+        assertFalse(drop.contains(1, 1))
+        assertFalse(root.blocker.components.contains(drop))
+    }
+
+    fun `test drop overlay is visual only and not native file drop target`() {
+        val drop = find<SessionDropOverlay>(ui)
+
+        assertNull(drop.dropTarget)
+    }
+
+    fun `test prompt file drag leave does not immediately hide drop overlay`() {
+        val prompt = find<PromptPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+        val card = dropCard(drop)
+
+        layout()
+        prompt.onFileDrag(true)
+        assertFalse(drop.contains(1, 1))
+        assertTrue(card.isVisible)
+
+        prompt.onFileDrag(false)
+        assertFalse(drop.contains(1, 1))
+        assertTrue(card.isVisible)
+
+        prompt.onFileDrag(true)
+        drop.setActive(false)
+    }
+
+    fun `test drop overlay covers full session after layout`() {
+        val root = find<SessionRootPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+
+        layout()
+
+        assertEquals(java.awt.Rectangle(0, 0, root.overlay.width, root.overlay.height), drop.bounds)
+    }
+
+    fun `test drop overlay is above account and scroll overlays`() {
+        val root = find<SessionRootPanel>(ui)
+        val drop = find<SessionDropOverlay>(ui)
+        val account = find<SessionAccountOverlay>(ui)
+        val jump = jumpButton()
+
+        assertTrue(root.overlay.getComponentZOrder(drop) < root.overlay.getComponentZOrder(account))
+        assertTrue(root.overlay.getComponentZOrder(drop) < root.overlay.getComponentZOrder(jump))
     }
 
     fun `test active views are children of message list panel`() {
@@ -86,19 +139,35 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
     }
 
-    fun `test connection panel uses stack width and sits above prompt`() {
+    fun `test connection panel overlays above full prompt width`() {
+        val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
         showConnection()
         layout()
 
         assertTrue(connection.isVisible)
-        assertEquals(0, connection.x)
-        assertEquals(stack.width, connection.width)
+        assertSame(root.overlay, connection.parent)
+        assertEquals(prompt.x, connection.x)
         assertEquals(prompt.width, connection.width)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+    }
+
+    fun `test expanded connection panel remains anchored above prompt`() {
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            "line 1\nline 2",
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
     }
 
     fun `test connection panel is unaffected by active question view`() {
@@ -116,7 +185,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -135,7 +204,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -465,4 +534,11 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertEquals(top, overlay.y)
         assertEquals(root.overlay.width - overlay.width - right, overlay.x)
     }
+
+    private fun dropCard(drop: SessionDropOverlay) = drop.components
+        .single()
+        .let { it as javax.swing.JComponent }
+        .components
+        .single()
+        .let { it as javax.swing.JComponent }
 }

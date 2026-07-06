@@ -4,13 +4,12 @@ import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { ConfigRow, SectionTitle } from "@kilocode/kilo-web-ui/console"
 import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
-import { CountTag, Tag } from "@kilocode/kilo-web-ui/tag"
 import { CustomSelect, type SelectOption } from "../../components/CustomSelect"
 import { SearchField } from "../../components/SearchField"
 import { useConfig } from "../../context/config"
 import { settings } from "../../shared/navigation"
 import { toolCapabilities, toolName } from "../../shared/utils"
-import { ConfigPage, SourceBadge } from "./ConfigPage"
+import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { ActionSelect, label as actionLabel, tone as actionTone } from "./PermissionsRoute"
 import { agentEditable, agentTitle, snippets, useAgentBuilder, type AgentEntry, type AgentItem } from "./state/agents"
 import type { PermissionAction } from "./state/permissions"
@@ -266,7 +265,10 @@ export function AgentBuilderRoute() {
                       onInput={(event) => state.setDesc(event.currentTarget.value)}
                     />
                   </FieldCard>
-                  <FieldCard label="Mode">
+                  <FieldCard
+                    label="Mode"
+                    description="Primary agents can run sessions directly; subagents are delegated to by other agents."
+                  >
                     <CustomSelect
                       label="Agent mode"
                       value={state.mode()}
@@ -324,6 +326,7 @@ export function AgentBuilderRoute() {
                 <div class="ui-form agent-builder-form">
                   <FieldCard
                     label="Model"
+                    description="Leave unset to inherit the default model, or choose one to pin this agent to a specific model."
                     actions={
                       <>
                         <Show when={!state.locked() && state.model()}>

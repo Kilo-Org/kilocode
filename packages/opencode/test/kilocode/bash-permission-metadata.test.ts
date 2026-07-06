@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { ShellTool } from "../../src/tool/shell"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { tmpdir } from "../fixture/fixture"
 import { Shell } from "../../src/shell/shell"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -13,6 +13,7 @@ import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Plugin } from "../../src/plugin"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
@@ -22,6 +23,7 @@ const runtime = ManagedRuntime.make(
     Truncate.defaultLayer,
     Agent.defaultLayer,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
   ),
 )
 
@@ -29,7 +31,7 @@ Shell.acceptable.reset()
 
 const baseCtx = {
   sessionID: SessionID.make("ses_test"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),
@@ -49,7 +51,7 @@ const capture = (requests: Array<Omit<Permission.Request, "id" | "sessionID" | "
 describe("bash permission metadata.command", () => {
   test("permission prompt shows raw command without tool name prefix", async () => {
     await using tmp = await tmpdir()
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const bash = await runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))

@@ -3,15 +3,55 @@
 //   legacy single-byte, CJK).
 // - Plain UTF-8 files do not gain a spurious BOM.
 // - Moved files keep the original encoding at the new path.
-// These round-trip through Patch.applyPatch directly so we exercise the
-// encoding + BOM integration in patch/index.ts without the tool stack.
+// These round-trip through the apply_patch tool so the Kilo encoding layer is
+// exercised with the upstream patch parser.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { tmpdir } from "os"
 import iconv from "iconv-lite"
-import { Patch } from "../../src/patch"
+import { Effect, Layer } from "effect"
+import { Agent } from "../../src/agent/agent"
+import { Bus } from "../../src/bus"
+import { Format } from "../../src/format"
+import { LSP } from "../../src/lsp/lsp"
+import { MessageID, SessionID } from "../../src/session/schema"
+import { ApplyPatchTool } from "../../src/tool/apply_patch"
+import { Tool } from "../../src/tool/tool"
+import { Truncate } from "../../src/tool/truncate"
+import { provideInstance } from "../fixture/fixture"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+
+const layer = Layer.mergeAll(
+  Agent.defaultLayer,
+  AppFileSystem.defaultLayer,
+  Bus.layer,
+  Format.defaultLayer,
+  LSP.defaultLayer,
+  Truncate.defaultLayer,
+)
+
+const apply = (dir: string, patchText: string) =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const info = yield* ApplyPatchTool
+      const tool = yield* Tool.init(info)
+      yield* tool.execute(
+        { patchText },
+        {
+          sessionID: SessionID.make("ses_patch"),
+          messageID: MessageID.make("msg_patch"),
+          callID: "call_patch",
+          agent: "code",
+          abort: AbortSignal.any([]),
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        },
+      )
+    }).pipe(provideInstance(dir), Effect.scoped, Effect.provide(layer)),
+  )
 
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf])
 const UTF16_LE_BOM = Buffer.from([0xff, 0xfe])
@@ -39,7 +79,7 @@ describe("Patch encoding preservation", () => {
 +line 2 updated
 *** End Patch`
 
-    await Patch.applyPatch(patch)
+    await apply(dir, patch)
 
     const bytes = await fs.readFile(file)
     expect(bytes.subarray(0, 3).equals(UTF8_BOM)).toBe(true)
@@ -58,7 +98,7 @@ describe("Patch encoding preservation", () => {
 +line 2 updated
 *** End Patch`
 
-    await Patch.applyPatch(patch)
+    await apply(dir, patch)
 
     const bytes = await fs.readFile(file)
     expect(bytes[0]).not.toBe(0xef)
@@ -77,7 +117,7 @@ describe("Patch encoding preservation", () => {
 +line 2 updated
 *** End Patch`
 
-    await Patch.applyPatch(patch)
+    await apply(dir, patch)
 
     const bytes = await fs.readFile(file)
     expect(bytes.subarray(0, 2).equals(UTF16_LE_BOM)).toBe(true)
@@ -96,7 +136,7 @@ describe("Patch encoding preservation", () => {
 +águila
 *** End Patch`
 
-    await Patch.applyPatch(patch)
+    await apply(dir, patch)
 
     const bytes = await fs.readFile(file)
     expect(iconv.decode(bytes, "iso-8859-1")).toBe("café\náguila\n")
@@ -122,7 +162,7 @@ describe("Patch encoding preservation", () => {
  line3
 *** End Patch`
 
-    await Patch.applyPatch(patch)
+    await apply(dir, patch)
 
     const bytes = await fs.readFile(file)
     expect(iconv.decode(bytes, "Shift_JIS")).toBe("line1\nさようなら、世界！\nline3\n")
@@ -143,7 +183,7 @@ describe("Patch encoding preservation", () => {
 +updated
 *** End Patch`
 
-    await Patch.applyPatch(patch)
+    await apply(dir, patch)
 
     const moved = await fs.readFile(to)
     expect(moved.subarray(0, 3).equals(UTF8_BOM)).toBe(true)
@@ -163,10 +203,10 @@ describe("Patch encoding preservation", () => {
 +hello world
 *** End Patch`
 
-    await Patch.applyPatch(patch)
+    await apply(dir, patch)
 
     const bytes = await fs.readFile(file)
     expect(bytes[0]).not.toBe(0xef)
-    expect(bytes.toString("utf-8")).toBe("hello world")
+    expect(bytes.toString("utf-8")).toBe("hello world\n")
   })
 })

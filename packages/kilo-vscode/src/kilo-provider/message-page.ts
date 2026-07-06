@@ -26,8 +26,7 @@ export async function fetchMessagePage(
     signal?: AbortSignal
   },
 ) {
-  // limit: 0 is the server contract for "return every message" — used by
-  // the sub-agent viewer, which has no "load earlier" UI.
+  // limit: 0 is the server contract for "return every message".
   const full = input.limit === 0
   const read = async (before?: string) => {
     const result = await retry(() =>

@@ -172,6 +172,40 @@ class RetryStore extends Store {
 }
 
 describe("DirectoryScanner", () => {
+  test("uses seeded baseline hashes to index only worktree changes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const same = join(root, "same.ts")
+    const changed = join(root, "changed.ts")
+    const added = join(root, "added.ts")
+    const deleted = join(root, "deleted.ts")
+    const sameContent = "export const same = 1\n"
+    const changedContent = "export const changed = 2\n"
+
+    await Bun.write(same, sameContent)
+    await Bun.write(changed, changedContent)
+    await Bun.write(added, "export const added = 1\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.seedHashes({
+      [same]: createHash("sha256").update(sameContent).digest("hex"),
+      [changed]: "baseline-changed",
+      [deleted]: "baseline-deleted",
+    })
+
+    const store = new Store()
+    const scan = new DirectoryScanner(new Emb(), store, new Parser(), cache, ignore(), 1, 1)
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats.processed).toBe(2)
+    expect(store.points).toBe(2)
+    expect(cache.getHash(same)).toBe(createHash("sha256").update(sameContent).digest("hex"))
+    expect(cache.getHash(changed)).toBe(createHash("sha256").update(changedContent).digest("hex"))
+    expect(cache.getHash(added)).toBeDefined()
+    expect(cache.getHash(deleted)).toBeUndefined()
+  })
+
   test("keeps file metadata when threshold flush is triggered by that file", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))

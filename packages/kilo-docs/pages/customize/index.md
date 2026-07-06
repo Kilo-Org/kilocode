@@ -17,6 +17,7 @@ Configure how Kilo Code behaves and responds:
 - [**Custom Rules**](/docs/customize/custom-rules) - Define rules that apply to specific file types or situations
 - [**Custom Instructions**](/docs/customize/custom-instructions) - Add project-specific guidelines and context
 - [**Custom Subagents**](/docs/customize/custom-subagents) - Create specialized subagents with custom prompts, models, and permissions
+- [**Agent Permissions**](/docs/customize/agent-permissions) - Configure rule precedence, shell command patterns, file paths, and subagent delegation
 - [**agents.md**](/docs/customize/agents-md) - Configure agent behavior at the project level
 - [**Workflows**](/docs/customize/workflows) - Automate multi-step processes
 - [**Skills**](/docs/customize/skills) - Extend Kilo's capabilities with reusable skill definitions
@@ -29,7 +30,6 @@ Help Kilo understand your codebase better:
 - [**Codebase Indexing**](/docs/customize/context/codebase-indexing) - Build a semantic index of your code for better context awareness
 - [**Context Condensing**](/docs/customize/context/context-condensing) - Summarize older context to stay within limits
 - [**AGENTS.md**](/docs/customize/agents-md) - Store project context, decisions, and important information
-- [**Large Projects**](/docs/customize/context/large-projects) - Best practices for working with monorepos and large codebases
 
 ## Getting Started
 

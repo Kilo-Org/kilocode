@@ -17,12 +17,13 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import { describePatterns, describeRule, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
 import { PermissionCommand } from "./PermissionCommand"
 import { PermissionDiff } from "./PermissionDiff"
 import { permissionDiffs } from "./permission-diff-utils"
 import { normalizeUrls } from "../../../../../opencode/src/kilocode/util/url"
 import type { PermissionRequest } from "../../types/messages"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 let rulesExpandedPreference = false
 
@@ -47,6 +48,8 @@ export const PermissionDock: Component<{
     // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
     return normalizeUrls(cmd)
   }
+  const text = (rule: string) => (command() ? label(rule) : describeRule(props.request.toolName, rule, language.t))
+  const external = () => props.request.toolName === "external_directory"
   const cmdDescription = () => {
     const val = props.request.args?.description
     return typeof val === "string" && val.length > 0 ? val : undefined
@@ -132,8 +135,7 @@ export const PermissionDock: Component<{
       "button, input, select, textarea, a[href], [contenteditable='true'], [role='button'], [role='menu'], [role='menuitem'], [role='listbox'], [role='option'], [role='combobox'], [role='textbox']",
     )
 
-  const plain = (e: KeyboardEvent) =>
-    e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && !e.isComposing
+  const plain = (e: KeyboardEvent) => isEnterKeyCommitNotIme(e) && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey
 
   const skip = (e: KeyboardEvent, target: Element | undefined) => {
     const local = !!target?.closest("[data-component='permission-shortcuts']")
@@ -248,12 +250,13 @@ export const PermissionDock: Component<{
                               </button>
                             </Tooltip>
                           </div>
-                          <code data-slot="permission-rule">
-                            {command()
-                              ? label(rule)
-                              : rule === "*"
-                                ? resolveLabel(props.request.toolName, language.t)
-                                : `${resolveLabel(props.request.toolName, language.t)} ${rule}`}
+                          <code data-slot="permission-rule" data-wrap={external() ? "" : undefined} title={text(rule)}>
+                            <Show when={external() && rule !== "*"} fallback={text(rule)}>
+                              <span data-slot="permission-rule-label">
+                                {language.t("ui.permission.toolLabel.externalDirectory")}{" "}
+                              </span>
+                              <span data-slot="permission-rule-path">{rule}</span>
+                            </Show>
                           </code>
                         </div>
                       )}
@@ -272,7 +275,16 @@ export const PermissionDock: Component<{
           const desc = description()
           if (!desc)
             return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
-          if (desc.kind === "single") return <div data-slot="permission-hint">{desc.text}</div>
+          if (desc.kind === "single")
+            return (
+              <div
+                data-slot="permission-hint"
+                data-wrap={external() ? "" : undefined}
+                title={external() ? desc.text : undefined}
+              >
+                {desc.text}
+              </div>
+            )
           return (
             <div data-slot="permission-patterns">
               <span data-slot="permission-patterns-title">{desc.title}</span>

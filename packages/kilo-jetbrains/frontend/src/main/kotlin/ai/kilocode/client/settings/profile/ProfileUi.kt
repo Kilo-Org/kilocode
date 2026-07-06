@@ -3,6 +3,8 @@ package ai.kilocode.client.settings.profile
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -25,6 +27,8 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 internal const val DASHBOARD_URL = "https://app.kilo.ai/profile"
+internal const val TOP_UP_URL = "https://app.kilo.ai/credits"
+internal const val PASS_URL = "https://kilo.ai/pricing/kilo-pass"
 
 internal val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -42,6 +46,7 @@ internal class ProfileUi(
     private val cs: CoroutineScope,
     private val app: KiloAppService = service(),
     private val browse: (String) -> Unit = { BrowserUtil.browse(it) },
+    private val timers: UiTimerSource = UiTimers,
 ) : JPanel(BorderLayout()) {
 
     private val cards = JPanel(CardLayout())
@@ -52,11 +57,20 @@ internal class ProfileUi(
         retry = { app.retryAsync() },
         cancel = ::cancel,
         browse = browse,
+        timers = timers,
     )
     private val account = LoggedInProfileUi(
         dashboard = {
             telemetry("Dashboard Opened", mapOf("surface" to "settings"))
             browse(DASHBOARD_URL)
+        },
+        topUp = {
+            telemetry("Credits Opened", mapOf("surface" to "settings"))
+            browse(TOP_UP_URL)
+        },
+        pass = {
+            telemetry("Kilo Pass Opened", mapOf("surface" to "settings"))
+            browse(PASS_URL)
         },
         logout = ::logout,
         organization = ::organization,
@@ -191,7 +205,7 @@ internal class ProfileUi(
                 val next = app.startLogin()
                 withContext(edt) {
                     if (id != attempt) return@withContext
-                    login = LoginState.Pending(next, System.currentTimeMillis())
+                    login = LoginState.Pending(next, timers.now())
                     sync()
                     browse(next.verificationUrl)
                 }

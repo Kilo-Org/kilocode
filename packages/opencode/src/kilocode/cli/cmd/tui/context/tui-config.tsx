@@ -8,6 +8,10 @@
 import { createContext, useContext, type ParentProps } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
+import { TuiKeybind } from "@/cli/cmd/tui/config/keybind"
+import { KeymapLeaderTimeoutDefault } from "@/cli/cmd/tui/config/tui-schema"
+import { createBindingLookup } from "@opentui/keymap/extras"
+import { KiloTitleIcon } from "@/kilocode/cli/cmd/tui/title-icon"
 
 export type SetTuiConfig = (next: TuiConfig.Info) => void
 
@@ -19,7 +23,24 @@ export namespace KiloTuiConfig {
   export function makeStore(initial: TuiConfig.Resolved) {
     const [store, setStore] = createStore<TuiConfig.Resolved>(initial)
     const set: SetTuiConfig = (next) => {
-      const config = TuiConfig.resolve(next)
+      const keybinds = TuiKeybind.parse(next.keybinds ?? {})
+      const config: TuiConfig.Resolved = {
+        ...next,
+        title_icon: next.title_icon ?? KiloTitleIcon.Default,
+        attention: {
+          enabled: next.attention?.enabled ?? false,
+          notifications: next.attention?.notifications ?? true,
+          sound: next.attention?.sound ?? true,
+          volume: next.attention?.volume ?? 0.4,
+          sound_pack: next.attention?.sound_pack ?? "kilo.default",
+          sounds: next.attention?.sounds ?? {},
+        },
+        keybinds: createBindingLookup(TuiKeybind.toBindingConfig(keybinds), {
+          commandMap: TuiKeybind.CommandMap,
+          bindingDefaults: TuiKeybind.bindingDefaults(),
+        }),
+        leader_timeout: next.leader_timeout ?? KeymapLeaderTimeoutDefault,
+      }
       if (JSON.stringify(config.keybinds.bindings) === JSON.stringify(store.keybinds.bindings)) {
         config.keybinds = store.keybinds
       }

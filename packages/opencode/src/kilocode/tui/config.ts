@@ -1,6 +1,6 @@
 import path from "path"
 import z from "zod"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Schema } from "effect"
 import { applyEdits, modify } from "jsonc-parser"
 import { mergeDeep } from "remeda"
 import { Global } from "@opencode-ai/core/global"
@@ -8,6 +8,7 @@ import { ConfigParse } from "@/config/parse"
 import { CurrentWorkingDirectory } from "@/cli/cmd/tui/config/cwd"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { TuiInfo } from "@/cli/cmd/tui/config/tui-schema"
+import { KilocodeKeybinds } from "./keybinds"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { GlobalBus } from "@/bus/global"
@@ -18,11 +19,11 @@ export namespace KilocodeTuiConfig {
   export type Scope = z.infer<typeof Scope>
 
   export const Patch = TuiInfo
-  export type Patch = z.output<typeof Patch>
+  export type Patch = Schema.Schema.Type<typeof Patch>
   export type Editable = Omit<Patch, "keybinds"> & { keybinds?: Record<string, string> }
 
   const files = ["tui.jsonc", "tui.json"] as const
-  const dirs = [".kilo", ".kilocode", ".opencode"] as const
+  const dirs = [".kilo", ".kilocode"] as const
 
   export async function get(input: { directory: string }) {
     const cfg = await Effect.runPromise(
@@ -108,20 +109,20 @@ export namespace KilocodeTuiConfig {
   }
 
   function merge(base: Patch, patch: Patch): Patch {
-    return writable(mergeDeep(base, patch))
+    return writable(mergeDeep(base, patch), false)
   }
 
-  function writable(config: TuiConfig.Info): Editable {
+  function writable(config: Patch | TuiConfig.Info, defaults = true): Editable {
     const result = { ...config } as Record<string, unknown>
     delete result.plugin_origins
-    const keybinds = Object.fromEntries(
-      Object.entries(config.keybinds ?? {}).flatMap(([key, value]) => {
-        if (typeof value === "string") return [[key, value]]
-        if (value === false) return [[key, "none"]]
-        return []
-      }),
-    )
-    if (config.keybinds) result.keybinds = keybinds
+    const keybinds: Record<string, string> = defaults
+      ? Object.fromEntries(KilocodeKeybinds.list().map((item) => [item.id, item.default]))
+      : {}
+    for (const [key, value] of Object.entries(config.keybinds ?? {})) {
+      if (typeof value === "string") keybinds[key] = value
+      if (value === false) keybinds[key] = "none"
+    }
+    if (defaults || config.keybinds) result.keybinds = keybinds
     else delete result.keybinds
 
     for (const key of Object.keys(result)) {

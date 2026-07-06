@@ -1,11 +1,14 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { expect } from "bun:test"
+import { tool } from "ai"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
+import z from "zod"
 import type { Agent } from "../../src/agent/agent"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "@/config/config"
+import { Image } from "@/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { Provider } from "@/provider/provider"
@@ -24,6 +27,9 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { raw, reply, TestLLMServer } from "../lib/llm-server"
+import { SyncEvent } from "@/sync"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { EventV2Bridge } from "@/event-v2-bridge"
 
 void Log.init({ print: false })
 
@@ -103,6 +109,17 @@ function defer<T>() {
   return { promise, resolve }
 }
 
+const waitFor = <A>(check: Effect.Effect<A | undefined>, message: string) =>
+  Effect.gen(function* () {
+    const stop = Date.now() + 500
+    while (Date.now() < stop) {
+      const value = yield* check
+      if (value !== undefined) return value
+      yield* Effect.sleep("10 millis")
+    }
+    return yield* Effect.fail(new Error(message))
+  })
+
 const user = Effect.fn("TestSession.user")(function* (sessionID: SessionID, text: string) {
   const session = yield* Session.Service
   const msg = yield* session.updateMessage({
@@ -166,13 +183,33 @@ const deps = Layer.mergeAll(
   LLM.defaultLayer,
   Provider.defaultLayer,
   status,
+  SyncEvent.defaultLayer,
+  EventV2Bridge.defaultLayer,
 ).pipe(Layer.provideMerge(infra))
 const env = Layer.mergeAll(
   TestLLMServer.layer,
-  SessionProcessor.layer.pipe(Layer.provide(summary), Layer.provideMerge(deps)),
+  SessionProcessor.layer.pipe(
+    Layer.provide(summary),
+    Layer.provide(Image.defaultLayer),
+    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
+    Layer.provideMerge(deps),
+  ),
 )
 
 const it = testEffect(env)
+// kilocode_change start - exercise non-default output token ceilings in the processor
+const capped = testEffect(
+  Layer.mergeAll(
+    TestLLMServer.layer,
+    SessionProcessor.layer.pipe(
+      Layer.provide(summary),
+      Layer.provide(Image.defaultLayer),
+      Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true, outputTokenMax: 8_000 })),
+      Layer.provideMerge(deps),
+    ),
+  ),
+)
+// kilocode_change end
 
 const boot = Effect.fn("test.boot")(function* () {
   const processors = yield* SessionProcessor.Service
@@ -228,7 +265,7 @@ it.live("session.processor effect tests capture llm input cleanly", () =>
         expect(calls).toBe(1)
         expect(parts.some((part) => part.type === "text" && part.text === "hello")).toBe(true)
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -293,15 +330,10 @@ it.live("session.processor effect tests preserve text start time", () =>
           })
           .pipe(Effect.forkChild)
 
-        yield* Effect.promise(async () => {
-          const stop = Date.now() + 500
-          while (Date.now() < stop) {
-            const text = MessageV2.parts(msg.id).find((part): part is MessageV2.TextPart => part.type === "text")
-            if (text?.time?.start) return
-            await Bun.sleep(10)
-          }
-          throw new Error("timed out waiting for text part")
-        })
+        yield* waitFor(
+          Effect.sync(() => MessageV2.parts(msg.id).find((part): part is MessageV2.TextPart => part.type === "text")),
+          "timed out waiting for text part",
+        )
         yield* Effect.sleep("20 millis")
         gate.resolve()
 
@@ -315,7 +347,7 @@ it.live("session.processor effect tests preserve text start time", () =>
         if (!text?.time?.start || !text.time.end) return
         expect(text.time.start).toBeLessThan(text.time.end)
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -361,9 +393,51 @@ it.live("session.processor effect tests stop after token overflow requests compa
         expect(parts.some((part) => part.type === "text" && part.text === "after")).toBe(true)
         expect(parts.some((part) => part.type === "step-finish")).toBe(true)
       }),
+    { config: (url) => providerCfg(url) },
+  ),
+)
+
+// kilocode_change start - configured output ceiling must reach finish-step overflow accounting
+capped.live("session.processor respects the configured output token ceiling", () =>
+  provideTmpdirServer(
+    ({ dir, llm }) =>
+      Effect.gen(function* () {
+        const { processors, session, provider } = yield* boot()
+        yield* llm.text("within capacity", { usage: { input: 91_000, output: 0 } })
+
+        const chat = yield* session.create({})
+        const parent = yield* user(chat.id, "stay within the configured capacity")
+        const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
+        const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
+        const handle = yield* processors.create({
+          assistantMessage: msg,
+          sessionID: chat.id,
+          model: mdl,
+        })
+
+        const value = yield* handle.process({
+          user: {
+            id: parent.id,
+            sessionID: chat.id,
+            role: "user",
+            time: parent.time,
+            agent: parent.agent,
+            model: { providerID: ref.providerID, modelID: ref.modelID },
+          } satisfies MessageV2.User,
+          sessionID: chat.id,
+          model: mdl,
+          agent: agent(),
+          system: [],
+          messages: [{ role: "user", content: "stay within the configured capacity" }],
+          tools: {},
+        })
+
+        expect(value).toBe("continue")
+      }),
     { git: true, config: (url) => providerCfg(url) },
   ),
 )
+// kilocode_change end
 
 it.live("session.processor effect tests capture reasoning from http mock", () =>
   provideTmpdirServer(
@@ -409,7 +483,7 @@ it.live("session.processor effect tests capture reasoning from http mock", () =>
         expect(reasoning?.text).toBe("think")
         expect(text?.text).toBe("done")
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -462,7 +536,7 @@ it.live("session.processor effect tests reset reasoning state across retries", (
         expect(reasoning.some((part) => part.text === "onetwo")).toBe(false)
         offAsk() // kilocode_change — cleanup subscriber
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -505,7 +579,7 @@ it.live("session.processor effect tests do not retry unknown json errors", () =>
         expect(yield* llm.calls).toBe(1)
         expect(handle.message.error?.name).toBe("APIError")
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -552,7 +626,7 @@ it.live("session.processor effect tests retry recognized structured json errors"
         expect(parts.some((part) => part.type === "text" && part.text === "after")).toBe(true)
         expect(handle.message.error).toBeUndefined()
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -604,7 +678,7 @@ it.live("session.processor effect tests publish retry status updates", () =>
         expect(yield* llm.calls).toBe(2)
         expect(states).toStrictEqual([1])
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -647,7 +721,72 @@ it.live("session.processor effect tests compact on structured context overflow",
         expect(yield* llm.calls).toBe(1)
         expect(handle.message.error).toBeUndefined()
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
+  ),
+)
+
+it.live("session.processor effect tests complete AI SDK tool calls when native flag is off", () =>
+  provideTmpdirServer(
+    ({ dir, llm }) =>
+      Effect.gen(function* () {
+        const { processors, session, provider } = yield* boot()
+
+        yield* llm.tool("lookup", { query: "weather" })
+
+        const chat = yield* session.create({})
+        const parent = yield* user(chat.id, "tool")
+        const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
+        const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
+        const handle = yield* processors.create({
+          assistantMessage: msg,
+          sessionID: chat.id,
+          model: mdl,
+        })
+
+        const value = yield* handle.process({
+          user: {
+            id: parent.id,
+            sessionID: chat.id,
+            role: "user",
+            time: parent.time,
+            agent: parent.agent,
+            model: { providerID: ref.providerID, modelID: ref.modelID },
+          } satisfies MessageV2.User,
+          sessionID: chat.id,
+          model: mdl,
+          agent: agent(),
+          system: [],
+          messages: [{ role: "user", content: "tool" }],
+          tools: {
+            lookup: tool({
+              description: "Look up information",
+              inputSchema: z.object({ query: z.string() }),
+              execute: async (input) => ({
+                title: "Weather lookup",
+                output: `result:${input.query}`,
+                metadata: { source: "test" },
+              }),
+            }),
+          },
+        })
+
+        const parts = MessageV2.parts(msg.id)
+        const call = parts.find((part): part is MessageV2.ToolPart => part.type === "tool")
+
+        expect(value).toBe("continue")
+        expect(yield* llm.calls).toBe(1)
+        expect(call?.callID).toBe("call_1")
+        expect(call?.tool).toBe("lookup")
+        expect(call?.state.status).toBe("completed")
+        if (call?.state.status !== "completed") return
+        expect(call.state.input).toEqual({ query: "weather" })
+        expect(call.state.output).toBe("result:weather")
+        expect(call.state.title).toBe("Weather lookup")
+        expect(call.state.metadata).toEqual({ source: "test" })
+        expect(call.state.time.start).toBeDefined()
+        expect(call.state.time.end).toBeDefined()
+      }),
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -689,14 +828,10 @@ it.live("session.processor effect tests mark pending tools as aborted on cleanup
           .pipe(Effect.forkChild)
 
         yield* llm.wait(1)
-        yield* Effect.promise(async () => {
-          const end = Date.now() + 500
-          while (Date.now() < end) {
-            const parts = await MessageV2.parts(msg.id)
-            if (parts.some((part) => part.type === "tool")) return
-            await Bun.sleep(10)
-          }
-        })
+        yield* waitFor(
+          Effect.sync(() => MessageV2.parts(msg.id).find((part): part is MessageV2.ToolPart => part.type === "tool")),
+          "timed out waiting for tool part",
+        )
         yield* Fiber.interrupt(run)
 
         const exit = yield* Fiber.await(run)
@@ -715,7 +850,7 @@ it.live("session.processor effect tests mark pending tools as aborted on cleanup
           expect(call.state.time.end).toBeDefined()
         }
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -771,7 +906,7 @@ it.live("session.processor effect tests record aborted errors and idle state", (
 
         const exit = yield* Fiber.await(run)
         yield* Effect.promise(() => seen.promise)
-        const stored = MessageV2.get({ sessionID: chat.id, messageID: msg.id })
+        const stored = yield* MessageV2.get({ sessionID: chat.id, messageID: msg.id })
         const state = yield* sts.get(chat.id)
         off()
 
@@ -787,7 +922,7 @@ it.live("session.processor effect tests record aborted errors and idle state", (
         expect(state).toMatchObject({ type: "idle" })
         expect(errs).toContain("MessageAbortedError")
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )
 
@@ -833,7 +968,7 @@ it.live("session.processor effect tests mark interruptions aborted without manua
         yield* Fiber.interrupt(run)
 
         const exit = yield* Fiber.await(run)
-        const stored = MessageV2.get({ sessionID: chat.id, messageID: msg.id })
+        const stored = yield* MessageV2.get({ sessionID: chat.id, messageID: msg.id })
         const state = yield* sts.get(chat.id)
 
         expect(Exit.isFailure(exit)).toBe(true)
@@ -844,6 +979,6 @@ it.live("session.processor effect tests mark interruptions aborted without manua
         }
         expect(state).toMatchObject({ type: "idle" })
       }),
-    { git: true, config: (url) => providerCfg(url) },
+    { config: (url) => providerCfg(url) },
   ),
 )

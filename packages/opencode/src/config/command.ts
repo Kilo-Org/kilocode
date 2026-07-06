@@ -1,16 +1,15 @@
 export * as ConfigCommand from "./command"
 
+import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
-import { Schema } from "effect"
-import { NamedError } from "@opencode-ai/core/util/error"
+import { Cause, Exit, Schema, SchemaIssue } from "effect"
 import { Glob } from "@opencode-ai/core/util/glob"
-import { Bus } from "@/bus"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { withStatics } from "@opencode-ai/core/schema"
 import { configEntryNameFromPath } from "./entry-name"
 import * as ConfigMarkdown from "./markdown"
 import { ConfigModelID } from "./model-id"
 // kilocode_change start
+import { Bus } from "@/bus"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
 // kilocode_change end
@@ -23,9 +22,11 @@ export const Info = Schema.Struct({
   agent: Schema.optional(Schema.String),
   model: Schema.optional(ConfigModelID),
   subtask: Schema.optional(Schema.Boolean),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export type Info = Schema.Schema.Type<typeof Info>
+
+const decodeInfo = Schema.decodeUnknownExit(Info)
 
 // kilocode_change start
 export async function load(dir: string, warnings?: Warning[]) {
@@ -44,43 +45,44 @@ export async function load(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-      } catch (e) {
-        log.warn("could not publish session error", { message, err: e })
+        const { capture } = await import("@/kilocode/instance")
+        const ctx = capture()
+        if (ctx) {
+          const { Session } = await import("@/session/session")
+          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        }
+      } catch (error) {
+        log.warn("could not publish session error", { message, err: error })
       }
+      // kilocode_change end
       log.error("failed to load command", { command: item, err })
       return undefined
-      // kilocode_change end
     })
     if (!md) continue
 
-    // kilocode_change start
-    const patterns = [
-      "/.kilo/command/",
-      "/.kilo/commands/",
-      "/.kilocode/command/",
-      "/.kilocode/commands/",
-      "/.opencode/command/",
-      "/.opencode/commands/",
-      "/command/",
-      "/commands/",
-    ]
-    // kilocode_change end
-    const name = configEntryNameFromPath(item, patterns)
+    const name = configEntryNameFromPath(path.relative(dir, item), ["command/", "commands/"])
 
     const config = {
       name,
       ...md.data,
       template: md.content.trim(),
     }
-    const parsed = Info.zod.safeParse(config)
-    if (parsed.success) {
-      result[config.name] = parsed.data
+    const parsed = decodeInfo(config, { errors: "all", propertyOrder: "original" })
+    if (Exit.isSuccess(parsed)) {
+      result[config.name] = parsed.value
       continue
     }
     // kilocode_change start
-    await KilocodeConfig.handleInvalid("command", item, parsed.error.issues, parsed.error, warnings)
+    const error = Cause.squash(parsed.cause)
+    const issues = Schema.isSchemaError(error)
+      ? SchemaIssue.makeFormatterStandardSchemaV1()(error.issue).issues.map((issue) => ({
+          ...issue,
+          message: issue.message,
+          path: issue.path?.map(String) ?? [],
+        }))
+      : [{ message: String(error), path: [] }]
+    const cause = error instanceof Error ? error : new Error(String(error))
+    await KilocodeConfig.handleInvalid("command", item, issues, cause, warnings)
     // kilocode_change end
   }
   return result

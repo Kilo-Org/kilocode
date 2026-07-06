@@ -1,3 +1,4 @@
+import { reconcile } from "solid-js/store"
 import type { Message, Part, ToolPart } from "../types/messages"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
@@ -83,6 +84,10 @@ export function buildSessionToolParts(
     }
   }
   return tools
+}
+
+export function reconcileSessionToolParts(tools: ToolPart[]) {
+  return reconcile(tools, { key: "id" })
 }
 
 export function upsertSessionToolPart(

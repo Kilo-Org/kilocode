@@ -1,9 +1,22 @@
 import { expect } from "bun:test"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Layer } from "effect"
+import { FetchHttpClient } from "effect/unstable/http"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Agent } from "../../src/agent/agent"
+import { Bus } from "../../src/bus"
+import { Config } from "../../src/config/config"
+import { Env } from "../../src/env"
+import { Git } from "../../src/git" // kilocode_change
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { MCP } from "../../src/mcp" // kilocode_change
 import { Plugin } from "../../src/plugin"
+import { AccountTest } from "../fake/account"
+import { AuthTest } from "../fake/auth"
+import { NpmTest } from "../fake/npm"
+import { ProviderTest } from "../fake/provider"
+import { SkillTest } from "../fake/skill"
 import { testEffect } from "../lib/effect"
 import { PLUGIN_AGENT } from "../fixture/agent-plugin.constants"
 
@@ -12,14 +25,39 @@ import { PLUGIN_AGENT } from "../fixture/agent-plugin.constants"
 // to verify plugin → config hook → Agent.list.
 const pluginUrl = pathToFileURL(path.join(import.meta.dir, "..", "fixture", "agent-plugin.ts")).href
 
-const it = testEffect(Layer.mergeAll(Agent.defaultLayer, Plugin.defaultLayer))
+const provider = ProviderTest.fake()
+const configLayer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer), // kilocode_change
+  Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
+  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(Env.defaultLayer),
+  Layer.provide(AuthTest.empty),
+  Layer.provide(AccountTest.empty),
+  Layer.provide(NpmTest.noop),
+  Layer.provide(FetchHttpClient.layer),
+)
+const pluginLayer = Plugin.layer.pipe(
+  Layer.provide(Bus.layer),
+  Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
+)
+const dependencies = Layer.mergeAll(configLayer, pluginLayer).pipe(Layer.provideMerge(configLayer))
+const agentLayer = Agent.layer.pipe(
+  Layer.provide(AuthTest.empty),
+  Layer.provide(SkillTest.empty),
+  Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
+  Layer.provide(provider.layer),
+  Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
+)
+const layer = Layer.mergeAll(agentLayer, dependencies).pipe(Layer.provideMerge(dependencies))
+
+const it = testEffect(layer)
 
 it.instance(
   "plugin-registered agents appear in Agent.list",
   () =>
     Effect.gen(function* () {
       yield* Plugin.Service.use((p) => p.init())
-      const agents = yield* Agent.Service.use((svc) => svc.list())
+      const agents = yield* Agent.use.list()
       const added = agents.find((agent) => agent.name === PLUGIN_AGENT.name)
       expect(added?.description).toBe(PLUGIN_AGENT.description)
       expect(added?.mode).toBe(PLUGIN_AGENT.mode)

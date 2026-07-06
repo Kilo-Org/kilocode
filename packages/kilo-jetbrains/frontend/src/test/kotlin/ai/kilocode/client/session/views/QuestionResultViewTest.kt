@@ -6,12 +6,15 @@ import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.question.QuestionResultView
+import ai.kilocode.client.session.views.tool.ToolView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
+import javax.swing.Icon
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.border.Border
 
@@ -130,7 +133,25 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         assertFalse("Should be collapsed after second toggle", view.isExpanded())
     }
 
-    fun `test hover border differs from header fill`() {
+    fun `test toggle uses right and down chevron icons`() {
+        val view = QuestionResultView(completedTool(
+            input = mapOf("questions" to """[{"question":"Q1"}]"""),
+            metadata = mapOf("answers" to """[["A1"]]"""),
+        ))
+
+        assertTrue(icons(view).contains(SessionViewIcons.chevronCollapsed))
+        assertTrue(icons(view).contains(SessionViewIcons.chevronRight))
+        val closed = SessionViewIcons.chevronCollapsed
+
+        view.toggle()
+
+        assertTrue(icons(view).contains(SessionViewIcons.chevronExpanded))
+        assertTrue(icons(view).contains(SessionViewIcons.chevronDown))
+        assertEquals(closed.iconWidth, SessionViewIcons.chevronExpanded.iconWidth)
+        assertEquals(closed.iconHeight, SessionViewIcons.chevronExpanded.iconHeight)
+    }
+
+    fun `test hover only changes header background`() {
         val view = QuestionResultView(completedTool(
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
@@ -138,12 +159,18 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         val root = view.node(0)
         val header = root.node(0)
 
-        enter(header)
+        assertEquals(0, paint(root.border).alpha)
+        view.toggle()
+        val body = root.node(1)
 
-        assertEquals(SessionUiStyle.View.hoverLine().rgb, paint(root.border).rgb)
-        assertNotSameColor(SessionUiStyle.View.headerHover(), paint(root.border))
-        exit(header)
-        assertEquals(SessionUiStyle.View.line().rgb, paint(root.border).rgb)
+        view.setHovered(true)
+
+        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor().rgb, header.background.rgb)
+        assertLine(root.border)
+        assertEquals(SessionUiStyle.View.Outline.brightColor().rgb, paint(body.border).rgb)
+        view.setHovered(false)
+        assertEquals(SessionUiStyle.View.Surface.headerBgColor().rgb, header.background.rgb)
+        assertLine(root.border)
     }
 
     // ------ view factory routing ------
@@ -153,7 +180,7 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
         )
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is QuestionResultView)
     }
@@ -163,14 +190,14 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = emptyMap(),
             metadata = emptyMap(),
         )
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is ToolView)
     }
 
     fun `test view factory falls back to tool view for running question`() {
         val tool = runningTool("question")
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is ToolView)
     }
@@ -290,7 +317,28 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         return Color(image.getRGB(0, 0), true)
     }
 
-    private fun assertNotSameColor(left: Color, right: Color) {
-        assertFalse("Expected distinct colors but both were ${left.rgb}", left.rgb == right.rgb)
+    private fun assertLine(border: Border) {
+        val image = BufferedImage(5, 5, BufferedImage.TYPE_INT_ARGB)
+        val panel = JPanel()
+        val graphics = image.createGraphics()
+        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
+        graphics.dispose()
+        val rgb = SessionUiStyle.View.Outline.brightColor().rgb
+        assertEquals(rgb, Color(image.getRGB(2, 0), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
+        assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
     }
+
+    private fun icons(component: Component): List<Icon> {
+        val found = mutableListOf<Icon>()
+        collect(component, found)
+        return found
+    }
+
+    private fun collect(component: Component, found: MutableList<Icon>) {
+        if (component is JLabel) component.icon?.let(found::add)
+        if (component is Container) component.components.forEach { collect(it, found) }
+    }
+
 }

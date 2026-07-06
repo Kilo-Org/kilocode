@@ -408,7 +408,7 @@
 }
 
 .kilo-console .confirm-dialog {
-  width: min(48rem, 100%);
+  width: min(28rem, 100%);
   overflow: hidden;
   border: 1px solid var(--border-weak-base);
   border-radius: var(--radius-lg);
@@ -435,16 +435,21 @@
   height: 3rem;
 }
 
-.kilo-console .confirm-body h2 {
+.kilo-console .confirm-body h2,
+.kilo-console .prompt-copy h2 {
   margin: 0;
   color: var(--text-strong);
-  font-size: clamp(1.15rem, 2vw, 1.35rem);
-  line-height: 1.35;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
 }
 
-.kilo-console .confirm-body p {
+.kilo-console .confirm-body p,
+.kilo-console .prompt-copy p {
   margin: 0.5rem 0 0;
   color: var(--text-weak);
+  font-size: 0.75rem;
+  line-height: 1.625;
 }
 
 .kilo-console .confirm-actions {
@@ -454,4 +459,26 @@
   border-top: 1px solid var(--border-weak-base);
   background: color-mix(in srgb, var(--background-base) 65%, transparent);
   padding: 1rem;
+}
+
+.kilo-console .prompt-form {
+  margin: 0;
+}
+
+.kilo-console .prompt-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.kilo-console .prompt-field {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--text-strong);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.kilo-console .prompt-field input {
+  height: 2rem;
 }

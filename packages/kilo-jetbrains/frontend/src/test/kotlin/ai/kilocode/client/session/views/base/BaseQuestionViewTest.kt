@@ -164,7 +164,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
 
             val north = region(panel, BorderLayout.NORTH) as Container
             val filler = north.components.last()
-            assertEquals(UiStyle.Gap.md(), filler.preferredSize.height)
+            assertEquals(UiStyle.Gap.lg(), filler.preferredSize.height)
             assertEquals(0, filler.preferredSize.width)
         }
     }
@@ -242,8 +242,8 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
                 BaseQuestionView.Action("a", "A", primary = false) {},
                 BaseQuestionView.Action("b", "B", primary = true) {},
             ))
-            assertEquals(SessionUiStyle.View.surface(), actionButton(panel, "A").background)
-            assertEquals(SessionUiStyle.View.surface(), actionButton(panel, "B").background)
+            assertEquals(SessionUiStyle.View.Surface.bgColor(), actionButton(panel, "A").background)
+            assertEquals(SessionUiStyle.View.Surface.bgColor(), actionButton(panel, "B").background)
         }
     }
 
@@ -293,6 +293,18 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val footer = region(panel, BorderLayout.SOUTH) as JPanel
             val ins = footer.border.getBorderInsets(footer)
             assertEquals(UiStyle.Gap.lg(), ins.top)
+        }
+    }
+
+    fun `test card top padding uses next spacing step`() {
+        edt {
+            val panel = BaseQuestionView()
+            val ins = panel.border.getBorderInsets(panel)
+
+            assertEquals(UiStyle.Gap.pad(), ins.top)
+            assertEquals(UiStyle.Gap.pad(), ins.left)
+            assertEquals(UiStyle.Gap.lg(), ins.bottom)
+            assertEquals(UiStyle.Gap.pad(), ins.right)
         }
     }
 

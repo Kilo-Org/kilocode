@@ -1,9 +1,11 @@
 import { describe, test, expect } from "bun:test"
 import {
   describePatterns,
+  describeRule,
   resolveLabel,
   TOOL_LABEL_KEYS,
 } from "../../webview-ui/src/components/chat/permission-dock-utils"
+import { resolveTemplate } from "../../webview-ui/src/context/language-utils"
 
 // Mock t() that returns the English label for known keys, or the key itself
 const labels: Record<string, string> = {
@@ -24,8 +26,10 @@ const labels: Record<string, string> = {
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
   "ui.permission.toolLabel.lsp": "LSP",
+  "ui.permission.doomLoop.prompt": "Potential loop detected for the {{tool}} tool. Continue running?",
+  "ui.permission.doomLoop.rule": "Continue {{tool}} calls",
 }
-const t = (key: string) => labels[key] ?? key
+const t = (key: string, params?: Record<string, string>) => resolveTemplate(labels[key] ?? key, params)
 
 describe("describePatterns", () => {
   test("returns null when patterns is empty", () => {
@@ -95,6 +99,14 @@ describe("describePatterns", () => {
     expect(result).toEqual({ kind: "single", text: "Web Search query" })
   })
 
+  test("doom loop describes the repeated tool with its human-readable label", () => {
+    const result = describePatterns("doom_loop", ["read"], t)
+    expect(result).toEqual({
+      kind: "single",
+      text: "Potential loop detected for the Read tool. Continue running?",
+    })
+  })
+
   test("TOOL_LABEL_KEYS maps all expected tools", () => {
     const expected: Record<string, string> = {
       read: "ui.permission.toolLabel.read",
@@ -159,6 +171,18 @@ describe("describePatterns", () => {
   test("lsp tool uses LSP label", () => {
     const result = describePatterns("lsp", ["diagnostics"], t)
     expect(result).toEqual({ kind: "single", text: "LSP diagnostics" })
+  })
+})
+
+describe("describeRule", () => {
+  test("describes doom loop rules as the action being allowed or denied", () => {
+    expect(describeRule("doom_loop", "read", t)).toBe("Continue Read calls")
+  })
+
+  test("preserves existing permission rule labels", () => {
+    expect(describeRule("read", "*", t)).toBe("Read")
+    expect(describeRule("external_directory", "*", t)).toBe("Read External Directory")
+    expect(describeRule("read", "src/app.ts", t)).toBe("Read src/app.ts")
   })
 })
 

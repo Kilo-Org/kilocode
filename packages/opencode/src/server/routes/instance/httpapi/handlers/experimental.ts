@@ -5,9 +5,11 @@ import { EffectBridge } from "@/effect/bridge" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { MCP } from "@/mcp"
 import { Project } from "@/project/project"
+import { Provider } from "@/provider/provider" // kilocode_change
+import { ModelID } from "@/provider/schema" // kilocode_change
 import { Session } from "@/session/session"
+import { ToolJsonSchema } from "@/tool/json-schema"
 import { ToolRegistry } from "@/tool/registry"
-import * as EffectZod from "@opencode-ai/core/effect-zod"
 import { Filesystem } from "@/util/filesystem" // kilocode_change
 import { Review } from "@/kilocode/review/review" // kilocode_change
 import { WorktreeDiff } from "@/kilocode/review/worktree-diff" // kilocode_change
@@ -23,9 +25,16 @@ import {
   ConsoleSwitchPayload,
   SessionListQuery,
   ToolListQuery,
+  WorktreeApiError,
   WorktreeDiffFileQuery,
   WorktreeDiffQuery,
 } from "../groups/experimental"
+
+function mapWorktreeError<A, R>(self: Effect.Effect<A, Worktree.Error, R>) {
+  return self.pipe(
+    Effect.mapError((error) => new WorktreeApiError({ name: error._tag, data: { message: error.message } })),
+  )
+}
 
 export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "experimental", (handlers) =>
   Effect.gen(function* () {
@@ -34,6 +43,7 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     const config = yield* Config.Service
     const mcp = yield* MCP.Service
     const project = yield* Project.Service
+    const provider = yield* Provider.Service // kilocode_change
     const registry = yield* ToolRegistry.Service
     const worktreeSvc = yield* Worktree.Service
 
@@ -89,15 +99,20 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     })
 
     const tool = Effect.fn("ExperimentalHttpApi.tool")(function* (ctx: { query: typeof ToolListQuery.Type }) {
+      // kilocode_change start
+      const found = yield* provider.getModel(ctx.query.provider, ctx.query.model).pipe(Effect.option)
+      const model = Option.getOrUndefined(found)
+      // kilocode_change end
       const list = yield* registry.tools({
         providerID: ctx.query.provider,
-        modelID: ctx.query.model,
-        agent: yield* agents.get(yield* agents.defaultAgent()),
+        modelID: model ? ModelID.make(model.api.id) : ctx.query.model, // kilocode_change
+        family: model?.family, // kilocode_change
+        agent: yield* agents.defaultInfo(),
       })
       return list.map((item) => ({
         id: item.id,
         description: item.description,
-        parameters: EffectZod.toJsonSchema(item.parameters),
+        parameters: ToolJsonSchema.fromTool(item),
       }))
     })
 
@@ -105,22 +120,32 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       return yield* registry.ids()
     })
 
+    // kilocode_change start - discover Agent Manager and external git worktrees
     const worktree = Effect.fn("ExperimentalHttpApi.worktree")(function* () {
       const ctx = yield* InstanceState.context
-      return yield* project.sandboxes(ctx.project.id)
+      const managed = new Set((yield* project.sandboxes(ctx.project.id)).map((dir) => Filesystem.resolve(dir)))
+      return yield* mapWorktreeError(worktreeSvc.list()).pipe(
+        Effect.map((items) =>
+          items.map((item) => ({
+            directory: item.directory,
+            managed: managed.has(Filesystem.resolve(item.directory)),
+          })),
+        ),
+      )
     })
+    // kilocode_change end
 
     const worktreeCreate = Effect.fn("ExperimentalHttpApi.worktreeCreate")(function* (ctx: {
-      payload: Worktree.CreateInput | undefined
+      payload: typeof Worktree.CreateInput.Type | void
     }) {
-      return yield* worktreeSvc.create(ctx.payload)
+      return yield* mapWorktreeError(worktreeSvc.create(ctx.payload ?? undefined))
     })
 
     const worktreeRemove = Effect.fn("ExperimentalHttpApi.worktreeRemove")(function* (input: {
       payload: Worktree.RemoveInput
     }) {
       const ctx = yield* InstanceState.context
-      yield* worktreeSvc.remove(input.payload)
+      yield* mapWorktreeError(worktreeSvc.remove(input.payload))
       yield* project.removeSandbox(ctx.project.id, input.payload.directory)
       return true
     })
@@ -128,7 +153,7 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     const worktreeReset = Effect.fn("ExperimentalHttpApi.worktreeReset")(function* (ctx: {
       payload: Worktree.ResetInput
     }) {
-      yield* worktreeSvc.reset(ctx.payload)
+      yield* mapWorktreeError(worktreeSvc.reset(ctx.payload))
       return true
     })
 
@@ -185,14 +210,18 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       // kilocode_change start
       const state = yield* InstanceState.context
       const projectID = ctx.query.worktrees && !ctx.query.projectID ? state.project.id : ctx.query.projectID
-      const directories = ctx.query.worktrees ? yield* WorktreeFamily.list() : undefined
-      const sorted = directories ? [...directories].sort((a, b) => b.length - a.length) : undefined
+      const roots = ctx.query.worktrees ? yield* WorktreeFamily.list() : undefined
+      const directory = ctx.query.current ? ctx.query.directory : undefined
+      const sorted = roots ? [...roots].sort((a, b) => b.length - a.length) : undefined
+      const current = sorted && directory ? sorted.find((dir) => Filesystem.contains(dir, directory)) : undefined
       // kilocode_change end
+      if (roots && directory && !current) return HttpServerResponse.jsonUnsafe([]) // kilocode_change
       const sessions = Array.from(
         Session.listGlobal({
           projectID, // kilocode_change
           directory: ctx.query.worktrees ? undefined : ctx.query.directory, // kilocode_change
-          directories, // kilocode_change
+          directories: roots, // kilocode_change
+          currentDirectory: directory, // kilocode_change
           roots: ctx.query.roots,
           start: ctx.query.start,
           cursor: ctx.query.cursor,

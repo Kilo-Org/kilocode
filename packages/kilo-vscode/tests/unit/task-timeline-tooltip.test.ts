@@ -19,12 +19,20 @@ describe("TaskTimeline delegated tooltip contract", () => {
     expect(src).not.toMatch(/<Tooltip\b/)
   })
 
-  it("keeps bar labels and renders one delegated portal tooltip", () => {
-    expect(src).toMatch(/data-tip=\{bar\(\)\.tip\}/)
-    expect(src).toMatch(/role="img"/)
-    expect(src).toMatch(/aria-label=\{bar\(\)\.tip\}/)
-    expect(src).toMatch(/if \(!bar \|\| !ref\?\.contains\(bar\)\) return hideTip\(\)/)
+  it("delegates SVG hit testing to one portal tooltip", () => {
+    expect(src).toMatch(/hit\(layout\(\)\.items, e\.clientX - rect\.left \+ ref\.scrollLeft\)/)
+    expect(src).toMatch(/const bar = bars\(\)\[idx\]/)
+    expect(src).toMatch(/text: bar\.tip/)
     expect(src).toMatch(/<Portal>/)
     expect(src).toMatch(/class="task-timeline-tooltip"/)
+  })
+
+  it("keeps accessibility and bar overlays bounded", () => {
+    expect(src).toMatch(/data-timeline-count=\{bars\(\)\.length\}/)
+    expect(src).toMatch(/tabIndex=\{0\}/)
+    expect(src).toMatch(/aria-label=\{aria\(\)\}/)
+    expect(src).toMatch(/<For each=\{layout\(\)\.paths\}>/)
+    expect(src).not.toMatch(/<Index\b/)
+    expect(src).not.toMatch(/data-tip=/)
   })
 })

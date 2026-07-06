@@ -30,13 +30,6 @@ function ConfigContent(props: { children?: JSX.Element }) {
             </Card>
           )}
         </Show>
-        <Show when={ctx.saving()}>
-          {(item) => (
-            <Card class="banner" variant="info">
-              {item()}...
-            </Card>
-          )}
-        </Show>
         <Show when={ctx.data.error}>
           <Card class="banner" variant="error">
             <strong>Dashboard request failed</strong>

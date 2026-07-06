@@ -2,6 +2,7 @@ import path from "path"
 import { existsSync } from "fs"
 import { spawn } from "child_process"
 import { createServer } from "net"
+import { randomUUID } from "node:crypto"
 import { open, readFile, rm, mkdir } from "fs/promises"
 import z from "zod"
 import { Global } from "@opencode-ai/core/global"
@@ -9,23 +10,42 @@ import { Flock } from "@opencode-ai/core/util/flock"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
+import { serverUrls } from "@/kilocode/cli/server-urls"
 
 export namespace Daemon {
   const username = "kilo"
   const lock = "kilocode-daemon"
   export const PortRange = { start: 4097, end: 4116 } as const
 
+  export const Network = z.object({
+    hostname: z.string(),
+    port: z.number().int().nonnegative(),
+    mdns: z.boolean(),
+    mdnsDomain: z.string(),
+    cors: z.array(z.string()).transform((items) => [...new Set(items)].sort()),
+  })
+  export type Network = z.infer<typeof Network>
+  export type NetworkOption = keyof Network
+
   export const State = z.object({
     pid: z.number().int().positive(),
     hostname: z.string(),
     port: z.number().int().positive(),
     url: z.string(),
+    urls: z
+      .object({
+        local: z.string(),
+        network: z.string().optional(),
+        bind: z.string(),
+      })
+      .optional(),
     username: z.string(),
     password: z.string(),
     token: z.string(),
     version: z.string(),
     startedAt: z.string(),
     log: z.string(),
+    options: Network.optional(),
   })
   export type State = z.infer<typeof State>
 
@@ -44,12 +64,7 @@ export namespace Daemon {
   })
   export type Status = z.infer<typeof Status>
 
-  export type Options = {
-    hostname: string
-    port: number
-    mdns?: boolean
-    mdnsDomain?: string
-    cors?: string[]
+  export type Options = Network & {
     command?: string[]
     env?: NodeJS.ProcessEnv
     timeout?: number
@@ -60,9 +75,16 @@ export namespace Daemon {
     reused: boolean
   }
 
+  export type Ensure = {
+    result: Start
+    restarted: boolean
+  }
+
   export type Stop = Status & {
     stopped: boolean
   }
+
+  export type Identity = Pick<State, "pid" | "startedAt">
 
   function root() {
     return process.env.KILO_TEST_DAEMON_STATE_DIR ?? Global.Path.state
@@ -157,15 +179,34 @@ export namespace Daemon {
     return { running: true, stale: false, state, health: probe, file: file() }
   }
 
-  export async function start(input: Options): Promise<Start> {
+  export function matches(state: State, input: Options, explicit: readonly NetworkOption[]) {
+    if (state.password === "kilo") return false
+    const options = Network.parse(input)
+    return explicit.every((name) => {
+      if (name === "hostname") return state.hostname === options.hostname
+      if (name === "port") return options.port === 0 || state.port === options.port
+      if (name === "mdns" && state.hostname !== options.hostname) return false
+      if (!state.options) return false
+      if (name === "cors") return state.options.cors.join("\n") === options.cors.join("\n")
+      return state.options[name] === options[name]
+    })
+  }
+
+  async function run(input: Options, explicit: readonly NetworkOption[] = [], force = false): Promise<Ensure> {
     return await Flock.withLock(
       lock,
       async () => {
         const current = await status()
-        if (current.running) return { ...current, started: false, reused: true }
-        if (current.stale && current.state) await terminate(current.state.pid, true)
+        const restarted = current.running && !!current.state && (force || !matches(current.state, input, explicit))
+        if (current.running && !restarted) {
+          return { result: { ...current, started: false, reused: true }, restarted: false }
+        }
+        if (current.state && (current.stale || restarted)) {
+          await terminate(current.state.pid, current.stale)
+          if (alive(current.state.pid)) await terminate(current.state.pid, true)
+        }
         await clear()
-        const password = "kilo"
+        const password = randomUUID()
         const token = auth(password)
         const out = log()
         await mkdir(path.dirname(out), { recursive: true })
@@ -176,27 +217,37 @@ export namespace Daemon {
           hostname: ready.hostname,
           port: ready.port,
           url: `http://${host(ready.hostname)}:${ready.port}`,
+          urls: serverUrls(ready.hostname, ready.port),
           username,
           password,
           token,
           version: InstallationVersion,
           startedAt: new Date().toISOString(),
           log: out,
+          options: Network.parse(input),
         }
         await write(state)
         const next = await status()
-        return { ...next, started: true, reused: false, state }
+        return { result: { ...next, started: true, reused: false, state }, restarted }
       },
       { dir: path.join(root(), "locks"), timeoutMs: 15_000, staleMs: 30_000 },
     )
   }
 
-  export async function stop(): Promise<Stop> {
+  export async function start(input: Options): Promise<Start> {
+    return (await run(input)).result
+  }
+
+  export async function ensure(input: Options, explicit: readonly NetworkOption[]): Promise<Ensure> {
+    return await run(input, explicit)
+  }
+
+  export async function stop(expected?: Identity): Promise<Stop> {
     return await Flock.withLock(
       lock,
       async () => {
         const current = await status()
-        if (!current.state) return { ...current, stopped: false }
+        if (!current.state || (expected && !same(current.state, expected))) return { ...current, stopped: false }
         if (alive(current.state.pid)) {
           await terminate(current.state.pid, false)
           if (alive(current.state.pid)) await terminate(current.state.pid, true)
@@ -208,9 +259,33 @@ export namespace Daemon {
     )
   }
 
+  export async function foreground(start: (signal: AbortSignal) => Promise<Identity>) {
+    const ctl = new AbortController()
+    const interrupt = new AbortController()
+    const done = Promise.withResolvers<"signal">()
+    const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const
+    const quit = () => {
+      interrupt.abort()
+      done.resolve("signal")
+    }
+    for (const signal of signals) process.once(signal, quit)
+
+    try {
+      const expected = await start(interrupt.signal)
+      if (interrupt.signal.aborted) {
+        await stop(expected)
+        return
+      }
+      const result = await Promise.race([done.promise, watch(expected, ctl.signal)])
+      if (result === "signal") await stop(expected)
+    } finally {
+      ctl.abort()
+      for (const signal of signals) process.off(signal, quit)
+    }
+  }
+
   export async function restart(input: Options): Promise<Start> {
-    await stop()
-    return await start(input)
+    return (await run(input, [], true)).result
   }
 
   export function command(
@@ -248,6 +323,7 @@ export namespace Daemon {
 
   async function port(input: Options) {
     if (input.port !== 0) return input.port
+    if (input.env?.KILO_TEST_DAEMON_EPHEMERAL_PORT) return 0
     const ports = Array.from({ length: PortRange.end - PortRange.start + 1 }, (_, index) => PortRange.start + index)
     const free = await Promise.any(
       ports.map((item) =>
@@ -289,7 +365,10 @@ export namespace Daemon {
       })
       const failure = new Promise<never>((_, reject) => child.once("error", reject))
       child.unref()
-      return await Promise.race([wait(out, child.pid, input.timeout ?? 10_000), failure])
+      return await Promise.race([wait(out, child.pid, input.timeout ?? 10_000), failure]).catch(async (err) => {
+        if (child.pid && alive(child.pid)) await terminate(child.pid, true)
+        throw err
+      })
     } finally {
       await Promise.all([stdout.close(), stderr.close()])
     }
@@ -330,8 +409,36 @@ export namespace Daemon {
     return { hostname: match[1], port: Number(match[2]) }
   }
 
-  function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
+  function same(state: State, expected: Identity) {
+    return state.pid === expected.pid && state.startedAt === expected.startedAt
+  }
+
+  async function watch(expected: Identity, signal: AbortSignal): Promise<"daemon"> {
+    while (!signal.aborted) {
+      const state = await read()
+      if (!state || !same(state, expected) || !alive(expected.pid)) return "daemon"
+      await sleep(250, signal)
+    }
+    return "daemon"
+  }
+
+  function sleep(ms: number, signal?: AbortSignal) {
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        signal?.removeEventListener("abort", cancel)
+        resolve()
+      }
+      const timer = setTimeout(done, ms)
+      const cancel = () => {
+        clearTimeout(timer)
+        done()
+      }
+      if (signal?.aborted) {
+        cancel()
+        return
+      }
+      signal?.addEventListener("abort", cancel, { once: true })
+    })
   }
 
   async function terminate(pid: number, force: boolean) {

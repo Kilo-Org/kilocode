@@ -112,14 +112,10 @@ const GROUPED_TOOLS: GroupedToolDef[] = [
     label: "todoread / todowrite",
     descriptionKey: "settings.autoApprove.tool.todoreadwrite",
   },
-  {
-    ids: ["websearch", "codesearch"],
-    label: "websearch / codesearch",
-    descriptionKey: "settings.autoApprove.tool.websearchcodesearch",
-  },
 ]
 
 const TRAILING_TOOLS: ToolDef[] = [
+  { id: "websearch", descriptionKey: "settings.autoApprove.tool.websearch" },
   { id: "webfetch", descriptionKey: "settings.autoApprove.tool.webfetch" },
   { id: "doom_loop", descriptionKey: "settings.autoApprove.tool.doom_loop" },
 ]

@@ -12,8 +12,8 @@ class MdViewFactoryTest : BasePlatformTestCase() {
         assertInstanceOf(MdViewFactory.hybrid(), MdViewHybrid::class.java)
     }
 
-    fun `test html returns html pane renderer`() {
-        assertInstanceOf(MdViewFactory.html(), MdViewHtmlPane::class.java)
+    fun `test html returns hybrid renderer`() {
+        assertInstanceOf(MdViewFactory.html(), MdViewHybrid::class.java)
     }
 
     fun `test create applies supplied session style`() {

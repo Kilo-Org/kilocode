@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/progress-circle"
+export * from "@opencode-ai/ui/progress-circle"

@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/text-strikethrough"
+export * from "@opencode-ai/ui/text-strikethrough"

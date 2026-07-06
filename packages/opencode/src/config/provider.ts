@@ -1,7 +1,6 @@
 import { Schema } from "effect"
 import { PROMPTS, AI_SDK_PROVIDERS } from "@kilocode/kilo-gateway" // kilocode_change
-import { zod } from "@opencode-ai/core/effect-zod"
-import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
+import { PositiveInt } from "@opencode-ai/core/schema"
 import { ModelStatus } from "@/provider/model-status"
 
 export const Model = Schema.Struct({
@@ -13,7 +12,7 @@ export const Model = Schema.Struct({
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)), // kilocode_change
   release_date: Schema.optional(Schema.String),
   attachment: Schema.optional(Schema.Boolean),
-  reasoning: Schema.optional(Schema.Boolean),
+  reasoning: Schema.optional(Schema.NullOr(Schema.Boolean)), // kilocode_change - allow null so reasoning can be removed via stripNulls on save
   temperature: Schema.optional(Schema.Boolean),
   tool_call: Schema.optional(Schema.Boolean),
   interleaved: Schema.optional(
@@ -49,8 +48,10 @@ export const Model = Schema.Struct({
   ),
   modalities: Schema.optional(
     Schema.Struct({
-      input: Schema.mutable(Schema.Array(Schema.Literals(["text", "audio", "image", "video", "pdf"]))),
-      output: Schema.mutable(Schema.Array(Schema.Literals(["text", "audio", "image", "video", "pdf"]))),
+      input: Schema.optional(Schema.mutable(Schema.Array(Schema.Literals(["text", "audio", "image", "video", "pdf"])))),
+      output: Schema.optional(
+        Schema.mutable(Schema.Array(Schema.Literals(["text", "audio", "image", "video", "pdf"]))),
+      ),
     }),
   ),
   experimental: Schema.optional(Schema.Boolean),
@@ -74,7 +75,7 @@ export const Model = Schema.Struct({
       ),
     ).annotate({ description: "Variant-specific configuration" }),
   ),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export const Info = Schema.Struct({
   api: Schema.optional(Schema.String),
@@ -97,12 +98,19 @@ export const Info = Schema.Struct({
         }),
         timeout: Schema.optional(
           Schema.Union([PositiveInt, Schema.Literal(false)]).annotate({
+            description: "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout.",
+          }),
+        ).annotate({
+          description: "Timeout in milliseconds for full requests to this provider. Set to false to disable timeout.",
+        }),
+        headerTimeout: Schema.optional(
+          Schema.Union([PositiveInt, Schema.Literal(false)]).annotate({
             description:
-              "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.",
+              "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.",
           }),
         ).annotate({
           description:
-            "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.",
+            "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.",
         }),
         chunkTimeout: Schema.optional(PositiveInt).annotate({
           description:
@@ -113,9 +121,7 @@ export const Info = Schema.Struct({
     ),
   ),
   models: Schema.optional(Schema.Record(Schema.String, Schema.NullOr(Model))), // kilocode_change - allow null values so removed models can be deleted via stripNulls on save
-})
-  .annotate({ identifier: "ProviderConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ProviderConfig" })
 export type Info = Schema.Schema.Type<typeof Info>
 
 export * as ConfigProvider from "./provider"

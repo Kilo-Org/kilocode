@@ -1,23 +1,34 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.views.tool.ShellToolView
+import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.plugin.KiloBundle
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.util.ui.JBUI
 import java.awt.Container
+import java.awt.Point
 import javax.swing.AbstractButton
 import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.Scrollable
+import javax.swing.SwingConstants
 import javax.swing.JTextArea
+import javax.swing.SwingUtilities
 import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
@@ -43,12 +54,55 @@ class SessionScrollTest : SessionUiTestBase() {
         if (bottom(bar) <= threshold) {
             fillTranscript(24, start = 24)
         }
-        setValue(bar, bottom(bar) - threshold + 1)
+        setValuePassive(bar, bottom(bar) - threshold + 1)
 
         emit(ChatEventDto.MessageUpdated("ses_test", message("tail")))
         drainScroll()
 
         assertBottom(bar)
+    }
+
+    fun `test viewport driven scroll can move away from stale saved position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+        val target = (value + JBUI.scale(96)).coerceAtMost(bottom(bar) - 1)
+        assertTrue("value=$value target=$target bottom=${bottom(bar)}", target > value)
+
+        (scrollComponent() as JBScrollPane).viewport.viewPosition = Point(0, target)
+        drainScroll()
+
+        assertEquals(target, bar.value)
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test user scroll upward near bottom disables tail follow`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        val threshold = JBUI.scale(32)
+        assertTrue("bottom=${bottom(bar)} threshold=$threshold", bottom(bar) > threshold * 2)
+        val id = "near_bottom_user_tail"
+        val pid = "near_bottom_user_part"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(id)), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "start\n\n")), flush = false)
+        forceFlush()
+        drainScroll()
+        setBottom(bar)
+        setValue(bar, bottom(bar) - threshold + 1)
+        val value = bar.value
+        assertFalse(ui.scroll.following())
+
+        repeat(240) { i ->
+            emit(ChatEventDto.PartDelta("ses_test", id, pid, "text", "tail line $i\n"), flush = false)
+        }
+        forceFlush()
+        drainScroll()
+
+        assertTrue("value=$value actual=${bar.value}", bar.value >= value)
+        assertFalse(ui.scroll.following())
     }
 
     fun `test session update preserves position outside bottom threshold`() {
@@ -161,6 +215,22 @@ class SessionScrollTest : SessionUiTestBase() {
         assertFalse(jumpButton().isVisible)
     }
 
+    fun `test physical mouse wheel uses accelerated transcript unit distance`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        setValue(bar, 0)
+        drainScroll()
+        val amount = 3
+        val expected = JBUI.scale(SessionUiStyle.SessionLayout.SCROLL_INCREMENT * amount)
+        assertTrue("bottom=${bottom(bar)} expected=$expected", bottom(bar) >= expected * 2)
+
+        val view = scrollView() as Scrollable
+        val unit = view.getScrollableUnitIncrement(scrollComponent().visibleRect, SwingConstants.VERTICAL, 1)
+
+        assertEquals(expected, unit * amount)
+    }
+
     fun `test part delta follows bottom after height growth`() {
         showMessages()
         fillTranscript(24)
@@ -178,6 +248,55 @@ class SessionScrollTest : SessionUiTestBase() {
         drainScroll()
 
         assertBottom(bar)
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test user scrolling to bottom during massive stream resumes following`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        val id = "stream_massive_resume"
+        val pid = "stream_massive_resume_part"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(id)), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "start\n\n")), flush = false)
+        forceFlush()
+        drainScroll()
+        setValue(bar, bottom(bar) / 2)
+        assertFalse(ui.scroll.following())
+        assertTrue(jumpButton().isVisible)
+        val first = buildString {
+            repeat(160) { i -> append("line $i\n\n") }
+        }
+
+        repeat(160) { i ->
+            emit(ChatEventDto.PartDelta("ses_test", id, pid, "text", "line $i\n\n"), flush = false)
+        }
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "start\n\n${first}snapshot\n\n")), flush = false)
+        forceFlush()
+        settleShort(100)
+        layout()
+        setBottom(bar)
+        drainScroll()
+        setBottom(bar)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+        val second = buildString {
+            repeat(160) { i -> append("tail line $i\n\n") }
+        }
+
+        repeat(160) { i ->
+            emit(ChatEventDto.PartDelta("ses_test", id, pid, "text", "tail line $i\n\n"), flush = false)
+        }
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "start\n\n${first}snapshot\n\n${second}snapshot tail\n\n")), flush = false)
+        forceFlush()
+        settleShort(100)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
         assertFalse(jumpButton().isVisible)
     }
 
@@ -199,6 +318,51 @@ class SessionScrollTest : SessionUiTestBase() {
         drainScroll()
 
         assertEquals(value, bar.value)
+    }
+
+    fun `test expanding tool at bottom preserves clicked header position`() {
+        val mid = "tool_expand_bottom"
+        val pid = "tool_expand_bottom_part"
+        rpc.history.addAll(history(23) + toolHistory(mid, pid) + historyRange(1, start = 23))
+        ui = newUi(id = "ses_test")
+        settle()
+        drainScroll()
+        val bar = scrollBar()
+        setBottom(bar)
+        drainScroll()
+        val view = toolView(mid, pid)
+        assertFalse(bodyVisible(view))
+        val y = visibleY(view)
+        val value = bar.value
+
+        toggle(view)
+        drainScroll()
+
+        assertTrue(bodyVisible(view))
+        assertEquals(y, visibleY(view))
+        assertEquals(value, bar.value)
+    }
+
+    fun `test expanding tool in middle preserves clicked header position`() {
+        val mid = "tool_expand_middle"
+        val pid = "tool_expand_middle_part"
+        rpc.history.addAll(history(12) + toolHistory(mid, pid) + historyRange(12, start = 12))
+        ui = newUi(id = "ses_test")
+        settle()
+        drainScroll()
+        val bar = scrollBar()
+        val view = toolView(mid, pid)
+        val top = SwingUtilities.convertPoint(view, Point(0, 0), scrollView()).y
+        setValue(bar, top - 80)
+        drainScroll()
+        val y = visibleY(view)
+
+        toggle(view)
+        drainScroll()
+
+        assertTrue(bodyVisible(view))
+        assertEquals(y, visibleY(view))
+        assertTrue(jumpButton().isVisible)
     }
 
     fun `test long prompt message follows when transcript is at bottom`() {
@@ -389,6 +553,56 @@ class SessionScrollTest : SessionUiTestBase() {
         assertFalse(button.isVisible)
     }
 
+    fun `test scroll button resumes following during massive stream`() {
+        showMessages()
+        fillTranscript(48)
+        val button = jumpButton()
+        val bar = scrollBar()
+        val id = "stream_massive_button"
+        val pid = "stream_massive_button_part"
+        emit(ChatEventDto.MessageUpdated("ses_test", message(id)), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "start\n\n")), flush = false)
+        forceFlush()
+        drainScroll()
+        setValue(bar, bottom(bar) / 2)
+        val first = buildString {
+            repeat(160) { i -> append("line $i\n\n") }
+        }
+
+        repeat(160) { i ->
+            emit(ChatEventDto.PartDelta("ses_test", id, pid, "text", "line $i\n\n"), flush = false)
+        }
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "start\n\n${first}snapshot\n\n")), flush = false)
+        forceFlush()
+        settleShort(100)
+        drainScroll()
+
+        assertTrue(button.isVisible)
+        assertFalse(ui.scroll.following())
+
+        click(button)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(button.isVisible)
+        val second = buildString {
+            repeat(160) { i -> append("tail line $i\n\n") }
+        }
+
+        repeat(160) { i ->
+            emit(ChatEventDto.PartDelta("ses_test", id, pid, "text", "tail line $i\n\n"), flush = false)
+        }
+        emit(ChatEventDto.PartUpdated("ses_test", part(pid, id, "text", "start\n\n${first}snapshot\n\n${second}snapshot tail\n\n")), flush = false)
+        forceFlush()
+        settleShort(100)
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(button.isVisible)
+    }
+
     fun `test scroll button remains hidden outside transcript body`() {
         val button = jumpButton()
 
@@ -476,11 +690,12 @@ class SessionScrollTest : SessionUiTestBase() {
         assertBottom(scrollBar())
     }
 
-    fun `test scroll owns the session viewport`() {
+    fun `test scroll owns the session viewport without overlapping content`() {
         settle()
 
         assertSame(scrollComponent(), scrollView()?.parent?.parent)
         assertFalse(scrollView() is SessionMessageListPanel)
+        assertFalse((scrollComponent() as JBScrollPane).isOverlappingScrollBar)
     }
 
     // ------ question/login-required autoscroll ------
@@ -853,6 +1068,32 @@ class SessionScrollTest : SessionUiTestBase() {
     private inline fun <reified T> option(label: String): T where T : AbstractButton =
         findAll<T>(ui).first { it.actionCommand == label }
 
+    private fun toolView(mid: String, pid: String): JComponent {
+        val messages = find<SessionMessageListPanel>(ui)
+        val view = messages.findMessage(mid)?.part(pid)
+        return when (view) {
+            is ShellToolView -> view
+            is ToolView -> view
+            else -> null
+        }
+            ?: error("missing tool $mid/$pid\n${messages.dumpDetailed()}")
+    }
+
+    private fun bodyVisible(view: JComponent): Boolean = when (view) {
+        is ShellToolView -> view.bodyVisible()
+        is ToolView -> view.bodyVisible()
+        else -> false
+    }
+
+    private fun toggle(view: JComponent) = when (view) {
+        is ShellToolView -> view.toggle()
+        is ToolView -> view.toggle()
+        else -> Unit
+    }
+
+    private fun visibleY(component: JComponent): Int =
+        SwingUtilities.convertPoint(component, Point(0, 0), scrollComponent()).y
+
     private inline fun <reified T> findAll(root: Container = ui): List<T> = findAll(root, T::class.java)
 
     private fun <T> findAll(root: Container, cls: Class<T>): List<T> {
@@ -949,4 +1190,27 @@ class SessionScrollTest : SessionUiTestBase() {
         ),
         tool = ToolRefDto("msg1", "call1"),
     )
+
+    private fun toolPart(id: String, mid: String) = PartDto(
+        id = id,
+        sessionID = "ses_test",
+        messageID = mid,
+        type = "tool",
+        tool = "bash",
+        callID = "call_$id",
+        state = "completed",
+        title = "print output",
+        output = "output line\n".repeat(160),
+    )
+
+    private fun toolHistory(mid: String, pid: String) = MessageWithPartsDto(
+        message(mid).copy(role = "assistant"),
+        listOf(toolPart(pid, mid)),
+    )
+
+    private fun historyRange(count: Int, start: Int) = List(count) { offset ->
+        val i = start + offset
+        val id = "hist_range_$i"
+        MessageWithPartsDto(message(id), listOf(part("hist_range_part_$i", id, "text", text(i))))
+    }
 }

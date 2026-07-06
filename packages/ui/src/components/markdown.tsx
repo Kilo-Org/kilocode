@@ -1,4 +1,5 @@
-import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
+import { useMarked } from "../context/marked"
+import { deferredHighlight, fnv1a } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
@@ -9,11 +10,14 @@ import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
 import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid" // kilocode_change
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight" // kilocode_change
+import { createIncrementalMarkdown, type MarkdownBlock } from "../kilocode/markdown-incremental-dom" // kilocode_change
 
 type Entry = {
   hash: string
   html: string
 }
+
+type Rendered = { content: string; blocks: MarkdownBlock[] } // kilocode_change
 
 const max = 200
 const cache = new Map<string, Entry>()
@@ -37,7 +41,7 @@ const config = {
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
   ADD_TAGS: ["svg", "path"],
-  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns"],
+  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns", "target"],
 }
 
 const iconPaths = {
@@ -260,34 +264,36 @@ export function Markdown(
       key: local.cacheKey,
       streaming: local.streaming ?? false,
     }),
-    async (src) => {
-      if (isServer) return fallback(src.text)
-      if (!src.text) return ""
+    // kilocode_change start
+    async (src): Promise<Rendered> => {
+      // kilocode_change end
+      if (isServer) return { content: fallback(src.text), blocks: [] } // kilocode_change
+      if (!src.text) return { content: "", blocks: [] } // kilocode_change
 
       const base = src.key ?? checksum(src.text)
       return Promise.all(
         stream(src.text, src.streaming).map(async (block, index) => {
-          const hash = checksum(block.raw)
+          const hash = checksum(block.raw) ?? "" // kilocode_change
           const key = base ? `${base}:${index}:${block.mode}` : hash
 
           if (key && hash) {
             const cached = cache.get(key)
             if (cached && cached.hash === hash) {
               touch(key, cached)
-              return cached.html
+              return { key: `${base}:${index}`, hash, html: cached.html, mode: block.mode } // kilocode_change
             }
           }
 
           const next = await Promise.resolve(marked.parse(block.src))
           const safe = sanitize(next)
           if (key && hash) touch(key, { hash, html: safe })
-          return safe
+          return { key: `${base}:${index}`, hash, html: safe, mode: block.mode } // kilocode_change
         }),
       )
-        .then((list) => list.join(""))
-        .catch(() => fallback(src.text))
+        .then((blocks) => ({ content: blocks.map((block) => block.html).join(""), blocks })) // kilocode_change
+        .catch(() => ({ content: fallback(src.text), blocks: [] })) // kilocode_change
     },
-    { initialValue: fallback(local.text) },
+    { initialValue: { content: fallback(local.text), blocks: [] } }, // kilocode_change
   )
 
   let copyCleanup: (() => void) | undefined
@@ -313,10 +319,27 @@ export function Markdown(
   let pendingContent: string | undefined
   let pendingLabels: { copy: string; copied: string } | undefined
   // kilocode_change end
+  // kilocode_change start
+  const incremental = createIncrementalMarkdown<MermaidLabels>(decorate, {
+    cancel: () => {
+      if (pendingFrame === undefined) return
+      cancelAnimationFrame(pendingFrame)
+      pendingFrame = undefined
+      pendingContent = undefined
+      pendingLabels = undefined
+    },
+    ready: (container, labels, mermaid) => {
+      copyCleanup ??= setupCodeCopy(container, () => labels)
+      kickMermaid(container, true, mermaid)
+      kickHighlight(container, labels)
+    },
+  })
+  // kilocode_change end
 
   createEffect(() => {
     const container = root()
-    const content = local.text ? (html.latest ?? html() ?? "") : ""
+    const rendered = html.latest ?? html() ?? { content: "", blocks: [] } // kilocode_change
+    const content = local.text ? rendered.content : "" // kilocode_change
     if (!container) return
     if (isServer) return
 
@@ -330,6 +353,7 @@ export function Markdown(
         pendingLabels = undefined
       }
       // kilocode_change end
+      incremental.reset() // kilocode_change
       container.innerHTML = ""
       // kilocode_change start: Mermaid diagram rendering
       mermaidState.signal.aborted = true
@@ -371,12 +395,16 @@ export function Markdown(
         pendingContent = undefined
         pendingLabels = undefined
       }
+      incremental.reset() // kilocode_change
       copyCleanup = fast.copyCleanup
       kickMermaid(container, local.streaming ?? false, mermaid)
       kickHighlight(container, labels)
       return
     }
     // kilocode_change end
+
+    if (incremental.render(local.streaming ?? false, container, rendered.blocks, labels, mermaid)) return // kilocode_change
+    incremental.reset() // kilocode_change
 
     // kilocode_change start: queue the latest content for a single rAF tick.
     // Further updates before the frame runs simply overwrite pendingContent,

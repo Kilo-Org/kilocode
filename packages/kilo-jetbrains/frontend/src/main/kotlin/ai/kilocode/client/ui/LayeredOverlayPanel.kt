@@ -108,7 +108,7 @@ open class LayeredOverlayPanel(
 
         override fun contains(x: Int, y: Int): Boolean {
             for (child in components) {
-                if (child.isVisible && child.bounds.contains(x, y)) return true
+                if (child.isVisible && child.bounds.contains(x, y) && child.contains(x - child.x, y - child.y)) return true
             }
             return false
         }

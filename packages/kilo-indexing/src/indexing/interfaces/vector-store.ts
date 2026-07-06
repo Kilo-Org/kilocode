@@ -9,6 +9,12 @@ export type PointStruct = {
 
 export interface IVectorStore {
   /**
+   * Opens an existing complete store without mutating it.
+   */
+  openExisting?(): Promise<void>
+  close?(): Promise<void>
+
+  /**
    * Initializes the vector store
    * @returns Promise resolving to boolean indicating if a new collection was created
    */
@@ -90,6 +96,7 @@ export interface VectorStoreSearchResult {
 
 export interface Payload {
   filePath: string
+  fileHash?: string
   codeChunk: string
   startLine: number
   endLine: number

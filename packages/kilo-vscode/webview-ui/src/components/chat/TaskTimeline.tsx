@@ -1,22 +1,14 @@
 /**
- * TaskTimeline — horizontal strip of colored bars representing session activity.
- *
- * Each bar = one Part from assistant messages.
- * Color  = part type (read=blue, write=dark blue, tool=indigo, error=red, text=gray).
- * Width  = proportional to time between parts.
- * Height = proportional to content length.
- *
- * Interactions: drag scroll, mouse wheel, auto-scroll to latest.
- *
- * No virtualization needed: SolidJS <Index> creates each element once and
- * updates bindings in place (unlike React). Even 1000+ bars are fine.
+ * Horizontal session activity timeline rendered as color-grouped SVG paths.
+ * Pointer and keyboard interaction use the same pure bar geometry.
  */
 
-import { Component, Index, Show, createMemo, createEffect, createSignal, on, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createEffect, createSignal, on, onCleanup } from "solid-js"
 import { Portal } from "solid-js/web"
 import { useSession } from "../../context/session"
 import { color, label } from "../../utils/timeline/colors"
-import { sizes, MAX_HEIGHT } from "../../utils/timeline/sizes"
+import { geometry, hit, navigate } from "../../utils/timeline/geometry"
+import { sizes, pinned, MAX_HEIGHT } from "../../utils/timeline/sizes"
 import type { Part, Message } from "../../types/messages"
 
 export interface TimelineBar {
@@ -28,7 +20,7 @@ export interface TimelineBar {
 }
 
 function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBar[] {
-  const result: Part[] = []
+  const result: { msg: Message; part: Part }[] = []
 
   for (const msg of messages) {
     if (msg.role === "user") continue
@@ -36,14 +28,14 @@ function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBa
     if (!ps) continue
     for (const p of ps) {
       if (p.type === "step-start") continue
-      result.push(p)
+      result.push({ msg, part: p })
     }
   }
 
-  const sz = sizes(result)
-  return result.map((p, i) => ({
-    bg: color(p),
-    tip: label(p),
+  const sz = sizes(result.map((item) => item.part))
+  return result.map((item, i) => ({
+    bg: color(item.part),
+    tip: label(item.part, item.msg),
     width: sz[i]!.width,
     height: sz[i]!.height,
     idx: i,
@@ -56,7 +48,8 @@ export const TaskTimeline: Component = () => {
   let dragging = false
   let startX = 0
   let startScroll = 0
-  let tipBar: HTMLElement | undefined
+  const [hover, setHover] = createSignal(-1)
+  const [active, setActive] = createSignal(-1)
   const [tip, setTip] = createSignal<{ text: string; x: number; y: number }>()
 
   const messages = () => session.visibleMessages()
@@ -71,45 +64,73 @@ export const TaskTimeline: Component = () => {
   }
 
   const bars = createMemo(() => collect(messages(), allParts()))
+  const layout = createMemo(() => geometry(bars(), MAX_HEIGHT))
   const busy = () => session.status() === "busy"
+  const selected = () => {
+    const idx = active()
+    if (idx >= 0 && idx < bars().length) return idx
+    return bars().length - 1
+  }
+  const aria = () => {
+    const idx = selected()
+    const bar = bars()[idx]
+    if (!bar) return "Session activity timeline, no activity"
+    return `Session activity timeline, bar ${idx + 1} of ${bars().length}: ${bar.tip}`
+  }
 
-  // Auto-scroll to the latest bar when new bars appear
   let prev = 0
+  let frame: number | undefined
+  let follow = true
+  const onScroll = () => {
+    if (ref) follow = pinned(ref)
+  }
   createEffect(
     on(
       () => bars().length,
       (len) => {
-        if (len > prev && ref) {
-          ref.scrollLeft = ref.scrollWidth
+        if (active() >= len) setActive(len - 1)
+        if (len > prev && ref && follow && frame === undefined) {
+          frame = requestAnimationFrame(() => {
+            frame = undefined
+            if (!ref || !follow) return
+            ref.scrollLeft = ref.scrollWidth
+          })
         }
         prev = len
       },
     ),
   )
+  onCleanup(() => {
+    if (frame !== undefined) cancelAnimationFrame(frame)
+  })
 
   const hideTip = () => {
-    tipBar = undefined
+    setHover(-1)
     setTip(undefined)
   }
 
   createEffect(on(bars, hideTip, { defer: true }))
 
-  const showTip = (e: PointerEvent) => {
-    if (dragging || !(e.target instanceof Element)) return
-    const bar = e.target.closest<HTMLElement>(".task-timeline-bar")
-    if (!bar || !ref?.contains(bar)) return hideTip()
-    if (bar === tipBar) return
-    const rect = bar.getBoundingClientRect()
-    tipBar = bar
+  const showTip = (idx: number) => {
+    const item = layout().items[idx]
+    const bar = bars()[idx]
+    if (!ref || !item || !bar) return hideTip()
+    const rect = ref.getBoundingClientRect()
     const margin = Math.min(160, window.innerWidth / 2)
+    setHover(idx)
     setTip({
-      text: bar.dataset.tip ?? "",
-      x: Math.max(margin, Math.min(window.innerWidth - margin, rect.left + rect.width / 2)),
-      y: rect.top,
+      text: bar.tip,
+      x: Math.max(margin, Math.min(window.innerWidth - margin, rect.left + item.x - ref.scrollLeft + item.width / 2)),
+      y: rect.top + MAX_HEIGHT - item.height,
     })
   }
 
-  // ── Drag scroll ──────────────────────────────────────────────────
+  const pointerIndex = (e: PointerEvent) => {
+    if (!ref) return -1
+    const rect = ref.getBoundingClientRect()
+    return hit(layout().items, e.clientX - rect.left + ref.scrollLeft)
+  }
+
   const onPointerDown = (e: PointerEvent) => {
     hideTip()
     if (!ref) return
@@ -122,24 +143,43 @@ export const TaskTimeline: Component = () => {
   }
 
   const onPointerMove = (e: PointerEvent) => {
-    if (!dragging || !ref) return showTip(e)
+    if (!ref) return
+    if (!dragging) {
+      const idx = pointerIndex(e)
+      if (idx === hover()) return
+      if (idx < 0) return hideTip()
+      return showTip(idx)
+    }
     ref.scrollLeft = startScroll - (e.clientX - startX)
   }
 
   const onPointerUp = (e: PointerEvent) => {
     if (!ref) return
     dragging = false
-    ref.releasePointerCapture(e.pointerId)
+    if (ref.hasPointerCapture(e.pointerId)) ref.releasePointerCapture(e.pointerId)
     ref.style.cursor = "grab"
     ref.style.userSelect = ""
   }
 
-  // ── Wheel → horizontal scroll ────────────────────────────────────
   const onWheel = (e: WheelEvent) => {
     hideTip()
     if (!ref) return
     e.preventDefault()
     ref.scrollLeft += e.deltaY || e.deltaX
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (!ref || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return
+    e.preventDefault()
+    const idx = navigate(selected(), bars().length, e.key)
+    setActive(idx)
+    const item = layout().items[idx]
+    if (!item) return
+    const left = item.x
+    const right = item.x + item.width
+    if (left < ref.scrollLeft) ref.scrollLeft = left
+    if (right > ref.scrollLeft + ref.clientWidth) ref.scrollLeft = right - ref.clientWidth
+    showTip(idx)
   }
 
   createEffect(() => {
@@ -149,47 +189,57 @@ export const TaskTimeline: Component = () => {
     onCleanup(() => el.removeEventListener("wheel", onWheel))
   })
 
+  const overlay = (idx: number, pulse = false) => {
+    const item = layout().items[idx]
+    if (!item) return null
+    return (
+      <div
+        class="task-timeline-bar"
+        classList={{ "task-timeline-bar--active": pulse }}
+        aria-hidden="true"
+        style={{
+          left: `${item.x}px`,
+          width: `${item.width}px`,
+          height: `${item.height}px`,
+          "--timeline-color": item.bg,
+        }}
+      />
+    )
+  }
+
   return (
     <>
       <div class="task-timeline-outer">
         <div
           ref={ref}
           class="task-timeline"
+          data-timeline-count={bars().length}
+          role="img"
+          tabIndex={0}
+          aria-label={aria()}
           style={{ height: `${MAX_HEIGHT}px` }}
+          onKeyDown={onKeyDown}
+          onBlur={hideTip}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onPointerLeave={hideTip}
+          onScroll={onScroll}
         >
-          <Index each={bars()}>
-            {(bar) => {
-              const active = () => busy() && bar().idx === bars().length - 1
-              return (
-                <div
-                  class="task-timeline-bar"
-                  data-tip={bar().tip}
-                  role="img"
-                  aria-label={bar().tip}
-                  style={{
-                    width: `${bar().width}px`,
-                    height: `${MAX_HEIGHT}px`,
-                  }}
-                >
-                  <div
-                    class="task-timeline-bar-fill task-timeline-bar-fill--new"
-                    classList={{
-                      "task-timeline-bar-fill--active": active(),
-                    }}
-                    style={{
-                      background: bar().bg,
-                      height: `${(bar().height / MAX_HEIGHT) * 100}%`,
-                    }}
-                  />
-                </div>
-              )
-            }}
-          </Index>
+          <div class="task-timeline-content" style={{ width: `${layout().width}px`, height: `${MAX_HEIGHT}px` }}>
+            <svg
+              class="task-timeline-svg"
+              width={layout().width}
+              height={MAX_HEIGHT}
+              viewBox={`0 0 ${layout().width} ${MAX_HEIGHT}`}
+              aria-hidden="true"
+            >
+              <For each={layout().paths}>{(path) => <path d={path.d} fill={path.bg} />}</For>
+            </svg>
+            <Show when={hover() >= 0}>{overlay(hover())}</Show>
+            <Show when={busy() && bars().length > 0}>{overlay(bars().length - 1, true)}</Show>
+          </div>
         </div>
       </div>
       <Show when={tip()}>

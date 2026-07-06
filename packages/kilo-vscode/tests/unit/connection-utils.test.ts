@@ -1,193 +1,176 @@
-import { describe, it, expect } from "bun:test"
+import { describe, expect, it } from "bun:test"
+import type { GlobalEvent } from "@kilocode/sdk/v2/client"
 import { resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
-import type { Event } from "@kilocode/sdk/v2/client"
 
 const noLookup = (_: string) => undefined
 
-/** Helper to create a partial Event for testing — only the fields accessed by resolveEventSessionId matter. */
-function event(partial: Record<string, unknown>): Event {
-  return partial as unknown as Event
+type Payload = GlobalEvent["payload"]
+
+const message = {
+  id: "m1",
+  sessionID: "s5",
+  role: "user",
+  time: { created: 0 },
+  agent: "build",
+  model: { providerID: "kilo", modelID: "test" },
+} as const
+
+const part = {
+  id: "p1",
+  sessionID: "s6",
+  messageID: "m1",
+  type: "text",
+  text: "",
+} as const
+
+function sync(event: Extract<Payload, { type: "sync" }>): Payload {
+  return event
 }
 
 describe("resolveEventSessionId", () => {
-  it("returns session id from session.created", () => {
-    const e = event({
-      type: "session.created",
-      properties: {
-        info: { id: "s1", title: "", directory: "", time: { created: 0, updated: 0 } },
+  it("returns the session ID from session.created.1", () => {
+    const event = sync({
+      type: "sync",
+      name: "session.created.1",
+      id: "e1",
+      seq: 0,
+      aggregateID: "sessionID",
+      data: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          slug: "session",
+          projectID: "project",
+          directory: "/workspace",
+          title: "Session",
+          version: "1",
+          time: { created: 0, updated: 0 },
+        },
       },
     })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s1")
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s1")
   })
 
-  it("returns session id from session.updated", () => {
-    const e = event({
-      type: "session.updated",
-      properties: {
-        info: { id: "s2", title: "", directory: "", time: { created: 0, updated: 0 } },
-      },
+  it("returns the session ID from session.updated.1", () => {
+    const event = sync({
+      type: "sync",
+      name: "session.updated.1",
+      id: "e2",
+      seq: 1,
+      aggregateID: "sessionID",
+      data: { sessionID: "s2", info: { title: "Updated" } },
     })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s2")
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s2")
   })
 
-  it("returns sessionID from session.status", () => {
-    const e = event({
-      type: "session.status",
-      properties: { sessionID: "s3", status: { type: "idle" } },
+  it("records message.updated.1 mappings", () => {
+    const event = sync({
+      type: "sync",
+      name: "message.updated.1",
+      id: "e3",
+      seq: 2,
+      aggregateID: "sessionID",
+      data: { sessionID: "s5", info: message },
     })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s3")
-  })
+    const recorded: Array<[string, string]> = []
 
-  it("returns sessionID from todo.updated", () => {
-    const e = event({
-      type: "todo.updated",
-      properties: { sessionID: "s4", todos: [] },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s4")
-  })
-
-  it("returns sessionID from session.turn.close", () => {
-    const e = event({
-      type: "session.turn.close",
-      properties: { sessionID: "s-turn", reason: "interrupted" },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s-turn")
-  })
-
-  it("returns sessionID from message.updated and calls onMessageUpdated", () => {
-    const e = event({
-      type: "message.updated",
-      properties: {
-        info: { id: "m1", sessionID: "s5", role: "assistant", time: { created: 0 } },
-      },
-    })
-    const recorded: [string, string][] = []
-    const result = resolveEventSessionId(e, noLookup, (mid, sid) => recorded.push([mid, sid]))
-    expect(result).toBe("s5")
+    expect(resolveEventSessionId(event, noLookup, (mid, sid) => recorded.push([mid, sid]))).toBe("s5")
     expect(recorded).toEqual([["m1", "s5"]])
   })
 
-  it("message.updated does not require onMessageUpdated callback", () => {
-    const e = event({
-      type: "message.updated",
-      properties: {
-        info: { id: "m1", sessionID: "s5", role: "assistant", time: { created: 0 } },
-      },
+  it("does not require a message mapping callback", () => {
+    const event = sync({
+      type: "sync",
+      name: "message.updated.1",
+      id: "e4",
+      seq: 3,
+      aggregateID: "sessionID",
+      data: { sessionID: "s5", info: message },
     })
-    expect(() => resolveEventSessionId(e, noLookup)).not.toThrow()
+
+    expect(() => resolveEventSessionId(event, noLookup)).not.toThrow()
   })
 
-  it("returns sessionID directly from message.part.updated when part has sessionID", () => {
-    const e = event({
-      type: "message.part.updated",
-      properties: {
-        part: { type: "text", id: "p1", text: "", sessionID: "s6", messageID: "m1" },
-      },
+  it("returns the envelope session ID from message.part.updated.1", () => {
+    const event = sync({
+      type: "sync",
+      name: "message.part.updated.1",
+      id: "e5",
+      seq: 4,
+      aggregateID: "sessionID",
+      data: { sessionID: "s6", part, time: 0 },
     })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s6")
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s6")
   })
 
-  it("falls back to lookup when message.part.updated has no sessionID but has messageID", () => {
-    const e = event({
-      type: "message.part.updated",
-      properties: {
-        part: { type: "text", id: "p1", text: "", messageID: "m2" },
-      },
-    })
-    const lookup = (id: string) => (id === "m2" ? "s7" : undefined)
-    expect(resolveEventSessionId(e, lookup)).toBe("s7")
+  it("routes transient session events", () => {
+    const event = {
+      id: "e6",
+      type: "session.status",
+      properties: { sessionID: "s3", status: { type: "idle" } },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s3")
   })
 
-  it("returns undefined for message.part.updated with no sessionID and messageID not in map", () => {
-    const e = event({
-      type: "message.part.updated",
-      properties: {
-        part: { type: "text", id: "p1", text: "", messageID: "unknown" },
-      },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBeUndefined()
+  it("routes transient message deltas", () => {
+    const event = {
+      id: "e7",
+      type: "message.part.delta",
+      properties: { sessionID: "s4", messageID: "m2", partID: "p2", field: "text", delta: "x" },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s4")
   })
 
-  it("returns undefined for message.part.updated with no messageID and no sessionID", () => {
-    const e = event({
-      type: "message.part.updated",
-      properties: {
-        part: { type: "text", id: "p1", text: "" },
-      },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBeUndefined()
+  it("routes session.network events", () => {
+    const event = {
+      id: "e8",
+      type: "session.network.restored",
+      properties: { sessionID: "s7" },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s7")
   })
 
-  it("returns sessionID from permission.asked", () => {
-    const e = event({
-      type: "permission.asked",
-      properties: {
-        id: "p1",
-        sessionID: "s8",
-        permission: "read_file",
-        patterns: [],
-        metadata: {},
-        always: [],
-      },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s8")
-  })
-
-  it("returns sessionID from question.asked", () => {
-    const e = event({
-      type: "question.asked",
-      properties: { id: "q1", sessionID: "s9", questions: [] },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s9")
-  })
-
-  it("returns sessionID from question.replied", () => {
-    const e = event({
-      type: "question.replied",
-      properties: { sessionID: "s10", requestID: "r1", answers: [] },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s10")
-  })
-
-  it("returns sessionID from question.rejected", () => {
-    const e = event({
+  it("routes permission, question, and suggestion events", () => {
+    const permission = {
+      id: "e9",
+      type: "permission.replied",
+      properties: { sessionID: "s8", requestID: "p1", reply: "once" },
+    } satisfies Payload
+    const question = {
+      id: "e10",
       type: "question.rejected",
-      properties: { sessionID: "s11", requestID: "r2" },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s11")
-  })
-
-  it("returns sessionID from suggestion.shown", () => {
-    const e = event({
-      type: "suggestion.shown",
-      properties: { id: "sug_1", sessionID: "s12", text: "Review?", actions: [] },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s12")
-  })
-
-  it("returns sessionID from suggestion.accepted", () => {
-    const e = event({
-      type: "suggestion.accepted",
-      properties: { sessionID: "s13", requestID: "sug_1", index: 0, action: { label: "Start", prompt: "x" } },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s13")
-  })
-
-  it("returns sessionID from suggestion.dismissed", () => {
-    const e = event({
+      properties: { sessionID: "s9", requestID: "q1" },
+    } satisfies Payload
+    const suggestion = {
+      id: "e11",
       type: "suggestion.dismissed",
-      properties: { sessionID: "s14", requestID: "sug_2" },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s14")
+      properties: { sessionID: "s10", requestID: "sg1" },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(permission, noLookup)).toBe("s8")
+    expect(resolveEventSessionId(question, noLookup)).toBe("s9")
+    expect(resolveEventSessionId(suggestion, noLookup)).toBe("s10")
   })
 
-  it("returns undefined for unknown event types (global events)", () => {
-    const e = event({ type: "server.connected", properties: {} })
-    expect(resolveEventSessionId(e, noLookup)).toBeUndefined()
+  it("routes sandbox status events", () => {
+    const event = {
+      id: "e12",
+      type: "sandbox.status.changed",
+      properties: { sessionID: "s11", directory: "/repo", enabled: true, available: true, version: 1 },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s11")
   })
 
-  it("returns undefined for another unknown event type", () => {
-    const e = event({ type: "server.heartbeat", properties: {} })
-    expect(resolveEventSessionId(e, noLookup)).toBeUndefined()
+  it("returns undefined for global events", () => {
+    const event = { id: "e12", type: "server.connected", properties: {} } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBeUndefined()
   })
 })

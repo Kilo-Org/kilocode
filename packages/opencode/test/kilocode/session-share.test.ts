@@ -3,13 +3,16 @@ import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Auth } from "../../src/auth"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Session } from "../../src/session/session"
 import { SessionShare } from "../../src/share/session"
 import { Storage } from "../../src/storage/storage"
 import { SyncEvent } from "../../src/sync"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Auth.defaultLayer, Storage.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(
+  Layer.mergeAll(Auth.defaultLayer, Storage.defaultLayer, CrossSpawnSpawner.defaultLayer, RuntimeFlags.layer()),
+)
 
 const layer = SessionShare.layer.pipe(
   Layer.provideMerge(Session.defaultLayer),

@@ -3,18 +3,25 @@ import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
 import { generatedLike } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
+import { binaryFile } from "../shared/binary"
+import { imageMime, loadImage } from "../shared/image"
+import { resolveInside } from "../shared/path"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 import {
+  blobOid,
   blobSize,
+  diskStamp,
   fileSize,
   INDEX_REF,
   MAX_DETAIL_BYTES,
   parseNameStatus,
   parseNumstat,
+  parseRawOids,
   readDisk,
-  resolveInside,
+  readDiskBytes,
   showBlob,
+  showBlobBytes,
   summarize,
   type FileEntry,
 } from "./git-status"
@@ -26,6 +33,11 @@ export const UNSTAGED_DESCRIPTOR: DiffSourceDescriptor = {
   type: "unstaged",
   group: "Git",
   capabilities: { revert: false, comments: true },
+}
+
+function stamp(entry: FileEntry, before: string, after: string): FileEntry {
+  if (!imageMime(entry.file)) return entry
+  return { ...entry, stamp: `${entry.status}:${before}:${after}` }
 }
 
 /**
@@ -41,22 +53,33 @@ export function createUnstagedDiffSource(): DiffSource {
   const root = (): string | undefined => getWorkspaceRoot()
 
   const listTracked = async (dir: string): Promise<FileEntry[]> => {
-    const [nameStatus, numstat] = await Promise.all([
+    const [nameStatus, numstat, raw] = await Promise.all([
       git.execGit(["-c", "core.quotepath=false", "diff", "--name-status", "--no-renames"], dir),
       git.execGit(["-c", "core.quotepath=false", "diff", "--numstat", "--no-renames"], dir),
+      git.execGit(["-c", "core.quotepath=false", "diff", "--raw", "--abbrev=64", "--no-renames"], dir),
     ])
     if (nameStatus.code !== 0) {
       log("git diff --name-status failed", { code: nameStatus.code, stderr: nameStatus.stderr.trim() })
       return []
     }
     const counts = parseNumstat(numstat.code === 0 ? numstat.stdout : "")
-    return parseNameStatus(nameStatus.stdout).map((item) => ({
-      file: item.file,
-      status: item.status,
-      additions: counts.get(item.file)?.additions ?? 0,
-      deletions: counts.get(item.file)?.deletions ?? 0,
-      tracked: true,
-    }))
+    const refs = parseRawOids(raw.code === 0 ? raw.stdout : "")
+    return Promise.all(
+      parseNameStatus(nameStatus.stdout).map(async (item) => {
+        const entry = {
+          file: item.file,
+          status: item.status,
+          additions: counts.get(item.file)?.additions ?? 0,
+          deletions: counts.get(item.file)?.deletions ?? 0,
+          tracked: true,
+          binary: counts.get(item.file)?.binary ?? false,
+        }
+        if (!imageMime(item.file)) return entry
+        const before = item.status === "added" ? "missing" : (refs.get(item.file)?.before ?? "missing")
+        const after = item.status === "deleted" ? "missing" : await diskStamp(dir, item.file)
+        return stamp(entry, before, after)
+      }),
+    )
   }
 
   const listUntracked = async (dir: string): Promise<FileEntry[]> => {
@@ -82,6 +105,7 @@ export function createUnstagedDiffSource(): DiffSource {
         additions: 0,
         deletions: 0,
         tracked: false,
+        binary: await binaryFile(full),
         // Untracked entries always have additions/deletions = 0 (numstat
         // can't compute them without an index blob), so fold size+mtime
         // into the stamp. Editing the file changes mtime → the webview
@@ -113,15 +137,24 @@ export function createUnstagedDiffSource(): DiffSource {
 
     async fetchFile(file: string): Promise<DiffFile | null> {
       const dir = root()
-      if (!dir || !file) return null
+      if (!dir || !file || !resolveInside(dir, file)) return null
 
       const entry = await fileEntry(git, dir, file, log)
       if (!entry) return null
+      const mime = imageMime(file)
+      if (entry.binary && !mime) return summarize(entry)
 
-      const beforeBytes = !entry.tracked || entry.status === "added" ? 0 : await blobSize(git, dir, INDEX_REF, file)
-      const afterBytes = entry.status === "deleted" ? 0 : await fileSize(dir, file)
-      if (beforeBytes > MAX_DETAIL_BYTES || afterBytes > MAX_DETAIL_BYTES) {
-        log("Unstaged detail skipped: file too large", { file, beforeBytes, afterBytes, cap: MAX_DETAIL_BYTES })
+      const bytes = await detailBytes(git, dir, file, entry)
+      const image = await imageDetail(git, dir, file, entry, bytes.before, bytes.after)
+      if (image) return image
+
+      if (bytes.before > MAX_DETAIL_BYTES || bytes.after > MAX_DETAIL_BYTES) {
+        log("Unstaged detail skipped: file too large", {
+          file,
+          beforeBytes: bytes.before,
+          afterBytes: bytes.after,
+          cap: MAX_DETAIL_BYTES,
+        })
         return summarize(entry)
       }
 
@@ -165,6 +198,31 @@ export function createUnstagedDiffSource(): DiffSource {
   }
 }
 
+async function detailBytes(git: GitOps, dir: string, file: string, entry: FileEntry) {
+  const before = !entry.tracked || entry.status === "added" ? 0 : await blobSize(git, dir, INDEX_REF, file)
+  const after = entry.status === "deleted" ? 0 : await fileSize(dir, file)
+  return { before, after }
+}
+
+async function imageDetail(
+  git: GitOps,
+  dir: string,
+  file: string,
+  entry: FileEntry,
+  beforeBytes: number,
+  afterBytes: number,
+): Promise<DiffFile | undefined> {
+  if (!imageMime(file)) return undefined
+  const image = await loadImage(
+    file,
+    !entry.tracked || entry.status === "added"
+      ? undefined
+      : { bytes: beforeBytes, read: () => showBlobBytes(git, dir, INDEX_REF, file) },
+    entry.status === "deleted" ? undefined : { bytes: afterBytes, read: () => readDiskBytes(dir, file) },
+  )
+  return { ...summarize(entry), summarized: false, image }
+}
+
 async function fileEntry(
   git: GitOps,
   dir: string,
@@ -185,13 +243,20 @@ async function fileEntry(
         dir,
       )
       const stats = parseNumstat(counts.code === 0 ? counts.stdout : "")
-      return {
+      const entry = {
         file: item.file,
         status: item.status,
         additions: stats.get(item.file)?.additions ?? 0,
         deletions: stats.get(item.file)?.deletions ?? 0,
         tracked: true,
+        binary: stats.get(item.file)?.binary ?? false,
       }
+      if (!imageMime(item.file)) return entry
+      const [before, after] = await Promise.all([
+        item.status === "added" ? "missing" : blobOid(git, dir, INDEX_REF, item.file),
+        item.status === "deleted" ? "missing" : diskStamp(dir, item.file),
+      ])
+      return stamp(entry, before, after)
     }
   }
 
@@ -204,6 +269,8 @@ async function fileEntry(
     log("Unstaged file rejected: outside workspace", { file })
     return undefined
   }
+  const untracked = await git.execGit(["ls-files", "--others", "--exclude-standard", "--", file], dir)
+  if (untracked.code !== 0 || !untracked.stdout.split("\n").includes(file)) return undefined
   const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) {
     log("Unstaged file not found", { file })
@@ -215,6 +282,7 @@ async function fileEntry(
     additions: 0,
     deletions: 0,
     tracked: false,
+    binary: await binaryFile(full),
     stamp: `added:untracked:${stat.size}:${stat.mtimeMs}`,
   }
 }

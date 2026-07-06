@@ -1,10 +1,9 @@
 import { createMemo, createSignal, For, Show } from "solid-js"
 import { ConfigRow, SectionTitle, StatusTag } from "@kilocode/kilo-web-ui/console"
-import { CountTag } from "@kilocode/kilo-web-ui/tag"
 import { SearchField } from "../../components/SearchField"
 import { useConfig } from "../../context/config"
 import { toolCapabilities, toolName } from "../../shared/utils"
-import { ConfigPage } from "./ConfigPage"
+import { ConfigCountTag as CountTag, ConfigPage } from "./ConfigPage"
 
 export function ToolsRoute() {
   const ctx = useConfig()

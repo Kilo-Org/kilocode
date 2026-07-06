@@ -1,7 +1,7 @@
 import { createRequire } from "module"
-import type { ConfigPlugin } from "@/config/plugin"
+import { ConfigPlugin } from "@/config/plugin"
 import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect"
-import { ensureAtomicChatPlugin, resolveAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
+import { ensureAtomicChatPlugin, isAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
 import { ensureIndexingPlugin, resolveIndexingPlugin } from "@/kilocode/indexing-feature"
 
 type Log = {
@@ -19,12 +19,25 @@ export namespace KilocodeDefaultPlugins {
 
     if (!opts.disabled) {
       plugins = ensureIndexingPlugin(plugins, resolveIndexingPlugin(req, opts.log))
-      plugins = ensureAtomicChatPlugin(plugins, resolveAtomicChatPlugin(req, opts.log))
+      plugins = ensureAtomicChatPlugin(plugins)
     }
 
     cfg.plugin = plugins
-    // Built-in indexing is not loaded through external plugins and must not wait for their setup.
-    cfg.plugin_origins = cfg.plugin_origins?.filter((item) => !isIndexingPlugin(item.spec))
+    // Built-in plugins are not loaded externally and must not wait for external plugin setup.
+    const origins = cfg.plugin_origins?.filter((item) => !isIndexingPlugin(item.spec) && !isAtomicChatPlugin(item.spec))
+    if (!origins) return cfg
+    if (opts.disabled) {
+      cfg.plugin_origins = origins
+      return cfg
+    }
+    const known = new Set(origins.map((item) => ConfigPlugin.pluginSpecifier(item.spec)))
+    cfg.plugin_origins = [
+      ...origins,
+      ...plugins
+        .filter((spec) => !isIndexingPlugin(spec) && !isAtomicChatPlugin(spec))
+        .filter((spec) => !known.has(ConfigPlugin.pluginSpecifier(spec)))
+        .map((spec) => ({ spec, source: "builtin", scope: "global" as const })),
+    ]
     return cfg
   }
 }

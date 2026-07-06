@@ -1,4 +1,5 @@
 import path from "path"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Cause, Context, Effect, Fiber, Layer, Queue, Schema, Stream } from "effect"
 import type { PlatformError } from "effect/PlatformError"
@@ -11,8 +12,7 @@ import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { sanitizedProcessEnv } from "@opencode-ai/core/util/opencode-process"
 import { which } from "@/util/which"
-import { zod } from "@opencode-ai/core/effect-zod"
-import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 
 const log = Log.create({ service: "ripgrep" })
 const VERSION = "15.1.0"
@@ -69,7 +69,7 @@ export const SearchMatch = Schema.Struct({
       end: NonNegativeInt,
     }),
   ),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+})
 
 export const Match = Schema.Struct({
   type: Schema.Literal("match"),
@@ -141,6 +141,8 @@ export interface Interface {
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Ripgrep") {}
+
+export const use = serviceUse(Service)
 
 function env() {
   const env = sanitizedProcessEnv()
@@ -288,8 +290,10 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
 
       const filepath = yield* Effect.cached(
         Effect.gen(function* () {
-          const system = yield* Effect.sync(() => which(process.platform === "win32" ? "rg.exe" : "rg"))
+          // kilocode_change start - Git for Windows can expose an MSYS rg.exe that fails when spawned natively
+          const system = yield* Effect.sync(() => (process.platform === "win32" ? undefined : which("rg")))
           if (system && (yield* fs.isFile(system).pipe(Effect.orDie))) return system
+          // kilocode_change end
 
           const target = path.join(Global.Path.bin, `rg${process.platform === "win32" ? ".exe" : ""}`)
           if (yield* fs.isFile(target).pipe(Effect.orDie)) return target
@@ -437,7 +441,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
 
         const root: Node = { name: "", children: new Map() }
         for (const file of list) {
-          if (file.includes(".kilo") || file.includes(".opencode")) continue // kilocode_change
+          if (file.includes(".kilo") || file.includes(".kilocode")) continue // kilocode_change
           const parts = file.split(path.sep)
           if (parts.length < 2) continue
           let node = root

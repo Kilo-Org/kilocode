@@ -1,4 +1,4 @@
-import { Effect, Stream } from "effect"
+import { Effect, Fiber, Stream } from "effect" // kilocode_change - Fiber
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
@@ -12,13 +12,14 @@ import { Language, type Node } from "web-tree-sitter"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Shell } from "@/shell/shell"
 import { ShellID } from "./shell/id"
 
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
+import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -27,7 +28,6 @@ import { BashArity } from "@/permission/arity"
 export { Parameters } from "./shell/prompt"
 
 const MAX_METADATA_LENGTH = 30_000
-const DEFAULT_TIMEOUT = Flag.KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
 const CWD = new Set(["cd", "chdir", "popd", "pushd", "push-location", "set-location"])
 const FILES = new Set([
   ...CWD,
@@ -310,9 +310,119 @@ const ask = Effect.fn("ShellTool.ask")(function* (
   })
 })
 
+// kilocode_change start - share bash permission scanning with Kilo interactive terminal
+type PermissionInput = {
+  command: string
+  cwd: string
+  shell: string
+  description?: string
+}
+
+export const ShellPermission = Effect.gen(function* () {
+  const spawner = yield* ChildProcessSpawner
+  const fs = yield* AppFileSystem.Service
+
+  const cygpath = Effect.fn("ShellTool.cygpath")(function* (shell: string, text: string) {
+    const lines = yield* spawner
+      .lines(ChildProcess.make(shell, ["-lc", 'cygpath -w -- "$1"', "_", text]))
+      .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+    const file = lines[0]?.trim()
+    if (!file) return
+    return AppFileSystem.normalizePath(file)
+  })
+
+  const resolve = Effect.fn("ShellTool.resolvePath")(function* (text: string, root: string, shell: string) {
+    if (process.platform === "win32") {
+      if (Shell.posix(shell) && text.startsWith("/") && AppFileSystem.windowsPath(text) === text) {
+        const file = yield* cygpath(shell, text)
+        if (file) return file
+      }
+      return AppFileSystem.normalizePath(path.resolve(root, AppFileSystem.windowsPath(text)))
+    }
+    return path.resolve(root, text)
+  })
+
+  const argpath = Effect.fn("ShellTool.argPath")(function* (arg: string, cwd: string, ps: boolean, shell: string) {
+    const text = ps ? expand(arg, cwd, shell) : home(unquote(arg))
+    const file = text && prefix(text)
+    if (!file || dynamic(file, ps)) return
+    const next = ps ? provider(file) : file
+    if (!next) return
+    return yield* resolve(next, cwd, shell)
+  })
+
+  const collect = Effect.fn("ShellTool.collect")(function* (
+    root: Node,
+    cwd: string,
+    ps: boolean,
+    shell: string,
+    instance: InstanceContext,
+  ) {
+    const scan: Scan = {
+      dirs: new Set<string>(),
+      patterns: new Set<string>(),
+      always: new Set<string>(),
+      access: "read",
+    }
+    const kind = ShellID.toKind(Shell.name(shell))
+
+    const nodes = commands(root)
+    if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown"
+    if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
+      scan.access = "unknown"
+    }
+
+    for (const node of nodes) {
+      const command = parts(node)
+      const tokens = command.map((item) => item.text)
+      const cmd = ps || kind === "cmd" ? tokens[0]?.toLowerCase() : tokens[0]
+
+      if (cmd && (FILES.has(cmd) || (kind === "cmd" && CMD_FILES.has(cmd)))) {
+        const accessKind = access(cmd, node)
+        for (const arg of pathArgs(command, ps, kind === "cmd")) {
+          const resolved = yield* argpath(arg, cwd, ps, shell)
+          log.info("resolved path", { arg, resolved })
+          if (!resolved || containsPath(resolved, instance)) continue
+          const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
+          scan.dirs.add(dir)
+          if (accessKind !== "read") scan.access = "unknown"
+        }
+      }
+
+      if (tokens.length && (!cmd || !CWD.has(cmd))) {
+        scan.patterns.add(source(node))
+        scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
+      }
+    }
+
+    return scan
+  })
+
+  const check = Effect.fn("ShellTool.permission")(function* (ctx: Tool.Context, input: PermissionInput) {
+    const instance = yield* InstanceState.context
+    const ps = Shell.ps(input.shell)
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
+        const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
+        if (!containsPath(input.cwd, instance)) {
+          scan.dirs.add(input.cwd)
+          scan.access = "unknown"
+        }
+        yield* ask(ctx, scan, input.command, input.description)
+      }),
+    )
+  })
+
+  return { ask: check, resolve }
+})
+// kilocode_change end
+
 function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv) {
   if (process.platform === "win32" && Shell.ps(shell)) {
-    return ChildProcess.make(shell, ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command], {
+    // kilocode_change start - PowerShell args
+    return ChildProcess.make(shell, Shell.args(shell, command, cwd), {
+      // kilocode_change end
       cwd,
       env,
       stdin: "ignore",
@@ -360,88 +470,11 @@ export const ShellTool = Tool.define(
   Effect.gen(function* () {
     const config = yield* Config.Service
     const spawner = yield* ChildProcessSpawner
-    const fs = yield* AppFileSystem.Service
     const trunc = yield* Truncate.Service
     const plugin = yield* Plugin.Service
-
-    const cygpath = Effect.fn("ShellTool.cygpath")(function* (shell: string, text: string) {
-      const lines = yield* spawner
-        .lines(ChildProcess.make(shell, ["-lc", 'cygpath -w -- "$1"', "_", text]))
-        .pipe(Effect.catch(() => Effect.succeed([] as string[])))
-      const file = lines[0]?.trim()
-      if (!file) return
-      return AppFileSystem.normalizePath(file)
-    })
-
-    const resolvePath = Effect.fn("ShellTool.resolvePath")(function* (text: string, root: string, shell: string) {
-      if (process.platform === "win32") {
-        if (Shell.posix(shell) && text.startsWith("/") && AppFileSystem.windowsPath(text) === text) {
-          const file = yield* cygpath(shell, text)
-          if (file) return file
-        }
-        return AppFileSystem.normalizePath(path.resolve(root, AppFileSystem.windowsPath(text)))
-      }
-      return path.resolve(root, text)
-    })
-
-    const argPath = Effect.fn("ShellTool.argPath")(function* (arg: string, cwd: string, ps: boolean, shell: string) {
-      const text = ps ? expand(arg, cwd, shell) : home(unquote(arg))
-      const file = text && prefix(text)
-      if (!file || dynamic(file, ps)) return
-      const next = ps ? provider(file) : file
-      if (!next) return
-      return yield* resolvePath(next, cwd, shell)
-    })
-
-    const collect = Effect.fn("ShellTool.collect")(function* (
-      root: Node,
-      cwd: string,
-      ps: boolean,
-      shell: string,
-      instance: InstanceContext,
-    ) {
-      const scan: Scan = {
-        dirs: new Set<string>(),
-        patterns: new Set<string>(),
-        always: new Set<string>(),
-        access: "read", // kilocode_change
-      }
-      const shellKind = ShellID.toKind(Shell.name(shell))
-
-      const nodes = commands(root) // kilocode_change
-      if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown" // kilocode_change
-      // kilocode_change start
-      if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
-        scan.access = "unknown"
-      }
-      // kilocode_change end
-
-      for (const node of nodes) {
-        // kilocode_change
-        const command = parts(node)
-        const tokens = command.map((item) => item.text)
-        const cmd = ps || shellKind === "cmd" ? tokens[0]?.toLowerCase() : tokens[0]
-
-        if (cmd && (FILES.has(cmd) || (shellKind === "cmd" && CMD_FILES.has(cmd)))) {
-          const kind = access(cmd, node) // kilocode_change
-          for (const arg of pathArgs(command, ps, shellKind === "cmd")) {
-            const resolved = yield* argPath(arg, cwd, ps, shell)
-            log.info("resolved path", { arg, resolved })
-            if (!resolved || containsPath(resolved, instance)) continue
-            const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
-            scan.dirs.add(dir)
-            if (kind !== "read") scan.access = "unknown" // kilocode_change
-          }
-        }
-
-        if (tokens.length && (!cmd || !CWD.has(cmd))) {
-          scan.patterns.add(source(node))
-          scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
-        }
-      }
-
-      return scan
-    })
+    const flags = yield* RuntimeFlags.Service
+    const permission = yield* ShellPermission // kilocode_change
+    const defaultTimeoutMs = flags.bashDefaultTimeoutMs ?? 2 * 60 * 1000
 
     const shellEnv = Effect.fn("ShellTool.shellEnv")(function* (ctx: Tool.Context, cwd: string) {
       const extra = yield* plugin.trigger(
@@ -478,6 +511,31 @@ export const ShellTool = Tool.define(
       let expired = false
       let aborted = false
 
+      const closeSink = Effect.fnUntraced(function* () {
+        const stream = sink
+        if (!stream) return
+        sink = undefined
+        if (stream.destroyed || stream.closed) return
+        yield* Effect.promise(
+          () =>
+            new Promise<void>((resolve) => {
+              let settled = false
+              const done = () => {
+                if (settled) return
+                settled = true
+                stream.off("close", done)
+                stream.off("error", done)
+                stream.off("finish", done)
+                resolve()
+              }
+              stream.once("close", done)
+              stream.once("error", done)
+              stream.once("finish", done)
+              stream.end(done)
+            }),
+        ).pipe(Effect.catch(() => Effect.void))
+      })
+
       yield* ctx.metadata({
         metadata: {
           output: "",
@@ -487,9 +545,10 @@ export const ShellTool = Tool.define(
 
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
+          yield* Effect.addFinalizer(closeSink)
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
 
-          yield* Effect.forkScoped(
+          const reader = yield* Effect.forkScoped( // kilocode_change - keep the fiber so trailing output can be drained
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
               const size = Buffer.byteLength(chunk, "utf-8")
               list.push({ text: chunk, size })
@@ -545,7 +604,7 @@ export const ShellTool = Tool.define(
             return Effect.sync(() => ctx.abort.removeEventListener("abort", handler))
           })
 
-          const timeout = Effect.sleep(`${input.timeout + 100} millis`)
+          const timeout = Effect.sleep(`${CommandTimeout.duration(input.timeout)} millis`) // kilocode_change
 
           const exit = yield* Effect.raceAll([
             handle.exitCode.pipe(Effect.map((code) => ({ kind: "exit" as const, code }))),
@@ -562,15 +621,24 @@ export const ShellTool = Tool.define(
             yield* handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.orDie)
           }
 
+          // kilocode_change start - closing the scope interrupts the reader fiber, which can drop
+          // buffered output that arrived just before the process exited. Wait for the stream to
+          // finish (it ends once stdio closes) so fast commands do not lose their final chunks.
+          yield* Fiber.await(reader).pipe(Effect.timeout("3 seconds"), Effect.ignore)
+          // kilocode_change end
+
           return exit.kind === "exit" ? exit.code : null
         }),
       ).pipe(Effect.orDie)
 
       const meta: string[] = []
       if (expired) {
+        // kilocode_change start
         meta.push(
-          `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
+          CommandTimeout.message(input.timeout, "shell tool terminated command") ??
+            `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
         )
+        // kilocode_change end
       }
       if (aborted) meta.push("User aborted the command")
       const raw = list.map((item) => item.text).join("")
@@ -590,17 +658,6 @@ export const ShellTool = Tool.define(
       if (meta.length > 0) {
         output += "\n\n<shell_metadata>\n" + meta.join("\n") + "\n</shell_metadata>"
       }
-      if (sink) {
-        const stream = sink
-        yield* Effect.promise(
-          () =>
-            new Promise<void>((resolve) => {
-              stream.end(() => resolve())
-              stream.on("error", () => resolve())
-            }),
-        )
-      }
-
       return {
         title: input.description,
         metadata: {
@@ -620,7 +677,7 @@ export const ShellTool = Tool.define(
         const shell = Shell.acceptable(cfg.shell)
         const name = Shell.name(shell)
         const limits = yield* trunc.limits()
-        const prompt = ShellPrompt.render(name, process.platform, limits)
+        const prompt = ShellPrompt.render(name, process.platform, limits, defaultTimeoutMs)
         log.info("shell tool using shell", { shell })
 
         return {
@@ -628,30 +685,15 @@ export const ShellTool = Tool.define(
           parameters: prompt.parameters,
           execute: (params: Parameters, ctx: Tool.Context) =>
             Effect.gen(function* () {
-              const executeInstance = yield* InstanceState.context
+              const instanceCtx = yield* InstanceState.context
               const cwd = params.workdir
-                ? yield* resolvePath(params.workdir, executeInstance.directory, shell)
-                : executeInstance.directory
+                ? yield* permission.resolve(params.workdir, instanceCtx.directory, shell)
+                : instanceCtx.directory
               if (params.timeout !== undefined && params.timeout < 0) {
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
-              const timeout = params.timeout ?? DEFAULT_TIMEOUT
-              const ps = Shell.ps(shell)
-              yield* Effect.scoped(
-                Effect.gen(function* () {
-                  const tree = yield* Effect.acquireRelease(parse(params.command, ps), (tree) =>
-                    Effect.sync(() => tree.delete()),
-                  )
-                  const scan = yield* collect(tree.rootNode, cwd, ps, shell, executeInstance)
-                  // kilocode_change start
-                  if (!containsPath(cwd, executeInstance)) {
-                    scan.dirs.add(cwd)
-                    scan.access = "unknown"
-                  }
-                  // kilocode_change end
-                  yield* ask(ctx, scan, params.command, params.description) // kilocode_change
-                }),
-              )
+              const timeout = CommandTimeout.clamp(params.timeout ?? defaultTimeoutMs).timeout // kilocode_change
+              yield* permission.ask(ctx, { command: params.command, cwd, shell, description: params.description }) // kilocode_change
 
               return yield* run(
                 {

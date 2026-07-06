@@ -17,7 +17,10 @@ import { Emitter } from "../../../src/indexing/runtime"
 
 class Store {
   public clearCount = 0
+  public closeCount = 0
+  public completeCount = 0
   public deleteCount = 0
+  public incompleteCount = 0
 
   constructor(
     private readonly existing: boolean,
@@ -47,14 +50,21 @@ class Store {
   async deleteCollection(): Promise<void> {
     this.deleteCount += 1
   }
+  async close(): Promise<void> {
+    this.closeCount += 1
+  }
   async collectionExists(): Promise<boolean> {
     return true
   }
   async hasIndexedData(): Promise<boolean> {
     return this.existing
   }
-  async markIndexingComplete(): Promise<void> {}
-  async markIndexingIncomplete(): Promise<void> {}
+  async markIndexingComplete(): Promise<void> {
+    this.completeCount += 1
+  }
+  async markIndexingIncomplete(): Promise<void> {
+    this.incompleteCount += 1
+  }
 }
 
 class Scanner {
@@ -115,6 +125,27 @@ class Watcher {
     this.onBatchProgressUpdate.dispose()
     this.onDidFinishBatchProcessing.dispose()
   }
+}
+
+class BlockingScanner {
+  public isCancelled = false
+  public finished = false
+  private readonly gate = Promise.withResolvers<void>()
+  readonly started = Promise.withResolvers<void>()
+
+  async scanDirectory(): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+    this.started.resolve()
+    await this.gate.promise
+    this.finished = true
+    return { stats: { processed: 0, skipped: 0 }, totalBlockCount: 0 }
+  }
+
+  cancel(): void {
+    this.isCancelled = true
+    this.gate.resolve()
+  }
+
+  updateBatchSegmentThreshold(_newThreshold: number): void {}
 }
 
 class FailScanner {
@@ -223,6 +254,136 @@ describe("CodeIndexOrchestrator telemetry", () => {
     // Scanner may or may not have been reached depending on timing,
     // but the orchestrator must not be in Indexing state
     expect(orchestrator.state).not.toBe("Indexing")
+  })
+
+  test("shutdown waits for an active scan before closing the store", async () => {
+    const scanner = new BlockingScanner()
+    const store = new Store(false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      scanner as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    const active = orchestrator.startIndexing("background")
+    await scanner.started.promise
+    await orchestrator.shutdown()
+    await active
+
+    expect(scanner.finished).toBe(true)
+    expect(store.closeCount).toBe(1)
+    expect(store.incompleteCount).toBe(1)
+    expect(store.completeCount).toBe(0)
+  })
+
+  test("preserves an unchanged index when an incremental scan is interrupted", async () => {
+    const scanner = new BlockingScanner()
+    const store = new Store(true)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      scanner as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    const active = orchestrator.startIndexing("background")
+    await scanner.started.promise
+    await orchestrator.shutdown()
+    await active
+
+    expect(store.incompleteCount).toBe(1)
+    expect(store.completeCount).toBe(1)
+    expect(store.clearCount).toBe(0)
+  })
+
+  test("clears stale vectors and hashes before rebuilding an incomplete store", async () => {
+    const cache = {
+      clears: 0,
+      async clearCacheFile() {
+        this.clears += 1
+      },
+      async flush() {},
+    }
+    const store = new Store(false, false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      cache as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+
+    expect(store.clearCount).toBe(1)
+    expect(cache.clears).toBe(1)
+    expect(orchestrator.state).toBe("Indexed")
+  })
+
+  test("does not clear data when index completeness cannot be read", async () => {
+    const cache = {
+      clears: 0,
+      async clearCacheFile() {
+        this.clears += 1
+      },
+    }
+    const store = new Store(true, false)
+    store.hasIndexedData = async () => {
+      throw new Error("metadata unavailable")
+    }
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      cache as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("background")
+
+    expect(store.clearCount).toBe(0)
+    expect(cache.clears).toBe(0)
+    expect(orchestrator.state).toBe("Error")
+  })
+
+  test("rebuilds a complete independent index when the shared baseline is unavailable", async () => {
+    const cache = {
+      clears: 0,
+      async clearCacheFile() {
+        this.clears += 1
+      },
+      async flush() {},
+    }
+    const store = new Store(true, false)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      cache as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+      undefined,
+      undefined,
+      true,
+    )
+
+    await orchestrator.startIndexing("background")
+
+    expect(store.clearCount).toBe(1)
+    expect(cache.clears).toBe(1)
+    expect(orchestrator.state).toBe("Indexed")
   })
 
   test("preserves cache and collection data on retryable start failures", async () => {

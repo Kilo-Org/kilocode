@@ -6,6 +6,14 @@ describe("session export worker validation", () => {
     expect(parseMessage({ kind: "init", dbPath: 42 })).toBeUndefined()
   })
 
+  test("accepts init messages with custom endpoint opt-in", () => {
+    expect(parseMessage({ kind: "init", dbPath: ":memory:", allowCustomEndpoint: true })).toEqual({
+      kind: "init",
+      dbPath: ":memory:",
+      allowCustomEndpoint: true,
+    })
+  })
+
   test("rejects event messages without a valid envelope", () => {
     expect(parseMessage({ kind: "event", approxBytes: 10, envelope: { type: "nope" } })).toBeUndefined()
   })

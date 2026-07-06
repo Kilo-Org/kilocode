@@ -9,9 +9,8 @@ import { Config } from "@/config/config"
 import { Bus } from "../bus"
 import * as Log from "@opencode-ai/core/util/log"
 import { createKiloClient } from "@kilocode/sdk"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { ServerAuth } from "@/server/auth"
-import { CodexAuthPlugin } from "./codex"
+import { CodexAuthPlugin } from "./openai/codex"
 import { Session } from "@/session/session"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { CopilotAuthPlugin } from "./github-copilot/copilot"
@@ -19,7 +18,8 @@ import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
 import { AzureAuthPlugin } from "./azure"
-import { XaiAuthPlugin } from "./xai" // kilocode_change
+import { DigitalOceanAuthPlugin } from "./digitalocean"
+import { XaiAuthPlugin } from "./xai"
 import { Effect, Layer, Context, Stream } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
@@ -27,8 +27,12 @@ import { errorMessage } from "@/util/error"
 import { PluginLoader } from "./loader"
 import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } from "./shared"
 import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
+import { AtomicChatPlugin } from "@kilocode/plugin-atomic-chat" // kilocode_change
+import { AnacondaDesktopPlugin } from "@/kilocode/anaconda-desktop/provider" // kilocode_change
 import { registerAdapter } from "@/control-plane/adapters"
 import type { WorkspaceAdapter } from "@/control-plane/types"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { InstallationChannel } from "@opencode-ai/core/installation/version"
 
 const log = Log.create({ service: "plugin" })
 
@@ -57,21 +61,34 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Plugin") {}
 
+export function experimentalWebSocketsEnabled(input: { enabled: boolean; channel?: string }) {
+  return input.enabled || ["local", "dev", "beta"].includes(input.channel ?? InstallationChannel)
+}
+
 // Built-in plugins that are directly imported (not installed from npm)
-// kilocode_change start
-const INTERNAL_PLUGINS: PluginInstance[] = [
-  KiloAuthPlugin,
-  CodexAuthPlugin,
-  CopilotAuthPlugin,
-  // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types
-  GitlabAuthPlugin as unknown as PluginInstance,
-  PoeAuthPlugin as unknown as PluginInstance,
-  CloudflareWorkersAuthPlugin,
-  CloudflareAIGatewayAuthPlugin,
-  AzureAuthPlugin,
-  XaiAuthPlugin,
-]
-// kilocode_change end
+function internalPlugins(flags: RuntimeFlags.Info): PluginInstance[] {
+  return [
+    KiloAuthPlugin, // kilocode_change
+    AtomicChatPlugin, // kilocode_change
+    AnacondaDesktopPlugin, // kilocode_change
+    // Temporary rollout: pre-release builds use WebSockets by default; releases require explicit opt-in.
+    (input) =>
+      CodexAuthPlugin(input, {
+        experimentalWebSockets: experimentalWebSocketsEnabled({ enabled: flags.experimentalWebSockets }),
+      }),
+    CopilotAuthPlugin,
+    // kilocode_change start
+    // kilocode_change - external auth plugins ship against @opencode-ai/plugin; bridge to our @kilocode/plugin types
+    GitlabAuthPlugin as unknown as PluginInstance,
+    PoeAuthPlugin as unknown as PluginInstance,
+    // kilocode_change end
+    CloudflareWorkersAuthPlugin,
+    CloudflareAIGatewayAuthPlugin,
+    AzureAuthPlugin,
+    DigitalOceanAuthPlugin,
+    XaiAuthPlugin,
+  ]
+}
 
 function isServerPlugin(value: unknown): value is PluginInstance {
   return typeof value === "function"
@@ -118,6 +135,7 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const bus = yield* Bus.Service
     const config = yield* Config.Service
+    const flags = yield* RuntimeFlags.Service
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("Plugin.state")(function* (ctx) {
@@ -154,7 +172,7 @@ export const layer = Layer.effect(
           $: typeof Bun === "undefined" ? undefined : Bun.$,
         }
 
-        for (const plugin of INTERNAL_PLUGINS) {
+        for (const plugin of flags.disableDefaultPlugins ? [] : internalPlugins(flags)) {
           log.info("loading internal plugin", { name: plugin.name })
           const init = yield* Effect.tryPromise({
             try: () => plugin(input),
@@ -165,8 +183,8 @@ export const layer = Layer.effect(
           if (init._tag === "Some") hooks.push(init.value)
         }
 
-        const plugins = Flag.KILO_PURE ? [] : (cfg.plugin_origins ?? [])
-        if (Flag.KILO_PURE && cfg.plugin_origins?.length) {
+        const plugins = flags.pure ? [] : (cfg.plugin_origins ?? [])
+        if (flags.pure && cfg.plugin_origins?.length) {
           log.info("skipping external plugins in pure mode", { count: cfg.plugin_origins.length })
         }
         if (plugins.length) yield* config.waitForDependencies()
@@ -247,8 +265,22 @@ export const layer = Layer.effect(
           }).pipe(Effect.ignore)
         }
 
+        yield* Effect.addFinalizer(() =>
+          Effect.forEach(
+            hooks,
+            (hook) =>
+              Effect.tryPromise({
+                try: () => Promise.resolve(hook.dispose?.()),
+                catch: (error) => {
+                  log.error("plugin dispose hook failed", { error })
+                },
+              }).pipe(Effect.ignore),
+            { discard: true },
+          ),
+        )
+
         // Subscribe to bus events, fiber interrupted when scope closes
-        yield* bus.subscribeAll().pipe(
+        yield* (yield* bus.subscribeAll()).pipe(
           Stream.runForEach((input) =>
             Effect.sync(() => {
               for (const hook of hooks) {
@@ -291,6 +323,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer))
+export const defaultLayer = layer.pipe(
+  Layer.provide(Bus.layer),
+  Layer.provide(Config.defaultLayer),
+  Layer.provide(RuntimeFlags.defaultLayer),
+)
 
 export * as Plugin from "."

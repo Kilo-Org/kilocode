@@ -1,6 +1,6 @@
 import type { EmbedderProvider } from "./interfaces/manager"
 import type { CodeIndexConfig, PreviousConfigSnapshot } from "./interfaces/config"
-import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS } from "./constants"
+import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_VECTOR_STORE } from "./constants"
 import { getDefaultModelId, getModelDimension, getModelScoreThreshold } from "./model-registry"
 import { isEmbeddingProfileEqual, resolveEmbeddingProfile } from "./embedding-profile"
 
@@ -50,14 +50,14 @@ export interface IndexingConfigInput {
 export class CodeIndexConfigManager {
   private enabled = false
   private embedderProvider: EmbedderProvider = "openai"
-  private vectorStoreProvider: "lancedb" | "qdrant" = "qdrant"
+  private vectorStoreProvider: "lancedb" | "qdrant" = DEFAULT_VECTOR_STORE
   private lancedbVectorStoreDirectory?: string
   private modelId?: string
   private modelDimension?: number
   private kiloOptions?: { apiKey: string; baseUrl?: string; organizationId?: string }
   private openAiOptions?: { apiKey: string }
   private ollamaOptions?: { baseUrl: string; modelId?: string }
-  private openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
+  private openAiCompatibleOptions?: { baseUrl: string; apiKey?: string }
   private geminiOptions?: { apiKey: string }
   private mistralOptions?: { apiKey: string }
   private vercelAiGatewayOptions?: { apiKey: string }
@@ -88,7 +88,7 @@ export class CodeIndexConfigManager {
   private applyInput(input: IndexingConfigInput): void {
     this.enabled = input.enabled
     this.embedderProvider = input.embedderProvider
-    this.vectorStoreProvider = input.vectorStoreProvider ?? "qdrant"
+    this.vectorStoreProvider = input.vectorStoreProvider ?? DEFAULT_VECTOR_STORE
     this.lancedbVectorStoreDirectory = input.lancedbVectorStoreDirectory
     this.qdrantUrl = input.qdrantUrl ?? "http://localhost:6333"
     this.qdrantApiKey = input.qdrantApiKey
@@ -112,10 +112,9 @@ export class CodeIndexConfigManager {
     this.openAiOptions = input.openAiKey ? { apiKey: input.openAiKey } : undefined
     const url = input.ollamaBaseUrl ?? (input.embedderProvider === "ollama" ? "http://localhost:11434" : undefined)
     this.ollamaOptions = url ? { baseUrl: url, modelId: input.modelId } : undefined
-    this.openAiCompatibleOptions =
-      input.openAiCompatibleBaseUrl && input.openAiCompatibleApiKey
-        ? { baseUrl: input.openAiCompatibleBaseUrl, apiKey: input.openAiCompatibleApiKey }
-        : undefined
+    this.openAiCompatibleOptions = input.openAiCompatibleBaseUrl
+      ? { baseUrl: input.openAiCompatibleBaseUrl, apiKey: input.openAiCompatibleApiKey?.trim() || undefined }
+      : undefined
     this.geminiOptions = input.geminiApiKey ? { apiKey: input.geminiApiKey } : undefined
     this.mistralOptions = input.mistralApiKey ? { apiKey: input.mistralApiKey } : undefined
     this.vercelAiGatewayOptions = input.vercelAiGatewayApiKey ? { apiKey: input.vercelAiGatewayApiKey } : undefined
@@ -168,8 +167,7 @@ export class CodeIndexConfigManager {
       return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
     if (provider === "openai") return !!(this.openAiOptions?.apiKey && hasStore)
     if (provider === "ollama") return !!(this.ollamaOptions?.baseUrl && hasStore)
-    if (provider === "openai-compatible")
-      return !!(this.openAiCompatibleOptions?.baseUrl && this.openAiCompatibleOptions?.apiKey && hasStore)
+    if (provider === "openai-compatible") return !!(this.openAiCompatibleOptions?.baseUrl && hasStore)
     if (provider === "gemini") return !!(this.geminiOptions?.apiKey && hasStore)
     if (provider === "mistral") return !!(this.mistralOptions?.apiKey && hasStore)
     if (provider === "vercel-ai-gateway") return !!(this.vercelAiGatewayOptions?.apiKey && hasStore)
@@ -196,7 +194,7 @@ export class CodeIndexConfigManager {
     if (prevProvider !== this.embedderProvider) return true
 
     // Vector store provider change
-    if ((prev.vectorStoreProvider ?? "qdrant") !== this.vectorStoreProvider) return true
+    if ((prev.vectorStoreProvider ?? DEFAULT_VECTOR_STORE) !== this.vectorStoreProvider) return true
 
     // LanceDB path change
     if (
@@ -258,7 +256,7 @@ export class CodeIndexConfigManager {
     return {
       isConfigured: this.isConfigured(),
       embedderProvider: this.embedderProvider,
-      vectorStoreProvider: this.vectorStoreProvider ?? "qdrant",
+      vectorStoreProvider: this.vectorStoreProvider,
       lancedbVectorStoreDirectoryPlaceholder: this.lancedbVectorStoreDirectory,
       modelId: this.modelId,
       modelDimension: this.modelDimension,

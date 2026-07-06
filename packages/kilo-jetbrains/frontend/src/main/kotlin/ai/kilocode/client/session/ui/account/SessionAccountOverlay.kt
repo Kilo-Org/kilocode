@@ -180,8 +180,7 @@ internal class SessionAccountOverlay(
             if (balanceText != next || balance.icon == null) {
                 balance.icon = FilledBadgeIcon(
                     next,
-                    UiStyle.Colors.badgeBg(),
-                    UiStyle.Colors.badgeFg(),
+                    UiStyle.Badge.Secondary,
                 )
                 layout = true
             }
@@ -194,7 +193,7 @@ internal class SessionAccountOverlay(
 
     @RequiresEdt
     private fun showPopup() {
-        val bg = SessionUiStyle.View.sessionViewBackground()
+        val bg = SessionUiStyle.AccountPopup.bgColor()
         val model = CollectionListModel(choices)
         val list = JBList(model).apply {
             selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -285,7 +284,7 @@ internal class SessionAccountOverlay(
     internal fun choiceCount() = choices.size
     internal fun selectedIndex() = choices.indexOfFirst { it.org == currentOrgId }.takeIf { it >= 0 } ?: 0
     internal fun panelBackground() = panel.background
-    internal fun panelBorderColor() = SessionUiStyle.View.sessionViewOutline()
+    internal fun panelBorderColor() = SessionUiStyle.AccountPopup.outlineColor()
     internal fun balanceVisible() = balance.isVisible
     internal fun balanceIcon() = balance.icon
     internal fun balanceText() = balanceText

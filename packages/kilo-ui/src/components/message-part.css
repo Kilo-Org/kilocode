@@ -210,30 +210,72 @@
 
 html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   border-radius: 0;
-  background: var(--vscode-terminal-background, var(--vscode-panel-background));
+  border: 0;
+  background: transparent;
+  overflow: visible;
 
-  [data-slot="bash-pre"] code {
-    color: var(--vscode-terminal-foreground, var(--vscode-editor-foreground));
+  [data-slot="bash-terminal"] {
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--surface-tool-output-base);
   }
 
-  [data-slot="bash-divider"] {
-    background: var(--vscode-panel-border, var(--border-weak-base));
+  [data-slot="bash-pre"] code,
+  .shiki code {
+    color: var(--text-weak);
   }
 }
 
-/* Bash tool: section layout (command + output) */
+/* Bash tool: static terminal preview with separate command/output surfaces. */
+[data-component="bash-output"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-inline: -6px;
+  width: calc(100% + 12px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+[data-component="bash-output"] [data-slot="bash-terminal"] {
+  border-radius: 0;
+  border: 1px solid var(--border-weak-base);
+  background: var(--surface-raised-base);
+  overflow: hidden;
+}
+
 [data-component="bash-output"] [data-slot="bash-section"] {
   position: relative;
 }
 
+[data-component="bash-output"] [data-slot="bash-section"][data-kind="command"] {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
+  padding: 8px 12px 7px;
+}
+
+[data-component="bash-output"] [data-slot="bash-section"][data-kind="output"] {
+  padding: 8px 12px 10px;
+}
+
+[data-component="bash-output"] [data-slot="bash-prompt"] {
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-family: var(--font-family-mono);
+  font-feature-settings: var(--font-family-mono--font-feature-settings);
+  font-size: var(--kilo-font-size-12);
+  line-height: var(--line-height-large);
+  user-select: none;
+}
+
 [data-component="bash-output"] [data-slot="bash-section-code"] {
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
   max-height: 240px;
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 [data-component="bash-output"] [data-slot="bash-section-actions"] {
@@ -254,25 +296,29 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   pointer-events: auto;
 }
 
-/* Edge-to-edge divider (matches MCP tool divider) */
-[data-component="bash-output"] [data-slot="bash-divider"] {
-  height: 1px;
-  background: var(--border-weak-base);
+[data-component="bash-output"] [data-slot="bash-pre"] {
+  margin: 0;
+  padding: 0;
 }
 
-/* Shiki syntax-highlighted shell output */
-[data-component="bash-output"] .shiki,
+[data-component="bash-output"] .shiki {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+}
+
 [data-component="shell-expanded-output"] .shiki {
   margin: 0;
   padding: 12px;
   background: transparent !important;
 }
 
+[data-component="bash-output"] [data-slot="bash-pre"] code,
 [data-component="bash-output"] .shiki code,
 [data-component="shell-expanded-output"] .shiki code {
   font-family: var(--font-family-mono);
   font-feature-settings: var(--font-family-mono--font-feature-settings);
-  font-size: var(--font-size-small);
+  font-size: var(--kilo-font-size-12);
   line-height: var(--line-height-large);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -292,26 +338,50 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 
   [data-slot="message-part-tool-error-content"] {
     display: flex;
-    align-items: start;
-    gap: 8px;
-  }
-
-  [data-slot="message-part-tool-error-title"] {
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    min-width: 0;
     font-family: var(--font-family-sans);
     font-size: var(--font-size-base);
     font-style: normal;
-    font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     letter-spacing: var(--letter-spacing-normal);
+  }
+
+  [data-slot="message-part-tool-error-heading"] {
+    display: inline-flex;
+    flex: none;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  [data-slot="message-part-tool-error-title"] {
+    font-weight: var(--font-weight-medium);
     color: var(--text-on-critical-base);
     white-space: nowrap;
   }
 
+  [data-slot="message-part-tool-error-code"] {
+    color: var(--text-on-critical-weak);
+  }
+
   [data-slot="message-part-tool-error-message"] {
     color: var(--text-on-critical-weak);
+    flex: 1 0 auto;
+    min-width: 0;
+    max-width: 100%;
     max-height: 240px;
     overflow-y: auto;
-    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 240px) {
+  [data-component="tool-error"] > [data-component="icon"] {
+    display: none;
   }
 }
 
@@ -356,6 +426,32 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 }
 
+html[data-theme="kilo-vscode"] [data-component="todos"] {
+  margin-inline: -6px;
+  width: calc(100% + 12px);
+  padding: 8px 12px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-tool-output-base);
+  color: var(--text-weak);
+
+  [data-slot="checkbox-checkbox-label"] {
+    color: var(--text-weak);
+    font-size: var(--kilo-font-size-12);
+    line-height: var(--kilo-font-size-16);
+  }
+
+  [data-slot="message-part-todo-hidden"] {
+    color: var(--text-weaker);
+    font-size: var(--kilo-font-size-12);
+    line-height: var(--kilo-font-size-16);
+  }
+
+  [data-slot="message-part-todo-content"][data-changed="changed"] {
+    color: var(--text-base);
+  }
+}
+
 /* User message copy button: collapse wrapper when idle, show on hover.
  * The wrapper must be tall enough to fully contain the button (20px)
  * so that hovering the button keeps [data-component="user-message"]
@@ -379,6 +475,30 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 
 [data-component="question-answers"] {
   padding: 8px;
+}
+
+@keyframes reasoning-card-down {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes reasoning-card-up {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
 }
 
 /* Reasoning block: visually distinct from normal agent output.
@@ -454,22 +574,21 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     }
   }
 
-  /* Collapse/expand animation via Kobalte's CSS variable.
-     Uses grid trick: the outer wrapper transitions grid-template-rows
-     between 0fr (collapsed) and 1fr (expanded) so the content smoothly
-     collapses without needing to know the pixel height up front. */
   [data-slot="collapsible-content"] {
     display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 250ms ease-out;
     overflow: hidden;
 
     > * {
+      min-height: 0;
       overflow: hidden;
     }
 
     &[data-expanded] {
-      grid-template-rows: 1fr;
+      animation: reasoning-card-down 220ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    &[data-closed] {
+      animation: reasoning-card-up 160ms cubic-bezier(0.77, 0, 0.175, 1);
     }
   }
 
@@ -486,6 +605,102 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     /* Pulse the brain icon while streaming */
     [data-slot="reasoning-header"] [data-component="icon"] {
       animation: reasoning-pulse 2s ease-in-out infinite;
+    }
+  }
+}
+
+html[data-theme="kilo-vscode"] [data-component="text-part"] {
+  margin-top: 0;
+}
+
+html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
+  border-left: 0;
+  border-radius: 0;
+  overflow: visible;
+
+  [data-component="collapsible"].tool-collapsible {
+    gap: 0;
+    border-radius: 0;
+  }
+
+  [data-slot="collapsible-trigger"] {
+    margin-inline: -6px;
+    width: calc(100% + 12px);
+    min-height: 24px;
+    height: auto;
+    padding: 2px 6px;
+    background: transparent;
+    border-radius: 4px;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+
+    &:hover {
+      background-color: var(--vscode-list-hoverBackground, var(--surface-raised-base-hover));
+    }
+  }
+
+  [data-slot="collapsible-arrow"] {
+    opacity: 1;
+  }
+
+  [data-slot="reasoning-header"] {
+    gap: 6px;
+    color: var(--text-weak);
+    font-size: var(--kilo-font-size-12);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--kilo-font-size-16);
+
+    [data-component="icon"] {
+      color: var(--text-weak);
+    }
+  }
+
+  [data-slot="reasoning-label"],
+  [data-slot="reasoning-title"] {
+    color: var(--text-weak);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--kilo-font-size-16);
+  }
+
+  [data-slot="reasoning-label"] + [data-slot="reasoning-title"]::before {
+    content: "·";
+    margin-right: 6px;
+    color: var(--text-weak);
+  }
+
+  [data-slot="collapsible-trigger"]:hover {
+    [data-slot="reasoning-label"],
+    [data-slot="reasoning-title"] {
+      color: var(--vscode-list-hoverForeground, var(--vscode-foreground, var(--text-strong)));
+    }
+
+    [data-slot="reasoning-header"] [data-component="icon"],
+    [data-slot="collapsible-arrow-icon"] {
+      color: var(--vscode-list-hoverForeground, var(--vscode-foreground, var(--icon-base)));
+    }
+  }
+
+  [data-slot="collapsible-content"] {
+    margin-inline: -6px;
+    width: calc(100% + 12px);
+  }
+
+  [data-slot="reasoning-details"]::before {
+    display: block;
+    height: 6px;
+    content: "";
+  }
+
+  [data-slot="reasoning-content"] {
+    padding: 8px 12px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--surface-tool-output-base);
+
+    [data-component="markdown"] {
+      font-size: var(--kilo-font-size-12);
+      line-height: 160%;
     }
   }
 }
@@ -520,5 +735,12 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     color: var(--text-weak);
     opacity: 0.9;
     line-height: var(--line-height-large);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="reasoning-part"] [data-slot="collapsible-content"][data-expanded],
+  [data-component="reasoning-part"] [data-slot="collapsible-content"][data-closed] {
+    animation-duration: 0.01ms;
   }
 }

@@ -7,7 +7,7 @@ import { WorktreeDiff } from "@/kilocode/review/worktree-diff" // kilocode_chang
 import { Worktree } from "@/worktree"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Schema } from "effect"
-import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
+import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
 import {
@@ -55,12 +55,33 @@ export const ToolListQuery = Schema.Struct({
   model: ModelID,
 })
 
-const WorktreeList = Schema.Array(Schema.String)
+// kilocode_change start
+const WorktreeList = Schema.Array(
+  Schema.Struct({ directory: Schema.String, managed: Schema.Boolean }).annotate({ identifier: "WorktreeListItem" }),
+)
+// kilocode_change end
+const WorktreeErrorName = Schema.Union([
+  Schema.Literal("WorktreeNotGitError"),
+  Schema.Literal("WorktreeNameGenerationFailedError"),
+  Schema.Literal("WorktreeCreateFailedError"),
+  Schema.Literal("WorktreeStartCommandFailedError"),
+  Schema.Literal("WorktreeRemoveFailedError"),
+  Schema.Literal("WorktreeResetFailedError"),
+  Schema.Literal("WorktreeListFailedError"),
+])
+export class WorktreeApiError extends Schema.ErrorClass<WorktreeApiError>("WorktreeError")(
+  {
+    name: WorktreeErrorName,
+    data: Schema.Struct({ message: Schema.String }),
+  },
+  { httpApiStatus: 400 },
+) {}
 export const SessionListQuery = Schema.Struct({
   ...WorkspaceRoutingQueryFields,
   // kilocode_change start
   projectID: Schema.optional(Schema.String),
   worktrees: Schema.optional(QueryBoolean),
+  current: Schema.optional(QueryBoolean),
   // kilocode_change end
   roots: Schema.optional(QueryBoolean),
   start: Schema.optional(Schema.NumberFromString),
@@ -131,7 +152,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
           OpenApi.annotations({
             identifier: "experimental.console.switchOrg",
             summary: "Switch active Console org",
-            description: "Persist a new active Console account/org selection for the current local OpenCode state.",
+            description: "Persist a new active Console account/org selection for the current local Kilo state.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.get("tool", ExperimentalPaths.tool, {
@@ -160,19 +181,21 @@ export const ExperimentalApi = HttpApi.make("experimental")
         ),
         HttpApiEndpoint.get("worktree", ExperimentalPaths.worktree, {
           query: WorkspaceRoutingQuery,
-          success: described(WorktreeList, "List of worktree directories"),
+          success: described(WorktreeList, "List of worktrees"), // kilocode_change
+          error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.list",
             summary: "List worktrees",
-            description: "List all sandbox worktrees for the current project.",
+            description: "List all git worktrees for the current project and whether Kilo manages them.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.post("worktreeCreate", ExperimentalPaths.worktree, {
+          disableCodecs: true,
           query: WorkspaceRoutingQuery,
-          payload: Schema.optional(Worktree.CreateInput),
+          payload: [HttpApiSchema.NoContent, Worktree.CreateInput],
           success: described(Worktree.Info, "Worktree created"),
-          error: HttpApiError.BadRequest,
+          error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.create",
@@ -184,7 +207,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
           query: WorkspaceRoutingQuery,
           payload: Worktree.RemoveInput,
           success: described(Schema.Boolean, "Worktree removed"),
-          error: HttpApiError.BadRequest,
+          error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.remove",
@@ -196,7 +219,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
           query: WorkspaceRoutingQuery,
           payload: Worktree.ResetInput,
           success: described(Schema.Boolean, "Worktree reset"),
-          error: HttpApiError.BadRequest,
+          error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.reset",
@@ -247,7 +270,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
             identifier: "experimental.session.list",
             summary: "List sessions",
             description:
-              "Get a list of all OpenCode sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.",
+              "Get a list of all Kilo sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.", // kilocode_change
           }),
         ),
         HttpApiEndpoint.get("resource", ExperimentalPaths.resource, {

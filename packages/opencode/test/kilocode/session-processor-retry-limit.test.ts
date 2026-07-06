@@ -9,23 +9,29 @@ import { afterEach, describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
+import type { LLMEvent } from "@opencode-ai/llm"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
 import { ModelID, ProviderID } from "../../src/provider/schema"
+import { Reference } from "../../src/reference/reference"
 import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionProcessor } from "../../src/session/processor"
 import { SessionRetry } from "../../src/session/retry"
-import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import { MessageID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { Snapshot } from "../../src/snapshot"
+import { SyncEvent } from "../../src/sync"
 import * as Log from "@opencode-ai/core/util/log"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance } from "../fixture/fixture"
@@ -38,7 +44,7 @@ const ref = {
   modelID: ModelID.make("test-model"),
 }
 
-type Script = Stream.Stream<LLM.Event, unknown>
+type Script = Stream.Stream<LLMEvent, unknown>
 
 class TestLLM extends Context.Service<
   TestLLM,
@@ -103,6 +109,13 @@ const llm = Layer.unwrap(
   }),
 )
 
+const reference = Layer.mock(Reference.Service)({
+  init: () => Effect.void,
+  list: () => Effect.succeed([]),
+  get: () => Effect.succeed(undefined),
+  ensure: () => Effect.void,
+  contains: () => Effect.succeed(false),
+})
 const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 const deps = Layer.mergeAll(
@@ -112,11 +125,16 @@ const deps = Layer.mergeAll(
   Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
+  RuntimeFlags.layer(),
+  reference,
   SessionSummary.defaultLayer,
+  Image.defaultLayer,
+  SyncEvent.defaultLayer,
+  EventV2Bridge.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
-const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
+const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps), Layer.provide(reference))
 
 const it = testEffect(env)
 

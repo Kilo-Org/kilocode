@@ -14,6 +14,7 @@
 import type { KeyEvent, Renderable } from "@opentui/core"
 import type { Binding } from "@opentui/keymap"
 import type { KiloClient, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
+import type { RunInteractiveTerminalSnapshot } from "@/kilocode/cli/cmd/run/types" // kilocode_change
 
 export type RunFilePart = {
   type: "file"
@@ -34,6 +35,7 @@ export type RunProvider = NonNullable<Awaited<ReturnType<KiloClient["provider"][
 export type RunPrompt = {
   text: string
   parts: RunPromptPart[]
+  mode?: "shell"
   command?: {
     name: string
     arguments: string
@@ -52,6 +54,8 @@ export type RunInput = {
   sessionID: string
   sessionTitle?: string
   resume?: boolean
+  replay?: boolean
+  replayLimit?: number
   agent: string | undefined
   model: PromptModel | undefined
   variant: string | undefined
@@ -157,9 +161,11 @@ export type FooterView =
   | { type: "prompt" }
   | { type: "permission"; request: PermissionRequest }
   | { type: "question"; request: QuestionRequest }
+  | { type: "interactive_terminal"; terminal: RunInteractiveTerminalSnapshot } // kilocode_change
 
 export type FooterPromptRoute =
   | { type: "composer" }
+  | { type: "subagent-menu" }
   | { type: "subagent"; sessionID: string }
   | { type: "command" }
   | { type: "model" }
@@ -300,6 +306,10 @@ export type StreamCommit = {
   interrupted?: boolean
   toolState?: StreamToolState
   toolError?: string
+  shell?: {
+    callID: string
+    command: string
+  }
 }
 
 // The public contract between the stream transport / prompt queue and

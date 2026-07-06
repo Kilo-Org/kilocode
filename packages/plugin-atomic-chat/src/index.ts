@@ -1,4 +1,4 @@
-import { AtomicChatPlugin } from './plugin'
+import { AtomicChatPlugin } from "./plugin"
 
 export { AtomicChatPlugin }
 export {
@@ -7,6 +7,6 @@ export {
   DEFAULT_ATOMIC_CHAT_ORIGIN,
   ATOMIC_CHAT_PROBE_PORTS,
   LOG_PREFIX,
-} from './constants'
+} from "./constants"
 
 export default AtomicChatPlugin

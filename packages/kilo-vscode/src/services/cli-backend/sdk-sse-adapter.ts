@@ -1,6 +1,7 @@
-import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
+import type { KiloClient, GlobalEvent } from "@kilocode/sdk/v2/client"
 
-export type SSEEventHandler = (event: Event, directory?: string) => void
+export type SSEPayload = GlobalEvent["payload"]
+export type SSEEventHandler = (event: SSEPayload, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
 
@@ -179,13 +180,7 @@ export class SdkSSEAdapter {
             this.notifyState("connected")
           }
 
-          // The SDK yields GlobalEvent = { directory, payload: Event }.
-          const globalEvent = event as GlobalEvent
-          const type = (globalEvent.payload as { type: string }).type
-          if (type !== "server.heartbeat") {
-            console.log("[Kilo New] SSE: 📨 Event:", type)
-          }
-          this.notifyEvent(globalEvent.payload as Event, globalEvent.directory)
+          this.notifyEvent(event.payload, event.directory)
         }
 
         console.log(
@@ -241,7 +236,7 @@ export class SdkSSEAdapter {
 
   // ── Notify helpers ─────────────────────────────────────────────────
 
-  private notifyEvent(event: Event, directory?: string): void {
+  private notifyEvent(event: SSEPayload, directory?: string): void {
     for (const handler of this.handlers) {
       try {
         handler(event, directory)

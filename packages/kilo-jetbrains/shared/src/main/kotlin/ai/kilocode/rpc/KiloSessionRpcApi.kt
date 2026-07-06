@@ -8,6 +8,7 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -71,8 +72,14 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     // ------ chat ------
 
+    /** Rewrite a draft prompt using the configured small model. */
+    suspend fun enhancePrompt(directory: String, text: String): String
+
     /** Send a prompt to a session (fire-and-forget). */
     suspend fun prompt(id: String, directory: String, prompt: PromptDto)
+
+    /** Run a configured slash command/workflow in a session. */
+    suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto)
 
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, directory: String)
@@ -82,6 +89,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
+
+    /** Load one attachment part from a session without returning full history to the frontend. */
+    suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto?
 
     /** Subscribe to streaming chat events for a specific session. */
     suspend fun events(id: String, directory: String): Flow<ChatEventDto>

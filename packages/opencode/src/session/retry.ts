@@ -4,6 +4,7 @@ import { MessageV2 } from "./message-v2"
 import { isKiloError } from "@/kilocode/kilo-errors" // kilocode_change
 import { SessionNetwork } from "./network" // kilocode_change
 import { iife } from "@/util/iife"
+import { isRecord } from "@/util/record"
 
 export type Err = ReturnType<NamedError["toObject"]>
 
@@ -86,7 +87,7 @@ export function retryable(error: Err, _provider?: string): Retryable | undefined
   }
 
   // Check for rate limit patterns in plain text error messages
-  const msg = error.data?.message
+  const msg = isRecord(error.data) ? error.data.message : undefined
   if (typeof msg === "string") {
     const lower = msg.toLowerCase()
     if (
@@ -98,7 +99,7 @@ export function retryable(error: Err, _provider?: string): Retryable | undefined
     }
   }
 
-  const json = parseJSON(error.data?.message)
+  const json = parseJSON(msg)
   if (!json || typeof json !== "object") return undefined
   const code = typeof json.code === "string" ? json.code : ""
 

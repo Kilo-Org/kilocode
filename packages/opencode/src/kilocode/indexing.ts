@@ -1,12 +1,13 @@
 import z from "zod"
 import path from "path"
+import { Effect } from "effect"
 import { type IndexingTelemetryEvent, type VectorStoreSearchResult } from "@kilocode/kilo-indexing/engine"
 import { toIndexingConfigInput, type IndexingConfig } from "@kilocode/kilo-indexing/config"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { IndexingStatus, disabledIndexingStatus } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { AppRuntime } from "@/effect/app-runtime"
@@ -15,10 +16,14 @@ import { makeRuntime } from "@/effect/run-service"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
-import { Event as IndexingEvent } from "./indexing-event"
+import type { WorkspaceID } from "@/control-plane/schema"
+import { WorkspaceContext } from "@/control-plane/workspace-context"
+import { Event as IndexingEvent, Warning as IndexingWarningEvent } from "./indexing-event"
+import { indexingWarningKey, type IndexingWarning } from "./indexing-warning"
 import { IndexingWorker } from "./indexing-worker-client"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
+import { primaryWorktree } from "./primary-worktree"
 
 const log = Log.create({ service: "kilocode-indexing" })
 const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
@@ -26,19 +31,19 @@ const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for
 const noWorkspace = () =>
   disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
 
-function worktreeDisabled(): z.infer<typeof IndexingStatus> {
-  return {
-    state: "Disabled",
-    message: "Indexing is disabled in worktree sessions. Use the main workspace for indexing.",
-    processedFiles: 0,
-    totalFiles: 0,
-    percent: 0,
-  }
-}
+const baselineDirectory = Effect.fn("KiloIndexing.baselineDirectory")(function* (dir: string) {
+  if (Instance.project.vcs !== "git") return undefined
+  const checkout = path.resolve(Instance.worktree)
+  const main = yield* primaryWorktree(checkout)
+  if (!main || checkout === main) return undefined
 
-function isWorktreePath(dir: string): boolean {
-  return /(?:\/|\\)\.kilo(?:code)?(?:\/|\\)worktrees(?:\/|\\)/.test(dir)
-}
+  const scope = path.relative(checkout, path.resolve(dir))
+  if (scope === ".." || scope.startsWith(`..${path.sep}`) || path.isAbsolute(scope)) return undefined
+
+  const baseline = path.resolve(main, scope)
+  if (baseline === path.resolve(dir)) return undefined
+  return baseline
+})
 
 function failed(err: unknown): z.infer<typeof IndexingStatus> {
   const msg = err instanceof Error ? err.message : String(err)
@@ -105,7 +110,7 @@ async function model(input: ReturnType<typeof toIndexingConfigInput>, auth: Kilo
   return {
     ...input,
     modelId: found.id,
-    modelDimension: chosen ? (input.modelDimension ?? found.dimension) : found.dimension,
+    modelDimension: found.dimension,
     searchMinScore: input.searchMinScore ?? found.scoreThreshold,
   }
 }
@@ -188,7 +193,7 @@ export namespace KiloIndexing {
   export function input(config?: IndexingConfig, global?: IndexingConfig) {
     return toIndexingConfigInput({
       ...config,
-      enabled: config?.enabled === true || global?.enabled === true,
+      enabled: config?.enabled ?? global?.enabled ?? false,
     })
   }
 
@@ -196,6 +201,8 @@ export namespace KiloIndexing {
     engine?: IndexingWorker.Driver
     initialized?: boolean
     current(): Status
+    warnings(): IndexingWarning[]
+    scope(workspace: WorkspaceID | undefined): void
     publish(): Promise<void>
     dispose(): Promise<void>
   }
@@ -210,16 +217,19 @@ export namespace KiloIndexing {
   }
 
   export const Event = IndexingEvent
+  export const Warning = IndexingWarningEvent
 
   const cache = new Map<string, Cache>()
 
   const inert = async (current: () => Status): Promise<Entry> => {
     const publish = async () => {
-      await Bus.publish(Event, { status: current() })
+      await Bus.publish(Instance.current, Event, { status: current() })
     }
 
     return {
       current,
+      warnings: () => [],
+      scope() {},
       publish,
       async dispose() {},
     }
@@ -234,7 +244,15 @@ export namespace KiloIndexing {
 
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
-    const cfg = await AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
+    const startup = await AppRuntime.runPromise(
+      Effect.gen(function* () {
+        const baseline = yield* baselineDirectory(dir)
+        const cfg = yield* Config.Service.use((svc) => svc.get())
+        return { baseline, cfg }
+      }),
+    )
+    const baseline = startup.baseline
+    const cfg = startup.cfg
     if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
       return track(hit, await inert(() => noWorkspace()))
     }
@@ -242,46 +260,109 @@ export namespace KiloIndexing {
       return track(hit, await inert(() => missing()))
     }
 
-    if (isWorktreePath(dir)) {
-      return track(hit, await inert(() => worktreeDisabled()))
-    }
-
-    log.info("initializing project indexing", { workspacePath: dir })
+    log.info("initializing project indexing", { workspacePath: dir, baselineDirectory: baseline })
     const root = path.join(Global.Path.state, "indexing")
     const auth = await kiloAuth(cfg)
     const globalConfig = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
     const global = globalConfig.indexing
     const merged = indexingWithKiloDefault({ ...global, ...cfg.indexing }, auth)
     const cfgInput = await model(enrichKilo(input(merged, global), auth), auth)
+    const workspaces = new Set<WorkspaceID | undefined>([WorkspaceContext.workspaceID])
     const box = { status: pending() }
+    const warnings = new Map<string, IndexingWarning>()
+    const delivery = {
+      last: undefined as Status | undefined,
+      task: Promise.resolve(),
+      timer: undefined as ReturnType<typeof setTimeout> | undefined,
+      time: 0,
+    }
     const current = () => box.status
     let disposed = false
 
-    const publish = async () => {
-      await Bus.publish(Event, { status: current() })
-    }
-    const report = Instance.bind(async () => {
-      try {
-        return await publish()
-      } catch (err) {
-        log.error("failed to publish indexing status", { err })
-      }
+    const same = (left: Status | undefined, right: Status) =>
+      left?.state === right.state &&
+      left.message === right.message &&
+      left.processedFiles === right.processedFiles &&
+      left.totalFiles === right.totalFiles &&
+      left.percent === right.percent
+    const report = Instance.bind((next = current()) => {
+      delivery.task = delivery.task
+        .then(async () => {
+          if (disposed || same(delivery.last, next)) return
+          await Bus.publish(Instance.current, Event, { status: next })
+          delivery.last = next
+        })
+        .catch((err) => {
+          log.error("failed to publish indexing status", { err })
+        })
+      return delivery.task
     })
+    const clear = () => {
+      if (!delivery.timer) return
+      clearTimeout(delivery.timer)
+      delivery.timer = undefined
+    }
     const status = Instance.bind((next: Status) => {
       if (disposed) return
+      const previous = current()
       box.status = next
-      void report()
+      if (same(previous, next)) return
+      const immediate = previous.state !== next.state || next.state !== "In Progress"
+      if (immediate) {
+        clear()
+        delivery.time = Date.now()
+        void report(next)
+        return
+      }
+      if (delivery.timer) return
+      const delay = Math.max(0, 250 - (Date.now() - delivery.time))
+      if (delay === 0) {
+        delivery.time = Date.now()
+        void report(next)
+        return
+      }
+      delivery.timer = setTimeout(
+        Instance.bind(() => {
+          delivery.timer = undefined
+          delivery.time = Date.now()
+          void report()
+        }),
+        delay,
+      )
     })
     const telemetry = Instance.bind((event: IndexingTelemetryEvent) => {
       if (disposed) return
       trackTelemetry(event)
     })
+    const warning = Instance.bind((item: IndexingWarning) => {
+      if (disposed) return
+      const key = indexingWarningKey(item)
+      if (warnings.has(key)) return
+      warnings.set(key, item)
+      void Promise.all(
+        [...workspaces].map((workspaceID) =>
+          WorkspaceContext.provide({
+            workspaceID,
+            fn: () => Bus.publish(Instance.current, Warning, item),
+          }),
+        ),
+      ).catch((err) => {
+        log.error("failed to publish indexing warning", { err, workspacePath: dir })
+      })
+    })
+    const output = Instance.bind((event: Parameters<IndexingWorker.Hooks["log"]>[0]) => {
+      if (disposed) return
+      log[event.level](event.message, { source: "worker", workspacePath: dir })
+    })
     const base: Entry = {
       current,
-      publish,
+      warnings: () => [...warnings.values()],
+      scope: (workspaceID) => workspaces.add(workspaceID),
+      publish: () => report(),
       async dispose() {
         if (disposed) return
         disposed = true
+        clear()
         base.initialized = false
         await base.engine?.dispose().catch((err) => {
           log.warn("failed to dispose project indexing worker", { err, workspacePath: dir })
@@ -291,9 +372,8 @@ export namespace KiloIndexing {
     const failure = Instance.bind((err: unknown) => {
       if (disposed) return
       base.initialized = false
-      box.status = failed(err)
       log.error("project indexing worker failed", { err, workspacePath: dir })
-      void report()
+      status(failed(err))
     })
     track(hit, base)
     await report()
@@ -309,9 +389,9 @@ export namespace KiloIndexing {
     const err = await LanceDBRuntime.ensure(cfgInput.vectorStoreProvider)
       .then(async () => {
         if (hit.disposed) return
-        const engine = IndexingWorker.create(dir, root, { status, telemetry, failure })
+        const engine = IndexingWorker.create(dir, root, { status, telemetry, warning, log: output, failure })
         base.engine = engine
-        box.status = await engine.init(cfgInput)
+        box.status = await engine.init(cfgInput, baseline)
         base.initialized = true
       })
       .then(
@@ -325,12 +405,13 @@ export namespace KiloIndexing {
         log.warn("failed to dispose failed project indexing worker", { err: disposeErr, workspacePath: dir })
       })
       base.engine = undefined
-      box.status = failed(err)
+      const next = failed(err)
+      status(next)
       log.error("project indexing initialization failed", {
         err,
         workspacePath: dir,
       })
-      await report()
+      await report(next)
       return base
     }
 
@@ -391,7 +472,29 @@ export namespace KiloIndexing {
   }
 
   export async function current(): Promise<Status> {
-    return (await hit().ready).current()
+    const entry = await hit().ready
+    entry.scope(WorkspaceContext.workspaceID)
+    return entry.current()
+  }
+
+  export async function models() {
+    try {
+      const cfg = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
+      const auth = await kiloAuth(cfg)
+      const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey })
+      if (catalog.models.length > 0 || (!auth.baseUrl && !auth.apiKey)) return catalog
+      const fallback = await fetchKiloEmbeddingModelCatalog()
+      return fallback.models.length > 0 ? fallback : catalog
+    } catch (err) {
+      log.warn("falling back to public Kilo embedding model catalog", { err })
+      return fetchKiloEmbeddingModelCatalog()
+    }
+  }
+
+  export async function warnings(): Promise<IndexingWarning[]> {
+    const entry = await hit().ready
+    entry.scope(WorkspaceContext.workspaceID)
+    return entry.warnings()
   }
 
   export function ready(): boolean {
@@ -402,12 +505,14 @@ export namespace KiloIndexing {
 
   export async function available(): Promise<boolean> {
     const entry = await hit().ready
+    entry.scope(WorkspaceContext.workspaceID)
     if (!entry.initialized) return false
     return entry.current().state !== "Disabled"
   }
 
   export async function search(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
-    const entry = await hit().ready
+    const entry = await hit().promise
+    entry.scope(WorkspaceContext.workspaceID)
     if (!entry.initialized || entry.current().state === "Disabled" || !entry.engine) return []
     return entry.engine.search(query, directoryPrefix)
   }

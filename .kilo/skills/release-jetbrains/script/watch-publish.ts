@@ -17,7 +17,9 @@ const { values } = parseArgs({
 })
 
 if (values.help) {
-  console.log(`Usage: bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --version <version> [--merge] [--run-id <id>]`)
+  console.log(
+    `Usage: bun .kilo/skills/release-jetbrains/script/watch-publish.ts --pr <number> --version <version> [--merge] [--run-id <id>]`,
+  )
   process.exit(0)
 }
 
@@ -35,10 +37,14 @@ console.log(`runUrl=${url}`)
 
 await $`gh run watch ${id} --repo ${repo} --exit-status`
 
-const rel = (await $`gh release view ${`jetbrains/v${ver}`} --repo ${repo} --json url,isPrerelease`.json()) as {
-  url: string
-  isPrerelease: boolean
-}
+const rel = await retry(
+  async () =>
+    (await $`gh release view ${`jetbrains/v${ver}`} --repo ${repo} --json url,isPrerelease`.json()) as {
+      url: string
+      isPrerelease: boolean
+    },
+  "view release",
+)
 console.log(
   JSON.stringify(
     {
@@ -54,7 +60,15 @@ console.log(
 
 async function merge() {
   const before = new Set((await runs()).map((run) => run.databaseId))
-  await $`gh pr merge ${pr} --repo ${repo} --merge`
+  try {
+    await $`gh pr merge ${pr} --repo ${repo} --merge`
+  } catch (err) {
+    if (await merged()) {
+      console.warn(`PR ${pr} is already merged; looking for the publish workflow run`)
+      return await find()
+    }
+    throw err
+  }
 
   for (const _ of Array.from({ length: 120 })) {
     const run = (await runs()).find((item) => item.headBranch === branch && !before.has(item.databaseId))
@@ -66,22 +80,49 @@ async function merge() {
 
 async function find() {
   for (const _ of Array.from({ length: 120 })) {
-    const run = (await runs()).find((item) => item.headBranch === branch && active(item.status))
+    const run = (await runs()).find((item) => item.headBranch === branch)
     if (run) return String(run.databaseId)
     await Bun.sleep(1000)
   }
   throw new Error(`No ${workflow} run found for ${branch}. Merge PR ${pr} first, or pass --merge to merge it automatically.`)
 }
 
-function active(status: string) {
-  return status === "queued" || status === "in_progress" || status === "waiting" || status === "requested" || status === "pending"
+async function merged() {
+  const info = await retry(
+    async () => (await $`gh pr view ${pr} --repo ${repo} --json state`.json()) as { state: string },
+    "check PR state",
+  )
+  return info.state === "MERGED"
 }
 
 async function runs() {
-  return (await $`gh run list --repo ${repo} --workflow ${workflow} --event pull_request --json databaseId,createdAt,headBranch,status --limit 100`.json()) as {
-    databaseId: number
-    createdAt: string
-    headBranch: string
-    status: string
-  }[]
+  return await retry(
+    async () =>
+      (await $`gh run list --repo ${repo} --workflow ${workflow} --event pull_request --json databaseId,createdAt,headBranch,status --limit 100`.json()) as {
+        databaseId: number
+        createdAt: string
+        headBranch: string
+        status: string
+      }[],
+    "list workflow runs",
+  )
+}
+
+async function retry<T>(task: () => Promise<T>, label: string, tries = 5): Promise<T> {
+  try {
+    return await task()
+  } catch (err) {
+    if (tries <= 1 || !transient(err)) throw err
+    console.warn(`${label} failed with a transient GitHub error; retrying (${tries - 1} left): ${message(err)}`)
+    await Bun.sleep(2000)
+    return await retry(task, label, tries - 1)
+  }
+}
+
+function transient(err: unknown) {
+  return /\bHTTP 5\d\d\b|\b50[234]\b|Bad Gateway|Gateway Timeout|Service Unavailable/i.test(message(err))
+}
+
+function message(err: unknown) {
+  return err instanceof Error ? err.message : String(err)
 }

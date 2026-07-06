@@ -1,12 +1,12 @@
-import type { AtomicChatModel, AtomicChatModelsResponse } from '../types'
-import { ATOMIC_CHAT_PROBE_PORTS, DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
+import type { AtomicChatModel, AtomicChatModelsResponse } from "../types"
+import { ATOMIC_CHAT_PROBE_PORTS, DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from "../constants"
 
-const MODELS_ENDPOINT = '/v1/models'
+const MODELS_ENDPOINT = "/v1/models"
 const FETCH_TIMEOUT_MS = 3000
 
 export function normalizeBaseURL(baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN): string {
-  let normalized = baseURL.replace(/\/+$/, '')
-  if (normalized.endsWith('/v1')) {
+  let normalized = baseURL.replace(/\/+$/, "")
+  if (normalized.endsWith("/v1")) {
     normalized = normalized.slice(0, -3)
   }
   return normalized
@@ -36,14 +36,11 @@ function fetchSignal(outer?: AbortSignal): AbortSignal {
 }
 
 /** Single GET /v1/models — shared by discovery, health, auto-detect, and chat validation. */
-export async function fetchModelsEndpoint(
-  baseURL: string,
-  signal?: AbortSignal
-): Promise<ModelsEndpointResult> {
+export async function fetchModelsEndpoint(baseURL: string, signal?: AbortSignal): Promise<ModelsEndpointResult> {
   const url = buildAPIURL(baseURL)
   const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
     signal: fetchSignal(signal),
   })
   if (!response.ok) {
@@ -55,7 +52,7 @@ export async function fetchModelsEndpoint(
 
 export async function checkAtomicChatHealth(
   baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<boolean> {
   try {
     const { ok } = await fetchModelsEndpoint(baseURL, signal)
@@ -71,7 +68,7 @@ export async function checkAtomicChatHealth(
 
 export async function discoverAtomicChatModels(
   baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<AtomicChatModel[]> {
   try {
     const { ok, models } = await fetchModelsEndpoint(baseURL, signal)
@@ -87,11 +84,11 @@ export async function discoverAtomicChatModels(
 
 export async function fetchModelsDirect(
   baseURL: string = DEFAULT_ATOMIC_CHAT_ORIGIN,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<string[]> {
   const { ok, models } = await fetchModelsEndpoint(baseURL, signal)
   if (!ok) {
-    throw new Error('Atomic Chat models endpoint returned a non-success status')
+    throw new Error("Atomic Chat models endpoint returned a non-success status")
   }
   return models.map((model) => model.id)
 }

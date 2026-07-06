@@ -1,7 +1,6 @@
 import { For, Show } from "solid-js"
-import { Tag } from "@kilocode/kilo-web-ui/tag"
 import { useConfig } from "../../context/config"
-import { ConfigPage, ConfigToolbar } from "./ConfigPage"
+import { ConfigPage, ConfigTag as Tag, ConfigToolbar } from "./ConfigPage"
 
 export function SourcesRoute() {
   const ctx = useConfig()

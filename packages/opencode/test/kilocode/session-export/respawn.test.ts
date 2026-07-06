@@ -5,7 +5,8 @@ import { getKillSwitchReason, resetEligibility } from "@/kilocode/session-export
 describe("SessionExport worker respawn", () => {
   let feature: string | undefined
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await SessionExport.shutdown()
     feature = process.env.KILOCODE_FEATURE
     resetEligibility()
   })

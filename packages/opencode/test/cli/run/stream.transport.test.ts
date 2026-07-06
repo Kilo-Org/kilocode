@@ -3,9 +3,9 @@ import { KiloClient, type GlobalEvent } from "@kilocode/sdk/v2"
 import { createSessionTransport } from "@/cli/cmd/run/stream.transport"
 import type { FooterApi, FooterEvent, RunFilePart, StreamCommit } from "@/cli/cmd/run/types"
 
-type EventStream = Awaited<ReturnType<KiloClient["event"]["subscribe"]>>["stream"]
+type SdkEvent = GlobalEvent["payload"]
+type EventStream = AsyncGenerator<SdkEvent, void, unknown>
 type GlobalEventStream = Awaited<ReturnType<KiloClient["global"]["event"]>>["stream"]
-type SdkEvent = EventStream extends AsyncGenerator<infer T, unknown, unknown> ? T : never
 type SessionMessage = NonNullable<Awaited<ReturnType<KiloClient["session"]["messages"]>>["data"]>[number]
 type SessionChild = NonNullable<Awaited<ReturnType<KiloClient["session"]["children"]>>["data"]>[number]
 type SessionToolPart = Extract<SessionMessage["parts"][number], { type: "tool" }>
@@ -67,27 +67,48 @@ function idle(sessionID = "session-1") {
   } satisfies SdkEvent
 }
 
-function assistant(id: string) {
+function retry(sessionID: string, attempt: number, message: string) {
   return {
-    id: `evt-${id}`,
-    type: "message.updated",
+    id: `evt-${sessionID}-retry-${attempt}`,
+    type: "session.status",
     properties: {
-      sessionID: "session-1",
-      info: assistantMessage({
-        sessionID: "session-1",
-        id,
-        parts: [],
-      }).info,
+      sessionID,
+      status: {
+        type: "retry",
+        attempt,
+        message,
+        next: 1,
+      },
     },
   } satisfies SdkEvent
 }
 
-function feed<T>() {
+function assistant(id: string, sessionID = "session-1"): SdkEvent {
+  return {
+    id: `evt-${id}`,
+    type: "sync",
+    name: "message.updated.1",
+    seq: 1,
+    aggregateID: "sessionID",
+    data: {
+      sessionID,
+      info: assistantMessage({
+        sessionID,
+        id,
+        parts: [],
+      }).info,
+    },
+  }
+}
+
+const StreamClosed = undefined as never
+
+function feed<T, R = never>(returnValue: R = StreamClosed) {
   const list: T[] = []
   let done = false
   let wake: (() => void) | undefined
 
-  const wrapped = (async function* () {
+  const wrapped = (async function* (): AsyncGenerator<T, R, unknown> {
     while (!done || list.length > 0) {
       if (list.length === 0) {
         await new Promise<void>((resolve) => {
@@ -103,6 +124,7 @@ function feed<T>() {
 
       yield next
     }
+    return returnValue as R
   })()
 
   return {
@@ -150,10 +172,11 @@ function globalSse(stream: GlobalEventStream) {
 }
 
 function wrapGlobalStream(stream: EventStream): GlobalEventStream {
-  return (async function* () {
+  return (async function* (): GlobalEventStream {
     for await (const event of stream) {
       yield globalEvent(event)
     }
+    return StreamClosed
   })()
 }
 
@@ -269,8 +292,11 @@ function textPart(id: string, messageID: string, text: string, sessionID = "sess
 function textUpdated(part: TextPart): SdkEvent {
   return {
     id: `evt-${part.id}-updated`,
-    type: "message.part.updated",
-    properties: {
+    type: "sync",
+    name: "message.part.updated.1",
+    seq: 1,
+    aggregateID: "sessionID",
+    data: {
       sessionID: part.sessionID,
       part,
       time: 1,
@@ -281,8 +307,11 @@ function textUpdated(part: TextPart): SdkEvent {
 function toolUpdated(part: SessionToolPart): SdkEvent {
   return {
     id: `evt-${part.id}-updated`,
-    type: "message.part.updated",
-    properties: {
+    type: "sync",
+    name: "message.part.updated.1",
+    seq: 1,
+    aggregateID: "sessionID",
+    data: {
       sessionID: part.sessionID,
       part,
       time: 1,
@@ -290,12 +319,12 @@ function toolUpdated(part: SessionToolPart): SdkEvent {
   }
 }
 
-function textDelta(messageID: string, partID: string, delta: string): SdkEvent {
+function textDelta(messageID: string, partID: string, delta: string, sessionID = "session-1"): SdkEvent {
   return {
     id: `evt-${partID}-delta`,
     type: "message.part.delta",
     properties: {
-      sessionID: "session-1",
+      sessionID,
       messageID,
       partID,
       field: "text",
@@ -331,6 +360,7 @@ function footer(fn?: (commit: StreamCommit) => void) {
   const commits: StreamCommit[] = []
   const events: FooterEvent[] = []
   let closed = false
+  let idleCalls = 0
 
   const api: FooterApi = {
     get isClosed() {
@@ -346,6 +376,7 @@ function footer(fn?: (commit: StreamCommit) => void) {
       fn?.(next)
     },
     idle() {
+      idleCalls += 1
       return Promise.resolve()
     },
     close() {
@@ -356,14 +387,20 @@ function footer(fn?: (commit: StreamCommit) => void) {
     },
   }
 
-  return { api, commits, events }
+  return {
+    api,
+    commits,
+    events,
+    get idleCalls() {
+      return idleCalls
+    },
+  }
 }
 
 function sdk(
   input: {
     stream?: EventStream
     globalStream?: GlobalEventStream
-    subscribe?: KiloClient["event"]["subscribe"]
     globalEvent?: KiloClient["global"]["event"]
     promptAsync?: KiloClient["session"]["promptAsync"]
     status?: KiloClient["session"]["status"]
@@ -375,7 +412,6 @@ function sdk(
 ) {
   const client = new KiloClient()
 
-  const subscribe: KiloClient["event"]["subscribe"] = input.subscribe ?? (() => sse(input.stream ?? emptyStream()))
   const globalEvent: KiloClient["global"]["event"] =
     input.globalEvent ?? (() => globalSse(input.globalStream ?? wrapGlobalStream(input.stream ?? emptyStream())))
   const promptAsync: KiloClient["session"]["promptAsync"] = input.promptAsync ?? (() => ok(undefined))
@@ -385,7 +421,6 @@ function sdk(
   const permissions: KiloClient["permission"]["list"] = input.permissions ?? (() => ok([]))
   const questions: KiloClient["question"]["list"] = input.questions ?? (() => ok([]))
 
-  spyOn(client.event, "subscribe").mockImplementation(subscribe)
   spyOn(client.global, "event").mockImplementation(globalEvent)
   spyOn(client.session, "promptAsync").mockImplementation(promptAsync)
   spyOn(client.session, "status").mockImplementation(status)
@@ -398,6 +433,355 @@ function sdk(
 }
 
 describe("run stream transport", () => {
+  test("does not replay persisted main-session history during bootstrap by default", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const transport = await createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        messages: async ({ sessionID }) =>
+          sessionID === "session-1"
+            ? ok([
+                assistantMessage({
+                  sessionID: "session-1",
+                  id: "msg-1",
+                  parts: [
+                    {
+                      ...textPart("text-1", "msg-1", "Hello."),
+                      time: {
+                        start: 1,
+                        end: 2,
+                      },
+                    },
+                  ],
+                }),
+              ])
+            : ok([]),
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      expect(ui.commits).toEqual([])
+      expect(ui.idleCalls).toBe(0)
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("replays persisted main-session history during bootstrap when enabled", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const transport = await createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        messages: async ({ sessionID }) =>
+          sessionID === "session-1"
+            ? ok([
+                assistantMessage({
+                  sessionID: "session-1",
+                  id: "msg-1",
+                  parts: [
+                    {
+                      ...textPart("text-1", "msg-1", "Hello."),
+                      time: {
+                        start: 1,
+                        end: 2,
+                      },
+                    },
+                  ],
+                }),
+              ])
+            : ok([]),
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      replay: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      await waitFor(() => ui.commits.find((item) => item.kind === "assistant" && item.text === "Hello."))
+      expect(ui.idleCalls).toBeGreaterThan(0)
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("caps replayed bootstrap history to the configured number of messages", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const transport = await createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        messages: async ({ sessionID }) =>
+          ok(
+            sessionID === "session-1"
+              ? [
+                  assistantMessage({
+                    sessionID: "session-1",
+                    id: "msg-1",
+                    parts: [
+                      {
+                        ...textPart("text-1", "msg-1", "Hello."),
+                        time: {
+                          start: 1,
+                          end: 2,
+                        },
+                      },
+                    ],
+                  }),
+                  assistantMessage({
+                    sessionID: "session-1",
+                    id: "msg-2",
+                    parts: [
+                      {
+                        ...textPart("text-2", "msg-2", "World."),
+                        time: {
+                          start: 3,
+                          end: 4,
+                        },
+                      },
+                    ],
+                  }),
+                ]
+              : [],
+          ),
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      replay: true,
+      replayLimit: 1,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      await waitFor(() => (ui.commits.length > 0 ? ui.commits : undefined))
+      expect(ui.commits.filter((item) => item.kind === "assistant")).toEqual([
+        expect.objectContaining({
+          text: "World.",
+        }),
+      ])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("skips buffered pre-bootstrap deltas already covered by replay history", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const gate = defer<void>()
+    let transport: Awaited<ReturnType<typeof createSessionTransport>> | undefined
+    const task = createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        messages: async ({ sessionID }) => {
+          if (sessionID !== "session-1") {
+            return ok([])
+          }
+
+          await gate.promise
+          return ok([
+            assistantMessage({
+              sessionID: "session-1",
+              id: "msg-1",
+              parts: [textPart("text-1", "msg-1", "Hello")],
+            }),
+          ])
+        },
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      replay: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      await Promise.resolve()
+      src.push(textDelta("msg-1", "text-1", "lo"))
+      gate.resolve()
+      transport = await task
+
+      await waitFor(() => (ui.commits.length > 0 ? ui.commits : undefined))
+      await Bun.sleep(20)
+      expect(ui.commits.filter((item) => item.kind === "assistant")).toEqual([
+        expect.objectContaining({
+          text: "Hello",
+        }),
+      ])
+    } finally {
+      src.close()
+      await transport?.close()
+    }
+  })
+
+  test("applies buffered pre-bootstrap deltas not yet persisted", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const gate = defer<void>()
+    let transport: Awaited<ReturnType<typeof createSessionTransport>> | undefined
+    const task = createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        messages: async ({ sessionID }) => {
+          if (sessionID !== "session-1") {
+            return ok([])
+          }
+
+          await gate.promise
+          return ok([
+            assistantMessage({
+              sessionID: "session-1",
+              id: "msg-1",
+              parts: [textPart("text-1", "msg-1", "")],
+            }),
+          ])
+        },
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      replay: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      await Promise.resolve()
+      src.push(textDelta("msg-1", "text-1", "Hello"))
+      gate.resolve()
+      transport = await task
+
+      await waitFor(() => (ui.commits.length > 0 ? ui.commits : undefined))
+      await Bun.sleep(20)
+      expect(ui.commits.filter((item) => item.kind === "assistant")).toEqual([
+        expect.objectContaining({
+          text: "Hello",
+        }),
+      ])
+    } finally {
+      src.close()
+      await transport?.close()
+    }
+  })
+
+  test("preserves running footer state for resumed active sessions", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const transport = await createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        messages: async ({ sessionID }) =>
+          sessionID === "session-1"
+            ? ok([
+                assistantMessage({
+                  sessionID: "session-1",
+                  id: "msg-1",
+                  parts: [
+                    runningTool({
+                      sessionID: "session-1",
+                      messageID: "msg-1",
+                      id: "bash-1",
+                      callID: "call-1",
+                      tool: "bash",
+                      body: {
+                        command: "pwd",
+                      },
+                    }),
+                  ],
+                }),
+              ])
+            : ok([]),
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      replay: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      const patch = await waitFor(() => {
+        const item = ui.events.findLast((event) => event.type === "stream.patch")
+        return item?.type === "stream.patch" ? item.patch : undefined
+      })
+
+      expect(patch).toEqual(
+        expect.objectContaining({
+          phase: "running",
+          status: "running bash",
+        }),
+      )
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
+  test("drops completed historical subagent tabs during bootstrap", async () => {
+    const src = eventFeed()
+    const ui = footer()
+    const transport = await createSessionTransport({
+      sdk: sdk({
+        stream: src.stream,
+        messages: async ({ sessionID }) => {
+          if (sessionID !== "session-1") {
+            return ok([])
+          }
+
+          return ok([
+            assistantMessage({
+              sessionID: "session-1",
+              id: "msg-1",
+              parts: [
+                completedTool({
+                  sessionID: "session-1",
+                  messageID: "msg-1",
+                  id: "task-1",
+                  callID: "call-1",
+                  tool: "task",
+                  body: {
+                    description: "Explore run folder",
+                    subagent_type: "explore",
+                  },
+                  metadata: {
+                    sessionId: "child-1",
+                  },
+                }),
+              ],
+            }),
+          ])
+        },
+        children: async () => ok([child("child-1")]),
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      const state = await waitFor(() => {
+        const item = ui.events.findLast((event) => event.type === "stream.subagent")
+        return item?.type === "stream.subagent" ? item.state : undefined
+      })
+
+      expect(state.tabs).toEqual([])
+      expect(state.details).toEqual({})
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
   test("bootstraps child tabs and resumed blocker input", async () => {
     const src = eventFeed()
     const ui = footer()
@@ -487,7 +871,7 @@ describe("run stream transport", () => {
         expect.objectContaining({
           sessionID: "child-1",
           label: "Explore",
-          description: "Explore run folder",
+          description: "Pending permission",
           status: "running",
         }),
       ])
@@ -569,7 +953,7 @@ describe("run stream transport", () => {
                 sessionID: "session-1",
                 id: "msg-1",
                 parts: [
-                  completedTool({
+                  runningTool({
                     sessionID: "session-1",
                     messageID: "msg-1",
                     id: "task-1",
@@ -711,6 +1095,109 @@ describe("run stream transport", () => {
     }
   })
 
+  test("replays child events buffered during bootstrap once the tab is known", async () => {
+    const global = globalFeed()
+    const ui = footer()
+    const gate = defer<void>()
+    let transport: Awaited<ReturnType<typeof createSessionTransport>> | undefined
+    const task = createSessionTransport({
+      sdk: sdk({
+        globalStream: global.stream,
+        messages: async ({ sessionID }) => {
+          if (sessionID !== "session-1") {
+            return ok([])
+          }
+
+          await gate.promise
+          return ok([])
+        },
+        children: async () => ok([]),
+      }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: ui.api,
+    })
+
+    try {
+      await Promise.resolve()
+      global.push(globalEvent(retry("child-1", 1, "retry child")))
+      global.push(
+        globalEvent({
+          id: "evt-child-message",
+          type: "message.updated",
+          properties: {
+            sessionID: "child-1",
+            info: assistantMessage({
+              sessionID: "child-1",
+              id: "msg-child-1",
+              parts: [],
+            }).info,
+          },
+        }),
+      )
+      global.push(globalEvent(textUpdated(textPart("txt-child-1", "msg-child-1", "", "child-1"))))
+      global.push(globalEvent(textDelta("msg-child-1", "txt-child-1", "Hello", "child-1")))
+      global.push(
+        globalEvent(
+          toolUpdated(
+            runningTool({
+              sessionID: "session-1",
+              messageID: "msg-1",
+              id: "task-1",
+              callID: "call-1",
+              tool: "task",
+              body: {
+                description: "Explore run.ts",
+                subagent_type: "explore",
+              },
+              metadata: {
+                sessionId: "child-1",
+              },
+            }),
+          ),
+        ),
+      )
+      gate.resolve()
+      transport = await task
+
+      await waitFor(() => {
+        const item = ui.events.findLast((event) => event.type === "stream.subagent")
+        return item?.type === "stream.subagent" && item.state.tabs.some((tab) => tab.sessionID === "child-1")
+          ? item
+          : undefined
+      })
+
+      transport.selectSubagent("child-1")
+
+      const detail = await waitFor(() => {
+        const item = ui.events.findLast((event) => event.type === "stream.subagent")
+        const next = item?.type === "stream.subagent" ? item.state.details["child-1"] : undefined
+        return next?.commits.some((commit) => commit.kind === "error" && commit.text === "retry child") &&
+          next.commits.some((commit) => commit.kind === "assistant" && commit.text === "Hello")
+          ? next
+          : undefined
+      })
+
+      expect(detail).toEqual({
+        sessionID: "child-1",
+        commits: expect.arrayContaining([
+          expect.objectContaining({
+            kind: "error",
+            text: "retry child",
+          }),
+          expect.objectContaining({
+            kind: "assistant",
+            text: "Hello",
+          }),
+        ]),
+      })
+    } finally {
+      global.close()
+      await transport?.close()
+    }
+  })
+
   test("streams selected subagent output from global events while it is running", async () => {
     const global = globalFeed()
     const ui = footer()
@@ -756,20 +1243,7 @@ describe("run stream transport", () => {
 
       transport.selectSubagent("child-1")
 
-      global.push(
-        globalEvent({
-          id: "evt-child-message",
-          type: "message.updated",
-          properties: {
-            sessionID: "child-1",
-            info: assistantMessage({
-              sessionID: "child-1",
-              id: "msg-child-1",
-              parts: [],
-            }).info,
-          },
-        }),
-      )
+      global.push(globalEvent(assistant("msg-child-1", "child-1")))
       global.push(globalEvent(textUpdated(textPart("txt-child-1", "msg-child-1", "hello", "child-1"))))
 
       expect(

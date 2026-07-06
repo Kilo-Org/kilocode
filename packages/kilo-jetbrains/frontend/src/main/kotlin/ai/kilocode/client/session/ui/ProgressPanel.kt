@@ -5,12 +5,14 @@ import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.Disposable
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
 
 /**
  * Progress footer rendered at the bottom of the session transcript while the
@@ -35,6 +37,12 @@ class ProgressPanel(
     init {
         isOpaque = false
         isVisible = false
+        border = JBUI.Borders.empty(
+            UiStyle.Gap.sm(),
+            JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING),
+            0,
+            0,
+        )
         applyStyle(SessionEditorStyle.current())
 
         next(JBLabel(AnimatedIcon.Default()))

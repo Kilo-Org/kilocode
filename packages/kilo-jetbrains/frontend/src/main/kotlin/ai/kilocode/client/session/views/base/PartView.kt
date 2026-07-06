@@ -1,9 +1,12 @@
 package ai.kilocode.client.session.views.base
 
 import ai.kilocode.client.session.model.Content
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import com.intellij.openapi.Disposable
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import javax.swing.JComponent
 import javax.swing.JPanel
 
 /**
@@ -20,6 +23,10 @@ abstract class PartView : JPanel(), Disposable, SessionEditorStyleTarget {
     /** Stable [Content.id] this renderer was created for. */
     abstract val contentId: String
 
+    var resize: ((JComponent, () -> Unit) -> Unit)? = null
+
+    var hover: ((PartView, Boolean) -> Unit)? = null
+
     /**
      * Apply a full content update — replace, not append.
      * Called when [ai.kilocode.client.session.model.SessionModelEvent.ContentUpdated] fires.
@@ -32,6 +39,11 @@ abstract class PartView : JPanel(), Disposable, SessionEditorStyleTarget {
      * [ai.kilocode.client.session.views.ReasoningView]); others ignore deltas by default.
      */
     open fun appendDelta(delta: String) {}
+
+    open fun setHovered(value: Boolean) {}
+
+    @RequiresEdt
+    open fun headerPopup(): HeaderPopupRequest? = null
 
     override fun applyStyle(style: SessionEditorStyle) {}
 

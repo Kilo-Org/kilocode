@@ -1,12 +1,21 @@
 import type { Argv } from "yargs"
 import { cmd } from "@/cli/cmd/cmd"
-import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
+import { explicitNetworkOptions, withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Daemon } from "@/kilocode/daemon/daemon"
+import { warnPort } from "@/kilocode/cli/port-warning"
 
 function withJson<T>(yargs: Argv<T>) {
   return yargs.option("json", {
     describe: "print daemon details as JSON",
+    type: "boolean",
+  })
+}
+
+function withForeground<T>(yargs: Argv<T>) {
+  return yargs.option("foreground", {
+    alias: "f",
+    describe: "keep the command active until interrupted",
     type: "boolean",
   })
 }
@@ -18,6 +27,7 @@ function safe(input: Daemon.State | undefined) {
     hostname: input.hostname,
     port: input.port,
     url: input.url,
+    urls: input.urls,
     username: input.username,
     version: input.version,
     startedAt: input.startedAt,
@@ -46,7 +56,13 @@ function print(input: Daemon.Status, json?: boolean) {
     return
   }
   console.log(`kilo daemon running`)
-  console.log(`url: ${input.state?.url}`)
+  if (input.state?.urls) {
+    const urls = input.state.urls
+    console.log(`local:   ${urls.local}`)
+    if (urls.network) console.log(`network: ${urls.network}`)
+  } else {
+    console.log(`url: ${input.state?.url}`)
+  }
   console.log(`pid: ${input.state?.pid}`)
   console.log(`version: ${input.health?.version ?? input.state?.version}`)
   console.log(`auth: enabled`)
@@ -54,21 +70,51 @@ function print(input: Daemon.Status, json?: boolean) {
   console.log(`log: ${input.state?.log}`)
 }
 
-const StartCommand = cmd({
-  command: "start",
-  describe: "start the local kilo daemon",
-  builder: (yargs) => withJson(withNetworkOptions(yargs)),
-  handler: async (args) => {
-    const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
-    const result = await Daemon.start(opts)
-    if (args.json) {
-      print(result, true)
-      return
-    }
-    console.log(result.reused ? "kilo daemon already running" : "kilo daemon started")
-    print(result)
-  },
-})
+async function hold(enabled: boolean, json: boolean, run: (signal?: AbortSignal) => Promise<Daemon.State>) {
+  if (!enabled) {
+    await run()
+    return
+  }
+  await Daemon.foreground(async (signal) => {
+    const state = await run(signal)
+    if (!signal.aborted && !json) console.log("Press Ctrl+C to stop the Kilo daemon.")
+    return state
+  })
+}
+
+function start(command: string) {
+  return cmd({
+    command,
+    describe: "start the local kilo daemon",
+    builder: (yargs) => withForeground(withJson(withNetworkOptions(yargs))),
+    handler: async (args) => {
+      await hold(Boolean(args.foreground), Boolean(args.json), async (signal) => {
+        const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
+        warnPort(opts.port)
+        const daemon = await Daemon.ensure(opts, explicitNetworkOptions())
+        const result = daemon.result
+        const state = result.state
+        if (!state) throw new Error("Kilo daemon did not provide process state")
+        if (signal?.aborted) return state
+        if (args.json) print(result, true)
+        if (!args.json) {
+          console.log(
+            result.reused
+              ? "kilo daemon already running"
+              : daemon.restarted
+                ? "kilo daemon restarted"
+                : "kilo daemon started",
+          )
+          print(result)
+        }
+        return state
+      })
+    },
+  })
+}
+
+const DefaultCommand = start("$0")
+const StartCommand = start("start")
 
 const StatusCommand = cmd({
   command: "status",
@@ -79,7 +125,7 @@ const StatusCommand = cmd({
   },
 })
 
-const StopCommand = cmd({
+export const StopCommand = cmd({
   command: "stop",
   describe: "stop the local kilo daemon",
   builder: (yargs) => withJson(yargs),
@@ -96,16 +142,22 @@ const StopCommand = cmd({
 const RestartCommand = cmd({
   command: "restart",
   describe: "restart the local kilo daemon",
-  builder: (yargs) => withJson(withNetworkOptions(yargs)),
+  builder: (yargs) => withForeground(withJson(withNetworkOptions(yargs))),
   handler: async (args) => {
-    const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
-    const result = await Daemon.restart(opts)
-    if (args.json) {
-      print(result, true)
-      return
-    }
-    console.log("kilo daemon restarted")
-    print(result)
+    await hold(Boolean(args.foreground), Boolean(args.json), async (signal) => {
+      const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
+      warnPort(opts.port)
+      const result = await Daemon.restart(opts)
+      const state = result.state
+      if (!state) throw new Error("Kilo daemon did not provide process state")
+      if (signal?.aborted) return state
+      if (args.json) print(result, true)
+      if (!args.json) {
+        console.log("kilo daemon restarted")
+        print(result)
+      }
+      return state
+    })
   },
 })
 
@@ -113,6 +165,12 @@ export const DaemonCommand = cmd({
   command: "daemon",
   describe: "manage the local kilo daemon",
   builder: (yargs: Argv) =>
-    yargs.command(StartCommand).command(StatusCommand).command(StopCommand).command(RestartCommand).demandCommand(),
+    yargs
+      .command(DefaultCommand)
+      .command(StartCommand)
+      .command(StatusCommand)
+      .command(StopCommand)
+      .command(RestartCommand)
+      .demandCommand(),
   handler: async () => {},
 })

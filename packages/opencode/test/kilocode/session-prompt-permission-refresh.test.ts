@@ -7,18 +7,24 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent as AgentSvc } from "../../src/agent/agent"
+import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
 import { Config } from "../../src/config/config"
+import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Env } from "../../src/env"
 import { Format } from "../../src/format"
 import { Git } from "../../src/git"
+import { Image } from "../../src/image/image"
 import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { Provider as ProviderSvc } from "../../src/provider/provider"
 import { Question } from "../../src/question"
+import { Reference } from "../../src/reference/reference"
+import { RepositoryCache } from "../../src/reference/repository-cache"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
 import { LLM } from "../../src/session/llm"
@@ -33,11 +39,16 @@ import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
+import { Storage } from "../../src/storage/storage"
+import { SyncEvent } from "../../src/sync"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
+import { KiloHeadless } from "../../src/kilocode/permission/headless"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 
 void Log.init({ print: false })
@@ -112,6 +123,7 @@ const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLaye
 function makeHttp() {
   const deps = Layer.mergeAll(
     Session.defaultLayer,
+    BackgroundJob.defaultLayer,
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
@@ -120,11 +132,16 @@ function makeHttp() {
     Permission.defaultLayer,
     Plugin.defaultLayer,
     Config.defaultLayer,
+    RuntimeFlags.layer(),
     ProviderSvc.defaultLayer,
     lsp,
     mcp,
     AppFileSystem.defaultLayer,
+    Reference.defaultLayer,
+    SyncEvent.defaultLayer,
+    EventV2Bridge.defaultLayer,
     status,
+    MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
@@ -132,31 +149,54 @@ function makeHttp() {
     Layer.provide(Skill.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
+    Layer.provide(RepositoryCache.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provide(Git.defaultLayer),
+    Layer.provide(Reference.defaultLayer),
+    Layer.provide(Command.defaultLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
   )
   const trunc = Truncate.layer.pipe(Layer.provideMerge(deps))
-  const proc = SessionProcessor.layer.pipe(Layer.provide(summary), Layer.provideMerge(deps))
+  const proc = SessionProcessor.layer.pipe(
+    Layer.provide(summary),
+    Layer.provide(Image.defaultLayer),
+    Layer.provideMerge(deps),
+  )
   const compact = SessionCompaction.layer.pipe(Layer.provideMerge(proc), Layer.provideMerge(deps))
   return Layer.mergeAll(
     TestLLMServer.layer,
     SessionPrompt.layer.pipe(
       Layer.provide(SessionRevert.defaultLayer),
+      Layer.provide(Image.defaultLayer),
       Layer.provide(summary),
       Layer.provideMerge(run),
       Layer.provideMerge(compact),
       Layer.provideMerge(proc),
       Layer.provideMerge(registry),
       Layer.provideMerge(trunc),
+      Layer.provideMerge(question),
       Layer.provide(Instruction.defaultLayer),
       Layer.provide(SystemPrompt.defaultLayer),
       Layer.provideMerge(deps),
     ),
-  ).pipe(Layer.provide(summary))
+  ).pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        summary,
+        deps,
+        Config.defaultLayer,
+        RuntimeFlags.layer(),
+        BackgroundJob.defaultLayer,
+        Bus.layer,
+        infra,
+        Storage.defaultLayer,
+        Reference.defaultLayer,
+      ),
+    ),
+  )
 }
 
 const it = testEffect(makeHttp())
@@ -252,5 +292,125 @@ it.live("active tool calls use permissions changed after model streaming starts"
         permission: { edit: "ask" },
       }),
     },
+  ),
+)
+
+const worker = (mode: "subagent" | "all"): AgentSvc.Info => ({
+  name: "worker",
+  mode,
+  permission: Permission.fromConfig({ bash: "ask" }),
+  options: {},
+})
+
+const bash = (sessionID: Session.Info["id"]) => ({
+  sessionID,
+  permission: "bash",
+  patterns: ["echo 1"],
+  always: ["echo 1"],
+  metadata: {},
+})
+
+// Reproduces #11903: a sync subagent hitting an "ask" rule in a headless run
+// used to block forever on a permission prompt no client would ever answer.
+it.live("headless run: subagent permission asks fail instead of waiting forever", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const permission = yield* Permission.Service
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "Root" })
+      const child = yield* sessions.create({ parentID: root.id, title: "Subagent" })
+      KiloHeadless.mark(root.id)
+
+      // mode "all" agents are valid subagents too; the deny must not key off agent mode
+      const agent = worker("all")
+      const err = yield* awaitWithTimeout(
+        KiloSessionPrompt.askPermission({
+          permission,
+          agents: { get: () => Effect.succeed(agent) },
+          sessions,
+          agent,
+          session: child,
+          request: bash(child.id),
+        }).pipe(Effect.flip),
+        "subagent permission ask queued waiting for a human reply instead of failing",
+      )
+
+      expect(err).toBeInstanceOf(Permission.DeniedError)
+      expect(yield* permission.list()).toEqual([])
+      expect(KiloHeadless.denies(child.id)).toBe(true)
+      expect(KiloHeadless.denies(root.id)).toBe(false)
+
+      KiloHeadless.clear(root.id)
+    }),
+    { git: true },
+  ),
+)
+
+it.live("interactive run: subagent permission asks still queue for a human reply", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const permission = yield* Permission.Service
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "Root" })
+      const child = yield* sessions.create({ parentID: root.id, title: "Subagent" })
+
+      const agent = worker("subagent")
+      const fiber = yield* KiloSessionPrompt.askPermission({
+        permission,
+        agents: { get: () => Effect.succeed(agent) },
+        sessions,
+        agent,
+        session: child,
+        request: bash(child.id),
+      }).pipe(Effect.forkScoped)
+
+      const pending = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const list = yield* permission.list()
+          return list.find((item) => item.sessionID === child.id)
+        }),
+        "subagent permission ask was never surfaced",
+      )
+      yield* permission.reply({ requestID: pending.id, reply: "reject" })
+
+      const exit = yield* Fiber.await(fiber)
+      expect(Exit.isFailure(exit)).toBe(true)
+    }),
+    { git: true },
+  ),
+)
+
+it.live("headless run: root session permission asks still queue (only subagents fail)", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const permission = yield* Permission.Service
+      const sessions = yield* Session.Service
+      const root = yield* sessions.create({ title: "Root" })
+      KiloHeadless.mark(root.id)
+
+      const agent = { ...worker("subagent"), mode: "primary" as const }
+      const fiber = yield* KiloSessionPrompt.askPermission({
+        permission,
+        agents: { get: () => Effect.succeed(agent) },
+        sessions,
+        agent,
+        session: root,
+        request: bash(root.id),
+      }).pipe(Effect.forkScoped)
+
+      const pending = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const list = yield* permission.list()
+          return list.find((item) => item.sessionID === root.id)
+        }),
+        "root permission ask was never surfaced",
+      )
+      yield* permission.reply({ requestID: pending.id, reply: "reject" })
+
+      const exit = yield* Fiber.await(fiber)
+      expect(Exit.isFailure(exit)).toBe(true)
+      KiloHeadless.clear(root.id)
+    }),
+    { git: true },
   ),
 )

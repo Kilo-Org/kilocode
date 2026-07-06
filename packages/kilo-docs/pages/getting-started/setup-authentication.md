@@ -32,21 +32,10 @@ kilo auth list
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Click **"Try Kilo Code for Free"** in the extension
-2. Sign in with your Google account
-3. Allow VS Code to open the authorization URL
-
-{% image src="/docs/img/signupflow.gif" alt="Sign up and registration flow with Kilo Code" /%}
-
-That's it! You're ready to [start your first task](/docs/getting-started/quickstart).
-
-{% /tab %}
 {% /tabs %}
 
 {% callout type="tip" title="Add Credits" %}
-[Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
+[Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
 {% /callout %}
 
 ## Kilo Gateway API Key
@@ -132,15 +121,6 @@ To set a default model:
   "model": "anthropic/claude-sonnet-4-20250514",
 }
 ```
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Click the {% kilo-code-icon /%} icon in the VS Code sidebar
-2. Select your API provider from the dropdown
-3. Paste your API key
-4. Choose your model
-5. Click **"Let's go!"**
 
 {% /tab %}
 {% /tabs %}

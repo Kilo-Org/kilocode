@@ -10,9 +10,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway経由でBYOK",
   "provider.connect.kiloGateway.byok.suffix": "をご利用ください。",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "おすすめ",
-  "dialog.provider.kilo.note": "500以上のAIモデルにアクセス",
+  // Provider settings translations
+  "settings.providers.group.recommended": "おすすめ",
+  "settings.providers.note.kilo": "500以上のAIモデルにアクセス",
+  "settings.providers.note.opencode": "Claude、GPT、Geminiなどの厳選モデル",
+  "settings.providers.note.anthropic": "ProやMaxを含むClaudeモデルへ直接アクセス",
+  "settings.providers.note.deepseek": "推論とコーディング作業向けのDeepSeekモデル",
+  "settings.providers.note.copilot": "コーディング支援向けのClaudeモデル",
+  "settings.providers.note.openai": "APIキーまたはChatGPTログインで使えるGPTとCodexモデル",
+  "settings.providers.note.google": "高速で構造化された応答向けのGeminiモデル",
+  "settings.providers.note.openrouter": "1つのプロバイダーからすべての対応モデルにアクセス",
+  "settings.providers.note.vercel": "スマートルーティングによるAIモデルへの統合アクセス",
 
   // Reasoning block label
   "ui.permission.run": "実行",
@@ -33,6 +41,26 @@ export const dict = {
   "marketplace.install.scope": "スコープ",
   "marketplace.install.scope.project": "プロジェクト",
   "marketplace.install.scope.global": "グローバル",
+  "marketplace.install.scope.project.description":
+    "このプロジェクトのみ。インストールしたファイルはバージョン管理に追加し、チームと共有できます。",
+  "marketplace.install.scope.global.description":
+    "このマシン上のすべてのプロジェクト。ユーザー設定に保存されます。",
+  "marketplace.install.destination": "インストール先",
+  "marketplace.install.about.mcp":
+    "MCPサーバーは、外部サービスやローカルプログラムを操作するための追加ツールをKiloに提供します。",
+  "marketplace.install.about.agent": "エージェントは、独自の指示と権限を持つ再利用可能な役割を追加します。",
+  "marketplace.install.about.skill":
+    "スキルは、必要に応じてKiloが読み込めるタスク固有の指示とリソースを追加します。",
+  "marketplace.install.mcp.warning":
+    "MCPサーバーはローカルコマンドを実行したり、外部サービスに接続したりできます。権限で自動的に許可されていない限り、Kiloはツールを使用する前に許可を求めます。",
+  "marketplace.install.project.warning":
+    "プロジェクトファイルはバージョン管理に追加される場合があります。設定で環境変数を参照している場合を除き、ここにシークレットを保存しないでください。",
+  "marketplace.install.learnMore": "Marketplaceからのインストールの仕組みを見る",
+  "marketplace.install.learnMcp": "MCPについて詳しく見る",
+  "marketplace.install.installedAt": "{{path}} にインストール済み",
+  "marketplace.intro":
+    "再利用可能なエージェント、スキル、MCPツールを1つのプロジェクトまたはすべてのプロジェクトにインストールできます。",
+  "marketplace.intro.learnMore": "Marketplaceについて",
   "marketplace.install.prerequisites": "前提条件",
   "marketplace.install.installing": "インストール中...",
   "marketplace.install.cancel": "キャンセル",
@@ -49,7 +77,9 @@ export const dict = {
   "marketplace.search": "検索...",
   "marketplace.filter.all": "すべてのアイテム",
   "marketplace.filter.notInstalled": "未インストール",
+  "marketplace.filter.relevant": "自分のワークスペースに関連",
   "marketplace.empty": "アイテムが見つかりません",
+  "marketplace.empty.relevant": "このワークスペースに関連するマーケットプレイスのアイテムが見つかりませんでした。",
   "marketplace.badge.mcpServer": "MCPサーバー",
   "marketplace.badge.mode": "モード",
   "marketplace.card.by": "作成者: {{author}}",
@@ -82,6 +112,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "クリーンなコンテキストの新しいセッションで実装する",
   "plan.followup.answer.continue": "ここで続行",
   "plan.followup.answer.continue.description": "このセッションで計画を実装する",
+  "plan.followup.answer.keepRefining": "さらに調整する",
+  "plan.followup.answer.keepRefining.description": "まだ実装せずに計画を続ける",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "スナップショットが遅い",

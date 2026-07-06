@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { KiloSessionPromptQueue } from "../../../src/kilocode/session/prompt-queue"
 import { Suggestion } from "../../../src/kilocode/suggestion"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { tmpdir } from "../../fixture/fixture"
 
@@ -13,7 +13,7 @@ describe("Suggestion.show auto-dismiss on queued followup", () => {
     // hasFollowup check rejects with DismissedError before any pending entry
     // is registered or a Shown event is published.
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_show")
@@ -24,7 +24,7 @@ describe("Suggestion.show auto-dismiss on queued followup", () => {
         const first = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_show_1"),
+            MessageID.make("msg_show_1"),
             Effect.gen(function* () {
               started.resolve()
               yield* Effect.promise(() => release.promise)
@@ -39,7 +39,7 @@ describe("Suggestion.show auto-dismiss on queued followup", () => {
         const second = Effect.runPromise(
           KiloSessionPromptQueue.enqueue(
             sessionID,
-            MessageID.make("message_show_2"),
+            MessageID.make("msg_show_2"),
             Effect.succeed("second" as const),
             Effect.succeed("second-cancelled" as const),
           ),
@@ -50,8 +50,8 @@ describe("Suggestion.show auto-dismiss on queued followup", () => {
         await expect(
           Suggestion.show({
             sessionID,
-            text: "Run review?",
-            actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+            text: "Continue with the task?",
+            actions: [{ label: "Continue", prompt: "Continue with the task" }],
           }),
         ).rejects.toBeInstanceOf(Suggestion.DismissedError)
         expect(await Suggestion.list()).toEqual([])

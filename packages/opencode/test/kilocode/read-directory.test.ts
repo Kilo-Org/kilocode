@@ -16,7 +16,7 @@ import { testEffect } from "../lib/effect"
 
 const baseCtx = {
   sessionID: SessionID.make("ses_test"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),
@@ -92,6 +92,20 @@ describe("kilocode directory reads", () => {
       expect(result.output).toContain("a.txt")
       expect(result.output).not.toContain('<file_content path="folder/a.txt">')
       expect(result.metadata.loaded).toEqual([])
+    }),
+  )
+
+  it.live("clamps a zero entry limit and advances pagination", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      yield* put(path.join(dir, "folder", "a.txt"), "alpha")
+      yield* put(path.join(dir, "folder", "b.txt"), "beta")
+
+      const result = yield* exec(dir, { filePath: path.join(dir, "folder"), limit: 0 }, baseCtx)
+
+      expect(result.output).toContain("a.txt")
+      expect(result.output).not.toContain("b.txt")
+      expect(result.output).toContain("beyond entry 2")
     }),
   )
 

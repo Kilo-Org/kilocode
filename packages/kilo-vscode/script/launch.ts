@@ -257,6 +257,7 @@ function settings(keep: boolean, enabled: boolean) {
   const dir = join(userDir, "User")
   const file = join(dir, "settings.json")
   const defaults = {
+    "chat.disableAIFeatures": true,
     "editor.accessibilitySupport": enabled ? "on" : "off",
     "extensions.autoCheckUpdates": false,
     "extensions.autoUpdate": false,

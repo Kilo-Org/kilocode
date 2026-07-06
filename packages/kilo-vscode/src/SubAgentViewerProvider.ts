@@ -42,32 +42,30 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     }
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
+    // Start accepting this session's SSE events as soon as the panel subscribes.
+    // Reasoning deltas are not persisted until the reasoning part finishes.
+    provider.trackSession(sessionID)
     provider.resolveWebviewPanel(panel)
 
-    // Once the webview is ready, fetch the session and display it in read-only mode.
-    const readyDisposable = panel.webview.onDidReceiveMessage(async (msg) => {
+    // Navigate immediately when the webview is ready, then load metadata and
+    // the same paginated, row-virtualized transcript used by normal sessions.
+    const readyDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type !== "webviewReady") return
       readyDisposable.dispose()
 
-      // Small delay to let KiloProvider's own webviewReady handler finish first
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      provider.postMessage({ type: "viewSubAgentSession", sessionID })
+      void provider.loadMessages(sessionID)
 
       try {
         const client = this.connectionService.getClient()
-        const { data: session } = await client.session.get({ sessionID }, { throwOnError: true })
-
-        // Register the session on the provider — this adds it to
-        // trackedSessionIds for live SSE updates and sends
-        // sessionCreated to the webview.
-        provider.registerSession(session)
-
-        // Fetch the newest page before navigating so the tab opens on the latest turn.
-        await provider.loadMessages(sessionID)
-
-        // Navigate to the sub-agent viewer
-        provider.postMessage({ type: "viewSubAgentSession", sessionID })
+        void client.session
+          .get({ sessionID }, { throwOnError: true })
+          .then(({ data: session }) => provider.registerSession(session))
+          .catch((err: unknown) => {
+            console.error("[Kilo New] SubAgentViewerProvider: Failed to load session metadata:", err)
+          })
       } catch (err) {
-        console.error("[Kilo New] SubAgentViewerProvider: Failed to load session:", err)
+        console.error("[Kilo New] SubAgentViewerProvider: Failed to load session metadata:", err)
       }
     })
 

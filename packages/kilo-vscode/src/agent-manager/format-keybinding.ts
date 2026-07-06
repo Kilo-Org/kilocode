@@ -67,6 +67,7 @@ export function buildKeybindingMap(
 
   // Ensure fallback bindings are always present (may be missing from
   // cached packageJSON if the extension hasn't been fully reloaded)
+  if (!bindings.search) bindings.search = formatKeybinding(mac ? "cmd+f" : "ctrl+f", mac)
   if (!bindings.runScript) bindings.runScript = formatKeybinding(mac ? "cmd+e" : "ctrl+e", mac)
   if (!bindings.toggleDiff) bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
   if (!bindings.showShortcuts) bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)

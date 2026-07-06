@@ -6,9 +6,9 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.PrimarySessionPartView
 import ai.kilocode.client.ui.UiStyle
-import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
@@ -28,8 +28,14 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
     init {
         bindHeader(parts.glyph, parts.title, parts.sub, parts.center, parts.controls)
         parts.list.border = JBUI.Borders.compound(
-            SessionUiStyle.View.topOutline(),
-            JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.md()),
+            JBUI.Borders.customLine(
+                SessionUiStyle.View.Outline.color(),
+                SessionUiStyle.View.Outline.width(),
+                0,
+                0,
+                0,
+            ),
+            JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad()),
         )
         applyStyle(style)
         sync()
@@ -54,7 +60,11 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
     internal fun rowCount() = parts.list.rowCount()
     internal fun rowText(index: Int) = parts.list.rowText(index)
     internal fun rowChecked(index: Int) = parts.list.rowChecked(index)
-    internal fun rowCheckboxOpaque(index: Int) = parts.list.rowCheckboxOpaque(index)
+    internal fun rowCheckBackground(index: Int) = parts.list.rowCheckBackground(index)
+    internal fun rowCheckForeground(index: Int) = parts.list.rowCheckForeground(index)
+    internal fun rowCheckBorder(index: Int) = parts.list.rowCheckBorder(index)
+    internal fun rowCheckAccessibleName(index: Int) = parts.list.rowCheckAccessibleName(index)
+    internal fun rowFont(index: Int) = parts.list.rowFont(index)
     internal fun rowForeground(index: Int) = parts.list.rowForeground(index)
     internal fun hiddenText() = parts.list.hiddenText()
     internal fun titleFont() = parts.title.font
@@ -92,16 +102,16 @@ class TodoParts(
 )
 
 private fun todoParts(): TodoParts {
-    val glyph = JBLabel(AllIcons.Actions.Checked)
+    val glyph = JBLabel(SessionViewIcons.checklist)
     val title = JBLabel(KiloBundle.message("session.part.todo.title"))
     val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         add(title, BorderLayout.WEST)
         add(sub, BorderLayout.CENTER)
     }
     val controls = Box.createHorizontalBox()
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.SESSION_VIEW_GAP), 0)).apply {
+    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
         add(glyph, BorderLayout.WEST)
         add(center, BorderLayout.CENTER)

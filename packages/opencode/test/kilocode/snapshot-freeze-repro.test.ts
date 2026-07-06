@@ -15,7 +15,7 @@
 import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
 import { Effect, Fiber } from "effect"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Server } from "../../src/server/server"
 import { Session } from "../../src/session/session"
 import { Snapshot } from "../../src/snapshot"
@@ -52,7 +52,7 @@ test("pathological diffFull workload finishes quickly and does not block abort",
     },
   })
 
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: () =>
       run((snapshot) =>

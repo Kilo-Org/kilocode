@@ -55,7 +55,7 @@ describe("QuestionDock explicit submit contract", () => {
     expect(reset, "reject should restore the agent before sending the dismissal").toBeLessThan(sending)
   })
 
-  it("keeps the footer Submit button wired to submit()", () => {
-    expect(source).toContain('<Button variant="primary" size="small" onClick={submit} disabled={store.sending}>')
+  it("hides footer actions while the custom answer form is open", () => {
+    expect(source).toContain('<Show when={!store.editing}>\n              <div data-slot="question-footer-actions">')
   })
 })

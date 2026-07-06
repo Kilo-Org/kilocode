@@ -32,6 +32,13 @@ import { SuggestBar } from "./SuggestBar"
 // We render these ourselves via ToolRegistry when they complete,
 // so the user can see what the AI set up.
 export const UPSTREAM_SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
+const EDIT_TOOLS = new Set(["edit", "write", "apply_patch"])
+
+function editOpen(part: SDKPart, open: boolean) {
+  if (part.type !== "tool") return undefined
+  const tool = (part as unknown as ToolPart).tool
+  return EDIT_TOOLS.has(tool) ? open : undefined
+}
 
 /** Extract plan path from a completed plan_exit tool part. */
 function planExitInfo(part: SDKPart): { plan: string } | undefined {
@@ -82,14 +89,16 @@ function isRenderable(part: SDKPart): boolean {
     const tool = (part as SDKPart & { tool: string }).tool
     const state = (part as SDKPart & { state: { status: string } }).state
     if (UPSTREAM_SUPPRESSED_TOOLS.has(tool)) {
-      // Show todo parts only when completed (permissions are now in the dock)
-      return state.status === "completed"
+      // Show completed todo parts only when kilo-ui provides a visible renderer.
+      return state.status === "completed" && !!ToolRegistry.render(tool)
     }
     // Always render question tool parts — active ones get the inline QuestionDock
     return true
   }
   if (part.type === "text") return !snapshotProgress(part) && !!(part as SDKPart & { text: string }).text?.trim()
-  if (part.type === "reasoning") return !!(part as SDKPart & { text: string }).text?.trim()
+  if (part.type === "reasoning") {
+    return !!(part as SDKPart & { text: string }).text?.replace("[REDACTED]", "").trim()
+  }
   return !!PART_MAPPING[part.type]
 }
 
@@ -110,6 +119,7 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 
 interface AssistantMessageProps {
   message: SDKAssistantMessage
+  parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
 }
@@ -175,11 +185,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const display = useDisplay()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
+  const edit = createMemo(() => config().code_edit_display === "expanded")
 
   const parts = createMemo(() => {
-    const stored = data.store.part?.[props.message.id]
+    const stored = props.parts ?? data.store.part?.[props.message.id]
     if (!stored) return []
-    return (stored as SDKPart[]).filter((part) => isRenderable(part))
+    return (stored as SDKPart[]).filter((part) => {
+      if (!isRenderable(part)) return false
+      if (part.type === "text" && part.synthetic && props.message.time.completed) return false
+      if (part.type !== "tool" || part.tool !== "question") return true
+      if (part.state.status !== "pending" && part.state.status !== "running") return true
+      return !!matchToolRequest(part, "question", session.questions())
+    })
   })
 
   return (
@@ -204,11 +221,8 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return part
           })
           const planExit = createMemo(() => {
-            if (part.type !== "tool") return
-            const tp = part as unknown as ToolPart
-            if (tp.tool !== "plan_exit") return
-            if (tp.state?.status !== "completed") return
-            return tp
+            if (!planExitInfo(part)) return
+            return part as unknown as ToolPart
           })
 
           return (
@@ -242,6 +256,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       part={part}
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                      defaultOpen={editOpen(part, edit())}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
                                       animate={

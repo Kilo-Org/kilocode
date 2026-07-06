@@ -1,6 +1,5 @@
 import { BusEvent } from "@/bus/bus-event"
 import { SessionID, MessageID, PartID } from "./schema"
-import z from "zod"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
 import { LSP } from "@/lsp/lsp"
@@ -25,11 +24,13 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import { SessionNetwork } from "./network" // kilocode_change
 import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
+import * as TextStream from "@/kilocode/text-stream" // kilocode_change
 import { Effect, Schema, Types } from "effect"
-import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
-import { NonNegativeInt, withStatics } from "@opencode-ai/core/schema"
-import { namedSchemaError } from "@/util/named-schema-error"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
+import { MessageError } from "./message-error"
+import { AuthError, OutputLengthError } from "./message-error"
+export { AuthError, OutputLengthError } from "./message-error"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -41,17 +42,12 @@ interface FetchDecompressionError extends Error {
 export const SYNTHETIC_ATTACHMENT_PROMPT = "Attached media from tool result:"
 export { isMedia }
 
-export const OutputLengthError = namedSchemaError("MessageOutputLengthError", {})
-export const AbortedError = namedSchemaError("MessageAbortedError", { message: Schema.String })
-export const StructuredOutputError = namedSchemaError("StructuredOutputError", {
+export const AbortedError = NamedError.create("MessageAbortedError", { message: Schema.String })
+export const StructuredOutputError = NamedError.create("StructuredOutputError", {
   message: Schema.String,
   retries: NonNegativeInt,
 })
-export const AuthError = namedSchemaError("ProviderAuthError", {
-  providerID: Schema.String,
-  message: Schema.String,
-})
-export const APIError = namedSchemaError("APIError", {
+export const APIError = NamedError.create("APIError", {
   message: Schema.String,
   statusCode: Schema.optional(NonNegativeInt),
   isRetryable: Schema.Boolean,
@@ -59,32 +55,27 @@ export const APIError = namedSchemaError("APIError", {
   responseBody: Schema.optional(Schema.String),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.String)),
 })
-export type APIError = z.infer<typeof APIError.Schema>
-export const ContextOverflowError = namedSchemaError("ContextOverflowError", {
+export type APIError = Schema.Schema.Type<typeof APIError.Schema>
+export const ContextOverflowError = NamedError.create("ContextOverflowError", {
   message: Schema.String,
   responseBody: Schema.optional(Schema.String),
 })
 
 export class OutputFormatText extends Schema.Class<OutputFormatText>("OutputFormatText")({
   type: Schema.Literal("text"),
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
 export class OutputFormatJsonSchema extends Schema.Class<OutputFormatJsonSchema>("OutputFormatJsonSchema")({
   type: Schema.Literal("json_schema"),
   schema: Schema.Record(Schema.String, Schema.Any).annotate({ identifier: "JSONSchema" }),
   retryCount: NonNegativeInt.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(2))),
-}) {
-  static readonly zod = zod(this)
-}
+}) {}
 
-const _Format = Schema.Union([OutputFormatText, OutputFormatJsonSchema]).annotate({
+export const Format = Schema.Union([OutputFormatText, OutputFormatJsonSchema]).annotate({
   discriminator: "type",
   identifier: "OutputFormat",
 })
-export const Format = Object.assign(_Format, { zod: zod(_Format) })
-export type OutputFormat = Schema.Schema.Type<typeof _Format>
+export type OutputFormat = Schema.Schema.Type<typeof Format>
 
 const partBase = {
   id: PartID,
@@ -96,9 +87,7 @@ export const SnapshotPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("snapshot"),
   snapshot: Schema.String,
-})
-  .annotate({ identifier: "SnapshotPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "SnapshotPart" })
 export type SnapshotPart = Types.DeepMutable<Schema.Schema.Type<typeof SnapshotPart>>
 
 export const PatchPart = Schema.Struct({
@@ -106,9 +95,7 @@ export const PatchPart = Schema.Struct({
   type: Schema.Literal("patch"),
   hash: Schema.String,
   files: Schema.Array(Schema.String),
-})
-  .annotate({ identifier: "PatchPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "PatchPart" })
 export type PatchPart = Types.DeepMutable<Schema.Schema.Type<typeof PatchPart>>
 
 export const TextPart = Schema.Struct({
@@ -124,9 +111,7 @@ export const TextPart = Schema.Struct({
     }),
   ),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
-})
-  .annotate({ identifier: "TextPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "TextPart" })
 export type TextPart = Types.DeepMutable<Schema.Schema.Type<typeof TextPart>>
 
 export const ReasoningPart = Schema.Struct({
@@ -138,9 +123,7 @@ export const ReasoningPart = Schema.Struct({
     start: NonNegativeInt,
     end: Schema.optional(NonNegativeInt),
   }),
-})
-  .annotate({ identifier: "ReasoningPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ReasoningPart" })
 export type ReasoningPart = Types.DeepMutable<Schema.Schema.Type<typeof ReasoningPart>>
 
 const filePartSourceBase = {
@@ -155,9 +138,7 @@ export const FileSource = Schema.Struct({
   ...filePartSourceBase,
   type: Schema.Literal("file"),
   path: Schema.String,
-})
-  .annotate({ identifier: "FileSource" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "FileSource" })
 
 export const SymbolSource = Schema.Struct({
   ...filePartSourceBase,
@@ -166,24 +147,19 @@ export const SymbolSource = Schema.Struct({
   range: LSP.Range,
   name: Schema.String,
   kind: NonNegativeInt,
-})
-  .annotate({ identifier: "SymbolSource" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "SymbolSource" })
 
 export const ResourceSource = Schema.Struct({
   ...filePartSourceBase,
   type: Schema.Literal("resource"),
   clientName: Schema.String,
   uri: Schema.String,
-})
-  .annotate({ identifier: "ResourceSource" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ResourceSource" })
 
-const _FilePartSource = Schema.Union([FileSource, SymbolSource, ResourceSource]).annotate({
+export const FilePartSource = Schema.Union([FileSource, SymbolSource, ResourceSource]).annotate({
   discriminator: "type",
   identifier: "FilePartSource",
 })
-export const FilePartSource = Object.assign(_FilePartSource, { zod: zod(_FilePartSource) })
 
 export const FilePart = Schema.Struct({
   ...partBase,
@@ -191,10 +167,8 @@ export const FilePart = Schema.Struct({
   mime: Schema.String,
   filename: Schema.optional(Schema.String),
   url: Schema.String,
-  source: Schema.optional(_FilePartSource),
-})
-  .annotate({ identifier: "FilePart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+  source: Schema.optional(FilePartSource),
+}).annotate({ identifier: "FilePart" })
 export type FilePart = Types.DeepMutable<Schema.Schema.Type<typeof FilePart>>
 
 export const AgentPart = Schema.Struct({
@@ -208,9 +182,7 @@ export const AgentPart = Schema.Struct({
       end: NonNegativeInt,
     }),
   ),
-})
-  .annotate({ identifier: "AgentPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "AgentPart" })
 export type AgentPart = Types.DeepMutable<Schema.Schema.Type<typeof AgentPart>>
 
 export const CompactionPart = Schema.Struct({
@@ -219,9 +191,7 @@ export const CompactionPart = Schema.Struct({
   auto: Schema.Boolean,
   overflow: Schema.optional(Schema.Boolean),
   tail_start_id: Schema.optional(MessageID),
-})
-  .annotate({ identifier: "CompactionPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "CompactionPart" })
 export type CompactionPart = Types.DeepMutable<Schema.Schema.Type<typeof CompactionPart>>
 
 export const SubtaskPart = Schema.Struct({
@@ -237,9 +207,7 @@ export const SubtaskPart = Schema.Struct({
     }),
   ),
   command: Schema.optional(Schema.String),
-})
-  .annotate({ identifier: "SubtaskPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "SubtaskPart" })
 export type SubtaskPart = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPart>>
 
 export const RetryPart = Schema.Struct({
@@ -250,9 +218,7 @@ export const RetryPart = Schema.Struct({
   time: Schema.Struct({
     created: NonNegativeInt,
   }),
-})
-  .annotate({ identifier: "RetryPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "RetryPart" })
 export type RetryPart = Omit<Types.DeepMutable<Schema.Schema.Type<typeof RetryPart>>, "error"> & {
   error: APIError
 }
@@ -261,9 +227,7 @@ export const StepStartPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("step-start"),
   snapshot: Schema.optional(Schema.String),
-})
-  .annotate({ identifier: "StepStartPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "StepStartPart" })
 export type StepStartPart = Types.DeepMutable<Schema.Schema.Type<typeof StepStartPart>>
 
 export const StepFinishPart = Schema.Struct({
@@ -271,6 +235,14 @@ export const StepFinishPart = Schema.Struct({
   type: Schema.Literal("step-finish"),
   reason: Schema.String,
   snapshot: Schema.optional(Schema.String),
+  // kilocode_change start
+  model: Schema.optional(
+    Schema.Struct({
+      providerID: ProviderID,
+      modelID: ModelID,
+    }),
+  ),
+  // kilocode_change end
   cost: Schema.Finite,
   tokens: Schema.Struct({
     total: Schema.optional(Schema.Finite),
@@ -282,18 +254,14 @@ export const StepFinishPart = Schema.Struct({
       write: Schema.Finite,
     }),
   }),
-})
-  .annotate({ identifier: "StepFinishPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "StepFinishPart" })
 export type StepFinishPart = Types.DeepMutable<Schema.Schema.Type<typeof StepFinishPart>>
 
 export const ToolStatePending = Schema.Struct({
   status: Schema.Literal("pending"),
   input: Schema.Record(Schema.String, Schema.Any),
   raw: Schema.String,
-})
-  .annotate({ identifier: "ToolStatePending" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ToolStatePending" })
 export type ToolStatePending = Types.DeepMutable<Schema.Schema.Type<typeof ToolStatePending>>
 
 export const ToolStateRunning = Schema.Struct({
@@ -304,9 +272,7 @@ export const ToolStateRunning = Schema.Struct({
   time: Schema.Struct({
     start: NonNegativeInt,
   }),
-})
-  .annotate({ identifier: "ToolStateRunning" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ToolStateRunning" })
 export type ToolStateRunning = Types.DeepMutable<Schema.Schema.Type<typeof ToolStateRunning>>
 
 export const ToolStateCompleted = Schema.Struct({
@@ -321,15 +287,16 @@ export const ToolStateCompleted = Schema.Struct({
     compacted: Schema.optional(NonNegativeInt),
   }),
   attachments: Schema.optional(Schema.Array(FilePart)),
-})
-  .annotate({ identifier: "ToolStateCompleted" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ToolStateCompleted" })
 export type ToolStateCompleted = Types.DeepMutable<Schema.Schema.Type<typeof ToolStateCompleted>>
 
 function truncateToolOutput(text: string, maxChars?: number) {
   if (!maxChars || text.length <= maxChars) return text
-  const omitted = text.length - maxChars
-  return `${text.slice(0, maxChars)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
+  // kilocode_change start - avoid persisting malformed Unicode in compacted tool output
+  const sliced = TextStream.safeSlice(text, maxChars)
+  const omitted = text.length - sliced.length
+  return `${sliced}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
+  // kilocode_change end
 }
 
 export const ToolStateError = Schema.Struct({
@@ -341,21 +308,17 @@ export const ToolStateError = Schema.Struct({
     start: NonNegativeInt,
     end: NonNegativeInt,
   }),
-})
-  .annotate({ identifier: "ToolStateError" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ToolStateError" })
 export type ToolStateError = Types.DeepMutable<Schema.Schema.Type<typeof ToolStateError>>
 
-const _ToolState = Schema.Union([ToolStatePending, ToolStateRunning, ToolStateCompleted, ToolStateError]).annotate({
+export const ToolState = Schema.Union([
+  ToolStatePending,
+  ToolStateRunning,
+  ToolStateCompleted,
+  ToolStateError,
+]).annotate({
   discriminator: "status",
   identifier: "ToolState",
-})
-// Cast the derived zod so downstream z.infer sees the same mutable shape that
-// our exported TS types expose (the pre-migration Zod inferences were mutable).
-export const ToolState = Object.assign(_ToolState, {
-  zod: zod(_ToolState) as unknown as z.ZodType<
-    ToolStatePending | ToolStateRunning | ToolStateCompleted | ToolStateError
-  >,
 })
 export type ToolState = ToolStatePending | ToolStateRunning | ToolStateCompleted | ToolStateError
 
@@ -364,11 +327,9 @@ export const ToolPart = Schema.Struct({
   type: Schema.Literal("tool"),
   callID: Schema.String,
   tool: Schema.String,
-  state: _ToolState,
+  state: ToolState,
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
-})
-  .annotate({ identifier: "ToolPart" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "ToolPart" })
 export type ToolPart = Omit<Types.DeepMutable<Schema.Schema.Type<typeof ToolPart>>, "state"> & {
   state: ToolState
 }
@@ -394,7 +355,7 @@ export const User = Schema.Struct({
   time: Schema.Struct({
     created: NonNegativeInt,
   }),
-  format: Schema.optional(_Format),
+  format: Schema.optional(Format),
   summary: Schema.optional(
     Schema.Struct({
       title: Schema.optional(Schema.String),
@@ -413,12 +374,10 @@ export const User = Schema.Struct({
   // kilocode_change start
   editorContext: Schema.optional(EditorContext),
   // kilocode_change end
-})
-  .annotate({ identifier: "UserMessage" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "UserMessage" })
 export type User = Types.DeepMutable<Schema.Schema.Type<typeof User>>
 
-const _Part = Schema.Union([
+export const Part = Schema.Union([
   TextPart,
   SubtaskPart,
   ReasoningPart,
@@ -432,22 +391,6 @@ const _Part = Schema.Union([
   RetryPart,
   CompactionPart,
 ]).annotate({ discriminator: "type", identifier: "Part" })
-export const Part = Object.assign(_Part, {
-  zod: zod(_Part) as unknown as z.ZodType<
-    | TextPart
-    | SubtaskPart
-    | ReasoningPart
-    | FilePart
-    | ToolPart
-    | StepStartPart
-    | StepFinishPart
-    | SnapshotPart
-    | PatchPart
-    | AgentPart
-    | RetryPart
-    | CompactionPart
-  >,
-})
 export type Part =
   | TextPart
   | SubtaskPart
@@ -463,11 +406,7 @@ export type Part =
   | CompactionPart
 
 const AssistantErrorSchema = Schema.Union([
-  AuthError.EffectSchema,
-  Schema.Struct({ name: Schema.Literal("UnknownError"), data: Schema.Struct({ message: Schema.String }) }).annotate({
-    identifier: "UnknownError",
-  }),
-  OutputLengthError.EffectSchema,
+  ...MessageError.Shared,
   AbortedError.EffectSchema,
   StructuredOutputError.EffectSchema,
   ContextOverflowError.EffectSchema,
@@ -480,8 +419,7 @@ type AssistantError = Schema.Schema.Type<typeof AssistantErrorSchema>
 // Consumers of `SessionPrompt.PromptInput.parts` send part drafts without the
 // ambient IDs (`messageID`, `sessionID`) that live on stored parts, and may
 // omit `id` to let the server allocate one.  These Schema-Struct variants
-// carry that shape, and `SessionPrompt.PromptInput` just references the
-// derived `.zod` (no omit/partial gymnastics needed at the call site).
+// carry that shape so prompt decoding can accept drafts without stored IDs.
 
 export const TextPartInput = Schema.Struct({
   id: Schema.optional(PartID),
@@ -496,9 +434,7 @@ export const TextPartInput = Schema.Struct({
     }),
   ),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
-})
-  .annotate({ identifier: "TextPartInput" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "TextPartInput" })
 export type TextPartInput = Types.DeepMutable<Schema.Schema.Type<typeof TextPartInput>>
 
 export const FilePartInput = Schema.Struct({
@@ -507,10 +443,8 @@ export const FilePartInput = Schema.Struct({
   mime: Schema.String,
   filename: Schema.optional(Schema.String),
   url: Schema.String,
-  source: Schema.optional(_FilePartSource),
-})
-  .annotate({ identifier: "FilePartInput" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+  source: Schema.optional(FilePartSource),
+}).annotate({ identifier: "FilePartInput" })
 export type FilePartInput = Types.DeepMutable<Schema.Schema.Type<typeof FilePartInput>>
 
 export const AgentPartInput = Schema.Struct({
@@ -524,9 +458,7 @@ export const AgentPartInput = Schema.Struct({
       end: NonNegativeInt,
     }),
   ),
-})
-  .annotate({ identifier: "AgentPartInput" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "AgentPartInput" })
 export type AgentPartInput = Types.DeepMutable<Schema.Schema.Type<typeof AgentPartInput>>
 
 export const SubtaskPartInput = Schema.Struct({
@@ -542,9 +474,7 @@ export const SubtaskPartInput = Schema.Struct({
     }),
   ),
   command: Schema.optional(Schema.String),
-})
-  .annotate({ identifier: "SubtaskPartInput" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "SubtaskPartInput" })
 export type SubtaskPartInput = Types.DeepMutable<Schema.Schema.Type<typeof SubtaskPartInput>>
 
 export const Assistant = Schema.Struct({
@@ -582,22 +512,17 @@ export const Assistant = Schema.Struct({
   structured: Schema.optional(Schema.Any),
   variant: Schema.optional(Schema.String),
   finish: Schema.optional(Schema.String),
-})
-  .annotate({ identifier: "AssistantMessage" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "AssistantMessage" })
 export type Assistant = Omit<Types.DeepMutable<Schema.Schema.Type<typeof Assistant>>, "error"> & {
   error?: AssistantError
 }
 
-const _Info = Schema.Union([User, Assistant]).annotate({ discriminator: "role", identifier: "Message" })
-export const Info = Object.assign(_Info, {
-  zod: zod(_Info) as unknown as z.ZodType<User | Assistant>,
-})
+export const Info = Schema.Union([User, Assistant]).annotate({ discriminator: "role", identifier: "Message" })
 export type Info = User | Assistant
 
 const UpdatedEventSchema = Schema.Struct({
   sessionID: SessionID,
-  info: _Info,
+  info: Info,
 })
 
 const RemovedEventSchema = Schema.Struct({
@@ -607,7 +532,7 @@ const RemovedEventSchema = Schema.Struct({
 
 const PartUpdatedEventSchema = Schema.Struct({
   sessionID: SessionID,
-  part: _Part,
+  part: Part,
   time: NonNegativeInt,
 })
 
@@ -655,9 +580,9 @@ export const Event = {
 }
 
 export const WithParts = Schema.Struct({
-  info: _Info,
-  parts: Schema.Array(_Part),
-}).pipe(withStatics((s) => ({ zod: zod(s) })))
+  info: Info,
+  parts: Schema.Array(Part),
+})
 export type WithParts = {
   info: Info
   parts: Part[]
@@ -839,6 +764,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
     if (model.api.npm === "@ai-sdk/anthropic") return true
     if (model.api.npm === "@ai-sdk/openai") return true
     if (model.api.npm === "@ai-sdk/amazon-bedrock") return attachment.mime.startsWith("image/")
+    if (model.api.npm === "@ai-sdk/xai") return attachment.mime.startsWith("image/")
     if (model.api.npm === "@ai-sdk/google-vertex/anthropic") return true
     if (model.api.npm === "@ai-sdk/google") {
       const id = model.api.id.toLowerCase()
@@ -1112,7 +1038,11 @@ export function toModelMessages(
   return Effect.runPromise(toModelMessagesEffect(input, model, options).pipe(Effect.provide(EffectLogger.layer)))
 }
 
-export function page(input: { sessionID: SessionID; limit: number; before?: string }) {
+export const page = Effect.fn("MessageV2.page")(function* (input: {
+  sessionID: SessionID
+  limit: number
+  before?: string
+}) {
   const before = input.before ? cursor.decode(input.before) : undefined
   const where = before
     ? and(eq(MessageTable.session_id, input.sessionID), older(before))
@@ -1130,7 +1060,7 @@ export function page(input: { sessionID: SessionID; limit: number; before?: stri
     const row = Database.use((db) =>
       db.select({ id: SessionTable.id }).from(SessionTable).where(eq(SessionTable.id, input.sessionID)).get(),
     )
-    if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
+    if (!row) return yield* new NotFoundError({ message: `Session not found: ${input.sessionID}` })
     return {
       items: [] as WithParts[],
       more: false,
@@ -1147,13 +1077,19 @@ export function page(input: { sessionID: SessionID; limit: number; before?: stri
     more,
     cursor: more && tail ? cursor.encode({ id: tail.id, time: tail.time_created }) : undefined,
   }
-}
+})
 
 export function* stream(sessionID: SessionID) {
   const size = 50
   let before: string | undefined
   while (true) {
-    const next = page({ sessionID, limit: size, before })
+    const next = Effect.runSync(
+      page({ sessionID, limit: size, before }).pipe(
+        Effect.catchIf(NotFoundError.isInstance, () =>
+          Effect.succeed({ items: [] as WithParts[], more: false, cursor: undefined }),
+        ),
+      ),
+    )
     if (next.items.length === 0) break
     for (let i = next.items.length - 1; i >= 0; i--) {
       yield next.items[i]
@@ -1180,7 +1116,7 @@ export function parts(message_id: MessageID) {
   )
 }
 
-export function get(input: { sessionID: SessionID; messageID: MessageID }): WithParts {
+export const get = Effect.fn("MessageV2.get")(function* (input: { sessionID: SessionID; messageID: MessageID }) {
   const row = Database.use((db) =>
     db
       .select()
@@ -1188,12 +1124,12 @@ export function get(input: { sessionID: SessionID; messageID: MessageID }): With
       .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
       .get(),
   )
-  if (!row) throw new NotFoundError({ message: `Message not found: ${input.messageID}` })
+  if (!row) return yield* new NotFoundError({ message: `Message not found: ${input.messageID}` })
   return {
     info: info(row),
     parts: parts(input.messageID),
   }
-}
+})
 
 export function filterCompacted(msgs: Iterable<WithParts>) {
   const result = [] as WithParts[]
@@ -1253,6 +1189,31 @@ export const filterCompactedEffect = Effect.fnUntraced(function* (sessionID: Ses
   return filterCompacted(stream(sessionID))
 })
 
+// filterCompacted reorders messages for model consumption
+// ([compaction-user, summary, ...retained tail..., continue-user]), so array
+// position is not chronological. Derive each binding by max id (MessageID
+// is monotonic via MessageID.ascending) so a pre-compaction overflowing tail
+// assistant doesn't get mistaken for the most recent turn. tasks are
+// compaction/subtask parts attached to user messages newer than the latest
+// finished assistant — i.e. unprocessed work.
+export function latest(msgs: WithParts[]) {
+  let user: User | undefined
+  let assistant: Assistant | undefined
+  let finished: Assistant | undefined
+  for (const msg of msgs) {
+    const info = msg.info
+    if (info.role === "user" && (!user || info.id > user.id)) user = info
+    if (info.role === "assistant" && (!assistant || info.id > assistant.id)) assistant = info
+    if (info.role === "assistant" && info.finish && (!finished || info.id > finished.id)) finished = info
+  }
+  const tasks = msgs.flatMap((m) =>
+    finished && m.info.id <= finished.id
+      ? []
+      : m.parts.filter((p): p is CompactionPart | SubtaskPart => p.type === "compaction" || p.type === "subtask"),
+  )
+  return { user, assistant, finished, tasks }
+}
+
 export function fromError(
   e: unknown,
   ctx: { providerID: ProviderID; aborted?: boolean },
@@ -1307,6 +1268,29 @@ export function fromError(
           metadata: {
             code: (e as FetchDecompressionError).code,
             message: e.message,
+          },
+        },
+        { cause: e },
+      ).toObject()
+    case e instanceof ProviderError.HeaderTimeoutError:
+      return new APIError(
+        {
+          message: e.message,
+          isRetryable: true,
+          metadata: {
+            code: e.name,
+            timeoutMs: String(e.ms),
+          },
+        },
+        { cause: e },
+      ).toObject()
+    case e instanceof ProviderError.ResponseStreamError:
+      return new APIError(
+        {
+          message: e.message,
+          isRetryable: true,
+          metadata: {
+            code: e.name,
           },
         },
         { cause: e },

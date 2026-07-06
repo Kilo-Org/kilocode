@@ -1,10 +1,10 @@
-import { sharedModelStatusCache } from '../cache/shared-model-status-cache'
-import { ToastNotifier } from '../ui/toast-notifier'
-import { findSimilarModels, retryWithBackoff, categorizeError, generateAutoFixSuggestions } from '../utils'
-import { getLoadedModels } from './get-loaded-models'
-import { normalizeBaseURL } from '../utils/atomic-chat-api'
-import { isPluginHookInput, isAtomicChatProvider, isValidModel } from '../utils/validation'
-import { DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
+import { sharedModelStatusCache } from "../cache/shared-model-status-cache"
+import { ToastNotifier } from "../ui/toast-notifier"
+import { findSimilarModels, retryWithBackoff, categorizeError, generateAutoFixSuggestions } from "../utils"
+import { getLoadedModels } from "./get-loaded-models"
+import { normalizeBaseURL } from "../utils/atomic-chat-api"
+import { isPluginHookInput, isAtomicChatProvider, isValidModel } from "../utils/validation"
+import { DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from "../constants"
 
 export function createChatParamsHook(toastNotifier: ToastNotifier) {
   return async (input: any, output: any) => {
@@ -40,11 +40,11 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
         return loadedModels
       },
       3,
-      500
+      500,
     )
 
     if (!validationResult.success || !validationResult.result) {
-      const errorCategory = categorizeError(validationResult.error || 'Validation operation failed', {
+      const errorCategory = categorizeError(validationResult.error || "Validation operation failed", {
         baseURL,
         modelId: model.id,
       })
@@ -58,21 +58,21 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
       })
 
       const availableModels =
-        errorCategory.type === 'offline' ? [] : lastLoadedModels.length > 0 ? lastLoadedModels : []
+        errorCategory.type === "offline" ? [] : lastLoadedModels.length > 0 ? lastLoadedModels : []
 
       const similarModels = findSimilarModels(model.id, availableModels)
 
       await toastNotifier.error(
         `Model '${model.id}' not ready: ${errorCategory.message}`,
-        'Model Validation Failed',
-        8000
+        "Model Validation Failed",
+        8000,
       )
 
       if (!output.options) {
         output.options = {}
       }
       output.options.atomicChatValidation = {
-        status: 'error',
+        status: "error",
         model: model.id,
         availableModels,
         errorCategory: errorCategory.type,
@@ -82,17 +82,17 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
         autoFixAvailable: errorCategory.autoFixAvailable,
         autoFixSuggestions,
         steps:
-          errorCategory.type === 'not_found'
+          errorCategory.type === "not_found"
             ? [
-                '1. Open Atomic Chat',
-                '2. Load the model you want to use',
-                '3. Confirm curl http://127.0.0.1:1337/v1/models lists that model id',
-                '4. Retry in Kilo Code',
+                "1. Open Atomic Chat",
+                "2. Load the model you want to use",
+                "3. Confirm curl http://127.0.0.1:1337/v1/models lists that model id",
+                "4. Retry in Kilo Code",
               ]
             : [
-                '1. Ensure Atomic Chat is running',
-                '2. Verify the API URL in kilo.json matches Atomic Chat settings',
-                '3. Retry your request',
+                "1. Ensure Atomic Chat is running",
+                "2. Verify the API URL in kilo.json matches Atomic Chat settings",
+                "3. Retry your request",
               ],
         similarModels: similarModels.map((item) => ({
           model: item.model,
@@ -110,7 +110,7 @@ export function createChatParamsHook(toastNotifier: ToastNotifier) {
         output.options = {}
       }
       output.options.atomicChatValidation = {
-        status: 'success',
+        status: "success",
         model: model.id,
         availableModels: loadedModels,
         message: `Model '${model.id}' is listed by Atomic Chat and ready.`,

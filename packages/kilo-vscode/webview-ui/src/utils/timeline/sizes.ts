@@ -20,6 +20,17 @@ export interface BarSize {
   content: number
 }
 
+export interface TimelineScroll {
+  scrollLeft: number
+  scrollWidth: number
+  clientWidth: number
+}
+
+/** Keep following updates when the viewport is within one bar of the right edge. */
+export function pinned(scroll: TimelineScroll, slack = BAR_W): boolean {
+  return scroll.scrollWidth - scroll.clientWidth - scroll.scrollLeft <= slack
+}
+
 // ── Content length ───────────────────────────────────────────────────
 
 function content(part: Part): number {

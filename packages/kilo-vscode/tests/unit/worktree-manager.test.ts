@@ -4,7 +4,12 @@ import path from "node:path"
 import fs from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
-import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
+import {
+  generateBranchName,
+  sanitizeBranchName,
+  semanticBranchName,
+  versionedName,
+} from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import simpleGit from "simple-git"
 
@@ -114,6 +119,24 @@ describe("generateBranchName", () => {
 // ---------------------------------------------------------------------------
 // sanitizeBranchName
 // ---------------------------------------------------------------------------
+
+describe("semanticBranchName", () => {
+  it("creates a branch slug from a generated session title", () => {
+    expect(semanticBranchName("Fix token refresh race")).toBe("fix-token-refresh-race")
+  })
+
+  it("normalizes a user prefix and keeps branch separators", () => {
+    expect(semanticBranchName("Add billing alerts", "marius/features/")).toBe("marius/features/add-billing-alerts")
+  })
+
+  it("reserves the length limit for the prefix", () => {
+    expect(semanticBranchName("a".repeat(100), "team/").length).toBeLessThanOrEqual(50)
+  })
+
+  it("returns empty when the title has no usable characters", () => {
+    expect(semanticBranchName("修复登录")).toBe("")
+  })
+})
 
 describe("sanitizeBranchName", () => {
   it("replaces spaces with hyphens", () => {
@@ -719,43 +742,80 @@ describe("WorktreeManager.ensureGitExclude", () => {
 })
 
 // ---------------------------------------------------------------------------
+// WorktreeManager -- automatic branch rename
+// ---------------------------------------------------------------------------
+
+describe("WorktreeManager.renameBranch", () => {
+  it("renames a local-only branch without moving or cleaning the worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const created = await mgr.createWorktree({ branchName: "quiet-river" })
+    await fs.writeFile(path.join(created.path, "draft.txt"), "keep me")
+
+    const branch = await mgr.renameBranch(created.path, created.branch, "fix-token-refresh")
+
+    expect(branch).toBe("fix-token-refresh")
+    expect((await simpleGit(created.path).revparse(["--abbrev-ref", "HEAD"])).trim()).toBe(branch)
+    expect(await fs.readFile(path.join(created.path, "draft.txt"), "utf-8")).toBe("keep me")
+    expect((await simpleGit(root).branch()).all).not.toContain(created.branch)
+  })
+
+  it("suffixes a generated name that already exists", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const created = await mgr.createWorktree({ branchName: "quiet-river" })
+    await simpleGit(root).branch(["fix-auth"])
+
+    expect(await mgr.renameBranch(created.path, created.branch, "fix-auth")).toBe("fix-auth-2")
+  })
+
+  it("does not rename a branch that exists on a remote", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const created = await mgr.createWorktree({ branchName: "quiet-river" })
+    const hash = (await simpleGit(root).revparse(["HEAD"])).trim()
+    await simpleGit(root).raw(["update-ref", `refs/remotes/origin/${created.branch}`, hash])
+
+    await expect(mgr.renameBranch(created.path, created.branch, "fix-auth")).rejects.toThrow(
+      "already exists on a remote",
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
 // WorktreeManager -- branch name collision retry
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.createWorktree branch collision", () => {
-  /**
-   * Exercise the retry path in WorktreeManager when `git worktree add -b <name>`
-   * fails because a branch with that name already exists.
-   *
-   * We force the collision by creating a worktree with branchName "collide",
-   * removing the worktree (keeping the branch), then requesting the same
-   * branchName again.
-   */
-  it("retries with a unique suffix when generated branch name collides", async () => {
+  it("creates a suffixed worktree without replacing an active explicitly named worktree", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const first = await mgr.createWorktree({ branchName: "echo-hello-world" })
+    const second = await mgr.createWorktree({ branchName: "echo-hello-world" })
+
+    expect(first.branch).toBe("echo-hello-world")
+    expect(second.branch).toBe("echo-hello-world-2")
+    expect((await fs.stat(path.join(first.path, ".git"))).isFile()).toBe(true)
+    expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
+    expect((await simpleGit(root).branch()).all.filter((branch) => branch.startsWith("echo-hello-world"))).toEqual([
+      "echo-hello-world",
+      "echo-hello-world-2",
+    ])
+  })
+
+  it("uses the same suffix sequence when only the requested branch already exists", async () => {
     const root = await createTempRepo()
     const git = simpleGit(root)
     const mgr = createManager(root)
-
-    // Create a first worktree with a fixed branch name
     const first = await mgr.createWorktree({ branchName: "collide" })
-    expect(first.branch).toBe("collide")
 
-    // Remove the worktree via git but keep the branch ref alive
     await git.raw(["worktree", "remove", "--force", first.path])
+    expect((await git.branch()).all).toContain("collide")
 
-    // Verify the branch still exists (worktree is gone, branch is not)
-    const branches = await git.branch()
-    expect(branches.all).toContain("collide")
-
-    // Request the same branchName — git will fail, triggering the retry
     const second = await mgr.createWorktree({ branchName: "collide" })
 
-    // The retry appends a timestamp suffix, so the branch name differs
-    expect(second.branch).not.toBe("collide")
-    expect(second.branch).toStartWith("collide-")
-
-    const stat = await fs.stat(path.join(second.path, ".git"))
-    expect(stat.isFile()).toBe(true)
+    expect(second.branch).toBe("collide-2")
+    expect((await fs.stat(path.join(second.path, ".git"))).isFile()).toBe(true)
   })
 })
 

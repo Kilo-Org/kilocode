@@ -70,216 +70,216 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
       )
     }
 
-    event.subscribe((event) => {
-      switch (event.type) {
-        case "session.next.prompted": {
-          update(event.properties.sessionID, (draft) => {
+    event.sync((event) => {
+      switch (event.name) {
+        case "session.next.prompted.1": {
+          update(event.data.sessionID, (draft) => {
             draft.unshift({
               id: event.id,
               type: "user",
-              text: event.properties.prompt.text,
-              files: event.properties.prompt.files,
-              agents: event.properties.prompt.agents,
-              time: { created: event.properties.timestamp },
+              text: event.data.prompt.text,
+              files: event.data.prompt.files,
+              agents: event.data.prompt.agents,
+              time: { created: event.data.timestamp },
             })
           })
           break
         }
-        case "session.next.synthetic":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.synthetic.1":
+          update(event.data.sessionID, (draft) => {
             draft.unshift({
               id: event.id,
               type: "synthetic",
-              sessionID: event.properties.sessionID,
-              text: event.properties.text,
-              time: { created: event.properties.timestamp },
+              sessionID: event.data.sessionID,
+              text: event.data.text,
+              time: { created: event.data.timestamp },
             })
           })
           break
-        case "session.next.shell.started":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.shell.started.1":
+          update(event.data.sessionID, (draft) => {
             draft.unshift({
               id: event.id,
               type: "shell",
-              callID: event.properties.callID,
-              command: event.properties.command,
+              callID: event.data.callID,
+              command: event.data.command,
               output: "",
-              time: { created: event.properties.timestamp },
+              time: { created: event.data.timestamp },
             })
           })
           break
-        case "session.next.shell.ended":
-          update(event.properties.sessionID, (draft) => {
-            const match = activeShell(draft, event.properties.callID)
+        case "session.next.shell.ended.1":
+          update(event.data.sessionID, (draft) => {
+            const match = activeShell(draft, event.data.callID)
             if (!match) return
-            match.output = event.properties.output
-            match.time.completed = event.properties.timestamp
+            match.output = event.data.output
+            match.time.completed = event.data.timestamp
           })
           break
-        case "session.next.step.started":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.step.started.1":
+          update(event.data.sessionID, (draft) => {
             const currentAssistant = activeAssistant(draft)
-            if (currentAssistant) currentAssistant.time.completed = event.properties.timestamp
+            if (currentAssistant) currentAssistant.time.completed = event.data.timestamp
             draft.unshift({
               id: event.id,
               type: "assistant",
-              agent: event.properties.agent,
-              model: event.properties.model,
+              agent: event.data.agent,
+              model: event.data.model,
               content: [],
-              snapshot: event.properties.snapshot ? { start: event.properties.snapshot } : undefined,
-              time: { created: event.properties.timestamp },
+              snapshot: event.data.snapshot ? { start: event.data.snapshot } : undefined,
+              time: { created: event.data.timestamp },
             })
           })
           break
-        case "session.next.step.ended":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.step.ended.1":
+          update(event.data.sessionID, (draft) => {
             const currentAssistant = activeAssistant(draft)
             if (!currentAssistant) return
-            currentAssistant.time.completed = event.properties.timestamp
-            currentAssistant.finish = event.properties.finish
-            currentAssistant.cost = event.properties.cost
-            currentAssistant.tokens = event.properties.tokens
-            if (event.properties.snapshot)
-              currentAssistant.snapshot = { ...currentAssistant.snapshot, end: event.properties.snapshot }
+            currentAssistant.time.completed = event.data.timestamp
+            currentAssistant.finish = event.data.finish
+            currentAssistant.cost = event.data.cost
+            currentAssistant.tokens = event.data.tokens
+            if (event.data.snapshot)
+              currentAssistant.snapshot = { ...currentAssistant.snapshot, end: event.data.snapshot }
           })
           break
-        case "session.next.step.failed":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.step.failed.1":
+          update(event.data.sessionID, (draft) => {
             const currentAssistant = activeAssistant(draft)
             if (!currentAssistant) return
-            currentAssistant.time.completed = event.properties.timestamp
+            currentAssistant.time.completed = event.data.timestamp
             currentAssistant.finish = "error"
-            currentAssistant.error = event.properties.error
+            currentAssistant.error = event.data.error
           })
           break
-        case "session.next.text.started":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.text.started.1":
+          update(event.data.sessionID, (draft) => {
             activeAssistant(draft)?.content.push({ type: "text", text: "" })
           })
           break
-        case "session.next.text.delta":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.text.delta.1":
+          update(event.data.sessionID, (draft) => {
             const match = latestText(activeAssistant(draft))
-            if (match) match.text += event.properties.delta
+            if (match) match.text += event.data.delta
           })
           break
-        case "session.next.text.ended":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.text.ended.1":
+          update(event.data.sessionID, (draft) => {
             const match = latestText(activeAssistant(draft))
-            if (match) match.text = event.properties.text
+            if (match) match.text = event.data.text
           })
           break
-        case "session.next.tool.input.started":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.tool.input.started.1":
+          update(event.data.sessionID, (draft) => {
             activeAssistant(draft)?.content.push({
               type: "tool",
-              id: event.properties.callID,
-              name: event.properties.name,
-              time: { created: event.properties.timestamp },
+              id: event.data.callID,
+              name: event.data.name,
+              time: { created: event.data.timestamp },
               state: { status: "pending", input: "" },
             })
           })
           break
-        case "session.next.tool.input.delta":
-          update(event.properties.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.properties.callID)
-            if (match?.state.status === "pending") match.state.input += event.properties.delta
+        case "session.next.tool.input.delta.1":
+          update(event.data.sessionID, (draft) => {
+            const match = latestTool(activeAssistant(draft), event.data.callID)
+            if (match?.state.status === "pending") match.state.input += event.data.delta
           })
           break
-        case "session.next.tool.input.ended":
+        case "session.next.tool.input.ended.1":
           break
-        case "session.next.tool.called":
-          update(event.properties.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.properties.callID)
+        case "session.next.tool.called.1":
+          update(event.data.sessionID, (draft) => {
+            const match = latestTool(activeAssistant(draft), event.data.callID)
             if (!match) return
-            match.time.ran = event.properties.timestamp
-            match.provider = event.properties.provider
-            match.state = { status: "running", input: event.properties.input, structured: {}, content: [] }
+            match.time.ran = event.data.timestamp
+            match.provider = event.data.provider
+            match.state = { status: "running", input: event.data.input, structured: {}, content: [] }
           })
           break
-        case "session.next.tool.progress":
-          update(event.properties.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.properties.callID)
+        case "session.next.tool.progress.1":
+          update(event.data.sessionID, (draft) => {
+            const match = latestTool(activeAssistant(draft), event.data.callID)
             if (match?.state.status !== "running") return
-            match.state.structured = event.properties.structured
-            match.state.content = [...event.properties.content]
+            match.state.structured = event.data.structured
+            match.state.content = [...event.data.content]
           })
           break
-        case "session.next.tool.success":
-          update(event.properties.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.properties.callID)
+        case "session.next.tool.success.1":
+          update(event.data.sessionID, (draft) => {
+            const match = latestTool(activeAssistant(draft), event.data.callID)
             if (match?.state.status !== "running") return
             match.state = {
               status: "completed",
               input: match.state.input,
-              structured: event.properties.structured,
-              content: [...event.properties.content],
+              structured: event.data.structured,
+              content: [...event.data.content],
             }
-            match.provider = event.properties.provider
-            match.time.completed = event.properties.timestamp
+            match.provider = event.data.provider
+            match.time.completed = event.data.timestamp
           })
           break
-        case "session.next.tool.failed":
-          update(event.properties.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.properties.callID)
+        case "session.next.tool.failed.1":
+          update(event.data.sessionID, (draft) => {
+            const match = latestTool(activeAssistant(draft), event.data.callID)
             if (match?.state.status !== "running") return
             match.state = {
               status: "error",
-              error: event.properties.error,
+              error: event.data.error,
               input: match.state.input,
               structured: match.state.structured,
               content: match.state.content,
             }
-            match.provider = event.properties.provider
-            match.time.completed = event.properties.timestamp
+            match.provider = event.data.provider
+            match.time.completed = event.data.timestamp
           })
           break
-        case "session.next.reasoning.started":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.reasoning.started.1":
+          update(event.data.sessionID, (draft) => {
             activeAssistant(draft)?.content.push({
               type: "reasoning",
-              id: event.properties.reasoningID,
+              id: event.data.reasoningID,
               text: "",
             })
           })
           break
-        case "session.next.reasoning.delta":
-          update(event.properties.sessionID, (draft) => {
-            const match = latestReasoning(activeAssistant(draft), event.properties.reasoningID)
-            if (match) match.text += event.properties.delta
+        case "session.next.reasoning.delta.1":
+          update(event.data.sessionID, (draft) => {
+            const match = latestReasoning(activeAssistant(draft), event.data.reasoningID)
+            if (match) match.text += event.data.delta
           })
           break
-        case "session.next.reasoning.ended":
-          update(event.properties.sessionID, (draft) => {
-            const match = latestReasoning(activeAssistant(draft), event.properties.reasoningID)
-            if (match) match.text = event.properties.text
+        case "session.next.reasoning.ended.1":
+          update(event.data.sessionID, (draft) => {
+            const match = latestReasoning(activeAssistant(draft), event.data.reasoningID)
+            if (match) match.text = event.data.text
           })
           break
-        case "session.next.retried":
+        case "session.next.retried.1":
           break
-        case "session.next.compaction.started":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.compaction.started.1":
+          update(event.data.sessionID, (draft) => {
             draft.unshift({
               id: event.id,
               type: "compaction",
-              reason: event.properties.reason,
+              reason: event.data.reason,
               summary: "",
-              time: { created: event.properties.timestamp },
+              time: { created: event.data.timestamp },
             })
           })
           break
-        case "session.next.compaction.delta":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.compaction.delta.1":
+          update(event.data.sessionID, (draft) => {
             const match = activeCompaction(draft)
-            if (match) match.summary += event.properties.text
+            if (match) match.summary += event.data.text
           })
           break
-        case "session.next.compaction.ended":
-          update(event.properties.sessionID, (draft) => {
+        case "session.next.compaction.ended.1":
+          update(event.data.sessionID, (draft) => {
             const match = activeCompaction(draft)
             if (!match) return
-            match.summary = event.properties.text
-            match.include = event.properties.include
+            match.summary = event.data.text
+            match.include = event.data.include
           })
           break
       }

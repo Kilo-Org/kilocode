@@ -23,11 +23,13 @@ test("config writes include the selected directory", async () => {
 
   await client.saveConfig(query, { permission: { edit: { "*": "allow" } } })
   await client.unsetConfig(query, [["permission", "edit"]])
+  await client.patchConfig(query, { indexing: { provider: "ollama" } }, [["indexing", "model"]])
 
-  expect(calls).toHaveLength(2)
+  expect(calls).toHaveLength(3)
 
   const save = calls[0]
   const unset = calls[1]
+  const patch = calls[2]
   expect(save.method).toBe("PATCH")
   expect(new URL(save.url).searchParams.get("directory")).toBe("/tmp/project")
   expect(save.body).toEqual({ scope: "project", set: { permission: { edit: { "*": "allow" } } } })
@@ -35,4 +37,12 @@ test("config writes include the selected directory", async () => {
   expect(unset.method).toBe("PATCH")
   expect(new URL(unset.url).searchParams.get("directory")).toBe("/tmp/project")
   expect(unset.body).toEqual({ scope: "project", unset: [["permission", "edit"]] })
+
+  expect(patch.method).toBe("PATCH")
+  expect(new URL(patch.url).searchParams.get("directory")).toBe("/tmp/project")
+  expect(patch.body).toEqual({
+    scope: "project",
+    set: { indexing: { provider: "ollama" } },
+    unset: [["indexing", "model"]],
+  })
 })

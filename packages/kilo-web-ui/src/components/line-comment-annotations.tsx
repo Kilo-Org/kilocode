@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/line-comment-annotations"
+export * from "@opencode-ai/ui/line-comment-annotations"

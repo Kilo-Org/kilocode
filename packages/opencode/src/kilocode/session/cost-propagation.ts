@@ -58,7 +58,7 @@ export namespace KiloCostPropagation {
       Effect.promise(() => acquire(`${sid}:${mid}`)),
       () =>
         Effect.gen(function* () {
-          const parent = yield* Effect.sync(() => MessageV2.get({ sessionID: sid, messageID: mid }))
+          const parent = yield* MessageV2.get({ sessionID: sid, messageID: mid })
           if (parent.info.role !== "assistant") return
           parent.info.cost += amount
           yield* sessions.updateMessage(parent.info)

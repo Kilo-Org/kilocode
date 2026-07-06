@@ -16,7 +16,7 @@ import { testEffect } from "../lib/effect"
 
 const ctx: Tool.Context = {
   sessionID: SessionID.make("ses_test-docx"),
-  messageID: MessageID.make(""),
+  messageID: MessageID.make("msg_test-docx"),
   callID: "",
   agent: "code",
   abort: AbortSignal.any([]),

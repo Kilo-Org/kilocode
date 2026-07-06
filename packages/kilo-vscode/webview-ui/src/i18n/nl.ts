@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
+  "provider.anaconda.title.manage": "Anaconda Desktop beheren",
+  "provider.anaconda.status.checking": "Anaconda Desktop controleren...",
+  "provider.anaconda.status.opening": "Anaconda Desktop openen...",
+  "provider.anaconda.status.syncing": "Providermodellen vernieuwen...",
+  "provider.anaconda.status.ready": "Klaar om te verbinden",
+  "provider.anaconda.status.waiting": "Wachten op Desktop",
+  "provider.anaconda.status.attention": "Vereist aandacht",
+  "provider.anaconda.status.unavailable": "Niet beschikbaar",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop wordt niet ondersteund op {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installeer Anaconda Desktop op deze machine en kom hier dan terug. Kilo voert het installatieprogramma niet voor je uit.",
+  "provider.anaconda.state.notRunning":
+    "Open Anaconda Desktop, voltooi de installatie en meld je aan, kies daarna Opnieuw controleren.",
+  "provider.anaconda.state.invalidConfig":
+    "De installatie van Anaconda Desktop is onvolledig. Open Desktop, voltooi de installatie en herstart het indien nodig.",
+  "provider.anaconda.state.signedOut": "Open Anaconda Desktop en meld je aan voordat je Kilo verbindt.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo kon geen toegang krijgen tot Anaconda Desktop. Open Desktop, meld je opnieuw aan en herstart het indien nodig.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop reageert nog niet. Open het en wacht tot de applicatie volledig is opgestart.",
+  "provider.anaconda.state.noModel":
+    "Download in Anaconda Desktop een tekstgeneratiemodel. Kies er indien mogelijk een met ondersteuning voor toolaanroepen en start daarna de server.",
+  "provider.anaconda.state.noServer_one":
+    "Er is 1 gedownload tekstgeneratiemodel beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
+  "provider.anaconda.state.noServer_other":
+    "Er zijn {{count}} gedownloade tekstgeneratiemodellen beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
+  "provider.anaconda.state.unhealthy":
+    "De actieve inferentieserver is nog niet gezond. Controleer deze in Anaconda Desktop en herstart de server indien nodig.",
+  "provider.anaconda.state.ready":
+    "Kilo heeft een gezonde lokale tekstgeneratieserver gevonden en kan de huidige verbindingsinstellingen importeren.",
+  "provider.anaconda.server": "Actieve inferentieserver",
+  "provider.anaconda.context": "Contextvenster",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Toolaanroepen",
+  "provider.anaconda.tools.supported": "Ondersteund",
+  "provider.anaconda.tools.unsupported": "Niet ingeschakeld",
+  "provider.anaconda.tools.unknown": "Onbekend",
+  "provider.anaconda.warning.title": "Toolondersteuning is beperkt",
+  "provider.anaconda.warning.description":
+    "Deze server bevestigt geen toolaanroepen. Acties van de codeeragent kunnen mislukken of niet beschikbaar zijn. Ga alleen verder als je deze beperkingen accepteert.",
+  "provider.anaconda.action.download": "Anaconda Desktop downloaden",
+  "provider.anaconda.action.open": "Anaconda Desktop openen",
+  "provider.anaconda.action.checkAgain": "Opnieuw controleren",
+  "provider.anaconda.action.continue": "Toch doorgaan",
+  "provider.anaconda.action.manage": "Beheren / Vernieuwen",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop vernieuwd",
+  "provider.anaconda.toast.refreshed.description": "De actieve lokale server en modellen zijn up-to-date in Kilo.",
+  "settings.providers.note.anacondaDesktop": "Voer een model uit dat lokaal door Anaconda Desktop wordt aangeboden.",
+  "settings.providers.tag.local": "Lokaal",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Voorgesteld",
   "command.category.view": "Weergave",
   "command.category.project": "Project",
@@ -94,6 +148,31 @@ export const dict = {
   "command.session.unshare.description": "Stop met het delen van deze sessie",
   "command.session.export": "Sessietranscript exporteren",
 
+  "agentRequirements.skill.installed": "Geïnstalleerd",
+  "agentRequirements.skill.checkFailed": "De skillcontrole is mislukt",
+  "agentRequirements.skill.missing": "Niet geïnstalleerd",
+  "agentRequirements.mcp.connected": "Verbonden",
+  "agentRequirements.mcp.checkFailed": "De MCP-controle is mislukt",
+  "agentRequirements.mcp.missing": "Niet verbonden",
+  "agentRequirements.extension.installed": "Geïnstalleerd",
+  "agentRequirements.extension.checkFailed": "De controle van de VS Code-extensie is mislukt",
+  "agentRequirements.extension.missing": "Niet geïnstalleerd",
+  "agentRequirements.extension.description": "Installeer de ontbrekende extensies in VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCP’s",
+  "agentRequirements.group.extensions": "VS Code-extensies",
+  "agentRequirements.blocked.title": "Vereisten voor agent {{agent}}",
+  "agentRequirements.blocked.description":
+    "Deze agent heeft de volgende tools nodig voordat deze kan worden uitgevoerd.",
+  "agentRequirements.prompt.blocked": "Voltooi eerst de vereiste controles om deze agent te gebruiken",
+  "agentRequirements.action.openMarketplace": "Marketplace openen",
+  "agentRequirements.error.unknownAgent": "De geselecteerde agent kon niet worden gevonden.",
+  "agentRequirements.error.malformedDeclaration": "Deze agent heeft een ongeldige vereistenverklaring.",
+  "agentRequirements.error.discoveryFailed": "Kilo kon de beschikbare skills niet controleren.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo kon de MCP-serverstatus niet controleren.",
+  "agentRequirements.error.scopeMismatch": "Deze controle van agentvereisten is niet meer actief.",
+  "agentRequirements.error.requestFailed": "Kilo kon de agentvereisten niet controleren.",
+
   "palette.search.placeholder": "Zoeken naar bestanden, commando's en sessies",
   "palette.empty": "Geen resultaten gevonden",
   "palette.group.commands": "Commando's",
@@ -101,17 +180,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Providers zoeken",
   "dialog.provider.empty": "Geen providers gevonden",
-  "dialog.provider.group.popular": "Populair",
   "dialog.provider.group.other": "Overige",
   "dialog.provider.tag.recommended": "Aanbevolen",
-  "dialog.provider.opencode.note": "Geselecteerde modellen waaronder Claude, GPT, Gemini en meer",
-  "dialog.provider.anthropic.note": "Directe toegang tot Claude-modellen, inclusief Pro en Max",
-  "dialog.provider.deepseek.note": "DeepSeek-modellen voor redeneer- en programmeertaken",
-  "dialog.provider.copilot.note": "Claude-modellen voor programmeerhulp",
-  "dialog.provider.openai.note": "GPT-modellen voor snelle, capabele algemene AI-taken",
-  "dialog.provider.google.note": "Gemini-modellen voor snelle, gestructureerde antwoorden",
-  "dialog.provider.openrouter.note": "Toegang tot alle ondersteunde modellen via één provider",
-  "dialog.provider.vercel.note": "Gecentraliseerde toegang tot AI-modellen met slimme routering",
 
   "dialog.model.select.title": "Model selecteren",
   "dialog.model.search.placeholder": "Modellen zoeken",
@@ -184,6 +254,7 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Gegevens kunnen worden gebruikt voor training",
   "model.tag.latest": "Nieuwste",
+  "model.group.auto": "Automatische modellen",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
   "model.group.collapse": "{{group}} inklappen",
@@ -210,6 +281,10 @@ export const dict = {
   "model.preview.label.cached": "Gecachet",
   "model.preview.label.average": "Gesch. gem. kosten",
   "model.preview.label.context": "Context",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Modelkeuzes",
+  "model.preview.label.completion": "Voltooiing",
+  "model.preview.label.costAttempt": "Kosten / poging",
   "model.preview.value.notSupported": "Niet ondersteund",
   "model.preview.tooltip.average":
     "De geschatte gemiddelde kosten zijn gebaseerd op een typische verhouding van input-, output- en cache-leestokens.",
@@ -294,6 +369,25 @@ export const dict = {
   "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
+  "prompt.action.sandbox.enable": "Sandbox inschakelen",
+  "prompt.action.sandbox.disable": "Sandbox uitschakelen",
+  "prompt.action.sandbox.enabled":
+    "Sandbox is ingeschakeld. Shell-opdrachten van de agent zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox is uitgeschakeld. Klik om schrijfbewerkingen van shell-opdrachten van de agent te beperken tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.status.enabled": "Sandbox ingeschakeld",
+  "prompt.action.sandbox.status.disabled": "Sandbox uitgeschakeld",
+  "prompt.action.sandbox.filesystem": "Bestandssysteem",
+  "prompt.action.sandbox.network": "Netwerk",
+  "prompt.action.sandbox.filesystem.restricted": "Beperkt",
+  "prompt.action.sandbox.network.blocked": "Geblokkeerd",
+  "prompt.action.sandbox.network.allowed": "Toegestaan",
+  "prompt.action.sandbox.unrestricted": "Onbeperkt",
+  "prompt.action.sandbox.description.enabled": "Schrijfbewerkingen zijn beperkt tot de project- en Kilo-mappen.",
+  "prompt.action.sandbox.description.disabled":
+    "Klik om schrijfbewerkingen in het bestandssysteem en netwerktoegang te beperken.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
@@ -527,6 +621,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Toestemming vereist (subagent)",
   "notification.permission.description": "{{sessionTitle}} in {{projectName}} heeft toestemming nodig",
   "ui.permission.manageAutoApprove": "Beheer automatisch goedkeuren regels",
+  "ui.permission.doomLoop.prompt": "Mogelijke lus gedetecteerd voor het hulpmiddel {{tool}}. Doorgaan met uitvoeren?",
+  "ui.permission.doomLoop.rule": "Doorgaan met {{tool}}-aanroepen",
   "ui.permission.rule.addToAllowed": "Toevoegen aan toegestane lijst",
   "ui.permission.rule.removeFromAllowed": "Verwijderen van toegestane lijst",
   "ui.permission.rule.addToDenied": "Toevoegen aan geweigerde lijst",
@@ -830,10 +926,10 @@ export const dict = {
   "settings.providers.tag.other": "Overige",
   "settings.providers.connected.environmentDescription": "Gekoppeld via je omgevingsvariabelen",
   "settings.providers.action.signInChatGPT": "Inloggen met ChatGPT",
-  "settings.providers.custom.description": "Voeg een OpenAI-compatibele provider toe via basis-URL.",
+  "settings.providers.custom.description": "Voeg een aangepaste provider toe via basis-URL.",
 
   "provider.custom.title": "Aangepaste provider",
-  "provider.custom.description.prefix": "Configureer een OpenAI-compatibele provider. Zie de ",
+  "provider.custom.description.prefix": "Configureer een aangepaste provider. Zie de ",
   "provider.custom.description.link": "provider configuratie documentatie",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "Provider-ID",
@@ -841,6 +937,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Kleine letters, cijfers, koppeltekens of onderstrepingstekens",
   "provider.custom.field.name.label": "Weergavenaam",
   "provider.custom.field.name.placeholder": "Mijn AI Provider",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Basis-URL",
   "provider.custom.field.baseURL.placeholder": "https://api.mijnprovider.com/v1",
   "provider.custom.field.apiKey.label": "API-sleutel",
@@ -866,6 +963,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Nadenken inschakelen via chat template args (bijv. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -879,6 +981,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
   "provider.custom.models.fetch": "Modellen ophalen",
@@ -1007,6 +1116,33 @@ export const dict = {
   "feedback.dialog.github": "Meld een probleem op GitHub",
   "feedback.dialog.discord": "Word lid van onze Discord community",
   "feedback.dialog.support": "Klantenservice",
+  "workStyle.onboarding.welcome": "Welkom bij Kilo",
+  "workStyle.onboarding.title": "Kies hoe je wilt werken",
+  "workStyle.onboarding.description":
+    "Hiermee stel je de beginwaarden in voor machtigingen, redeneerblokken, terminaluitvoer en de contexttijdlijn. Dit wordt slechts één keer toegepast en slaat instellingen over die je al hebt aangepast.",
+  "workStyle.onboarding.settingsNote": "Je kunt deze opties op elk moment wijzigen in",
+  "workStyle.onboarding.settings": "Instellingen.",
+  "workStyle.onboarding.skip": "Voorlopig overslaan",
+  "workStyle.toast.saved.title": "Modus succesvol opgeslagen",
+  "workStyle.toast.saved.description": "Werk je voorkeuren op elk moment bij in Instellingen.",
+  "workStyle.toast.saved.action": "Naar Instellingen",
+  "workStyle.choice.permissions": "Machtigingen",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Zichtbaarheid",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Menselijke controle",
+  "workStyle.choice.human-in-the-loop.title": "Eerst controleren",
+  "workStyle.choice.human-in-the-loop.description": "Kilo pauzeert en toont tijdens het werk zijn plan.",
+  "workStyle.choice.human-in-the-loop.permissions":
+    "Vraagt toestemming voordat bestanden worden bewerkt of opdrachten worden uitgevoerd.",
+  "workStyle.choice.human-in-the-loop.bash": "Vraagt toestemming voor elke terminalopdracht.",
+  "workStyle.choice.human-in-the-loop.visibility": "Toont alle gespreksdetails, inclusief de redenering.",
+  "workStyle.choice.autonomous.eyebrow": "Minder onderbrekingen",
+  "workStyle.choice.autonomous.title": "Hoge autonomie",
+  "workStyle.choice.autonomous.description": "Minder onderbrekingen, gestroomlijnde interface.",
+  "workStyle.choice.autonomous.permissions":
+    "Bewerkt bestanden en voert opdrachten in de werkruimte uit zonder toestemming te vragen.",
+  "workStyle.choice.autonomous.bash": "Kan terminalopdrachten in de werkruimte zonder goedkeuring uitvoeren.",
+  "workStyle.choice.autonomous.visibility": "Details blijven ingeklapt totdat je ze uitvouwt.",
   "session.cloud.import.title": "Importeer uit de cloud",
   "session.cloud.import.placeholder": "Sessie-ID, URL, of kilo import commando",
   "session.cloud.import.button": "Importeren",
@@ -1069,6 +1205,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Saldo vernieuwen",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Opwaarderen",
+  "profile.pass.subscribe": "Schaf Kilo Pass aan om tegoed toe te voegen en bonussen te verdienen",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Vernieuwt",
   "profile.action.logout": "Uitloggen",
 
   "settings.section.configuration": "Configuratie",
@@ -1086,6 +1226,9 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Indexering inschakelen",
   "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
+  "settings.indexing.showButton.title": "Knop weergeven wanneer indexering is uitgeschakeld",
+  "settings.indexing.showButton.description":
+    "Geef de indexeringsknop onder de prompt weer wanneer indexering is uitgeschakeld. Als de knop verborgen is, opent u Instellingen > Indexering om indexering in te schakelen.",
   "settings.indexing.globalEnable.title": "Globaal inschakelen",
   "settings.indexing.globalEnable.description": "Indexering inschakelen voor elke werkruimte.",
   "settings.indexing.projectEnable.title": "Inschakelen voor dit project",
@@ -1138,6 +1281,11 @@ export const dict = {
   "session.outcome.interrupted": "Beurt onderbroken",
   "session.outcome.error": "Beurt mislukt",
   "session.outcome.finish": "Voltooiingsreden: {{reason}}",
+  "session.costAlert.header": "Sessiekostenwaarschuwing",
+  "session.costAlert.continue": "Doorgaan",
+  "session.costAlert.question":
+    "Deze sessie is net boven je waarschuwingsdrempel per sessie van {{limit}} gekomen en kost {{cost}}. Doorgaan?",
+  "session.costAlert.stop": "Stoppen",
 
   "ui.sessionTurn.cancel": "Annuleren",
   "ui.sessionTurn.status.thinking": "Denken...",
@@ -1183,6 +1331,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dit reset alleen VS Code-extensiespecifieke instellingen naar hun standaardwaarden. Instellingen die gedeeld worden met de CLI, zoals modi en regels voor automatisch goedkeuren, worden opgeslagen in de CLI-configuratie en worden niet gereset.",
   "settings.aboutKiloCode.resetSettings.button": "Alle instellingen resetten",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Instellingen overdragen",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exporteer of importeer uw instellingen om ze tussen VS Code-instanties over te dragen.",
@@ -1245,6 +1394,10 @@ export const dict = {
   "settings.notifications.errors.title": "Fouten",
   "settings.notifications.errors.description": "Toon melding bij fouten",
   "settings.notifications.sounds": "Geluiden",
+  "settings.notifications.enable.title": "Geluidsmeldingen inschakelen",
+  "settings.notifications.enable.description":
+    "Geluiden afspelen wanneer sessies worden voltooid, er een fout optreedt of uw invoer vereist is",
+  "settings.notifications.testSound": "Testen",
   "settings.notifications.agentSound.title": "Agent Voltooiingsgeluid",
   "settings.notifications.agentSound.description": "Geluid om af te spelen wanneer agent voltooit",
   "settings.notifications.permSound.title": "Toestemmingsverzoek Geluid",
@@ -1252,6 +1405,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Fout Geluid",
   "settings.notifications.errorSound.description": "Geluid om af te spelen bij fouten",
   "settings.notifications.sound.default": "Standaard",
+  "settings.notifications.sound.system": "Systeem",
+  "settings.notifications.sound.description":
+    "Standaard worden verschillende geluiden gebruikt voor voltooiing, invoer en fouten. Andere keuzes gebruiken voor elke gebeurtenis hetzelfde geluid.",
   "settings.notifications.sound.none": "Geen",
 
   "settings.experimental.share.title": "Deelmodus",
@@ -1263,8 +1419,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Schakel de automatische code formatter in",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Schakel language server protocol integratie in",
-  "settings.experimental.pasteSummary.title": "Plak-samenvatting uitschakelen",
-  "settings.experimental.pasteSummary.description": "Vat grote geplakte inhoud niet samen",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
@@ -1273,13 +1427,20 @@ export const dict = {
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
-  "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
+  "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
+  "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
+  "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
+  "settings.experimental.nativeNotebookTools.description":
+    "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
+  "settings.sandboxing.title": "Sandbox",
+  "settings.sandboxing.network.title": "Netwerktoegang beperken",
+  "settings.sandboxing.network.description":
+    "Blokkeer uitgaande netwerktoegang voor door het model geïnitieerde opdrachten en HTTP-tools. Lokale MCP-servers en plugin-hooks vallen buiten deze beperking. Netwerkverkeer voor providers en modelinferentie blijft beschikbaar.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1291,6 +1452,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",
 
   "settings.agentBehaviour.defaultAgent.title": "Standaard Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent om te gebruiken wanneer er geen is opgegeven",
@@ -1383,6 +1547,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
+  "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
+  "settings.autoApprove.maxCost.description":
+    "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",
   "settings.autoApprove.level.allow": "Toestaan",
   "settings.autoApprove.level.ask": "Vragen",
   "settings.autoApprove.level.deny": "Weigeren",
@@ -1414,8 +1581,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Takenlijst beheren. Staat het lezen en bijwerken van de interne takenlijst toe.",
   "settings.autoApprove.tool.webfetch": "Een URL ophalen. Staat het ophalen van inhoud van een specifieke URL toe.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Zoek op web of in code. Staat het uitvoeren van externe web- of code-zoekopdrachten toe.",
+  "settings.autoApprove.tool.websearch": "Zoek op het web. Staat het uitvoeren van externe web-zoekopdrachten toe.",
   "settings.autoApprove.tool.doom_loop":
     "Voorkom herhaalde identieke acties. Geactiveerd wanneer dezelfde tool call herhaald wordt met identieke invoer.",
 
@@ -1445,10 +1611,6 @@ export const dict = {
 
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
-  "settings.display.layout.title": "Lay-out",
-  "settings.display.layout.description": "Lay-outmodus voor de chatinterface",
-  "settings.display.layout.auto": "Auto",
-  "settings.display.layout.stretch": "Uitrekken",
   "settings.display.fontSize.title": "Lettergrootte",
   "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
@@ -1458,6 +1620,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blokken met codebewerkingen",
+  "settings.display.codeEdit.description":
+    "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
+  "settings.display.codeEdit.expanded": "Uitgeklapt",
+  "settings.display.codeEdit.collapsed": "Ingeklapt",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",
@@ -1467,6 +1634,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagentmodel",
   "settings.providers.subagentModel.description":
     "Standaardmodel en redeneerinspanning voor task-tool subagenten. Laat leeg om het model van de aanroepende agent over te nemen.",
+  "settings.models.hidePromptTraining.title": "Modellen die prompts voor training gebruiken verbergen",
+  "settings.models.hidePromptTraining.description":
+    "Verberg Kilo Gateway-modellen waarvan providers je prompts mogelijk voor training gebruiken.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",
@@ -1477,7 +1647,7 @@ export const dict = {
   "settings.providers.enabled.description":
     "Indien ingesteld, zijn alleen deze providers beschikbaar (exclusieve allowlist)",
   "settings.providers.notSet": "Niet ingesteld (gebruik server standaard)",
-  "settings.providers.custom.note": "Voeg een OpenAI-compatibele provider toe via base URL.",
+  "settings.providers.custom.note": "Voeg een aangepaste provider toe via base URL.",
   "settings.providers.search.placeholder": "Zoek providers",
   "settings.providers.select.placeholder": "Selecteer provider...",
 
@@ -1496,6 +1666,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Legacy Migratie",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migreer instellingen van een eerdere installatie van Kilo Code, inclusief provider API-sleutels en standaard model.",
+  "settings.aboutKiloCode.rooImport.description": "Importeer gespreksgeschiedenis van een Roo Code installatie.",
+  "settings.aboutKiloCode.rooImport.button": "Sessies importeren uit Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",

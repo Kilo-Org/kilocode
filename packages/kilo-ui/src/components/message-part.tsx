@@ -58,6 +58,7 @@ import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
 import { escapeHtml } from "../util/escape-html"
+import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -348,7 +349,7 @@ function renderable(part: PartType, showReasoningSummaries = true) {
 function toolDefaultOpen(tool: string, shell = false, edit = false) {
   if (tool === "bash") return shell
   if (tool === "edit" || tool === "write") return edit
-  if (tool === "apply_patch") return false
+  if (tool === "apply_patch") return edit
 }
 
 function partDefaultOpen(part: PartType, shell = false, edit = false) {
@@ -731,6 +732,9 @@ export function UserMessageDisplay(props: {
   interrupted?: boolean
   animate?: boolean
   queued?: boolean
+  text?: string
+  copyText?: string
+  header?: JSX.Element
   onFork?: () => void
   onRevert?: () => void
 }) {
@@ -743,7 +747,7 @@ export function UserMessageDisplay(props: {
     () => props.parts?.find((p) => p.type === "text" && !(p as TextPart).synthetic) as TextPart | undefined,
   )
 
-  const text = createMemo(() => textPart()?.text || "")
+  const text = createMemo(() => props.text ?? textPart()?.text ?? "")
 
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
 
@@ -767,7 +771,7 @@ export function UserMessageDisplay(props: {
     const providerID = props.message.model?.providerID
     const modelID = props.message.model?.modelID
     if (!providerID || !modelID) return ""
-    const match = data.store.provider?.all?.find((p) => p.id === providerID)
+    const match = data.store.provider?.all?.get(providerID)
     return match?.models?.[modelID]?.name ?? modelID
   })
 
@@ -797,7 +801,7 @@ export function UserMessageDisplay(props: {
   }
 
   const handleCopy = async () => {
-    const content = text()
+    const content = props.copyText ?? text()
     if (!content) return
     await navigator.clipboard.writeText(content)
     setCopied(true)
@@ -840,12 +844,15 @@ export function UserMessageDisplay(props: {
             </For>
           </div>
         </Show>
-        <Show when={text()}>
+        <Show when={text() || props.header}>
           <>
             <div data-slot="user-message-body">
-              <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-                <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
-              </div>
+              {props.header}
+              <Show when={text()}>
+                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                  <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+                </div>
+              </Show>
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
@@ -928,56 +935,9 @@ export function UserMessageDisplay(props: {
   )
 }
 
-type HighlightSegment = { text: string; type?: "file" | "agent" }
-
-/** Match @path mentions: `@` followed by a path-like token (contains `/` or `.`). */
-const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
-
-function detectMentions(text: string): { start: number; end: number; type: "file" }[] {
-  const result: { start: number; end: number; type: "file" }[] = []
-  MENTION_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = MENTION_RE.exec(text))) {
-    result.push({ start: m.index, end: m.index + m[0].length, type: "file" })
-  }
-  return result
-}
-
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
-    const text = props.text
-
-    const offset: { start: number; end: number; type: "file" | "agent" }[] = [
-      ...props.references
-        .filter((r) => r.source?.text?.start !== undefined && r.source?.text?.end !== undefined)
-        .map((r) => ({ start: r.source!.text!.start, end: r.source!.text!.end, type: "file" as const })),
-      ...props.agents
-        .filter((a) => a.source?.start !== undefined && a.source?.end !== undefined)
-        .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
-    ]
-
-    // Fall back to regex detection when no source offsets are available
-    const allRefs = offset.length > 0 ? offset.sort((a, b) => a.start - b.start) : detectMentions(text)
-
-    const result: HighlightSegment[] = []
-    let lastIndex = 0
-
-    for (const ref of allRefs) {
-      if (ref.start < lastIndex) continue
-
-      if (ref.start > lastIndex) {
-        result.push({ text: text.slice(lastIndex, ref.start) })
-      }
-
-      result.push({ text: text.slice(ref.start, ref.end), type: ref.type })
-      lastIndex = ref.end
-    }
-
-    if (lastIndex < text.length) {
-      result.push({ text: text.slice(lastIndex) })
-    }
-
-    return result
+    return buildHighlightedTextSegments(props.text, props.references, props.agents)
   })
 
   const data = useData()
@@ -1240,6 +1200,10 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                 )
               }
               const [title, ...rest] = cleaned.split(": ")
+              const message = rest.join(": ")
+              const status = message.match(/^(\d{3})(?:\s+|$)/)
+              const code = status?.[1]
+              const detail = code ? message.slice(code.length).trimStart() : message
               return (
                 <Card variant="error">
                   <div data-component="tool-error">
@@ -1247,8 +1211,15 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                     <Switch>
                       <Match when={title && title.length < 30}>
                         <div data-slot="message-part-tool-error-content">
-                          <div data-slot="message-part-tool-error-title">{title}</div>
-                          <span data-slot="message-part-tool-error-message">{rest.join(": ")}</span>
+                          <div data-slot="message-part-tool-error-heading">
+                            <div data-slot="message-part-tool-error-title">{title}</div>
+                            <Show when={code}>
+                              <span data-slot="message-part-tool-error-code">{code}</span>
+                            </Show>
+                          </div>
+                          <Show when={detail}>
+                            <span data-slot="message-part-tool-error-message">{detail}</span>
+                          </Show>
                         </div>
                       </Match>
                       <Match when={true}>
@@ -1574,8 +1545,10 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-              <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+            <div data-slot="reasoning-details">
+              <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
+                <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+              </div>
             </div>
           </Collapsible.Content>
         </Collapsible>
@@ -1835,7 +1808,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -1866,7 +1839,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -1900,7 +1873,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -2145,34 +2118,36 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
   return (
     <div data-component="bash-output">
       <Show when={props.cmd}>
-        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.command")}</div>
-        <div data-slot="bash-section">
-          <div data-slot="bash-section-code" ref={cmdRef} />
-          <div data-slot="bash-section-actions">
-            <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+        <div data-slot="bash-terminal" data-kind="command">
+          <div data-slot="bash-section" data-kind="command">
+            <span data-slot="bash-prompt" aria-hidden="true">
+              $
+            </span>
+            <div data-slot="bash-section-code" data-scrollable ref={cmdRef} />
+            <div data-slot="bash-section-actions">
+              <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+            </div>
           </div>
         </div>
       </Show>
-      <Show when={props.cmd && props.output}>
-        <div data-slot="bash-divider" />
-      </Show>
       <Show when={props.output}>
-        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.output")}</div>
-        <div data-slot="bash-section">
-          <div data-slot="bash-section-code" data-scrollable ref={outRef} />
-          <div data-slot="bash-section-actions">
-            <Show when={data.openContent || (props.outputPath && data.openFile)}>
-              <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
-                <IconButton
-                  icon="square-arrow-top-right"
-                  size="small"
-                  variant="ghost"
-                  onClick={openInEditor}
-                  aria-label={i18n.t("ui.messagePart.openInEditor")}
-                />
-              </Tooltip>
-            </Show>
-            <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+        <div data-slot="bash-terminal" data-kind="output">
+          <div data-slot="bash-section" data-kind="output">
+            <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+            <div data-slot="bash-section-actions">
+              <Show when={data.openContent || (props.outputPath && data.openFile)}>
+                <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
+                  <IconButton
+                    icon="square-arrow-top-right"
+                    size="small"
+                    variant="ghost"
+                    onClick={openInEditor}
+                    aria-label={i18n.t("ui.messagePart.openInEditor")}
+                  />
+                </Tooltip>
+              </Show>
+              <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+            </div>
           </div>
         </div>
       </Show>
@@ -2212,7 +2187,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="console"
-        animated
         hasDetails
         defaultOpen={props.defaultOpen ?? true}
         onOpenChange={setOpen}

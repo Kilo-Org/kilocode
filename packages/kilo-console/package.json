@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-console",
-  "version": "7.3.39",
+  "version": "7.4.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
     "@kilocode/kilo-web-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@lottiefiles/dotlottie-web": "0.74.0",
-    "@opencode-ai/ui": "workspace:*",
+    "@pierre/diffs": "catalog:",
     "@solidjs/router": "catalog:",
     "ghostty-web": "0.4.0",
     "solid-js": "catalog:",

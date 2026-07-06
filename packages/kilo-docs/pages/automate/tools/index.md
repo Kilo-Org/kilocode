@@ -11,9 +11,6 @@ Kilo Code implements a sophisticated tool system that allows AI models to intera
 
 ### Tool Groups
 
-{% tabs %}
-{% tab label="VSCode" %}
-
 Tools are organized into logical groups based on their functionality:
 
 | Category | Purpose | Tools | Common Use |
@@ -21,7 +18,7 @@ Tools are organized into logical groups based on their functionality:
 | **Read Group** | File system reading and searching | `read`, `glob`, `grep` | Code exploration and analysis |
 | **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
 | **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
-| **Web Group** | Fetch and search web content | `webfetch`, `websearch`, `codesearch` | Research, documentation lookup |
+| **Web Group** | Fetch and search web content | `webfetch`, `websearch` | Research, documentation lookup |
 | **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
 | **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
 | **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager` | Context switching and task organization |
@@ -66,7 +63,6 @@ These tools help Kilo Code access web content:
 
 - `webfetch` - Fetches a URL and returns the content
 - `websearch` - Searches the web (available to Kilo/OpenRouter users)
-- `codesearch` - Semantic code search (available to Kilo/OpenRouter users)
 
 ### Browser Tools
 
@@ -95,81 +91,6 @@ These tools help manage the conversation and task flow:
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Tools are organized into logical groups based on their functionality:
-
-| Category | Purpose | Tools | Common Use |
-|---|---|---|---|
-| **Read Group** | File system reading and searching | [read_file](/docs/automate/tools/read-file), [search_files](/docs/automate/tools/search-files), [list_files](/docs/automate/tools/list-files), [list_code_definition_names](/docs/automate/tools/list-code-definition-names) | Code exploration and analysis |
-| **Edit Group** | File system modifications | [apply_diff](/docs/automate/tools/apply-diff), [delete_file](/docs/automate/tools/delete-file), [write_to_file](/docs/automate/tools/write-to-file) | Code changes and file manipulation |
-| **Browser Group** | Web automation | [browser_action](/docs/automate/tools/browser-action) | Web testing and interaction |
-| **Command Group** | System command execution | [execute_command](/docs/automate/tools/execute-command) | Running scripts, building projects |
-| **MCP Group** | External tool integration | [use_mcp_tool](/docs/automate/tools/use-mcp-tool), [access_mcp_resource](/docs/automate/tools/access-mcp-resource) | Specialized functionality through external servers |
-| **Workflow Group** | Mode and task management | [switch_mode](/docs/automate/tools/switch-mode), [new_task](/docs/automate/tools/new-task), [ask_followup_question](/docs/automate/tools/ask-followup-question), [attempt_completion](/docs/automate/tools/attempt-completion), [update_todo_list](/docs/automate/tools/update-todo-list) | Context switching and task organization |
-
-### Always Available Tools
-
-Certain tools are accessible regardless of the current mode:
-
-- [ask_followup_question](/docs/automate/tools/ask-followup-question): Gather additional information from users
-- [attempt_completion](/docs/automate/tools/attempt-completion): Signal task completion
-- [switch_mode](/docs/automate/tools/switch-mode): Change operational modes
-- [new_task](/docs/automate/tools/new-task): Create subtasks
-- [update_todo_list](/docs/automate/tools/update-todo-list): Manage step-by-step task tracking
-
-## Available Tools
-
-### Read Tools
-
-These tools help Kilo Code understand your code and project:
-
-- [read_file](/docs/automate/tools/read-file) - Examines the contents of files
-- [search_files](/docs/automate/tools/search-files) - Finds patterns across multiple files
-- [list_files](/docs/automate/tools/list-files) - Maps your project's file structure
-- [list_code_definition_names](/docs/automate/tools/list-code-definition-names) - Creates a structural map of your code
-
-### Edit Tools
-
-These tools help Kilo Code make changes to your code:
-
-- [apply_diff](/docs/automate/tools/apply-diff) - Makes precise, surgical changes to your code
-- [delete_file](/docs/automate/tools/delete-file) - Removes files from your workspace
-- [write_to_file](/docs/automate/tools/write-to-file) - Creates new files or completely rewrites existing ones
-
-### Browser Tools
-
-These tools help Kilo Code interact with web applications:
-
-- [browser_action](/docs/automate/tools/browser-action) - Automates browser interactions
-
-### Command Tools
-
-These tools help Kilo Code execute commands:
-
-- [execute_command](/docs/automate/tools/execute-command) - Runs system commands and programs
-
-### MCP Tools
-
-These tools help Kilo Code connect with external services:
-
-- [use_mcp_tool](/docs/automate/tools/use-mcp-tool) - Uses specialized external tools
-- [access_mcp_resource](/docs/automate/tools/access-mcp-resource) - Accesses external data sources
-
-### Workflow Tools
-
-These tools help manage the conversation and task flow:
-
-- [ask_followup_question](/docs/automate/tools/ask-followup-question) - Gets additional information from you
-- [attempt_completion](/docs/automate/tools/attempt-completion) - Presents final results
-- [switch_mode](/docs/automate/tools/switch-mode) - Changes to a different mode for specialized tasks
-- [new_task](/docs/automate/tools/new-task) - Creates a new subtask
-- [update_todo_list](/docs/automate/tools/update-todo-list) - Tracks task progress with step-by-step checklists
-
-{% /tab %}
-{% /tabs %}
 
 ## Tool Calling Mechanism
 
@@ -302,24 +223,24 @@ Tools are made available based on the current mode:
 1. **Information Gathering**
 
    ```
-   [ask_followup_question](/docs/automate/tools/ask-followup-question) → [read_file](/docs/automate/tools/read-file) → [search_files](/docs/automate/tools/search-files)
+   `question` → `read` → `grep`
    ```
 
 2. **Code Modification**
 
    ```
-   [read_file](/docs/automate/tools/read-file) → [apply_diff](/docs/automate/tools/apply-diff) → [attempt_completion](/docs/automate/tools/attempt-completion)
+   `read` → `edit` → final response
    ```
 
 3. **Task Management**
 
    ```
-   [new_task](/docs/automate/tools/new-task) → [switch_mode](/docs/automate/tools/switch-mode) → [execute_command](/docs/automate/tools/execute-command)
+   `task` → `bash` → final response
    ```
 
 4. **Progress Tracking**
    ```
-   [update_todo_list](/docs/automate/tools/update-todo-list) → [execute_command](/docs/automate/tools/execute-command) → [update_todo_list](/docs/automate/tools/update-todo-list)
+   `todowrite` → `bash` → `todowrite`
    ```
 
 ## Error Handling and Recovery

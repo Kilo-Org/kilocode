@@ -6,13 +6,15 @@ import { Server } from "../../../src/server/server"
 import { Config } from "../../../src/config/config"
 import { KilocodeConfigOverlay } from "../../../src/kilocode/config/overlay"
 import { Permission } from "../../../src/permission"
-import { AppRuntime } from "../../../src/effect/app-runtime"
+import { PtyPaths } from "../../../src/server/routes/instance/httpapi/groups/pty"
+import { Filesystem } from "../../../src/util/filesystem"
 import { resetDatabase } from "../../fixture/db"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 void Log.init({ print: false })
 
 const original = Global.Path.config
+const terminal = process.platform === "win32" ? test.skip : test.serial
 
 type Overlay = {
   fields: Record<string, { source: string; inherited: boolean; overridden: boolean; value?: unknown }>
@@ -26,7 +28,6 @@ type Agent = {
 
 afterEach(async () => {
   ;(Global.Path as { config: string }).config = original
-  await AppRuntime.runPromise(Config.Service.use((svc) => svc.invalidate()))
   await disposeAllInstances()
   await resetDatabase()
 })
@@ -64,8 +65,15 @@ async function config(dir: string, value: unknown) {
   await Bun.write(path.join(dir, "kilo.json"), JSON.stringify(value, null, 2))
 }
 
-async function invalidate() {
-  await AppRuntime.runPromise(Config.Service.use((svc) => svc.invalidate()))
+async function setGlobal(dir: string, value: Config.Info) {
+  ;(Global.Path as { config: string }).config = dir
+  await json(
+    await request(Server.Default().app, undefined, "/config/overlay", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "global", set: value }),
+    }),
+  )
 }
 
 describe("config overlay routes", () => {
@@ -84,16 +92,66 @@ describe("config overlay routes", () => {
     expect(Object.hasOwn(patched, "prototype")).toBe(false)
   })
 
+  test("prefers .kilo over legacy .kilocode and ignores .opencode in project overlays", async () => {
+    await using project = await tmpdir()
+    const entries = [
+      {
+        root: ".opencode",
+        source: "opencode",
+        value: { username: "opencode", model: "test/opencode", small_model: "test/opencode" },
+      },
+      {
+        root: ".kilocode",
+        source: "kilocode",
+        value: { username: "kilocode", model: "test/kilocode" },
+      },
+      {
+        root: ".kilo",
+        source: "kilo",
+        value: { username: "kilo" },
+      },
+    ] as const
+
+    for (const item of entries) {
+      const dir = path.join(project.path, item.root)
+      await Filesystem.write(path.join(dir, "kilo.json"), JSON.stringify(item.value))
+      await Filesystem.write(
+        path.join(dir, "agent", "shared.md"),
+        `---\ndescription: ${item.source} agent\nmode: subagent\n---\n${item.source} agent prompt`,
+      )
+    }
+    await Filesystem.write(
+      path.join(project.path, ".opencode", "agent", "opencode-only.md"),
+      "---\ndescription: opencode-only agent\nmode: subagent\n---\nopencode-only agent prompt",
+    )
+
+    const body = await KilocodeConfigOverlay.resolve({
+      directory: project.path,
+      scope: "project",
+      effective: {},
+      global: {},
+      sources: [],
+    })
+
+    expect(body.project.username).toBe("kilo")
+    expect(body.project.model).toBe("test/kilocode")
+    expect(body.project.small_model).toBeUndefined()
+    expect(body.project.agent?.shared).toMatchObject({
+      description: "kilo agent",
+      prompt: "kilo agent prompt",
+    })
+    expect(body.project.agent?.["opencode-only"]).toBeUndefined()
+    expect(body.targets.project).toBe(path.join(project.path, ".kilo", "kilo.json"))
+  })
+
   test.serial("marks global values inherited in project scope", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
-    ;(Global.Path as { config: string }).config = global.path
-    await config(global.path, {
+    await setGlobal(global.path, {
       model: "kilo/global-model",
       permission: { bash: "ask" },
       mcp: { shared: { type: "local", command: ["node", "shared.js"], enabled: true } },
     })
-    await invalidate()
 
     const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
 
@@ -108,12 +166,110 @@ describe("config overlay routes", () => {
     })
   })
 
+  test.serial("resolves prompt-training model visibility across scopes", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir({ config: { hide_prompt_training_models: false } })
+    await setGlobal(global.path, { hide_prompt_training_models: true })
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(body.fields.hide_prompt_training_models).toMatchObject({
+      source: "project",
+      inherited: false,
+      overridden: true,
+      value: false,
+    })
+  })
+
+  test.serial("marks global indexing values inherited in project scope", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, {
+      indexing: {
+        enabled: true,
+        provider: "ollama",
+        ollama: { baseUrl: "http://localhost:11434" },
+      },
+    })
+
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(body.fields["indexing.enabled"]).toMatchObject({ source: "global", inherited: true, value: true })
+    expect(body.fields["indexing.provider"]).toMatchObject({ source: "global", inherited: true, value: "ollama" })
+    expect(body.fields["indexing.ollama.baseUrl"]).toMatchObject({
+      source: "global",
+      inherited: true,
+      value: "http://localhost:11434",
+    })
+  })
+
+  test.serial("excludes project indexing values from global scope", async () => {
+    await using project = await tmpdir()
+    const global: Config.Info = {
+      indexing: {
+        enabled: true,
+        provider: "openai",
+        openai: { apiKey: "global-secret" },
+      },
+    }
+    const local: Config.Info = {
+      indexing: {
+        enabled: false,
+        provider: "ollama",
+        ollama: { baseUrl: "http://project:11434" },
+      },
+    }
+    await config(project.path, local)
+
+    const body = await KilocodeConfigOverlay.resolve({
+      directory: project.path,
+      scope: "global",
+      effective: local,
+      global,
+      sources: [],
+    })
+
+    expect(body.fields["indexing.enabled"]).toMatchObject({ source: "global", value: true })
+    expect(body.fields["indexing.provider"]).toMatchObject({ source: "global", value: "openai" })
+    expect(body.fields["indexing.openai.apiKey"]).toMatchObject({ source: "global", value: "global-secret" })
+    expect(body.fields["indexing.ollama.baseUrl"]).toMatchObject({ source: "default" })
+    expect(body.fields["indexing.ollama.baseUrl"].value).toBeUndefined()
+  })
+
+  test.serial("writes project indexing overrides to .kilo/kilo.jsonc", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    await setGlobal(global.path, { indexing: { enabled: true, provider: "openai" } })
+
+    await json(
+      await req(project.path, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scope: "project",
+          set: { indexing: { enabled: false, provider: "ollama", ollama: { baseUrl: "http://127.0.0.1:11434" } } },
+        }),
+      }),
+    )
+
+    const file = path.join(project.path, ".kilo", "kilo.jsonc")
+    const saved = (await Bun.file(file).json()) as { indexing: Record<string, unknown> }
+    const body = await json<Overlay>(await req(project.path, "/config/overlay?scope=project"))
+
+    expect(await Bun.file(path.join(project.path, ".kilo", "kilo.json")).exists()).toBe(false)
+    expect(saved.indexing).toEqual({
+      enabled: false,
+      provider: "ollama",
+      ollama: { baseUrl: "http://127.0.0.1:11434" },
+    })
+    expect(body.fields["indexing.enabled"]).toMatchObject({ source: "project", value: false })
+    expect(body.fields["indexing.provider"]).toMatchObject({ source: "project", value: "ollama" })
+  })
+
   test.serial("removes local scalar override and falls back to global", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir({ config: { model: "kilo/project-model", username: "alice" } })
-    ;(Global.Path as { config: string }).config = global.path
-    await config(global.path, { model: "kilo/global-model" })
-    await invalidate()
+    await setGlobal(global.path, { model: "kilo/global-model" })
 
     await json(
       await req(project.path, "/config/overlay", {
@@ -133,11 +289,9 @@ describe("config overlay routes", () => {
   test.serial("writes project mcp overrides without copying inherited servers", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
-    ;(Global.Path as { config: string }).config = global.path
-    await config(global.path, {
+    await setGlobal(global.path, {
       mcp: { shared: { type: "local", command: ["node", "shared.js"], enabled: true } },
     })
-    await invalidate()
 
     await json(
       await req(project.path, "/config/overlay", {
@@ -150,7 +304,7 @@ describe("config overlay routes", () => {
       }),
     )
 
-    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.json")).json()) as {
+    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.jsonc")).json()) as {
       mcp: Record<string, unknown>
     }
     expect(Object.keys(saved.mcp)).toEqual(["local"])
@@ -159,11 +313,9 @@ describe("config overlay routes", () => {
   test.serial("disables inherited mcp server with a minimal local override", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
-    ;(Global.Path as { config: string }).config = global.path
-    await config(global.path, {
+    await setGlobal(global.path, {
       mcp: { shared: { type: "local", command: ["node", "shared.js"], enabled: true } },
     })
-    await invalidate()
 
     await json(
       await req(project.path, "/config/overlay", {
@@ -173,7 +325,7 @@ describe("config overlay routes", () => {
       }),
     )
 
-    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.json")).json()) as {
+    const saved = (await Bun.file(path.join(project.path, ".kilo", "kilo.jsonc")).json()) as {
       mcp: Record<string, unknown>
     }
     expect(saved.mcp).toEqual({ shared: { enabled: false } })
@@ -182,9 +334,7 @@ describe("config overlay routes", () => {
   test.serial("refreshes effective config after project permission update", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
-    ;(Global.Path as { config: string }).config = global.path
-    await config(global.path, { permission: { edit: "allow" } })
-    await invalidate()
+    await setGlobal(global.path, { permission: { edit: "allow" } })
 
     const before = await json<Agent[]>(await req(project.path, "/agent"))
     expect(Permission.evaluate("edit", "*", before.find((item) => item.name === "code")?.permission ?? []).action).toBe(
@@ -217,9 +367,7 @@ describe("config overlay routes", () => {
   test.serial("refreshes agent permissions after global permission update", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
-    ;(Global.Path as { config: string }).config = global.path
-    await config(global.path, { permission: { edit: "allow" } })
-    await invalidate()
+    await setGlobal(global.path, { permission: { edit: "allow" } })
 
     const before = await json<Agent[]>(await req(project.path, "/agent"))
     expect(Permission.evaluate("edit", "*", before.find((item) => item.name === "code")?.permission ?? []).action).toBe(
@@ -245,15 +393,43 @@ describe("config overlay routes", () => {
     )
   })
 
+  terminal("preserves active terminals after updating global console preferences", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    const headers = { "x-kilo-directory": project.path }
+    const created = await Server.Default().app.request(PtyPaths.create, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ command: "/usr/bin/env", args: ["sh", "-c", "sleep 30"], title: "console" }),
+    })
+    const info = await json<{ id: string }>(created)
+
+    try {
+      await json(
+        await request(Server.Default().app, undefined, "/config/overlay", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ scope: "global", set: { console: { diff_style: "split" } } }),
+        }),
+      )
+
+      const found = await Server.Default().app.request(PtyPaths.get.replace(":ptyID", info.id), { headers })
+      expect(found.status).toBe(200)
+      expect(await found.json()).toMatchObject({ id: info.id, title: "console", status: "running" })
+    } finally {
+      await Server.Default().app.request(PtyPaths.remove.replace(":ptyID", info.id), { method: "DELETE", headers })
+    }
+  })
+
   for (const value of [false, true]) {
     test.serial(
       `${value ? "httpapi" : "legacy"} global overlay update refreshes existing project instances without a project directory`,
       async () => {
         await using global = await tmpdir()
         await using project = await tmpdir()
-        ;(Global.Path as { config: string }).config = global.path
-        await config(global.path, { permission: { edit: "ask" } })
-        await invalidate()
+        await setGlobal(global.path, { permission: { edit: "ask" } })
+        await disposeAllInstances()
         const target = app(value)
 
         const before = await json<Agent[]>(await request(target, project.path, "/agent"))

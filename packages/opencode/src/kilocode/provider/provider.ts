@@ -35,6 +35,19 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
   recommendedIndex: optionalOmitUndefined(Schema.Finite),
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
+  mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
+  hasUserByokAvailable: Schema.optional(Schema.Boolean),
+  terminalBench: optionalOmitUndefined(
+    Schema.Struct({
+      overallScore: Schema.Finite,
+      avgAttemptCostUsd: Schema.Finite,
+    }),
+  ),
+  autoRouting: optionalOmitUndefined(
+    Schema.Struct({
+      models: Schema.Array(Schema.String),
+    }),
+  ),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
 }
 
@@ -43,12 +56,15 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
 // ---------------------------------------------------------------------------
 
 export function patchModelsDevModel(providerID: string, source: any) {
-  const free = providerID === "kilo" && source.cost?.input === 0 && source.cost?.output === 0
   return {
     variants: providerID === "kilo" ? (source.variants ?? {}) : {},
     recommendedIndex: source.recommendedIndex,
     prompt: source.prompt,
-    isFree: source.isFree ?? (free ? true : undefined),
+    isFree: source.isFree,
+    mayTrainOnYourPrompts: source.mayTrainOnYourPrompts,
+    hasUserByokAvailable: source.hasUserByokAvailable,
+    terminalBench: source.terminalBench,
+    autoRouting: source.autoRouting,
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
   }
@@ -63,6 +79,10 @@ export function patchConfigModel(cfg: any, existing: any) {
     recommendedIndex: cfg.recommendedIndex ?? existing?.recommendedIndex,
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,
+    mayTrainOnYourPrompts: cfg.mayTrainOnYourPrompts ?? existing?.mayTrainOnYourPrompts,
+    hasUserByokAvailable: cfg.hasUserByokAvailable ?? existing?.hasUserByokAvailable,
+    terminalBench: existing?.terminalBench,
+    autoRouting: existing?.autoRouting,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants
       ? mapValues(
@@ -105,6 +125,11 @@ function useLanguageModel(sdk: any) {
   return sdk.responses === undefined && sdk.chat === undefined
 }
 
+export function patchKiloProviderPrivacy(provider: { options?: Record<string, any> } | undefined, config: any) {
+  if (!provider || config.hide_prompt_training_models !== true) return
+  provider.options = { ...provider.options, dataCollection: "deny" }
+}
+
 export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> {
   return {
     "github-copilot-enterprise": () =>
@@ -119,16 +144,20 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
 
     kilo: Effect.fnUntraced(function* (input: any) {
       const env = yield* dep.env()
+      const config = yield* dep.config()
       const hasKey = yield* Effect.gen(function* () {
         if (input.env.some((item: string) => env[item])) return true
         if (yield* dep.auth(input.id)) return true
-        if ((yield* dep.config()).provider?.["kilo"]?.options?.apiKey) return true
+        if (config.provider?.["kilo"]?.options?.apiKey) return true
         return false
       })
 
       const options: Record<string, string> = {}
       if (env.KILO_ORG_ID) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
+      }
+      if (config.hide_prompt_training_models === true) {
+        options.dataCollection = "deny"
       }
       if (!hasKey) {
         options.apiKey = "anonymous"

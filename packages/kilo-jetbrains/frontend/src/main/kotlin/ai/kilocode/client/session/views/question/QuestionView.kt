@@ -6,6 +6,7 @@ import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.editor.SessionEditorTextField
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -13,7 +14,6 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.QuestionReplyDto
-import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.project.Project
@@ -79,14 +79,14 @@ class QuestionView(
         layout = BoxLayout(this, BoxLayout.X_AXIS)
     }
     private val back = HoverIcon().apply {
-        val ico = AllIcons.Actions.Back
+        val ico = SessionViewIcons.chevronLeft
         icon = ico
         disabledIcon = IconLoader.getDisabledIcon(ico)
         toolTipText = KiloBundle.message("session.question.back")
         addActionListener { goBack() }
     }
     private val fwd = HoverIcon().apply {
-        val ico = AllIcons.Actions.Forward
+        val ico = SessionViewIcons.chevronRight
         icon = ico
         disabledIcon = IconLoader.getDisabledIcon(ico)
         toolTipText = KiloBundle.message("session.question.next")
@@ -94,7 +94,7 @@ class QuestionView(
     }
     private val topPanel = JPanel(BorderLayout()).apply {
         isOpaque = false
-        border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
+        border = JBUI.Borders.empty()
         alignmentX = Component.LEFT_ALIGNMENT
     }
     private val body = JPanel().apply {
@@ -164,8 +164,8 @@ class QuestionView(
         this.style = style
         card.applyStyle(style)
         customEditor?.let { ed ->
-            ed.font = style.editorFont
-            ed.getEditor(false)?.let(style::applyToEditor)
+            ed.font = style.transcriptFont
+            ed.getEditor(false)?.let(style::applyTranscriptToEditor)
             ed.background = style.editorScheme.defaultBackground
         }
         val changed = texts.fold(false) { acc, item -> setFont(item.first, item.second) || acc }
@@ -207,6 +207,12 @@ class QuestionView(
         summary.isVisible = total > 1
         nav.isVisible = total > 1
         topPanel.isVisible = total > 1
+        if (total > 1) {
+            topPanel.border = JBUI.Borders.empty(0, 0, UiStyle.Gap.sm(), 0)
+            card.setSpacing(UiStyle.Gap.sm(), UiStyle.Gap.pad())
+            return
+        }
+        card.setSpacing(UiStyle.Gap.xl(), UiStyle.Gap.pad())
     }
 
     @RequiresEdt
@@ -482,14 +488,13 @@ class QuestionView(
      */
     @RequiresEdt
     private fun buildCustomEditor(): SessionEditorTextField {
-        val ed = SessionEditorTextField(project)
+        val ed = SessionEditorTextField(project, selection = selection)
         ed.border = JBUI.Borders.empty()
-        ed.setFontInheritedFromLAF(false)
         ed.setPlaceholder(KiloBundle.message("session.question.custom.placeholder"))
         ed.setShowPlaceholderWhenFocused(true)
         ed.setOneLineMode(false)
         ed.addSettingsProvider { ex ->
-            style.applyToEditor(ex)
+            style.applyTranscriptToEditor(ex)
             ex.setBorder(JBUI.Borders.empty())
             ex.scrollPane.border = JBUI.Borders.empty()
             ex.scrollPane.viewportBorder = JBUI.Borders.empty()
@@ -500,7 +505,8 @@ class QuestionView(
             ex.settings.isAdditionalPageAtBottom = false
             ex.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         }
-        ed.font = style.editorFont
+        selection?.register(ed)?.let(regs::add)
+        ed.font = style.transcriptFont
         ed.background = style.editorScheme.defaultBackground
 
         // Pre-fill with saved text. This call also forces lazy document creation so

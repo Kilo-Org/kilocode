@@ -2,9 +2,8 @@ import { For, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { ConfigRow, SectionTitle } from "@kilocode/kilo-web-ui/console"
 import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
-import { CountTag, Tag } from "@kilocode/kilo-web-ui/tag"
 import { toolName } from "../../shared/utils"
-import { ConfigPage, SourceBadge } from "./ConfigPage"
+import { ConfigCountTag as CountTag, ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { actions, usePermissionSettings, type PermissionAction, type PermissionRule } from "./state/permissions"
 
 export function tone(action: PermissionAction) {

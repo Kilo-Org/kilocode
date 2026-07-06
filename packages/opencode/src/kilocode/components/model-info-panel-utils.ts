@@ -13,6 +13,14 @@ export function fmtPrice(n: number): string {
   return `$${n.toFixed(2)}/1M`
 }
 
+export function fmtScore(n: number): string {
+  return `${(n * 100).toFixed(1)}%`
+}
+
+export function fmtAttemptCost(n: number): string {
+  return `$${n.toFixed(2)}`
+}
+
 export function fmtCachedPrice(cost: Cost): string | null {
   const read = cost.cache.read
   if (read > 0) return fmtPrice(read)

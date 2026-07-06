@@ -1,4 +1,4 @@
-import { splitProps, type ComponentProps } from "solid-js"
+import { onMount, splitProps, type ComponentProps } from "solid-js"
 
 const icons = {
   "align-right": `<path d="M12.292 6.04167L16.2503 9.99998L12.292 13.9583M2.91699 9.99998H15.6253M17.0837 3.75V16.25" stroke="currentColor" stroke-linecap="square"/>`,
@@ -86,6 +86,7 @@ const icons = {
   photo: `<path d="M16.6665 16.6666L11.6665 11.6666L9.99984 13.3333L6.6665 9.99996L3.08317 13.5833M2.9165 2.91663H17.0832V17.0833H2.9165V2.91663ZM13.3332 7.49996C13.3332 8.30537 12.6803 8.95829 11.8748 8.95829C11.0694 8.95829 10.4165 8.30537 10.4165 7.49996C10.4165 6.69454 11.0694 6.04163 11.8748 6.04163C12.6803 6.04163 13.3332 6.69454 13.3332 7.49996Z" stroke="currentColor" stroke-linecap="square"/>`,
   share: `<path d="M10.0013 12.0846L10.0013 3.33464M13.7513 6.66797L10.0013 2.91797L6.2513 6.66797M17.0846 10.418V17.0846H2.91797V10.418" stroke="currentColor" stroke-linecap="square"/>`,
   shield: `<path d="M7.49935 9.3737L9.16602 11.0404L12.4994 7.70703M9.99935 2.08203L17.0827 4.3737V9.92565C17.0827 14.0694 13.3327 16.2487 9.99935 18.047C6.66602 16.2487 2.91602 14.0694 2.91602 9.92565V4.3737L9.99935 2.08203Z" stroke="currentColor" stroke-linecap="square"/>`,
+  lock: `<path d="M5.833 8.33366V6.25033C5.833 3.71903 7.96805 1.66699 10.4993 1.66699C13.0307 1.66699 15.166 3.71903 15.166 6.25033V8.33366M4.16634 8.33366H16.833C17.7535 8.33366 18.4997 9.07985 18.4997 10.0003V16.667C18.4997 17.5875 17.7535 18.3337 16.833 18.3337H4.16634C3.24586 18.3337 2.49967 17.5875 2.49967 16.667V10.0003C2.49967 9.07985 3.24586 8.33366 4.16634 8.33366Z" stroke="currentColor" stroke-linecap="square"/>`, // kilocode_change
   download: `<path d="M13.9583 10.6257L10 14.584L6.04167 10.6257M10 2.08398V13.959M16.25 17.9173H3.75" stroke="currentColor" stroke-linecap="square"/>`,
   menu: `<path d="M2.5 5H17.5M2.5 10H17.5M2.5 15H17.5" stroke="currentColor" stroke-linecap="square"/>`,
   server: `<rect x="3.35547" y="1.92969" width="13.2857" height="16.1429" stroke="currentColor"/><rect x="3.35547" y="11.9297" width="13.2857" height="6.14286" stroke="currentColor"/><rect x="12.8555" y="14.2852" width="1.42857" height="1.42857" fill="currentColor"/><rect x="10" y="14.2852" width="1.42857" height="1.42857" fill="currentColor"/>`,
@@ -113,6 +114,42 @@ const icons = {
   "arrow-undo-down": `<path d="M4.08333 11.0859L1.75 8.7526L4.08333 6.41927M2.33333 8.7526L12.5417 8.7526L12.5417 3.21094L7 3.21094" stroke="currentColor" stroke-width="1" stroke-linecap="square"/>`,
 }
 
+const spriteID = "opencode-icon-sprite"
+const symbol = (name: keyof typeof icons) => `opencode-icon-${name}`
+let spriteInserted = false
+
+function viewBox(name: keyof typeof icons) {
+  return name === "magnifying-glass" || name === "arrow-undo-down" ? "0 0 16 16" : "0 0 20 20"
+}
+
+function ensureSprite() {
+  if (spriteInserted) return
+  if (typeof document === "undefined") return
+  if (document.getElementById(spriteID)) {
+    spriteInserted = true
+    return
+  }
+  const body = document.body as HTMLElement | null
+  if (!body) return
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+  svg.id = spriteID
+  svg.setAttribute("aria-hidden", "true")
+  svg.setAttribute("width", "0")
+  svg.setAttribute("height", "0")
+  svg.style.position = "absolute"
+  svg.style.overflow = "hidden"
+  svg.style.display = "none"
+  svg.innerHTML = Object.entries(icons)
+    .map(([name, path]) => {
+      const key = name as keyof typeof icons
+      return `<symbol id="${symbol(key)}" viewBox="${viewBox(key)}">${path}</symbol>`
+    })
+    .join("")
+  body.insertBefore(svg, body.firstChild)
+  spriteInserted = true
+}
+
 export interface IconProps extends ComponentProps<"svg"> {
   name: keyof typeof icons
   size?: "small" | "normal" | "medium" | "large"
@@ -120,7 +157,8 @@ export interface IconProps extends ComponentProps<"svg"> {
 
 export function Icon(props: IconProps) {
   const [local, others] = splitProps(props, ["name", "size", "class", "classList"])
-  const viewBox = () => (local.name === "magnifying-glass" ? "0 0 16 16" : "0 0 20 20")
+  onMount(ensureSprite)
+
   return (
     <div data-component="icon" data-size={local.size || "normal"}>
       <svg
@@ -130,11 +168,12 @@ export function Icon(props: IconProps) {
           [local.class ?? ""]: !!local.class,
         }}
         fill="none"
-        viewBox={viewBox()}
-        innerHTML={icons[local.name as keyof typeof icons]}
+        viewBox={viewBox(local.name)}
         aria-hidden="true"
         {...others}
-      />
+      >
+        <use href={`#${symbol(local.name)}`} />
+      </svg>
     </div>
   )
 }

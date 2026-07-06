@@ -8,12 +8,16 @@
  */
 
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
+import type { DiffImage } from "../diff/types"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
 import type { RunStatus } from "./run/manager"
+import type { TerminalFont } from "./terminal-font"
+
+export type { TerminalFont }
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -30,6 +34,8 @@ export type WorktreeDiffEntry = SnapshotFileDiff & {
   generatedLike?: boolean
   summarized?: boolean
   stamp?: string
+  kind?: "image"
+  image?: DiffImage
 }
 
 // ---------------------------------------------------------------------------
@@ -147,6 +153,7 @@ interface TerminalCreatedMessage {
   terminalId: string
   title: string
   wsUrl: string
+  font: TerminalFont
 }
 
 interface TerminalClosedMessage {
@@ -158,6 +165,11 @@ interface TerminalErrorMessage {
   type: "agentManager.terminal.error"
   terminalId?: string
   message: string
+}
+
+interface TerminalFontChangedMessage {
+  type: "agentManager.terminal.fontChanged"
+  font: TerminalFont
 }
 
 interface ErrorOutMessage {
@@ -314,6 +326,7 @@ export type AgentManagerOutMessage =
   | TerminalCreatedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
+  | TerminalFontChangedMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -426,6 +439,8 @@ interface CreateMultiVersionIn {
   baseBranch?: string
   branchName?: string
   modelAllocations?: Array<{ providerID: string; modelID: string; count: number }>
+  /** When set, reconcile each created session's sandbox override to this state. */
+  sandbox?: boolean
 }
 
 interface RenameWorktreeIn {
@@ -626,6 +641,37 @@ interface SendCommandIn {
   contextDirectory?: string
 }
 
+interface QuestionReplyIn {
+  type: "questionReply"
+  requestID: string
+  sessionID?: string
+  answers: string[][]
+}
+
+interface RequestSandboxDefaultIn {
+  type: "requestSandboxDefault"
+  requestID?: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
+interface SetSandboxDefaultIn {
+  type: "setSandboxDefault"
+  enabled: boolean
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
+interface ToggleSandboxIn {
+  type: "toggleSandbox"
+  sessionID?: string
+  draftID?: string
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
 interface RequestTerminalContextIn {
   type: "requestTerminalContext"
   requestId: string
@@ -770,6 +816,10 @@ export type AgentManagerInMessage =
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn
+  | QuestionReplyIn
+  | RequestSandboxDefaultIn
+  | SetSandboxDefaultIn
+  | ToggleSandboxIn
   | RequestTerminalContextIn
   | ClearSessionIn
   | AbortIn

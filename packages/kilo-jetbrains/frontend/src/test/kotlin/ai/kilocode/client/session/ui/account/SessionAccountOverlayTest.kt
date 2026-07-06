@@ -205,8 +205,8 @@ class SessionAccountOverlayTest : SessionControllerTestBase() {
         val prof = profile(email = "user@example.com")
         show(snap(prof))
         edt {
-            assertEquals(SessionUiStyle.View.sessionViewBackground(), panel.panelBackground())
-            assertEquals(SessionUiStyle.View.sessionViewOutline(), panel.panelBorderColor())
+            assertEquals(SessionUiStyle.AccountPopup.bgColor(), panel.panelBackground())
+            assertEquals(SessionUiStyle.AccountPopup.outlineColor(), panel.panelBorderColor())
         }
     }
 

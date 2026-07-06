@@ -3,12 +3,11 @@ import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
 import { ProviderIcon } from "@kilocode/kilo-web-ui/provider-icon"
-import { CountTag } from "@kilocode/kilo-web-ui/tag"
 import { StatusTag } from "@kilocode/kilo-web-ui/status-tag"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { CustomSelect } from "../../components/CustomSelect"
 import { SearchField } from "../../components/SearchField"
-import { ConfigPage, SourceBadge } from "./ConfigPage"
+import { ConfigCountTag as CountTag, ConfigPage, SourceBadge } from "./ConfigPage"
 import { useProviderSettings } from "./state/providers"
 
 export function ProvidersRoute() {

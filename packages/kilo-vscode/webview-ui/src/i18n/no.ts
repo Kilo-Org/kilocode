@@ -1,7 +1,61 @@
 import { dict as en } from "./en"
 type Keys = keyof typeof en
 
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Koble til Anaconda Desktop",
+  "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
+  "provider.anaconda.status.checking": "Sjekker Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Åpner Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Oppdaterer leverandørmodeller...",
+  "provider.anaconda.status.ready": "Klar til å koble til",
+  "provider.anaconda.status.waiting": "Venter på Desktop",
+  "provider.anaconda.status.attention": "Trenger oppmerksomhet",
+  "provider.anaconda.status.unavailable": "Utilgjengelig",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop støttes ikke på {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installer Anaconda Desktop på denne maskinen, og kom deretter tilbake hit. Kilo kjører ikke installasjonsprogrammet for deg.",
+  "provider.anaconda.state.notRunning":
+    "Åpne Anaconda Desktop, fullfør oppsettet og logg inn, og velg deretter Sjekk igjen.",
+  "provider.anaconda.state.invalidConfig":
+    "Oppsettet av Anaconda Desktop er ufullstendig. Åpne Desktop, fullfør oppsettet, og start det på nytt om nødvendig.",
+  "provider.anaconda.state.signedOut": "Åpne Anaconda Desktop og logg inn før du kobler til Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo fikk ikke tilgang til Anaconda Desktop. Åpne Desktop, logg inn på nytt, og start det på nytt om nødvendig.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop svarer ikke ennå. Åpne det og vent til applikasjonen er ferdig med å starte.",
+  "provider.anaconda.state.noModel":
+    "Last ned en tekstgenereringsmodell i Anaconda Desktop. Velg en med støtte for verktøykall når det er mulig, og start deretter serveren.",
+  "provider.anaconda.state.noServer_one":
+    "1 nedlastet tekstgenereringsmodell er tilgjengelig. Start en modellserver i Anaconda Desktop. Modeller med støtte for verktøykall anbefales på det sterkeste.",
+  "provider.anaconda.state.noServer_other":
+    "{{count}} nedlastede tekstgenereringsmodeller er tilgjengelige. Start en modellserver i Anaconda Desktop. Modeller med støtte for verktøykall anbefales på det sterkeste.",
+  "provider.anaconda.state.unhealthy":
+    "Den aktive inferensserveren er ikke sunn ennå. Sjekk den i Anaconda Desktop og start serveren på nytt om nødvendig.",
+  "provider.anaconda.state.ready":
+    "Kilo fant en sunn lokal tekstgenereringsserver og kan importere de gjeldende tilkoblingsinnstillingene.",
+  "provider.anaconda.server": "Aktiv inferensserver",
+  "provider.anaconda.context": "Kontekstvindu",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Verktøykall",
+  "provider.anaconda.tools.supported": "Støttet",
+  "provider.anaconda.tools.unsupported": "Ikke aktivert",
+  "provider.anaconda.tools.unknown": "Ukjent",
+  "provider.anaconda.warning.title": "Verktøystøtte er begrenset",
+  "provider.anaconda.warning.description":
+    "Denne serveren bekrefter ikke verktøykall. Handlinger fra kodeagenten kan mislykkes eller være utilgjengelige. Fortsett bare hvis du godtar disse begrensningene.",
+  "provider.anaconda.action.download": "Last ned Anaconda Desktop",
+  "provider.anaconda.action.open": "Åpne Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Sjekk igjen",
+  "provider.anaconda.action.continue": "Fortsett likevel",
+  "provider.anaconda.action.manage": "Administrer / Oppdater",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop oppdatert",
+  "provider.anaconda.toast.refreshed.description": "Den aktive lokale serveren og modellene er oppdatert i Kilo.",
+  "settings.providers.note.anacondaDesktop": "Kjør en modell som serveres lokalt av Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokal",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Foreslått",
   "command.category.view": "Visning",
   "command.category.project": "Prosjekt",
@@ -97,6 +151,30 @@ export const dict = {
   "command.session.unshare.description": "Slutt å dele denne sesjonen",
   "command.session.export": "Eksporter sesjonsutskrift",
 
+  "agentRequirements.skill.installed": "Installert",
+  "agentRequirements.skill.checkFailed": "Skill-sjekken mislyktes",
+  "agentRequirements.skill.missing": "Ikke installert",
+  "agentRequirements.mcp.connected": "Tilkoblet",
+  "agentRequirements.mcp.checkFailed": "MCP-sjekken mislyktes",
+  "agentRequirements.mcp.missing": "Ikke tilkoblet",
+  "agentRequirements.extension.installed": "Installert",
+  "agentRequirements.extension.checkFailed": "Sjekken av VS Code-utvidelsen mislyktes",
+  "agentRequirements.extension.missing": "Ikke installert",
+  "agentRequirements.extension.description": "Installer de manglende utvidelsene i VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCP-er",
+  "agentRequirements.group.extensions": "VS Code-utvidelser",
+  "agentRequirements.blocked.title": "Forutsetninger for agenten {{agent}}",
+  "agentRequirements.blocked.description": "Denne agenten trenger følgende verktøy før den kan kjøre.",
+  "agentRequirements.prompt.blocked": "Fullfør først de nødvendige sjekkene for å bruke denne agenten",
+  "agentRequirements.action.openMarketplace": "Åpne Marketplace",
+  "agentRequirements.error.unknownAgent": "Den valgte agenten ble ikke funnet.",
+  "agentRequirements.error.malformedDeclaration": "Denne agenten har en ugyldig kravdeklarasjon.",
+  "agentRequirements.error.discoveryFailed": "Kilo kunne ikke sjekke tilgjengelige skills.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo kunne ikke sjekke MCP-serverstatus.",
+  "agentRequirements.error.scopeMismatch": "Denne sjekken av agentkrav er ikke lenger aktiv.",
+  "agentRequirements.error.requestFailed": "Kilo kunne ikke sjekke agentkravene.",
+
   "palette.search.placeholder": "Søk i filer, kommandoer og sesjoner",
   "palette.empty": "Ingen resultater funnet",
   "palette.group.commands": "Kommandoer",
@@ -104,17 +182,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Søk etter leverandører",
   "dialog.provider.empty": "Ingen leverandører funnet",
-  "dialog.provider.group.popular": "Populære",
   "dialog.provider.group.other": "Andre",
   "dialog.provider.tag.recommended": "Anbefalt",
-  "dialog.provider.opencode.note": "Utvalgte modeller inkludert Claude, GPT, Gemini og flere",
-  "dialog.provider.anthropic.note": "Koble til med Claude Pro/Max eller API-nøkkel",
-  "dialog.provider.deepseek.note": "DeepSeek-modeller for resonnering og kodeoppgaver",
-  "dialog.provider.openai.note": "Koble til med ChatGPT Pro/Plus eller API-nøkkel",
-  "dialog.provider.google.note": "Gemini-modeller for raske, strukturerte svar",
-  "dialog.provider.openrouter.note": "Tilgang til alle støttede modeller fra én leverandør",
-  "dialog.provider.vercel.note": "Samlet tilgang til AI-modeller med smart ruting",
-  "dialog.provider.copilot.note": "Koble til med Copilot eller API-nøkkel",
 
   "dialog.model.select.title": "Velg modell",
   "dialog.model.search.placeholder": "Søk etter modeller",
@@ -186,6 +255,7 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Data kan brukes til trening",
   "model.tag.latest": "Nyeste",
+  "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
   "model.group.collapse": "Skjul {{group}}",
@@ -212,6 +282,10 @@ export const dict = {
   "model.preview.label.cached": "Bufret",
   "model.preview.label.average": "Est. snittkostnad",
   "model.preview.label.context": "Kontekst",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Modellvalg",
+  "model.preview.label.completion": "Fullføring",
+  "model.preview.label.costAttempt": "Kostnad / forsøk",
   "model.preview.value.notSupported": "Ikke støttet",
   "model.preview.tooltip.average":
     "Den estimerte snittkostnaden er basert på et typisk forhold mellom inndata-, utdata- og leste buffer-tokens.",
@@ -296,6 +370,25 @@ export const dict = {
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
+  "prompt.action.sandbox.enable": "Aktiver sandbox",
+  "prompt.action.sandbox.disable": "Deaktiver sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox er aktivert. Shell-kommandoer for agenten er begrenset til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox er deaktivert. Klikk for å begrense skriving av shell-kommandoer for agenten til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.status.enabled": "Sandbox aktivert",
+  "prompt.action.sandbox.status.disabled": "Sandbox deaktivert",
+  "prompt.action.sandbox.filesystem": "Filsystem",
+  "prompt.action.sandbox.network": "Nettverk",
+  "prompt.action.sandbox.filesystem.restricted": "Begrenset",
+  "prompt.action.sandbox.network.blocked": "Blokkert",
+  "prompt.action.sandbox.network.allowed": "Tillatt",
+  "prompt.action.sandbox.unrestricted": "Ubegrenset",
+  "prompt.action.sandbox.description.enabled": "Skrivetilgang er begrenset til prosjekt- og Kilo-mappene.",
+  "prompt.action.sandbox.description.disabled":
+    "Klikk for å begrense skrivetilgang til filsystemet og nettverkstilgang.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klikk for å begrense skrivetilgang til filsystemet. Nettverkstilgang er fortsatt tillatt av sandbox-innstillingene dine.",
 
   "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
   "speechToText.tooltip.stop": "Stopp lydfangst",
@@ -528,6 +621,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Tillatelse påkrevd (underagent)",
   "notification.permission.description": "{{sessionTitle}} i {{projectName}} trenger tillatelse",
   "ui.permission.manageAutoApprove": "Administrer regler for automatisk godkjenning",
+  "ui.permission.doomLoop.prompt": "Mulig løkke oppdaget for verktøyet {{tool}}. Fortsette kjøringen?",
+  "ui.permission.doomLoop.rule": "Fortsett {{tool}}-kall",
   "ui.permission.rule.addToAllowed": "Legg til i tillatt-listen",
   "ui.permission.rule.removeFromAllowed": "Fjern fra tillatt-listen",
   "ui.permission.rule.addToDenied": "Legg til i blokkert-listen",
@@ -829,16 +924,19 @@ export const dict = {
   "settings.providers.tag.customProvider": "Egendefinert leverandør",
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
-  "settings.providers.custom.description": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
+  "settings.providers.custom.description": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodell",
   "settings.providers.subagentModel.description":
     "Standardmodell og resonneringsinnsats for task-tool-underagenter. La stå tom for å arve den kallende agentens modell.",
+  "settings.models.hidePromptTraining.title": "Skjul modeller som trener på ledetekster",
+  "settings.models.hidePromptTraining.description":
+    "Skjul Kilo Gateway-modeller der leverandørene kan bruke ledetekstene dine til trening.",
   "settings.providers.modeModels": "Modell per modus",
-  "settings.providers.custom.note": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
+  "settings.providers.custom.note": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.modeModels.description":
     "Overstyr standardmodellen for bestemte moduser. Hvis ikke angitt, brukes den globale standardmodellen.",
   "provider.custom.title": "Egendefinert leverandør",
-  "provider.custom.description.prefix": "Konfigurer en OpenAI-kompatibel leverandør. Se ",
+  "provider.custom.description.prefix": "Konfigurer en egendefinert leverandør. Se ",
   "provider.custom.description.link": "dokumentasjon for leverandørkonfigurasjon",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "Leverandør-ID",
@@ -846,6 +944,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Små bokstaver, tall, bindestreker eller understreker",
   "provider.custom.field.name.label": "Visningsnavn",
   "provider.custom.field.name.placeholder": "Min AI-leverandør",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Basis-URL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "API-nøkkel",
@@ -871,6 +970,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Aktiver tenkning via chat-malargumenter (f.eks. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -884,6 +988,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
   "provider.custom.models.fetch": "Hent modeller",
@@ -1011,6 +1122,31 @@ export const dict = {
   "feedback.dialog.github": "Rapporter et problem på GitHub",
   "feedback.dialog.discord": "Bli med i Discord-fellesskapet vårt",
   "feedback.dialog.support": "Kundestøtte",
+  "workStyle.onboarding.welcome": "Velkommen til Kilo",
+  "workStyle.onboarding.title": "Velg hvordan du vil arbeide",
+  "workStyle.onboarding.description":
+    "Dette angir startinnstillingene for tillatelser, resonneringsblokker, terminalutdata og konteksttidslinjen. Det brukes bare én gang og hopper over innstillinger du allerede har tilpasset.",
+  "workStyle.onboarding.settingsNote": "Du kan endre disse alternativene når som helst under",
+  "workStyle.onboarding.settings": "Innstillinger.",
+  "workStyle.onboarding.skip": "Hopp over inntil videre",
+  "workStyle.toast.saved.title": "Modusen er lagret",
+  "workStyle.toast.saved.description": "Oppdater innstillingene når som helst under Innstillinger.",
+  "workStyle.toast.saved.action": "Gå til Innstillinger",
+  "workStyle.choice.permissions": "Tillatelser",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Synlighet",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Menneskelig kontroll",
+  "workStyle.choice.human-in-the-loop.title": "Gjennomgå først",
+  "workStyle.choice.human-in-the-loop.description": "Kilo tar pause og viser deg planen sin mens den arbeider.",
+  "workStyle.choice.human-in-the-loop.permissions": "Ber om tillatelse før filer redigeres eller kommandoer kjøres.",
+  "workStyle.choice.human-in-the-loop.bash": "Ber om tillatelse til alle terminalkommandoer.",
+  "workStyle.choice.human-in-the-loop.visibility": "Viser alle samtaledetaljer, inkludert resonnering.",
+  "workStyle.choice.autonomous.eyebrow": "Færre avbrudd",
+  "workStyle.choice.autonomous.title": "Høy autonomi",
+  "workStyle.choice.autonomous.description": "Færre avbrudd og et strømlinjeformet grensesnitt.",
+  "workStyle.choice.autonomous.permissions": "Redigerer filer og kjører kommandoer i arbeidsområdet uten å spørre.",
+  "workStyle.choice.autonomous.bash": "Kan kjøre terminalkommandoer i arbeidsområdet uten godkjenning.",
+  "workStyle.choice.autonomous.visibility": "Detaljene forblir skjult til du utvider dem.",
   "session.cloud.import.title": "Importer fra skyen",
   "session.cloud.import.placeholder": "Økt-ID, URL eller kilo import-kommando",
   "session.cloud.import.button": "Importer",
@@ -1073,6 +1209,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Oppdater saldo",
   "profile.action.dashboard": "Kontrollpanel",
+  "profile.action.topUp": "Fyll på",
+  "profile.pass.subscribe": "Få Kilo Pass for å legge til kreditt og tjene bonuser",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Fornyes",
   "profile.action.logout": "Logg ut",
 
   "settings.section.configuration": "Konfigurasjon",
@@ -1110,6 +1250,11 @@ export const dict = {
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",
+  "session.costAlert.header": "Varsel om øktkostnad",
+  "session.costAlert.continue": "Fortsett",
+  "session.costAlert.question":
+    "Denne økten gikk nettopp over varselgrensen per økt på {{limit}} og koster {{cost}}. Fortsette?",
+  "session.costAlert.stop": "Stopp",
 
   "ui.sessionTurn.cancel": "Avbryt",
   "ui.sessionTurn.status.thinking": "Tenker...",
@@ -1154,6 +1299,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dette tilbakestiller kun VS Code-utvidelsesspecifikke innstillinger til standardverdiene. Innstillinger som deles med CLI, som modi og regler for automatisk godkjenning, lagres i CLI-konfigurasjonen og vil ikke tilbakestilles.",
   "settings.aboutKiloCode.resetSettings.button": "Tilbakestill alle innstillinger",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Overføring av innstillinger",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksporter eller importer innstillingene dine for å overføre dem mellom VS Code-instanser.",
@@ -1210,6 +1356,10 @@ export const dict = {
   "settings.notifications.errors.title": "Feil",
   "settings.notifications.errors.description": "Vis varsling ved feil",
   "settings.notifications.sounds": "Lyder",
+  "settings.notifications.enable.title": "Aktiver lydvarsler",
+  "settings.notifications.enable.description":
+    "Spill av lyder når økter fullføres, det oppstår en feil eller det trengs innspill fra deg",
+  "settings.notifications.testSound": "Test",
   "settings.notifications.agentSound.title": "Agentfullføringslyd",
   "settings.notifications.agentSound.description": "Lyd ved agentfullføring",
   "settings.notifications.permSound.title": "Tillatelsesforespørselslyd",
@@ -1217,6 +1367,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Feillyd",
   "settings.notifications.errorSound.description": "Lyd ved feil",
   "settings.notifications.sound.default": "Standard",
+  "settings.notifications.sound.system": "System",
+  "settings.notifications.sound.description":
+    "Standardvalget bruker forskjellige lyder for fullføring, innspill og feil. Andre valg bruker én lyd for alle hendelser.",
   "settings.notifications.sound.none": "Ingen",
   "settings.experimental.share.title": "Delingsmodus",
   "settings.experimental.share.description": "Oppførsel for sesjonsdeling",
@@ -1227,8 +1380,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Aktiver automatisk kodeformatering",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Aktiver språkserverprotokoll-integrasjon",
-  "settings.experimental.pasteSummary.title": "Deaktiver lim-sammendrag",
-  "settings.experimental.pasteSummary.description": "Ikke oppsummer stort limt innhold",
   "settings.experimental.batch.title": "Batchverktøy",
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
@@ -1236,12 +1387,19 @@ export const dict = {
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Tale-til-tekst-modell",
-  "settings.experimental.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
+  "settings.models.speechToTextModel.title": "Tale-til-tekst-modell",
+  "settings.models.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
+  "settings.experimental.nativeNotebookTools.title": "Innebygde notatbok-verktøy",
+  "settings.experimental.nativeNotebookTools.description":
+    "Aktiver eksperimentelle verktøy for å lese, redigere og kjøre VS Code-notatbøker",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
+  "settings.sandboxing.title": "Kjøring i sandkasse",
+  "settings.sandboxing.network.title": "Begrens nettverkstilgang",
+  "settings.sandboxing.network.description":
+    "Blokker utgående nettverkstilgang fra kommandoer generert av modellen og HTTP-verktøy. Lokale MCP-servere og programtilleggskroker kjører utenfor denne begrensningen. Trafikk for leverandør- og modellinferens forblir tilgjengelig.",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1256,6 +1414,9 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
+  "settings.indexing.showButton.title": "Vis knappen når indeksering er slått av",
+  "settings.indexing.showButton.description":
+    "Vis indekseringsknappen under ledeteksten mens indeksering er slått av. Hvis knappen er skjult, åpner du Innstillinger > Indeksering for å aktivere indeksering.",
   "settings.indexing.globalEnable.title": "Aktiver globalt",
   "settings.indexing.globalEnable.description": "Aktiver indeksering for hvert arbeidsområde.",
   "settings.indexing.projectEnable.title": "Aktiver for dette prosjektet",
@@ -1407,9 +1568,15 @@ export const dict = {
     "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
 
   "settings.autoApprove.description":
     "Definer hvordan verktøy kan kjøre. De fleste verktøy har Tillat som standard. doom_loop og external_directory har Spør som standard.",
+  "settings.autoApprove.maxCost.title": "Varsel om øktkostnad",
+  "settings.autoApprove.maxCost.description":
+    "Varsle før en økt fortsetter etter at kostnaden overstiger dette USD-beløpet. Bruk hele dollar; la feltet stå tomt for å deaktivere.",
   "settings.autoApprove.level.allow": "Tillat",
   "settings.autoApprove.level.ask": "Spør",
   "settings.autoApprove.level.deny": "Avvis",
@@ -1437,8 +1604,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Administrer oppgaveliste. Tillater lesing og oppdatering av den interne oppgavelisten.",
   "settings.autoApprove.tool.webfetch": "Hent en URL. Tillater henting av innhold fra en spesifikk URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Søk på nettet eller i kode. Tillater å utføre eksterne nett- eller kodesøk.",
+  "settings.autoApprove.tool.websearch": "Søk på nettet. Tillater å utføre eksterne nettsøk.",
   "settings.autoApprove.tool.external_directory":
     "Få tilgang til filer utenfor arbeidsområdet. Utløses ved tilgang til filer utenfor gjeldende prosjektkatalog.",
   "settings.autoApprove.tool.doom_loop":
@@ -1467,10 +1633,6 @@ export const dict = {
 
   "settings.display.username.title": "Brukernavn",
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
-  "settings.display.layout.title": "Layout",
-  "settings.display.layout.description": "Layoutmodus for chatgrensesnittet",
-  "settings.display.layout.auto": "Automatisk",
-  "settings.display.layout.stretch": "Strekk",
   "settings.display.fontSize.title": "Skriftstørrelse",
   "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
@@ -1480,6 +1642,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blokker for kodeendringer",
+  "settings.display.codeEdit.description":
+    "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
+  "settings.display.codeEdit.expanded": "Utvidet",
+  "settings.display.codeEdit.collapsed": "Skjult",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",
@@ -1504,6 +1671,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migrering fra eldre versjon",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrer innstillinger fra en tidligere installasjon av Kilo Code, inkludert API-nøkler for leverandører og standardmodell.",
+  "settings.aboutKiloCode.rooImport.description": "Importer samtalehistorikk fra en installasjon av Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Importer økter fra Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Hva er nytt i Kilo Code",

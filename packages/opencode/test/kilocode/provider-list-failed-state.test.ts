@@ -7,18 +7,18 @@
 import { beforeEach, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
+import type { ModelsDev } from "@opencode-ai/core/models-dev"
 import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
 
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
-import type { Provider } from "../../src/provider/models"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
 
 type Failure = { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
-type Result = { models: Provider["models"]; error?: Failure }
+type Result = { models: ModelsDev.Provider["models"]; error?: Failure }
 
 let result: Result = { models: {} }
 let error: Error | undefined

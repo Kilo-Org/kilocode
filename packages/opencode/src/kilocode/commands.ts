@@ -13,10 +13,12 @@ import { AgentCommand } from "../cli/cmd/agent"
 import { UpgradeCommand } from "../cli/cmd/upgrade"
 import { UninstallCommand } from "../cli/cmd/uninstall"
 import { ServeCommand } from "../cli/cmd/serve"
+import { WebCommand } from "../cli/cmd/web"
 import { ModelsCommand } from "../cli/cmd/models"
 import { StatsCommand } from "../cli/cmd/stats"
 import { ExportCommand } from "../cli/cmd/export"
 import { ImportCommand } from "../cli/cmd/import"
+import { GithubCommand } from "../cli/cmd/github"
 import { PrCommand } from "../cli/cmd/pr"
 import { SessionCommand } from "../cli/cmd/session"
 import { RemoteCommand } from "../cli/cmd/remote"
@@ -58,12 +60,14 @@ export const commands = [
   UpgradeCommand,
   UninstallCommand,
   ServeCommand,
+  WebCommand,
   ModelsCommand,
   RollCallCommand,
   ProfileCommand,
   StatsCommand,
   ExportCommand,
   ImportCommand,
+  GithubCommand,
   PrCommand,
   SessionCommand,
   RemoteCommand,

@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 import { describe, expect, test } from "bun:test"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
@@ -15,9 +13,9 @@ function blob(size: number) {
 
 function part(tool: string, metadata: Record<string, unknown>): MessageV2.Part {
   return {
-    id: PartID.make(`p-${tool}`),
+    id: PartID.make(`prt-${tool}`),
     sessionID,
-    messageID: MessageID.make("m-assistant"),
+    messageID: MessageID.make("msg-assistant"),
     type: "tool",
     callID: `call-${tool}`,
     tool,

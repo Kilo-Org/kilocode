@@ -4,7 +4,15 @@ import { createMemo, Show } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import type { Model } from "@kilocode/sdk/v2"
 import { FreeModelDisclosure } from "./free-model-disclosure"
-import { avgPrice, fmtCachedPrice, fmtContext, fmtDate, fmtPrice } from "./model-info-panel-utils"
+import {
+  avgPrice,
+  fmtAttemptCost,
+  fmtCachedPrice,
+  fmtContext,
+  fmtDate,
+  fmtPrice,
+  fmtScore,
+} from "./model-info-panel-utils"
 
 interface Props {
   model: Model
@@ -67,6 +75,11 @@ export function ModelInfoPanel(props: Props) {
           </text>
           <text fg={theme.textMuted}>{props.provider ?? m().providerID ?? ""}</text>
         </box>
+        <Show when={FreeModelDisclosure.hasByok(m())}>
+          <box>
+            <text fg={theme.text}>{FreeModelDisclosure.byok}</text>
+          </box>
+        </Show>
         <Show when={FreeModelDisclosure.collectsData(m())}>
           <box>
             <text fg={theme.text}>{FreeModelDisclosure.panel}</text>
@@ -111,6 +124,23 @@ export function ModelInfoPanel(props: Props) {
               <text fg={theme.text}>{m() ? fmtContext(m().limit.context) : "—"}</text>
             </box>
           </box>
+        </Show>
+        <Show when={m().terminalBench}>
+          {(bench) => (
+            <box>
+              <text fg={theme.text}>
+                <b>Terminal Bench 2.0</b>
+              </text>
+              <box flexDirection="row" justifyContent="space-between">
+                <text fg={theme.textMuted}>Completion</text>
+                <text fg={theme.text}>{fmtScore(bench().overallScore)}</text>
+              </box>
+              <box flexDirection="row" justifyContent="space-between">
+                <text fg={theme.textMuted}>Cost / attempt</text>
+                <text fg={theme.text}>{fmtAttemptCost(bench().avgAttemptCostUsd)}</text>
+              </box>
+            </box>
+          )}
         </Show>
         <Show when={caps()?.reasoning || inputLine() || outputLine()}>
           <box flexDirection="column">

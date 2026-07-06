@@ -8,6 +8,7 @@ import path from "path"
 import os from "os"
 import { Filesystem } from "@/util/filesystem"
 import { Process } from "@/util/process"
+import { Brew as KiloBrew } from "@/kilocode/installation" // kilocode_change
 
 interface UninstallArgs {
   keepConfig: boolean
@@ -133,7 +134,7 @@ async function showRemovalSummary(targets: RemovalTargets, method: Installation.
       pnpm: "pnpm uninstall -g @kilocode/cli", // kilocode_change
       bun: "bun remove -g @kilocode/cli", // kilocode_change
       yarn: "yarn global remove @kilocode/cli", // kilocode_change
-      brew: "brew uninstall opencode",
+      brew: `brew uninstall ${KiloBrew.name}`, // kilocode_change
       choco: "choco uninstall kilo", // kilocode_change
       scoop: "scoop uninstall kilo", // kilocode_change
     }
@@ -184,7 +185,7 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
       pnpm: ["pnpm", "uninstall", "-g", "@kilocode/cli"], // kilocode_change
       bun: ["bun", "remove", "-g", "@kilocode/cli"], // kilocode_change
       yarn: ["yarn", "global", "remove", "@kilocode/cli"], // kilocode_change
-      brew: ["brew", "uninstall", "opencode"],
+      brew: ["brew", "uninstall", KiloBrew.name], // kilocode_change
       choco: ["choco", "uninstall", "kilo"], // kilocode_change
       scoop: ["scoop", "uninstall", "kilo"], // kilocode_change
     }

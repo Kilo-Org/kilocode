@@ -1,7 +1,15 @@
 import type { ExportEvent } from "../events"
 
 export type ToWorker =
-  | { kind: "init"; dbPath: string; agentVersion?: string; endpoint?: string; surface?: string; anonId?: string }
+  | {
+      kind: "init"
+      dbPath: string
+      agentVersion?: string
+      endpoint?: string
+      allowCustomEndpoint?: boolean
+      surface?: string
+      anonId?: string
+    }
   | { kind: "event"; envelope: ExportEvent; approxBytes: number }
   | { kind: "shutdown"; timeoutMs: number }
   | { kind: "network_reconnect" }

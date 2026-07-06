@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { afterEach, mock, spyOn } from "bun:test"
 import { Effect } from "effect"
+import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
@@ -54,7 +55,7 @@ const nolog = {
 function permissions(items: Permission.Request[] = []) {
   return {
     list: async () => items,
-    reply: async () => true,
+    reply: async () => {},
   }
 }
 
@@ -69,6 +70,31 @@ function questions(items: Question.Request[] = []) {
 function prompts(calls: SessionPrompt.PromptInput[]) {
   return async (input: SessionPrompt.PromptInput) => {
     calls.push(input)
+  }
+}
+
+function catalogModel(providerID: string, modelID: string, name: string, reasoning = false) {
+  return {
+    id: ModelID.make(modelID),
+    providerID: ProviderID.make(providerID),
+    api: { id: "private-deployment", url: "https://private.example.com", npm: "file:///private/provider" },
+    name,
+    capabilities: {
+      temperature: true,
+      attachment: true,
+      reasoning,
+      toolcall: true,
+      input: { text: true, audio: false, image: true, video: false, pdf: true },
+      output: { text: true, audio: false, image: false, video: false, pdf: false },
+      interleaved: false,
+    },
+    cost: { input: 1, output: 2, cache: { read: 3, write: 4 } },
+    limit: { context: 100_000, output: 4_096 },
+    status: "active" as const,
+    options: { apiKey: "must-not-leak" },
+    headers: { authorization: "must-not-leak" },
+    release_date: "2026-01-01",
+    variants: { precise: { apiKey: "must-not-leak" } },
   }
 }
 
@@ -299,6 +325,342 @@ describe("RemoteSender", () => {
     })
   })
 
+  test("list_models returns the effective catalog from the exact session directory", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      catalog: {
+        get: async () =>
+          ({
+            id: SessionID.make("ses_models"),
+            directory: "/workspace/project-a",
+            model: {
+              id: ModelID.make("deployment/model"),
+              providerID: ProviderID.make("custom"),
+              variant: "precise",
+            },
+          }) as any,
+        messages: async () => [],
+        providers: async () =>
+          ({
+            custom: {
+              id: ProviderID.make("custom"),
+              name: "Custom Provider",
+              source: "config",
+              env: ["PRIVATE_API_KEY"],
+              key: "must-not-leak",
+              options: { apiKey: "must-not-leak" },
+              models: {
+                "deployment/model": catalogModel("custom", "deployment/model", "Deployment Model", true),
+              },
+            },
+          }) as any,
+        default: async () => ({ providerID: ProviderID.make("custom"), modelID: ModelID.make("deployment/model") }),
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models",
+      command: "list_models",
+      sessionId: "ses_models",
+      data: { protocolVersion: 1 },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(dirs).toEqual(["/workspace/project-a"])
+    expect(sent).toHaveLength(1)
+    expect(sent[0]?.type).toBe("response")
+    expect(sent[0]?.id).toBe("req_models")
+    const result = sent[0]?.result as RemoteModelCatalog.Response
+    expect(result.all).toHaveLength(1)
+    expect(result.all[0]?.id).toBe("custom")
+    expect(result.all[0]?.env).toEqual([])
+    expect(result.all[0]?.options).toEqual({})
+    expect(result.all[0]?.models["deployment/model"]?.variants).toEqual({ precise: {} })
+    expect(result.default).toEqual({ custom: "deployment/model" })
+    expect(result.connected).toEqual(["custom"])
+    expect(result.failed).toEqual([])
+    expect(result.currentModel).toEqual({
+      model: { providerID: "custom", modelID: "deployment/model" },
+      variant: "precise",
+    })
+    expect(result.defaultModel).toEqual({ providerID: "custom", modelID: "deployment/model" })
+    expect(result.truncated).toBe(false)
+    expect(JSON.stringify(result)).not.toContain("must-not-leak")
+    expect(JSON.stringify(result)).not.toContain("private.example.com")
+  })
+
+  test("list_models scopes provider discovery to each session directory", async () => {
+    const { conn, sent } = fakeConn()
+    const state = { directory: "" }
+    const messages: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => {
+        state.directory = input.directory
+        const result = await input.fn()
+        state.directory = ""
+        return result
+      },
+      catalog: {
+        get: async (sessionID) =>
+          ({
+            id: sessionID,
+            directory: sessionID === SessionID.make("ses_first") ? "/workspace/first" : "/workspace/second",
+          }) as any,
+        messages: async (sessionID) => {
+          messages.push(sessionID)
+          return []
+        },
+        providers: async () => {
+          const id = state.directory === "/workspace/first" ? "first-provider" : "second-provider"
+          return {
+            [id]: {
+              id: ProviderID.make(id),
+              name: id,
+              source: "custom",
+              env: [],
+              options: {},
+              models: {
+                model: catalogModel(id, "model", "Model"),
+              },
+            },
+          } as any
+        },
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_first",
+      command: "list_models",
+      sessionId: "ses_first",
+      data: { protocolVersion: 1 },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    sender.handle({
+      type: "command",
+      id: "req_models_second",
+      command: "list_models",
+      sessionId: "ses_second",
+      data: { protocolVersion: 1 },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent.map((message) => message.result?.all[0]?.id)).toEqual(["first-provider", "second-provider"])
+    expect(messages).toEqual([SessionID.make("ses_first"), SessionID.make("ses_second")])
+  })
+
+  test("list_models tolerates unavailable provider default resolution", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      catalog: {
+        get: async () => ({ id: SessionID.make("ses_models"), directory: "/workspace/project-a" }) as any,
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => {
+          throw new Error("no provider default")
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_no_default",
+      command: "list_models",
+      sessionId: "ses_models",
+      data: { protocolVersion: 1 },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_models_no_default",
+        result: {
+          all: [],
+          default: {},
+          connected: [],
+          failed: [],
+          protocolVersion: 1,
+          truncated: false,
+        },
+      },
+    ])
+  })
+
+  test("list_models logs a warning when provider default resolution fails", async () => {
+    const { conn, sent } = fakeConn()
+    const warnings: any[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: { ...nolog, warn: (...args: any[]) => warnings.push(args) },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      catalog: {
+        get: async () => ({ id: SessionID.make("ses_models"), directory: "/workspace/project-a" }) as any,
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => {
+          throw new Error("no provider default")
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_warn_default",
+      command: "list_models",
+      sessionId: "ses_models",
+      data: { protocolVersion: 1 },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent[0]?.result?.defaultModel).toBeUndefined()
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]?.[0]).toBe("default model lookup failed")
+    expect(String(warnings[0]?.[1]?.error)).toContain("no provider default")
+  })
+
+  test("list_models never falls back to the process directory for an unknown session", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      catalog: {
+        get: async () => {
+          throw new Error("session not found")
+        },
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_missing",
+      command: "list_models",
+      sessionId: "ses_missing",
+      data: { protocolVersion: 1 },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(dirs).toEqual([])
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_models_missing",
+        error: "failed to list models",
+      },
+    ])
+  })
+
+  test("list_models returns one generic error when provider discovery fails", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      catalog: {
+        get: async () => ({ id: SessionID.make("ses_models"), directory: "/workspace/project-a" }) as any,
+        messages: async () => [],
+        providers: async () => {
+          throw new Error("private provider failure with api-key")
+        },
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_failed",
+      command: "list_models",
+      sessionId: "ses_models",
+      data: { protocolVersion: 1 },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_models_failed",
+        error: "failed to list models",
+      },
+    ])
+    expect(JSON.stringify(sent)).not.toContain("api-key")
+  })
+
+  test("list_models rejects unsupported versions and missing session IDs", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_v2",
+      command: "list_models",
+      sessionId: "ses_models",
+      data: { protocolVersion: 2 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_models_missing_session",
+      command: "list_models",
+      data: { protocolVersion: 1 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_models_invalid_session",
+      command: "list_models",
+      sessionId: "not-a-session-id",
+      data: { protocolVersion: 1 },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_models_v2", error: "invalid list_models command" },
+      { type: "response", id: "req_models_missing_session", error: "invalid list_models command" },
+      { type: "response", id: "req_models_invalid_session", error: "invalid list_models command" },
+    ])
+  })
+
   test("send_message with agent is accepted", async () => {
     const { conn, sent } = fakeConn()
     let resolveProvide: () => void
@@ -405,31 +767,103 @@ describe("RemoteSender", () => {
     ])
   })
 
-  test("send_message rejects structured model on remote path", () => {
+  test("send_message preserves a structured provider and model", async () => {
     const { conn, sent } = fakeConn()
+    const calls: SessionPrompt.PromptInput[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
     })
 
     sender.handle({
       type: "command",
-      id: "req_model_alias",
+      id: "req_model_structured",
       command: "send_message",
       data: {
         sessionID: "ses_x",
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: "kilocode", modelID: "gpt-5-mini" },
+        model: { providerID: "custom:edge", modelID: "deployment/model-v1" },
+        variant: "precise",
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent[0]).toEqual({ type: "response", id: "req_model_structured", result: {} })
+    expect(calls).toEqual([
+      {
+        sessionID: SessionID.make("ses_x"),
+        parts: [{ type: "text", text: "hello" }],
+        model: {
+          providerID: ProviderID.make("custom:edge"),
+          modelID: ModelID.make("deployment/model-v1"),
+        },
+        variant: "precise",
+      },
+    ])
+  })
+
+  test("send_message rejects invalid structured model identities before ACK", () => {
+    const { conn, sent } = fakeConn()
+    const calls: SessionPrompt.PromptInput[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_model_invalid",
+      command: "send_message",
+      data: {
+        sessionID: "ses_x",
+        parts: [{ type: "text", text: "hello" }],
+        model: { providerID: "", modelID: "deployment/model-v1" },
       },
     })
 
     expect(sent).toHaveLength(1)
-    expect(sent[0].type).toBe("response")
-    expect(sent[0].id).toBe("req_model_alias")
-    expect(sent[0].error).toContain("invalid send_message data")
+    expect(sent[0]?.error).toContain("invalid send_message data")
+    expect(calls).toHaveLength(0)
+  })
+
+  test("send_message leaves model and variant omitted for CLI precedence", async () => {
+    const { conn, sent } = fakeConn()
+    const calls: SessionPrompt.PromptInput[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      prompt: prompts(calls),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_model_omitted",
+      command: "send_message",
+      data: {
+        sessionID: "ses_x",
+        parts: [{ type: "text", text: "hello" }],
+        agent: "configured-agent",
+      },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent[0]).toEqual({ type: "response", id: "req_model_omitted", result: {} })
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.model).toBeUndefined()
+    expect(calls[0]?.variant).toBeUndefined()
   })
 
   test("send_message does not special-case kilo-prefixed model", async () => {
@@ -515,7 +949,6 @@ describe("RemoteSender", () => {
         list: async () => [],
         reply: async (input) => {
           calls.push(input)
-          return true
         },
       },
     })
@@ -1120,8 +1553,8 @@ describe("RemoteSender", () => {
       {
         id: "sug_1",
         sessionID: "ses_target",
-        text: "Review?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        text: "Continue?",
+        actions: [{ label: "Continue", prompt: "Continue with the task" }],
       } as any,
       {
         id: "sug_2",
@@ -1153,8 +1586,8 @@ describe("RemoteSender", () => {
       data: {
         id: "sug_1",
         sessionID: "ses_target",
-        text: "Review?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        text: "Continue?",
+        actions: [{ label: "Continue", prompt: "Continue with the task" }],
       },
     })
   })

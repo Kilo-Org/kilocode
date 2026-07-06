@@ -1,12 +1,10 @@
-// kilocode_change - new file
-import { remapChildren as _remapChildren } from "./fork"
+import { writer as _writer } from "./fork"
 import z from "zod"
 import { Cause, Effect, Schema } from "effect"
 import { BusEvent } from "@/bus/bus-event"
 import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { fn } from "@/util/fn"
 import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
@@ -14,9 +12,13 @@ import { ProjectID } from "@/project/schema"
 import { Filesystem } from "@/util/filesystem"
 import { SessionTable } from "@/session/session.sql"
 import * as Log from "@opencode-ai/core/util/log"
-import type { LanguageModelUsage, ProviderMetadata } from "ai"
+import type { ProviderMetadata, Usage } from "@opencode-ai/llm"
 import type { Provider } from "@/provider/provider"
+import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import { ENV_FEATURE } from "@kilocode/kilo-gateway"
+import { fn } from "@/kilocode/fn"
+import { existsSync } from "fs"
+import path from "path"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -38,6 +40,7 @@ export namespace KiloSession {
       "session.turn.close",
       Schema.Struct({
         sessionID: SessionID,
+        parentID: Schema.optional(SessionID),
         reason: CloseReasonSchema,
       }),
     ),
@@ -116,25 +119,26 @@ export namespace KiloSession {
   // Project family resolution (worktree-aware)
   // ---------------------------------------------------------------------------
 
-  export function family(id: string): string[] {
-    const row = Database.use((db) =>
+  export function family(id: string, directories: string[] = []): string[] {
+    const rows = Database.use((db) =>
       db
-        .select({ worktree: ProjectTable.worktree })
+        .select({ id: ProjectTable.id, worktree: ProjectTable.worktree, sandboxes: ProjectTable.sandboxes })
         .from(ProjectTable)
-        .where(eq(ProjectTable.id, ProjectID.make(id)))
-        .get(),
+        .all(),
     )
-    const root = row?.worktree ? Filesystem.resolve(row.worktree) : undefined
-    if (!root || root === "/") return [id]
-    const ids = Database.use((db) =>
-      db
-        .select({ id: ProjectTable.id })
-        .from(ProjectTable)
-        .where(eq(ProjectTable.worktree, root))
-        .all()
-        .map((item) => item.id),
-    )
-    return ids.length ? ids : [id]
+    const current = rows.find((row) => row.id === id)
+    const root = current?.worktree ? Filesystem.resolve(current.worktree) : undefined
+    // Combine the stored root with Git's current sibling worktrees.
+    const roots = new Set([...(root && root !== "/" ? [root] : []), ...directories.map(Filesystem.resolve)])
+    if (roots.size === 0) return [id]
+
+    // Match both each project's recorded root and its saved worktrees.
+    const ids = rows.flatMap((row) => {
+      const dirs = [row.worktree, ...row.sandboxes].map(Filesystem.resolve)
+      return dirs.some((dir) => roots.has(dir)) ? [row.id] : []
+    })
+    // Always keep the requested ID and remove duplicates.
+    return [...new Set([id, ...ids])]
   }
 
   export function filters(input: { projectID: ProjectID; directory?: string }): SQL[] {
@@ -157,10 +161,9 @@ export namespace KiloSession {
    *   1. OpenRouter chat completions  -> `metadata.openrouter.usage.cost`
    *                                      (`costDetails.upstreamInferenceCost` for Kilo)
    *   2. Anthropic Messages or OpenAI Responses via OpenRouter
-   *                                   -> `usage.raw.cost_details.upstream_inference_cost`
-   *      (the `@ai-sdk/anthropic` and `@ai-sdk/openai` providers both surface the verbatim
-   *      provider usage object on `LanguageModelUsage.raw`, so OpenRouter's upstream
-   *      inference cost lands there with snake_case preserved)
+   *                                   -> `usage.providerMetadata.<provider>.cost_details`
+   *      (native LLM usage retains the verbatim provider payload under its provider key,
+   *      so OpenRouter's upstream inference cost remains available with snake_case preserved)
    *   3. Anthropic Messages or OpenAI Responses via Vercel AI Gateway
    *                                   -> `metadata.gateway.marketCost` (defensive: the
    *      gateway emits this in the SSE `provider_metadata` field, which the current AI SDK
@@ -177,7 +180,7 @@ export namespace KiloSession {
    */
   export function providerCost(input: {
     metadata?: ProviderMetadata
-    usage?: LanguageModelUsage
+    usage?: Usage
     provider?: Provider.Info
     providerID: string
   }): number | undefined {
@@ -203,16 +206,17 @@ export namespace KiloSession {
       if (cost !== undefined) return cost
     }
 
-    // 2. Anthropic Messages or OpenAI Responses via OpenRouter. The `@ai-sdk/anthropic`
-    //    (`convertAnthropicUsage`) and `@ai-sdk/openai` (`convertOpenAIResponsesUsage`)
-    //    providers both copy the verbatim provider usage object onto `usage.raw`, so
-    //    OpenRouter's upstream inference cost lands at
-    //    `usage.raw.cost_details.upstream_inference_cost` with snake_case preserved.
-    //    Kilo doesn't charge end users a per-request fee, so the top-level `cost` field
-    //    (the OpenRouter fee) would understate the user's true spend; only the upstream
-    //    cost is meaningful here.
-    const raw = input.usage?.raw as { cost_details?: { upstream_inference_cost?: number } } | undefined
-    const upstream = num(raw?.cost_details?.upstream_inference_cost)
+    // 2. Anthropic Messages or OpenAI Responses via OpenRouter. Native LLM usage keeps
+    //    each provider's verbatim usage payload under `providerMetadata`, so OpenRouter's
+    //    upstream inference cost remains available with snake_case preserved. Kilo doesn't
+    //    charge end users a per-request fee, so only the upstream cost is meaningful here.
+    const usage = input.usage?.providerMetadata
+    const anthropic = usage?.["anthropic"]?.["cost_details"] as { upstream_inference_cost?: number } | undefined
+    const openai = usage?.["openai"]?.["cost_details"] as { upstream_inference_cost?: number } | undefined
+    const aiSdk = usage?.["aiSdk"]?.["cost_details"] as { upstream_inference_cost?: number } | undefined
+    const upstream = num(
+      anthropic?.upstream_inference_cost ?? openai?.upstream_inference_cost ?? aiSdk?.upstream_inference_cost,
+    )
     if (upstream !== undefined) return upstream
 
     // 3. Anthropic Messages or OpenAI Responses via Vercel AI Gateway. `cost` is the
@@ -270,16 +274,24 @@ export namespace KiloSession {
   // These helpers catch that specific error and log a warning instead.
   // ---------------------------------------------------------------------------
 
-  export function runSyncSafe(run: () => void, context: { type: string; id: string; sessionID: string }): void {
-    try {
-      run()
-    } catch (e: any) {
-      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
-        log.warn(`skipping ${context.type} for deleted session`, { id: context.id, sessionID: context.sessionID })
-        return
-      }
-      throw e
-    }
+  export function runSyncSafe<E, R>(
+    run: Effect.Effect<void, E, R>,
+    context: { type: string; id: string; sessionID: string },
+  ) {
+    return run.pipe(
+      Effect.catchCause((cause) => {
+        const err = Cause.squash(cause)
+        if (typeof err === "object" && err !== null && "code" in err && err.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+          return Effect.sync(() =>
+            log.warn(`skipping ${context.type} for deleted session`, {
+              id: context.id,
+              sessionID: context.sessionID,
+            }),
+          )
+        }
+        return Effect.failCause(cause)
+      }),
+    )
   }
 
   // ---------------------------------------------------------------------------
@@ -289,7 +301,7 @@ export namespace KiloSession {
   /** Schema for project summary returned by listGlobal. */
   export const ProjectInfo = z
     .object({
-      id: ProjectID.zod,
+      id: z.custom<ProjectID>(Schema.is(ProjectID)),
       name: z.string().optional(),
       worktree: z.string(),
     })
@@ -308,6 +320,7 @@ export namespace KiloSession {
     projectID?: string
     directory?: string
     directories?: string[]
+    currentDirectory?: string
     roots?: boolean
     start?: number
     cursor?: number
@@ -316,9 +329,10 @@ export namespace KiloSession {
     archived?: boolean
   }) {
     const conditions: SQL[] = []
+    const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
 
     if (input.projectID) {
-      const ids = family(input.projectID)
+      const ids = family(input.projectID, dirs)
       if (ids.length === 1 && ids[0] === input.projectID) {
         conditions.push(eq(SessionTable.project_id, ProjectID.make(input.projectID)))
       } else {
@@ -351,7 +365,25 @@ export namespace KiloSession {
     }
 
     const limit = input.limit ?? 100
-    const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
+    const sorted = [...dirs].sort((a, b) => b.length - a.length)
+    const nested = (root: string, dir: string): boolean => {
+      if (dir === root || !Filesystem.contains(root, dir)) return false
+      if (existsSync(path.join(dir, ".git"))) return true
+      const parent = path.dirname(dir)
+      return parent !== dir && nested(root, parent)
+    }
+    const worktree = (dir: string) => {
+      for (const root of sorted) {
+        if (!Filesystem.contains(root, dir) || nested(root, dir)) continue
+        const rel = path.relative(root, dir)
+        const parts = rel.split(path.sep)
+        if ((parts[0] === ".kilo" || parts[0] === ".kilocode") && parts[1] === "worktrees" && parts[2]) {
+          return path.join(root, parts[0], parts[1], parts[2])
+        }
+        return root
+      }
+    }
+    const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
 
     const rows = Database.use((db) => {
       const query =
@@ -369,7 +401,10 @@ export namespace KiloSession {
       dirs.length > 0
         ? rows.filter((row) => {
             const dir = Filesystem.resolve(row.directory)
-            return dirs.some((root) => Filesystem.contains(root, dir))
+            const root = worktree(dir)
+            if (!root) return false
+            if (input.currentDirectory) return root === current
+            return true
           })
         : rows
 
@@ -399,20 +434,13 @@ export namespace KiloSession {
     }
   }
 
-  export const remapChildren = _remapChildren
+  export const writer = _writer
 }
 
 export const kiloSessionFork = fn(
-  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }),
+  z.object({ sessionID: toZod(SessionID), messageID: toZod(MessageID).optional() }),
   async (input) => {
     const { AppRuntime } = await import("@/effect/app-runtime")
-    return AppRuntime.runPromise(
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const session = yield* sessions.fork(input)
-        yield* KiloSession.remapChildren(session.id)
-        return session
-      }),
-    )
+    return AppRuntime.runPromise(Session.Service.use((sessions) => sessions.fork(input)))
   },
 )

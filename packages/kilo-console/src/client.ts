@@ -10,6 +10,8 @@ import type {
   FormatterStatusResponse,
   GlobalHealthResponse,
   GlobalEvent,
+  KiloEmbeddingModelCatalog,
+  KiloProfileResponse,
   LspStatusResponse,
   McpStatusResponse,
   Pty as PtyInfo,
@@ -28,6 +30,7 @@ import type {
   VcsInfo,
   Worktree,
   WorktreeDiffItem,
+  WorktreeListResponse,
 } from "@kilocode/sdk/v2/client"
 
 export type Scope = "global" | "project"
@@ -40,6 +43,8 @@ export type Query = {
 
 export type ProjectQuery = Pick<Query, "url" | "dir">
 
+export type KiloProfileData = KiloProfileResponse
+
 export type ProjectItem = KiloProject
 export type RecentProjectItem = ProjectItem & {
   sessions: number
@@ -51,8 +56,9 @@ export type ProjectConsoleQuery = ProjectQuery & {
 
 export type ProjectConsoleSnapshot = {
   project: ProjectItem
+  config: EffectiveConfig
   vcs: VcsInfo
-  worktrees: string[]
+  worktrees: WorktreeListResponse
   terminals: ProjectTerminalItem[]
 }
 
@@ -205,6 +211,11 @@ function model(input: unknown) {
   const index = input.indexOf("/")
   if (index <= 0 || index >= input.length - 1) return undefined
   return { provider: input.slice(0, index), model: input.slice(index + 1) }
+}
+
+function directory(input: ProjectQuery) {
+  const dir = value(input.dir)
+  return dir ? { directory: dir } : undefined
 }
 
 function title(input: string) {
@@ -400,6 +411,46 @@ export async function load(input: Query): Promise<Snapshot> {
   }
 }
 
+export async function loadEmbeddingModels(input: Query): Promise<KiloEmbeddingModelCatalog> {
+  return demand("Kilo embedding models", await client(input).indexing.models())
+}
+
+export async function loadKiloProfile(input: ProjectQuery): Promise<KiloProfileData> {
+  const sdk = client(input)
+  const result = await sdk.kilo.profile(directory(input))
+  return demand("Kilo profile", result)
+}
+
+export async function setKiloOrganization(input: ProjectQuery, organizationId: string | null) {
+  const sdk = client(input)
+  const result = await sdk.kilo.organization.set({ ...directory(input), organizationId })
+  demand("Switch Kilo account", result)
+  await sdk.global.dispose()
+}
+
+export async function logoutKilo(input: ProjectQuery) {
+  const sdk = client(input)
+  const result = await sdk.auth.remove({ providerID: "kilo" })
+  demand("Log out of Kilo", result)
+  await sdk.global.dispose()
+}
+
+export async function startKiloLogin(input: ProjectQuery): Promise<ProviderAuthAuthorization> {
+  const sdk = client(input)
+  const result = await sdk.provider.oauth.authorize({ ...directory(input), providerID: "kilo", method: 0 })
+  return demand("Start Kilo login", result)
+}
+
+export async function completeKiloLogin(input: ProjectQuery, signal?: AbortSignal) {
+  const sdk = client(input)
+  const result = await sdk.provider.oauth.callback(
+    { ...directory(input), providerID: "kilo", method: 0 },
+    signal ? { signal } : undefined,
+  )
+  demand("Complete Kilo login", result)
+  await sdk.global.dispose()
+}
+
 export async function loadProjects(input: ProjectQuery): Promise<ProjectItem[]> {
   const sdk = client(input)
   const dir = value(input.dir)
@@ -434,17 +485,20 @@ export async function loadProjectConsole(input: ProjectConsoleQuery): Promise<Pr
   const project = await resolved(input)
   const query = { url: input.url, dir: project.worktree }
   const sdk = client(query)
-  const [vcs, worktrees] = await Promise.all([
+  const [config, vcs, worktrees] = await Promise.all([
+    sdk.config.overlay({ scope: "global" }),
     sdk.vcs.get({ directory: query.dir }),
     sdk.worktree.list({ directory: query.dir }),
   ])
+  const overlay = demand("Config", config)
   const dirs = demand("Worktrees", worktrees)
   const terminals = await Promise.all(
-    [query.dir, ...dirs].map((dir) => loadProjectTerminals({ url: input.url, dir }, dir)),
+    [query.dir, ...dirs.map((item) => item.directory)].map((dir) => loadProjectTerminals({ url: input.url, dir }, dir)),
   )
 
   return {
     project,
+    config: overlay.global,
     vcs: demand("VCS", vcs),
     worktrees: dirs,
     terminals: terminals.flat(),
@@ -611,16 +665,24 @@ export function ptyWsUrl(input: Query, pty: string, cursor = 0) {
   return url.toString()
 }
 
-export async function saveConfig(input: Query, patch: Partial<ConfigPatch>) {
+export async function patchConfig(input: Query, patch: Partial<ConfigPatch>, unset?: ConfigUnset) {
   const sdk = client(input)
-  const result = await sdk.config.overlayUpdate({ directory: value(input.dir), scope: input.scope, set: patch })
+  const set = Object.keys(patch).length ? patch : undefined
+  const result = await sdk.config.overlayUpdate({
+    directory: value(input.dir),
+    scope: input.scope,
+    set,
+    unset,
+  })
   return demand("Update config", result)
 }
 
+export async function saveConfig(input: Query, patch: Partial<ConfigPatch>) {
+  return patchConfig(input, patch)
+}
+
 export async function unsetConfig(input: Query, unset: ConfigUnset) {
-  const sdk = client(input)
-  const result = await sdk.config.overlayUpdate({ directory: value(input.dir), scope: input.scope, unset })
-  return demand("Update config", result)
+  return patchConfig(input, {}, unset)
 }
 
 export async function saveModelState(input: Query, favorite: ModelRef[]) {

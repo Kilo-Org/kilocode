@@ -40,8 +40,26 @@ data class SessionEditorStyle(
 ) {
     /** Apply this snapshot to embedded IntelliJ editor components used by session UI. */
     fun applyToEditor(editor: EditorEx) {
-        editor.setColorsScheme(editorScheme)
-        editor.setFontSize(editorSize)
+        try {
+            if (editor.isDisposed) return
+            editor.setColorsScheme(editorScheme)
+            editor.setFontSize(editorSize)
+        } catch (err: RuntimeException) {
+            if (err.javaClass.name != "com.intellij.openapi.util.TraceableDisposable\$DisposalException") throw err
+        }
+    }
+
+    /** Apply editor colors while using standard transcript typography for the embedded editor text. */
+    fun applyTranscriptToEditor(editor: EditorEx) {
+        try {
+            if (editor.isDisposed) return
+            applyToEditor(editor)
+            if (editor.isDisposed) return
+            editor.colorsScheme.setEditorFontName(transcriptFont.fontName)
+            editor.colorsScheme.setEditorFontSize(transcriptFont.size)
+        } catch (err: RuntimeException) {
+            if (err.javaClass.name != "com.intellij.openapi.util.TraceableDisposable\$DisposalException") throw err
+        }
     }
 
     companion object {

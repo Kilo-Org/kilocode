@@ -1,5 +1,6 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.backend.migration.session.LegacySessionIds
 import ai.kilocode.jetbrains.api.infrastructure.Serializer
 import ai.kilocode.jetbrains.api.model.Session
 import ai.kilocode.jetbrains.api.model.SessionStatus
@@ -38,6 +39,27 @@ class SessionModelSerializationTest {
         assertEquals(2000L, obj.time.updated)
         assertNull(obj.parentID)
         assertNull(obj.summary)
+    }
+
+    @Test
+    fun `Session decodes canonical migrated and unprefixed legacy IDs`() {
+        val src = """{
+            "id": "ses_abc",
+            "slug": "canonical",
+            "projectID": "prj_123",
+            "directory": "/test/project",
+            "title": "Canonical",
+            "version": "1.0.0",
+            "time": {"created": 1000, "updated": 2000}
+        }"""
+        val migrated = LegacySessionIds.createSessionId("task-abc")
+        val canonical = json.decodeFromString<Session>(src)
+        val imported = json.decodeFromString<Session>(src.replace("ses_abc", migrated))
+        val legacy = json.decodeFromString<Session>(src.replace("ses_abc", "s1"))
+
+        assertEquals("ses_abc", canonical.id)
+        assertEquals(migrated, imported.id)
+        assertEquals("s1", legacy.id)
     }
 
     @Test

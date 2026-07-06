@@ -9,6 +9,40 @@ import {
 export { KILO_GATEWAY_ID, PROVIDER_ORDER }
 
 export const KILO_AUTO_SMALL_IDS = new Set(["kilo-auto/small", "auto-small"])
+export const KILO_AUTO_EFFICIENT_ID = "kilo-auto/efficient"
+const AUTO_FALLBACK = "Routes requests automatically."
+
+interface Choice {
+  id: string
+  name: string
+}
+
+export function isAuto(model: Pick<EnrichedModel, "providerID" | "id">): boolean {
+  return (
+    model.providerID === KILO_GATEWAY_ID && (model.id.startsWith("kilo-auto/") || KILO_AUTO_SMALL_IDS.has(model.id))
+  )
+}
+
+export function isAutoEfficient(model: Pick<EnrichedModel, "providerID" | "id">): boolean {
+  return model.providerID === KILO_GATEWAY_ID && model.id === KILO_AUTO_EFFICIENT_ID
+}
+
+export function autoChoices(
+  model: Pick<EnrichedModel, "providerID" | "id" | "autoRouting">,
+  catalog: readonly Pick<EnrichedModel, "id" | "name">[] = [],
+): readonly Choice[] {
+  if (!isAutoEfficient(model)) return []
+  const ids = model.autoRouting?.models
+  if (!ids?.length) return []
+  const names = new Map(catalog.map((item) => [item.id, stripSubProviderPrefix(sanitizeName(item.name))]))
+  return ids.map((id) => ({ id, name: names.get(id) ?? id }))
+}
+
+export function autoSummary(model: Pick<EnrichedModel, "options">): string {
+  const raw = model.options?.description?.split(/\n\s*\n/)[0]
+  if (!raw) return AUTO_FALLBACK
+  return raw.replace(/\s+/g, " ").trim() || AUTO_FALLBACK
+}
 
 export function isSmall(model: Pick<EnrichedModel, "providerID" | "id">): boolean {
   return model.providerID === KILO_GATEWAY_ID && KILO_AUTO_SMALL_IDS.has(model.id)
@@ -22,8 +56,12 @@ export function isFree(model: Pick<EnrichedModel, "isFree">): boolean {
   return model.isFree === true
 }
 
-export function isDataCollectedModel(model: Pick<EnrichedModel, "providerID" | "isFree">): boolean {
-  return model.isFree === true && model.providerID === KILO_GATEWAY_ID
+export function isDataCollectedModel(model: Pick<EnrichedModel, "mayTrainOnYourPrompts">): boolean {
+  return model.mayTrainOnYourPrompts === true
+}
+
+export function hasByok(model: Pick<EnrichedModel, "hasUserByokAvailable">): boolean {
+  return model.hasUserByokAvailable === true
 }
 
 export function freeDataLabel(_free: string, data: string): string {

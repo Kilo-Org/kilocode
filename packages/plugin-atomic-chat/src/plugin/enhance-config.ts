@@ -1,18 +1,18 @@
-import { sharedModelStatusCache } from '../cache/shared-model-status-cache'
-import { ToastNotifier } from '../ui/toast-notifier'
-import { categorizeModel, formatModelName, extractModelOwner } from '../utils'
-import { normalizeBaseURL, fetchModelsEndpoint, autoDetectAtomicChat } from '../utils/atomic-chat-api'
+import { sharedModelStatusCache } from "../cache/shared-model-status-cache"
+import { ToastNotifier } from "../ui/toast-notifier"
+import { categorizeModel, formatModelName, extractModelOwner } from "../utils"
+import { normalizeBaseURL, fetchModelsEndpoint, autoDetectAtomicChat } from "../utils/atomic-chat-api"
 import {
   getAtomicSection,
   hasAtomicChatProviderSection,
   isAtomicChatAutoDetectEnabled,
   shouldProbeAtomicChat,
-} from '../utils/should-probe-atomic-chat'
-import type { PluginInput } from '@kilocode/plugin'
-import type { AtomicChatModel } from '../types'
-import { ATOMIC_CHAT_PROVIDER_KEY, DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from '../constants'
+} from "../utils/should-probe-atomic-chat"
+import type { PluginInput } from "@kilocode/plugin"
+import type { AtomicChatModel } from "../types"
+import { ATOMIC_CHAT_PROVIDER_KEY, DEFAULT_ATOMIC_CHAT_ORIGIN, LOG_PREFIX } from "../constants"
 
-export { shouldProbeAtomicChat } from '../utils/should-probe-atomic-chat'
+export { shouldProbeAtomicChat } from "../utils/should-probe-atomic-chat"
 
 function setAtomicSection(config: any, value: Record<string, unknown>) {
   if (!config.provider) {
@@ -23,9 +23,9 @@ function setAtomicSection(config: any, value: Record<string, unknown>) {
 
 export async function enhanceConfig(
   config: any,
-  _client: PluginInput['client'],
+  _client: PluginInput["client"],
   toastNotifier: ToastNotifier,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<void> {
   if (!shouldProbeAtomicChat(config) || signal?.aborted) {
     return
@@ -46,8 +46,8 @@ export async function enhanceConfig(
       baseURL = detected.baseURL
       models = detected.models
       setAtomicSection(config, {
-        npm: '@ai-sdk/openai-compatible',
-        name: 'Atomic Chat (local)',
+        npm: "@ai-sdk/openai-compatible",
+        name: "Atomic Chat (local)",
         options: {
           baseURL: `${baseURL}/v1`,
         },
@@ -57,8 +57,8 @@ export async function enhanceConfig(
     } else {
       baseURL = normalizeBaseURL(DEFAULT_ATOMIC_CHAT_ORIGIN)
       setAtomicSection(config, {
-        npm: '@ai-sdk/openai-compatible',
-        name: 'Atomic Chat (local)',
+        npm: "@ai-sdk/openai-compatible",
+        name: "Atomic Chat (local)",
         options: {
           baseURL: `${baseURL}/v1`,
         },
@@ -101,7 +101,7 @@ export async function enhanceConfig(
       for (const model of models) {
         let modelKey = model.id
         if (!/^[a-zA-Z0-9_-]+$/.test(modelKey)) {
-          modelKey = model.id.replace(/[^a-zA-Z0-9_-]/g, '_')
+          modelKey = model.id.replace(/[^a-zA-Z0-9_-]/g, "_")
         }
 
         if (!existingModels[modelKey] && !existingModels[model.id]) {
@@ -116,17 +116,17 @@ export async function enhanceConfig(
             modelConfig.organizationOwner = owner
           }
 
-          if (modelType === 'embedding') {
+          if (modelType === "embedding") {
             embeddingModelsCount++
             modelConfig.modalities = {
-              input: ['text'],
-              output: ['embedding'],
+              input: ["text"],
+              output: ["embedding"],
             }
-          } else if (modelType === 'chat') {
+          } else if (modelType === "chat") {
             chatModelsCount++
             modelConfig.modalities = {
-              input: ['text', 'image'],
-              output: ['text'],
+              input: ["text", "image"],
+              output: ["text"],
             }
           }
 
@@ -146,7 +146,7 @@ export async function enhanceConfig(
 
         if (chatModelsCount === 0 && embeddingModelsCount > 0) {
           console.warn(
-            `${LOG_PREFIX} Only embedding-style models detected; load a chat model in Atomic Chat for coding agents.`
+            `${LOG_PREFIX} Only embedding-style models detected; load a chat model in Atomic Chat for coding agents.`,
           )
         }
       }
@@ -170,12 +170,10 @@ export async function enhanceConfig(
     }
   } catch (error) {
     console.error(`${LOG_PREFIX} Unexpected error in enhanceConfig:`, error)
-    toastNotifier
-      .warning('Plugin configuration failed', 'Configuration Error')
-      .catch((err) => {
-        console.warn(`${LOG_PREFIX} Failed to show configuration warning toast`, {
-          error: err instanceof Error ? err.message : String(err),
-        })
+    toastNotifier.warning("Plugin configuration failed", "Configuration Error").catch((err) => {
+      console.warn(`${LOG_PREFIX} Failed to show configuration warning toast`, {
+        error: err instanceof Error ? err.message : String(err),
       })
+    })
   }
 }

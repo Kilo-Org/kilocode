@@ -3,7 +3,6 @@ dist
 dist-*
 gen
 app.log
-src/provider/models-snapshot.json
 script/build-*.ts
 temporary-*.md
 .artifacts

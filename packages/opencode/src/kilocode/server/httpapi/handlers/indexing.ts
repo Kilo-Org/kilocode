@@ -5,12 +5,17 @@ import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 
 export const indexingHandlers = HttpApiBuilder.group(InstanceHttpApi, "indexing", (handlers) =>
   Effect.gen(function* () {
+    const mod = yield* Effect.promise(() => import("@/kilocode/indexing"))
     const status = Effect.fn("IndexingHttpApi.status")(function* () {
-      const mod = yield* Effect.promise(() => import("@/kilocode/indexing"))
-      const current = yield* EffectBridge.fromPromise(() => mod.KiloIndexing.current())
-      return current
+      return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.current())
+    })
+    const models = Effect.fn("IndexingHttpApi.models")(function* () {
+      return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.models())
+    })
+    const warnings = Effect.fn("IndexingHttpApi.warnings")(function* () {
+      return yield* EffectBridge.fromPromise(() => mod.KiloIndexing.warnings())
     })
 
-    return handlers.handle("status", status)
+    return handlers.handle("status", status).handle("models", models).handle("warnings", warnings)
   }),
 )

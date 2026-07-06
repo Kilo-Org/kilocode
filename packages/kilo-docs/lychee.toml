@@ -10,6 +10,7 @@ exclude_path = ["node_modules"]
 
 accept = [
   "200",
+  "202",
   "403",
   "429",
   "301",
@@ -30,6 +31,7 @@ exclude = [
   # API endpoint prefixes are valid but return 4xx to plain GET link checks.
   '^https?://ai-gateway\.vercel\.sh/v1/?$',
   '^https?://api\.voyageai\.com/v1/embeddings/?$',
+  '^https?://inference\.do-ai\.run/v1/?$',
   '^https?://generativelanguage\.googleapis\.com/v1beta/openai/?$',
   '^https?://search\.parallel\.ai/mcp/?$',
   # xAI API and OAuth endpoints require request parameters or reject plain link checks.
@@ -48,6 +50,8 @@ exclude = [
   '^https?://api\.apertis\.ai/v1/?$',
   # Redirects to authenticated Google Cloud console
   '^https?://console\.cloud\.google\.com',
+  # Linear intermittently returns 503 to CI link checks.
+  '^https?://linear\.app/?$',
   # Consistently times out in CI
   '^https?://opncd\.ai',
   '^https?://zod\.dev/v4/changelog',

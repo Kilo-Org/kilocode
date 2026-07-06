@@ -13,7 +13,7 @@ type Command = {
 }
 
 const names = new Set(["kilo", "kilocode"])
-const self = current()
+const self = command()
 
 function clean(input: string[]) {
   return input.filter((arg, index) => {
@@ -24,34 +24,38 @@ function clean(input: string[]) {
   })
 }
 
-function full(input: string) {
+function full(input: string, cwd: string) {
   if (path.isAbsolute(input)) return input
-  return path.resolve(process.cwd(), input)
+  return path.resolve(cwd, input)
 }
 
-function current(): Command {
-  const script = process.argv[1]
-  if (script && /\.(ts|js|mjs|cjs)$/.test(script)) {
-    const file = full(script)
+export function command(
+  proc = { argv: process.argv, execArgv: process.execArgv, execPath: process.execPath, cwd: process.cwd() },
+): Command {
+  const script = proc.argv[1]
+  const bundled = script?.startsWith("/$bunfs/") || (script ? /^[A-Za-z]:[\\/]~BUN[\\/]/.test(script) : false)
+  if (script && !bundled && /\.(ts|js|mjs|cjs)$/.test(script)) {
+    const file = full(script, proc.cwd)
     const dir = path.dirname(file)
-    const root = path.basename(dir) === "src" ? path.dirname(dir) : process.cwd()
-    return { command: full(process.execPath), args: [...clean(process.execArgv), file], cwd: root }
+    const root = path.basename(dir) === "src" ? path.dirname(dir) : proc.cwd
+    return { command: full(proc.execPath, proc.cwd), args: [...clean(proc.execArgv), file], cwd: root }
   }
-  return { command: full(process.execPath), args: [] }
+  return { command: full(proc.execPath, proc.cwd), args: [] }
 }
 
-export function resolve(input: Input): Input {
+export function resolve(input: Input, cmd = self): Input {
   if (!input.command || !names.has(input.command)) return input
   const args = input.args ?? []
-  const project = self.cwd && args.length === 0 && input.cwd ? [input.cwd] : []
+  const project = cmd.cwd && args.length === 0 && input.cwd ? [input.cwd] : []
   return {
     ...input,
-    command: self.command,
-    args: [...self.args, ...project, ...args],
-    cwd: self.cwd ?? input.cwd,
+    command: cmd.command,
+    args: [...cmd.args, ...project, ...args],
+    cwd: cmd.cwd ?? input.cwd,
   }
 }
 
 export const KiloPtySelfCommand = {
+  command,
   resolve,
 }

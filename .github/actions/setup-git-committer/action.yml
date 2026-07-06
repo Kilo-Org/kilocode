@@ -21,7 +21,7 @@ runs:
   steps:
     - name: Create app token
       id: apptoken
-      uses: actions/create-github-app-token@v2
+      uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
       with:
         # kilocode_change start
         app-id: ${{ inputs['kilo-maintainer-app-id'] }}

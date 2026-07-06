@@ -90,7 +90,8 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/compact` | `/summarize` | Compact/summarize session |
 | `/undo` | - | Undo previous message |
 | `/redo` | - | Redo message |
-| `/copy` | - | Copy session transcript |
+| `/copy` | - | Copy latest agent response |
+| `/copy-session` | - | Copy session transcript |
 | `/export` | - | Export session transcript |
 | `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
 | `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |
@@ -132,8 +133,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | Command | Description |
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
-| `/local-review` | Review code changes |
-| `/local-review-uncommitted` | Review uncommitted changes |
+| `/review` | Review code changes |
 
 ## Local Code Reviews
 
@@ -143,8 +143,11 @@ Review your code locally before pushing — catch issues early without waiting f
 
 | Command | Description |
 |---|---|
-| `/local-review` | Review current branch changes vs base branch |
-| `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged) |
+| `/review` | Review staged, unstaged, and untracked changes (the default with no arguments) |
+| `/review uncommitted [guidance]` | Review uncommitted changes with optional guidance |
+| `/review branch [base] [guidance]` | Review the current branch against its detected or specified base, with optional guidance |
+| `/review <commit-hash>` | Review a specific commit |
+| `/review <PR URL or number>` | Review a pull request |
 
 ## Config Reference
 
@@ -152,15 +155,63 @@ Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
 - Config files in **`~/.config/kilo/`**: use **`kilo.jsonc`** for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for MCP config format.
+- **`tui.jsonc`** for terminal UI settings such as notifications, sounds, themes, and keybindings
 - `kilo auth` for credential management
+
+## CLI Notifications and Sounds
+
+CLI attention alerts are disabled by default. Enable and configure them in either of these ways:
+
+- Run `kilo console`, open your project, then go to **Settings > CLI > Notifications**.
+- Edit the TUI configuration directly. Use `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings, or `.kilo/tui.json` (or `tui.jsonc`) for project settings.
+
+The Console exposes the attention, desktop notification, sound, and volume controls. The equivalent TUI configuration is:
+
+```json
+{
+  "attention": {
+    "enabled": true,
+    "notifications": true,
+    "sound": true,
+    "volume": 0.4
+  }
+}
+```
+
+- `enabled` is the master switch. When it is `false`, no attention notifications or sounds are delivered.
+- `notifications` requests a desktop notification when the terminal is not focused. Your terminal and operating system decide whether the notification is displayed.
+- `sound` enables the built-in attention sounds. Sounds can play while the terminal is focused.
+- `volume` accepts a value from `0` to `1`.
+
+### Custom Sounds
+
+To replace individual sounds, add file paths under `attention.sounds`:
+
+```json
+{
+  "attention": {
+    "enabled": true,
+    "sound": true,
+    "volume": 0.4,
+    "sounds": {
+      "question": "./sounds/question.mp3",
+      "permission": "./sounds/permission.mp3",
+      "error": "./sounds/error.mp3",
+      "done": "./sounds/done.mp3"
+    }
+  }
+}
+```
+
+Supported sound names are `default`, `question`, `permission`, `error`, `done`, and `subagent_done`. Relative paths are resolved from the directory containing the TUI configuration file. If an override cannot be loaded, Kilo falls back to the active sound pack and then the built-in `opencode.default` pack.
+
+The `attention.sound_pack` setting selects a sound pack registered by a TUI plugin. Setting an arbitrary pack name does not install or load a pack. Per-event file overrides remain the simplest way to customize sounds without a plugin.
+
+There is no notification slash command or command-palette toggle. Use Kilo Console or `tui.json` / `tui.jsonc` so all attention behavior is controlled by the same configuration.
 
 ## Slash Commands
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
-
-{% callout type="tip" %}
-**Confused about /newtask vs /smol in the IDE?** See the [Using Agents](/docs/code-with-ai/agents/using-agents#understanding-newtask-vs-smol) documentation for details.
-{% /callout %}
 
 ## Permissions
 
@@ -282,8 +333,8 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 
 | Scope | Path |
 |---|---|
-| **Global** | `~/.config/kilo/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
-| **Project** | `./opencode.json` or `./.opencode/` in project root |
+| **Global** | `~/.config/kilo/kilo.json[c]` or legacy `opencode.json[c]` (Windows config dir may vary) |
+| **Project** | `./kilo.json[c]`, legacy `./opencode.json[c]`, or config inside `./.kilo/` (legacy `./.kilocode/` is also read) |
 
 Project-level configuration takes precedence over global settings.
 

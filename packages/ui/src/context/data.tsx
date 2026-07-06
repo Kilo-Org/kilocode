@@ -1,13 +1,21 @@
-import type { Message, Session, Part, SnapshotFileDiff, SessionStatus, ProviderListResponse } from "@kilocode/sdk/v2"
+import type { Message, Session, Part, SnapshotFileDiff, SessionStatus, Provider } from "@kilocode/sdk/v2"
 import { createSimpleContext } from "./helper"
 import { PreloadMultiFileDiffResult } from "@pierre/diffs/ssr"
+
+export type NormalizedProviderListResponse = {
+  all: Map<string, Provider>
+  default: {
+    [key: string]: string
+  }
+  connected: Array<string>
+}
 
 type Data = {
   agent?: {
     name: string
     color?: string
   }[]
-  provider?: ProviderListResponse
+  provider?: NormalizedProviderListResponse
   session: Session[]
   session_status: {
     [sessionID: string]: SessionStatus
@@ -23,6 +31,9 @@ type Data = {
   }
   part: {
     [messageID: string]: Part[]
+  }
+  part_text_accum_delta?: {
+    [partID: string]: string
   }
 }
 
@@ -45,6 +56,8 @@ export type OpenDiffFn = (diff: {
 export type OpenUrlFn = (url: string) => void
 
 export type OpenContentFn = (content: string, language?: string) => void // kilocode_change
+
+export type ValidateFilesFn = (paths: string[]) => Promise<string[]> // kilocode_change
 // kilocode_change end
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({
@@ -58,6 +71,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onOpenDiff?: OpenDiffFn // kilocode_change
     onOpenUrl?: OpenUrlFn // kilocode_change
     onOpenContent?: OpenContentFn // kilocode_change
+    onValidateFiles?: ValidateFilesFn // kilocode_change
   }) => {
     return {
       get store() {
@@ -72,6 +86,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       openDiff: props.onOpenDiff, // kilocode_change
       openUrl: props.onOpenUrl, // kilocode_change
       openContent: props.onOpenContent, // kilocode_change
+      validateFiles: props.onValidateFiles, // kilocode_change
     }
   },
 })

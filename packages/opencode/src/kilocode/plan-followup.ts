@@ -5,7 +5,7 @@ import { TuiEvent } from "@/cli/cmd/tui/event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Question } from "@/question"
@@ -17,12 +17,13 @@ import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
+import { PlanFile } from "@/kilocode/plan-file"
 
 const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
@@ -53,9 +54,8 @@ export const PlanFollowupRuntime = {
     return AppRuntime.runPromise(Session.Service.use(run))
   },
   async loop(sessionID: SessionID) {
-    const item = await import("@/session/prompt")
-    const prompt = makeRuntime(item.SessionPrompt.Service, item.SessionPrompt.defaultLayer)
-    return prompt.runPromise((svc) => svc.loop({ sessionID }))
+    const [item, app] = await Promise.all([import("@/session/prompt"), import("@/effect/app-runtime")])
+    return app.AppRuntime.runPromise(item.SessionPrompt.Service.use((svc) => svc.loop({ sessionID })))
   },
 }
 
@@ -160,6 +160,7 @@ export namespace PlanFollowup {
   export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
+  export const ANSWER_KEEP_REFINING = "Keep refining"
 
   export function abort(sessionID: SessionID) {
     const ctl = pending.get(sessionID)
@@ -177,7 +178,15 @@ export namespace PlanFollowup {
 
   const ModelState = z
     .object({
-      model: z.record(z.string(), z.object({ providerID: ProviderID.zod, modelID: ModelID.zod })).optional(),
+      model: z
+        .record(
+          z.string(),
+          z.object({
+            providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
+            modelID: z.custom<ModelID>(Schema.is(ModelID)),
+          }),
+        )
+        .optional(),
       variant: z.record(z.string(), z.string().optional()).optional(),
     })
     .passthrough()
@@ -214,6 +223,15 @@ export namespace PlanFollowup {
     return input
   }
 
+  async function locatePlan(sessionID: SessionID, messages: MessageV2.WithParts[]) {
+    const ctx = Instance.current
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(sessionID))
+    const target = PlanFile.resolve(PlanFile.latest(messages), ctx) ?? Session.plan(session, ctx)
+    const agent = messages.findLast((m) => m.info.role === "user")?.info.agent
+    const file = await PlanFile.locate(target, messages, session, ctx, agent)
+    return { target, file }
+  }
+
   async function resolvePlan(input: {
     assistant?: MessageV2.WithParts
     messages: MessageV2.WithParts[]
@@ -234,9 +252,14 @@ export namespace PlanFollowup {
     if (text) return text
 
     // Fall back to plan file on disk
-    const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
-    const file = Bun.file(Session.plan(session, Instance.current))
-    const plan = await file.text().catch(() => "")
+    const { target, file } = await locatePlan(input.sessionID, input.messages)
+    if (!file) {
+      log.warn("resolvePlan: no saved plan file found", { sessionID: input.sessionID, target })
+      return ""
+    }
+    const plan = await Bun.file(file)
+      .text()
+      .catch(() => "")
     return plan.trim()
   }
 
@@ -309,6 +332,13 @@ export namespace PlanFollowup {
               descriptionKey: "plan.followup.answer.continue.description",
               mode: "code",
             },
+            {
+              label: ANSWER_KEEP_REFINING,
+              labelKey: "plan.followup.answer.keepRefining",
+              description: "Keep planning without implementing yet",
+              descriptionKey: "plan.followup.answer.keepRefining.description",
+              mode: "plan",
+            },
           ],
         },
       ],
@@ -338,7 +368,7 @@ export namespace PlanFollowup {
 
   async function startNew(input: {
     sessionID: SessionID
-    plan: string
+    file?: string
     messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
     abort?: AbortSignal
@@ -347,9 +377,9 @@ export namespace PlanFollowup {
       model: input.model,
     })
     const session = await PlanFollowupRuntime.session((svc) => svc.get(input.sessionID))
-    const { WithInstance } = await import("@/project/with-instance")
+    const { provide } = await import("@/kilocode/instance")
 
-    await WithInstance.provide({
+    await provide({
       directory: session.directory,
       fn: async () => {
         // Create the session FIRST so session.created fires immediately while the
@@ -361,7 +391,7 @@ export namespace PlanFollowup {
         pending.set(next.id, ctl)
         const { AppRuntime } = await import("@/effect/app-runtime")
         await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
-        await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
+        await Bus.publish(Instance.current, TuiEvent.SessionSelect, { sessionID: next.id })
 
         const idle = () =>
           AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
@@ -369,25 +399,24 @@ export namespace PlanFollowup {
           })
 
         try {
-          const file = Session.plan(session, Instance.current)
+          const file = input.file ?? Session.plan(session, Instance.current)
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
           const todoList = formatTodos(todos)
 
           // Assemble the user message text with or without a handover section.
           // The section order is fixed so the initial and final renders stay
-          // aligned — only the handover block grows in between.
+          // aligned; only the handover block grows in between.
           const compose = (handover: string) => {
             const sections = [
               `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
-              `Implement the following plan:\n\n${input.plan}`,
             ]
             if (handover) sections.push(`## Handover from Planning Session\n\n${handover}`)
             if (todoList) sections.push(`## Todo List\n\n${todoList}`)
             return sections.join("\n\n")
           }
 
-          // Inject the plan and todos immediately so the new session tab shows
-          // real content right away. The handover section is appended to this
+          // Inject the plan-file handoff and todos immediately so the new session tab
+          // shows useful content right away. The handover section is appended to this
           // same part in-place once the slow LLM call resolves below.
           const msg: MessageV2.User = {
             id: MessageID.ascending(),
@@ -443,7 +472,7 @@ export namespace PlanFollowup {
             return
           }
 
-          const queue = WithInstance.provide({
+          const queue = provide({
             directory: next.directory,
             fn: async () => {
               if (ctl.signal.aborted) {
@@ -503,9 +532,11 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_NEW_SESSION) {
       Telemetry.trackPlanFollowup(input.sessionID, "new_session")
+      const ctx = Instance.current
+      const { file } = await locatePlan(input.sessionID, input.messages)
       await startNew({
         sessionID: input.sessionID,
-        plan,
+        file: file ? PlanFile.display(file, ctx) : undefined,
         messages: input.messages,
         model: user.model,
         abort: input.abort,
@@ -523,6 +554,18 @@ export namespace PlanFollowup {
         agent: "code",
         model: code.model,
         text: "Implement the plan above.",
+      })
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      return "continue"
+    }
+
+    if (answer === ANSWER_KEEP_REFINING) {
+      Telemetry.trackPlanFollowup(input.sessionID, "keep_refining")
+      const msg = await inject({
+        sessionID: input.sessionID,
+        agent: "plan",
+        model: user.model,
+        text: "Continue refining the plan. Do not implement yet.",
       })
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"

@@ -10,11 +10,12 @@
 
 import { describe, expect, it } from "bun:test"
 import * as Config from "../../src/config/config"
+import { Schema } from "effect"
 import { KilocodeConfig } from "../../src/kilocode/config/config"
 
 describe("Config.Info — null sentinels for custom provider deletes", () => {
   it("accepts a null model value inside a provider", () => {
-    const parsed = Config.Info.zod.safeParse({
+    const parsed = Schema.decodeUnknownResult(Config.Info)({
       provider: {
         myprovider: {
           name: "My Provider",
@@ -24,20 +25,20 @@ describe("Config.Info — null sentinels for custom provider deletes", () => {
         },
       },
     })
-    expect(parsed.success).toBe(true)
+    expect(parsed._tag).toBe("Success")
   })
 
   it("accepts a null provider value", () => {
-    const parsed = Config.Info.zod.safeParse({
+    const parsed = Schema.decodeUnknownResult(Config.Info)({
       provider: {
         myprovider: null,
       },
     })
-    expect(parsed.success).toBe(true)
+    expect(parsed._tag).toBe("Success")
   })
 
   it("accepts a null variant value inside a model", () => {
-    const parsed = Config.Info.zod.safeParse({
+    const parsed = Schema.decodeUnknownResult(Config.Info)({
       provider: {
         myprovider: {
           name: "My Provider",
@@ -51,7 +52,7 @@ describe("Config.Info — null sentinels for custom provider deletes", () => {
         },
       },
     })
-    expect(parsed.success).toBe(true)
+    expect(parsed._tag).toBe("Success")
   })
 })
 

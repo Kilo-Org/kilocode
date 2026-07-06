@@ -10,9 +10,11 @@
 @import "./styles/formatters.css";
 @import "./styles/keybinds.css";
 @import "./styles/models.css";
+@import "./styles/indexing.css";
 @import "./styles/agents-tools.css";
 @import "./styles/projects.css";
 @import "./styles/project-console.css";
+@import "./styles/profile.css";
 @import "./styles/servers.css";
 @import "./styles/sources.css";
 @import "./styles/responsive.css";

@@ -3,7 +3,7 @@ import { cmd } from "./cmd"
 import { CliError, effectCmd, fail } from "../effect-cmd"
 import { UI } from "../ui"
 import * as Prompt from "../effect/prompt"
-import { ModelsDev } from "@/provider/models"
+import { ModelsDev } from "@opencode-ai/core/models-dev"
 
 import { map, pipe, sortBy, values } from "remeda"
 import path from "path"
@@ -124,6 +124,7 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
           yield* put(saveProvider, {
             type: "api",
             key: result.key,
+            ...(result.metadata ? { metadata: result.metadata } : {}),
           })
         }
         yield* spinner.stop("Login successful")
@@ -156,6 +157,7 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
           yield* put(saveProvider, {
             type: "api",
             key: result.key,
+            ...(result.metadata ? { metadata: result.metadata } : {}),
           })
         }
         yield* Prompt.log.success("Login successful")
@@ -191,10 +193,11 @@ const handlePluginAuth = Effect.fn("Cli.providers.pluginAuth")(function* (
     }
     if (result.type === "success") {
       const saveProvider = result.provider ?? provider
+      const merged = { ...(metadata.metadata ?? {}), ...(result.metadata ?? {}) }
       yield* put(saveProvider, {
         type: "api",
         key: result.key ?? apiKey,
-        ...metadata,
+        ...(Object.keys(merged).length ? { metadata: merged } : {}),
       })
       yield* Prompt.log.success("Login successful")
     }
@@ -367,7 +370,6 @@ export const ProvidersLoginCommand = effectCmd({
     // kilocode_change start
     const priority: Record<string, number> = {
       kilo: 0,
-      opencode: 1,
       anthropic: 2,
       "github-copilot": 3,
       openai: 4,
@@ -398,7 +400,6 @@ export const ProvidersLoginCommand = effectCmd({
           value: x.id,
           hint: {
             kilo: "recommended", // kilocode_change
-            opencode: "recommended",
             openai: "ChatGPT login or API key", // kilocode_change
           }[x.id],
         })),
@@ -454,7 +455,7 @@ export const ProvidersLoginCommand = effectCmd({
       }
 
       yield* Prompt.log.warn(
-        `This only stores a credential for ${provider} - you will need configure it in opencode.json, check the docs for examples.`,
+        `This only stores a credential for ${provider} - you will need configure it in kilo.json, check the docs for examples.`, // kilocode_change
       )
     }
 
@@ -463,13 +464,9 @@ export const ProvidersLoginCommand = effectCmd({
         "Amazon Bedrock authentication priority:\n" +
           "  1. Bearer token (AWS_BEARER_TOKEN_BEDROCK or /connect)\n" +
           "  2. AWS credential chain (profile, access keys, IAM roles, EKS IRSA)\n\n" +
-          "Configure via opencode.json options (profile, region, endpoint) or\n" +
+          "Configure via kilo.json options (profile, region, endpoint) or\n" + // kilocode_change
           "AWS environment variables (AWS_PROFILE, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_WEB_IDENTITY_TOKEN_FILE).",
       )
-    }
-
-    if (provider === "opencode") {
-      yield* Prompt.log.info("Create an api key at https://opencode.ai/auth")
     }
 
     if (provider === "vercel") {
@@ -478,7 +475,7 @@ export const ProvidersLoginCommand = effectCmd({
 
     if (["cloudflare", "cloudflare-ai-gateway"].includes(provider)) {
       yield* Prompt.log.info(
-        "Cloudflare AI Gateway can be configured with CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_API_TOKEN environment variables. Read more: https://opencode.ai/docs/providers/#cloudflare-ai-gateway",
+        "Cloudflare AI Gateway can be configured with CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_API_TOKEN environment variables. Read more: https://kilo.ai/docs/ai-providers/cloudflare", // kilocode_change
       )
     }
 

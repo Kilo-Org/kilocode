@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-web-ui",
-  "version": "7.3.39",
+  "version": "7.4.1",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -137,6 +137,8 @@
   "dependencies": {
     "@kobalte/core": "catalog:",
     "@kilocode/kilo-ui": "workspace:*",
+    "@opencode-ai/ui": "workspace:*",
+    "@pierre/diffs": "catalog:",
     "solid-js": "catalog:"
   },
   "devDependencies": {

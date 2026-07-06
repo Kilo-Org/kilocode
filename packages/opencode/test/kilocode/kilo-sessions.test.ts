@@ -5,6 +5,7 @@ import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Auth } from "../../src/auth"
 import { Bus } from "../../src/bus"
 import type { Config } from "../../src/config/config"
+import { clearInFlightCache } from "../../src/kilo-sessions/inflight-cache"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { ProjectID } from "../../src/project/schema"
 import { Session } from "../../src/session/session"
@@ -23,6 +24,12 @@ function layer(overrides: Partial<Config.Interface> = {}) {
     ),
     Auth.defaultLayer,
   )
+}
+
+function reset(...tokens: string[]) {
+  clearInFlightCache("kilo-sessions:token")
+  clearInFlightCache("kilo-sessions:client")
+  for (const token of tokens) clearInFlightCache(`kilo-sessions:token-valid:${token}`)
 }
 
 it.instance("initializes once per instance through Config.Service", () => {
@@ -46,6 +53,86 @@ it.instance("initializes once per instance through Config.Service", () => {
   )
 })
 
+it.instance("bootstraps session ingest from KILO_API_KEY without stored auth", () => {
+  const original = process.env.KILO_API_KEY
+  const calls: string[] = []
+  const fetch: typeof globalThis.fetch = Object.assign(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith("/api/user")) {
+        calls.push(new Headers(init?.headers).get("Authorization") ?? "")
+        return new Response("{}", { status: 200 })
+      }
+      if (url.endsWith("/api/session")) {
+        calls.push(new Headers(init?.headers).get("Authorization") ?? "")
+        return Response.json({ id: "remote-env", ingestPath: "/api/ingest/env" })
+      }
+      return new Response("{}", { status: 200 })
+    },
+    { preconnect: globalThis.fetch.preconnect },
+  )
+  const request = spyOn(globalThis, "fetch").mockImplementation(fetch)
+
+  process.env.KILO_API_KEY = "env-token"
+  reset("env-token")
+
+  return Effect.promise(() => KiloSessions.bootstrap("session-env")).pipe(
+    Effect.andThen(() => Effect.sync(() => expect(calls).toEqual(["Bearer env-token", "Bearer env-token"]))),
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (original === undefined) delete process.env.KILO_API_KEY
+        else process.env.KILO_API_KEY = original
+        reset("env-token")
+        request.mockRestore()
+      }),
+    ),
+    Effect.provide(layer()),
+  )
+})
+
+it.instance("prefers stored auth over KILO_API_KEY for session ingest", () => {
+  const original = process.env.KILO_API_KEY
+  const calls: string[] = []
+  const fetch: typeof globalThis.fetch = Object.assign(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith("/api/user")) {
+        calls.push(new Headers(init?.headers).get("Authorization") ?? "")
+        return new Response("{}", { status: 200 })
+      }
+      if (url.endsWith("/api/session")) {
+        calls.push(new Headers(init?.headers).get("Authorization") ?? "")
+        return Response.json({ id: "remote-auth", ingestPath: "/api/ingest/auth" })
+      }
+      return new Response("{}", { status: 200 })
+    },
+    { preconnect: globalThis.fetch.preconnect },
+  )
+  const request = spyOn(globalThis, "fetch").mockImplementation(fetch)
+
+  process.env.KILO_API_KEY = "env-token"
+  reset("env-token", "stored-token")
+
+  return Effect.gen(function* () {
+    const auth = yield* Auth.Service
+    yield* auth.set("kilo", { type: "api", key: "stored-token" })
+    yield* Effect.promise(() => KiloSessions.bootstrap("session-auth"))
+    expect(calls).toEqual(["Bearer stored-token", "Bearer stored-token"])
+  }).pipe(
+    Effect.ensuring(
+      Effect.gen(function* () {
+        const auth = yield* Auth.Service
+        yield* auth.remove("kilo").pipe(Effect.orDie)
+        if (original === undefined) delete process.env.KILO_API_KEY
+        else process.env.KILO_API_KEY = original
+        reset("env-token", "stored-token")
+        request.mockRestore()
+      }),
+    ),
+    Effect.provide(layer()),
+  )
+})
+
 it.instance("does not duplicate created-session subscribers when init is repeated", () => {
   const calls: string[] = []
   const fetch: typeof globalThis.fetch = Object.assign(
@@ -62,6 +149,7 @@ it.instance("does not duplicate created-session subscribers when init is repeate
   )
   const request = spyOn(globalThis, "fetch").mockImplementation(fetch)
 
+  reset("test-token")
   const id = SessionID.descending("session-created")
 
   return Effect.gen(function* () {
@@ -91,6 +179,7 @@ it.instance("does not duplicate created-session subscribers when init is repeate
       Effect.gen(function* () {
         const auth = yield* Auth.Service
         yield* auth.remove("kilo").pipe(Effect.orDie)
+        reset("test-token")
         request.mockRestore()
       }),
     ),

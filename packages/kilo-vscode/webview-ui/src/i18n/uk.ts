@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Підключити Anaconda Desktop",
+  "provider.anaconda.title.manage": "Керувати Anaconda Desktop",
+  "provider.anaconda.status.checking": "Перевірка Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Відкриття Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Оновлення моделей провайдера...",
+  "provider.anaconda.status.ready": "Готово до підключення",
+  "provider.anaconda.status.waiting": "Очікування Desktop",
+  "provider.anaconda.status.attention": "Потребує уваги",
+  "provider.anaconda.status.unavailable": "Недоступно",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop не підтримується на {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Встановіть Anaconda Desktop на цьому комп'ютері, а потім поверніться сюди. Kilo не запускає інсталятор за вас.",
+  "provider.anaconda.state.notRunning":
+    "Відкрийте Anaconda Desktop, завершіть налаштування та увійдіть, потім виберіть «Перевірити ще раз».",
+  "provider.anaconda.state.invalidConfig":
+    "Налаштування Anaconda Desktop неповне. Відкрийте Desktop, завершіть налаштування та перезапустіть його за потреби.",
+  "provider.anaconda.state.signedOut": "Відкрийте Anaconda Desktop та увійдіть перед підключенням Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo не вдалося отримати доступ до Anaconda Desktop. Відкрийте Desktop, увійдіть знову та перезапустіть його за потреби.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop ще не відповідає. Відкрийте його та зачекайте, доки програма завершить запуск.",
+  "provider.anaconda.state.noModel":
+    "В Anaconda Desktop завантажте модель генерації тексту. За можливості виберіть модель із підтримкою виклику інструментів, потім запустіть її сервер.",
+  "provider.anaconda.state.noServer_one":
+    "Доступна 1 завантажена модель генерації тексту. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.noServer_other":
+    "Доступно завантажених моделей генерації тексту: {{count}}. Запустіть сервер моделі в Anaconda Desktop. Наполегливо рекомендуємо використовувати моделі з підтримкою виклику інструментів.",
+  "provider.anaconda.state.unhealthy":
+    "Активний сервер інференсу ще не справний. Перевірте його в Anaconda Desktop та перезапустіть сервер за потреби.",
+  "provider.anaconda.state.ready":
+    "Kilo знайшов справний локальний сервер генерації тексту та може імпортувати його поточні налаштування підключення.",
+  "provider.anaconda.server": "Активний сервер інференсу",
+  "provider.anaconda.context": "Вікно контексту",
+  "provider.anaconda.contextValue": "{{count}} токенів",
+  "provider.anaconda.tools": "Виклик інструментів",
+  "provider.anaconda.tools.supported": "Підтримується",
+  "provider.anaconda.tools.unsupported": "Не увімкнено",
+  "provider.anaconda.tools.unknown": "Невідомо",
+  "provider.anaconda.warning.title": "Підтримка інструментів обмежена",
+  "provider.anaconda.warning.description":
+    "Цей сервер не підтверджує виклик інструментів. Дії агента кодування можуть не спрацювати або бути недоступними. Продовжуйте, лише якщо приймаєте ці обмеження.",
+  "provider.anaconda.action.download": "Завантажити Anaconda Desktop",
+  "provider.anaconda.action.open": "Відкрити Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Перевірити ще раз",
+  "provider.anaconda.action.continue": "Усе одно продовжити",
+  "provider.anaconda.action.manage": "Керувати / Оновити",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop оновлено",
+  "provider.anaconda.toast.refreshed.description": "Активний локальний сервер та моделі актуальні в Kilo.",
+  "settings.providers.note.anacondaDesktop": "Запустіть модель, що обслуговується локально через Anaconda Desktop.",
+  "settings.providers.tag.local": "Локальний",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Запропоновані",
   "command.category.view": "Вигляд",
   "command.category.project": "Проєкт",
@@ -94,6 +148,30 @@ export const dict = {
   "command.session.unshare.description": "Закрити доступ до цієї сесії",
   "command.session.export": "Експортувати запис сеансу",
 
+  "agentRequirements.skill.installed": "Встановлено",
+  "agentRequirements.skill.checkFailed": "Не вдалося перевірити навичку",
+  "agentRequirements.skill.missing": "Не встановлено",
+  "agentRequirements.mcp.connected": "Підключено",
+  "agentRequirements.mcp.checkFailed": "Не вдалося перевірити MCP",
+  "agentRequirements.mcp.missing": "Не підключено",
+  "agentRequirements.extension.installed": "Встановлено",
+  "agentRequirements.extension.checkFailed": "Не вдалося перевірити розширення VS Code",
+  "agentRequirements.extension.missing": "Не встановлено",
+  "agentRequirements.extension.description": "Встановіть відсутні розширення у VS Code.",
+  "agentRequirements.group.skills": "Навички",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "Розширення VS Code",
+  "agentRequirements.blocked.title": "Передумови агента {{agent}}",
+  "agentRequirements.blocked.description": "Цьому агенту потрібні такі інструменти, перш ніж він зможе працювати.",
+  "agentRequirements.prompt.blocked": "Спочатку завершіть необхідні перевірки, щоб використати цього агента",
+  "agentRequirements.action.openMarketplace": "Відкрити Marketplace",
+  "agentRequirements.error.unknownAgent": "Вибраного агента не знайдено.",
+  "agentRequirements.error.malformedDeclaration": "Цей агент має недійсну декларацію вимог.",
+  "agentRequirements.error.discoveryFailed": "Kilo не зміг перевірити доступні навички.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo не зміг перевірити стан сервера MCP.",
+  "agentRequirements.error.scopeMismatch": "Ця перевірка вимог агента більше не активна.",
+  "agentRequirements.error.requestFailed": "Kilo не зміг перевірити вимоги агента.",
+
   "palette.search.placeholder": "Пошук файлів, команд і сесій",
   "palette.empty": "Результатів не знайдено",
   "palette.group.commands": "Команди",
@@ -101,17 +179,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Пошук провайдера",
   "dialog.provider.empty": "Провайдерів не знайдено",
-  "dialog.provider.group.popular": "Популярні",
   "dialog.provider.group.other": "Інші",
   "dialog.provider.tag.recommended": "Рекомендовано",
-  "dialog.provider.opencode.note": "Добірка моделей включаючи Claude, GPT, Gemini та інші",
-  "dialog.provider.anthropic.note": "Прямий доступ до моделей Claude включаючи Pro та Max",
-  "dialog.provider.deepseek.note": "Моделі DeepSeek для завдань міркування та програмування",
-  "dialog.provider.copilot.note": "Моделі Claude для допомоги з кодуванням",
-  "dialog.provider.openai.note": "Моделі GPT для швидких і потужних загальних завдань ШІ",
-  "dialog.provider.google.note": "Моделі Gemini для швидких і структурованих відповідей",
-  "dialog.provider.openrouter.note": "Доступ до всіх підтримуваних моделей від одного провайдера",
-  "dialog.provider.vercel.note": "Уніфікований доступ до моделей ШІ з інтелектуальною маршрутизацією",
 
   "dialog.model.select.title": "Вибір моделі",
   "dialog.model.search.placeholder": "Пошук моделі",
@@ -184,6 +253,7 @@ export const dict = {
   "model.tag.free": "Безкоштовно",
   "model.tag.dataCollected": "Дані можуть використовуватися для навчання",
   "model.tag.latest": "Остання",
+  "model.group.auto": "Автоматичні моделі",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
   "model.group.collapse": "Згорнути {{group}}",
@@ -210,6 +280,10 @@ export const dict = {
   "model.preview.label.cached": "Кешовані",
   "model.preview.label.average": "Орієнт. сер. вартість",
   "model.preview.label.context": "Контекст",
+  "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Варіанти моделей",
+  "model.preview.label.completion": "Виконання",
+  "model.preview.label.costAttempt": "Вартість / спроба",
   "model.preview.value.notSupported": "Не підтримується",
   "model.preview.tooltip.average":
     "Орієнтовна середня вартість базується на типовому співвідношенні вхідних, вихідних токенів та читання кешу.",
@@ -293,6 +367,23 @@ export const dict = {
   "prompt.action.resetModel": "Скинути модель до стандартної",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
+  "prompt.action.sandbox.enable": "Увімкнути пісочницю",
+  "prompt.action.sandbox.disable": "Вимкнути пісочницю",
+  "prompt.action.sandbox.enabled": "Пісочницю увімкнено. Команди оболонки агента обмежені каталогами проєкту та Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Пісочницю вимкнено. Натисніть, щоб обмежити запис команд оболонки агента каталогами проєкту та Kilo.",
+  "prompt.action.sandbox.status.enabled": "Пісочницю увімкнено",
+  "prompt.action.sandbox.status.disabled": "Пісочницю вимкнено",
+  "prompt.action.sandbox.filesystem": "Файлова система",
+  "prompt.action.sandbox.network": "Мережа",
+  "prompt.action.sandbox.filesystem.restricted": "Обмежено",
+  "prompt.action.sandbox.network.blocked": "Заблоковано",
+  "prompt.action.sandbox.network.allowed": "Дозволено",
+  "prompt.action.sandbox.unrestricted": "Без обмежень",
+  "prompt.action.sandbox.description.enabled": "Запис дозволено лише в каталогах проєкту та Kilo.",
+  "prompt.action.sandbox.description.disabled": "Натисніть, щоб обмежити запис у файлову систему та доступ до мережі.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
@@ -528,6 +619,9 @@ export const dict = {
   "notification.permission.titleSubagent": "Потрібен дозвіл (підагент)",
   "notification.permission.description": "{{sessionTitle}} у {{projectName}} потребує дозволу",
   "ui.permission.manageAutoApprove": "Керувати правилами автоматичного схвалення",
+  "ui.permission.doomLoop.prompt":
+    "Виявлено потенційний цикл під час роботи інструмента {{tool}}. Продовжити виконання?",
+  "ui.permission.doomLoop.rule": "Продовжувати виклики {{tool}}",
   "ui.permission.rule.addToAllowed": "Додати до дозволених",
   "ui.permission.rule.removeFromAllowed": "Видалити з дозволених",
   "ui.permission.rule.addToDenied": "Додати до заблокованих",
@@ -828,10 +922,10 @@ export const dict = {
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
   "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
-  "settings.providers.custom.description": "Додати OpenAI-сумісного провайдера через базовий URL.",
+  "settings.providers.custom.description": "Додати власного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",
-  "provider.custom.description.prefix": "Налаштувати OpenAI-сумісного провайдера. ",
+  "provider.custom.description.prefix": "Налаштувати власного провайдера. ",
   "provider.custom.description.link": "Документація щодо налаштування провайдера",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "Ідентифікатор провайдера",
@@ -839,6 +933,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Малі літери, цифри, дефіс або підкреслення",
   "provider.custom.field.name.label": "Відображувана назва",
   "provider.custom.field.name.placeholder": "Мій ШІ-провайдер",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Базовий URL",
   "provider.custom.field.baseURL.placeholder": "https://api.miy-provyder.com/v1",
   "provider.custom.field.apiKey.label": "API-ключ",
@@ -865,6 +960,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Увімкнути мислення через аргументи шаблону чату (напр. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -878,6 +978,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
   "provider.custom.models.fetch": "Отримати моделі",
@@ -1006,6 +1113,31 @@ export const dict = {
   "feedback.dialog.github": "Повідомити про проблему на GitHub",
   "feedback.dialog.discord": "Приєднатися до нашої спільноти Discord",
   "feedback.dialog.support": "Служба підтримки клієнтів",
+  "workStyle.onboarding.welcome": "Ласкаво просимо до Kilo",
+  "workStyle.onboarding.title": "Виберіть, як ви хочете працювати",
+  "workStyle.onboarding.description":
+    "Встановлює початкові значення дозволів, блоків міркувань, виводу термінала та часової шкали контексту. Застосовується лише один раз і не змінює вже налаштовані вами параметри.",
+  "workStyle.onboarding.skip": "Поки пропустити",
+  "workStyle.onboarding.settingsNote": "Ці параметри можна будь-коли змінити в розділі",
+  "workStyle.onboarding.settings": "«Налаштування».",
+  "workStyle.toast.saved.title": "Режим успішно збережено",
+  "workStyle.toast.saved.description": "Змінити їх можна будь-коли в налаштуваннях.",
+  "workStyle.toast.saved.action": "Перейти до налаштувань",
+  "workStyle.choice.permissions": "Дозволи",
+  "workStyle.choice.bash": "Bash",
+  "workStyle.choice.visibility": "Видимість",
+  "workStyle.choice.human-in-the-loop.eyebrow": "Людина контролює процес",
+  "workStyle.choice.human-in-the-loop.title": "Спочатку перевірка",
+  "workStyle.choice.human-in-the-loop.description": "Kilo призупиняється та показує свій план у процесі роботи.",
+  "workStyle.choice.human-in-the-loop.permissions": "Запитує дозвіл перед редагуванням файлів або виконанням команд.",
+  "workStyle.choice.human-in-the-loop.bash": "Запитує дозвіл на кожну команду термінала.",
+  "workStyle.choice.human-in-the-loop.visibility": "Показує всі деталі розмови, зокрема хід міркувань.",
+  "workStyle.choice.autonomous.eyebrow": "Менше переривань",
+  "workStyle.choice.autonomous.title": "Висока автономність",
+  "workStyle.choice.autonomous.description": "Менше переривань, спрощений інтерфейс.",
+  "workStyle.choice.autonomous.permissions": "Редагує файли та виконує команди в робочому просторі без дозволу.",
+  "workStyle.choice.autonomous.bash": "Може виконувати команди термінала в робочому просторі без схвалення.",
+  "workStyle.choice.autonomous.visibility": "Деталі залишаються згорнутими, доки ви їх не розгорнете.",
   "session.cloud.import.title": "Імпортувати з хмари",
   "session.cloud.import.placeholder": "Ідентифікатор сесії, URL або команда kilo import",
   "session.cloud.import.button": "Імпортувати",
@@ -1068,6 +1200,10 @@ export const dict = {
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Оновити баланс",
   "profile.action.dashboard": "Панель керування",
+  "profile.action.topUp": "Поповнити",
+  "profile.pass.subscribe": "Отримайте Kilo Pass, щоб додати кредити та заробляти бонуси",
+  "profile.pass.bonus": "Бонус",
+  "profile.pass.renews": "Поновлюється",
   "profile.action.logout": "Вийти",
 
   "settings.section.configuration": "Конфігурація",
@@ -1085,6 +1221,9 @@ export const dict = {
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
   "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
+  "settings.indexing.showButton.title": "Показувати кнопку, коли індексування вимкнено",
+  "settings.indexing.showButton.description":
+    "Показувати кнопку індексування під полем введення, поки індексування вимкнено. Якщо кнопку приховано, відкрийте «Налаштування > Індексування», щоб увімкнути індексування.",
   "settings.indexing.globalEnable.title": "Увімкнути глобально",
   "settings.indexing.globalEnable.description": "Увімкнути індексування для кожного робочого простору.",
   "settings.indexing.projectEnable.title": "Увімкнути для цього проєкту",
@@ -1135,6 +1274,11 @@ export const dict = {
   "session.outcome.interrupted": "Хід перервано",
   "session.outcome.error": "Хід не вдався",
   "session.outcome.finish": "Причина завершення: {{reason}}",
+  "session.costAlert.header": "Сповіщення про вартість сесії",
+  "session.costAlert.continue": "Продовжити",
+  "session.costAlert.question":
+    "Ця сесія щойно перевищила поріг сповіщення для сесії {{limit}} і коштує {{cost}}. Продовжити?",
+  "session.costAlert.stop": "Зупинити",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1179,6 +1323,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Це скине лише налаштування, специфічні для розширення VS Code, до стандартних значень. Налаштування, що зберігаються в конфігурації CLI (такі як режими та правила автоматичного схвалення), не будуть скинуті.",
   "settings.aboutKiloCode.resetSettings.button": "Скинути всі налаштування",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Перенесення налаштувань",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Експортуйте або імпортуйте налаштування для перенесення між екземплярами VS Code.",
@@ -1238,6 +1383,10 @@ export const dict = {
   "settings.notifications.errors.title": "Помилки",
   "settings.notifications.errors.description": "Показувати сповіщення при виникненні помилок",
   "settings.notifications.sounds": "Звуки",
+  "settings.notifications.enable.title": "Увімкнути звукові сповіщення",
+  "settings.notifications.enable.description":
+    "Відтворювати звуки, коли сеанси завершуються, виникає помилка або потрібна ваша відповідь",
+  "settings.notifications.testSound": "Тест",
   "settings.notifications.agentSound.title": "Звук завершення агента",
   "settings.notifications.agentSound.description": "Звук, що відтворюється після завершення агента",
   "settings.notifications.permSound.title": "Звук запиту дозволу",
@@ -1245,6 +1394,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Звук помилки",
   "settings.notifications.errorSound.description": "Звук, що відтворюється при виникненні помилок",
   "settings.notifications.sound.default": "За замовчуванням",
+  "settings.notifications.sound.system": "Системний",
+  "settings.notifications.sound.description":
+    "За замовчуванням для завершення, запиту на введення та помилок використовуються різні звуки. В інших варіантах для всіх подій використовується один і той самий звук.",
   "settings.notifications.sound.none": "Немає",
 
   "settings.experimental.share.title": "Режим публікації",
@@ -1256,8 +1408,6 @@ export const dict = {
   "settings.experimental.formatter.description": "Увімкнути автоматичне форматування коду",
   "settings.experimental.lsp.title": "LSP",
   "settings.experimental.lsp.description": "Увімкнути інтеграцію з мовним сервером",
-  "settings.experimental.pasteSummary.title": "Вимкнути підсумовування вставки",
-  "settings.experimental.pasteSummary.description": "Підсумовувати великий вставлений вміст",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
@@ -1266,13 +1416,19 @@ export const dict = {
   "settings.experimental.speechToText.title": "Мовлення в текст",
   "settings.experimental.speechToText.description":
     "Увімкніть голосове введення в полях запитів, використовуючи ваш обліковий запис Kilo через Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Модель мовлення в текст",
-  "settings.experimental.speechToTextModel.description":
-    "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
+  "settings.models.speechToTextModel.title": "Модель мовлення в текст",
+  "settings.models.speechToTextModel.description": "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
+  "settings.experimental.nativeNotebookTools.title": "Власні інструменти для блокнотів",
+  "settings.experimental.nativeNotebookTools.description":
+    "Увімкнути експериментальні інструменти для читання, редагування та виконання блокнотів VS Code",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
+  "settings.sandboxing.title": "Пісочниця",
+  "settings.sandboxing.network.title": "Обмежити доступ до мережі",
+  "settings.sandboxing.network.description":
+    "Блокуйте вихідний доступ до мережі для команд, ініційованих моделлю, та HTTP-інструментів. Локальні MCP-сервери й хуки плагінів працюють поза цим обмеженням. Трафік провайдерів та інференсу моделей залишається доступним.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1284,6 +1440,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Неактивний",
   "settings.experimental.remote.hint": "Використовуйте /remote у чаті для перемикання",
   "settings.experimental.toolToggles": "Перемикачі інструментів",
+  "settings.experimental.sandbox.title": "Пісочниця",
+  "settings.experimental.sandbox.description":
+    "Виконувати команди оболонки агента в пісочниці на рівні ОС, яка обмежує запис до каталогів стану проєкту та Kilo",
 
   "settings.agentBehaviour.defaultAgent.title": "Агент за замовчуванням",
   "settings.agentBehaviour.defaultAgent.description": "Агент, що використовується, якщо не вказано інший",
@@ -1374,6 +1533,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
+  "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
+  "settings.autoApprove.maxCost.description":
+    "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",
   "settings.autoApprove.level.allow": "Дозволити",
   "settings.autoApprove.level.ask": "Запитувати",
   "settings.autoApprove.level.deny": "Відхилити",
@@ -1403,8 +1565,7 @@ export const dict = {
   "settings.autoApprove.tool.todoreadwrite":
     "Керувати списком завдань. Дозволяє читання та оновлення внутрішнього списку завдань.",
   "settings.autoApprove.tool.webfetch": "Отримати URL. Дозволяє отримання вмісту з вказаного URL.",
-  "settings.autoApprove.tool.websearchcodesearch":
-    "Шукати в мережі або коді. Дозволяє зовнішній веб-пошук або пошук коду.",
+  "settings.autoApprove.tool.websearch": "Шукати в інтернеті. Дозволяє зовнішній веб-пошук.",
   "settings.autoApprove.tool.doom_loop":
     "Запобігати повторюваним діям. Спрацьовує, коли той самий виклик інструменту повторюється з однаковими вхідними даними.",
 
@@ -1434,10 +1595,6 @@ export const dict = {
 
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
-  "settings.display.layout.title": "Макет",
-  "settings.display.layout.description": "Режим макету для інтерфейсу чату",
-  "settings.display.layout.auto": "Автоматично",
-  "settings.display.layout.stretch": "Розтягнути",
   "settings.display.fontSize.title": "Розмір шрифту",
   "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
@@ -1447,6 +1604,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Блоки редагування коду",
+  "settings.display.codeEdit.description":
+    "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
+  "settings.display.codeEdit.expanded": "Розгорнуті",
+  "settings.display.codeEdit.collapsed": "Згорнуті",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",
@@ -1456,6 +1618,9 @@ export const dict = {
   "settings.providers.subagentModel.title": "Модель субагента",
   "settings.providers.subagentModel.description":
     "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
+  "settings.models.hidePromptTraining.title": "Приховувати моделі, що навчаються на запитах",
+  "settings.models.hidePromptTraining.description":
+    "Приховувати моделі Kilo Gateway, постачальники яких можуть використовувати ваші запити для навчання.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
@@ -1465,7 +1630,7 @@ export const dict = {
   "settings.providers.enabled": "Увімкнені провайдери (список дозволених)",
   "settings.providers.enabled.description": "Якщо встановлено, доступні лише ці провайдери (власний список дозволених)",
   "settings.providers.notSet": "Не встановлено (використовувати стандартний сервера)",
-  "settings.providers.custom.note": "Додати OpenAI-сумісного провайдера через базовий URL.",
+  "settings.providers.custom.note": "Додати власного провайдера через базовий URL.",
   "settings.providers.search.placeholder": "Пошук провайдера",
   "settings.providers.select.placeholder": "Вибрати провайдера...",
 
@@ -1483,6 +1648,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Перенесення зі старої версії",
   "settings.aboutKiloCode.legacyMigration.description":
     "Перенести налаштування з попередньої версії Kilo Code, включаючи API-ключі провайдерів та стандартну модель.",
+  "settings.aboutKiloCode.rooImport.description": "Імпортувати історію розмов з інсталяції Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Імпортувати сесії з Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Що нового в Kilo Code",

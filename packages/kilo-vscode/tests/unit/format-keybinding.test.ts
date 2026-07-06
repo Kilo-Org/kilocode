@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { formatKeybinding } from "../../src/agent-manager/format-keybinding"
+import { buildKeybindingMap, formatKeybinding } from "../../src/agent-manager/format-keybinding"
 
 describe("formatKeybinding", () => {
   describe("mac", () => {
@@ -68,5 +68,13 @@ describe("formatKeybinding", () => {
     it("joins with + separator on non-mac", () => {
       expect(formatKeybinding("ctrl+shift+alt+t", false)).toBe("Ctrl+Shift+Alt+T")
     })
+  })
+})
+
+describe("buildKeybindingMap", () => {
+  it("maps the configurable Agent Manager search shortcut", () => {
+    const bindings = [{ command: "kilo-code.new.agentManager.search", key: "ctrl+f", mac: "cmd+f" }]
+    expect(buildKeybindingMap(bindings, true).search).toBe("⌘F")
+    expect(buildKeybindingMap(bindings, false).search).toBe("Ctrl+F")
   })
 })

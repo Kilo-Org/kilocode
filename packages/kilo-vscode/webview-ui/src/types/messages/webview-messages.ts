@@ -5,12 +5,15 @@ import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { ReviewMessageData } from "../../../../src/shared/review-comments"
+import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
+import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
-  RequestLegacyMigrationDataMessage,
+  RequestMigrationDataMessage,
   SkipLegacyMigrationMessage,
-  StartLegacyMigrationMessage,
+  StartMigrationMessage,
 } from "./migration"
 
 // ============================================
@@ -28,6 +31,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  review?: ReviewMessageData
   agentManagerContext?: string
   contextDirectory?: string
 }
@@ -78,6 +82,12 @@ export interface LoadSessionsRequest {
   type: "loadSessions"
 }
 
+export interface RequestSessionModelUsageMessage {
+  type: "requestSessionModelUsage"
+  sessionID: string
+  requestID: string
+}
+
 export interface RequestCloudSessionsMessage {
   type: "requestCloudSessions"
   cursor?: string
@@ -104,6 +114,7 @@ export interface ImportAndSendMessage {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  review?: ReviewMessageData
   command?: string
   commandArgs?: string
 }
@@ -136,6 +147,12 @@ export interface OpenContentRequest {
   type: "openContent"
   content: string
   language?: string
+}
+
+export interface ValidateFilesRequest {
+  type: "validateFiles"
+  id: string
+  paths: string[]
 }
 
 export interface CancelLoginRequest {
@@ -206,6 +223,7 @@ export interface OpenConfigFileRequest {
 
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
+  directory?: string
 }
 
 export interface OpenAgentManagerRequest {
@@ -216,12 +234,24 @@ export interface OpenAdvancedWorktreeRequest {
   type: "openAdvancedWorktree"
 }
 
+export interface OpenKiloClawRequest {
+  type: "openKiloClaw"
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
 
 export interface RequestSkillsMessage {
   type: "requestSkills"
+}
+
+export interface RequestAgentRequirementsMessage {
+  type: "requestAgentRequirements"
+  agent: string
+  directory: string
+  sessionID?: string
+  force?: boolean
 }
 
 export interface RequestCommandsMessage {
@@ -294,6 +324,13 @@ export interface QuestionRejectRequest {
   type: "questionReject"
   requestID: string
   sessionID?: string
+}
+
+export interface SessionCostAlertResponseRequest {
+  type: "sessionCostAlertResponse"
+  sessionID: string
+  limit: number
+  response: "continue" | "stop"
 }
 
 export interface SuggestionAcceptRequest {
@@ -386,6 +423,20 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface RequestWorkStyleMessage {
+  type: "requestWorkStyle"
+}
+
+export interface SetWorkStyleMessage {
+  type: "setWorkStyle"
+  style: WorkStyleState
+}
+
+export interface ApplyWorkStyleMessage {
+  type: "applyWorkStyle"
+  style: WorkStyle
+}
+
 export interface StreamSessionVisibleMessage {
   type: "streamSessionVisible"
   sessionID: string
@@ -412,6 +463,10 @@ export interface RequestIndexingStatusMessage {
   type: "requestIndexingStatus"
 }
 
+export interface RequestIndexingSettingsMessage {
+  type: "requestIndexingSettings"
+}
+
 export interface RequestKiloEmbeddingModelsMessage {
   type: "requestKiloEmbeddingModels"
 }
@@ -425,16 +480,27 @@ export interface UpdateConfigMessage {
   type: "updateConfig"
   /** Global config patch written to ~/.config/kilo/kilo.json. */
   config: Partial<Config>
-  /** Project config patch written to the workspace's .kilo/kilo.json or existing project config. */
+  globalUnset?: string[][]
+  /** Project config patch written to the workspace's .kilo/kilo.jsonc or existing project config. */
   projectConfig?: Partial<Config>
+  projectUnset?: string[][]
 }
 
 export interface RequestNotificationSettingsMessage {
   type: "requestNotificationSettings"
 }
 
+export interface TestNotificationMessage {
+  type: "testNotification"
+  sound: string
+}
+
 export interface ResetAllSettingsRequest {
   type: "resetAllSettings"
+}
+
+export interface ResetReadNotificationsRequest {
+  type: "resetReadNotifications"
 }
 
 export interface SettingsTabChangedMessage {
@@ -652,6 +718,9 @@ export interface CreateMultiVersionRequest {
   // Overrides `versions`, `providerID`, and `modelID`.
   variant?: string
   modelAllocations?: ModelAllocation[]
+  // When set, start each created worktree session with the sandbox override
+  // reconciled to this state. Only sent when sandbox controls are available.
+  sandbox?: boolean
 }
 
 // Persist tab order for a context (worktree ID or "local")
@@ -895,6 +964,34 @@ export interface ToggleAutoApproveMessage {
   type: "toggleAutoApprove"
 }
 
+export interface RequestSandboxStatusMessage {
+  type: "requestSandboxStatus"
+  sessionID: string
+}
+
+export interface RequestSandboxDefaultMessage {
+  type: "requestSandboxDefault"
+  requestID?: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
+export interface SetSandboxDefaultMessage {
+  type: "setSandboxDefault"
+  enabled: boolean
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
+export interface ToggleSandboxMessage {
+  type: "toggleSandbox"
+  sessionID: string
+  requestID: string
+  agentManagerContext?: string
+  contextDirectory?: string
+}
+
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
 }
@@ -951,6 +1048,13 @@ export interface FetchCustomProviderModelsMessage {
   requestId: string
   baseURL: string
   apiKey?: string
+  /**
+   * When editing an existing provider and the key field is untouched, the
+   * webview has no key to send (keys are stripped before they reach it).
+   * It sends the providerID instead so the extension can authenticate the
+   * fetch with the stored key — which never crosses into the webview.
+   */
+  providerID?: string
   headers?: Record<string, string>
 }
 
@@ -961,6 +1065,15 @@ export interface PersistRecentsRequest {
 
 export interface RequestRecentsMessage {
   type: "requestRecents"
+}
+
+export interface PersistModelSelectorExpandedRequest {
+  type: "persistModelSelectorExpanded"
+  value: boolean
+}
+
+export interface RequestModelSelectorExpandedMessage {
+  type: "requestModelSelectorExpanded"
 }
 
 export interface ToggleFavoriteRequest {
@@ -1074,6 +1187,7 @@ export type WebviewMessage =
   | ClearSessionRequest
   | LoadMessagesRequest
   | LoadSessionsRequest
+  | RequestSessionModelUsageMessage
   | RequestCloudSessionsMessage
   | RequestGitRemoteUrlMessage
   | LoginRequest
@@ -1086,7 +1200,9 @@ export type WebviewMessage =
   | OpenMarketplacePanelRequest
   | OpenAgentManagerRequest
   | OpenAdvancedWorktreeRequest
+  | OpenKiloClawRequest
   | OpenFileRequest
+  | ValidateFilesRequest
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
@@ -1095,6 +1211,7 @@ export type WebviewMessage =
   | CompactRequest
   | RequestAgentsMessage
   | RequestSkillsMessage
+  | RequestAgentRequirementsMessage
   | RequestCommandsMessage
   | SendCommandRequest
   | RemoveSkillMessage
@@ -1107,6 +1224,7 @@ export type WebviewMessage =
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
+  | SessionCostAlertResponseRequest
   | SuggestionAcceptRequest
   | SuggestionDismissRequest
   | DeleteSessionRequest
@@ -1123,17 +1241,23 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestWorkStyleMessage
+  | SetWorkStyleMessage
+  | ApplyWorkStyleMessage
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage
+  | RequestIndexingSettingsMessage
   | RequestKiloEmbeddingModelsMessage
   | UpdateConfigMessage
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
+  | TestNotificationMessage
   | ResetAllSettingsRequest
+  | ResetReadNotificationsRequest
   | SettingsTabChangedMessage
   | SyncSessionRequest
   | CreateWorktreeSessionRequest
@@ -1188,8 +1312,8 @@ export type WebviewMessage =
   | RefreshPRMessage
   | OpenPRMessage
   // legacy-migration start
-  | RequestLegacyMigrationDataMessage
-  | StartLegacyMigrationMessage
+  | RequestMigrationDataMessage
+  | StartMigrationMessage
   | SkipLegacyMigrationMessage
   | ClearLegacyDataMessage
   | FinalizeLegacyMigrationMessage
@@ -1216,6 +1340,10 @@ export type WebviewMessage =
   | AgentManagerOpenSessionsMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
+  | RequestSandboxStatusMessage
+  | RequestSandboxDefaultMessage
+  | SetSandboxDefaultMessage
+  | ToggleSandboxMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage
@@ -1225,10 +1353,13 @@ export type WebviewMessage =
   | AuthorizeProviderOAuthMessage
   | CompleteProviderOAuthMessage
   | DisconnectProviderMessage
+  | AnacondaDesktopWebviewMessage
   | SaveCustomProviderMessage
   | FetchCustomProviderModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
+  | PersistModelSelectorExpandedRequest
+  | RequestModelSelectorExpandedMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | PersistModelSelectionRequest

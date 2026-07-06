@@ -100,18 +100,18 @@ Verification:
 
 - Audit `PathParameterSchemas` and `pathParameterSchema()` in `public.ts`.
 - Check source schemas in files like `packages/opencode/src/session/schema.ts`, `packages/opencode/src/permission/schema.ts`, and pty schema definitions.
-- Add or fix `ZodOverride` / OpenAPI-compatible annotations on branded ID schemas so generated path params include the same patterns without `public.ts` overrides.
+- Add or fix OpenAPI-compatible annotations on branded ID schemas so generated path params include the same patterns without `public.ts` overrides.
 - Delete one path override only after generated OpenAPI is unchanged for that param.
 
 Concrete first targets:
 
-- `sessionID`
-- `messageID`
-- `partID`
-- `permissionID`
-- `ptyID`
+- `[x]` `sessionID`
+- `[x]` `messageID`
+- `[x]` `partID`
+- `[x]` `permissionID`
+- `[x]` `ptyID`
 
-Leave ambiguous route-local `id` overrides for workspace routes until they are renamed or explicitly typed in endpoint params.
+- `[x]` Remove ambiguous workspace `id` path overrides once the endpoint source schema emits the `wrk` pattern.
 
 Verification:
 

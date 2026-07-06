@@ -1,11 +1,11 @@
 import { For, Show } from "solid-js"
 import { Button } from "@kilocode/kilo-web-ui/button"
+import { Card } from "@kilocode/kilo-web-ui/card"
 import { IconButton } from "@kilocode/kilo-web-ui/icon-button"
-import { Tag } from "@kilocode/kilo-web-ui/tag"
 import type { Model } from "@kilocode/sdk/v2/client"
 import { SearchField } from "../../components/SearchField"
 import { text } from "../../shared/utils"
-import { ConfigPage, SourceBadge } from "./ConfigPage"
+import { ConfigPage, ConfigTag as Tag, SourceBadge } from "./ConfigPage"
 import { type Capability, type ModelField, useModelSettings } from "./state/models"
 
 function money(n: number) {
@@ -40,6 +40,7 @@ function chips(model: Model) {
   const list: string[] = []
   if (model.capabilities.toolcall) list.push("toolcall")
   if (model.capabilities.attachment) list.push("attachment")
+  if (model.capabilities.temperature) list.push("temperature")
   if (model.capabilities.input.image) list.push("vision")
   if (model.capabilities.input.audio || model.capabilities.output.audio) list.push("audio")
   return list
@@ -87,6 +88,7 @@ function Stat(props: { label: string; value: string; sub?: string; mono?: boolea
 const caps = [
   { key: "toolcall", label: "toolcall" },
   { key: "attachment", label: "attachment" },
+  { key: "temperature", label: "temperature" },
   { key: "input:image", label: "vision" },
   { key: "input:audio", label: "audio" },
 ] satisfies { key: Capability; label: string }[]
@@ -137,6 +139,8 @@ export function ModelsRoute() {
 
 export function ModelsDefaultRoute() {
   const state = useModelSettings()
+  const privacy = () => state.snap()?.overlay.fields.hide_prompt_training_models
+  const hidden = () => privacy()?.value === true
 
   return (
     <Show when={state.snap()}>
@@ -192,6 +196,48 @@ export function ModelsDefaultRoute() {
             }}
           </For>
         </div>
+
+        <Card class="ui-card" padding={0}>
+          <header class="ui-card-header">
+            <div>
+              <h2>Model visibility</h2>
+              <p>Control which Kilo Gateway models appear in model lists.</p>
+            </div>
+            <Show when={state.ctx.query()?.scope === "project" && privacy()?.overridden}>
+              <Button
+                variant="secondary"
+                disabled={Boolean(state.ctx.saving())}
+                onClick={() => state.ctx.unset([["hide_prompt_training_models"]])}
+              >
+                Revert
+              </Button>
+            </Show>
+          </header>
+          <div class="ui-form">
+            <button
+              class="ui-toggle"
+              classList={{ selected: hidden() }}
+              type="button"
+              aria-pressed={hidden()}
+              disabled={Boolean(state.ctx.saving()) || privacy()?.editable === false}
+              onClick={() => state.ctx.save({ hide_prompt_training_models: !hidden() })}
+            >
+              <span>
+                <strong>Hide prompt-training models</strong>
+                <small>Hide Kilo Gateway models whose providers may use your prompts for training.</small>
+                <Show when={privacy()?.reason}>{(reason) => <small>{reason()}</small>}</Show>
+              </span>
+              <span class="tags">
+                <SourceBadge
+                  source={privacy()?.source}
+                  inherited={privacy()?.inherited}
+                  overridden={privacy()?.overridden}
+                />
+                <Tag tone={hidden() ? "success" : "neutral"}>{hidden() ? "On" : "Off"}</Tag>
+              </span>
+            </button>
+          </div>
+        </Card>
 
         <Show when={state.mode() !== "closed"}>
           <div class="drawer-scrim" onClick={state.close} />
@@ -375,6 +421,21 @@ export function ModelsAvailableRoute() {
               </div>
               <strong class="models-context-value mono">{fmtContext(state.top())}</strong>
             </div>
+            <Show when={state.gateway()}>
+              <div class="models-privacy-filter-group">
+                <span>Privacy</span>
+                <button
+                  class="models-privacy-filter"
+                  classList={{ selected: state.privacy() }}
+                  type="button"
+                  aria-label="Hide Kilo Gateway models whose providers may use prompts for training"
+                  aria-pressed={state.privacy()}
+                  onClick={() => state.setPrivacy(!state.privacy())}
+                >
+                  Hide prompt-training models
+                </button>
+              </div>
+            </Show>
             <div class="models-capabilities-filter">
               <span>Capabilities</span>
               <div class="models-capabilities-list">
@@ -432,6 +493,7 @@ export function ModelsAvailableRoute() {
                     <Stat label="Input" value={money(item.model.cost.input)} sub="/ 1M tok" mono />
                     <Stat label="Output" value={money(item.model.cost.output)} sub="/ 1M tok" mono />
                     <Stat label="Reasoning" value={item.model.capabilities.reasoning ? "Yes" : "No"} />
+                    <Stat label="Temperature" value={item.model.capabilities.temperature ? "Yes" : "No"} />
                   </div>
                   <Show when={chips(item.model).length}>
                     <div class="tags model-capabilities">

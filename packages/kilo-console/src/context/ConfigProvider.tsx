@@ -6,6 +6,7 @@ import {
   load,
   loadCached,
   loadProjects,
+  patchConfig,
   resolveServer,
   saveCached,
   saveConfig,
@@ -133,6 +134,10 @@ export function ConfigProvider(props: { children?: JSX.Element }) {
     run("Saving config", () => saveConfig(target(), patch))
   }
 
+  function patch(update: Partial<ConfigPatch>, unset?: ConfigUnset) {
+    run("Saving config", () => patchConfig(target(), update, unset))
+  }
+
   function unset(paths: ConfigUnset) {
     run("Saving config", () => unsetConfig(target(), paths))
   }
@@ -150,6 +155,7 @@ export function ConfigProvider(props: { children?: JSX.Element }) {
     fail,
     run,
     save,
+    patch,
     unset,
     tui,
   }
