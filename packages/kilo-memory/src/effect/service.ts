@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Semaphore } from "effect"
 import { skipLine, type CaptureSkip } from "../capture/capture"
 import type { Memory } from "../memory"
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemoryRecall } from "../recall/recall"
 import { MemorySchema } from "../schema"
 import { MemoryFiles } from "../storage/store"
@@ -54,6 +54,7 @@ type RecordInput = KiloMemory.Input & {
   summary: string
   time?: number
   tokens?: number
+  fallback?: boolean
 }
 
 type DecideInput = {
@@ -98,8 +99,18 @@ type CommitInput = RootInput & {
   tokens: number
   count: number
   digest: boolean
+  // Whether a typed consolidation was actually attempted this commit. Only a typed attempt advances the
+  // shared typed-interval clock (lastTypedConsolidationAt); a digest-only commit must leave it untouched so a
+  // digest in one session cannot throttle another session's typed capture.
+  typed: boolean
   skipped: CaptureSkip[]
   cost?: number
+}
+
+type RecordRecallInput = RootInput & {
+  now: number
+  sessionID: string
+  count: number
 }
 
 function bridge<A>(fn: () => Promise<A>) {
@@ -147,6 +158,7 @@ export namespace MemoryService {
     readonly append: (input: AppendInput) => Effect.Effect<void, Failure>
     readonly index: (input: RootInput) => Effect.Effect<Index, Failure>
     readonly commit: (input: CommitInput) => Effect.Effect<void, Failure>
+    readonly recordRecall: (input: RecordRecallInput) => Effect.Effect<void, Failure>
     readonly decide: (input: DecideInput) => Effect.Effect<void, Failure>
     readonly readSource: (input: ReadSourceInput) => Effect.Effect<string, Failure>
     readonly turnLock: (sessionID: SessionID) => Semaphore.Semaphore
@@ -201,7 +213,9 @@ export namespace MemoryService {
               ...state,
               stats: {
                 ...state.stats,
-                lastConsolidatedAt: input.now,
+                // Digest-only commits leave the typed-interval clock where it was.
+                lastTypedConsolidationAt: input.typed ? input.now : state.stats.lastTypedConsolidationAt,
+                lastSessionSavedAt: input.digest ? input.now : state.stats.lastSessionSavedAt,
                 lastConsolidatedMessageID: input.messageID,
                 lastConsolidationCost: input.cost ?? state.stats.lastConsolidationCost,
                 lastConsolidationTokens: input.tokens,
@@ -218,6 +232,21 @@ export namespace MemoryService {
                 .filter(Boolean)
                 .join(" "),
             )
+          }),
+        ),
+      recordRecall: (input) =>
+        bridge(() =>
+          MemoryFiles.queue(input.root, async () => {
+            const state = await MemoryFiles.readState(input.root)
+            await MemoryFiles.writeState(input.root, {
+              ...state,
+              stats: {
+                ...state.stats,
+                lastRecallAt: input.now,
+                lastRecallCount: input.count,
+                lastRecallSessionID: input.sessionID,
+              },
+            })
           }),
         ),
       decide: (input) => bridge(() => MemoryFiles.decide(input.root, input.decision)),

@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
@@ -59,7 +60,14 @@ class MessageView(
     val role: String get() = msg.info.role
 
     override val sessionViewKind: SessionView.Kind
-        get() = if (role == SessionUiStyle.View.Message.USER_ROLE) SessionView.Kind.UserPrompt else SessionView.Kind.Default
+        get() = if (role == SessionUiStyle.View.Message.USER_ROLE && !compaction) {
+            SessionView.Kind.UserPrompt
+        } else {
+            SessionView.Kind.Default
+        }
+
+    private val compaction: Boolean
+        get() = role == SessionUiStyle.View.Message.USER_ROLE && msg.parts.values.any { it is Compaction }
 
     private val parts = LinkedHashMap<String, PartView>()
     // Adjacent reasoning parts render through the first ReasoningView. aliases maps each
@@ -411,7 +419,7 @@ class MessageView(
     }
 
     override fun paintComponent(g: Graphics) {
-        if (msg.info.role != SessionUiStyle.View.Message.USER_ROLE) {
+        if (msg.info.role != SessionUiStyle.View.Message.USER_ROLE || compaction) {
             super.paintComponent(g)
             return
         }

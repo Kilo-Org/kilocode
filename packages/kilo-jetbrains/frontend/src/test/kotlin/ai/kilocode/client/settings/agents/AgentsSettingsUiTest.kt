@@ -286,9 +286,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
             list.doLayout()
             val idx = rows(panel).indexOfFirst { it.key == "hidden" }
             list.selectedIndex = idx
-            val row = rows(panel)[idx]
-            val bounds = list.getCellBounds(idx, idx)
-            val area = settingsListCellBounds(list, bounds, row, selected = true).getValue(DELETE_CELL)
+            val area = settingsListCellBounds(list, idx, selected = true).getValue(DELETE_CELL)
             click(list, center(area))
             true
         }
@@ -483,9 +481,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         list.doLayout()
         val idx = rows(panel).indexOfFirst { it.key == key }
         list.selectedIndex = idx
-        val row = rows(panel)[idx]
-        val bounds = list.getCellBounds(idx, idx)
-        val area = settingsListCellBounds(list, bounds, row, selected = true).getValue(cell)
+        val area = settingsListCellBounds(list, idx, selected = true).getValue(cell)
         click(list, center(area))
     }
 

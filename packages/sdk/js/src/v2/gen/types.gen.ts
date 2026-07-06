@@ -57,6 +57,9 @@ export type Event =
   | EventSessionCompacted
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
+  | EventMemoryStatus1
+  | EventMemoryUpdated1
+  | EventMemoryError1
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventWorkspaceStatus
@@ -1087,6 +1090,9 @@ export type GlobalEvent = {
     | EventSessionCompacted
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
+    | EventMemoryStatus
+    | EventMemoryUpdated
+    | EventMemoryError
     | EventWorkspaceReady
     | EventWorkspaceFailed
     | EventWorkspaceStatus
@@ -2779,6 +2785,22 @@ export type KilocodeSessionImportResult = {
   skipped?: boolean
 }
 
+export type MemoryApiClientError = {
+  name: "MemoryApiClientError"
+  data: {
+    code: string
+    message: string
+  }
+}
+
+export type MemoryApiServerError = {
+  name: "MemoryApiServerError"
+  data: {
+    code: string
+    message: string
+  }
+}
+
 export type EffectHttpApiErrorForbidden = {
   _tag: "Forbidden"
 }
@@ -3773,6 +3795,111 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
+  }
+}
+
+export type EventMemoryStatus = {
+  id: string
+  type: "memory.status"
+  properties: {
+    directory: string
+    sessionID?: string
+    enabled: boolean
+    state: "idle" | "checking" | "injecting" | "updating" | "skipped" | "error"
+    reason?: string
+    project: {
+      bytes: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      estimatedTokens: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      truncated: boolean
+      updatedAt?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    consolidation?: {
+      trigger: "explicit" | "turn-close" | "rebuild"
+      operationCount: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cost: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      tokens: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    detail?: {
+      type: "saved" | "skipped" | "recalled"
+      message: string
+      reason?: string
+      duplicateOf?: string
+      tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      sources?: Array<string>
+      files?: Array<string>
+    }
+  }
+}
+
+export type EventMemoryUpdated = {
+  id: string
+  type: "memory.updated"
+  properties: {
+    directory: string
+    sessionID?: string
+    enabled: boolean
+    state: "idle" | "checking" | "injecting" | "updating" | "skipped" | "error"
+    reason?: string
+    project: {
+      bytes: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      estimatedTokens: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      truncated: boolean
+      updatedAt?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    consolidation?: {
+      trigger: "explicit" | "turn-close" | "rebuild"
+      operationCount: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cost: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      tokens: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    detail?: {
+      type: "saved" | "skipped" | "recalled"
+      message: string
+      reason?: string
+      duplicateOf?: string
+      tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      sources?: Array<string>
+      files?: Array<string>
+    }
+  }
+}
+
+export type EventMemoryError = {
+  id: string
+  type: "memory.error"
+  properties: {
+    directory: string
+    sessionID?: string
+    enabled: boolean
+    state: "idle" | "checking" | "injecting" | "updating" | "skipped" | "error"
+    reason?: string
+    project: {
+      bytes: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      estimatedTokens: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      truncated: boolean
+      updatedAt?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    consolidation?: {
+      trigger: "explicit" | "turn-close" | "rebuild"
+      operationCount: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      cost: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      tokens: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    detail?: {
+      type: "saved" | "skipped" | "recalled"
+      message: string
+      reason?: string
+      duplicateOf?: string
+      tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      sources?: Array<string>
+      files?: Array<string>
+    }
   }
 }
 
@@ -4788,6 +4915,111 @@ export type EventTuiToastShow1 = {
     message: string
     variant: "info" | "success" | "warning" | "error"
     duration?: number
+  }
+}
+
+export type EventMemoryStatus1 = {
+  id: string
+  type: "memory.status"
+  properties: {
+    directory: string
+    sessionID?: string
+    enabled: boolean
+    state: "idle" | "checking" | "injecting" | "updating" | "skipped" | "error"
+    reason?: string
+    project: {
+      bytes: number | "NaN" | "Infinity" | "-Infinity"
+      estimatedTokens: number | "NaN" | "Infinity" | "-Infinity"
+      truncated: boolean
+      updatedAt?: number | "NaN" | "Infinity" | "-Infinity"
+    }
+    consolidation?: {
+      trigger: "explicit" | "turn-close" | "rebuild"
+      operationCount: number | "NaN" | "Infinity" | "-Infinity"
+      cost: number | "NaN" | "Infinity" | "-Infinity"
+      tokens: number | "NaN" | "Infinity" | "-Infinity"
+    }
+    detail?: {
+      type: "saved" | "skipped" | "recalled"
+      message: string
+      reason?: string
+      duplicateOf?: string
+      tokens?: number | "NaN" | "Infinity" | "-Infinity"
+      operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
+      sources?: Array<string>
+      files?: Array<string>
+    }
+  }
+}
+
+export type EventMemoryUpdated1 = {
+  id: string
+  type: "memory.updated"
+  properties: {
+    directory: string
+    sessionID?: string
+    enabled: boolean
+    state: "idle" | "checking" | "injecting" | "updating" | "skipped" | "error"
+    reason?: string
+    project: {
+      bytes: number | "NaN" | "Infinity" | "-Infinity"
+      estimatedTokens: number | "NaN" | "Infinity" | "-Infinity"
+      truncated: boolean
+      updatedAt?: number | "NaN" | "Infinity" | "-Infinity"
+    }
+    consolidation?: {
+      trigger: "explicit" | "turn-close" | "rebuild"
+      operationCount: number | "NaN" | "Infinity" | "-Infinity"
+      cost: number | "NaN" | "Infinity" | "-Infinity"
+      tokens: number | "NaN" | "Infinity" | "-Infinity"
+    }
+    detail?: {
+      type: "saved" | "skipped" | "recalled"
+      message: string
+      reason?: string
+      duplicateOf?: string
+      tokens?: number | "NaN" | "Infinity" | "-Infinity"
+      operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
+      sources?: Array<string>
+      files?: Array<string>
+    }
+  }
+}
+
+export type EventMemoryError1 = {
+  id: string
+  type: "memory.error"
+  properties: {
+    directory: string
+    sessionID?: string
+    enabled: boolean
+    state: "idle" | "checking" | "injecting" | "updating" | "skipped" | "error"
+    reason?: string
+    project: {
+      bytes: number | "NaN" | "Infinity" | "-Infinity"
+      estimatedTokens: number | "NaN" | "Infinity" | "-Infinity"
+      truncated: boolean
+      updatedAt?: number | "NaN" | "Infinity" | "-Infinity"
+    }
+    consolidation?: {
+      trigger: "explicit" | "turn-close" | "rebuild"
+      operationCount: number | "NaN" | "Infinity" | "-Infinity"
+      cost: number | "NaN" | "Infinity" | "-Infinity"
+      tokens: number | "NaN" | "Infinity" | "-Infinity"
+    }
+    detail?: {
+      type: "saved" | "skipped" | "recalled"
+      message: string
+      reason?: string
+      duplicateOf?: string
+      tokens?: number | "NaN" | "Infinity" | "-Infinity"
+      operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
+      sources?: Array<string>
+      files?: Array<string>
+    }
   }
 }
 
@@ -12255,6 +12487,652 @@ export type TelemetrySetEnabledResponses = {
 }
 
 export type TelemetrySetEnabledResponse = TelemetrySetEnabledResponses[keyof TelemetrySetEnabledResponses]
+
+export type MemoryStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/status"
+}
+
+export type MemoryStatusErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryStatusError = MemoryStatusErrors[keyof MemoryStatusErrors]
+
+export type MemoryStatusResponses = {
+  /**
+   * Memory status
+   */
+  200: {
+    root: string
+    state: {
+      version: 1
+      enabled: boolean
+      scope: "project"
+      autoInject: boolean
+      autoConsolidate: boolean
+      capture: {
+        mode: "selective"
+        turnClose: boolean
+        explicit: boolean
+        maxOpsPerRun: number
+        minIntervalMs: number
+        timeoutMs: number
+      }
+      limits: {
+        maxProjectIndexBytes: number
+        maxSessionFiles: number
+        maxRecentSessions: number
+        maxConsolidationInputBytes: number
+        maxLineChars: number
+        maxSessionLineChars: number
+      }
+      stats: {
+        lastInjectedAt: number
+        lastInjectedBytes: number
+        lastInjectedTokens: number
+        lastInjectedSessionID: string
+        lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
+        lastConsolidationCost: number
+        lastConsolidationTokens: number
+        lastOperationCount: number
+        lastRecallAt: number
+        lastRecallCount: number
+        lastRecallSessionID: string
+      }
+    }
+    exists: {
+      state: boolean
+      index: boolean
+    }
+    index: {
+      bytes: number
+      estimatedTokens: number
+      preview: string
+    }
+  }
+}
+
+export type MemoryStatusResponse = MemoryStatusResponses[keyof MemoryStatusResponses]
+
+export type MemoryShowData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/show"
+}
+
+export type MemoryShowErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryShowError = MemoryShowErrors[keyof MemoryShowErrors]
+
+export type MemoryShowResponses = {
+  /**
+   * Memory source and index
+   */
+  200: {
+    root: string
+    state: {
+      version: 1
+      enabled: boolean
+      scope: "project"
+      autoInject: boolean
+      autoConsolidate: boolean
+      capture: {
+        mode: "selective"
+        turnClose: boolean
+        explicit: boolean
+        maxOpsPerRun: number
+        minIntervalMs: number
+        timeoutMs: number
+      }
+      limits: {
+        maxProjectIndexBytes: number
+        maxSessionFiles: number
+        maxRecentSessions: number
+        maxConsolidationInputBytes: number
+        maxLineChars: number
+        maxSessionLineChars: number
+      }
+      stats: {
+        lastInjectedAt: number
+        lastInjectedBytes: number
+        lastInjectedTokens: number
+        lastInjectedSessionID: string
+        lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
+        lastConsolidationCost: number
+        lastConsolidationTokens: number
+        lastOperationCount: number
+        lastRecallAt: number
+        lastRecallCount: number
+        lastRecallSessionID: string
+      }
+    }
+    sources: {
+      project: string
+      environment: string
+      corrections: string
+    }
+    index: string
+    items: string
+    changes: string
+    decisions: string
+  }
+}
+
+export type MemoryShowResponse = MemoryShowResponses[keyof MemoryShowResponses]
+
+export type MemoryEnableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/enable"
+}
+
+export type MemoryEnableErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryEnableError = MemoryEnableErrors[keyof MemoryEnableErrors]
+
+export type MemoryEnableResponses = {
+  /**
+   * Memory enabled
+   */
+  200: {
+    root: string
+    state: {
+      version: 1
+      enabled: boolean
+      scope: "project"
+      autoInject: boolean
+      autoConsolidate: boolean
+      capture: {
+        mode: "selective"
+        turnClose: boolean
+        explicit: boolean
+        maxOpsPerRun: number
+        minIntervalMs: number
+        timeoutMs: number
+      }
+      limits: {
+        maxProjectIndexBytes: number
+        maxSessionFiles: number
+        maxRecentSessions: number
+        maxConsolidationInputBytes: number
+        maxLineChars: number
+        maxSessionLineChars: number
+      }
+      stats: {
+        lastInjectedAt: number
+        lastInjectedBytes: number
+        lastInjectedTokens: number
+        lastInjectedSessionID: string
+        lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
+        lastConsolidationCost: number
+        lastConsolidationTokens: number
+        lastOperationCount: number
+        lastRecallAt: number
+        lastRecallCount: number
+        lastRecallSessionID: string
+      }
+    }
+    index: {
+      text: string
+      bytes: number
+      tokens: number
+      truncated: boolean
+    }
+  }
+}
+
+export type MemoryEnableResponse = MemoryEnableResponses[keyof MemoryEnableResponses]
+
+export type MemoryDisableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/disable"
+}
+
+export type MemoryDisableErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryDisableError = MemoryDisableErrors[keyof MemoryDisableErrors]
+
+export type MemoryDisableResponses = {
+  /**
+   * Memory disabled
+   */
+  200: {
+    root: string
+    state: {
+      version: 1
+      enabled: boolean
+      scope: "project"
+      autoInject: boolean
+      autoConsolidate: boolean
+      capture: {
+        mode: "selective"
+        turnClose: boolean
+        explicit: boolean
+        maxOpsPerRun: number
+        minIntervalMs: number
+        timeoutMs: number
+      }
+      limits: {
+        maxProjectIndexBytes: number
+        maxSessionFiles: number
+        maxRecentSessions: number
+        maxConsolidationInputBytes: number
+        maxLineChars: number
+        maxSessionLineChars: number
+      }
+      stats: {
+        lastInjectedAt: number
+        lastInjectedBytes: number
+        lastInjectedTokens: number
+        lastInjectedSessionID: string
+        lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
+        lastConsolidationCost: number
+        lastConsolidationTokens: number
+        lastOperationCount: number
+        lastRecallAt: number
+        lastRecallCount: number
+        lastRecallSessionID: string
+      }
+    }
+  }
+}
+
+export type MemoryDisableResponse = MemoryDisableResponses[keyof MemoryDisableResponses]
+
+export type MemoryConfigureData = {
+  body?: {
+    autoConsolidate?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/configure"
+}
+
+export type MemoryConfigureErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryConfigureError = MemoryConfigureErrors[keyof MemoryConfigureErrors]
+
+export type MemoryConfigureResponses = {
+  /**
+   * Memory configured
+   */
+  200: {
+    root: string
+    state: {
+      version: 1
+      enabled: boolean
+      scope: "project"
+      autoInject: boolean
+      autoConsolidate: boolean
+      capture: {
+        mode: "selective"
+        turnClose: boolean
+        explicit: boolean
+        maxOpsPerRun: number
+        minIntervalMs: number
+        timeoutMs: number
+      }
+      limits: {
+        maxProjectIndexBytes: number
+        maxSessionFiles: number
+        maxRecentSessions: number
+        maxConsolidationInputBytes: number
+        maxLineChars: number
+        maxSessionLineChars: number
+      }
+      stats: {
+        lastInjectedAt: number
+        lastInjectedBytes: number
+        lastInjectedTokens: number
+        lastInjectedSessionID: string
+        lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
+        lastConsolidationCost: number
+        lastConsolidationTokens: number
+        lastOperationCount: number
+        lastRecallAt: number
+        lastRecallCount: number
+        lastRecallSessionID: string
+      }
+    }
+  }
+}
+
+export type MemoryConfigureResponse = MemoryConfigureResponses[keyof MemoryConfigureResponses]
+
+export type MemoryRebuildData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/rebuild"
+}
+
+export type MemoryRebuildErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryRebuildError = MemoryRebuildErrors[keyof MemoryRebuildErrors]
+
+export type MemoryRebuildResponses = {
+  /**
+   * Memory rebuilt
+   */
+  200: {
+    root: string
+    state: {
+      version: 1
+      enabled: boolean
+      scope: "project"
+      autoInject: boolean
+      autoConsolidate: boolean
+      capture: {
+        mode: "selective"
+        turnClose: boolean
+        explicit: boolean
+        maxOpsPerRun: number
+        minIntervalMs: number
+        timeoutMs: number
+      }
+      limits: {
+        maxProjectIndexBytes: number
+        maxSessionFiles: number
+        maxRecentSessions: number
+        maxConsolidationInputBytes: number
+        maxLineChars: number
+        maxSessionLineChars: number
+      }
+      stats: {
+        lastInjectedAt: number
+        lastInjectedBytes: number
+        lastInjectedTokens: number
+        lastInjectedSessionID: string
+        lastTypedConsolidationAt: number
+        lastSessionSavedAt: number
+        lastConsolidationCost: number
+        lastConsolidationTokens: number
+        lastOperationCount: number
+        lastRecallAt: number
+        lastRecallCount: number
+        lastRecallSessionID: string
+      }
+    }
+    index: {
+      text: string
+      bytes: number
+      tokens: number
+      truncated: boolean
+    }
+  }
+}
+
+export type MemoryRebuildResponse = MemoryRebuildResponses[keyof MemoryRebuildResponses]
+
+export type MemoryRememberData = {
+  body?: {
+    text: string
+    key?: string
+    file?: "project.md" | "environment.md" | "corrections.md"
+    section?: string
+    sessionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/remember"
+}
+
+export type MemoryRememberErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryRememberError = MemoryRememberErrors[keyof MemoryRememberErrors]
+
+export type MemoryRememberResponses = {
+  /**
+   * Memory operation result
+   */
+  200: {
+    operationCount: number
+    added: number
+    removed: number
+    skipped: Array<{
+      reason: "self_referential" | "out_of_scope" | "secret"
+      text?: string
+    }>
+    index: {
+      text: string
+      bytes: number
+      tokens: number
+      truncated: boolean
+    }
+  }
+}
+
+export type MemoryRememberResponse = MemoryRememberResponses[keyof MemoryRememberResponses]
+
+export type MemoryCorrectData = {
+  body?: {
+    text: string
+    key?: string
+    sessionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/correct"
+}
+
+export type MemoryCorrectErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryCorrectError = MemoryCorrectErrors[keyof MemoryCorrectErrors]
+
+export type MemoryCorrectResponses = {
+  /**
+   * Memory correction result
+   */
+  200: {
+    operationCount: number
+    added: number
+    removed: number
+    skipped: Array<{
+      reason: "self_referential" | "out_of_scope" | "secret"
+      text?: string
+    }>
+    index: {
+      text: string
+      bytes: number
+      tokens: number
+      truncated: boolean
+    }
+  }
+}
+
+export type MemoryCorrectResponse = MemoryCorrectResponses[keyof MemoryCorrectResponses]
+
+export type MemoryForgetData = {
+  body?: {
+    query: string
+    sessionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/forget"
+}
+
+export type MemoryForgetErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryForgetError = MemoryForgetErrors[keyof MemoryForgetErrors]
+
+export type MemoryForgetResponses = {
+  /**
+   * Memory forget result
+   */
+  200: {
+    operationCount: number
+    added: number
+    removed: number
+    skipped: Array<{
+      reason: "self_referential" | "out_of_scope" | "secret"
+      text?: string
+    }>
+    index: {
+      text: string
+      bytes: number
+      tokens: number
+      truncated: boolean
+    }
+  }
+}
+
+export type MemoryForgetResponse = MemoryForgetResponses[keyof MemoryForgetResponses]
+
+export type MemoryPurgeData = {
+  body?: {
+    confirm: true
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/memory/purge"
+}
+
+export type MemoryPurgeErrors = {
+  /**
+   * MemoryApiClientError | InvalidRequestError
+   */
+  400: MemoryApiClientError | InvalidRequestError
+  /**
+   * MemoryApiServerError
+   */
+  503: MemoryApiServerError
+}
+
+export type MemoryPurgeError = MemoryPurgeErrors[keyof MemoryPurgeErrors]
+
+export type MemoryPurgeResponses = {
+  /**
+   * Memory purged
+   */
+  200: {
+    root: string
+    purged: boolean
+  }
+}
+
+export type MemoryPurgeResponse = MemoryPurgeResponses[keyof MemoryPurgeResponses]
 
 export type PtyConnectData = {
   body?: never

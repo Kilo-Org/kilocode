@@ -82,6 +82,8 @@ class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()
+    var childSessionId: String? = null
+    var childTools: List<Tool> = emptyList()
     var output: String? = null
     var error: String? = null
     var time: PartTimeDto? = null

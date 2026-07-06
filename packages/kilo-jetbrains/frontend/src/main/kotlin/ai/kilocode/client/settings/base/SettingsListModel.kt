@@ -2,11 +2,14 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.util.ui.JBUI
-import java.awt.Dimension
+import java.awt.Component
+import java.awt.Container
 import java.awt.Point
 import java.awt.Rectangle
 import javax.swing.Icon
 import javax.swing.JList
+import javax.swing.ListCellRenderer
+import javax.swing.SwingUtilities
 
 private const val CELL_GAP = 8
 
@@ -57,55 +60,64 @@ internal fun settingsListVisibleCells(item: SettingsListItem, selected: Boolean)
     return item.cells.filter { selected || it.alwaysVisible }
 }
 
+internal fun settingsListCellGap() = JBUI.scale(CELL_GAP)
+
+/**
+ * Clickable action-cell rectangles for a row, in list coordinates.
+ *
+ * The rectangles are read back from the actual rendered component tree instead of being
+ * re-derived by hand. This keeps the click targets identical to what the [SettingsListRenderer]
+ * draws — including the horizontal insets the platform's [com.intellij.ui.popup.list.SelectablePanel]
+ * adds in the New UI, which a hand-computed layout would miss.
+ */
+internal fun settingsListCellBounds(
+    list: JList<*>,
+    index: Int,
+    selected: Boolean,
+): Map<String, Rectangle> {
+    val model = list.model
+    if (index < 0 || index >= model.size) return emptyMap()
+    @Suppress("UNCHECKED_CAST")
+    val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyMap()
+    val cell = list.getCellBounds(index, index) ?: return emptyMap()
+    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, list.hasFocus())
+    comp.setBounds(0, 0, cell.width, cell.height)
+    settingsListLayout(comp)
+    val out = linkedMapOf<String, Rectangle>()
+    for (action in settingsListActionCells(comp)) {
+        val origin = SwingUtilities.convertPoint(action, 0, 0, comp)
+        out[action.cellId] = Rectangle(cell.x + origin.x, cell.y + origin.y, action.width, action.height)
+    }
+    return out
+}
+
 internal fun settingsListCellAt(
     list: JList<*>,
-    bounds: Rectangle,
+    index: Int,
     point: Point,
-    item: SettingsListItem,
     selected: Boolean,
 ): String? {
-    val cells = settingsListCellBounds(list, bounds, item, selected)
+    val model = list.model
+    if (index < 0 || index >= model.size) return null
+    val item = model.getElementAt(index) as? SettingsListItem ?: return null
+    val cells = settingsListCellBounds(list, index, selected)
     return settingsListVisibleCells(item, selected)
         .firstOrNull { cell -> cell.enabled && cells[cell.id]?.contains(point) == true }
         ?.id
 }
 
-internal fun settingsListCellBounds(
-    list: JList<*>,
-    bounds: Rectangle,
-    item: SettingsListItem,
-    selected: Boolean,
-): Map<String, Rectangle> {
-    val height = settingsListCellHeight(list)
-    var edge = bounds.x + bounds.width - UiStyle.Gap.pad()
-    val out = linkedMapOf<String, Rectangle>()
-    for (cell in settingsListVisibleCells(item, selected).asReversed()) {
-        val size = settingsListCellSize(list, cell)
-        val width = size.width
-        val h = height.coerceAtLeast(size.height)
-        val top = bounds.y + (bounds.height - h) / 2
-        val left = edge - width
-        out[cell.id] = Rectangle(left, top, width, h)
-        edge = left - JBUI.scale(CELL_GAP)
+private fun settingsListLayout(component: Component) {
+    if (component !is Container) return
+    component.doLayout()
+    for (child in component.components) settingsListLayout(child)
+}
+
+private fun settingsListActionCells(component: Component): List<SettingsListActionCell> {
+    val out = mutableListOf<SettingsListActionCell>()
+    fun visit(c: Component) {
+        if (c is SettingsListActionCell && c.isVisible) out += c
+        if (c is Container) c.components.forEach(::visit)
     }
+    visit(component)
     return out
 }
-
-internal fun settingsListCellSize(list: JList<*>, cell: SettingsListCell): Dimension {
-    val label = SettingsListActionCell().apply {
-        update(cell)
-        font = list.font
-        isEnabled = cell.enabled
-    }
-    val size = label.preferredSize
-    if (!cell.iconOnly) return size
-    val min = settingsListCellHeight(list)
-    return Dimension(size.width.coerceAtLeast(min), size.height.coerceAtLeast(min))
-}
-
-private fun settingsListCellHeight(list: JList<*>): Int {
-    val metrics = list.getFontMetrics(list.font)
-    return metrics.height + UiStyle.Gap.sm() * 2
-}
-
-internal fun settingsListCellGap() = JBUI.scale(CELL_GAP)

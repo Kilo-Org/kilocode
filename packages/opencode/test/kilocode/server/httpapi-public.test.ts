@@ -8,6 +8,7 @@ import { ConfigConsolePaths } from "../../../src/kilocode/server/httpapi/groups/
 import { IndexingPaths, KiloEmbeddingModel } from "../../../src/kilocode/server/httpapi/groups/indexing"
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { KilocodePaths } from "../../../src/kilocode/server/httpapi/groups/kilocode"
+import { MemoryPaths } from "../../../src/kilocode/server/httpapi/groups/memory"
 import { NetworkPaths } from "../../../src/kilocode/server/httpapi/groups/network"
 import { TelemetryPaths } from "../../../src/kilocode/server/httpapi/groups/telemetry"
 import { ExperimentalPaths } from "../../../src/server/routes/instance/httpapi/groups/experimental"
@@ -140,6 +141,16 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "patch", path: ConfigConsolePaths.tuiConfig },
       { method: "get", path: KilocodePaths.sessionModelUsage },
       { method: "post", path: BranchNamePaths.generate },
+      { method: "get", path: MemoryPaths.status },
+      { method: "get", path: MemoryPaths.show },
+      { method: "post", path: MemoryPaths.enable },
+      { method: "post", path: MemoryPaths.disable },
+      { method: "post", path: MemoryPaths.configure },
+      { method: "post", path: MemoryPaths.rebuild },
+      { method: "post", path: MemoryPaths.remember },
+      { method: "post", path: MemoryPaths.correct },
+      { method: "post", path: MemoryPaths.forget },
+      { method: "post", path: MemoryPaths.purge },
     ] satisfies Array<{ method: Method; path: string }>
 
     for (const route of routes) {
