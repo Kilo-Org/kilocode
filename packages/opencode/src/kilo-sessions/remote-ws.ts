@@ -36,8 +36,7 @@ export namespace RemoteWS {
 
   export function connect(options: Options): Connection {
     const interval = options.heartbeat ?? 10_000
-    let connectionId = crypto.randomUUID()
-    let generation = 0
+    const connectionId = crypto.randomUUID()
     const withContext = options.withContext ?? ((fn) => fn())
     let ws: WebSocket | undefined
     let backoff = 1000
@@ -119,8 +118,6 @@ export namespace RemoteWS {
         schedule()
         return
       }
-      if (generation > 0) connectionId = crypto.randomUUID()
-      generation += 1
       const endpoint = `${options.url}/api/user/cli?token=${encodeURIComponent(token)}&connectionId=${connectionId}`
       options.log.info("remote-ws connecting", { connectionId, endpoint: endpoint.replace(/token=[^&]+/, "token=***") })
       const socket = new WebSocket(endpoint)

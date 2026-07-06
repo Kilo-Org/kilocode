@@ -222,7 +222,7 @@ describe("RemoteWS", () => {
     expect(conn.connected).toBe(true)
   })
 
-  test("rotates connection identity for each WebSocket generation", async () => {
+  test("keeps a stable connection identity across reconnects", async () => {
     server = createServer()
 
     conn = RemoteWS.connect({
@@ -244,7 +244,7 @@ describe("RemoteWS", () => {
     await settled()
 
     const replacement = server.urls[1]?.searchParams.get("connectionId")
-    expect(replacement).not.toBe(initial)
+    expect(replacement).toBe(initial)
     expect(replacement).toBe(conn.connectionId)
   })
 
