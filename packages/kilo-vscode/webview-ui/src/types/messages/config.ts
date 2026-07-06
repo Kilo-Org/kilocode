@@ -48,6 +48,7 @@ export interface ExperimentalConfig {
   mcp_timeout?: number
   sandbox?: boolean
   sandbox_restrict_network?: boolean
+  swe_pruner?: boolean
 }
 
 export interface CommitMessageConfig {

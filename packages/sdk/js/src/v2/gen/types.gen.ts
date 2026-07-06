@@ -1693,6 +1693,7 @@ export type Config = {
     continue_loop_on_deny?: boolean
     sandbox?: boolean
     sandbox_restrict_network?: boolean
+    swe_pruner?: boolean
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }

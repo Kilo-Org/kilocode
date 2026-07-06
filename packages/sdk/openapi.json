@@ -25094,6 +25094,9 @@
               "sandbox_restrict_network": {
                 "type": "boolean"
               },
+              "swe_pruner": {
+                "type": "boolean"
+              },
               "mcp_timeout": {
                 "type": "integer",
                 "exclusiveMinimum": 0

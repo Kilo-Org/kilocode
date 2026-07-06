@@ -1400,6 +1400,9 @@ export const dict = {
   "settings.sandboxing.network.title": "Begrens nettverkstilgang",
   "settings.sandboxing.network.description":
     "Blokker utgående nettverkstilgang fra kommandoer generert av modellen og HTTP-verktøy. Lokale MCP-servere og programtilleggskroker kjører utenfor denne begrensningen. Trafikk for leverandør- og modellinferens forblir tilgjengelig.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Aktiver SWE-Pruner: oppgavebevisst beskjæring av store lese- og søkeresultater, styrt av et fokusspørsmål fra agenten",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",

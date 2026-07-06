@@ -1420,6 +1420,9 @@ export const dict = {
   "settings.sandboxing.network.title": "จำกัดการเข้าถึงเครือข่าย",
   "settings.sandboxing.network.description":
     "บล็อกการเข้าถึงเครือข่ายขาออกจากคำสั่งที่มาจากโมเดลและเครื่องมือ HTTP เซิร์ฟเวอร์ MCP ภายในเครื่องและฮุกของปลั๊กอินทำงานอยู่นอกข้อจำกัดนี้ การรับส่งข้อมูลสำหรับการอนุมานของผู้ให้บริการและโมเดลยังคงใช้งานได้",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "เปิดใช้ SWE-Pruner: ตัดทอนผลลัพธ์ขนาดใหญ่ของเครื่องมืออ่านและค้นหาตามคำถามโฟกัสจากเอเจนต์",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",

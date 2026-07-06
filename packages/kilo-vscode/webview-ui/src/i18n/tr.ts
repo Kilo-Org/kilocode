@@ -1431,6 +1431,9 @@ export const dict = {
   "settings.sandboxing.network.title": "Ağ Erişimini Kısıtla",
   "settings.sandboxing.network.description":
     "Model tarafından başlatılan komutların ve HTTP araçlarının giden ağ erişimini engelleyin. Yerel MCP sunucuları ve eklenti kancaları bu kısıtlamanın dışında çalışır. Sağlayıcı ve model çıkarım trafiği kullanılabilir durumda kalır.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner'ı etkinleştir: ajanın odak sorusuna göre büyük okuma ve arama araç çıktılarının budanması",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",

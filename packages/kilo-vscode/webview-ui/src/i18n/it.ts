@@ -1229,6 +1229,9 @@ export const dict = {
   "settings.sandboxing.network.title": "Limita l'accesso alla rete",
   "settings.sandboxing.network.description":
     "Blocca l'accesso in uscita alla rete per i comandi avviati dal modello e gli strumenti HTTP. I server MCP locali e gli hook dei plugin operano al di fuori di questa restrizione. Il traffico verso i provider e per l'inferenza dei modelli rimane disponibile.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Abilita SWE-Pruner: potatura delle uscite di grandi dimensioni degli strumenti di lettura e ricerca, guidata da una domanda di focus dell'agente",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",

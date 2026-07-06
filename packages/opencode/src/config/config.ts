@@ -418,6 +418,10 @@ export const Info = Schema.Struct({
         description:
           "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)",
       }),
+      swe_pruner: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Enable SWE-Pruner: task-aware pruning of large read/grep tool outputs guided by a focus question provided by the agent (default: false)",
+      }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",

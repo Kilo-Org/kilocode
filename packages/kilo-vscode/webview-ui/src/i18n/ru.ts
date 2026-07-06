@@ -1441,6 +1441,9 @@ export const dict = {
   "settings.sandboxing.network.title": "Ограничить доступ к сети",
   "settings.sandboxing.network.description":
     "Блокировать исходящий доступ к сети для команд, инициированных моделью, и HTTP-инструментов. Локальные серверы MCP и хуки плагинов не подпадают под это ограничение. Трафик к провайдерам и моделям для инференса остаётся доступным.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Включить SWE-Pruner: обрезка больших выводов инструментов чтения и поиска на основе фокус-вопроса агента",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",

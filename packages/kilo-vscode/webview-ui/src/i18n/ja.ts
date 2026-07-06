@@ -1432,6 +1432,9 @@ export const dict = {
   "settings.sandboxing.network.title": "ネットワークアクセスを制限",
   "settings.sandboxing.network.description":
     "モデルから発行されたコマンドと HTTP ツールによる外部ネットワークアクセスをブロックします。ローカル MCP サーバーとプラグインフックは、この制限の対象外です。プロバイダーおよびモデルへの推論通信は引き続き利用できます。",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner を有効化: エージェントのフォーカス質問に基づいて、大きな読み取り・検索ツール出力を関連行のみに剪定します",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",

@@ -180,6 +180,19 @@ const ExperimentalTab: Component = () => {
           </Switch>
         </SettingsRow>
 
+        <SettingsRow
+          title={language.t("settings.experimental.swePruner.title")}
+          description={language.t("settings.experimental.swePruner.description")}
+        >
+          <Switch
+            checked={experimental().swe_pruner ?? false}
+            onChange={(checked) => updateExperimental("swe_pruner", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.swePruner.title")}
+          </Switch>
+        </SettingsRow>
+
         {/* MCP timeout */}
         <SettingsRow
           title={language.t("settings.experimental.mcpTimeout.title")}

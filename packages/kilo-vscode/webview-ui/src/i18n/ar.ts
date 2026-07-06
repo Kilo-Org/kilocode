@@ -1411,6 +1411,9 @@ export const dict = {
   "settings.sandboxing.network.title": "تقييد الوصول إلى الشبكة",
   "settings.sandboxing.network.description":
     "احظر الوصول الصادر إلى الشبكة من الأوامر الصادرة عن النموذج وأدوات HTTP. تعمل خوادم MCP المحلية وخطافات المكونات الإضافية خارج هذا التقييد. تظل حركة مرور استدلال الموفّر والنموذج متاحة.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "تفعيل SWE-Pruner: تقليم مخرجات أدوات القراءة والبحث الكبيرة استنادًا إلى سؤال تركيز من الوكيل",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
