@@ -196,6 +196,11 @@ export namespace RemoteModelCatalog {
     }
   }
 
+  function presentIn(providers: Provider.Info[], ref: { providerID: string; modelID: string }): boolean {
+    const provider = providers.find((candidate) => candidate.id === ref.providerID)
+    return provider ? Object.hasOwn(provider.models, ref.modelID) : false
+  }
+
   function defaults(providers: Provider.Info[]): Record<string, string> {
     const result: Record<string, string> = {}
     for (const provider of providers) {
@@ -234,6 +239,8 @@ export namespace RemoteModelCatalog {
 
     const active = current(input)
     const fallback = input.defaultModel
+    const currentModel = active && presentIn(all, active.model) ? active : undefined
+    const defaultModel = fallback && presentIn(all, fallback) ? fallback : undefined
 
     return {
       all,
@@ -242,8 +249,8 @@ export namespace RemoteModelCatalog {
       failed: [],
       protocolVersion: 1,
       truncated,
-      ...(active ? { currentModel: active } : {}),
-      ...(fallback ? { defaultModel: fallback } : {}),
+      ...(currentModel ? { currentModel } : {}),
+      ...(defaultModel ? { defaultModel } : {}),
     }
   }
 }

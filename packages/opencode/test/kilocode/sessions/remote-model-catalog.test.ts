@@ -193,7 +193,9 @@ describe("RemoteModelCatalog", () => {
 
   test("uses the latest user message when the session has no current model", () => {
     const catalog = RemoteModelCatalog.build({
-      providers: {},
+      providers: {
+        latest: { id: "latest", name: "Latest", models: { "latest/model": model("latest", "latest/model", "Latest") } },
+      },
       session: {},
       messages: [
         {
@@ -296,6 +298,33 @@ describe("RemoteModelCatalog", () => {
     expect(catalog.truncated).toBe(true)
     expect(catalog.default).toEqual({ big: "gpt-5-preferred" })
     expect(Object.keys(catalog.all[0]?.models ?? {})).toContain("gpt-5-preferred")
+  })
+
+  test("omits currentModel and defaultModel when truncation drops them", () => {
+    const providers = {
+      big: {
+        id: "big",
+        name: "Big",
+        models: Object.fromEntries([
+          ...Array.from({ length: RemoteModelCatalog.MAX_MODELS }, (_, i) => {
+            const id = `kept-${i}`
+            return [id, model("big", id, `Kept ${i}`)]
+          }),
+          ["dropped-model", model("big", "dropped-model", "Dropped")],
+        ]),
+      },
+    }
+    const catalog = RemoteModelCatalog.build({
+      providers,
+      session: { model: { id: "dropped-model", providerID: "big", variant: "default" } },
+      messages: [],
+      defaultModel: { providerID: "big", modelID: "dropped-model" },
+    })
+
+    expect(catalog.truncated).toBe(true)
+    expect(Object.keys(catalog.all[0]?.models ?? {})).not.toContain("dropped-model")
+    expect(catalog.currentModel).toBeUndefined()
+    expect(catalog.defaultModel).toBeUndefined()
   })
 
   test("caps overlong model names and variant maps", () => {
