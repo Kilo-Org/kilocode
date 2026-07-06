@@ -1,4 +1,5 @@
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
 export namespace RemoteWS {
   export type SessionInfo = RemoteProtocol.SessionInfo
@@ -53,11 +54,12 @@ export namespace RemoteWS {
 
       const current = Promise.resolve(
         withContext(async () => {
-          while (queued && !closed) {
+          while (queued) {
+            if (closed) return
             queued = false
             const sessions = await options.getSessions()
             if (closed) return
-            send({ type: "heartbeat", ...sessions })
+            send({ type: "heartbeat", protocolVersion: InstallationVersion, ...sessions })
           }
         }),
       ).finally(() => {
@@ -119,20 +121,26 @@ export namespace RemoteWS {
       }
       const endpoint = `${options.url}/api/user/cli?token=${encodeURIComponent(token)}&connectionId=${connectionId}`
       options.log.info("remote-ws connecting", { connectionId, endpoint: endpoint.replace(/token=[^&]+/, "token=***") })
-      ws = new WebSocket(endpoint)
+      const socket = new WebSocket(endpoint)
+      ws = socket
 
-      ws.onopen = () => {
+      socket.onopen = () => {
+        if (ws !== socket || closed) {
+          socket.close()
+          return
+        }
         options.log.info("remote-ws connected", { buffered: buffer.length })
         void withContext(() => options.onOpen?.())
         backoff = 1000
-        for (const msg of buffer) ws!.send(msg)
+        for (const msg of buffer) socket.send(msg)
         buffer.length = 0
         activity = Date.now()
         startHeartbeat()
         startWatchdog()
       }
 
-      ws.onmessage = (event) => {
+      socket.onmessage = (event) => {
+        if (ws !== socket || closed) return
         activity = Date.now()
         const raw = String(event.data)
         let json: unknown
@@ -152,7 +160,8 @@ export namespace RemoteWS {
         options.onMessage?.(parsed.data)
       }
 
-      ws.onclose = (event) => {
+      socket.onclose = (event) => {
+        if (ws !== socket) return
         options.log.info("remote-ws closed", { code: event.code, reason: event.reason })
         ws = undefined
         stopHeartbeat()
@@ -170,7 +179,8 @@ export namespace RemoteWS {
         schedule()
       }
 
-      ws.onerror = (event) => {
+      socket.onerror = (event) => {
+        if (ws !== socket || closed) return
         options.log.error("remote-ws error", { error: event })
       }
     }
@@ -200,10 +210,12 @@ export namespace RemoteWS {
       if (ws) ws.close()
     }
 
-    open()
+    void open()
 
     return {
-      connectionId,
+      get connectionId() {
+        return connectionId
+      },
       send,
       heartbeat,
       close,
