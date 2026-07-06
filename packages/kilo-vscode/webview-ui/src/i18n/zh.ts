@@ -1266,7 +1266,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
-  "prompt.placeholder.default": "输入消息... (Enter 发送，Shift+Enter 换行)",
+  "prompt.placeholder.default": "输入消息，用 @ 提及文件... (Enter 发送，Shift+Enter 换行)",
 
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",

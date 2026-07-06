@@ -1307,7 +1307,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
   "prompt.placeholder.error": "Povezivanje nije uspjelo. Provjerite panel za izlaz ili ponovo pokrenite ekstenziju.",
-  "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
+  "prompt.placeholder.default": "Unesite poruku, @ za spominjanje datoteka... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
   "context.usage.olderSessions": "{{count}} starijih sesija",

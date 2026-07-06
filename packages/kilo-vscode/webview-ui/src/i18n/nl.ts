@@ -1294,7 +1294,7 @@ export const dict = {
   "dialog.model.noProviders": "Geen providers",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
-  "prompt.placeholder.default": "Typ een bericht... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
+  "prompt.placeholder.default": "Typ een bericht, @ om bestanden te vermelden... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",

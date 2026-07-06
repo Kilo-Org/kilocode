@@ -1279,7 +1279,7 @@ export const dict = {
   "dialog.model.noProviders": "No providers",
 
   "prompt.placeholder.connecting": "Connecting to server...",
-  "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",

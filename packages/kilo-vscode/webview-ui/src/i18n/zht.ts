@@ -1230,7 +1230,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
   "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",
-  "prompt.placeholder.default": "輸入訊息... (Enter 送出，Shift+Enter 換行)",
+  "prompt.placeholder.default": "輸入訊息，用 @ 提及檔案... (Enter 送出，Shift+Enter 換行)",
 
   "context.usage.sessionCost": "工作階段費用",
   "context.usage.olderSessions": "{{count}} 個較早的工作階段",

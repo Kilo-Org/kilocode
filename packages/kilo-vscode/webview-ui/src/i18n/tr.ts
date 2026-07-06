@@ -1290,7 +1290,7 @@ export const dict = {
   "dialog.model.noProviders": "Sağlayıcı yok",
 
   "prompt.placeholder.connecting": "Sunucuya bağlanılıyor...",
-  "prompt.placeholder.default": "Bir mesaj yazın... (Göndermek için Enter, yeni satır için Shift+Enter)",
+  "prompt.placeholder.default": "Bir mesaj yazın, dosyalardan bahsetmek için @ ... (Göndermek için Enter, yeni satır için Shift+Enter)",
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",

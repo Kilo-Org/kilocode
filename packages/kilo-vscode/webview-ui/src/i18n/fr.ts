@@ -1324,7 +1324,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Connexion au serveur...",
   "prompt.placeholder.error": "Échec de la connexion. Vérifiez le panneau de sortie ou redémarrez l'extension.",
-  "prompt.placeholder.default": "Tapez un message... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
+  "prompt.placeholder.default": "Tapez un message, @ pour mentionner des fichiers... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
 
   "context.usage.sessionCost": "Coût de la session",
   "context.usage.olderSessions": "{{count}} sessions précédentes",
