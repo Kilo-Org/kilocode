@@ -59,6 +59,31 @@ function locate(text: string, ref: Ref, index: number): Ref | undefined {
   return { ...ref, source: { ...source, start, end: start + source.value.length } }
 }
 
+/**
+ * Find every position at or after `from` where `value` occurs as a complete,
+ * boundary-delimited token (flanked by whitespace or a string edge on both
+ * sides). A plain substring search would let a shorter mention match as a
+ * prefix of a longer, distinct one that starts the same way (e.g. "@a.ts"
+ * inside "@a.tsx"), truncating the real mention's highlight.
+ */
+function repeats(text: string, value: string, from: number): number[] {
+  const result: number[] = []
+  let search = from
+
+  while (true) {
+    const found = text.indexOf(value, search)
+    if (found === -1) break
+
+    const end = found + value.length
+    const before = found === 0 || /\s/.test(text[found - 1] ?? "")
+    const after = end === text.length || /\s/.test(text[end] ?? "")
+    if (before && after) result.push(found)
+    search = found + 1
+  }
+
+  return result
+}
+
 function resolve(text: string, refs: Ref[]): Ref[] {
   const result: Ref[] = []
   let index = 0
@@ -71,15 +96,13 @@ function resolve(text: string, refs: Ref[]): Ref[] {
     index = next.source.end
 
     // mentionedPaths is a Set, so a path mentioned more than once in the same
-    // message only produces a single attachment/ref. Search the rest of the
-    // text for exact repeats of this ref's mention text so every occurrence
-    // stays highlighted, not just the first.
-    let repeat = text.indexOf(next.source.value, index)
-    while (repeat !== -1) {
-      const end = repeat + next.source.value.length
-      result.push({ ...next, source: { ...next.source, start: repeat, end } })
-      index = end
-      repeat = text.indexOf(next.source.value, index)
+    // message only produces a single attachment/ref. Highlight any later
+    // boundary-delimited repeats of this ref's mention text too, so every
+    // occurrence stays highlighted, not just the first.
+    for (const start of repeats(text, next.source.value, index)) {
+      const end = start + next.source.value.length
+      result.push({ ...next, source: { ...next.source, start, end } })
+      index = Math.max(index, end)
     }
   }
 

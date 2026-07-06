@@ -144,6 +144,28 @@ describe("message highlight", () => {
     ])
   })
 
+  test("does not let a shorter mention's repeat-search truncate a longer mention that starts the same way", () => {
+    // "@a.ts" is a literal prefix of "@a.tsx". A naive repeat-search for the
+    // first ref's value would match inside the second, distinct mention and
+    // drop its highlight (or worse, wrongly highlight only part of it).
+    const text = "see @a.ts and also @a.tsx"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        { source: { type: "file", path: "a.ts", text: { value: "@a.ts", start: 4, end: 9 } } },
+        { source: { type: "file", path: "a.tsx", text: { value: "@a.tsx", start: 19, end: 25 } } },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "see " },
+      { text: "@a.ts", type: "file" },
+      { text: " and also " },
+      { text: "@a.tsx", type: "file" },
+    ])
+  })
+
   test("highlights every repeated occurrence of a mention containing a space when only one ref exists", () => {
     const text = "a @dup name.ts b @dup name.ts c"
     const segments = buildHighlightedTextSegments(
