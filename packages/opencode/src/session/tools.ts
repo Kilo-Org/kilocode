@@ -106,7 +106,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             )
             // kilocode_change start
             let result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
-            // SWE-Pruner (experimental): prune the output when the model provided a focus question
+            // SWE-Pruner (experimental): prune the output when the model provided a focus question.
+            // Runs before tool.execute.after so plugins observe the final output the model will
+            // see; pruning is signalled to them via metadata.swePruner.
             if (pruner) result = yield* SwePruner.sweep({ tool: item.id, args, result, abort: ctx.abort })
             // kilocode_change end
             const output = {
