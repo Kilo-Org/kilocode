@@ -35,6 +35,8 @@ export interface ModeSwitcherBaseProps {
   value: string
   /** Called when the user picks an agent */
   onSelect: (name: string) => void
+  /** Render inline instead of through a portal when nested in a dialog. */
+  portal?: boolean
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
 }
@@ -124,6 +126,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         expanded={false}
         placement="top-start"
         minHeight={100}
+        portal={props.portal}
         deferDismiss={props.deferDismiss}
         open={open()}
         onOpenChange={onOpen}

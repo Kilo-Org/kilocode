@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 7.4.1
+
+### Patch Changes
+
+- [#11887](https://github.com/Kilo-Org/kilocode/pull/11887) [`51dc189`](https://github.com/Kilo-Org/kilocode/commit/51dc189682107615d6af3fc6306d64fa3d5dafd8) - Require authentication before enabling allow-everything permissions over HTTP.
+
+- [#11923](https://github.com/Kilo-Org/kilocode/pull/11923) [`fda4e17`](https://github.com/Kilo-Org/kilocode/commit/fda4e1756b3de46da3ac2081d440969a32ae5a59) - Fail subagent permission prompts in headless `kilo run` immediately instead of hanging forever, and approve subagent permission prompts under `--dangerously-skip-permissions`
+
 ## 7.4.0
 
 ### Minor Changes
