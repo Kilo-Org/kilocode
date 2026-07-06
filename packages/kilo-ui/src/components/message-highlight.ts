@@ -23,12 +23,15 @@ type Ref = {
 
 /**
  * Match @path mentions: `@` followed by a path-like token (contains `/` or `.`).
- * The first alternative handles filenames with optional space-separated segments
- * before the final `name.ext`, covering paths like `org data.xlsx` or
- * `my folder/report q1.xlsx`. The second alternative handles slash-based paths.
- * This regex is the fallback used only when no source position data is available.
+ * This regex is the fallback used only when no source position data is available
+ * (e.g. messages sent before file attachments carried source.text). It intentionally
+ * does not match spaces: a pattern permissive enough to span space-separated path
+ * segments also matches ordinary prose following any @mention (e.g. `@agent check
+ * the report for v1.2 details` would swallow everything up to `v1.2`). Paths with
+ * spaces are highlighted correctly via the source.text-based resolve() path instead,
+ * which locates the exact known mention text rather than pattern-matching prose.
  */
-const MENTION_RE = /@((?:[\w./-]+ )*[\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
+const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
 
 function detect(text: string): Ref[] {
   return Array.from(text.matchAll(MENTION_RE), (match) => ({
@@ -66,6 +69,18 @@ function resolve(text: string, refs: Ref[]): Ref[] {
 
     result.push(next)
     index = next.source.end
+
+    // mentionedPaths is a Set, so a path mentioned more than once in the same
+    // message only produces a single attachment/ref. Search the rest of the
+    // text for exact repeats of this ref's mention text so every occurrence
+    // stays highlighted, not just the first.
+    let repeat = text.indexOf(next.source.value, index)
+    while (repeat !== -1) {
+      const end = repeat + next.source.value.length
+      result.push({ ...next, source: { ...next.source, start: repeat, end } })
+      index = end
+      repeat = text.indexOf(next.source.value, index)
+    }
   }
 
   return result

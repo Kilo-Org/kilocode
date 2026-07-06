@@ -104,11 +104,60 @@ describe("message highlight", () => {
     ])
   })
 
-  test("highlights filename with a space via fallback regex detection", () => {
-    expect(buildHighlightedTextSegments("check @org data.xlsx now", [], [])).toEqual([
-      { text: "check " },
-      { text: "@org data.xlsx", type: "file" },
-      { text: " now" },
+  test("fallback regex does not match filenames containing spaces (requires source offsets)", () => {
+    // The fallback regex intentionally excludes spaces: a pattern permissive enough to
+    // span space-separated path segments would also swallow ordinary prose following
+    // any unrelated @mention. Highlighting space-containing paths relies on source.text.
+    const text = "check @org data.xlsx now"
+    expect(buildHighlightedTextSegments(text, [], [])).toEqual([{ text }])
+  })
+
+  test("fallback regex does not over-match ordinary prose following an unrelated @mention", () => {
+    const text = "@code-reviewer check the report for v1.2 details"
+    expect(buildHighlightedTextSegments(text, [], [])).toEqual([{ text }])
+  })
+
+  test("fallback regex still detects a plain mention without swallowing trailing prose", () => {
+    const text = "see @src/index.ts for v1.2 details"
+    expect(buildHighlightedTextSegments(text, [], [])).toEqual([
+      { text: "see " },
+      { text: "@src/index.ts", type: "file" },
+      { text: " for v1.2 details" },
+    ])
+  })
+
+  test("highlights every repeated occurrence of a plain mention when only one ref exists", () => {
+    // mentionedPaths is a Set, so buildFileAttachments only ever produces one
+    // ref per unique path even when it's mentioned twice in the same message.
+    const text = "compare @src/a.ts with @src/a.ts"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [{ source: { type: "file", path: "src/a.ts", text: { value: "@src/a.ts", start: 8, end: 17 } } }],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "compare " },
+      { text: "@src/a.ts", type: "file" },
+      { text: " with " },
+      { text: "@src/a.ts", type: "file" },
+    ])
+  })
+
+  test("highlights every repeated occurrence of a mention containing a space when only one ref exists", () => {
+    const text = "a @dup name.ts b @dup name.ts c"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [{ source: { type: "file", path: "dup name.ts", text: { value: "@dup name.ts", start: 2, end: 14 } } }],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "a " },
+      { text: "@dup name.ts", type: "file" },
+      { text: " b " },
+      { text: "@dup name.ts", type: "file" },
+      { text: " c" },
     ])
   })
 
