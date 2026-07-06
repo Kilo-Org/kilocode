@@ -68,7 +68,7 @@ export interface MemoryOperationResultMessage {
   ok: boolean
   status?: MemoryStatusResponse
   show?: MemoryShowResponse
-  result?: MemoryStatusResponse | MemoryShowResponse | MemoryOperationResponse
+  result?: MemoryOperationResponse
   error?: string
 }
 

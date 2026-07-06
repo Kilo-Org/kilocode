@@ -90,7 +90,9 @@ export class KiloProviderMemory {
   }
 
   private serial<T>(fn: () => Promise<T>) {
-    const next = this.tail.then(fn, fn)
+    // this.tail is always reassigned below to a never-rejecting promise, so it
+    // never settles rejected — a single fulfillment handler is sufficient.
+    const next = this.tail.then(fn)
     this.tail = next.then(
       () => undefined,
       () => undefined,
@@ -294,6 +296,26 @@ export class KiloProviderMemory {
 
   run(message: KiloProviderMemoryMessage): Promise<boolean> {
     return this.serial(() => this.execute(message))
+  }
+
+  /**
+   * Serialized status read + enable/disable, so two rapid toggles can't both
+   * read the same pre-toggle state and apply the same operation twice.
+   * Returns the applied operation, or undefined when it failed (the failure is
+   * already posted to the webview by execute()).
+   */
+  toggle(sessionID?: string): Promise<MemoryOperation | undefined> {
+    return this.serial(async () => {
+      const client = this.input.client()
+      if (!client) throw new Error("Not connected to CLI backend")
+      const api = memory(client)
+      if (!api) throw new Error("Memory unavailable in CLI backend")
+      const directory = this.input.dir(sessionID ?? this.input.session()?.id)
+      if (!directory) throw new Error(NO_PROJECT)
+      const { data: status } = await retry(() => api.status({ directory }, { throwOnError: true }))
+      const operation = status.state.enabled ? "disable" : "enable"
+      return (await this.execute({ operation, sessionID })) ? operation : undefined
+    })
   }
 
   private async execute(message: KiloProviderMemoryMessage): Promise<boolean> {

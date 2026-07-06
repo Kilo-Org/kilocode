@@ -4033,22 +4033,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   public async toggleMemory(sessionID?: string): Promise<void> {
-    if (!this.client) {
-      void vscode.window.showErrorMessage("Not connected to CLI backend")
-      return
-    }
-
-    const sid = sessionID ?? this.currentSession?.id
-    const directory = this.getProjectDirectory(sid)
-    if (!directory) {
-      void vscode.window.showErrorMessage("No active project for memory in this window")
-      return
-    }
     try {
-      const { data: status } = await retry(() => this.client!.memory.status({ directory }, { throwOnError: true }))
-      const operation = status.state.enabled ? "disable" : "enable"
-      const ok = await this.memory.run({ operation, sessionID: sid })
-      if (ok) {
+      const operation = await this.memory.toggle(sessionID ?? this.currentSession?.id)
+      if (operation) {
         void vscode.window.showInformationMessage(`Project memory ${operation === "enable" ? "enabled" : "disabled"}.`)
       }
     } catch (error) {

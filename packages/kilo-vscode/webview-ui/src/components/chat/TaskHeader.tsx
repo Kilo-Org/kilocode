@@ -25,6 +25,7 @@ import { hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
+import { formatCompactCount } from "../../utils/format"
 
 interface TaskHeaderProps {
   readonly?: boolean
@@ -85,18 +86,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return false
   })
 
-  const fmtNum = (n: number): string => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-    return String(n)
-  }
-
   const memoryLabel = createMemo(() => {
     const status = memory.status()
     if (!status) return memory.loading() ? language.t("chat.memory.loading") : undefined
     if (!status.state.enabled) return language.t("chat.memory.off")
     const count = memory.sessionTokens()
-    return count > 0 ? language.t("chat.memory.label", { tokens: fmtNum(count) }) : language.t("chat.memory.on")
+    return count > 0
+      ? language.t("chat.memory.label", { tokens: formatCompactCount(count) })
+      : language.t("chat.memory.on")
   })
 
   const vscode = useVSCode()
@@ -253,7 +250,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
       </Show>
       <Show when={memory.status()}>
         <div class="task-header-memory">
-          <span class="task-header-memory-status" data-enabled={memory.active() ? "" : undefined}>
+          <span class="task-header-memory-status" data-enabled={memory.enabled() ? "" : undefined}>
             <Icon name="brain" size="small" />
             <span>{memoryLabel()}</span>
           </span>

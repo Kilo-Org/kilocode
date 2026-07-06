@@ -15,7 +15,6 @@ interface MemoryContextValue {
   pending: Accessor<boolean>
   error: Accessor<string | undefined>
   enabled: Accessor<boolean>
-  active: Accessor<boolean>
   sessionTokens: Accessor<number>
   totalTokens: Accessor<number>
   refresh: (includeSources?: boolean) => void
@@ -192,7 +191,6 @@ export const MemoryProvider: ParentComponent = (props) => {
     pending: createMemo(() => pending() === key(id())),
     error,
     enabled: createMemo(() => status()?.state.enabled ?? false),
-    active: createMemo(() => Boolean(status()?.state.enabled)),
     sessionTokens: sessionTotal,
     totalTokens: total,
     refresh,
