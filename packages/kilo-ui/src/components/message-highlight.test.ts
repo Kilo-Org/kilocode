@@ -166,6 +166,71 @@ describe("message highlight", () => {
     ])
   })
 
+  test("highlights a repeated mention directly followed by a comma", () => {
+    const text = "check @file.ts, then @file.ts, done"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [{ source: { type: "file", path: "file.ts", text: { value: "@file.ts", start: 6, end: 14 } } }],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "check " },
+      { text: "@file.ts", type: "file" },
+      { text: ", then " },
+      { text: "@file.ts", type: "file" },
+      { text: ", done" },
+    ])
+  })
+
+  test("highlights a repeated mention directly followed by a sentence-ending period", () => {
+    const text = "check @file.ts, then @file.ts."
+    const segments = buildHighlightedTextSegments(
+      text,
+      [{ source: { type: "file", path: "file.ts", text: { value: "@file.ts", start: 6, end: 14 } } }],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "check " },
+      { text: "@file.ts", type: "file" },
+      { text: ", then " },
+      { text: "@file.ts", type: "file" },
+      { text: "." },
+    ])
+  })
+
+  test("highlights a repeated mention directly followed by a closing paren", () => {
+    const text = "see (@a.ts) and (@a.ts) again"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [{ source: { type: "file", path: "a.ts", text: { value: "@a.ts", start: 5, end: 10 } } }],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "see (" },
+      { text: "@a.ts", type: "file" },
+      { text: ") and (" },
+      { text: "@a.ts", type: "file" },
+      { text: ") again" },
+    ])
+  })
+
+  test("still rejects a repeat that is actually a prefix of a longer compound extension", () => {
+    // "@report.csv" is a literal prefix of "@report.csv.bak" — the second
+    // dot is followed by a word character, so it counts as a continuation
+    // and the shorter mention must not falsely match inside the longer one.
+    const text = "compare @report.csv with backup @report.csv.bak"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [{ source: { type: "file", path: "report.csv", text: { value: "@report.csv", start: 8, end: 19 } } }],
+      [],
+    )
+
+    expect(segments).toEqual([{ text: "compare " }, { text: "@report.csv", type: "file" }, { text: " with backup @report.csv.bak" }])
+  })
+
   test("highlights every repeated occurrence of a mention containing a space when only one ref exists", () => {
     const text = "a @dup name.ts b @dup name.ts c"
     const segments = buildHighlightedTextSegments(

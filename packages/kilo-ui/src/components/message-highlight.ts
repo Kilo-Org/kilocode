@@ -59,12 +59,34 @@ function locate(text: string, ref: Ref, index: number): Ref | undefined {
   return { ...ref, source: { ...source, start, end: start + source.value.length } }
 }
 
+// Word characters, slashes, and hyphens unambiguously continue a path token.
+// A dot is handled separately (see continuesPath) since it is both a common
+// sentence-ending character and a path/extension separator.
+const PATH_CONTINUATION = /[\w/-]/
+
 /**
- * Find every position at or after `from` where `value` occurs as a complete,
- * boundary-delimited token (flanked by whitespace or a string edge on both
- * sides). A plain substring search would let a shorter mention match as a
- * prefix of a longer, distinct one that starts the same way (e.g. "@a.ts"
- * inside "@a.tsx"), truncating the real mention's highlight.
+ * Whether `text[end]` extends a match into a longer, different path rather
+ * than ending it. A dot only counts as a continuation when another word
+ * character follows (e.g. "@report.csv" + ".bak", or the "x" in "@a.tsx"
+ * itself is already caught by PATH_CONTINUATION) — a lone trailing dot, as
+ * in an ordinary sentence ending, does not.
+ */
+function continuesPath(text: string, end: number): boolean {
+  const char = text[end]
+  if (char === undefined) return false
+  if (PATH_CONTINUATION.test(char)) return true
+  return char === "." && /\w/.test(text[end + 1] ?? "")
+}
+
+/**
+ * Find every position at or after `from` where `value` occurs as a complete
+ * token, not immediately preceded or followed by a character that could
+ * extend it into a longer, different path. A plain substring search would
+ * let a shorter mention match as a prefix of a longer, distinct one that
+ * starts the same way (e.g. "@a.ts" inside "@a.tsx"), truncating the real
+ * mention's highlight. Ordinary punctuation such as a trailing comma,
+ * sentence-ending period, or closing paren is not a continuation character,
+ * so a repeat directly followed by it is still accepted.
  */
 function repeats(text: string, value: string, from: number): number[] {
   const result: number[] = []
@@ -75,8 +97,8 @@ function repeats(text: string, value: string, from: number): number[] {
     if (found === -1) break
 
     const end = found + value.length
-    const before = found === 0 || /\s/.test(text[found - 1] ?? "")
-    const after = end === text.length || /\s/.test(text[end] ?? "")
+    const before = found === 0 || !PATH_CONTINUATION.test(text[found - 1] ?? "")
+    const after = !continuesPath(text, end)
     if (before && after) result.push(found)
     search = found + 1
   }
