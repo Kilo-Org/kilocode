@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
 
-function sanitizedModel(providerID: string, id: string, name: string) {
+function sanitizedModel(providerID: string, id: string, name: string, extra: Record<string, unknown> = {}) {
   return {
     id,
     providerID,
@@ -23,6 +23,7 @@ function sanitizedModel(providerID: string, id: string, name: string) {
     options: {},
     headers: {},
     release_date: "",
+    ...extra,
   }
 }
 
@@ -69,6 +70,12 @@ function model(providerID: string, id: string, name: string) {
 describe("RemoteModelCatalog", () => {
   test("transforms providers to an allowlisted catalog with exact model identities", () => {
     const privateModel = model("custom:edge", "model.with/slash-and:colon", "Model One")
+    Object.assign(privateModel, {
+      recommendedIndex: 3,
+      isFree: true,
+      mayTrainOnYourPrompts: false,
+      hasUserByokAvailable: true,
+    })
     Object.assign(privateModel.capabilities, { privateCapabilityConfig: "must-not-leak" })
     Object.assign(privateModel.limit, { privateLimitConfig: "must-not-leak" })
     const catalog = RemoteModelCatalog.build({
@@ -126,7 +133,12 @@ describe("RemoteModelCatalog", () => {
           env: [],
           options: {},
           models: {
-            "model.with/slash-and:colon": sanitizedModel("custom:edge", "model.with/slash-and:colon", "Model One"),
+            "model.with/slash-and:colon": sanitizedModel("custom:edge", "model.with/slash-and:colon", "Model One", {
+              recommendedIndex: 3,
+              isFree: true,
+              mayTrainOnYourPrompts: false,
+              hasUserByokAvailable: true,
+            }),
           },
         },
         {
@@ -206,7 +218,7 @@ describe("RemoteModelCatalog", () => {
     })
   })
 
-  test("drops empty identities but keeps overlong ones", () => {
+  test("drops empty identities and truncates overlong names", () => {
     const empty = ""
     const overlong = "x".repeat(500)
     const kept = model("custom", "kept/model", overlong)
@@ -231,9 +243,9 @@ describe("RemoteModelCatalog", () => {
     })
 
     expect(catalog.all).toHaveLength(1)
-    expect(catalog.all[0]?.name).toBe(overlong)
+    expect(catalog.all[0]?.name).toBe(overlong.slice(0, RemoteModelCatalog.MAX_NAME_LENGTH))
     expect(Object.keys(catalog.all[0]?.models ?? {})).toEqual(["kept/model"])
-    expect(catalog.all[0]?.models["kept/model"]?.name).toBe(overlong)
+    expect(catalog.all[0]?.models["kept/model"]?.name).toBe(overlong.slice(0, RemoteModelCatalog.MAX_NAME_LENGTH))
     expect(catalog.all[0]?.models["kept/model"]?.variants).toEqual({ exact: {} })
     expect(catalog.default).toEqual({ custom: "kept/model" })
     expect(catalog.connected).toEqual(["custom"])
@@ -263,5 +275,58 @@ describe("RemoteModelCatalog", () => {
 
     expect(modelCount).toBe(RemoteModelCatalog.MAX_MODELS)
     expect(catalog.truncated).toBe(true)
+  })
+
+  test("truncation keeps the provider's preferred default model", () => {
+    const providers = {
+      big: {
+        id: "big",
+        name: "Big",
+        models: Object.fromEntries([
+          ...Array.from({ length: RemoteModelCatalog.MAX_MODELS }, (_, i) => {
+            const id = `model-${i}`
+            return [id, model("big", id, `Model ${i}`)]
+          }),
+          ["gpt-5-preferred", model("big", "gpt-5-preferred", "Preferred")],
+        ]),
+      },
+    }
+    const catalog = RemoteModelCatalog.build({ providers, session: {}, messages: [] })
+
+    expect(catalog.truncated).toBe(true)
+    expect(catalog.default).toEqual({ big: "gpt-5-preferred" })
+    expect(Object.keys(catalog.all[0]?.models ?? {})).toContain("gpt-5-preferred")
+  })
+
+  test("caps overlong model names and variant maps", () => {
+    const longName = "x".repeat(500)
+    const manyVariants: Record<string, Record<string, unknown>> = {}
+    for (let i = 0; i < 50; i++) {
+      manyVariants[`variant-${i}`] = { secret: i }
+    }
+    manyVariants["y".repeat(100)] = { secret: "key" }
+
+    const kept = model("custom", "kept/model", longName)
+    kept.variants = manyVariants
+
+    const catalog = RemoteModelCatalog.build({
+      providers: {
+        custom: {
+          id: "custom",
+          name: longName,
+          models: { kept },
+        },
+      },
+      session: {},
+      messages: [],
+    })
+
+    expect(catalog.all[0]?.name.length).toBeLessThanOrEqual(RemoteModelCatalog.MAX_NAME_LENGTH)
+    expect(catalog.all[0]?.models["kept/model"]?.name.length).toBeLessThanOrEqual(RemoteModelCatalog.MAX_NAME_LENGTH)
+    const variants = catalog.all[0]?.models["kept/model"]?.variants
+    expect(Object.keys(variants ?? {}).length).toBeLessThanOrEqual(RemoteModelCatalog.MAX_VARIANTS)
+    expect(Object.keys(variants ?? {}).every((key) => key.length <= RemoteModelCatalog.MAX_VARIANT_KEY_LENGTH)).toBe(
+      true,
+    )
   })
 })

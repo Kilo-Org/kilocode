@@ -509,6 +509,41 @@ describe("RemoteSender", () => {
     ])
   })
 
+  test("list_models logs a warning when provider default resolution fails", async () => {
+    const { conn, sent } = fakeConn()
+    const warnings: any[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: { ...nolog, warn: (...args: any[]) => warnings.push(args) },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
+      catalog: {
+        get: async () => ({ id: SessionID.make("ses_models"), directory: "/workspace/project-a" }) as any,
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => {
+          throw new Error("no provider default")
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_warn_default",
+      command: "list_models",
+      sessionId: "ses_models",
+      data: { protocolVersion: 1 },
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent[0]?.result?.defaultModel).toBeUndefined()
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]?.[0]).toBe("default model lookup failed")
+    expect(String(warnings[0]?.[1]?.error)).toContain("no provider default")
+  })
+
   test("list_models never falls back to the process directory for an unknown session", async () => {
     const { conn, sent } = fakeConn()
     const dirs: string[] = []

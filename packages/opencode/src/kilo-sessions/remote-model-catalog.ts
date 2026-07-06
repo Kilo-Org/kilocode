@@ -5,6 +5,9 @@ import z from "zod"
 
 export namespace RemoteModelCatalog {
   export const MAX_MODELS = 2_048
+  export const MAX_NAME_LENGTH = 256
+  export const MAX_VARIANTS = 32
+  export const MAX_VARIANT_KEY_LENGTH = 64
 
   export const Request = z
     .object({
@@ -119,7 +122,7 @@ export namespace RemoteModelCatalog {
       id: ModelID.make(source.id),
       providerID: ProviderID.make(providerID),
       api: { id: source.id, url: "", npm: "" },
-      name: source.name,
+      name: source.name.slice(0, MAX_NAME_LENGTH),
       capabilities: {
         temperature: source.capabilities.temperature,
         reasoning: source.capabilities.reasoning,
@@ -151,12 +154,24 @@ export namespace RemoteModelCatalog {
         output: source.limit.output,
       },
       status: source.status,
+      ...(typeof source.recommendedIndex === "number" && Number.isFinite(source.recommendedIndex)
+        ? { recommendedIndex: source.recommendedIndex }
+        : {}),
+      ...(typeof source.isFree === "boolean" ? { isFree: source.isFree } : {}),
+      ...(typeof source.mayTrainOnYourPrompts === "boolean"
+        ? { mayTrainOnYourPrompts: source.mayTrainOnYourPrompts }
+        : {}),
+      ...(typeof source.hasUserByokAvailable === "boolean"
+        ? { hasUserByokAvailable: source.hasUserByokAvailable }
+        : {}),
       options: {},
       headers: {},
       release_date: "",
       variants: Object.fromEntries(
         Object.keys(source.variants ?? {})
           .filter(validIdentity)
+          .filter((variant) => variant.length <= MAX_VARIANT_KEY_LENGTH)
+          .slice(0, MAX_VARIANTS)
           .map((variant) => [variant, {}]),
       ),
     }
@@ -164,15 +179,16 @@ export namespace RemoteModelCatalog {
 
   function sanitizeProvider(source: SourceProvider): Provider.Info | undefined {
     if (!validIdentity(source.id)) return undefined
-    const models = Object.values(source.models)
-      .flatMap((model) => {
+    const models = Provider.sort(
+      Object.values(source.models).flatMap((model) => {
         const sanitized = sanitizeModel(model, source.id)
         return sanitized ? [sanitized] : []
-      })
+      }),
+    )
     if (models.length === 0) return undefined
     return {
       id: ProviderID.make(source.id),
-      name: source.name,
+      name: source.name.slice(0, MAX_NAME_LENGTH),
       source: source.source ?? "custom",
       env: [],
       options: {},

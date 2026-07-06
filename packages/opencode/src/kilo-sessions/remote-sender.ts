@@ -54,7 +54,7 @@ function getRemotePromptInput() {
   }))
 }
 // kilocode_change end
-function normalizeModel(model: string | RemoteModelCatalog.ModelRef | undefined): SessionPrompt.PromptInput["model"] {
+function normalizeModel(model: string | RemoteModelCatalog.ModelRef | undefined) {
   if (!model) return undefined
   if (typeof model !== "string") {
     return {
@@ -369,7 +369,10 @@ export namespace RemoteSender {
                 const [providers, messages, fallback] = await Promise.all([
                   catalog.providers(),
                   catalog.messages(info.id),
-                  catalog.default().catch(() => undefined),
+                  catalog.default().catch((err) => {
+                    options.log.warn("default model lookup failed", { error: String(err) })
+                    return undefined
+                  }),
                 ])
                 return RemoteModelCatalog.build({
                   providers,
