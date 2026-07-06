@@ -1627,6 +1627,14 @@ function ToolText(props: { text: string; delay?: number; animate?: boolean }) {
   )
 }
 
+function swePruned(metadata: Record<string, unknown>) {
+  const value = metadata["swePruner"]
+  if (typeof value !== "object" || value === null) return undefined
+  const info = value as { kept?: unknown; total?: unknown }
+  if (typeof info.kept !== "number" || typeof info.total !== "number") return undefined
+  return `SWE-Pruner · ${info.kept}/${info.total}`
+}
+
 function ToolLoadedFile(props: { text: string; animate?: boolean; onClick?: () => void }) {
   let ref: HTMLDivElement | undefined
   useToolFade(() => ref, { delay: 0.02, wipe: true, animate: props.animate })
@@ -1754,6 +1762,7 @@ ToolRegistry.register({
       if (!value || !Array.isArray(value)) return []
       return value.filter((p): p is string => typeof p === "string")
     })
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     return (
       <>
@@ -1783,6 +1792,7 @@ ToolRegistry.register({
             />
           )}
         </For>
+        <Show when={pruned()}>{(info) => <ToolLoadedFile text={info()} animate={props.reveal} />}</Show>
       </>
     )
   },
@@ -1856,29 +1866,33 @@ ToolRegistry.register({
     const args: string[] = []
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     return (
-      <BasicTool
-        {...props}
-        icon="magnifying-glass-menu"
-        trigger={
-          <ToolTriggerRow
-            title={i18n.t("ui.tool.grep")}
-            pending={pending()}
-            subtitle={getDirectory(props.input.path)}
-            args={args}
-            animate={props.reveal}
-          />
-        }
-      >
-        <Show when={props.output}>
-          {(output) => (
-            <div data-component="tool-output" data-variant="preview" data-scrollable>
-              <Markdown text={output()} />
-            </div>
-          )}
-        </Show>
-      </BasicTool>
+      <>
+        <BasicTool
+          {...props}
+          icon="magnifying-glass-menu"
+          trigger={
+            <ToolTriggerRow
+              title={i18n.t("ui.tool.grep")}
+              pending={pending()}
+              subtitle={getDirectory(props.input.path)}
+              args={args}
+              animate={props.reveal}
+            />
+          }
+        >
+          <Show when={props.output}>
+            {(output) => (
+              <div data-component="tool-output" data-variant="preview" data-scrollable>
+                <Markdown text={output()} />
+              </div>
+            )}
+          </Show>
+        </BasicTool>
+        <Show when={pruned()}>{(info) => <ToolLoadedFile text={info()} animate={props.reveal} />}</Show>
+      </>
     )
   },
 })
