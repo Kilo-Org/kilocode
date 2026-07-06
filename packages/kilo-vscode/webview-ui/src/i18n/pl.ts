@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "Cofnięto {{count}} wiadomości",
   "revert.banner.redo": "Ponów",
   "revert.banner.redo.all": "Ponów wszystko",
-  "revert.banner.hint": "Wyślij nową wiadomość, aby to utrwalić",
+  "revert.banner.hint": "Cofnięte wiadomości są zachowywane do czasu wysłania nowej wiadomości; potem Ponów nie będzie już dostępne",
   "revert.disabled.agentBusy": "Poczekaj aż agent zakończy",
   "command.session.compact": "Kompaktuj sesję",
   "command.session.compact.description": "Podsumuj sesję, aby zmniejszyć rozmiar kontekstu",

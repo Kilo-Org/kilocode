@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} mensajes revertidos",
   "revert.banner.redo": "Rehacer",
   "revert.banner.redo.all": "Rehacer todo",
-  "revert.banner.hint": "Envía un nuevo mensaje para hacerlo permanente",
+  "revert.banner.hint": "Los mensajes revertidos se conservan hasta que envíes un nuevo mensaje; después Rehacer ya no estará disponible",
   "revert.disabled.agentBusy": "Espera a que el agente termine",
   "command.session.compact": "Compactar sesión",
   "command.session.compact.description": "Resumir la sesión para reducir el tamaño del contexto",

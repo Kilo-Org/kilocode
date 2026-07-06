@@ -139,7 +139,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} meldinger angret",
   "revert.banner.redo": "Gjenta",
   "revert.banner.redo.all": "Gjenta alt",
-  "revert.banner.hint": "Send en ny melding for å gjøre dette permanent",
+  "revert.banner.hint": "De angrede meldingene beholdes til du sender en ny melding; deretter er Gjenta ikke lenger tilgjengelig",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
   "command.session.compact": "Komprimer sesjon",
   "command.session.compact.description": "Oppsummer sesjonen for å redusere kontekststørrelsen",

@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} messages reverted",
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.hint": "The reverted messages are kept until you send a new message, then Redo is no longer available",
   "revert.disabled.agentBusy": "Wait for agent to finish",
   "command.session.compact": "Compact session",
   "command.session.compact.description": "Summarize the session to reduce context size",

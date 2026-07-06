@@ -130,7 +130,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} messaggi ripristinati",
   "revert.banner.redo": "Ripeti",
   "revert.banner.redo.all": "Ripeti tutto",
-  "revert.banner.hint": "Invia un nuovo messaggio per rendere permanente questa modifica",
+  "revert.banner.hint": "I messaggi ripristinati vengono conservati finché non invii un nuovo messaggio; poi Ripeti non sarà più disponibile",
   "revert.disabled.agentBusy": "Attendi che l'agente finisca",
   "command.session.compact": "Compatta sessione",
   "command.session.compact.description": "Riassumi la sessione per ridurre la dimensione del contesto",

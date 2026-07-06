@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} beskeder fortrudt",
   "revert.banner.redo": "Gentag",
   "revert.banner.redo.all": "Gentag alt",
-  "revert.banner.hint": "Send en ny besked for at gøre dette permanent",
+  "revert.banner.hint": "De fortrudte beskeder gemmes, indtil du sender en ny besked; derefter er Gentag ikke længere tilgængelig",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",

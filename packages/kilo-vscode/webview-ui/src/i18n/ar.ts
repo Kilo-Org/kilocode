@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "تم التراجع عن {{count}} رسائل",
   "revert.banner.redo": "إعادة",
   "revert.banner.redo.all": "إعادة الكل",
-  "revert.banner.hint": "أرسل رسالة جديدة لجعل هذا دائمًا",
+  "revert.banner.hint": "يتم الاحتفاظ بالرسائل المتراجع عنها حتى ترسل رسالة جديدة؛ بعدها لن تكون إعادة متاحة",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",

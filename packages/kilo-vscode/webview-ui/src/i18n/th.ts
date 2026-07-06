@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "ย้อนกลับ {{count}} ข้อความแล้ว",
   "revert.banner.redo": "ทำซ้ำ",
   "revert.banner.redo.all": "ทำซ้ำทั้งหมด",
-  "revert.banner.hint": "ส่งข้อความใหม่เพื่อทำให้การเปลี่ยนแปลงนี้ถาวร",
+  "revert.banner.hint": "ข้อความที่ย้อนกลับจะถูกเก็บไว้จนกว่าคุณจะส่งข้อความใหม่ จากนั้นจะใช้ทำซ้ำไม่ได้อีก",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",

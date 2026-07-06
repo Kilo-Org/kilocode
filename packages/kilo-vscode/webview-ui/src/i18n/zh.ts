@@ -137,7 +137,7 @@ export const dict = {
   "revert.banner.count_other": "已还原 {{count}} 条消息",
   "revert.banner.redo": "重做",
   "revert.banner.redo.all": "全部重做",
-  "revert.banner.hint": "发送新消息以使此更改永久生效",
+  "revert.banner.hint": "已还原的消息会保留到你发送新消息为止，之后将无法再重做",
   "revert.disabled.agentBusy": "等待智能体完成",
   "command.session.compact": "精简会话",
   "command.session.compact.description": "总结会话以减少上下文大小",

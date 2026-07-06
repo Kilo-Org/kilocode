@@ -137,7 +137,7 @@ export const dict = {
   "revert.banner.count_other": "已還原 {{count}} 則訊息",
   "revert.banner.redo": "重做",
   "revert.banner.redo.all": "全部重做",
-  "revert.banner.hint": "傳送新訊息以使此變更永久生效",
+  "revert.banner.hint": "已還原的訊息會保留到你傳送新訊息為止，之後將無法再重做",
   "revert.disabled.agentBusy": "等待 Agent 完成",
   "command.session.compact": "精簡工作階段",
   "command.session.compact.description": "總結工作階段以減少上下文大小",
