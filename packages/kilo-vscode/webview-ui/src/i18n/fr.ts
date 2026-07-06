@@ -390,6 +390,7 @@ export const dict = {
     "Cliquez pour restreindre les écritures dans le système de fichiers. L'accès au réseau reste autorisé par vos paramètres de sandbox.",
 
   "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
+  "speechToText.tooltip.starting": "Démarrage du microphone... Attendez avant de parler.",
   "speechToText.tooltip.stop": "Arrêter la capture audio",
   "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
   "speechToText.tooltip.error": "La saisie vocale a échoué. Cliquez pour effacer.",

@@ -84,6 +84,7 @@ import { SessionProvider, useSession } from "../src/context/session"
 import { AgentRequirementsProvider } from "../src/context/agent-requirements"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
+import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { DataBridge, MermaidDownloadBridge } from "../src/App"
@@ -3132,6 +3133,7 @@ export const AgentManagerApp: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
+                          <SpeechToTextPrewarm />
                           <DisplayProvider>
                             <IndexingProvider>
                               <KiloEmbeddingModelsProvider>

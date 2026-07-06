@@ -372,6 +372,10 @@ export interface RequestChatCompletionMessage {
   requestId: string
 }
 
+export interface SpeechToTextPrewarmMessage {
+  type: "speechToTextPrewarm"
+}
+
 export interface SpeechToTextStartMessage {
   type: "speechToTextStart"
   requestId: string
@@ -1232,6 +1236,7 @@ export type WebviewMessage =
   | ExportSessionTranscriptRequest
   | RequestAutocompleteSettingsMessage
   | RequestChatCompletionMessage
+  | SpeechToTextPrewarmMessage
   | SpeechToTextStartMessage
   | SpeechToTextStopMessage
   | SpeechToTextCancelMessage

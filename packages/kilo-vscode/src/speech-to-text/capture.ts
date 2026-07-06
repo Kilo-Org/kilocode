@@ -36,13 +36,18 @@ type Args = {
 
 let active: Recording | undefined
 let starting: string | undefined
+let ffmpeg: Promise<string> | undefined
+
+export async function prewarmSpeechCapture(): Promise<void> {
+  await resolveFFmpeg()
+}
 
 export async function startSpeechCapture(input: Input): Promise<boolean> {
   if (active || starting) throw new Error("Speech recording is already in progress")
 
   starting = input.requestId
   try {
-    const bin = await findFFmpeg()
+    const bin = await resolveFFmpeg()
     const file = path.join(os.tmpdir(), `kilo-stt-${process.pid}-${Date.now()}.wav`)
     const state = await startWithArgs(bin, file, input, await inputArgSets(bin))
     return !state.stopped
@@ -227,6 +232,23 @@ async function stopProcess(state: Recording): Promise<void> {
 function requireActive(requestId: string): Recording {
   if (!active || active.requestId !== requestId) throw new Error("No active speech recording")
   return active
+}
+
+async function resolveFFmpeg(): Promise<string> {
+  if (ffmpeg) {
+    const bin = await ffmpeg
+    if (!path.isAbsolute(bin) || existsSync(bin)) return bin
+    ffmpeg = undefined
+  }
+
+  const task = findFFmpeg()
+  ffmpeg = task
+  try {
+    return await task
+  } catch (err) {
+    if (ffmpeg === task) ffmpeg = undefined
+    throw err
+  }
 }
 
 async function findFFmpeg(): Promise<string> {
