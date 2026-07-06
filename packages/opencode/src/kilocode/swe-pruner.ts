@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
-import type { Config } from "@/config/config"
+import { Config } from "@/config/config"
 import type { Tool } from "@/tool/tool"
 import * as Log from "@opencode-ai/core/util/log"
 
@@ -141,11 +141,26 @@ export function assemble(lines: string[], ranges: Range[], total: number) {
   return parts.join("\n")
 }
 
+const resolve = Effect.fn("SwePruner.resolve")(function* () {
+  const provider = yield* Provider.Service
+  const config = yield* Config.Service
+  const cfg = yield* config.get()
+  const configured = cfg.experimental?.swe_pruner_model
+  if (configured) {
+    const parsed = Provider.parseModel(configured)
+    const model = yield* provider
+      .getModel(parsed.providerID, parsed.modelID)
+      .pipe(Effect.catch(() => Effect.succeed(undefined)))
+    if (model) return model
+    log.warn("configured model unavailable, falling back to small model", { model: configured })
+  }
+  const ref = yield* provider.defaultModel()
+  return (yield* provider.getSmallModel(ref.providerID)) ?? (yield* provider.getModel(ref.providerID, ref.modelID))
+})
+
 const skim = Effect.fn("SwePruner.skim")(function* (input: { question: string; output: string; abort?: AbortSignal }) {
   const provider = yield* Provider.Service
-  const ref = yield* provider.defaultModel()
-  const model =
-    (yield* provider.getSmallModel(ref.providerID)) ?? (yield* provider.getModel(ref.providerID, ref.modelID))
+  const model = yield* resolve()
   const language = yield* provider.getLanguage(model)
   const lines = input.output.split("\n")
   const numbered = lines.map((line, index) => `${index + 1}|${line}`).join("\n")

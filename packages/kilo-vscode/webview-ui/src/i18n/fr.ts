@@ -1473,6 +1473,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "Activer SWE-Pruner : élagage des sorties volumineuses des outils de lecture et de recherche, guidé par une question de focus fournie par l'agent",
+  "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",

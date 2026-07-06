@@ -49,6 +49,7 @@ export interface ExperimentalConfig {
   sandbox?: boolean
   sandbox_restrict_network?: boolean
   swe_pruner?: boolean
+  swe_pruner_model?: string
 }
 
 export interface CommitMessageConfig {

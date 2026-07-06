@@ -1403,6 +1403,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "Aktiver SWE-Pruner: oppgavebevisst beskjæring av store lese- og søkeresultater, styrt av et fokusspørsmål fra agenten",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-modell",
+  "settings.experimental.swePrunerModel.description":
+    "Modell som brukes til å beskjære verktøyutdata; som standard den konfigurerte lille modellen",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",

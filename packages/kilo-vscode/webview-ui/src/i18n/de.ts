@@ -1470,6 +1470,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "SWE-Pruner aktivieren: aufgabenbezogenes Kürzen großer Lese- und Suchausgaben, gesteuert durch eine Fokusfrage des Agenten",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
+  "settings.experimental.swePrunerModel.description":
+    "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",

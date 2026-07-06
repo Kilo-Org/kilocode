@@ -1434,6 +1434,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "SWE-Pruner'ı etkinleştir: ajanın odak sorusuna göre büyük okuma ve arama araç çıktılarının budanması",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
+  "settings.experimental.swePrunerModel.description":
+    "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",

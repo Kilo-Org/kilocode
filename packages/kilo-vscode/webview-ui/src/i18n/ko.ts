@@ -1427,6 +1427,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "SWE-Pruner 활성화: 에이전트의 포커스 질문에 따라 대용량 읽기·검색 도구 출력을 관련 줄만 남기도록 정리합니다",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
+  "settings.experimental.swePrunerModel.description":
+    "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",

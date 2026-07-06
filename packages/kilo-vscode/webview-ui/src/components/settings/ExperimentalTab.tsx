@@ -7,6 +7,8 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage } from "../../types/messages"
+import { parseModelString } from "../../../../src/shared/provider-model"
+import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
 
 interface ShareOption {
@@ -192,6 +194,25 @@ const ExperimentalTab: Component = () => {
             {language.t("settings.experimental.swePruner.title")}
           </Switch>
         </SettingsRow>
+
+        <Show when={experimental().swe_pruner}>
+          <SettingsRow
+            title={language.t("settings.experimental.swePrunerModel.title")}
+            description={language.t("settings.experimental.swePrunerModel.description")}
+          >
+            <ModelSelectorBase
+              value={parseModelString(experimental().swe_pruner_model ?? undefined)}
+              onSelect={(providerID, modelID) =>
+                updateExperimental("swe_pruner_model", providerID && modelID ? `${providerID}/${modelID}` : null)
+              }
+              placement="bottom-start"
+              allowClear
+              clearLabel={language.t("settings.providers.notSet")}
+              label={language.t("settings.experimental.swePrunerModel.title")}
+              description={language.t("settings.experimental.swePrunerModel.description")}
+            />
+          </SettingsRow>
+        </Show>
 
         {/* MCP timeout */}
         <SettingsRow

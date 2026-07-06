@@ -1446,6 +1446,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "Omogući SWE-Pruner: orezivanje velikih izlaza alata za čitanje i pretragu, vođeno fokusnim pitanjem agenta",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
+  "settings.experimental.swePrunerModel.description":
+    "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",

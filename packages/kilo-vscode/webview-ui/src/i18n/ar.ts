@@ -1414,6 +1414,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "تفعيل SWE-Pruner: تقليم مخرجات أدوات القراءة والبحث الكبيرة استنادًا إلى سؤال تركيز من الوكيل",
+  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",

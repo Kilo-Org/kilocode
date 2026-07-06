@@ -1440,6 +1440,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "Aktivér SWE-Pruner: opgavebevidst beskæring af store læse- og søgeoutput, styret af et fokusspørgsmål fra agenten",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
+  "settings.experimental.swePrunerModel.description":
+    "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",

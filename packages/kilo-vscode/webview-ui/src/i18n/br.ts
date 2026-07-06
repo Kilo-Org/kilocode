@@ -1450,6 +1450,9 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "Ativar SWE-Pruner: poda das saídas grandes das ferramentas de leitura e busca, guiada por uma pergunta de foco do agente",
+  "settings.experimental.swePrunerModel.title": "Modelo do SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Modelo usado para podar as saídas das ferramentas; por padrão, o modelo pequeno configurado",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",

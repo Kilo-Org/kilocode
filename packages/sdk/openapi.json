@@ -25097,6 +25097,9 @@
               "swe_pruner": {
                 "type": "boolean"
               },
+              "swe_pruner_model": {
+                "type": "string"
+              },
               "mcp_timeout": {
                 "type": "integer",
                 "exclusiveMinimum": 0

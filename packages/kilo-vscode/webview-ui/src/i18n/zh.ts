@@ -1397,6 +1397,8 @@ export const dict = {
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "启用 SWE-Pruner:根据智能体提供的聚焦问题,对大型读取和搜索工具输出进行任务感知裁剪",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
+  "settings.experimental.swePrunerModel.description": "用于裁剪工具输出的模型;默认为已配置的小模型",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

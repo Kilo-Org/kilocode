@@ -1694,6 +1694,7 @@ export type Config = {
     sandbox?: boolean
     sandbox_restrict_network?: boolean
     swe_pruner?: boolean
+    swe_pruner_model?: string
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }
