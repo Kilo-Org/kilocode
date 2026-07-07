@@ -177,3 +177,95 @@ describe("Systemd.quoteArg", () => {
     expect(Systemd.quoteArg("")).toBe("''")
   })
 })
+
+// Minimal reproduction of systemd's extract_first_word() command-line
+// tokenizer (src/basic/extract-word.c) with the EXTRACT_CUNESCAPE flag
+// that exec_command_append() enables for ExecStart= values. It splits on
+// ASCII whitespace and recognizes ', ", and \ as in the systemd grammar.
+// Used to round-trip quoteArg() output without requiring systemd on the
+// test host.
+function parseSystemdArg(input: string): string {
+  let out = ""
+  enum State {
+    None,
+    Single,
+    Double,
+  }
+  let state = State.None
+  for (let i = 0; i < input.length; ) {
+    const c = input[i]
+    if (state === State.None) {
+      if (c === "'") {
+        state = State.Single
+        i++
+        continue
+      }
+      if (c === '"') {
+        state = State.Double
+        i++
+        continue
+      }
+      if (c === "\\") {
+        if (i + 1 >= input.length) throw new Error("trailing backslash in systemd arg")
+        out += input[i + 1]
+        i += 2
+        continue
+      }
+      out += c
+      i++
+      continue
+    }
+    if (state === State.Single) {
+      if (c === "'") {
+        state = State.None
+        i++
+        continue
+      }
+      out += c
+      i++
+      continue
+    }
+    if (c === '"') {
+      state = State.None
+      i++
+      continue
+    }
+    if (c === "\\") {
+      if (i + 1 >= input.length) throw new Error("trailing backslash in systemd arg")
+      out += input[i + 1]
+      i += 2
+      continue
+    }
+    out += c
+    i++
+  }
+  return out
+}
+
+describe("Systemd.quoteArg round-trip via systemd-compatible parser", () => {
+  const cases: string[] = [
+    "it's",
+    "it's a test",
+    "'hello",
+    "hello'",
+    "it's 'quoted' here",
+    "https://example.com/?q=it's",
+    "''",
+    "foo'bar'baz",
+    "a'b'c'd",
+    "name with space",
+    "name with 'single' and \"double\" quotes",
+    "it's got \\ backslashes \\too",
+    "https://user:pa$$w0rd@example.com:8443/path?q=it's#frag",
+    "unicode: it's 日本語",
+    "",
+    "plain",
+  ]
+
+  for (const value of cases) {
+    test(`preserves ${JSON.stringify(value).slice(0, 40)}`, () => {
+      const quoted = Systemd.quoteArg(value)
+      expect(parseSystemdArg(quoted)).toBe(value)
+    })
+  }
+})
