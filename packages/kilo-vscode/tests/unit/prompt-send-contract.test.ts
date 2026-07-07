@@ -213,14 +213,12 @@ describe("sendMessage / sendCommand draft id contract", () => {
     // from ":pending:<id>" to ":session:<newSessionId>". The user loses the
     // typed message and the new session starts empty.
     const body = extractFunctionBody(source, "sendMessage")
-    expect(body).toContain("const fresh = !sid && !draftID")
-    expect(body).toMatch(/const effectiveDraftID = fresh \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
   })
 
   it("sendCommand mints a draftID when there is no current session and none was supplied", () => {
     const body = extractFunctionBody(source, "sendCommand")
-    expect(body).toContain("const fresh = !sid && !draftID")
-    expect(body).toMatch(/const effectiveDraftID = fresh \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
   })
 
   it("sendMessage seeds the pending agent before resolving the draft-scoped agent", () => {
@@ -230,14 +228,14 @@ describe("sendMessage / sendCommand draft id contract", () => {
     // model with the default agent's system prompt.
     const body = extractFunctionBody(source, "sendMessage")
     expect(body).toMatch(
-      /if \(fresh && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
+      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
     )
   })
 
   it("sendCommand seeds the pending agent before resolving the draft-scoped agent", () => {
     const body = extractFunctionBody(source, "sendCommand")
     expect(body).toMatch(
-      /if \(fresh && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
+      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
     )
   })
 

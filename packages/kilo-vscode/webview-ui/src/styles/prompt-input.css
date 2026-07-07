@@ -374,6 +374,8 @@
   font-size: var(--font-size-base);
   line-height: 1.4;
   white-space: pre-wrap;
+  /* Match textarea plaintext bidi behavior for each hard-newline paragraph. */
+  unicode-bidi: plaintext;
   word-wrap: break-word;
   overflow-x: hidden;
   overflow-y: auto;
