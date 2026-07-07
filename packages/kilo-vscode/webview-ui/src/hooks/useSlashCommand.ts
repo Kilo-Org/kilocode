@@ -242,6 +242,8 @@ export function useSlashCommand(
     onSelect?: () => void,
   ) => {
     const cursor = textarea.selectionStart ?? 0
+    // trailingText holds text after the slash command cursor position.
+    // invariant: cursor always sits right after the typed slash command when select() is called.
     const trailingText = textarea.value.substring(cursor)
 
     if (cmd.action) {
@@ -257,7 +259,7 @@ export function useSlashCommand(
     const updatedText = commandText + trailingText
     textarea.value = updatedText
     setText(updatedText)
-    textarea.setSelectionRange(commandText.length, commandText.length)
+    textarea.setSelectionRange(updatedText.length, updatedText.length)
     textarea.focus()
     close()
     onSelect?.()
