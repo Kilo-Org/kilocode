@@ -30,7 +30,7 @@ describe("previous-docs-redirects", () => {
 
   it("has valid redirect objects", () => {
     for (const redirect of entries) {
-      expect(redirect.source).toMatch(/^\//)
+      expect(redirect.source, `Source "${redirect.source}" must start with /docs/ (or /auto-top-ups for top-level redirects)`).toMatch(/^\/(?:docs\/|auto-top-ups$)/)
       expect(redirect.destination).toMatch(/^(?:\/|https:\/\/)/)
       expect(redirect.basePath).toBe(false)
       expect(redirect.permanent).toBe(true)
@@ -138,5 +138,12 @@ describe("previous-docs-redirects", () => {
       if (!redirect.destination.startsWith(archive)) continue
       expect(redirect.destination).toMatch(/\.md(?:#.*)?$/)
     }
+  })
+
+  it("uses section headers for organization", () => {
+    const redirectFile = path.join(pages, "..", "previous-docs-redirects.js")
+    const file = fs.readFileSync(redirectFile, "utf8")
+    const sections = file.match(/\/\/\s*=+\s*\n\s*\/\/\s*[A-Z][A-Z\s]+\n/g)
+    expect(sections && sections.length >= 1, "Should have at least one section header for organization").toBeTruthy()
   })
 })

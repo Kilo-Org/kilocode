@@ -88,13 +88,25 @@ Use the Markdoc codicon tag format:
 
 1. Add a redirect entry to `previous-docs-redirects.js`
 2. Redirect format:
-   ```javascript
-   {
-     source: "/docs/old-path",
-     destination: "/docs/new-path",
-     basePath: false,
-     permanent: true,
-   }
-   ```
+    ```javascript
+    {
+      source: "/docs/old-path",
+      destination: "/docs/new-path",
+      basePath: false,
+      permanent: true,
+    }
+    ```
 3. Update the navigation file to remove or update the link
 4. Redirects are loaded in `next.config.js`
+
+### Redirect System
+
+`previous-docs-redirects.js` contains redirects for renamed/moved pages. Entries are organized in sections with comment headers for maintainability.
+
+**Tests:** Run `bun run test` to validate redirects:
+- Required fields (`source`, `destination`, `permanent: true`) are validated
+- No duplicate source paths
+- Source paths must start with `/docs/` (except `/auto-top-ups` for top-level redirects)
+- Section headers are required for organization
+
+**Adding redirects:** Place new redirects in the appropriate section or add a new section header. All redirects must use `basePath: false` to work correctly under the `/docs` base path.
