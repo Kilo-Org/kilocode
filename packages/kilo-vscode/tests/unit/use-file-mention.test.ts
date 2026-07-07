@@ -288,4 +288,37 @@ describe("useFileMention", () => {
 
     dispose.fn?.()
   })
+
+  it("resolves a pending arrow snap before the next native arrow move", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "See @src/main.ts now"
+    mention.addPaths(["src/main.ts"], "/repo")
+
+    const right = key("ArrowRight")
+    const input = textarea(text, "See ".length, "ltr")
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+
+    const pos = "See @".length
+    input.setSelectionRange(pos, pos)
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+
+    const end = "See @src/main.ts".length
+    expect(input.selectionStart).toBe(end)
+
+    input.setSelectionRange(end + 1, end + 1)
+    await wait(0)
+    expect(input.selectionStart).toBe(end + 1)
+
+    dispose.fn?.()
+  })
 })
