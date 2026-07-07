@@ -2,6 +2,19 @@ import * as vscode from "vscode"
 import type { MarketplaceItem, MarketplaceRelevanceMetadata } from "./types"
 
 const EXCLUDE = "**/{node_modules,.git,dist,build,out,.kilo,.opencode,.kilocode}/**"
+// Build a regex from EXCLUDE so the same list drives both the glob pattern passed
+// to findFiles and the in-memory post-filter (see context().find below).
+// We extract the brace-group, escape dots only within each segment, and anchor on
+// path separators so "builds.ts" or "distribution/" are never falsely excluded.
+const EXCLUDE_REGEX = new RegExp(
+  "(^|/)(" +
+    EXCLUDE.replace(/^\*\*\/\{/, "")
+      .replace(/\}\/\*\*$/, "")
+      .split(",")
+      .map((s) => s.replaceAll(".", "\\."))
+      .join("|") +
+    ")(/|$)",
+)
 
 function strings(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -18,7 +31,9 @@ function context(): RelevanceHost {
     extensions: vscode.extensions.all.map((extension) => extension.id),
     find: async (root, pattern) => {
       const glob = new vscode.RelativePattern(root, `**/${pattern}`)
-      return (await vscode.workspace.findFiles(glob, EXCLUDE, 1)).length > 0
+      const matches = await vscode.workspace.findFiles(glob, undefined, 5)
+      const filtered = matches.filter((uri) => !EXCLUDE_REGEX.test(uri.fsPath.replaceAll("\\", "/")))
+      return filtered.length > 0
     },
   }
 }
