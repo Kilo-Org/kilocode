@@ -581,6 +581,9 @@ it.instance("injects $schema into config without existing schema", () =>
     // Read the file to verify $schema was injected
     const content = yield* AppFileSystem.use.readFileString(path.join(test.directory, "kilo.json"))
     expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
+    const schemaIndex = content.indexOf('"$schema"')
+    const usernameIndex = content.indexOf('"username"')
+    expect(schemaIndex).toBeLessThan(usernameIndex)
   }),
 )
 
@@ -600,6 +603,9 @@ it.instance("injects $schema into comment-first JSONC config", () =>
     const content = yield* AppFileSystem.use.readFileString(path.join(test.directory, "kilo.jsonc"))
     expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
     expect(content).toContain("// project config")
+    const schemaIndex = content.indexOf('"$schema"')
+    const modelIndex = content.indexOf('"model"')
+    expect(schemaIndex).toBeLessThan(modelIndex)
   }),
 )
 
