@@ -13,6 +13,10 @@ export const ContributingNav: NavSection[] = [
         href: "/contributing/ecosystem",
         children: "Ecosystem",
       },
+      {
+        href: "/contributing/content-gap-audit",
+        children: "Content Gap Audit",
+      },
     ],
   },
   {
