@@ -163,9 +163,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // smooth scroll's initial frames sit within createAutoScroll's near-bottom
   // threshold, which resumes auto-follow mid-animation and snaps back down.
   const onScrollToMessage = (e: Event) => {
-    const id = (e as CustomEvent<{ id: string }>).detail?.id
-    if (!id) return
-    const row = rows().find((r) => r.type === "assistant" && r.message.id === id)
+    const detail = (e as CustomEvent<{ id: string; partId?: string }>).detail
+    if (!detail?.id) return
+    const matches = rows().filter((r) => r.type === "assistant" && r.message.id === detail.id)
+    // Long messages split into multiple rows (chunks); land on the chunk that
+    // actually contains the clicked part, not just the message's first chunk.
+    const row = matches.find((r) => r.type === "assistant" && r.parts.some((p) => p.id === detail.partId)) ?? matches[0]
     if (!row) return
     autoScroll.pause()
     const index = keys().indexOf(row.key)

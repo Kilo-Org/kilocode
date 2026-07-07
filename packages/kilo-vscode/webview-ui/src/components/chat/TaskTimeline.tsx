@@ -18,6 +18,7 @@ export interface TimelineBar {
   height: number
   idx: number
   msgId: string
+  partId: string
 }
 
 function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBar[] {
@@ -41,6 +42,7 @@ function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBa
     height: sz[i]!.height,
     idx: i,
     msgId: item.msg.id,
+    partId: item.part.id,
   }))
 }
 
@@ -150,7 +152,7 @@ export const TaskTimeline: Component = () => {
     const bar = bars()[idx]
     if (!bar) return
     setActive(idx)
-    window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { id: bar.msgId } }))
+    window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { id: bar.msgId, partId: bar.partId } }))
   }
 
   const onPointerMove = (e: PointerEvent) => {
