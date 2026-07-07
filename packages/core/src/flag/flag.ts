@@ -1,15 +1,14 @@
 import { Config } from "effect"
 
-function truthy(key: string) {
+export function truthy(key: string) {
   const value = process.env[key]?.toLowerCase()
   return value === "true" || value === "1"
 }
 
-const KILO_EXPERIMENTAL = truthy("KILO_EXPERIMENTAL")
 const copy = process.env["KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"]
 
 function enabledByExperimental(key: string) {
-  return process.env[key] === undefined ? KILO_EXPERIMENTAL : truthy(key)
+  return process.env[key] === undefined ? truthy("KILO_EXPERIMENTAL") : truthy(key)
 }
 
 export const Flag = {
@@ -53,6 +52,9 @@ export const Flag = {
   // external tooling set these env vars at runtime.
   get KILO_DISABLE_PROJECT_CONFIG() {
     return truthy("KILO_DISABLE_PROJECT_CONFIG")
+  },
+  get KILO_EXPERIMENTAL_REFERENCES() {
+    return enabledByExperimental("KILO_EXPERIMENTAL_REFERENCES")
   },
   get KILO_TUI_CONFIG() {
     return process.env["KILO_TUI_CONFIG"]
