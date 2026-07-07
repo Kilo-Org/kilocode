@@ -1110,8 +1110,8 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
-    const orphaned = state.removeWorktree(worktreeId)
     this.naming.forget(worktreeId)
+    const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
     }

@@ -124,9 +124,13 @@ export class BranchNamingController {
   }
 
   /** Drop in-memory bookkeeping for a worktree whose arming ended without a
-   *  rename (worktree removed, session moved/deleted). Safe to call for any
-   *  id; no-ops when nothing is held. */
+   *  rename (worktree removed, session moved/deleted). Also clears the armed
+   *  session from the busy set. Call before the worktree is removed from state
+   *  so the session is still resolvable. Safe to call for any id; no-ops when
+   *  nothing is held. */
   forget(id: string): void {
+    const worktree = this.deps.state()?.getWorktree(id)
+    if (worktree?.autoNameSessionId) this.busySessions.delete(worktree.autoNameSessionId)
     this.pending.delete(id)
     this.model.delete(id)
     this.idleAttempted.delete(id)
