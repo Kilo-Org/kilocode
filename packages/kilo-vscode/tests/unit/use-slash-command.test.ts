@@ -126,7 +126,7 @@ describe("select", () => {
 
     expect(textarea.value).toBe("/docmd existing text")
     expect(currentText).toBe("/docmd existing text")
-    expect(selectionStart).toBe("/docmd existing text".length)
+    expect(selectionStart).toBe("/docmd ".length)
     ctx.dispose()
   })
 

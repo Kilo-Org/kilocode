@@ -259,7 +259,7 @@ export function useSlashCommand(
     const updatedText = commandText + trailingText
     textarea.value = updatedText
     setText(updatedText)
-    textarea.setSelectionRange(updatedText.length, updatedText.length)
+    textarea.setSelectionRange(commandText.length, commandText.length)
     textarea.focus()
     close()
     onSelect?.()
