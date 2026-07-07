@@ -29,6 +29,7 @@ export {
   fetchProfileWithBalance,
   fetchDefaultModel,
   getKiloProfile,
+  defaultOrganizationId,
   getKiloBalance,
   getKiloDefaultModel,
   promptOrganizationSelection,

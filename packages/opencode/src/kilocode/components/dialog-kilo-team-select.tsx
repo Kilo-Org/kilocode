@@ -12,12 +12,17 @@ import { getOrganizationOptions } from "@kilocode/kilo-gateway/tui"
 interface DialogKiloTeamSelectProps {
   organizations: Organization[]
   currentOrgId?: string | null
+  hasPersonalAccount?: boolean
   onSelect: (orgId: string | null) => Promise<void>
 }
 
 export function DialogKiloTeamSelect(props: DialogKiloTeamSelectProps) {
   // Get formatted options with current markers
-  const options = getOrganizationOptions(props.organizations, props.currentOrgId || undefined)
+  const options = getOrganizationOptions(
+    props.organizations,
+    props.currentOrgId || undefined,
+    props.hasPersonalAccount !== false,
+  )
 
   return (
     <DialogSelect

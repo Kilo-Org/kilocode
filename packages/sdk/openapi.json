@@ -13574,6 +13574,12 @@
                             "required": ["id", "name", "role"],
                             "additionalProperties": false
                           }
+                        },
+                        "selectedOrganizationId": {
+                          "type": "string"
+                        },
+                        "hasPersonalAccount": {
+                          "type": "boolean"
                         }
                       },
                       "required": ["email"],

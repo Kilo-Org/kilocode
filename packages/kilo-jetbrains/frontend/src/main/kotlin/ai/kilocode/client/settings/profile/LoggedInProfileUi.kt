@@ -331,12 +331,11 @@ internal class LoggedInProfileUi(
     @RequiresEdt
     private fun applyOrganizations(profile: ProfileDto) {
         val orgs = profile.organizations
-        val keys: List<Pair<String?, String>> = listOf(null to KiloBundle.message("profile.personalAccount")) +
+        val personal = profile.hasPersonalAccount
+        val keys: List<Pair<String?, String>> = (if (personal) listOf(null to KiloBundle.message("profile.personalAccount")) else emptyList()) +
                 orgs.map { it.id to it.name }
 
-        val target = profile.currentOrgId
-            ?.let { id -> orgs.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.plus(1) }
-            ?: 0
+        val target = keys.indexOfFirst { it.first == profile.currentOrgId }.takeIf { it >= 0 } ?: 0
 
         currentOrgId = profile.currentOrgId
 
