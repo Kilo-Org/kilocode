@@ -86,6 +86,19 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals(UiStyle.Gap.md(), centerGap(view))
     }
 
+    fun `test todo body uses next standard inner padding`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(TodoDto("Next", "pending", "medium"))
+        })
+        val body = view.components.filterIsInstance<TodoListPanel>().single()
+        val ins = body.border.getBorderInsets(body)
+
+        assertEquals(UiStyle.Gap.lg() + SessionUiStyle.View.Outline.width(), ins.top)
+        assertEquals(UiStyle.Gap.pad(), ins.left)
+        assertEquals(UiStyle.Gap.lg(), ins.bottom)
+        assertEquals(UiStyle.Gap.pad(), ins.right)
+    }
+
     fun `test compact view renders hidden labels and visible rows`() {
         val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
             it.todos = listOf(

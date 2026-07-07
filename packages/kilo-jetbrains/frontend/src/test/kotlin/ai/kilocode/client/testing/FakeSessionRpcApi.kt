@@ -46,6 +46,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     /** Message history returned by [messages]. */
     val history = mutableListOf<MessageWithPartsDto>()
+    val histories = mutableMapOf<String, MutableList<MessageWithPartsDto>>()
     var historyGate: CompletableDeferred<Unit>? = null
     var historyCalls = 0
         private set
@@ -218,7 +219,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         assertNotEdt("messages")
         historyCalls++
         historyGate?.await()
-        return history.toList()
+        return histories[id]?.toList() ?: history.toList()
     }
 
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {

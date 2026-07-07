@@ -24,6 +24,10 @@ export namespace ConfigProtection {
   /** Metadata key used to signal the UI to hide the "Allow always" option. */
   export const DISABLE_ALWAYS_KEY = "disableAlways" as const
 
+  /** Metadata key used to signal the UI this is a config-file-edit request, so the
+   * "Config file edits always require approval" explanation copy applies. */
+  export const CONFIG_PROTECTED_KEY = "configProtected" as const
+
   function normalize(p: string): string {
     return path.posix.normalize(p.replaceAll("\\", "/"))
   }

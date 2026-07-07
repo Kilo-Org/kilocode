@@ -6,7 +6,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { errorMessage } from "@/util/error"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { validateSession } from "@/cli/cmd/tui/validate-session"
-import { importCloudSession, localSessionID } from "@/kilocode/cloud-session"
+import { importCloudSession } from "@/kilocode/cloud-session"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { createKiloClient } from "@kilocode/sdk/v2"
 
@@ -67,10 +67,13 @@ export namespace KiloTuiThreadDaemon {
     const prompt = await input.input()
     const config = await TuiConfig.get()
 
+    const fork = await session(input, daemon)
+    if (!fork.ok) return true
+
     try {
       await validateSession({
         url: daemon.url,
-        sessionID: localSessionID(input.args),
+        sessionID: fork.id,
         directory: input.cwd,
         headers: daemon.headers,
       })
@@ -79,9 +82,6 @@ export namespace KiloTuiThreadDaemon {
       process.exitCode = 1
       return true
     }
-
-    const fork = await session(input, daemon)
-    if (!fork.ok) return true
 
     await input.start({
       url: daemon.url,

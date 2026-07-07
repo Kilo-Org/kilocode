@@ -4,6 +4,7 @@ import { MemoryFiles } from "../storage/store"
 import { MemoryIndexFormat } from "./index-format"
 import { MemorySchema } from "../schema"
 import { MemoryShared } from "./shared"
+import { MemoryTopics } from "./topics"
 
 export namespace MemoryIndexer {
   // Budget/envelope concerns live in MemoryBudget; re-exported here to keep MemoryIndexer.* the stable facade.
@@ -13,7 +14,7 @@ export namespace MemoryIndexer {
   export const stale = MemoryBudget.stale
 
   type Item = MemoryShared.TypedItem
-  type Digest = { id: string; topic: string; time: string; summary: string }
+  type Digest = { id: string; topic: string; time: string; summary: string; fallback?: boolean }
 
   export const digest = {
     recent: 240,
@@ -24,6 +25,11 @@ export namespace MemoryIndexer {
   const reserved = {
     facts: 8,
     environment: 12,
+    decisions: 6,
+    constraints: 6,
+  }
+  const guard = {
+    covered: 32,
   }
 
   function session(input: Digest, opts: { limits: MemorySchema.Limits; latest?: boolean }) {
@@ -35,13 +41,13 @@ export namespace MemoryIndexer {
       id: `${opts?.latest ? "latest_session" : "session"}.${input.id}`,
       source: `${input.id}.md`,
       updated: input.time,
-      text: `session=${input.id} topic="${topic}" ${input.time} :: ${summary}`,
+      text: `session=${input.id} topic="${topic}" ${input.time}${input.fallback ? " (fallback)" : ""} :: ${summary}`,
     })
   }
 
   function hits(left: string[], right: string[]) {
     const found = new Set(right)
-    return left.filter((item) => found.has(item)).length
+    return left.filter((item) => found.has(item) || right.some((term) => MemoryTopics.related(term, item))).length
   }
 
   function covered(input: { digest: Digest; items: Item[] }) {
@@ -84,7 +90,8 @@ export namespace MemoryIndexer {
     max: number
     current: string[]
     corrections: string[]
-    important: string[]
+    importantTop: string[]
+    importantRest: string[]
     top: string[]
     topEnv: string[]
     hints: string[]
@@ -93,11 +100,13 @@ export namespace MemoryIndexer {
     sessions: string[]
   }) {
     const keep = input.current
+    // Reserved decisions/constraints lead so bulk corrections can't starve them under tail truncation.
     // Topic hints are compact recall routing (topic -> source files); keep them ahead of older sessions and bulk facts.
     const primary = [
+      ...input.importantTop,
       ...input.corrections,
       ...input.current,
-      ...input.important,
+      ...input.importantRest,
       ...input.top,
       ...input.topEnv,
       ...input.hints,
@@ -111,9 +120,10 @@ export namespace MemoryIndexer {
       root: input.root,
       limits: input.limits,
       lines: [
+        ...input.importantTop,
         ...input.current,
         ...input.corrections,
-        ...input.important,
+        ...input.importantRest,
         ...input.top,
         ...input.topEnv,
         ...input.hints,
@@ -142,7 +152,11 @@ export namespace MemoryIndexer {
       max: state.limits.maxLineChars,
       inventory,
     })
-    const important = MemoryIndexFormat.project(projectItems, { include: ["PROJECT_DECISION", "PROJECT_CONSTRAINT"] })
+    const decisions = MemoryIndexFormat.project(projectItems, { include: ["PROJECT_DECISION"] })
+    const constraints = MemoryIndexFormat.project(projectItems, { include: ["PROJECT_CONSTRAINT"] })
+    // Reserve a minimum slice of decisions/constraints (like facts/env) so corrections can't push them out.
+    const importantTop = [...decisions.slice(0, reserved.decisions), ...constraints.slice(0, reserved.constraints)]
+    const importantRest = [...decisions.slice(reserved.decisions), ...constraints.slice(reserved.constraints)]
     const facts = MemoryIndexFormat.project(projectItems, { exclude: ["PROJECT_DECISION", "PROJECT_CONSTRAINT"] })
     const top = facts.slice(0, reserved.facts)
     const rest = facts.slice(reserved.facts)
@@ -164,23 +178,47 @@ export namespace MemoryIndexer {
     )
     // The continuity pointer must be the true newest session. Only older bulk digests are curated by empty().
     const current = recent[0] ? [session(recent[0], { limits: state.limits, latest: true })] : []
-    const sessions = distinct(recent.slice(1).filter((item) => !MemoryDigest.empty(item)))
-      .filter((item) => !covered({ digest: item, items: durable }))
+    const candidates = distinct(recent.slice(1).filter((item) => !MemoryDigest.empty(item)))
+    const split = { uncovered: [] as typeof candidates, coveredDigests: [] as typeof candidates }
+    for (const item of candidates) {
+      const list = covered({ digest: item, items: durable }) ? split.coveredDigests : split.uncovered
+      list.push(item)
+    }
+    const sessions = split.uncovered
       .slice(0, Math.max(0, state.limits.maxRecentSessions - current.length))
       .map((item) => session(item, { limits: state.limits }))
+    // Covered digests are dropped from the index body (their topic already lives in typed memory), but
+    // their session ids stay targetable. Keep one compact pointer row so a model still knows they exist
+    // and can pull the full digest by id via kilo_memory_recall mode=digest session=<id>.
+    const pointer =
+      split.coveredDigests.length > 0
+        ? [
+            MemoryIndexFormat.record({
+              kind: "COVERED_SESSION_POINTER",
+              id: "session.covered",
+              source: "sessions",
+              updated: Math.max(...split.coveredDigests.map((item) => Date.parse(item.time) || 0)) || "unknown",
+              text: `covered by typed memory; recall mode=digest session=<id> :: ${split.coveredDigests
+                .slice(0, guard.covered)
+                .map((item) => `session=${item.id}`)
+                .join(" ")}`,
+            }),
+          ]
+        : []
     return assemble({
       root: input.root,
       limits: state.limits,
       max,
       current,
       corrections,
-      important,
+      importantTop,
+      importantRest,
       top,
       topEnv,
       hints: MemoryIndexFormat.hints(all),
       rest,
       environment: restEnv,
-      sessions,
+      sessions: [...sessions, ...pointer],
     })
   }
 

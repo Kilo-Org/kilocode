@@ -74,7 +74,6 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -369,6 +368,7 @@ class SessionUi(
             onEnhance = controller::enhancePrompt,
             onMentions = ::mentionParts,
             completion = completion,
+            cs = cs,
         )
         connection = ConnectionPanel(this, controller)
         root.addOverlay(connection) { pane, child ->
@@ -695,9 +695,9 @@ class SessionUi(
         spec.available,
     )
 
-    private fun mentionParts(text: String): List<PromptPartDto> = runBlockingCancellable {
+    private suspend fun mentionParts(text: String): List<PromptPartDto> {
         val names = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
-        promptMentionParts(
+        return promptMentionParts(
             text = text,
             directory = workspace.directory,
             reserved = names,

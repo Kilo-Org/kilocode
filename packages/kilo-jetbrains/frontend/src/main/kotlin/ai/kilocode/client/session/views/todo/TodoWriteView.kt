@@ -35,7 +35,7 @@ class TodoWriteView(tool: Tool, private val parts: TodoParts = todoParts()) :
                 0,
                 0,
             ),
-            JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.md()),
+            JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad()),
         )
         applyStyle(style)
         sync()
