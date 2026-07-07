@@ -1441,11 +1441,11 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
   "settings.experimental.codebaseSearch.description":
     "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
-  "settings.experimental.imageGeneration.title": "Image Generation",
-  "settings.experimental.imageGeneration.description": "Enable AI image generation",
-  "settings.experimental.imageGenerationModel.title": "Image Model",
-  "settings.experimental.imageGenerationModel.description": "Image Generation Model",
-  "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
+  "settings.experimental.imageGeneration.title": "Generación de imágenes",
+  "settings.experimental.imageGeneration.description": "Habilitar generación de imágenes con IA",
+  "settings.experimental.imageGenerationModel.title": "Modelo de imagen",
+  "settings.experimental.imageGenerationModel.description": "Modelo de generación de imágenes",
+  "settings.experimental.imageGenerationModel.placeholder": "Predeterminado (Auto Router)",
 
   "settings.experimental.speechToText.title": "Voz a texto",
   "settings.experimental.speechToText.description":

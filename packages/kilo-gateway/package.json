@@ -38,7 +38,7 @@
     "@ai-sdk/openai": "3.0.53",
     "@ai-sdk/openai-compatible": "2.0.48",
     "@ai-sdk/mistral": "3.0.27",
-    "@openrouter/ai-sdk-provider": "2.10.0",
+    "@openrouter/ai-sdk-provider": "2.9.0",
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",
     "open": "10.1.2",

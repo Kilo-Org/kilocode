@@ -1430,11 +1430,11 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
-  "settings.experimental.imageGeneration.title": "Image Generation",
-  "settings.experimental.imageGeneration.description": "Enable AI image generation",
-  "settings.experimental.imageGenerationModel.title": "Image Model",
-  "settings.experimental.imageGenerationModel.description": "Image Generation Model",
-  "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
+  "settings.experimental.imageGeneration.title": "Generisanje slika",
+  "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.experimental.imageGenerationModel.title": "Model slike",
+  "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
+  "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
 
   "settings.experimental.speechToText.title": "Govor u tekst",
   "settings.experimental.speechToText.description":

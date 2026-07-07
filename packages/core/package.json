@@ -67,7 +67,7 @@
     "@ai-sdk/vercel": "2.0.39",
     "@ai-sdk/xai": "3.0.92",
     "@aws-sdk/credential-providers": "3.993.0",
-    "@openrouter/ai-sdk-provider": "2.10.0",
+    "@openrouter/ai-sdk-provider": "2.9.0",
     "ai-gateway-provider": "3.1.2",
     "gitlab-ai-provider": "6.8.0",
     "google-auth-library": "10.5.0",
