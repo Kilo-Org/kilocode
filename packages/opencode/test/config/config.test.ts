@@ -636,6 +636,10 @@ it.instance("preserves env variables when adding $schema to config", () =>
       )
       const config = yield* Config.use.get()
       expect(config.username).toBe("secret_value")
+    }),
+  ),
+)
+
 it.instance("allows {file:} that stays inside the project root", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
