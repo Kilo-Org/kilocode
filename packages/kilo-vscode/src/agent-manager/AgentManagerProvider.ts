@@ -1804,6 +1804,60 @@ export class AgentManagerProvider implements Disposable {
     return this.panel?.active === true
   }
 
+  private async waitForPanel(panel: PanelContext, promise: Promise<void>): Promise<boolean> {
+    const done = promise.then(() => true)
+    let sub: Disposable | undefined
+    const disposed = new Promise<false>((resolve) => {
+      sub = panel.onDidDispose(() => {
+        sub?.dispose()
+        resolve(false)
+      })
+    })
+    void done.finally(() => sub?.dispose())
+    const ok = await Promise.race([done, disposed])
+    return ok && this.panel === panel
+  }
+
+  private waitForPanelReady(panel: PanelContext): Promise<boolean> {
+    return this.waitForPanel(panel, panel.waitForReady())
+  }
+
+  private waitForPanelActive(panel: PanelContext): Promise<boolean> {
+    return this.waitForPanel(panel, panel.waitForActive())
+  }
+
+  public async showMemory(): Promise<void> {
+    const panel = this.panel
+    const sid = this.activeSessionId
+    if (!panel || !sid) {
+      this.host.showError("No active Agent Manager session")
+      return
+    }
+    if (!(await this.waitForPanelReady(panel))) return
+    if (this.activeSessionId !== sid) return
+    try {
+      await panel.sessions.showMemory(sid)
+    } catch (error) {
+      this.host.showError(getErrorMessage(error) || "Failed to show memory")
+    }
+  }
+
+  public async toggleMemory(): Promise<void> {
+    const panel = this.panel
+    const sid = this.activeSessionId
+    if (!panel || !sid) {
+      this.host.showError("No active Agent Manager session")
+      return
+    }
+    if (!(await this.waitForPanelReady(panel))) return
+    if (this.activeSessionId !== sid) return
+    try {
+      await panel.sessions.toggleMemory(sid)
+    } catch (error) {
+      this.host.showError(getErrorMessage(error) || "Failed to toggle memory")
+    }
+  }
+
   /** Expose worktree session→directory mappings for the auto-approve toggle. */
   public getSessionDirectories(): ReadonlyMap<string, string> {
     return this.panel?.sessions.getSessionDirectories() ?? new Map()
@@ -1869,7 +1923,7 @@ export class AgentManagerProvider implements Disposable {
     this.openPanel()
     const panel = this.panel
     if (!panel) return
-    await panel.waitForReady()
+    if (!(await this.waitForPanelReady(panel))) return
     await this.waitForStateReady("createFromSidebar")
     await this.onCreateWorktree(baseBranch, branchName)
   }
@@ -1878,8 +1932,8 @@ export class AgentManagerProvider implements Disposable {
     this.openPanel()
     const panel = this.panel
     if (!panel) return
-    await panel.waitForActive()
-    await panel.waitForReady()
+    if (!(await this.waitForPanelActive(panel))) return
+    if (!(await this.waitForPanelReady(panel))) return
     await this.waitForStateReady("openAdvancedWorktree")
     queueMicrotask(() => this.postToWebview({ type: "action", action: "advancedWorktree" }))
   }

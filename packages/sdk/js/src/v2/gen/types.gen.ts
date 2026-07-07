@@ -2573,6 +2573,12 @@ export type KiloEmbeddingModelCatalog = {
   }
 }
 
+export type ConflictError = {
+  _tag: "ConflictError"
+  message: string
+  resource?: string
+}
+
 export type InteractiveTerminalSnapshot = {
   info: InteractiveTerminalInfo
   output: string
@@ -10590,6 +10596,38 @@ export type IndexingModelsResponses = {
 
 export type IndexingModelsResponse = IndexingModelsResponses[keyof IndexingModelsResponses]
 
+export type InstanceReloadData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/instance/reload"
+}
+
+export type InstanceReloadErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
+}
+
+export type InstanceReloadError = InstanceReloadErrors[keyof InstanceReloadErrors]
+
+export type InstanceReloadResponses = {
+  /**
+   * Instance reloaded
+   */
+  200: boolean
+}
+
+export type InstanceReloadResponse = InstanceReloadResponses[keyof InstanceReloadResponses]
+
 export type InteractiveTerminalListData = {
   body?: never
   path?: never
@@ -10789,6 +10827,8 @@ export type KiloProfileResponses = {
         name: string
         role: string
       }>
+      selectedOrganizationId?: string
+      hasPersonalAccount?: boolean
     }
     balance: {
       balance: number

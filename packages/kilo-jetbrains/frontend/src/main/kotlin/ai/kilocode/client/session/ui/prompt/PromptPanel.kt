@@ -42,6 +42,7 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.editor.event.CaretEvent
@@ -133,6 +134,7 @@ class PromptPanel(
     var onAutoApproveToggle: (Boolean) -> Unit = {}
     var onFileDrag: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
+    private var focused = false
     private val shell = BorderLayoutPanel().apply {
         isOpaque = true
         border = JBUI.Borders.empty(
@@ -170,13 +172,19 @@ class PromptPanel(
             style.applyTranscriptToEditor(ed)
             ed.setBorder(JBUI.Borders.empty())
             ed.scrollPane.border = JBUI.Borders.empty()
-            ed.scrollPane.viewportBorder = JBUI.Borders.empty()
+            ed.scrollPane.viewportBorder = JBUI.Borders.empty(
+                0,
+                JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
+                0,
+                JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
+            )
             ed.backgroundColor = style.editorScheme.defaultBackground
             ed.scrollPane.background = style.editorScheme.defaultBackground
             ed.scrollPane.viewport.background = style.editorScheme.defaultBackground
             ed.settings.isUseSoftWraps = true
             ed.settings.isPaintSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
+            SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
             ed.scrollPane.verticalScrollBarPolicy =
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
@@ -198,11 +206,11 @@ class PromptPanel(
             })
             ed.contentComponent.addFocusListener(object : FocusAdapter() {
                 override fun focusGained(e: FocusEvent) {
-                    repaint()
+                    syncFocus(true)
                 }
 
                 override fun focusLost(e: FocusEvent) {
-                    repaint()
+                    syncFocus(false)
                 }
             })
         }
@@ -301,8 +309,27 @@ class PromptPanel(
 
     override fun updateUI() {
         super.updateUI()
+        syncBorder()
+    }
+
+    private fun syncFocus(value: Boolean) {
+        if (focused == value) {
+            repaint()
+            return
+        }
+        focused = value
+        syncBorder()
+        revalidate()
+        repaint()
+    }
+
+    private fun syncBorder() {
         border = JBUI.Borders.compound(
-            JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator()),
+            if (focused) {
+                JBUI.Borders.emptyTop(JBUI.scale(1))
+            } else {
+                JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator())
+            },
             JBUI.Borders.empty(),
         )
     }

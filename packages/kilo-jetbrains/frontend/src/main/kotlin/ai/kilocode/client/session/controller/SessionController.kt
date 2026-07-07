@@ -1094,7 +1094,8 @@ class SessionController(
                 } else {
                     snapshots.remove(key)
                 }
-                if (model.state is SessionState.Busy) {
+                val s = model.state
+                if (s is SessionState.Busy || s is SessionState.Retry || s is SessionState.Offline) {
                     model.setState(SessionState.Busy(status()))
                 }
                 if (child != null) trackChild(key, child)
@@ -1830,6 +1831,14 @@ class SessionController(
             return SessionControllerEvent.ConnectionChanged.ShowError(
                 KiloBundle.message("session.connection.error.app"),
                 app.errors.toErrorText() ?: app.error,
+            )
+        }
+
+        if (app.status == KiloAppStatusDto.DOWNLOADING) {
+            return SessionControllerEvent.ConnectionChanged.ShowDownloading(
+                app.downloadPercent ?: 0,
+                app.downloadVersion,
+                app.downloadPlatform,
             )
         }
 

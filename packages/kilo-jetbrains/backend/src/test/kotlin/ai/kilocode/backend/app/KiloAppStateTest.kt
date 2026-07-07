@@ -39,6 +39,7 @@ class KiloAppStateTest {
     @Test
     fun `KiloAppState sealed subtypes are distinct`() {
         assertIs<KiloAppState.Disconnected>(KiloAppState.Disconnected)
+        assertIs<KiloAppState.Downloading>(KiloAppState.Downloading(42, "1.2.3", "darwin-arm64"))
         assertIs<KiloAppState.Connecting>(KiloAppState.Connecting)
         assertIs<KiloAppState.Loading>(KiloAppState.Loading(LoadProgress()))
         assertIs<KiloAppState.Error>(KiloAppState.Error("fail"))

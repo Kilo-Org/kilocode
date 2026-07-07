@@ -389,6 +389,7 @@ export const dict = {
     "Clique para restringir as operações de escrita no sistema de arquivos. O acesso à rede continua permitido pelas configurações do sandbox.",
 
   "speechToText.tooltip.start": "Iniciar entrada de voz com o Kilo Gateway",
+  "speechToText.tooltip.starting": "Iniciando o microfone... Aguarde antes de falar.",
   "speechToText.tooltip.stop": "Parar captura",
   "speechToText.tooltip.transcribing": "Transcrevendo... Clique para cancelar.",
   "speechToText.tooltip.error": "Falha na entrada de voz. Clique para limpar.",
@@ -1204,6 +1205,8 @@ export const dict = {
 
   "common.retry": "Tentar novamente",
   "common.refresh": "Atualizar",
+  "common.reload": "Recarregar",
+  "common.reloadDescription": "Recarregar configuração, habilidades, agentes e comandos do disco",
 
   "profile.title": "Perfil",
   "profile.notLoggedIn": "Não conectado",
@@ -1447,6 +1450,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Restringir acesso à rede",
   "settings.sandboxing.network.description":
     "Bloqueie o acesso de saída à rede para comandos originados pelo modelo e ferramentas HTTP. Servidores MCP locais e hooks de plugins são executados fora dessa restrição. O tráfego de inferência de provedores e modelos permanece disponível.",
+
+  "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
+  "settings.sandboxing.writablePaths.description":
+    "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "Ativar SWE-Pruner: poda das saídas grandes das ferramentas de leitura e busca, guiada por uma pergunta de foco do agente",
@@ -1637,6 +1644,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
   "settings.context.autoCompaction.title": "Compactação automática",
   "settings.context.autoCompaction.description": "Compactar automaticamente o contexto antes que atinja o limite",
+  "settings.context.compaction.title": "Compactação",
   "settings.context.compactionLimit.title": "Limite de compactação automática",
   "settings.context.compactionLimit.description":
     "Compacte quando o contexto atingir esta porcentagem da janela do modelo. Deixe em branco para usar apenas a margem de segurança.",
@@ -1644,6 +1652,42 @@ export const dict = {
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",
   "settings.context.watcherPatterns.description": "Padrões glob para arquivos que o observador deve ignorar",
+
+  "settings.context.memory.title": "Memória",
+  "settings.context.memory.project.title": "Memória do projeto",
+  "settings.context.memory.autoSave.title": "Salvar memória do projeto automaticamente",
+  "settings.context.memory.autoSave.description":
+    "Salva automaticamente fatos duradouros do projeto a partir de turnos concluídos quando a memória está ativada.",
+  "settings.context.memory.index.title": "Índice da memória",
+  "settings.context.memory.status.notLoaded": "Não carregada",
+  "settings.context.memory.status.disabled": "Desativada",
+  "settings.context.memory.status.enabledTokensOps":
+    "Ativada - ~{{session}} tokens de contexto inicial nesta sessão - ~{{tokens}} tokens no índice armazenado - última op. {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Ative a memória para criar arquivos de memória do projeto.",
+  "settings.context.memory.inspect": "Inspecionar",
+  "settings.context.memory.rebuild": "Reconstruir índice da memória",
+  "chat.memory.on": "Memória ligada",
+  "chat.memory.label": "Memória · {{tokens}} tokens",
+  "chat.memory.status.loading": "Carregando status da memória",
+  "chat.memory.session.tokens": "Contexto inicial desta sessão: {{tokens}} tokens",
+  "chat.memory.total.tokens": "Índice armazenado: {{tokens}} tokens",
+  "chat.memory.project.enabled": "Memória do projeto ativada",
+  "chat.memory.project.disabled": "Memória do projeto desativada",
+  "chat.memory.command.failed": "Comando de memória falhou",
+  "chat.memory.savedOperations": "Última operação de memória: {{count}} ops",
+  "chat.memory.inspect": "Inspecionar memória",
+  "chat.memory.remember": "Lembrar",
+  "chat.memory.forget": "Esquecer",
+  "chat.memory.rebuild": "Reconstruir índice",
+  "chat.memory.disable": "Desativar memória",
+  "chat.memory.badge.injected": "Memória injetada",
+  "chat.memory.badge.recalled": "Memória recuperada",
+  "chat.memory.badge.startupCtx": "ctx inicial",
+  "chat.memory.badge.items": "{{count}} itens",
+  "chat.memory.badge.tokens": "{{tokens}} tokens",
+  "chat.memory.badge.recalledDetail": "Memória recuperada: {{count}} itens - {{tokens}} tokens",
+  "chat.memory.badge.files": "Arquivos de memória: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Usar prompt personalizado",

@@ -1,8 +1,10 @@
 package ai.kilocode.client.actions
 
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -30,11 +32,18 @@ import kotlinx.coroutines.withTimeout
 class KiloRecoveryActionsTest : BasePlatformTestCase() {
     private lateinit var scope: CoroutineScope
     private lateinit var rpc: FakeWorkspaceRpcApi
+    private lateinit var appRpc: FakeAppRpcApi
 
     override fun setUp() {
         super.setUp()
         scope = CoroutineScope(SupervisorJob())
         rpc = FakeWorkspaceRpcApi()
+        appRpc = FakeAppRpcApi()
+        ApplicationManager.getApplication().replaceService(
+            KiloAppService::class.java,
+            KiloAppService(scope, appRpc),
+            testRootDisposable,
+        )
         ApplicationManager.getApplication().replaceService(
             KiloWorkspaceService::class.java,
             KiloWorkspaceService(scope, rpc),
@@ -68,36 +77,53 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
         assertTrue("Reinstall should force-enable recovery action", event.presentation.isEnabled)
     }
 
-    fun `test restart action adds cli suffix in connection retry popup`() {
+    fun `test restart action adds core suffix in connection retry popup`() {
         val action = RestartKiloAction()
         val event = event(action, place = KiloActionPlaces.connectionRetryPopup())
 
         update(action, event)
 
-        assertEquals("Restart CLI", event.presentation.text)
+        assertEquals("Restart Core", event.presentation.text)
     }
 
-    fun `test reinstall action adds cli suffix in connection retry popup`() {
+    fun `test reinstall action adds core suffix in connection retry popup`() {
         val action = ReinstallKiloAction()
         val event = event(action, place = KiloActionPlaces.connectionRetryPopup())
 
         update(action, event)
 
-        assertEquals("Reinstall CLI", event.presentation.text)
+        assertEquals("Reinstall Core", event.presentation.text)
     }
 
-    fun `test cli group has visible menu text`() {
+    fun `test core group has visible menu text and info action`() {
         val xml = requireNotNull(javaClass.classLoader.getResourceAsStream("kilo.jetbrains.frontend.xml"))
             .bufferedReader()
             .use { it.readText() }
 
-        assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"CLI\" popup=\"true\">"))
+        assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"Core\" popup=\"true\">"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Restart\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Reinstall\"/>"))
+        assertTrue(xml.contains("<reference ref=\"Kilo.CoreInfo\"/>"))
         assertTrue(xml.contains("<group id=\"Kilo.OpenConfigGroup\" text=\"Config Files\" popup=\"true\">"))
         assertTrue(xml.contains("<reference ref=\"Kilo.OpenConfigGroup\"/>"))
         assertFalse(xml.contains("<action id=\"Kilo.ShowProfile\""))
         assertFalse(xml.contains("<reference ref=\"Kilo.ShowProfile\"/>"))
+    }
+
+    fun `test core info action shows version and architecture`() {
+        appRpc.cliVersion = "1.2.3"
+        appRpc.cliPlatform = "darwin-arm64"
+        ApplicationManager.getApplication().executeOnPooledThread {
+            runBlocking { app().coreInfo() }
+        }.get()
+        val action = CoreInfoAction()
+        val event = event(action)
+
+        update(action, event)
+
+        assertFalse(event.presentation.isEnabled)
+        assertTrue(event.presentation.isVisible)
+        assertEquals("Core v1.2.3 • Architecture: darwin-arm64", event.presentation.text)
     }
 
     fun `test local config action says open when target exists`() {
@@ -310,6 +336,8 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
     }
 
     private fun service(): KiloWorkspaceService = ApplicationManager.getApplication().getService(KiloWorkspaceService::class.java)
+
+    private fun app(): KiloAppService = ApplicationManager.getApplication().getService(KiloAppService::class.java)
 
     private fun cacheGlobal(target: ConfigTargetDto) {
         val field = KiloWorkspaceService::class.java.getDeclaredField("globalConfig")

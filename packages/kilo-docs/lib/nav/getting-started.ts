@@ -24,7 +24,6 @@ export const GettingStartedNav: NavSection[] = [
         href: "/getting-started/byok",
         children: "Bring Your Own Key (BYOK)",
       },
-      { href: "/ai-providers", children: "AI Providers" },
       {
         href: "/getting-started/settings",
         children: "Settings",
@@ -34,7 +33,10 @@ export const GettingStartedNav: NavSection[] = [
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
-      { href: "/getting-started/rate-limits-and-costs", children: "Cost Efficiency & Model Selection" },
+      {
+        href: "/getting-started/rate-limits-and-costs",
+        children: "Cost Efficiency & Model Selection",
+      },
       { href: "/getting-started/cost-controls-and-usage-safeguards", children: "Cost Controls and Usage Safeguards" },
     ],
   },

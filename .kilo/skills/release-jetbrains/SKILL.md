@@ -34,7 +34,40 @@ Accepted specs:
 | `x.y.z-rc.n` | Explicit RC release. |
 | `x.y.z` | Explicit stable release. |
 
-Show the resolved `version`, `kind`, and default `fromTagDefault` to the user and ask for confirmation before continuing.
+Show the resolved `version`, `kind`, and default `fromTagDefault` to the user.
+
+## CLI Pin Verification
+
+Before dispatching prepare, verify the JetBrains plugin is pinned to the intended Kilo Core release. The plugin downloads the CLI version from `packages/kilo-jetbrains/package.json`, not from the JetBrains plugin version.
+
+Read the pinned CLI version:
+
+```bash
+bun -e 'const p=require("./packages/kilo-jetbrains/package.json"); console.log(p.version)'
+```
+
+Verify the matching GitHub Release exists and includes every runtime asset the backend may download:
+
+```bash
+cli_version="7.4.1"
+gh release view "v${cli_version}" --repo Kilo-Org/kilocode --json assets \
+  --jq '.assets[].name' | sort
+```
+
+Expected assets:
+
+```text
+kilo-darwin-arm64.zip
+kilo-darwin-x64.zip
+kilo-linux-arm64.tar.gz
+kilo-linux-x64.tar.gz
+kilo-windows-arm64.zip
+kilo-windows-x64.zip
+```
+
+If the pin is stale or the release assets are missing, stop and ask the user to update `packages/kilo-jetbrains/package.json` on `main` before dispatching prepare. The prepare workflow tags `origin/main`, so the pin must already be reviewed and merged before the release tag is created.
+
+Show the resolved JetBrains plugin version, release kind, default `fromTagDefault`, pinned CLI version, and CLI release asset status to the user, then ask for confirmation before continuing.
 
 ## Prepare Workflow
 

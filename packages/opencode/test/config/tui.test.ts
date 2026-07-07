@@ -678,7 +678,8 @@ it.instance("does not derive tui path from KILO_CONFIG", () =>
   ),
 )
 
-it.instance("applies env and file substitutions in tui.json", () =>
+// kilocode_change start - trusted global config substitutes; untrusted project config does not
+it.instance("applies env and file substitutions in global tui.json", () =>
   withCleanState(
     withEnv(
       "TUI_THEME_TEST",
@@ -686,8 +687,9 @@ it.instance("applies env and file substitutions in tui.json", () =>
       Effect.gen(function* () {
         const fs = yield* AppFileSystem.Service
         const test = yield* TestInstance
-        yield* fs.writeFileString(path.join(test.directory, "keybind.txt"), "ctrl+q")
-        yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+        // Global config is trusted, so {env:}/{file:} references resolve.
+        yield* fs.writeFileString(path.join(Global.Path.config, "keybind.txt"), "ctrl+q")
+        yield* fs.writeJson(path.join(Global.Path.config, "tui.json"), {
           theme: "{env:TUI_THEME_TEST}",
           keybinds: { app_exit: "{file:keybind.txt}" },
         })
@@ -700,14 +702,71 @@ it.instance("applies env and file substitutions in tui.json", () =>
   ),
 )
 
+it.instance("does not substitute env references in untrusted project tui.json", () =>
+  withCleanState(
+    withEnv(
+      "TUI_THEME_TEST",
+      "env-theme",
+      Effect.gen(function* () {
+        const fs = yield* AppFileSystem.Service
+        const test = yield* TestInstance
+        yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+          theme: "{env:TUI_THEME_TEST}",
+        })
+
+        // {env:} in project config is rejected, so the file is skipped and the theme is not applied.
+        const config = yield* getTuiConfig(test.directory)
+        expect(config.theme).not.toBe("env-theme")
+      }),
+    ),
+  ),
+)
+
+it.instance("applies in-project file references in project tui.json", () =>
+  withCleanState(
+    Effect.gen(function* () {
+      const fs = yield* AppFileSystem.Service
+      const test = yield* TestInstance
+      // {file:} that stays inside the project root is allowed even in untrusted project config.
+      yield* fs.writeFileString(path.join(test.directory, "keybind.txt"), "ctrl+q")
+      yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+        keybinds: { app_exit: "{file:keybind.txt}" },
+      })
+
+      const config = yield* getTuiConfig(test.directory)
+      expect(config.keybinds.get("app.exit")?.[0]?.key).toBe("ctrl+q")
+    }),
+  ),
+)
+
+it.instance("rejects project tui.json file references that escape the project root", () =>
+  withCleanState(
+    Effect.gen(function* () {
+      const fs = yield* AppFileSystem.Service
+      const test = yield* TestInstance
+      const outside = path.join(path.dirname(test.directory), "keybind.txt")
+      yield* fs.writeFileString(outside, "ctrl+q")
+      yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+        keybinds: { app_exit: "{file:../keybind.txt}" },
+      })
+
+      const config = yield* getTuiConfig(test.directory)
+      expect(config.keybinds.get("app.exit")?.[0]?.key).not.toBe("ctrl+q")
+    }),
+  ),
+)
+// kilocode_change end
+
 it.instance("applies file substitutions when first identical token is in a commented line", () =>
   withCleanState(
     Effect.gen(function* () {
       const fs = yield* AppFileSystem.Service
       const test = yield* TestInstance
-      yield* fs.writeFileString(path.join(test.directory, "theme.txt"), "resolved-theme")
+      // kilocode_change start - global config is trusted, so the second (uncommented) reference resolves
+      yield* fs.writeFileString(path.join(Global.Path.config, "theme.txt"), "resolved-theme")
       yield* fs.writeFileString(
-        path.join(test.directory, "tui.jsonc"),
+        path.join(Global.Path.config, "tui.jsonc"),
+        // kilocode_change end
         `{
   // "theme": "{file:theme.txt}",
   "theme": "{file:theme.txt}"

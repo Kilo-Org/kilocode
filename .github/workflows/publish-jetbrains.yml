@@ -125,19 +125,11 @@ jobs:
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
-      - name: Prepare CLI resources
-        working-directory: packages/kilo-jetbrains
-        run: bun script/build.ts --production --prepare-cli
-        env:
-          KILO_VERSION: ${{ steps.release.outputs.version }}
-          KILO_CHANNEL: ${{ steps.release.outputs.cli_channel }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-
       - name: Verify plugin
         working-directory: packages/kilo-jetbrains
         run: ./gradlew verifyPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
           CHANNEL: ${{ steps.release.outputs.marketplace_channel }}
 

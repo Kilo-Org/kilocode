@@ -13,8 +13,14 @@ interface CliServer {
 
     var forceExtract: Boolean
     fun process(): Process?
-    suspend fun init(): State
+    suspend fun init(onProgress: (CliDownload) -> Unit = {}, onResolved: () -> Unit = {}): State
     fun exited(proc: Process)
     fun stop()
     fun dispose()
 }
+
+data class CliDownload(
+    val percent: Int,
+    val version: String,
+    val platform: String,
+)

@@ -48,6 +48,7 @@ export interface ExperimentalConfig {
   mcp_timeout?: number
   sandbox?: boolean
   sandbox_restrict_network?: boolean
+  sandbox_writable_paths?: string[]
   swe_pruner?: boolean
   swe_pruner_model?: string
 }

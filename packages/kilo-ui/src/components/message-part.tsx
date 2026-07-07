@@ -995,6 +995,7 @@ export interface ToolProps {
   callID?: string
   output?: string
   status?: string
+  attachments?: FilePart[]
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
@@ -1243,6 +1244,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               // @ts-expect-error
               output={part.state.output}
               status={part.state.status}
+              // @ts-expect-error
+              attachments={part.state.attachments}
               hideDetails={props.hideDetails}
               defaultOpen={props.defaultOpen}
               animate
@@ -1754,6 +1757,7 @@ ToolRegistry.register({
   render(props) {
     const data = useData()
     const i18n = useI18n()
+    const dialog = useDialog()
     const args: string[] = []
     if (props.input.offset) args.push("offset=" + props.input.offset)
     if (props.input.limit) args.push("limit=" + props.input.limit)
@@ -1764,6 +1768,8 @@ ToolRegistry.register({
     })
     const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
+    const images = createMemo(() => (props.attachments ?? []).filter((f) => f.mime.startsWith("image/") && f.url))
+    const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
     return (
       <>
         <BasicTool
@@ -1792,6 +1798,23 @@ ToolRegistry.register({
             />
           )}
         </For>
+        <Show when={images().length > 0}>
+          <div data-slot="tool-read-images">
+            <For each={images()}>
+              {(file) => (
+                <div data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
+                  <img
+                    data-slot="tool-read-image-img"
+                    src={file.url}
+                    alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
         <Show when={pruned()}>
           {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>

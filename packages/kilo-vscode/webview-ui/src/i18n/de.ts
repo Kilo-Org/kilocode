@@ -395,6 +395,7 @@ export const dict = {
     "Klicken, um Schreibvorgänge im Dateisystem einzuschränken. Der Netzwerkzugriff bleibt gemäß deinen Sandbox-Einstellungen erlaubt.",
 
   "speechToText.tooltip.start": "Spracheingabe mit Kilo Gateway starten",
+  "speechToText.tooltip.starting": "Mikrofon wird gestartet... Bitte noch nicht sprechen.",
   "speechToText.tooltip.stop": "Audioerfassung beenden",
   "speechToText.tooltip.transcribing": "Transkribieren... Zum Abbrechen klicken.",
   "speechToText.tooltip.error": "Spracheingabe fehlgeschlagen. Zum Löschen klicken.",
@@ -1259,6 +1260,8 @@ export const dict = {
 
   "common.retry": "Erneut versuchen",
   "common.refresh": "Aktualisieren",
+  "common.reload": "Neu laden",
+  "common.reloadDescription": "Konfiguration, Skills, Agents und Befehle vom Datenträger neu laden",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nicht angemeldet",
@@ -1467,6 +1470,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Netzwerkzugriff einschränken",
   "settings.sandboxing.network.description":
     "Blockiert den ausgehenden Netzwerkzugriff für vom Modell initiierte Befehle und HTTP-Tools. Lokale MCP-Server und Plugin-Hooks sind von dieser Einschränkung ausgenommen. Anbieter- und Modellinferenzdatenverkehr bleibt verfügbar.",
+
+  "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
+  "settings.sandboxing.writablePaths.description":
+    "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
     "SWE-Pruner aktivieren: aufgabenbezogenes Kürzen großer Lese- und Suchausgaben, gesteuert durch eine Fokusfrage des Agenten",
@@ -1656,6 +1663,7 @@ export const dict = {
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
   "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
+  "settings.context.compaction.title": "Komprimierung",
   "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
   "settings.context.compactionLimit.description":
     "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
@@ -1663,6 +1671,42 @@ export const dict = {
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",
   "settings.context.watcherPatterns.description": "Glob-Muster für Dateien, die der Watcher ignorieren soll",
+
+  "settings.context.memory.title": "Speicher",
+  "settings.context.memory.project.title": "Projektspeicher",
+  "settings.context.memory.autoSave.title": "Projektspeicher automatisch speichern",
+  "settings.context.memory.autoSave.description":
+    "Dauerhafte Projektfakten aus abgeschlossenen Durchläufen automatisch speichern, wenn Speicher aktiviert ist.",
+  "settings.context.memory.index.title": "Speicherindex",
+  "settings.context.memory.status.notLoaded": "Nicht geladen",
+  "settings.context.memory.status.disabled": "Deaktiviert",
+  "settings.context.memory.status.enabledTokensOps":
+    "Aktiviert - ~{{session}} Startkontext-Tokens in dieser Sitzung - ~{{tokens}} Tokens im gespeicherten Index - letzte Operation {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Aktivieren Sie den Speicher, um Projektspeicherdateien zu erstellen.",
+  "settings.context.memory.inspect": "Prüfen",
+  "settings.context.memory.rebuild": "Speicherindex neu erstellen",
+  "chat.memory.on": "Speicher an",
+  "chat.memory.label": "Speicher · {{tokens}} Tokens",
+  "chat.memory.status.loading": "Speicherstatus wird geladen",
+  "chat.memory.session.tokens": "Startkontext dieser Sitzung: {{tokens}} Tokens",
+  "chat.memory.total.tokens": "Gespeicherter Index: {{tokens}} Tokens",
+  "chat.memory.project.enabled": "Projektspeicher aktiviert",
+  "chat.memory.project.disabled": "Projektspeicher deaktiviert",
+  "chat.memory.command.failed": "Speicherbefehl fehlgeschlagen",
+  "chat.memory.savedOperations": "Letzte Speicheroperation: {{count}} Vorgänge",
+  "chat.memory.inspect": "Speicher prüfen",
+  "chat.memory.remember": "Merken",
+  "chat.memory.forget": "Vergessen",
+  "chat.memory.rebuild": "Index neu erstellen",
+  "chat.memory.disable": "Speicher deaktivieren",
+  "chat.memory.badge.injected": "Speicher eingefügt",
+  "chat.memory.badge.recalled": "Speicher abgerufen",
+  "chat.memory.badge.startupCtx": "Startkontext",
+  "chat.memory.badge.items": "{{count}} Elemente",
+  "chat.memory.badge.tokens": "{{tokens}} Tokens",
+  "chat.memory.badge.recalledDetail": "Speicher abgerufen: {{count}} Elemente - {{tokens}} Tokens",
+  "chat.memory.badge.files": "Speicherdateien: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Benutzerdefinierten prompt verwenden",

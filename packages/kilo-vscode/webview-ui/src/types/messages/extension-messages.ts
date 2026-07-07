@@ -47,6 +47,7 @@ import type {
   MigrationSessionProgressMessage,
   MigrationStateMessage,
 } from "./migration"
+import type { MemoryEventMessage, MemoryLoadedMessage, MemoryOperationResultMessage } from "./memory"
 
 // ============================================
 // Messages FROM extension TO webview
@@ -1218,3 +1219,6 @@ export type ExtensionMessage =
   | TelemetryStateMessage
   | RemoteStatusMessage
   | ValidateFilesResultMessage
+  | MemoryLoadedMessage
+  | MemoryEventMessage
+  | MemoryOperationResultMessage

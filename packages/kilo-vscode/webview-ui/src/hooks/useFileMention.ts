@@ -15,12 +15,6 @@ import {
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
 
-const rtl = (textarea: HTMLTextAreaElement): boolean => {
-  if (textarea.matches(":dir(rtl)")) return true
-  if (textarea.matches(":dir(ltr)")) return false
-  return getComputedStyle(textarea).direction === "rtl"
-}
-
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -89,6 +83,7 @@ export function useFileMention(
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
+  let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
 
   const showMention = () => mentionQuery() !== null
 
@@ -109,6 +104,7 @@ export function useFileMention(
   onCleanup(() => {
     unsubscribe()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    if (pendingArrowSnap) clearTimeout(pendingArrowSnap.timer)
   })
 
   const requestFileSearch = (query: string) => {
@@ -278,32 +274,62 @@ export function useFileMention(
     return true
   }
 
+  const resolvePendingArrowSnap = (textarea: HTMLTextAreaElement) => {
+    const pending = pendingArrowSnap
+    if (!pending) return
+
+    clearTimeout(pending.timer)
+    pendingArrowSnap = undefined
+
+    if (textarea.value !== pending.prevValue) return
+    const start = textarea.selectionStart ?? 0
+    const end = textarea.selectionEnd ?? 0
+    if (start !== end) return
+
+    if (start === pending.prevPosition) return
+
+    const range = findMentionRange(pending.prevValue, start, mentionedPaths())
+    if (!range) return
+
+    const pos = start > pending.prevPosition ? range.end : range.start
+    if (pos === start) return
+
+    textarea.setSelectionRange(pos, pos)
+  }
+
   const handleArrowKey = (e: KeyboardEvent, textarea: HTMLTextAreaElement | undefined): boolean => {
-    if ((e.key !== "ArrowLeft" && e.key !== "ArrowRight") || !textarea) return false
+    if (!textarea) return false
+    resolvePendingArrowSnap(textarea)
+
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return false
     // Don't interfere with selection (Shift) or word/line navigation (Ctrl/Cmd/Alt)
     if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false
-    const cursor = textarea.selectionStart ?? 0
     // Only when there's no active selection
     if (textarea.selectionStart !== textarea.selectionEnd) return false
 
-    const forward = e.key === (rtl(textarea) ? "ArrowLeft" : "ArrowRight")
-    // Check where the cursor WOULD land after the native move
-    const next = forward ? cursor + 1 : cursor - 1
-    const range = findMentionRange(textarea.value, next, mentionedPaths())
-    if (!range) return false
+    const prevPosition = textarea.selectionStart ?? 0
+    const prevValue = textarea.value
 
-    e.preventDefault()
-    const pos = forward ? range.end : range.start
-    textarea.setSelectionRange(pos, pos)
-    return true
+    // Let the textarea perform its native bidi-aware caret move,
+    // then read the updated selection and snap only if it landed inside a mention.
+    const timer = setTimeout(() => {
+      resolvePendingArrowSnap(textarea)
+    }, 0)
+    pendingArrowSnap = { timer, prevValue, prevPosition }
+    return false
   }
 
   let snapping = false
+  let last: { start: number; end: number } | undefined
   const snapSelection = (textarea: HTMLTextAreaElement): void => {
     if (snapping) return
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
-    if (start === end) return // cursor, not a selection
+    const dir = textarea.selectionDirection
+    if (start === end) {
+      last = undefined
+      return // cursor, not a selection
+    }
 
     const val = textarea.value
     const paths = mentionedPaths()
@@ -311,16 +337,23 @@ export function useFileMention(
     let snappedEnd = end
 
     const startRange = findMentionRange(val, start, paths)
-    if (startRange) snapped = startRange.start
+    if (startRange) {
+      const shrink = dir === "backward" && last?.start === startRange.start && last.end === end
+      snapped = shrink ? startRange.end : startRange.start
+    }
 
     const endRange = findMentionRange(val, end, paths)
-    if (endRange) snappedEnd = endRange.end
+    if (endRange) {
+      const shrink = dir === "forward" && last?.start === start && last.end === endRange.end
+      snappedEnd = shrink ? endRange.start : endRange.end
+    }
 
     if (snapped !== start || snappedEnd !== end) {
       snapping = true
-      textarea.setSelectionRange(snapped, snappedEnd, textarea.selectionDirection)
+      textarea.setSelectionRange(snapped, snappedEnd, dir)
       snapping = false
     }
+    last = { start: snapped, end: snappedEnd }
   }
 
   const seedFromText = (text: string) => {

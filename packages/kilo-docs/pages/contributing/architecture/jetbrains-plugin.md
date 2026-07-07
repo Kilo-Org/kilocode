@@ -131,10 +131,10 @@ JetBrains Kotlin toolchain is Java 21. Gradle commands report missing or incompa
 | Typecheck | `./gradlew typecheck` |
 | Tests | `./gradlew test` |
 | Full plugin build | `bun run build` |
-| Gradle plugin assembly with prepared CLI binaries | `./gradlew buildPlugin` |
+| Gradle plugin assembly with pinned CLI download | `./gradlew buildPlugin` |
 | Split-mode sandbox | `./gradlew --no-configuration-cache runIdeSplitMode` |
 | Split backend sandbox | `./gradlew --no-configuration-cache runIdeBackend` |
-| Monolithic sandbox IDE | `./gradlew runIde` after `bun run build --prepare-cli` |
+| Monolithic sandbox IDE | `./gradlew runIde` |
 
 Run `Plugin DevKit | Code | Frontend and Backend API Usage` inspection when moving code across split boundary.
 

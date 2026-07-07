@@ -2,6 +2,7 @@ import { Component, createSignal, createEffect, createMemo, on, Show } from "sol
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -143,6 +144,12 @@ const Settings: Component<SettingsProps> = (props) => {
         <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>
           {language.t("settings.openGlobalConfig")}
         </Button>
+        <Tooltip value={language.t("common.reloadDescription")} placement="bottom">
+          <Button variant="secondary" size="small" onClick={() => vscode.postMessage({ type: "reload" })}>
+            <Icon name="reload" size="small" />
+            {language.t("common.reload")}
+          </Button>
+        </Tooltip>
       </div>
 
       {/* Settings tabs */}
