@@ -58,6 +58,7 @@ import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
 import { escapeHtml } from "../util/escape-html"
+import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -934,56 +935,9 @@ export function UserMessageDisplay(props: {
   )
 }
 
-type HighlightSegment = { text: string; type?: "file" | "agent" }
-
-/** Match @path mentions: `@` followed by a path-like token (contains `/` or `.`). */
-const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
-
-function detectMentions(text: string): { start: number; end: number; type: "file" }[] {
-  const result: { start: number; end: number; type: "file" }[] = []
-  MENTION_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = MENTION_RE.exec(text))) {
-    result.push({ start: m.index, end: m.index + m[0].length, type: "file" })
-  }
-  return result
-}
-
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
-    const text = props.text
-
-    const offset: { start: number; end: number; type: "file" | "agent" }[] = [
-      ...props.references
-        .filter((r) => r.source?.text?.start !== undefined && r.source?.text?.end !== undefined)
-        .map((r) => ({ start: r.source!.text!.start, end: r.source!.text!.end, type: "file" as const })),
-      ...props.agents
-        .filter((a) => a.source?.start !== undefined && a.source?.end !== undefined)
-        .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
-    ]
-
-    // Fall back to regex detection when no source offsets are available
-    const allRefs = offset.length > 0 ? offset.sort((a, b) => a.start - b.start) : detectMentions(text)
-
-    const result: HighlightSegment[] = []
-    let lastIndex = 0
-
-    for (const ref of allRefs) {
-      if (ref.start < lastIndex) continue
-
-      if (ref.start > lastIndex) {
-        result.push({ text: text.slice(lastIndex, ref.start) })
-      }
-
-      result.push({ text: text.slice(ref.start, ref.end), type: ref.type })
-      lastIndex = ref.end
-    }
-
-    if (lastIndex < text.length) {
-      result.push({ text: text.slice(lastIndex) })
-    }
-
-    return result
+    return buildHighlightedTextSegments(props.text, props.references, props.agents)
   })
 
   const data = useData()
@@ -1041,6 +995,7 @@ export interface ToolProps {
   callID?: string
   output?: string
   status?: string
+  attachments?: FilePart[]
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
@@ -1289,6 +1244,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               // @ts-expect-error
               output={part.state.output}
               status={part.state.status}
+              // @ts-expect-error
+              attachments={part.state.attachments}
               hideDetails={props.hideDetails}
               defaultOpen={props.defaultOpen}
               animate
@@ -1591,8 +1548,10 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-              <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+            <div data-slot="reasoning-details">
+              <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
+                <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+              </div>
             </div>
           </Collapsible.Content>
         </Collapsible>
@@ -1790,6 +1749,7 @@ ToolRegistry.register({
   render(props) {
     const data = useData()
     const i18n = useI18n()
+    const dialog = useDialog()
     const args: string[] = []
     if (props.input.offset) args.push("offset=" + props.input.offset)
     if (props.input.limit) args.push("limit=" + props.input.limit)
@@ -1799,6 +1759,10 @@ ToolRegistry.register({
       return value.filter((p): p is string => typeof p === "string")
     })
     const pending = createMemo(() => busy(props.status))
+    const images = createMemo(() =>
+      (props.attachments ?? []).filter((f) => f.mime.startsWith("image/") && f.url),
+    )
+    const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
     return (
       <>
         <BasicTool
@@ -1827,6 +1791,23 @@ ToolRegistry.register({
             />
           )}
         </For>
+        <Show when={images().length > 0}>
+          <div data-slot="tool-read-images">
+            <For each={images()}>
+              {(file) => (
+                <div data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
+                  <img
+                    data-slot="tool-read-image-img"
+                    src={file.url}
+                    alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
       </>
     )
   },

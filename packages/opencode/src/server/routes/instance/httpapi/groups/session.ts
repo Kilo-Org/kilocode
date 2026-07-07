@@ -45,6 +45,7 @@ export const MessagesQuery = Schema.Struct({
 export const StatusMap = Schema.Record(Schema.String, SessionStatus.Info)
 export const UpdatePayload = Schema.Struct({
   title: Schema.optional(Schema.String),
+  metadata: Schema.optional(Session.Metadata),
   permission: Schema.optional(Permission.Ruleset),
   time: Schema.optional(
     Schema.Struct({
@@ -252,7 +253,7 @@ export const SessionApi = HttpApi.make("session")
         HttpApiEndpoint.post("fork", SessionPaths.fork, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,
-          payload: Schema.optional(ForkPayload), // kilocode_change - carry upstream bodyless full-session fork support
+          payload: [HttpApiSchema.NoContent, ForkPayload], // kilocode_change - carry upstream bodyless full-session fork support
           success: described(Session.Info, "200"),
           error: [HttpApiError.BadRequest, ApiNotFoundError], // kilocode_change - carry upstream malformed payload response
         }).annotateMerge(

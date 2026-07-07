@@ -1,7 +1,9 @@
+import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
 import { Session } from "@/session/session"
+import type { MessageV2 } from "@/session/message-v2"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
@@ -9,11 +11,11 @@ import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
+import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
-import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
 import { zodObject } from "@opencode-ai/core/effect-zod"
-import { Effect } from "effect"
+import { Effect, Option, Schema } from "effect"
 
 type Provide = typeof import("@/kilocode/instance").provide
 
@@ -38,24 +40,35 @@ const SuggestionData = z.object({
   index: z.number().int().nonnegative(),
 })
 
+const decodeSessionID = Schema.decodeUnknownOption(SessionID)
+
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
+type RemotePromptInput = Omit<SessionPrompt.PromptInput, "model"> & {
+  model?: string | RemoteModelCatalog.ModelRef
+}
 let _remotePromptInput: z.ZodObject<any> | undefined
 function getRemotePromptInput() {
   return (_remotePromptInput ??= zodObject(SessionPrompt.PromptInput).extend({
-    model: z.string().optional(),
+    model: z.union([z.string(), RemoteModelCatalog.ModelRef]).optional(),
   }))
 }
 // kilocode_change end
-function normalizeModel(model: string | undefined) {
+function normalizeModel(model: string | RemoteModelCatalog.ModelRef | undefined) {
   if (!model) return undefined
+  if (typeof model !== "string") {
+    return {
+      providerID: ProviderID.make(model.providerID),
+      modelID: ModelID.make(model.modelID),
+    }
+  }
   return {
     providerID: ProviderID.make("kilo"),
     modelID: ModelID.make(model.startsWith("kilocode/") ? model.slice("kilocode/".length) : model),
   }
 }
 
-function normalizePrompt(input: SessionPrompt.PromptInput & { model?: string }): SessionPrompt.PromptInput {
+function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
   return {
     ...input,
     model: normalizeModel(input.model),
@@ -83,6 +96,12 @@ export namespace RemoteSender {
       readonly reject: (requestID: QuestionID) => Promise<void>
     }
     prompt?: (input: SessionPrompt.PromptInput) => Promise<unknown>
+    catalog?: {
+      readonly get: (sessionID: SessionID) => Promise<Session.Info>
+      readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
+      readonly providers: () => Promise<Record<ProviderID, Provider.Info>>
+      readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
+    }
   }
 
   export type Sender = {
@@ -124,6 +143,30 @@ export namespace RemoteSender {
         const { AppRuntime } = await import("@/effect/app-runtime")
         return AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.prompt(input)))
       })
+    const catalog = options.catalog ?? {
+      get: async (sessionID: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Session.Service.use((svc) => svc.get(sessionID)))
+      },
+      messages: async (sessionID: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(
+          Session.Service.use((svc) =>
+            svc
+              .findMessage(sessionID, (message) => message.info.role === "user" && !!message.info.model)
+              .pipe(Effect.map((message) => (Option.isSome(message) ? [message.value] : []))),
+          ),
+        )
+      },
+      providers: async () => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Provider.Service.use((svc) => svc.list()))
+      },
+      default: async () => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Provider.Service.use((svc) => svc.defaultModel()))
+      },
+    }
 
     const sub =
       options.subscribe ??
@@ -305,6 +348,48 @@ export namespace RemoteSender {
     }
 
     function dispatch(msg: RemoteProtocol.Command) {
+      if (msg.command === "list_models") {
+        const parsed = RemoteModelCatalog.Request.safeParse(msg.data)
+        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(session)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid list_models command",
+          })
+          return
+        }
+        const run = options.provide ?? provide
+        void (async () => {
+          try {
+            const info = await catalog.get(session.value)
+            const result = await run({
+              directory: info.directory,
+              fn: async () => {
+                const [providers, messages, fallback] = await Promise.all([
+                  catalog.providers(),
+                  catalog.messages(info.id),
+                  catalog.default().catch((err) => {
+                    options.log.warn("default model lookup failed", { error: String(err) })
+                    return undefined
+                  }),
+                ])
+                return RemoteModelCatalog.build({
+                  providers,
+                  session: info,
+                  messages,
+                  defaultModel: fallback,
+                })
+              },
+            })
+            options.conn.send({ type: "response", id: msg.id, result })
+          } catch {
+            options.log.error("list models command failed", { id: msg.id })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to list models" })
+          }
+        })()
+        return
+      }
       if (msg.command === "send_message") {
         const parsed = getRemotePromptInput().safeParse(msg.data)
         if (!parsed.success) {
@@ -315,9 +400,7 @@ export namespace RemoteSender {
           })
           return
         }
-        const input = SessionPrompt.PromptInput.zod.safeParse(
-          normalizePrompt(parsed.data as SessionPrompt.PromptInput & { model?: string }),
-        )
+        const input = SessionPrompt.PromptInput.zod.safeParse(normalizePrompt(parsed.data as RemotePromptInput))
         if (!input.success) {
           options.conn.send({
             type: "response",

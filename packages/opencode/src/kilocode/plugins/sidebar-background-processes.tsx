@@ -23,7 +23,17 @@ function label(item: TuiSidebarBackgroundProcessItem) {
 function View(props: { api: TuiPluginApi; session_id: string }) {
   const [open, setOpen] = createSignal(true)
   const theme = () => props.api.theme.current
-  const list = createMemo(() => props.api.state.session.processes(props.session_id))
+  const list = createMemo(() =>
+    props.api.state.session
+      .processes(props.session_id)
+      .filter(
+        (item) =>
+          item.status === "starting" ||
+          item.status === "running" ||
+          item.status === "ready" ||
+          item.status === "stopping",
+      ),
+  )
 
   return (
     <Show when={list().length > 0}>

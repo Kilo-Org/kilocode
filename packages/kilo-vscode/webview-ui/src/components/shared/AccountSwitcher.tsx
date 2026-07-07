@@ -10,6 +10,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useServer } from "../../context/server"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
+import { BalanceChip } from "./BalanceChip"
 
 const PERSONAL = "personal"
 
@@ -92,6 +93,7 @@ export const AccountSwitcher: Component<{ class?: string }> = (props) => {
           }
         >
           <span class="account-switcher-label">{label()}</span>
+          <BalanceChip class="account-switcher-balance" />
           <span class="account-switcher-badges">
             <Show when={selected() && !switching()}>
               <span class="account-switcher-role">{selected()!.role.toUpperCase()}</span>

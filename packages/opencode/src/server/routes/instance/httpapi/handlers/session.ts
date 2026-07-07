@@ -2,6 +2,7 @@ import { Image } from "@/image/image" // kilocode_change - classify user image v
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { KiloSessionSummary } from "@/kilocode/session/summary" // kilocode_change
 import { Provider } from "@/provider/provider" // kilocode_change - classify provider errors on the summary route
+import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { Command } from "@/command"
@@ -191,6 +192,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       if (ctx.payload.title !== undefined) {
         yield* session.setTitle({ sessionID: ctx.params.sessionID, title: ctx.payload.title })
       }
+      if (ctx.payload.metadata !== undefined) {
+        yield* session.setMetadata({ sessionID: ctx.params.sessionID, metadata: ctx.payload.metadata })
+      }
       if (ctx.payload.permission !== undefined) {
         yield* session.setPermission({
           sessionID: ctx.params.sessionID,
@@ -208,7 +212,10 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload?: typeof ForkPayload.Type
     }) {
       return yield* SessionError.mapStorageNotFound(
-        session.fork({ sessionID: ctx.params.sessionID, messageID: ctx.payload?.messageID }),
+        session.fork({
+          sessionID: ctx.params.sessionID,
+          messageID: ctx.payload?.messageID,
+        }),
       )
     })
 
@@ -342,9 +349,12 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
               yield* Effect.logError("prompt_async failed").pipe(
                 Effect.annotateLogs({ sessionID: ctx.params.sessionID, cause }),
               )
+              const error = Cause.squash(cause)
               yield* bus.publish(Session.Event.Error, {
                 sessionID: ctx.params.sessionID,
-                error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
+                error: AgentRequirementError.isInstance(error)
+                  ? error.toObject()
+                  : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
               })
             }),
           ),

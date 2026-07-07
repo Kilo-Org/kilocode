@@ -40,10 +40,15 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   batch_tool?: boolean
   codebase_search?: boolean
+  agent_requirements?: boolean
+  native_notebook_tools?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
+  sandbox?: boolean
+  sandbox_restrict_network?: boolean
+  sandbox_writable_paths?: string[]
 }
 
 export interface CommitMessageConfig {
@@ -147,4 +152,5 @@ export interface Config {
 
 export interface FeatureFlags {
   indexing: boolean
+  sandboxControls: boolean
 }

@@ -18,6 +18,7 @@ import { PermissionV2 } from "@opencode-ai/core/permission"
 import { PermissionID } from "./schema"
 // kilocode_change start
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
@@ -276,16 +277,24 @@ export const layer = Layer.effect(
 
       if (!needsAsk) return
 
+      // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
+      if (KiloHeadless.denies(request.sessionID)) {
+        return yield* new DeniedError({ ruleset: subset(request.permission, ruleset) })
+      }
+      // kilocode_change end
+
       const id = request.id ?? PermissionID.ascending()
       const info: Request = {
         id,
         sessionID: request.sessionID,
         permission: request.permission,
         patterns: request.patterns,
-        // kilocode_change start — inject disableAlways metadata for config paths
+        // kilocode_change start — inject disableAlways + configProtected metadata for config paths
         metadata: {
           ...request.metadata,
-          ...(isProtected ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true } : {}),
+          ...(isProtected
+            ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true, [ConfigProtection.CONFIG_PROTECTED_KEY]: true }
+            : {}),
         },
         // kilocode_change end
         always: request.always,

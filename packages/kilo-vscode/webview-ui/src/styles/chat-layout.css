@@ -228,6 +228,14 @@
   width: 100%;
 }
 
+[data-component="assistant-memory-badge"] {
+  align-self: flex-start;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+}
+
 .vscode-session-turn-diffs {
   width: 100%;
 }

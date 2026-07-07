@@ -38,6 +38,7 @@ describe("indexing worktrees", () => {
   test("shares the primary checkout index with a linked worktree", async () => {
     await using tmp = await tmpdir({ git: true, config: cfg })
     process.env["KILO_CONFIG_DIR"] = tmp.path
+    await Bun.$`git -C ${tmp.path} add opencode.json && git -C ${tmp.path} commit -m config`.quiet()
     const worktree = path.join(tmp.path, ".kilo", "worktrees", "feature")
     await Bun.$`git -C ${tmp.path} worktree add -b feature ${worktree}`.quiet()
 

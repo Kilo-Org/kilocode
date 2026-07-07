@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop'a bağlan",
+  "provider.anaconda.title.manage": "Anaconda Desktop'ı yönet",
+  "provider.anaconda.status.checking": "Anaconda Desktop kontrol ediliyor...",
+  "provider.anaconda.status.opening": "Anaconda Desktop açılıyor...",
+  "provider.anaconda.status.syncing": "Sağlayıcı modelleri yenileniyor...",
+  "provider.anaconda.status.ready": "Bağlanmaya hazır",
+  "provider.anaconda.status.waiting": "Desktop bekleniyor",
+  "provider.anaconda.status.attention": "İlgi gerekiyor",
+  "provider.anaconda.status.unavailable": "Kullanılamıyor",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop {{platform}} üzerinde desteklenmiyor.",
+  "provider.anaconda.state.notInstalled":
+    "Anaconda Desktop'ı bu makineye kurun, ardından buraya dönün. Kilo kurulumu sizin için çalıştırmaz.",
+  "provider.anaconda.state.notRunning":
+    "Anaconda Desktop'ı açın, kurulumu tamamlayıp oturum açın, ardından Tekrar kontrol et'i seçin.",
+  "provider.anaconda.state.invalidConfig":
+    "Anaconda Desktop kurulumu eksik. Desktop'ı açın, kurulumu tamamlayın ve gerekirse yeniden başlatın.",
+  "provider.anaconda.state.signedOut": "Kilo'yu bağlamadan önce Anaconda Desktop'ı açın ve oturum açın.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo Anaconda Desktop'a erişemedi. Desktop'ı açın, tekrar oturum açın ve gerekirse yeniden başlatın.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop henüz yanıt vermiyor. Açın ve uygulamanın başlamasını bekleyin.",
+  "provider.anaconda.state.noModel":
+    "Anaconda Desktop'ta bir metin üretme modeli indirin. Mümkünse araç çağırma destekli bir model seçin, ardından sunucusunu başlatın.",
+  "provider.anaconda.state.noServer_one":
+    "İndirilmiş 1 metin üretme modeli kullanılabilir. Anaconda Desktop'ta bir model sunucusu başlatın. Araç çağırma desteği olan modeller önemle tavsiye edilir.",
+  "provider.anaconda.state.noServer_other":
+    "İndirilmiş {{count}} metin üretme modeli kullanılabilir. Anaconda Desktop'ta bir model sunucusu başlatın. Araç çağırma desteği olan modeller önemle tavsiye edilir.",
+  "provider.anaconda.state.unhealthy":
+    "Etkin çıkarım sunucusu henüz sağlıklı değil. Anaconda Desktop'ta kontrol edin ve gerekirse sunucuyu yeniden başlatın.",
+  "provider.anaconda.state.ready":
+    "Kilo sağlıklı bir yerel metin üretme sunucusu buldu ve mevcut bağlantı ayarlarını içe aktarabilir.",
+  "provider.anaconda.server": "Etkin çıkarım sunucusu",
+  "provider.anaconda.context": "Bağlam penceresi",
+  "provider.anaconda.contextValue": "{{count}} token",
+  "provider.anaconda.tools": "Araç çağırma",
+  "provider.anaconda.tools.supported": "Destekleniyor",
+  "provider.anaconda.tools.unsupported": "Etkin değil",
+  "provider.anaconda.tools.unknown": "Bilinmiyor",
+  "provider.anaconda.warning.title": "Araç desteği sınırlı",
+  "provider.anaconda.warning.description":
+    "Bu sunucu araç çağırmayı doğrulamıyor. Kodlama aracısı eylemleri başarısız olabilir veya kullanılamayabilir. Yalnızca bu sınırlamaları kabul ediyorsanız devam edin.",
+  "provider.anaconda.action.download": "Anaconda Desktop'ı indir",
+  "provider.anaconda.action.open": "Anaconda Desktop'ı aç",
+  "provider.anaconda.action.checkAgain": "Tekrar kontrol et",
+  "provider.anaconda.action.continue": "Yine de devam et",
+  "provider.anaconda.action.manage": "Yönet / Yenile",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop yenilendi",
+  "provider.anaconda.toast.refreshed.description": "Etkin yerel sunucu ve modeller Kilo'da güncel.",
+  "settings.providers.note.anacondaDesktop": "Anaconda Desktop tarafından yerel olarak sunulan bir model çalıştırın.",
+  "settings.providers.tag.local": "Yerel",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Önerilen",
   "command.category.view": "Görünüm",
   "command.category.project": "Proje",
@@ -94,6 +148,30 @@ export const dict = {
   "command.session.unshare.description": "Bu oturumun paylaşımını durdur",
   "command.session.export": "Oturum dökümünü dışa aktar",
 
+  "agentRequirements.skill.installed": "Yüklü",
+  "agentRequirements.skill.checkFailed": "Yetenek denetimi başarısız oldu",
+  "agentRequirements.skill.missing": "Yüklü değil",
+  "agentRequirements.mcp.connected": "Bağlı",
+  "agentRequirements.mcp.checkFailed": "MCP denetimi başarısız oldu",
+  "agentRequirements.mcp.missing": "Bağlı değil",
+  "agentRequirements.extension.installed": "Yüklü",
+  "agentRequirements.extension.checkFailed": "VS Code uzantısı denetimi başarısız oldu",
+  "agentRequirements.extension.missing": "Yüklü değil",
+  "agentRequirements.extension.description": "Eksik uzantıları VS Code içinde yükleyin.",
+  "agentRequirements.group.skills": "Yetenekler",
+  "agentRequirements.group.mcps": "MCP’ler",
+  "agentRequirements.group.extensions": "VS Code Uzantıları",
+  "agentRequirements.blocked.title": "{{agent}} ajanı ön koşulları",
+  "agentRequirements.blocked.description": "Bu ajanın çalışmadan önce aşağıdaki araçlara ihtiyacı var.",
+  "agentRequirements.prompt.blocked": "Bu ajanı kullanmak için önce gerekli denetimleri tamamlayın",
+  "agentRequirements.action.openMarketplace": "Marketplace’i Aç",
+  "agentRequirements.error.unknownAgent": "Seçili ajan bulunamadı.",
+  "agentRequirements.error.malformedDeclaration": "Bu ajanın geçersiz bir gereksinim bildirimi var.",
+  "agentRequirements.error.discoveryFailed": "Kilo mevcut yetenekleri denetleyemedi.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo MCP sunucu durumunu denetleyemedi.",
+  "agentRequirements.error.scopeMismatch": "Bu ajan gereksinimi denetimi artık etkin değil.",
+  "agentRequirements.error.requestFailed": "Kilo ajan gereksinimlerini denetleyemedi.",
+
   "palette.search.placeholder": "Dosya, komut ve oturum ara",
   "palette.empty": "Sonuç bulunamadı",
   "palette.group.commands": "Komutlar",
@@ -174,6 +252,7 @@ export const dict = {
   "model.tag.free": "Ücretsiz",
   "model.tag.dataCollected": "Veriler eğitim için kullanılabilir",
   "model.tag.latest": "En yeni",
+  "model.group.auto": "Otomatik Modeller",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",
   "model.group.collapse": "{{group}} grubunu daralt",
@@ -201,6 +280,7 @@ export const dict = {
   "model.preview.label.average": "Tahmini Ort. Maliyet",
   "model.preview.label.context": "Bağlam",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Model seçenekleri",
   "model.preview.label.completion": "Tamamlama",
   "model.preview.label.costAttempt": "Maliyet / deneme",
   "model.preview.value.notSupported": "Desteklenmiyor",
@@ -285,8 +365,27 @@ export const dict = {
   "prompt.action.resetModel": "Modeli varsayılana sıfırla",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
+  "prompt.action.sandbox.enable": "Sandbox'ı etkinleştir",
+  "prompt.action.sandbox.disable": "Sandbox'ı devre dışı bırak",
+  "prompt.action.sandbox.enabled": "Sandbox etkin. Agent shell komutları proje ve Kilo dizinleriyle sınırlıdır.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox devre dışı. Agent shell komut yazma işlemlerini proje ve Kilo dizinleriyle sınırlamak için tıklayın.",
+  "prompt.action.sandbox.status.enabled": "Sandbox etkin",
+  "prompt.action.sandbox.status.disabled": "Sandbox devre dışı",
+  "prompt.action.sandbox.filesystem": "Dosya sistemi",
+  "prompt.action.sandbox.network": "Ağ",
+  "prompt.action.sandbox.filesystem.restricted": "Kısıtlı",
+  "prompt.action.sandbox.network.blocked": "Engellendi",
+  "prompt.action.sandbox.network.allowed": "İzin verildi",
+  "prompt.action.sandbox.unrestricted": "Kısıtlanmamış",
+  "prompt.action.sandbox.description.enabled": "Yazma işlemleri proje ve Kilo dizinleriyle sınırlıdır.",
+  "prompt.action.sandbox.description.disabled":
+    "Dosya sistemi yazma işlemlerini ve ağ erişimini kısıtlamak için tıklayın.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Dosya sistemi yazma işlemlerini kısıtlamak için tıklayın. Sandbox ayarlarınız ağ erişimine izin vermeye devam ediyor.",
 
   "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
+  "speechToText.tooltip.starting": "Mikrofon başlatılıyor... Henüz konuşmayın.",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
   "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
@@ -1097,6 +1196,8 @@ export const dict = {
 
   "common.retry": "Tekrar Dene",
   "common.refresh": "Yenile",
+  "common.reload": "Yeniden yükle",
+  "common.reloadDescription": "Diskten yapılandırma, yetenekler, ajanlar ve komutları yeniden yükle",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Giriş yapılmadı",
@@ -1104,6 +1205,10 @@ export const dict = {
   "profile.balance.title": "Bakiye",
   "profile.balance.refresh": "Bakiyeyi yenile",
   "profile.action.dashboard": "Kontrol Paneli",
+  "profile.action.topUp": "Bakiye yükle",
+  "profile.pass.subscribe": "Kredi eklemek ve bonus kazanmak için Kilo Pass edinin",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Yenilenir",
   "profile.action.logout": "Çıkış Yap",
 
   "settings.section.configuration": "Yapılandırma",
@@ -1121,6 +1226,9 @@ export const dict = {
   "settings.indexing.status.title": "Durum",
   "settings.indexing.enable.title": "İndekslemeyi etkinleştir",
   "settings.indexing.enable.description": "Anlamsal kod tabanı indekslemeyi açın veya kapatın.",
+  "settings.indexing.showButton.title": "İndeksleme kapalıyken düğmeyi göster",
+  "settings.indexing.showButton.description":
+    "İndeksleme kapalıyken istem alanının altında indeksleme düğmesini göster. Düğme gizliyse indekslemeyi etkinleştirmek için Ayarlar > İndeksleme'yi açın.",
   "settings.indexing.globalEnable.title": "Genel olarak etkinleştir",
   "settings.indexing.globalEnable.description": "Her çalışma alanı için dizine eklemeyi etkinleştir.",
   "settings.indexing.projectEnable.title": "Bu proje için etkinleştir",
@@ -1172,6 +1280,11 @@ export const dict = {
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",
+  "session.costAlert.header": "Oturum Maliyeti Uyarısı",
+  "session.costAlert.continue": "Devam et",
+  "session.costAlert.question":
+    "Bu oturum, oturum başına {{limit}} uyarı eşiğini yeni geçti ve maliyeti {{cost}} oldu. Devam edilsin mi?",
+  "session.costAlert.stop": "Durdur",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",
@@ -1217,6 +1330,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Bu, yalnızca VS Code uzantısına özgü ayarları varsayılan değerlerine sıfırlar. Modlar ve otomatik onay kuralları gibi CLI ile paylaşılan ayarlar, CLI yapılandırmasında depolanır ve sıfırlanmaz.",
   "settings.aboutKiloCode.resetSettings.button": "Tüm Ayarları Sıfırla",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Ayar Aktarımı",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Ayarlarınızı VS Code örnekleri arasında aktarmak için dışa veya içe aktarın.",
@@ -1311,8 +1425,19 @@ export const dict = {
     "Speech to Text kullanmak için Kilo sağlayıcısını etkinleştirin ve giriş yapın. Speech to Text şu anda yalnızca Kilo Gateway ile desteklenmektedir.",
   "settings.models.speechToTextModel.title": "Sesten metne modeli",
   "settings.models.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
+  "settings.experimental.nativeNotebookTools.title": "Yerel Not Defteri Araçları",
+  "settings.experimental.nativeNotebookTools.description":
+    "VS Code not defterlerini okumak, düzenlemek ve çalıştırmak için deneysel araçları etkinleştir",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
+  "settings.sandboxing.title": "Sandbox",
+  "settings.sandboxing.network.title": "Ağ Erişimini Kısıtla",
+  "settings.sandboxing.network.description":
+    "Model tarafından başlatılan komutların ve HTTP araçlarının giden ağ erişimini engelleyin. Yerel MCP sunucuları ve eklenti kancaları bu kısıtlamanın dışında çalışır. Sağlayıcı ve model çıkarım trafiği kullanılabilir durumda kalır.",
+
+  "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
+  "settings.sandboxing.writablePaths.description":
+    "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1324,6 +1449,9 @@ export const dict = {
   "settings.experimental.remote.inactive": "Pasif",
   "settings.experimental.remote.hint": "Geçiş yapmak için sohbette /remote kullanın",
   "settings.experimental.toolToggles": "Araç Açma/Kapatma",
+  "settings.experimental.sandbox.title": "Sandbox",
+  "settings.experimental.sandbox.description":
+    "Agent shell komutlarını, proje ve Kilo durum dizinlerine yazmaları kısıtlanan işletim sistemi düzeyinde bir sandbox içinde çalıştırın",
 
   "settings.agentBehaviour.defaultAgent.title": "Varsayılan Ajan",
   "settings.agentBehaviour.defaultAgent.description": "Belirtilmediğinde kullanılacak ajan",
@@ -1415,6 +1543,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Araçların nasıl çalıştırılacağını tanımlayın. Çoğu araç varsayılan olarak İzin Ver'dir. doom_loop ve external_directory varsayılan olarak Sor'dur.",
+  "settings.autoApprove.maxCost.title": "Oturum Maliyeti Uyarısı",
+  "settings.autoApprove.maxCost.description":
+    "Bir oturumun harcaması bu USD tutarını aştıktan sonra devam etmeden önce uyar. Tam dolar kullanın; devre dışı bırakmak için boş bırakın.",
   "settings.autoApprove.level.allow": "İzin Ver",
   "settings.autoApprove.level.ask": "Sor",
   "settings.autoApprove.level.deny": "Reddet",
@@ -1454,6 +1585,7 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
   "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
+  "settings.context.compaction.title": "Sıkıştırma",
   "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
   "settings.context.compactionLimit.description":
     "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
@@ -1461,6 +1593,42 @@ export const dict = {
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",
   "settings.context.watcherPatterns.description": "İzleyicinin yok sayması gereken dosyalar için glob kalıpları",
+
+  "settings.context.memory.title": "Bellek",
+  "settings.context.memory.project.title": "Proje belleği",
+  "settings.context.memory.autoSave.title": "Proje belleğini otomatik kaydet",
+  "settings.context.memory.autoSave.description":
+    "Bellek açıkken tamamlanan turlardan kalıcı proje gerçeklerini otomatik olarak kaydeder.",
+  "settings.context.memory.index.title": "Bellek indeksi",
+  "settings.context.memory.status.notLoaded": "Yüklenmedi",
+  "settings.context.memory.status.disabled": "Devre dışı",
+  "settings.context.memory.status.enabledTokensOps":
+    "Etkin - bu oturumda ~{{session}} başlangıç bağlamı tokenı - depolanan indekste ~{{tokens}} token - son işlem {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Proje belleği dosyalarını oluşturmak için belleği etkinleştirin.",
+  "settings.context.memory.inspect": "İncele",
+  "settings.context.memory.rebuild": "Bellek indeksini yeniden oluştur",
+  "chat.memory.on": "Bellek açık",
+  "chat.memory.label": "Bellek · {{tokens}} token",
+  "chat.memory.status.loading": "Bellek durumu yükleniyor",
+  "chat.memory.session.tokens": "Bu oturumdaki başlangıç bağlamı: {{tokens}} token",
+  "chat.memory.total.tokens": "Depolanan indeks: {{tokens}} token",
+  "chat.memory.project.enabled": "Proje belleği etkin",
+  "chat.memory.project.disabled": "Proje belleği devre dışı",
+  "chat.memory.command.failed": "Bellek komutu başarısız oldu",
+  "chat.memory.savedOperations": "Son bellek işlemi: {{count}} işlem",
+  "chat.memory.inspect": "Belleği incele",
+  "chat.memory.remember": "Hatırla",
+  "chat.memory.forget": "Unut",
+  "chat.memory.rebuild": "İndeksi yeniden oluştur",
+  "chat.memory.disable": "Belleği devre dışı bırak",
+  "chat.memory.badge.injected": "Bellek eklendi",
+  "chat.memory.badge.recalled": "Bellek geri çağrıldı",
+  "chat.memory.badge.startupCtx": "başlangıç ctx",
+  "chat.memory.badge.items": "{{count}} öğe",
+  "chat.memory.badge.tokens": "{{tokens}} token",
+  "chat.memory.badge.recalledDetail": "Bellek geri çağrıldı: {{count}} öğe - {{tokens}} token",
+  "chat.memory.badge.files": "Bellek dosyaları: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Özel prompt Kullan",

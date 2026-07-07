@@ -2,6 +2,8 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Font
@@ -97,5 +99,14 @@ class SessionEditorStyleTest : BasePlatformTestCase() {
         assertFalse("regularFont should not use editor font family", style.regularFont.name == "Courier New")
         assertFalse("boldFont should not use editor font family", style.boldFont.name == "Courier New")
         assertFalse("smallFont should not use editor font family", style.smallFont.name == "Courier New")
+    }
+
+    fun `test transcript editor styling ignores disposed editor`() {
+        val factory = EditorFactory.getInstance()
+        val editor = factory.createEditor(factory.createDocument(""), project) as EditorEx
+
+        factory.releaseEditor(editor)
+
+        SessionEditorStyle.current().applyTranscriptToEditor(editor)
     }
 }

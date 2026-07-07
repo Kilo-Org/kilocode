@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/sandbox",
+  "version": "7.4.1",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "description": "OS-neutral sandbox profiles and launch preparation for Kilo Code",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test --timeout 30000",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --dots --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/platform-node": "catalog:",
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "peerDependencies": {}
+}

@@ -236,6 +236,33 @@ const scenarios: Scenario[] = [
     }))
     .json(404, object, "status"),
   http.protected.get("/question", "question.list").json(200, array),
+  // kilocode_change start
+  http.protected.get("/kilocode/notebook", "kilocode.notebook.list").json(200, array),
+  http.protected
+    .post("/kilocode/notebook/{requestID}/reply", "kilocode.notebook.reply")
+    .at((ctx) => ({
+      path: route("/kilocode/notebook/{requestID}/reply", { requestID: "nbr_httpapi_reply" }),
+      headers: ctx.headers(),
+      body: {
+        result: {
+          operation: "read",
+          path: "notebook.ipynb",
+          requestPath: "notebook.ipynb",
+          revision: "content:1",
+          cells: [],
+        },
+      },
+    }))
+    .json(404, object, "status"),
+  http.protected
+    .post("/kilocode/notebook/{requestID}/reject", "kilocode.notebook.reject")
+    .at((ctx) => ({
+      path: route("/kilocode/notebook/{requestID}/reject", { requestID: "nbr_httpapi_reject" }),
+      headers: ctx.headers(),
+      body: { error: { code: "not_found", message: "Notebook not found" } },
+    }))
+    .json(404, object, "status"),
+  // kilocode_change end
   http.protected
     .post("/question/{requestID}/reply", "question.reply.invalid")
     .at((ctx) => ({

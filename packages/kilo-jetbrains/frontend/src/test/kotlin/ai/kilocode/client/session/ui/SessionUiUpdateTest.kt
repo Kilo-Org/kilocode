@@ -15,6 +15,8 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -41,7 +43,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent, openFile = {})
+        panel = SessionMessageListPanel(model, parent, openFile = { _, _ -> })
     }
 
     override fun tearDown() {
@@ -158,6 +160,24 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
     }
 
+    fun `test user compaction marker renders without prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto("cp1", "ses", "u1", "compaction"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.Default, mv.sessionViewKind)
+        assertEquals(listOf("cp1"), mv.partIds())
+        assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
+    }
+
+    fun `test user text message keeps prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.UserPrompt, mv.sessionViewKind)
+    }
+
     // ------ generic fallback ------
 
     fun `test unknown part type falls back to GenericView`() {
@@ -218,7 +238,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     fun `test user text and attachments share one prompt container`() {
         val opened = mutableListOf<String>()
-        val item = SessionMessageListPanel(model, parent, openFile = {}, openAttachment = { _, it -> opened.add(it.url) })
+        val item = SessionMessageListPanel(model, parent, openFile = { _, _ -> }, openAttachment = { _, it -> opened.add(it.url) })
         model.upsertMessage(msg("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", text = "look at this"))
         model.updateContent(
@@ -262,6 +282,100 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         }
 
         assertEquals(listOf("data:image/png;base64,aGVsbG8=", "data:text/plain;base64,aGVsbG8="), opened)
+    }
+
+    fun `test user file mention hides synthetic read payload and text attachment card`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "read @src/a.kt"))
+        model.updateContent("u1", PartDto(
+            id = "p2",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "text",
+            text = "<path>/tmp/a.kt</path>\n<content>raw</content>",
+            synthetic = true,
+        ))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "file:///tmp/a.kt",
+            filename = "a.kt",
+            source = source("src/a.kt"),
+        ))
+
+        val msg = panel.findMessage("u1")!!
+
+        assertEquals(listOf("p1"), msg.partIds())
+        assertNull(msg.part("p2"))
+        assertNull(msg.part("f1"))
+        assertEquals("read [@src/a.kt](src/a.kt)", (msg.part("p1") as TextView).markdown())
+        assertEquals(0, msg.components.filterIsInstance<PromptAttachmentView>().size)
+    }
+
+    fun `test user git changes mention hides synthetic data attachment card`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "review @git-changes"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "data:text/plain;charset=utf-8,diff%20content",
+            filename = "git-changes.txt",
+            source = PartSourceDto(
+                type = "file",
+                text = PartSourceTextDto("@git-changes", 7.0, 19.0),
+                path = "git-changes",
+            ),
+        ))
+
+        val msg = panel.findMessage("u1")!!
+
+        assertEquals(listOf("p1"), msg.partIds())
+        assertNull(msg.part("f1"))
+        assertEquals("review [@git-changes](git-changes)", (msg.part("p1") as TextView).markdown())
+        assertEquals(0, msg.components.filterIsInstance<PromptAttachmentView>().size)
+    }
+
+    fun `test source less text attachment still renders in prompt strip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "data:text/plain;base64,aGVsbG8=",
+            filename = "note.txt",
+        ))
+
+        val view = panel.findMessage("u1")!!.part("f1")
+
+        assertTrue(view is PromptAttachmentView)
+        assertNotNull(find(view!!, AttachmentCard::class.java))
+    }
+
+    fun `test source backed image attachment still renders in prompt strip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "image/png",
+            url = "file:///tmp/a.png",
+            filename = "a.png",
+            source = source("src/a.png"),
+        ))
+
+        val view = panel.findMessage("u1")!!.part("f1")
+
+        assertTrue(view is PromptAttachmentView)
+        assertNotNull(find(view!!, AttachmentCard::class.java))
     }
 
     fun `test empty sanitized user text does not create prompt panel`() {
@@ -368,7 +482,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     fun `test transcript attachment click delegates to attachment opener`() {
         val opened = mutableListOf<Pair<String, String>>()
-        val item = SessionMessageListPanel(model, parent, openFile = {}, openAttachment = { msg, it -> opened.add(msg to it.url) })
+        val item = SessionMessageListPanel(model, parent, openFile = { _, _ -> }, openAttachment = { msg, it -> opened.add(msg to it.url) })
         model.upsertMessage(msg("u1", "user"))
         model.updateContent(
             "u1",
@@ -459,6 +573,12 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     private fun toolPart(id: String, mid: String, tool: String, state: String) = PartDto(
         id = id, sessionID = "ses", messageID = mid, type = "tool", tool = tool, state = state,
+    )
+
+    private fun source(path: String) = PartSourceDto(
+        type = "file",
+        path = path,
+        text = PartSourceTextDto("@$path", 5.0, (6 + path.length).toDouble()),
     )
 
     private fun <T : Any> find(root: java.awt.Component, type: Class<T>): T? {

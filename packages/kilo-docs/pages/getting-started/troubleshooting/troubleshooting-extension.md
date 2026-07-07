@@ -9,34 +9,8 @@ Providing console logs helps us pinpoint exactly what's going wrong with your in
 
 ## Opening Developer Tools
 
-{% tabs %}
-{% tab label="VS Code" %}
-
 1. **Open the Command Palette**: Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac)
 2. **Search for Developer Tools**: Type `Developer: Open Webview Developer Tools` and select it
-
-{% /tab %}
-{% tab label="JetBrains" %}
-
-### Enable JCEF Debugging
-
-1. Open your JetBrains IDE and go to **Help → Find Action** (or press `Cmd+Shift+A` / `Ctrl+Shift+A`)
-2. Type `Registry` and open it
-3. Search for `jcef` and configure these settings:
-   - `ide.browser.jcef.debug.port` → set to `9222`
-   - `ide.browser.jcef.contextMenu.devTools.enabled` → check the box
-4. Restart your IDE after making these changes
-
-### Connect Chrome DevTools
-
-1. Make sure the **Kilo Code panel is open** in your IDE (the debug target won't appear unless the webview is active)
-2. Open Chrome (or any Chromium-based browser like Edge or Arc)
-3. Navigate to `http://localhost:9222/json` to see the list of inspectable targets
-4. Find the entry with `"title": "Kilo Code"` and open the `devtoolsFrontendUrl` link
-5. Chrome DevTools will open connected to the Kilo webview—click the **Console** tab
-
-{% /tab %}
-{% /tabs %}
 
 ## Capturing the Error
 

@@ -39,13 +39,6 @@ While the specifics change constantly, some principles stay consistent:
 - **Model precedence:** `--model` flag → Per-agent config → Last used in session → Global config → Recent models → First available.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-- Use the **model dropdown** in the chat panel to select a model for each conversation.
-- Configure **API profiles** in Settings to group provider + model combinations and switch between them quickly.
-- Models are **sticky per mode** — each mode (Code, Architect, Debug, etc.) remembers the last model you selected.
-
-{% /tab %}
 {% /tabs %}
 
 **For complex coding tasks**: Premium models (Claude Sonnet/Opus, GPT-5 class, Gemini Pro) typically handle nuanced requirements, large refactors, and architectural decisions better.
@@ -125,17 +118,6 @@ Subagents inherit the model currently active in the primary agent session — th
 ```
 
 The Settings UI writes the same `agent.<name>.model` entry, so either method produces the same override. Subagents without an explicit model continue to inherit whatever the invoking agent is running.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-In the legacy extension, each mode has **Sticky Models** — switching from one mode to another (e.g., Code → Architect) uses whatever model you last selected for that mode, not the model from the mode you came from. This means you can assign different models to different modes:
-
-- **Architect:** a reasoning-heavy model (Gemini Pro, Claude Opus)
-- **Code:** a fast coding model (Claude Sonnet, GPT-4.1)
-- **Debug:** a cost-efficient model (Gemini Flash, DeepSeek)
-
-The model selection is remembered per mode across sessions.
 
 {% /tab %}
 {% /tabs %}

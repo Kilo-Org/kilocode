@@ -177,7 +177,7 @@ Remote HTTP proxy responses can include sync fence metadata. Router waits for ma
 
 ## Daemon lifecycle
 
-`kilo daemon start|status|stop|restart` manage detached local `kilo serve` child. `kilo console` calls same start path, so it reuses healthy daemon instead of spawning second process.
+`kilo daemon start|status|stop|restart` manage a detached local `kilo serve` child, with bare `kilo daemon` equivalent to `kilo daemon start`. `kilo console` calls the same start path, so it reuses a healthy daemon instead of spawning a second process, while `kilo console stop` aliases `kilo daemon stop`.
 
 | Area | Behavior |
 |---|---|
@@ -185,6 +185,7 @@ Remote HTTP proxy responses can include sync fence metadata. Router waits for ma
 | Log file | `${Global.Path.log}/daemon.log`, created with mode `0600` |
 | Port allocation | For `--port 0`, scans `4097..4116` and chooses available port |
 | Child process | Detached `kilo serve --hostname <host> --port <port>` process |
+| Foreground mode | `--foreground` / `-f` keeps the invoking command attached; SIGINT, SIGTERM, or SIGHUP stops only the daemon identity it started or reused |
 | Health | Probes authenticated `/global/health` with 2 second timeout |
 | Reuse | Reuses daemon only when process is alive, health succeeds, and installed version matches |
 | Cleanup | Terminates stale process when present, clears stale state, then starts replacement |
@@ -261,7 +262,7 @@ Later sources override earlier values during instance config load:
 | 11 | macOS managed preferences |
 | 12 | Runtime flag-derived permission, tool, compaction, and plugin behavior |
 
-Global config files load from `${Global.Path.config}`. Project updates prefer existing config files found in ancestor `.kilo`, `.kilocode`, or `.opencode` directories, then existing project root config files, then create `.kilo/kilo.json`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
+Global config files load from `${Global.Path.config}`. Project updates prefer existing config files found in ancestor `.kilo` or legacy `.kilocode` directories, then existing project root config files, then create `.kilo/kilo.json`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
 
 Signed-in organization modes become normal agent configuration during load. They override migrated legacy modes and remain overridable by later config sources in table.
 

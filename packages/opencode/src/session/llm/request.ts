@@ -24,6 +24,7 @@ import {
 } from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { KiloSession } from "@/kilocode/session"
+import { stripInternalOptions } from "@/kilocode/agent/options"
 // kilocode_change end
 
 type PrepareInput = {
@@ -100,7 +101,11 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
         sessionID: input.sessionID,
         providerOptions: input.provider.options,
       })
-  const options = mergeOptions(mergeOptions(mergeOptions(base, input.model.options), input.agent.options), variant)
+  // kilocode_change start - drop Kilo-internal agent metadata (id/displayName/source)
+  // so it never leaks into providerOptions and gets rejected by strict providers
+  const agentOptions = stripInternalOptions(input.agent.options)
+  const options = mergeOptions(mergeOptions(mergeOptions(base, input.model.options), agentOptions), variant)
+  // kilocode_change end
   if (isOpenaiOauth) {
     // kilocode_change start - prepend soul to instructions
     options.instructions = SystemPrompt.soul() + "\n" + system.join("\n")

@@ -14,7 +14,7 @@
 
 - `plugin.xml` `<content>` entries ↔ module XML descriptors (`kilo.jetbrains.{shared,frontend,backend}.xml`)
 - Service classes ↔ `<applicationService>`/`<projectService>` entries in the corresponding module XML
-- `script/build.ts` platform list ↔ `backend/build.gradle.kts` `requiredPlatforms` list
+- `packages/kilo-jetbrains/package.json` version ↔ GitHub CLI release tag consumed by the backend downloader
 
 ## IntelliJ Platform Source Lookup
 
@@ -133,8 +133,17 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - Extend `BasePlatformTestCase` to get a real IntelliJ Application and EDT in tests. The session package already uses `SessionControllerTestBase` which wraps this.
 - Do not mock the EDT or threading assertions — test against the real threading model.
 - Do not add production methods whose only purpose is test access. Prefer exercising the public API and inspecting the real Swing component tree in tests.
+- Do not expose `internal` accessors, helper methods, or synthetic seams just so tests can inspect private implementation details. If a test needs this, either assert observable UI/action behavior or refactor the production API so the new seam has real product value.
 - For state-driven updates, assert that the component state matches after flushing coroutines and draining the EDT.
 - For retained Swing components, assert that expand/collapse, update, and no-op paths work correctly without rebuilding the component tree.
+
+### Integration Test Timeouts
+
+- Prefer deterministic synchronization over timeouts: wait for explicit state transitions, event emissions, fake server hooks, latches, or coroutine completions that prove the system reached the expected condition.
+- Use timeouts only when an integration test cannot otherwise protect the suite from a stuck process, external boundary, or coroutine. Treat them as watchdogs, not as the mechanism that makes the test pass.
+- When a timeout is necessary, define one named timeout or wait helper near the top of the test file and reuse it. Do not scatter literal timeout values through individual assertions.
+- Timeout failures should include the last observed state and useful logs or errors so CI explains what blocked progress.
+- Do not use `delay`, sleeps, or repeated polling to guess when asynchronous work is done unless the behavior under test is timing-specific.
 
 ## Dependencies
 
@@ -144,7 +153,9 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 ## CLI Integration
 
-- CLI process spawning, extraction, and lifecycle belong in `backend`.
+- CLI process spawning, download, extraction, and lifecycle belong in `backend`.
+- The plugin does not bundle CLI binaries. At connect time the backend downloads the GitHub Release asset for the version pinned in `packages/kilo-jetbrains/package.json`; `backend` resources include `kilo.properties` with `cli.version` for split-mode RPC and runtime use.
+- The generated API client is produced from the pinned release binary by running `kilo generate` during the Gradle OpenAPI generation task.
 - For OS and environment checks, prefer IntelliJ Platform classes over raw JVM APIs such as `System.getProperty(...)` or `System.getenv(...)`.
 - Detect architecture with `com.intellij.util.system.CpuArch.CURRENT`, not `System.getProperty("os.arch")`.
 - Detect OS with `com.intellij.openapi.util.SystemInfo.isMac` / `isLinux` / `isWindows`.
@@ -162,8 +173,8 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 ### Dev Storage Isolation
 
-- In development (`runIdeBackend` / `runIde`), the Gradle property `kilo.dev.storage.isolated=true` makes the backend set `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, and `XDG_CACHE_HOME` to `<worktree>/.kilo-dev/{data,config,state,cache}` before spawning the CLI. The worktree root comes from the `kilo.dev.worktree.root` JVM system property (auto-set by Gradle from the project directory).
-- The checked-in `Run IDE (Backend)` run configuration enables isolation by default (`-Pkilo.dev.storage.isolated=true`). Developers can disable it by passing `-Pkilo.dev.storage.isolated=false`.
+- In development (`runIdeSplitMode`, `runIdeBackend`, `runIdeFrontend`, or `runIde`), the Gradle property `kilo.dev.storage.isolated=true` makes the backend set `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, and `XDG_CACHE_HOME` to `<worktree>/.kilo-dev/{data,config,state,cache}` before spawning the CLI. The worktree root comes from the `kilo.dev.worktree.root` JVM system property (auto-set by Gradle from the project directory).
+- The checked-in `Run IDE (Backend)`, `Run IDE (Frontend)`, and `Run IDE (Split Mode)` run configurations enable isolation by default (`-Pkilo.dev.storage.isolated=true`). Developers can disable it by passing `-Pkilo.dev.storage.isolated=false`.
 - Use standard `XDG_*_HOME` env vars for this isolation. Do not introduce custom `KILO_DATA_DIR`, `KILO_GLOBAL_CONFIG_DIR`, `KILO_STATE_DIR`, or `KILO_CACHE_DIR` env vars — the CLI core already respects `XDG_*_HOME` via `xdg-basedir`.
 - The `.kilo-dev/` directory is gitignored and created automatically on first run.
 - The implementation lives in `KiloBackendCliManager.buildEnv()` / `devStorageEnv()`. Tests: `KiloBackendCliManagerEnvTest`.
@@ -178,22 +189,21 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 ## Build and Verification
 
-- **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, prepare production CLI binaries, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.
+- **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.
 - **Test version build**: If the user asks for a JetBrains test build, still require a version and use `script/build-version.sh <version> --skip-signing --skip-verification` from `packages/kilo-jetbrains/` so no signing secrets are needed. Add `--skip-clean` only when the user wants a faster incremental test build.
-- **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. Does NOT require CLI binaries.
-- **Full build**: `bun run build` from `packages/kilo-jetbrains/` (prepares CLI binaries + runs Gradle `buildPlugin`).
-- **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present in `backend/build/generated/cli/`; run `bun run build --prepare-cli` first).
+- **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. A cold build downloads the pinned CLI release via `generateOpenApiSpec` and needs network access; Gradle-cached incremental runs skip the download. It does not bundle per-platform CLI binaries.
+- **Full build**: `bun run build` from `packages/kilo-jetbrains/` (runs Gradle `buildPlugin`).
+- **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/`.
 - **Java checks**: Do not run `java -version` as a routine preflight. Gradle commands already fail clearly when Java is missing or incompatible; check Java only when diagnosing that failure mode.
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
-- **Run in sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does NOT build CLI binaries.
-- **Run split backend**: `./gradlew runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
-- **Test split mode**: `./gradlew generateSplitModeRunConfigurations` creates a "Run IDE (Split Mode)" config that starts both frontend and backend processes locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
+- **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
 
 ### CLI/SDK Change Awareness
 
-- JetBrains runtime behavior depends on the bundled CLI artifact under `backend/build/generated/cli/`; Gradle-only tasks and sandbox runs do not rebuild it.
-- If there are relevant changes outside `packages/kilo-jetbrains/` in the CLI (`packages/opencode/`) or SDK/API generation paths (`packages/sdk/js/`, server endpoints, OpenAPI outputs), warn the user that the JetBrains run may be using stale generated CLI or SDK artifacts.
-- Do not regenerate or rebuild those artifacts automatically just because such changes exist. Ask the user whether to refresh them first, typically with `bun run build --prepare-cli` from `packages/kilo-jetbrains/` for CLI artifacts and `./script/generate.ts` from the repo root for server/API SDK changes.
+- JetBrains runtime behavior depends on the downloaded CLI release pinned by `packages/kilo-jetbrains/package.json`; local `packages/opencode/` changes are not used unless published and pinned.
+- If there are relevant server/API changes outside `packages/kilo-jetbrains/`, warn the user that JetBrains may need a newly published/pinned CLI release and regenerated SDK artifacts.
 
 ## UI Guidelines
 
@@ -232,7 +242,6 @@ Before introducing any new reusable color, spacing value, border, size, font, or
 - `SessionUiStyle.View` — card sizing, card borders, surfaces, hover colors, and nested objects for `Prompt`, `Reasoning`, `Message`, and `Tool`.
 - `SessionUiStyle.RecentSessions` — recent sessions list limits.
 - `SessionUiStyle.Timeline` — activity-indicator colors for the session header timeline.
-- `Dock` — border presets for question, permission, and connection dock panels.
 
 Rules:
 - Generic layout constants (gaps, generic colors, reusable helpers) → `UiStyle`.
@@ -539,6 +548,7 @@ Official references:
 - [User Interface Components](https://plugins.jetbrains.com/docs/intellij/user-interface-components.html)
 - [UI FAQ (colors, borders, icons)](https://plugins.jetbrains.com/docs/intellij/ui-faq.html)
 
+- For compact icon-only actions, use `ai.kilocode.client.ui.HoverIcon` so the control gets the standard 24×24 hover treatment. Do not create `JButton(icon)` or wrap a bare icon in a button just to make it clickable.
 - **Reuse platform icons**: browse at https://intellij-icons.jetbrains.design. Access via `AllIcons.*` constants.
 - Custom icons: SVG files in `resources/icons/`. Load via `IconLoader.getIcon("/icons/foo.svg", MyClass::class.java)`.
 - Organize in an `icons` package or a `*Icons` object with `@JvmField` on each constant.
@@ -574,6 +584,38 @@ Review generated UI code and remove:
 - SVG assets using `currentColor`, CSS variables, CSS classes, `<style>` blocks, or inherited styling
 - Extra helpers that do not make the UI clearer or more reusable
 - Any Kotlin UI DSL (`com.intellij.ui.dsl.builder`) introduced by accident
+
+## Settings UI
+
+Settings UI has reusable primitives in `frontend/src/main/kotlin/ai/kilocode/client/settings/base/`. Check these before adding new settings components or custom Swing assemblies.
+
+### Base Pages And Messaging
+
+- Use `BaseSettingsUi` for app-backed draft settings that need app-state collection, workspace loading/refreshing, draft/baseline tracking, save progress, save failure handling, and login/banner integration.
+- Use `SettingsPanel` and `SettingsOverlayPanel` as the settings surface so progress and errors go through `showProgress`, `updateProgress`, `showError`, and `clearProgress`.
+- Use `SettingsTop` for settings banners and login prompts rather than ad hoc labels, notifications, or dialog prompts embedded in the form.
+- Use `SettingsDraftState` and `SettingsDraftPage` for modified/reset/apply behavior instead of maintaining unrelated local dirty-state mechanisms.
+- Use the base loading and refresh flow (`BaseSettingsUi` or `SettingsListPanel.reload` / `mutateAndReload`) so busy state, refresh selection, and app readiness are handled consistently.
+- Communicate load, refresh, validation, and save errors through the common settings messaging mechanisms: overlay `showError`, `SettingsMessageException` for user-facing list mutation errors, `failedText()` / `saveError` in `BaseSettingsUi`, and `SettingsTop` banners for persistent page-level problems.
+
+### Rows And Forms
+
+- Use `SettingsRow`, `SettingsStackedRow`, and `SettingsRows` for reusable setting rows, stacked text/editing rows, keyed dynamic rows, and setting sections.
+- Do not create a custom row panel for each setting unless the common row classes cannot represent the behavior.
+- Keep settings UI on the EDT and continue using existing platform Swing components, `Stack`, `Align`, `UiStyle`, and localized `KiloBundle` strings according to the UI guidance above.
+
+### Lists And Add/Remove Collections
+
+- For add/remove/edit collections, use the shared list infrastructure: `SettingsListPanel`, `SettingsListView`, `SettingsListItem`, `SettingsListCell`, `SettingsListSelection`, and `SettingsToolbarAction` where applicable.
+- When a setting is a list of values that can be added or removed inline, represent it with common list/editor primitives, toolbar actions, and in-place cells/buttons as needed.
+- Do not build a bespoke set of Swing components for each add/remove list situation.
+- Prefer list action cells (`SettingsListCell`) for row-local actions like edit/delete and toolbar actions for global add/import/refresh actions.
+
+### Settings Test Coverage Pattern
+
+- Each settings page that writes state needs a fake-RPC frontend test that proves UI interactions call the expected client service/RPC method.
+- Each backend-backed settings write path needs a `*RpcApiImpl` or manager test against `MockCliServer` that asserts the exact CLI HTTP body and that a subsequent reload observes the persisted value.
+- Navigation-only settings pages should still have `BasePlatformTestCase` coverage for rendered child links, stable child IDs, and inert `isModified`/`apply` behavior.
 
 ## Session Component
 

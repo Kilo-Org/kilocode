@@ -16,6 +16,18 @@
   }
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .prompt-review-comments {
   margin: 6px 6px 0;
   border: 1px solid var(--vscode-panel-border);
@@ -560,11 +572,53 @@
   color: var(--vscode-errorForeground, #f48771);
 }
 
-.prompt-auto-approve-button {
+.prompt-status-button {
   position: relative;
 }
 
-.prompt-auto-approve-button--active {
+.prompt-sandbox-tooltip-content {
+  width: 260px;
+  padding: 10px 12px;
+  white-space: normal;
+}
+
+.prompt-sandbox-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-sandbox-tooltip-title {
+  color: var(--text-invert-strong);
+  font-weight: var(--font-weight-medium);
+}
+
+.prompt-sandbox-tooltip-row {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-invert-base);
+
+  [data-component="icon"] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.prompt-sandbox-tooltip-state {
+  color: var(--text-invert-strong);
+  font-weight: var(--font-weight-medium);
+}
+
+.prompt-sandbox-tooltip-description {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-weak-base);
+  color: var(--text-invert-base);
+  font-weight: var(--font-weight-normal);
+}
+
+.prompt-status-button--active {
   color: var(--vscode-testing-iconPassed, #73c991);
 
   [data-slot="icon-svg"] {
@@ -572,7 +626,7 @@
   }
 }
 
-.prompt-auto-approve-button--active::after {
+.prompt-status-button--active::after {
   content: "";
   position: absolute;
   right: 4px;
@@ -598,6 +652,11 @@
   .prompt-speech-icon {
     animation: prompt-speech-recording-pulse 1.1s ease-in-out infinite;
   }
+}
+
+.prompt-speech-button--starting {
+  cursor: progress;
+  opacity: 0.7;
 }
 
 .prompt-speech-button--recording::after {

@@ -4,20 +4,27 @@ import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.SkillsPatchDto
 import org.junit.jupiter.api.Nested
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -188,6 +195,42 @@ class KiloCliDataParserTest {
             assertEquals("image/png", result.part.mime)
             assertEquals("file:///tmp/a.png", result.part.url)
             assertEquals("a.png", result.part.filename)
+        }
+
+        @Test
+        fun `parseChatEvent - part preserves synthetic flag and source metadata`() {
+            val data = globalEvent("""
+                "type": "message.part.updated",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "part": {
+                        "id": "file_1",
+                        "sessionID": "ses_1",
+                        "messageID": "msg_1",
+                        "type": "file",
+                        "mime": "text/plain",
+                        "url": "file:///tmp/a.kt",
+                        "filename": "a.kt",
+                        "synthetic": true,
+                        "source": {
+                            "type": "file",
+                            "path": "src/a.kt",
+                            "text": { "value": "@src/a.kt", "start": 4, "end": 13 }
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.PartUpdated)
+            assertEquals(true, result.part.synthetic)
+            assertEquals("file", result.part.source?.type)
+            assertEquals("src/a.kt", result.part.source?.path)
+            assertEquals("@src/a.kt", result.part.source?.text?.value)
+            assertEquals(4.0, result.part.source?.text?.start)
+            assertEquals(13.0, result.part.source?.text?.end)
         }
 
         @Test
@@ -524,6 +567,32 @@ class KiloCliDataParserTest {
             assertEquals("Unauthorized", result.error?.message)
             assertEquals(401, result.error?.statusCode)
             assertEquals("""{"error":{"code":"PAID_MODEL_AUTH_REQUIRED"}}""", result.error?.responseBody)
+        }
+
+        @Test
+        fun `parseChatEvent - session error preserves nested named error details`() {
+            val data = globalEvent("""
+                "type": "session.error",
+                "properties": {
+                    "sessionID": "ses_1",
+                    "error": {
+                        "name": "UnknownError",
+                        "data": {
+                            "message": "Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'",
+                            "ref": "err_123"
+                        }
+                    }
+                }
+            """)
+
+            val result = KiloCliDataParser.parseChatEvent("session.error", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.Error)
+            assertEquals("ses_1", result.sessionID)
+            assertEquals("UnknownError", result.error?.type)
+            assertEquals("Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'", result.error?.message)
+            assertEquals(listOf("message", "ref"), result.error?.dataKeys)
+            assertEquals("err_123", result.error?.ref)
         }
 
         @Test
@@ -1011,6 +1080,156 @@ class KiloCliDataParserTest {
     @Nested
     inner class HttpResponses {
 
+        // ---- parseConfig ----
+
+        @Test
+        fun `parseConfig - local mcp server`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"sample":{"type":"local","command":["node","s.js"],"environment":{"TOKEN":"x"},"enabled":false,"timeout":12000}}}"""
+            )
+            val mcp = cfg.mcp["sample"]
+
+            assertEquals("local", mcp?.type)
+            assertEquals(listOf("node", "s.js"), mcp?.command)
+            assertEquals(mapOf("TOKEN" to "x"), mcp?.environment)
+            assertEquals(false, mcp?.enabled)
+            assertEquals(12000L, mcp?.timeout)
+        }
+
+        @Test
+        fun `parseConfig - remote mcp server`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"remote":{"type":"remote","url":"https://mcp.example.test","headers":{"Authorization":"Bearer t"},"enabled":true,"timeout":5000}}}"""
+            )
+            val mcp = cfg.mcp["remote"]
+
+            assertEquals("remote", mcp?.type)
+            assertEquals("https://mcp.example.test", mcp?.url)
+            assertEquals(mapOf("Authorization" to "Bearer t"), mcp?.headers)
+            assertEquals(true, mcp?.enabled)
+            assertEquals(5000L, mcp?.timeout)
+        }
+
+        @Test
+        fun `parseConfig - mcp env alias`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"sample":{"type":"local","command":["node"],"env":{"TOKEN":"x"}}}}"""
+            )
+
+            assertEquals(mapOf("TOKEN" to "x"), cfg.mcp["sample"]?.environment)
+        }
+
+        @Test
+        fun `parseConfig - disabled mcp form remains present`() {
+            val cfg = KiloCliDataParser.parseConfig("""{"mcp":{"sample":{"enabled":false}}}""")
+            val mcp = cfg.mcp["sample"]
+
+            assertNotNull(mcp)
+            assertNull(mcp.type)
+            assertEquals(false, mcp.enabled)
+        }
+
+        @Test
+        fun `parseConfig - multiple mcp server shapes`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"mcp":{"local":{"type":"local","command":["node","s.js"]},"remote":{"type":"remote","url":"https://mcp.example.test"},"off":{"enabled":false}}}"""
+            )
+
+            assertEquals(setOf("local", "remote", "off"), cfg.mcp.keys)
+            assertEquals(listOf("node", "s.js"), cfg.mcp["local"]?.command)
+            assertEquals("https://mcp.example.test", cfg.mcp["remote"]?.url)
+            assertEquals(false, cfg.mcp["off"]?.enabled)
+        }
+
+        @Test
+        fun `parseConfig - scalars instructions and skills`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "model":"openai/gpt",
+                    "small_model":"openai/small",
+                    "subagent_model":"anthropic/claude",
+                    "subagent_variant":"high",
+                    "default_agent":"build",
+                    "instructions":["one","two"],
+                    "skills":{"paths":[".kilo/skills"],"urls":["https://example.test/skill.md"]}
+                }"""
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals("openai/small", cfg.smallModel)
+            assertEquals("anthropic/claude", cfg.subagentModel)
+            assertEquals("high", cfg.subagentVariant)
+            assertEquals("build", cfg.defaultAgent)
+            assertEquals(listOf("one", "two"), cfg.instructions)
+            assertEquals(listOf(".kilo/skills"), cfg.skills?.paths)
+            assertEquals(listOf("https://example.test/skill.md"), cfg.skills?.urls)
+        }
+
+        @Test
+        fun `parseConfig - agent overrides and permissions`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""
+            )
+            val agent = cfg.agent["build"]
+            val edit = agent?.permission?.get("edit")
+            val bash = agent?.permission?.get("bash")
+            val webfetch = agent?.permission?.get("webfetch")
+
+            assertEquals("x", agent?.model)
+            assertEquals("high", agent?.variant)
+            assertEquals("p", agent?.prompt)
+            assertEquals("d", agent?.description)
+            assertEquals("subagent", agent?.mode)
+            assertEquals(true, agent?.hidden)
+            assertEquals(false, agent?.disable)
+            assertEquals(0.2, agent?.temperature)
+            assertEquals(0.8, agent?.top_p)
+            assertEquals(12L, agent?.steps)
+            assertIs<PermissionRuleDto.Level>(edit)
+            assertEquals("ask", edit.value)
+            assertIs<PermissionRuleDto.Patterns>(bash)
+            assertEquals(mapOf("git *" to "allow"), bash.map)
+            assertIs<PermissionRuleDto.Level>(webfetch)
+            assertNull(webfetch.value)
+        }
+
+        @Test
+        fun `parseConfig - empty and missing blocks`() {
+            val cfg = KiloCliDataParser.parseConfig("{}")
+
+            assertNull(cfg.model)
+            assertTrue(cfg.mcp.isEmpty())
+            assertTrue(cfg.agent.isEmpty())
+            assertNull(cfg.skills)
+        }
+
+        @Test
+        fun `parseConfig - malformed body returns empty config`() {
+            assertEquals(ConfigDto(), KiloCliDataParser.parseConfig("not json"))
+            assertEquals(ConfigDto(), KiloCliDataParser.parseConfig("[]"))
+        }
+
+        @Test
+        fun `parseConfig - realistic mcp payload is non-empty`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "model":"test/model",
+                    "mcp":{
+                        "sample":{
+                            "type":"local",
+                            "command":["node",".kilo/mcp/sample-server.js"],
+                            "environment":{"TOKEN":"x"},
+                            "enabled":true,
+                            "timeout":12000
+                        }
+                    }
+                }"""
+            )
+
+            assertEquals(1, cfg.mcp.size)
+            assertEquals("local", cfg.mcp["sample"]?.type)
+        }
+
         // ---- parseSession ----
 
         @Test
@@ -1110,6 +1329,25 @@ class KiloCliDataParserTest {
                 "Called the Read tool with the following input: {\"filePath\":\"/tmp/assistant.kt\"}",
                 result[1].parts[0].text,
             )
+        }
+
+        @Test
+        fun `parseMessages - preserves synthetic and source metadata`() {
+            val raw = """[
+                {
+                    "info": { "id": "m1", "sessionID": "s1", "role": "user", "time": { "created": 1.0 } },
+                    "parts": [
+                        { "id": "p1", "sessionID": "s1", "messageID": "m1", "type": "text", "text": "hidden", "synthetic": true },
+                        { "id": "f1", "sessionID": "s1", "messageID": "m1", "type": "file", "mime": "text/plain", "url": "file:///tmp/a.kt", "source": { "type": "file", "path": "src/a.kt", "text": { "value": "@src/a.kt", "start": 0, "end": 9 } } }
+                    ]
+                }
+            ]"""
+
+            val result = KiloCliDataParser.parseMessages(raw).single()
+
+            assertEquals(true, result.parts[0].synthetic)
+            assertEquals("src/a.kt", result.parts[1].source?.path)
+            assertEquals("@src/a.kt", result.parts[1].source?.text?.value)
         }
 
         @Test
@@ -1283,6 +1521,67 @@ class KiloCliDataParserTest {
             assertEquals(200000L, model.limit?.context)
             assertEquals(100000L, model.limit?.input)
             assertEquals(16000L, model.limit?.output)
+        }
+
+        @Test
+        fun `parseProviders - maps model preview metadata`() {
+            val raw = """{
+                "all": [{
+                    "id": "kilo", "name": "Kilo", "source": "api", "env": [], "options": {},
+                    "models": {
+                        "auto": {
+                            "id": "auto",
+                            "name": "Kilo Auto",
+                            "inputPrice": 0.25,
+                            "outputPrice": 1.5,
+                            "contextLength": 256000,
+                            "release_date": "2026-06-01",
+                            "capabilities": {
+                                "reasoning": true,
+                                "input": {"text": true, "image": true, "audio": false, "video": true, "pdf": true}
+                            },
+                            "cost": {"input": 0.25, "output": 1.5, "cache": {"read": 0.05, "write": 0.2}},
+                            "options": {"description": "Fast routed model"},
+                            "autoRouting": {"models": ["openai/gpt", "anthropic/claude"]},
+                            "terminalBench": {"overallScore": 0.73, "avgAttemptCostUsd": 1.25}
+                        }
+                    }
+                }],
+                "default": {}, "connected": []
+            }"""
+
+            val model = KiloCliDataParser.parseProviders(raw).providers.single().models.getValue("auto")
+
+            assertEquals(0.25, model.inputPrice)
+            assertEquals(1.5, model.outputPrice)
+            assertEquals(256000L, model.contextLength)
+            assertEquals("2026-06-01", model.releaseDate)
+            assertNull(model.latest)
+            assertEquals(0.05, model.cost?.cache?.read)
+            assertEquals(true, model.capabilities?.reasoning)
+            assertEquals(true, model.capabilities?.input?.image)
+            assertEquals(false, model.capabilities?.input?.audio)
+            assertEquals("Fast routed model", model.options?.description)
+            assertEquals(listOf("openai/gpt", "anthropic/claude"), model.autoRouting?.models)
+            assertEquals(0.73, model.terminalBench?.overallScore)
+            assertEquals(1.25, model.terminalBench?.avgAttemptCostUsd)
+        }
+
+        @Test
+        fun `parseProviders - malformed optional preview metadata is ignored`() {
+            val raw = """{
+                "all": [{
+                    "id": "p", "name": "P", "source": "api", "env": [], "options": {},
+                    "models": {"m": {"capabilities": "bad", "cost": {"input": "bad"}, "terminalBench": []}}
+                }],
+                "default": {}, "connected": []
+            }"""
+
+            val model = KiloCliDataParser.parseProviders(raw).providers.single().models.getValue("m")
+
+            assertFalse(model.reasoning)
+            assertNull(model.cost)
+            assertNull(model.terminalBench)
         }
 
         @Test
@@ -1635,6 +1934,86 @@ class KiloCliDataParserTest {
             assertTrue(result.contains(""""filename":"a \"b\".txt""""), result)
         }
 
+        @Test
+        fun `buildPromptJson - file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///tmp/a.kt",
+                filename = "a.kt",
+                source = PartSourceDto(
+                    type = "file",
+                    path = "src/a.kt",
+                    text = PartSourceTextDto("@src/a.kt", 4.0, 13.0),
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"text/plain","url":"file:///tmp/a.kt","filename":"a.kt","source":{"type":"file","text":{"value":"@src/a.kt","start":4.0,"end":13.0},"path":"src/a.kt"}}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildPromptJson - data file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "data:text/plain;charset=utf-8,diff%20content",
+                filename = "git-changes.txt",
+                source = PartSourceDto(
+                    type = "file",
+                    text = PartSourceTextDto("@git-changes", 7.0, 19.0),
+                    path = "git-changes",
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildPromptJson(prompt)
+
+            assertEquals(
+                """{"parts":[{"type":"file","mime":"text/plain","url":"data:text/plain;charset=utf-8,diff%20content","filename":"git-changes.txt","source":{"type":"file","text":{"value":"@git-changes","start":7.0,"end":19.0},"path":"git-changes"}}]}""",
+                result,
+            )
+        }
+
+        @Test
+        fun `buildCommandJson - file part includes source metadata`() {
+            val prompt = PromptDto(parts = listOf(PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///tmp/a.kt",
+                source = PartSourceDto(
+                    type = "file",
+                    path = "src/a.kt",
+                    text = PartSourceTextDto("@src/a.kt", 0.0, 9.0),
+                ),
+            )))
+
+            val result = KiloCliDataParser.buildCommandJson("review", "", prompt)
+
+            assertTrue(result.contains(""""source":{"type":"file","text":{"value":"@src/a.kt","start":0.0,"end":9.0},"path":"src/a.kt"}"""), result)
+        }
+
+        @Test
+        fun `buildCommandJson - includes agent variant model and arguments`() {
+            val prompt = PromptDto(
+                parts = emptyList(),
+                agent = "code",
+                variant = "high",
+                providerID = "kilo",
+                modelID = "gpt-5",
+            )
+
+            val result = KiloCliDataParser.buildCommandJson("review", "src/", prompt)
+
+            assertEquals(
+                """{"command":"review","arguments":"src/","agent":"code","variant":"high","model":"kilo/gpt-5"}""",
+                result,
+            )
+        }
+
         // ---- buildSummarizeJson ----
 
         @Test
@@ -1692,8 +2071,70 @@ class KiloCliDataParserTest {
 
         @Test
         fun `buildConfigPatch - per-agent model clear emits null`() {
-            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(model = null)))
+            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(clear = listOf("model"))))
             assertEquals("{\"agent\":{\"code\":{\"model\":null}}}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - per-agent description patch does not clear model`() {
+            val patch = ConfigPatchDto(agents = linkedMapOf("code" to AgentConfigPatchDto(description = "New description")))
+            assertEquals("{\"agent\":{\"code\":{\"description\":\"New description\"}}}", KiloCliDataParser.buildConfigPatch(patch))
+        }
+
+        @Test
+        fun `buildConfigPatch - agent behavior top-level fields`() {
+            val patch = ConfigPatchDto(
+                values = linkedMapOf("default_agent" to "build"),
+                instructions = listOf("AGENTS.md"),
+                skills = SkillsPatchDto(paths = listOf(".kilo/skills"), urls = listOf("https://example.com/skill")),
+            )
+
+            assertEquals(
+                "{\"default_agent\":\"build\",\"instructions\":[\"AGENTS.md\"],\"skills\":{\"paths\":[\".kilo/skills\"],\"urls\":[\"https://example.com/skill\"]}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - mcp upsert and delete`() {
+            val patch = ConfigPatchDto(mcp = linkedMapOf(
+                "local" to McpConfigDto(
+                    type = "local",
+                    command = listOf("node", "server.js"),
+                    environment = mapOf("TOKEN" to "x"),
+                    headers = mapOf("X-Test" to "1"),
+                    enabled = false,
+                    timeout = 12000L,
+                ),
+                "old" to null,
+            ))
+
+            assertEquals(
+                "{\"mcp\":{\"local\":{\"type\":\"local\",\"command\":[\"node\",\"server.js\"],\"environment\":{\"TOKEN\":\"x\"},\"headers\":{\"X-Test\":\"1\"},\"enabled\":false,\"timeout\":12000},\"old\":null}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - full agent permission object`() {
+            val patch = ConfigPatchDto(agents = linkedMapOf("custom" to AgentConfigPatchDto(
+                model = "kilo/gpt-5",
+                mode = "primary",
+                hidden = false,
+                disable = null,
+                temperature = 0.2,
+                top_p = 0.9,
+                steps = 12,
+                permission = linkedMapOf(
+                    "bash" to PermissionRuleDto.Patterns(linkedMapOf("*" to "ask", "npm test" to "allow")),
+                    "read" to PermissionRuleDto.Level(null),
+                ),
+            )))
+
+            assertEquals(
+                "{\"agent\":{\"custom\":{\"model\":\"kilo/gpt-5\",\"mode\":\"primary\",\"hidden\":false,\"temperature\":0.2,\"top_p\":0.9,\"steps\":12,\"permission\":{\"bash\":{\"*\":\"ask\",\"npm test\":\"allow\"},\"read\":null}}}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
         }
 
         @Test

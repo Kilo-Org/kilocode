@@ -92,6 +92,15 @@ class SearchToolViewTest : BasePlatformTestCase() {
         assertEquals("pattern=<unsafe>", view.targetComponents().first().text)
     }
 
+    fun `test target labels normalize newlines for one line clipping`() {
+        val view = SearchToolView(tool().also {
+            it.input = mapOf("path" to "/repo/src\nnested", "pattern" to "class\nSearchToolView", "include" to "*.kt")
+        })
+
+        assertEquals(listOf("/repo/src nested", "pattern=class SearchToolView", "include=*.kt"), view.targetTexts())
+        assertFalse(view.targetComponents().any { it.text.contains("\n") })
+    }
+
     fun `test target labels use regular font`() {
         val view = SearchToolView(tool().also {
             it.input = mapOf("pattern" to "TODO", "include" to "*.kt")
@@ -177,7 +186,7 @@ class SearchToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test view factory routes grep to search tool view`() {
-        assertTrue(ViewFactory.create(tool(), openFile = {}) is SearchToolView)
+        assertTrue(ViewFactory.create(tool(), openFile = { _, _ -> }) is SearchToolView)
     }
 
     fun `test should replace when search renderer changes`() {

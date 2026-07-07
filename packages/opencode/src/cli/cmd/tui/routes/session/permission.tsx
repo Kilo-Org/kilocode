@@ -19,6 +19,7 @@ import { useTuiConfig } from "../../context/tui-config"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { normalizeUrls } from "@/kilocode/util/url"
+import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
@@ -404,6 +405,9 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               }
             }
 
+            const custom = MemoryPermissionRegistry.render(permission, props.request) // kilocode_change
+            if (custom) return custom // kilocode_change
+
             return {
               icon: "⚙",
               title: `Call tool ${permission}`,
@@ -430,7 +434,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 <text fg={theme.text}>{current.title}</text>
               </box>
               {/* kilocode_change start - explain config file edits always require approval */}
-              <Show when={props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]}>
+              <Show when={props.request.metadata?.[ConfigProtection.CONFIG_PROTECTED_KEY]}>
                 <box paddingLeft={4} flexShrink={0}>
                   <text fg={theme.textMuted}>Config file edits always require approval</text>
                 </box>

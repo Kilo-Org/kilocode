@@ -13,6 +13,7 @@ import { Plugin } from "../../src/plugin"
 import { Provider } from "../../src/provider/provider"
 import { Skill } from "../../src/skill"
 import { Truncate } from "../../src/tool/truncate"
+import { MCP } from "../../src/mcp" // kilocode_change
 
 const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   Agent.layer.pipe(
@@ -21,6 +22,7 @@ const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
     Layer.provide(Auth.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Skill.defaultLayer),
+    Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
     Layer.provide(RuntimeFlags.layer(flags)),
   )
 
@@ -72,6 +74,7 @@ it.instance("build agent has correct default properties", () =>
     expect(evalPerm(build, "bash")).toBe("ask")
     expect(evalPerm(build, "repo_clone")).toBe("deny")
     expect(evalPerm(build, "repo_overview")).toBe("deny")
+    expect(evalPerm(build, "interactive_terminal")).toBe("allow") // kilocode_change
   }),
 )
 
@@ -81,6 +84,7 @@ it.instance("plan agent denies edits except .opencode/plans/*", () =>
     expect(plan).toBeDefined()
     // Wildcard is denied
     expect(evalPerm(plan, "edit")).toBe("deny")
+    expect(evalPerm(plan, "interactive_terminal")).toBe("deny") // kilocode_change
     // But specific path is allowed
     expect(Permission.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
   }),
@@ -94,6 +98,7 @@ it.instance("explore agent denies edit and write", () =>
     expect(evalPerm(explore, "edit")).toBe("deny")
     expect(evalPerm(explore, "write")).toBe("deny")
     expect(evalPerm(explore, "todowrite")).toBe("deny")
+    expect(evalPerm(explore, "interactive_terminal")).toBe("deny") // kilocode_change
   }),
 )
 
@@ -594,7 +599,7 @@ it.instance(
   () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const skillDir = path.join(test.directory, ".opencode", "skill", "perm-skill")
+      const skillDir = path.join(test.directory, ".kilo", "skill", "perm-skill") // kilocode_change
       yield* Effect.promise(() =>
         Bun.write(
           path.join(skillDir, "SKILL.md"),

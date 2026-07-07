@@ -12,6 +12,7 @@ import { KilocodeDefaultPlugins } from "../../../src/kilocode/config/default-plu
 import { INDEXING_PLUGIN } from "../../../src/kilocode/indexing-feature"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../../src/env"
+import { Git } from "../../../src/git"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Filesystem } from "../../../src/util/filesystem"
@@ -39,6 +40,7 @@ const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
 )
 const layer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),

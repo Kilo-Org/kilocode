@@ -29,10 +29,12 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { File } from "@kilocode/kilo-ui/file"
 import { SessionContext } from "../context/session"
+import { AgentRequirementsContext, type AgentRequirementsContextValue } from "../context/agent-requirements"
 import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
 import { IndexingProvider } from "../context/indexing"
 import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
+import { MemoryProvider } from "../context/memory"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
@@ -41,12 +43,14 @@ import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { resolveTemplate } from "../context/language-utils"
 import type {
   Config,
+  FeatureFlags,
   KilocodeNotification,
   PermissionRequest,
   ProviderAuthState,
   SessionCloseReason,
   QuestionRequest,
   SuggestionRequest,
+  AgentRequirementResult,
 } from "../types/messages"
 
 type PluginSpec = string | [string, Record<string, unknown>]
@@ -190,6 +194,7 @@ export function mockSessionValue(overrides?: {
     submitting: () => false,
     draftSessionID: () => undefined,
     setDraftSessionID: noop,
+    userClearedSession: () => false,
     messageMutation: () => undefined,
     messages: () => [],
     visibleMessages: () => [],
@@ -219,6 +224,8 @@ export function mockSessionValue(overrides?: {
     clearModelOverride: noop,
     costBreakdown: () => [],
     contextUsage: () => undefined,
+    modelUsage: () => undefined,
+    refreshModelUsage: noop,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     allAgents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     skills: () => [],
@@ -250,6 +257,7 @@ export function mockSessionValue(overrides?: {
     respondToPermission: noop,
     replyToQuestion: noop,
     rejectQuestion: noop,
+    closeQuestion: noop,
     acceptSuggestion: noop,
     dismissSuggestion: noop,
     createSession: noop,
@@ -276,10 +284,14 @@ interface StoryProvidersProps {
   questions?: QuestionRequest[]
   suggestions?: SuggestionRequest[]
   notifications?: KilocodeNotification[]
+  agentRequirements?: AgentRequirementResult
+  agentRequirementsChecking?: boolean
+  agentRequirementsBlocked?: boolean
   status?: string
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
   config?: Config
+  features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
   onConfigChange?: (config: Config) => void
@@ -295,6 +307,7 @@ interface StoryProvidersProps {
 /** Wraps children with either a mock ConfigContext (when config prop is given) or the real ConfigProvider. */
 const ConfigWrapper: ParentComponent<{
   config?: Config
+  features?: Partial<FeatureFlags>
   globalConfig?: Config
   projectConfig?: Config
   onConfigChange?: (config: Config) => void
@@ -314,7 +327,8 @@ const ConfigWrapper: ParentComponent<{
       }
 
       return {
-        indexing: hasIndexingPlugin(config.plugin ?? []),
+        indexing: props.features?.indexing ?? hasIndexingPlugin(config.plugin ?? []),
+        sandboxControls: props.features?.sandboxControls ?? false,
       }
     })
 
@@ -381,6 +395,22 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
   })
   const notifications = mockNotificationsValue(props.notifications)
   const [locale] = createSignal<"en">("en")
+  const result = () => props.agentRequirements
+  const visible = () => {
+    const value = result()
+    return value?.state === "blocked" || value?.state === "error"
+  }
+  const requirements: AgentRequirementsContextValue = {
+    result,
+    checking: () => props.agentRequirementsChecking ?? false,
+    blocked: () => {
+      if (props.agentRequirementsBlocked !== undefined) return props.agentRequirementsBlocked
+      const value = result()
+      if (!value) return props.agentRequirementsChecking === true
+      return value.enabled && (value.state === "blocked" || value.state === "error")
+    },
+    visible,
+  }
 
   return (
     <VSCodeProvider>
@@ -388,6 +418,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
         <FeedbackProvider>
           <ConfigWrapper
             config={props.config}
+            features={props.features}
             globalConfig={props.globalConfig}
             projectConfig={props.projectConfig}
             onConfigChange={props.onConfigChange}
@@ -408,30 +439,34 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                     <I18nProvider value={{ locale: () => "en", t }}>
                       <NotificationsContext.Provider value={notifications}>
                         <SessionContext.Provider value={session as any}>
-                          <IndexingProvider>
-                            <KiloEmbeddingModelsProvider>
-                              <DataProvider
-                                data={data()}
-                                directory="/project/"
-                                onOpenDiff={props.onOpenDiff}
-                                onOpenFile={props.onOpenFile}
-                              >
-                                <DiffComponentProvider component={Diff}>
-                                  <CodeComponentProvider component={Code}>
-                                    <FileComponentProvider component={File}>
-                                      <MarkedProvider>
-                                        {props.noPadding ? (
-                                          props.children
-                                        ) : (
-                                          <div style={{ padding: "12px" }}>{props.children}</div>
-                                        )}
-                                      </MarkedProvider>
-                                    </FileComponentProvider>
-                                  </CodeComponentProvider>
-                                </DiffComponentProvider>
-                              </DataProvider>
-                            </KiloEmbeddingModelsProvider>
-                          </IndexingProvider>
+                          <AgentRequirementsContext.Provider value={requirements}>
+                            <MemoryProvider>
+                              <IndexingProvider>
+                                <KiloEmbeddingModelsProvider>
+                                  <DataProvider
+                                    data={data()}
+                                    directory="/project/"
+                                    onOpenDiff={props.onOpenDiff}
+                                    onOpenFile={props.onOpenFile}
+                                  >
+                                    <DiffComponentProvider component={Diff}>
+                                      <CodeComponentProvider component={Code}>
+                                        <FileComponentProvider component={File}>
+                                          <MarkedProvider>
+                                            {props.noPadding ? (
+                                              props.children
+                                            ) : (
+                                              <div style={{ padding: "12px" }}>{props.children}</div>
+                                            )}
+                                          </MarkedProvider>
+                                        </FileComponentProvider>
+                                      </CodeComponentProvider>
+                                    </DiffComponentProvider>
+                                  </DataProvider>
+                                </KiloEmbeddingModelsProvider>
+                              </IndexingProvider>
+                            </MemoryProvider>
+                          </AgentRequirementsContext.Provider>
                         </SessionContext.Provider>
                       </NotificationsContext.Provider>
                     </I18nProvider>

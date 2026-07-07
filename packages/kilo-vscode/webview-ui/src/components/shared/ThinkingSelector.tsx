@@ -32,6 +32,8 @@ export interface ThinkingSelectorBaseProps {
   clearLabel?: string
   /** Popover placement — defaults to top-start. */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
+  /** Render inline instead of through a portal when nested in a dialog. */
+  portal?: boolean
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
   /** Listen for the global prompt trigger event. Defaults to true. */
@@ -64,13 +66,14 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   }
 
   function onOpen(val: boolean) {
-    setOpen(val)
     if (val) {
       const items = rows()
       const idx = items.findIndex((v) => v === props.value)
-      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+      setFocused(idx >= 0 ? idx : 0)
+      setOpen(true)
       return
     }
+    setOpen(false)
     refocus()
   }
 
@@ -137,6 +140,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
         placement={props.placement ?? "top-start"}
         preferredWidth={180}
         minHeight={100}
+        portal={props.portal}
         deferDismiss={props.deferDismiss}
         open={open()}
         onOpenChange={onOpen}
@@ -166,6 +170,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
                   role="option"
                   aria-selected={props.value === v}
                   tabindex={focused() === i() ? 0 : -1}
+                  data-autofocus={focused() === i() ? "" : undefined}
                   onClick={() => pick(v)}
                   onFocus={() => setFocused(i())}
                 >

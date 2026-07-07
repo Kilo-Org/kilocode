@@ -164,6 +164,42 @@ class MdViewHybridStressTest : BasePlatformTestCase() {
         assertTrue(view.markdown().contains("line 49"))
     }
 
+    fun `test repeated table set reuses single pane and stays bounded`() {
+        repeat(150) { i -> view.set("| a | b |\n|---|---|\n| $i | ${i + 1} |") }
+        val pane = scrolls().single()
+        val inner = pane.viewport.view as JBHtmlPane
+
+        repeat(50) { i -> view.set("| a | b |\n|---|---|\n| y$i | z$i |") }
+
+        assertSame(pane, scrolls().single())
+        assertSame(inner, scrolls().single().viewport.view)
+        assertEquals(1, scrolls().size)
+        assertEquals(0, htmls().size)
+        assertEquals(1, panel().componentCount)
+        assertTrue(inner.text.contains("y49"))
+    }
+
+    fun `test churn across prose code and table stays bounded and leak free`() {
+        val base = EditorFactory.getInstance().allEditors.size
+
+        repeat(60) { i ->
+            view.set("prose $i")
+            view.set("```kotlin\nval x = $i\n```")
+            editors().single().getEditor(true)
+            view.set("| a | b |\n|---|---|\n| $i | ${i + 1} |")
+            assertEquals(1, scrolls().size)
+            assertTrue(editors().isEmpty())
+        }
+
+        view.clear()
+        drainEdt()
+
+        assertTrue(scrolls().isEmpty())
+        assertTrue(htmls().isEmpty())
+        assertEquals(0, panel().componentCount)
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
     private fun panel(): JPanel = view.component as JPanel
 
     private fun scrolls(): List<JBScrollPane> = panel().components.filterIsInstance<JBScrollPane>()

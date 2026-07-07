@@ -66,6 +66,34 @@ class SettingsRow(
     }
 }
 
+class SettingsStackedRow(
+    title: String,
+    description: String? = null,
+    value: JComponent,
+    action: JComponent? = null,
+) : JPanel(BorderLayout()) {
+    private val titleLabel = JBLabel(title).apply { font = UiStyle.Fonts.bold() }
+    private val descriptionLabel = JBLabel(descriptionHtml(description)).apply {
+        font = UiStyle.Fonts.hint()
+        foreground = UIUtil.getContextHelpForeground()
+        setAllowAutoWrapping(true)
+        isVisible = description != null
+    }
+
+    init {
+        border = JBUI.Borders.empty(UiStyle.Gap.pad(), 0, UiStyle.Gap.pad(), 0)
+        val header = JPanel(BorderLayout()).apply {
+            add(Stack.vertical(UiStyle.Gap.sm())
+                .next(titleLabel)
+                .next(descriptionLabel), BorderLayout.CENTER)
+            action?.let { add(it.align(HAlign.RIGHT, VAlign.CENTER), BorderLayout.EAST) }
+        }
+        add(Stack.vertical(UiStyle.Gap.sm())
+            .next(header)
+            .next(value), BorderLayout.CENTER)
+    }
+}
+
 private fun descriptionHtml(description: String?): String {
     val text = description ?: return ""
     return XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(text))
@@ -79,10 +107,17 @@ class SettingsRows : Stack(StackAxis.VERTICAL) {
         return this
     }
 
+    fun row(child: JComponent): SettingsRows {
+        next(child)
+        return this
+    }
+
     fun row(key: String, child: SettingsRow): SettingsRow {
         keyed.remove(key)?.let { remove(it) }
         keyed[key] = child
         next(child)
+        revalidate()
+        repaint()
         return child
     }
 

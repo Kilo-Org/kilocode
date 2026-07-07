@@ -80,9 +80,12 @@ import { DisplayProvider } from "../src/context/display"
 import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-models"
 import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
+import { MemoryProvider } from "../src/context/memory"
 import { SessionProvider, useSession } from "../src/context/session"
+import { AgentRequirementsProvider } from "../src/context/agent-requirements"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
+import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { DataBridge, MermaidDownloadBridge } from "../src/App"
@@ -234,7 +237,7 @@ const AgentManagerContent: Component = () => {
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
-  const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
+  const [sessionsCollapsed, setSessionsCollapsed] = createSignal(true)
   const sidebar = createSidebarCollapse(vscode)
   const sidebarCollapsed = sidebar.collapsed
   const expandSidebar = sidebar.expand
@@ -3131,18 +3134,23 @@ export const AgentManagerApp: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
+                          <SpeechToTextPrewarm />
                           <DisplayProvider>
                             <IndexingProvider>
                               <KiloEmbeddingModelsProvider>
                                 <NotificationsProvider>
                                   <SessionProvider>
-                                    <FeedbackProvider>
-                                      <WorktreeModeProvider>
-                                        <DataBridge>
-                                          <AgentManagerContent />
-                                        </DataBridge>
-                                      </WorktreeModeProvider>
-                                    </FeedbackProvider>
+                                    <AgentRequirementsProvider>
+                                      <MemoryProvider>
+                                        <FeedbackProvider>
+                                          <WorktreeModeProvider>
+                                            <DataBridge>
+                                              <AgentManagerContent />
+                                            </DataBridge>
+                                          </WorktreeModeProvider>
+                                        </FeedbackProvider>
+                                      </MemoryProvider>
+                                    </AgentRequirementsProvider>
                                   </SessionProvider>
                                 </NotificationsProvider>
                               </KiloEmbeddingModelsProvider>

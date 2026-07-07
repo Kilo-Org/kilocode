@@ -710,6 +710,19 @@ button.am-section-toggle:hover .am-section-label {
 .am-pr-badge:hover .am-pr-badge-number {
   color: var(--pr-accent);
 }
+/* Status icon overlaid on the badge — colored by CI/review result, independent
+   of the badge's PR-state accent color. */
+.am-pr-badge-status[data-status="failure"] {
+  color: #ef4444;
+}
+.am-pr-badge-status[data-status="changes"] {
+  color: #fbbf24;
+}
+.am-pr-badge-status[data-status="approved"] {
+  color: #34d399;
+}
+
+/* Checks still running — pulse the whole amber badge. */
 .am-pr-badge[data-pending] {
   animation: am-pr-pulse 1.5s ease-in-out infinite;
 }
@@ -720,6 +733,13 @@ button.am-section-toggle:hover .am-section-label {
   }
   50% {
     opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-pr-badge[data-pending] {
+    animation: none;
+    opacity: 0.9;
   }
 }
 
@@ -2284,8 +2304,13 @@ body.am-wt-dragging-active * {
   color: var(--text-base);
 }
 
-.am-annotation-btn:hover {
+.am-annotation-btn:hover:not(:disabled) {
   background: var(--surface-interactive-base);
+}
+
+.am-annotation-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .am-annotation-btn-submit {
@@ -2295,7 +2320,7 @@ body.am-wt-dragging-active * {
   font-weight: 500;
 }
 
-.am-annotation-btn-submit:hover {
+.am-annotation-btn-submit:hover:not(:disabled) {
   background: var(--surface-interactive-strong-hover, var(--vscode-button-hoverBackground, #0066b8));
 }
 
@@ -2684,10 +2709,11 @@ body.am-wt-dragging-active * {
   overflow-y: auto;
 }
 
-.am-nv-dialog .am-prompt-input-container:has([class~="model-selector-popover"][data-component="popover-content"]),
-.am-nv-dialog-content:has([class~="model-selector-popover"][data-component="popover-content"]),
-[data-component="dialog"]:has(.am-nv-dialog [class~="model-selector-popover"][data-component="popover-content"])
-  [data-slot="dialog-body"] {
+/* While any inline (non-portaled) selector popover is open, let it escape the
+   dialog's scroll containers. Covers model, thinking-variant, and mode pickers. */
+.am-nv-dialog .am-prompt-input-container:has([data-component="popover-content"]),
+.am-nv-dialog-content:has([data-component="popover-content"]),
+[data-component="dialog"]:has(.am-nv-dialog [data-component="popover-content"]) [data-slot="dialog-body"] {
   overflow: visible;
 }
 

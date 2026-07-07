@@ -2,6 +2,7 @@ import path from "path"
 import { existsSync } from "fs"
 import { spawn } from "child_process"
 import { createServer } from "net"
+import { randomUUID } from "node:crypto"
 import { open, readFile, rm, mkdir } from "fs/promises"
 import z from "zod"
 import { Global } from "@opencode-ai/core/global"
@@ -82,6 +83,8 @@ export namespace Daemon {
   export type Stop = Status & {
     stopped: boolean
   }
+
+  export type Identity = Pick<State, "pid" | "startedAt">
 
   function root() {
     return process.env.KILO_TEST_DAEMON_STATE_DIR ?? Global.Path.state
@@ -177,6 +180,7 @@ export namespace Daemon {
   }
 
   export function matches(state: State, input: Options, explicit: readonly NetworkOption[]) {
+    if (state.password === "kilo") return false
     const options = Network.parse(input)
     return explicit.every((name) => {
       if (name === "hostname") return state.hostname === options.hostname
@@ -202,7 +206,7 @@ export namespace Daemon {
           if (alive(current.state.pid)) await terminate(current.state.pid, true)
         }
         await clear()
-        const password = "kilo"
+        const password = randomUUID()
         const token = auth(password)
         const out = log()
         await mkdir(path.dirname(out), { recursive: true })
@@ -238,12 +242,12 @@ export namespace Daemon {
     return await run(input, explicit)
   }
 
-  export async function stop(): Promise<Stop> {
+  export async function stop(expected?: Identity): Promise<Stop> {
     return await Flock.withLock(
       lock,
       async () => {
         const current = await status()
-        if (!current.state) return { ...current, stopped: false }
+        if (!current.state || (expected && !same(current.state, expected))) return { ...current, stopped: false }
         if (alive(current.state.pid)) {
           await terminate(current.state.pid, false)
           if (alive(current.state.pid)) await terminate(current.state.pid, true)
@@ -253,6 +257,31 @@ export namespace Daemon {
       },
       { dir: path.join(root(), "locks"), timeoutMs: 15_000, staleMs: 30_000 },
     )
+  }
+
+  export async function foreground(start: (signal: AbortSignal) => Promise<Identity>) {
+    const ctl = new AbortController()
+    const interrupt = new AbortController()
+    const done = Promise.withResolvers<"signal">()
+    const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const
+    const quit = () => {
+      interrupt.abort()
+      done.resolve("signal")
+    }
+    for (const signal of signals) process.once(signal, quit)
+
+    try {
+      const expected = await start(interrupt.signal)
+      if (interrupt.signal.aborted) {
+        await stop(expected)
+        return
+      }
+      const result = await Promise.race([done.promise, watch(expected, ctl.signal)])
+      if (result === "signal") await stop(expected)
+    } finally {
+      ctl.abort()
+      for (const signal of signals) process.off(signal, quit)
+    }
   }
 
   export async function restart(input: Options): Promise<Start> {
@@ -380,8 +409,36 @@ export namespace Daemon {
     return { hostname: match[1], port: Number(match[2]) }
   }
 
-  function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
+  function same(state: State, expected: Identity) {
+    return state.pid === expected.pid && state.startedAt === expected.startedAt
+  }
+
+  async function watch(expected: Identity, signal: AbortSignal): Promise<"daemon"> {
+    while (!signal.aborted) {
+      const state = await read()
+      if (!state || !same(state, expected) || !alive(expected.pid)) return "daemon"
+      await sleep(250, signal)
+    }
+    return "daemon"
+  }
+
+  function sleep(ms: number, signal?: AbortSignal) {
+    return new Promise<void>((resolve) => {
+      const done = () => {
+        signal?.removeEventListener("abort", cancel)
+        resolve()
+      }
+      const timer = setTimeout(done, ms)
+      const cancel = () => {
+        clearTimeout(timer)
+        done()
+      }
+      if (signal?.aborted) {
+        cancel()
+        return
+      }
+      signal?.addEventListener("abort", cancel, { once: true })
+    })
   }
 
   async function terminate(pid: number, force: boolean) {

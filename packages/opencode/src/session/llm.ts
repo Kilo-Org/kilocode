@@ -1,5 +1,5 @@
 import { Provider } from "@/provider/provider"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import * as Log from "@opencode-ai/core/util/log"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
@@ -52,6 +52,7 @@ export type StreamInput = {
   retries?: number
   toolChoice?: "auto" | "required" | "none"
   preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
+  reportedContextTokens?: number // kilocode_change - provider-reported context size from the last finished turn, source of truth for the output cap
 }
 
 export type StreamRequest = StreamInput & {
@@ -141,7 +142,8 @@ const live: Layer.Layer<
         messages: estimated,
         tools: base.tools,
         configured: base.params.maxOutputTokens,
-        tokens: usage?.raw,
+        usage,
+        reported: input.reportedContextTokens,
       })
       if (
         preflight &&
@@ -344,7 +346,7 @@ const live: Layer.Layer<
           })
         },
         async experimental_repairToolCall(failed) {
-          const lower = failed.toolCall.toolName.toLowerCase()
+          const lower = failed.toolCall.toolName.trim().toLowerCase() // kilocode_change
           if (lower !== failed.toolCall.toolName && prepared.tools[lower]) {
             l.info("repairing tool call", {
               tool: failed.toolCall.toolName,

@@ -1,12 +1,14 @@
 package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.CliServer
+import ai.kilocode.backend.cli.CliDownload
 import ai.kilocode.backend.app.ConnectionState
 import ai.kilocode.backend.app.KiloConnectionService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.log.KiloLog
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +78,45 @@ class KiloConnectionServiceTest {
             svc.state.first { it is ConnectionState.Connected }
         }
         assertTrue(svc.api != null)
+    }
+
+    @Test
+    fun `connect reports downloading then connecting before ready`() = runBlocking {
+        val resolved = CompletableDeferred<Unit>()
+        val ready = CompletableDeferred<Unit>()
+        val server = object : CliServer {
+            override var forceExtract = false
+            override fun process(): Process? = null
+            override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit): CliServer.State {
+                onProgress(CliDownload(42, "1.2.3", "darwin-arm64"))
+                resolved.await()
+                onResolved()
+                ready.await()
+                return CliServer.State.Ready(mock.start(), mock.password)
+            }
+            override fun exited(proc: Process) {}
+            override fun stop() {}
+            override fun dispose() {}
+        }
+        val svc = KiloConnectionService(scope, server, {}, log)
+        val job = scope.launch { svc.connect() }
+
+        val downloading = withTimeout(5_000) {
+            svc.state.first { it is ConnectionState.Downloading }
+        }
+        assertEquals(ConnectionState.Downloading(42, "1.2.3", "darwin-arm64"), downloading)
+
+        resolved.complete(Unit)
+        withTimeout(5_000) {
+            svc.state.first { it == ConnectionState.Connecting }
+        }
+
+        ready.complete(Unit)
+        mock.awaitSseConnection()
+        withTimeout(5_000) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+        job.join()
     }
 
     @Test
@@ -189,7 +230,7 @@ class KiloConnectionServiceTest {
         val failing = object : CliServer {
             override var forceExtract = false
             override fun process(): Process? = null
-            override suspend fun init() = CliServer.State.Error("binary not found", "stderr line 1\nstderr line 2")
+            override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit) = CliServer.State.Error("binary not found", "stderr line 1\nstderr line 2")
             override fun exited(proc: Process) {}
             override fun stop() {}
             override fun dispose() {}

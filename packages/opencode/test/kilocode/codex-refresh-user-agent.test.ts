@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import type { PluginInput } from "@kilocode/plugin"
-import { CodexAuthPlugin } from "../../src/plugin/codex"
+import { CodexAuthPlugin } from "../../src/plugin/openai/codex"
 
 test("identifies Codex refresh requests as Kilo", async () => {
   const original = globalThis.fetch

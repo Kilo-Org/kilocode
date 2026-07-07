@@ -1,5 +1,6 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { MCP } from "@/mcp"
@@ -19,6 +20,7 @@ import { SessionProcessor } from "./processor"
 import { PartID } from "./schema"
 import * as Log from "@opencode-ai/core/util/log"
 import { EffectBridge } from "@/effect/bridge"
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 
 const log = Log.create({ service: "session.tools" })
 
@@ -30,14 +32,17 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   bypassAgentCheck: boolean
   messages: MessageV2.WithParts[]
   promptOps: TaskPromptOps
+  memoryCache: MemoryMarker.Cache // kilocode_change
 }) {
   using _ = log.time("resolveTools")
   const tools: Record<string, AITool> = {}
   const run = yield* EffectBridge.make()
   const plugin = yield* Plugin.Service
   const permission = yield* Permission.Service
-  const agents = yield* Agent.Service // kilocode_change
-  const sessions = yield* Session.Service // kilocode_change
+  // kilocode_change start
+  const agents = yield* Agent.Service
+  const sessions = yield* Session.Service
+  // kilocode_change end
   const registry = yield* ToolRegistry.Service
   const mcp = yield* MCP.Service
   const truncate = yield* Truncate.Service
@@ -50,8 +55,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps: input.promptOps },
     agent: input.agent.name,
     messages: input.messages,
-    metadata: (val) => input.processor.metadata(options.toolCallId, val), // kilocode_change
-    // kilocode_change start - resolve permissions at ask time so active tools see config edits
+    // kilocode_change start
+    metadata: (val) => input.processor.metadata(options.toolCallId, val),
     ask: (req) =>
       KiloSessionPrompt.askPermission({
         permission,
@@ -65,12 +70,13 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
         },
       }).pipe(Effect.orDie),
-    // kilocode_change end
   })
+  // kilocode_change end
 
   for (const item of yield* registry.tools({
     modelID: ModelID.make(input.model.api.id),
     providerID: input.model.providerID,
+    family: input.model.family, // kilocode_change
     agent: input.agent,
   })) {
     const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
@@ -86,7 +92,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
               { args },
             )
-            const result = yield* item.execute(args, ctx)
+            // kilocode_change start
+            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            // kilocode_change end
             const output = {
               ...result,
               attachments: result.attachments?.map((attachment) => ({
@@ -96,6 +104,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                 messageID: input.processor.message.id,
               })),
             }
+            // kilocode_change - mark successful targeted memory recalls for the assistant badge
+            if (item.id === "kilo_memory_recall") MemoryMarker.recall({ result: output, cache: input.memoryCache }) // kilocode_change
             yield* plugin.trigger(
               "tool.execute.after",
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
@@ -127,10 +137,16 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
             { args },
           )
-          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* Effect.gen(function* () {
-            yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-            return yield* Effect.promise(() => execute(args, opts))
-          }).pipe(
+          // kilocode_change start
+          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
+            ctx.sessionID,
+            item,
+            Effect.gen(function* () {
+              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+              return yield* Effect.promise(() => execute(args, opts))
+            }),
+          ).pipe(
+            // kilocode_change end
             Effect.withSpan("Tool.execute", {
               attributes: {
                 "tool.name": key,

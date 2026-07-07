@@ -6,7 +6,6 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Insets
-import javax.swing.border.Border
 
 /** Static style tokens owned by the chat session UI. */
 object SessionUiStyle {
@@ -74,6 +73,11 @@ object SessionUiStyle {
             const val CONTROL_GAP = 4
             const val SHELL_VERTICAL_PADDING = 6
             const val SHELL_HORIZONTAL_PADDING = 8
+
+            fun separator(): Color = JBColor.namedColor(
+                "EditorTabs.underTabsBorderColor",
+                JBUI.CurrentTheme.EditorTabs.borderColor(),
+            )
         }
 
         /** Attachment preview card geometry. */
@@ -109,6 +113,22 @@ object SessionUiStyle {
             const val BODY_HORIZONTAL_PADDING = 8
         }
 
+        /** Markdown colors that mirror Kilo's VS Code webview tokens. */
+        object Markdown {
+            fun string(): Color = JBColor.namedColor(
+                "Kilo.Session.Markdown.String",
+                JBColor(0xA31515, 0xCE9178),
+            )
+        }
+
+        object Todo {
+            fun checkBg(): Color = JBColor.namedColor("Kilo.Session.Todo.Checkbox.Background", Color.WHITE)
+
+            fun checkFg(): Color = JBColor.namedColor("Kilo.Session.Todo.Checkbox.Foreground", Color(0x1F, 0x23, 0x28))
+
+            fun checkBorder(): Color = UiStyle.Colors.contentBorder()
+        }
+
         /** Message container roles and user bubble geometry. */
         object Message {
             const val USER_ROLE = "user"
@@ -132,6 +152,11 @@ object SessionUiStyle {
             fun topPadding(): Int = VIEWPORT_TOP_PADDING
         }
 
+        object Popup {
+            const val MAX_LINES = 15
+            const val MAX_WIDTH = 520
+        }
+
         /** Permission session-view command preview limits. */
         object Permission {
             const val COMMAND_LINES = 3
@@ -140,6 +165,7 @@ object SessionUiStyle {
         /** Tool session-view preview limits and state colors. */
         object Tool {
             const val BODY_LINES = 15
+            const val TASK_LINES = 10
             const val PREVIEW_LIMIT = 20_000
 
             fun pending(): Color = UiStyle.Colors.weak()
@@ -174,18 +200,4 @@ object SessionUiStyle {
         val TEXT: Color = JBColor.namedColor("Kilo.Session.Timeline.Text", UIUtil.getContextHelpForeground())
         val STEP: Color = JBColor.namedColor("Kilo.Session.Timeline.Step", JBColor.border())
     }
-}
-
-/** Border presets for connection dock panel. */
-object Dock {
-    fun banner(): Border = JBUI.Borders.compound(
-        JBUI.Borders.customLine(
-            SessionUiStyle.View.Outline.color(),
-            SessionUiStyle.View.Outline.width(),
-            0,
-            0,
-            0,
-        ),
-        JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.lg(), 0, UiStyle.Gap.lg()),
-    )!!
 }
