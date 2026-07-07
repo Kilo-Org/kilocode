@@ -6,7 +6,7 @@ usage() {
 Usage: $0 <version> [options]
 
 Builds the JetBrains plugin for a version without creating or validating a git tag.
-By default this runs a clean build, prepares production CLI binaries, signs the ZIP, and verifies it.
+By default this runs a clean build, signs the ZIP, and verifies it.
 
 Version:
   x.y.z or x.y.z-rc.n, with an optional leading v.
@@ -75,7 +75,6 @@ fi
 
 script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 plugin="$(cd "${script}/.." && pwd)"
-cli="$(cd "${plugin}/../opencode" && pwd)"
 secrets="${HOME}/.secrets/jetbrains"
 chain="${secrets}/chain.crt"
 key="${secrets}/private.pem"
@@ -84,11 +83,6 @@ pass="${secrets}/JETBRAINS_PRIVATE_KEY_PASSWORD"
 
 if [[ ! -d "$plugin" ]]; then
   echo "Expected JetBrains plugin package at $plugin" >&2
-  exit 1
-fi
-
-if [[ ! -f "${cli}/package.json" ]]; then
-  echo "Expected CLI package at $cli" >&2
   exit 1
 fi
 
@@ -117,8 +111,6 @@ if [[ "$clean" == "1" ]]; then
   ./gradlew clean
 fi
 
-rm -rf "${cli}/dist"
-KILO_VERSION="$version" KILO_CHANNEL=rc bun "${plugin}/script/build.ts" --production --prepare-cli
 ./gradlew buildPlugin -Pproduction=true -Pkilo.version="$version" -Pkilo.channel=eap
 
 if [[ "$sign" == "1" ]]; then

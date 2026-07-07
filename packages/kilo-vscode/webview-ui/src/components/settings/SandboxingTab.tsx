@@ -64,63 +64,67 @@ const SandboxingTab: Component = () => {
         </Switch>
       </SettingsRow>
 
-      <SettingsRow
-        title={language.t("settings.sandboxing.writablePaths.title")}
-        description={language.t("settings.sandboxing.writablePaths.description")}
-        descriptionId={writablePathsDescription}
-        last
-      >
-        <div style={{ width: "100%" }}>
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              "align-items": "center",
-              padding: "8px 0",
-              "border-bottom": writablePaths().length > 0 ? "1px solid var(--border-weak-base)" : "none",
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <TextField
-                value={newPath()}
-                placeholder="/tmp"
-                onChange={(val) => setNewPath(val)}
-                onKeyDown={(e: KeyboardEvent) => {
-                  if (e.key === "Enter") addPath()
-                }}
-                hideLabel
-                label={language.t("settings.sandboxing.writablePaths.title")}
-              />
+      {/* wide-input widens the input column so long filesystem paths are readable */}
+      <div data-variant="wide-input">
+        <SettingsRow
+          title={language.t("settings.sandboxing.writablePaths.title")}
+          description={language.t("settings.sandboxing.writablePaths.description")}
+          descriptionId={writablePathsDescription}
+          last
+        >
+          <div style={{ width: "100%" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                "align-items": "center",
+                padding: "8px 0",
+                "border-bottom": writablePaths().length > 0 ? "1px solid var(--border-weak-base)" : "none",
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <TextField
+                  value={newPath()}
+                  placeholder="/tmp"
+                  onChange={(val) => setNewPath(val)}
+                  onKeyDown={(e: KeyboardEvent) => {
+                    if (e.key === "Enter") addPath()
+                  }}
+                  hideLabel
+                  label={language.t("settings.sandboxing.writablePaths.title")}
+                />
+              </div>
+              <Button variant="secondary" onClick={addPath}>
+                {language.t("common.add")}
+              </Button>
             </div>
-            <Button variant="secondary" onClick={addPath}>
-              {language.t("common.add")}
-            </Button>
-          </div>
-          <For each={writablePaths()}>
-            {(path, index) => (
-              <div
-                style={{
-                  display: "flex",
-                  "align-items": "center",
-                  "justify-content": "space-between",
-                  padding: "6px 0",
-                  "border-bottom": index() < writablePaths().length - 1 ? "1px solid var(--border-weak-base)" : "none",
-                }}
-              >
-                <span
+            <For each={writablePaths()}>
+              {(path, index) => (
+                <div
                   style={{
-                    "font-family": "var(--vscode-editor-font-family, monospace)",
-                    "font-size": "var(--kilo-font-size-12)",
+                    display: "flex",
+                    "align-items": "center",
+                    "justify-content": "space-between",
+                    padding: "6px 0",
+                    "border-bottom":
+                      index() < writablePaths().length - 1 ? "1px solid var(--border-weak-base)" : "none",
                   }}
                 >
-                  {path}
-                </span>
-                <IconButton size="small" variant="ghost" icon="close" onClick={() => removePath(index())} />
-              </div>
-            )}
-          </For>
-        </div>
-      </SettingsRow>
+                  <span
+                    style={{
+                      "font-family": "var(--vscode-editor-font-family, monospace)",
+                      "font-size": "var(--kilo-font-size-12)",
+                    }}
+                  >
+                    {path}
+                  </span>
+                  <IconButton size="small" variant="ghost" icon="close" onClick={() => removePath(index())} />
+                </div>
+              )}
+            </For>
+          </div>
+        </SettingsRow>
+      </div>
     </Card>
   )
 }

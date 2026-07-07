@@ -81,6 +81,7 @@ import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-model
 import { ImageModelsProvider } from "../src/context/image-models"
 import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
+import { MemoryProvider } from "../src/context/memory"
 import { SessionProvider, useSession } from "../src/context/session"
 import { AgentRequirementsProvider } from "../src/context/agent-requirements"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
@@ -3142,13 +3143,15 @@ export const AgentManagerApp: Component = () => {
                                   <NotificationsProvider>
                                     <SessionProvider>
                                       <AgentRequirementsProvider>
-                                        <FeedbackProvider>
-                                          <WorktreeModeProvider>
-                                            <DataBridge>
-                                              <AgentManagerContent />
-                                            </DataBridge>
-                                          </WorktreeModeProvider>
-                                        </FeedbackProvider>
+                                        <MemoryProvider>
+                                          <FeedbackProvider>
+                                            <WorktreeModeProvider>
+                                              <DataBridge>
+                                                <AgentManagerContent />
+                                              </DataBridge>
+                                            </WorktreeModeProvider>
+                                          </FeedbackProvider>
+                                        </MemoryProvider>
                                       </AgentRequirementsProvider>
                                     </SessionProvider>
                                   </NotificationsProvider>

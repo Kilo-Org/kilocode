@@ -1,6 +1,7 @@
 package ai.kilocode.backend.testing
 
 import ai.kilocode.backend.cli.CliServer
+import ai.kilocode.backend.cli.CliDownload
 
 /**
  * Fake [CliServer] that delegates to a [MockCliServer] instead of
@@ -20,8 +21,10 @@ class FakeCliServer(private val mock: MockCliServer) : CliServer {
 
     override fun process(): Process? = null
 
-    override suspend fun init(): CliServer.State =
-        CliServer.State.Ready(mock.start(), mock.password)
+    override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit): CliServer.State {
+        onResolved()
+        return CliServer.State.Ready(mock.start(), mock.password)
+    }
 
     override fun exited(proc: Process) {}
 

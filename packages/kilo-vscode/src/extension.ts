@@ -398,6 +398,26 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
       settingsEditorProvider.openPanel("settings", "indexing")
     }),
+    vscode.commands.registerCommand("kilo-code.new.showMemory", async () => {
+      if (agentManagerProvider.isActive()) {
+        await agentManagerProvider.showMemory()
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      if (target === provider) await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await target.waitForReady()
+      await target.showMemory()
+    }),
+    vscode.commands.registerCommand("kilo-code.new.toggleMemory", async () => {
+      if (agentManagerProvider.isActive()) {
+        await agentManagerProvider.toggleMemory()
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      if (target === provider) await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await target.waitForReady()
+      await target.toggleMemory()
+    }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
       provider.postMessage({ type: "migrationState", needed: true, source: "legacy" })

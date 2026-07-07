@@ -162,6 +162,20 @@ describe("memory marker metadata", () => {
       type: "recall",
       tokens: 4,
       count: 2,
+      files: ["project.md", "environment.md"],
+    })
+  })
+
+  test("decodes legacy metadata that only carries sources", () => {
+    expect(
+      MemoryMarkerMeta.fromParts([
+        { type: "text", metadata: { kiloMemory: { type: "startup", tokens: 3, sources: ["project.md"] } } },
+      ]),
+    ).toEqual({
+      type: "startup",
+      tokens: 3,
+      count: 1,
+      files: ["project.md"],
     })
   })
 
