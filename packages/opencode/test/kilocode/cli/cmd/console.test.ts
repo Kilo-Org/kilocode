@@ -151,7 +151,7 @@ describe("console systemd subcommands", () => {
       expect(process.exitCode).toBe(1)
     } finally {
       ;(Systemd as { isAvailable: () => boolean }).isAvailable = originalIsAvailable
-      process.exitCode = originalExitCode
+      process.exitCode = originalExitCode ?? 0
     }
   })
 
@@ -559,7 +559,7 @@ describe("console systemd subcommands", () => {
     } finally {
       systemctlRunner.current = prevRun
       ;(Systemd as { isAvailable: () => boolean }).isAvailable = prevIsAvailable
-      process.exitCode = prevExitCode
+      process.exitCode = prevExitCode ?? 0
     }
   })
 })
