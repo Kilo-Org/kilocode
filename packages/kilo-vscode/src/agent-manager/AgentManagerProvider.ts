@@ -1076,6 +1076,7 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
     this.run.remove(worktreeId)
+    this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
@@ -1110,6 +1111,7 @@ export class AgentManagerProvider implements Disposable {
     }
 
     const orphaned = state.removeWorktree(worktreeId)
+    this.naming.forget(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
     }

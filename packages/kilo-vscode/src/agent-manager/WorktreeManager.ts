@@ -166,11 +166,15 @@ export class WorktreeManager {
       const git = simpleGit(worktreePath)
       const status = await git.status()
       if (status.files.length > 0) return true
-      // When the base ref cannot be resolved, we cannot prove there is work.
       return git
         .raw(["rev-list", "--count", `${base}..HEAD`])
         .then((count) => parseInt(count.trim(), 10) > 0)
-        .catch(() => false)
+        .catch((error) => {
+          // An unresolvable base ref means no work to compare; other git
+          // failures also fail safe to "no work", keeping the placeholder name.
+          this.log(`hasWork rev-list failed: ${error}`)
+          return false
+        })
     })
   }
 

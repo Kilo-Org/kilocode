@@ -76,7 +76,7 @@ export class BranchNamingController {
       return
     }
     if (count < 2) return
-    if (this.requests.has(worktree.id)) return
+    if (this.requests.has(worktree.id) || this.pending.has(worktree.id)) return
     this.dispatch(worktree.id, input)
   }
 
@@ -123,7 +123,10 @@ export class BranchNamingController {
     this.forget(id)
   }
 
-  private forget(id: string): void {
+  /** Drop in-memory bookkeeping for a worktree whose arming ended without a
+   *  rename (worktree removed, session moved/deleted). Safe to call for any
+   *  id; no-ops when nothing is held. */
+  forget(id: string): void {
     this.pending.delete(id)
     this.model.delete(id)
     this.idleAttempted.delete(id)
@@ -140,6 +143,10 @@ export class BranchNamingController {
     const manager = this.deps.manager()
     const worktree = state?.getWorktree(id)
     if (!state || !manager || !worktree || worktree.autoNameSessionId !== sessionID) return
+    if (!this.deps.settings().enabled) {
+      this.disarm(id)
+      return
+    }
     if (state.getSessions(id).length !== 1 || worktree.prNumber || worktree.prUrl) {
       this.disarm(id)
       return
@@ -168,8 +175,10 @@ export class BranchNamingController {
         { throwOnError: true, signal: request.signal },
       )
       if (!data.branch || request.signal.aborted) return
-      // Keep the request slot occupied until the rename settles so a fast
-      // next prompt does not dispatch a redundant generation.
+      // Hold the name: if busy, stash it as pending (the request slot frees
+      // immediately, but prompt() refuses to dispatch while a rename is
+      // pending); otherwise apply it now, keeping the slot occupied until it
+      // settles so a fast next prompt does not dispatch a redundant generation.
       await this.queueRename(id, input.sessionID, data.branch)
     } catch (error) {
       if (request.signal.aborted) return
