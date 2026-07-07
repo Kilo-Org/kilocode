@@ -158,6 +158,22 @@ export class WorktreeManager {
     return this.withGitLock(() => this.renameBranchImpl(worktreePath, current, requested))
   }
 
+  /** Whether the worktree has uncommitted changes or commits ahead of base.
+   *  Used to defer automatic branch naming until the branch carries real work. */
+  async hasWork(worktreePath: string, base: string): Promise<boolean> {
+    if (!this.isManagedPath(worktreePath)) return false
+    return this.withGitLock(async () => {
+      const git = simpleGit(worktreePath)
+      const status = await git.status()
+      if (status.files.length > 0) return true
+      // When the base ref cannot be resolved, we cannot prove there is work.
+      return git
+        .raw(["rev-list", "--count", `${base}..HEAD`])
+        .then((count) => parseInt(count.trim(), 10) > 0)
+        .catch(() => false)
+    })
+  }
+
   private async ensureGitAvailable(): Promise<void> {
     try {
       await execWithShellEnv("git", ["--version"])
