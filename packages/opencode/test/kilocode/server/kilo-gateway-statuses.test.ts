@@ -19,11 +19,28 @@ import {
 import { testEffect } from "../../lib/effect"
 
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
+let authInfo: Auth.Info = new Auth.Api({ type: "api", key: "test-token" })
+let disposedInstanceCount = 0
+let clearedModelCacheCount = 0
 const auth = Layer.mock(Auth.Service)({
-  get: () => Effect.succeed(new Auth.Api({ type: "api", key: "test-token" })),
+  get: () => Effect.succeed(authInfo),
+  set: (_providerID, info) =>
+    Effect.sync(() => {
+      authInfo = info
+    }),
 })
-const store = Layer.mock(InstanceStore.Service)({})
-const cache = Layer.mock(ModelCache.Service)({})
+const store = Layer.mock(InstanceStore.Service)({
+  disposeAll: () =>
+    Effect.sync(() => {
+      disposedInstanceCount += 1
+    }),
+})
+const cache = Layer.mock(ModelCache.Service)({
+  clear: () =>
+    Effect.sync(() => {
+      clearedModelCacheCount += 1
+    }),
+})
 const session = Layer.mock(Session.Service)({})
 const passthroughAuthorization = Layer.succeed(
   Authorization,
@@ -57,14 +74,14 @@ const layer = HttpRouter.serve(
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 const it = testEffect(layer)
 
-function stub(run: () => Response | Promise<Response>) {
+function stub(run: (input: RequestInfo | URL, init?: RequestInit) => Response | Promise<Response>) {
   // These tests run sequentially; scope the process-global override and delegate in-process server traffic.
   const original = globalThis.fetch
   const fetch: typeof globalThis.fetch = Object.assign(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
       if (url.startsWith("http://127.0.0.1:")) return original(input, init)
-      return run()
+      return run(input, init)
     },
     { preconnect: original.preconnect },
   )
@@ -217,6 +234,61 @@ describe("Kilo gateway HttpApi statuses", () => {
 
       expect(response.status).toBe(502)
       expect(yield* response.json).toEqual({ error: "Failed to reach KiloClaw" })
+    }),
+  )
+
+  it.live("clears a selected organization omitted from the profile", () =>
+    Effect.gen(function* () {
+      const expires = Date.now() + 60_000
+      authInfo = new Auth.Oauth({
+        type: "oauth",
+        refresh: "refresh-token",
+        access: "access-token",
+        expires,
+        accountId: "parent-organization",
+        enterpriseUrl: "https://enterprise.example.com",
+      })
+      disposedInstanceCount = 0
+      clearedModelCacheCount = 0
+
+      yield* stub((input, init) => {
+        const request = new Request(input, init)
+        if (request.url.endsWith("/api/profile")) {
+          return Response.json({
+            user: { email: "member@example.com" },
+            organizations: [{ id: "child-organization", name: "Child Organization", role: "member" }],
+          })
+        }
+        if (request.url.endsWith("/api/profile/balance")) {
+          expect(request.headers.get("x-kilocode-organizationid")).toBeNull()
+          return Response.json({ balance: 42 })
+        }
+        return new Response("unexpected Gateway request", { status: 500 })
+      })
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.profile)
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({
+        profile: {
+          email: "member@example.com",
+          name: null,
+          organizations: [{ id: "child-organization", name: "Child Organization", role: "member" }],
+        },
+        balance: { balance: 42 },
+        currentOrgId: null,
+      })
+      expect(authInfo).toEqual(
+        new Auth.Oauth({
+          type: "oauth",
+          refresh: "refresh-token",
+          access: "access-token",
+          expires,
+          enterpriseUrl: "https://enterprise.example.com",
+        }),
+      )
+      expect(clearedModelCacheCount).toBe(1)
+      expect(disposedInstanceCount).toBe(1)
     }),
   )
 })
