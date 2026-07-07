@@ -1614,7 +1614,7 @@ export const dict = {
   "settings.commitMessage.language.sync": "UI 언어와 동기화",
   "settings.commitMessage.language.title": "언어",
   "settings.commitMessage.language.description":
-    "AI 생성된 커AI 메시지에 사용할 언어를 선택하십시오.:",
+    "AI 생성된 커밋 메시지에 사용할 언어를 선택하십시오.:",
 
   "settings.display.username.title": "사용자 이름",
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",

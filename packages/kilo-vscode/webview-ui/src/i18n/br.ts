@@ -1649,10 +1649,10 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "ex: Gere commit messages em espanhol seguindo o formato conventional commits. Retorne APENAS o commit message.",
 
-  "settings.commitMessage.language.sync": "Sincronizar com linguagem UI",
-  "settings.commitMessage.language.title": "Linguagem",
+  "settings.commitMessage.language.sync": "Sincronizar com idioma da interface",
+  "settings.commitMessage.language.title": "Idioma",
   "settings.commitMessage.language.description":
-    "Escolha qual língua usar para as mensagens de entrega geradas por AI:",
+    "Escolha qual idioma usar para as mensagens de commit geradas por AI:",
 
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",
