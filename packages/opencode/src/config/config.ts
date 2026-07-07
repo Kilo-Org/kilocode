@@ -585,6 +585,7 @@ export const layer = Layer.effect(
         data.$schema = "https://app.kilo.ai/config.json"
         const edits = modify(text, ["$schema"], "https://app.kilo.ai/config.json", {
           formattingOptions: { insertSpaces: true, tabSize: 2 },
+          getInsertionIndex: () => 0,
         })
         const updated = applyEdits(text, edits)
         if (updated !== text) {
