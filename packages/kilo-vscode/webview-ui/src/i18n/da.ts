@@ -1632,6 +1632,11 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "f.eks. Generer commit messages på spansk efter conventional commits formatet. Returner KUN commit message.",
 
+  "settings.commitMessage.language.sync": "Synkroniser med UI sprog",
+  "settings.commitMessage.language.title": "Sprog",
+  "settings.commitMessage.language.description":
+    "Vælg hvilket sprog der skal bruges til AI-genererede commit-meddelelser:",
+
   "settings.display.username.title": "Brugernavn",
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
