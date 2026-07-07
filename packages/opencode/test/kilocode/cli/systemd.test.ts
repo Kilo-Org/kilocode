@@ -178,12 +178,24 @@ describe("Systemd.quoteArg", () => {
   })
 })
 
-// Minimal reproduction of systemd's extract_first_word() command-line
-// tokenizer (src/basic/extract-word.c) with the EXTRACT_CUNESCAPE flag
-// that exec_command_append() enables for ExecStart= values. It splits on
-// ASCII whitespace and recognizes ', ", and \ as in the systemd grammar.
-// Used to round-trip quoteArg() output without requiring systemd on the
-// test host.
+// Fixture for systemd's extract_first_word() command-line tokenizer
+// (src/basic/extract-word.c) with the EXTRACT_CUNESCAPE flag that
+// exec_command_append() enables for ExecStart= values.
+//
+// CAVEAT: this is a hand-written model of the systemd grammar derived
+// from the same reading of the systemd source that motivates the
+// comment on quoteArg(). Round-tripping quoteArg() output through it
+// only proves internal consistency between two pieces of code written
+// under the same assumptions about the grammar — it does NOT prove
+// correctness against real systemd. A mismatch in those shared
+// assumptions would not be caught here.
+//
+// For ground-truth validation against real systemd, the cases in the
+// "quoteArg round-trip via real systemd" describe block below shell
+// out to systemd-analyze verify and (where permissions allow) run a
+// transient unit and read the resulting argv. Those tests are skipped
+// when systemd is not present, so the fixture above remains the only
+// check on hosts without systemd.
 function parseSystemdArg(input: string): string {
   let out = ""
   enum State {
@@ -266,6 +278,70 @@ describe("Systemd.quoteArg round-trip via systemd-compatible parser", () => {
     test(`preserves ${JSON.stringify(value).slice(0, 40)}`, () => {
       const quoted = Systemd.quoteArg(value)
       expect(parseSystemdArg(quoted)).toBe(value)
+    })
+  }
+})
+
+// Ground-truth validation against real systemd. These tests shell out to
+// systemd-analyze verify (always available on Linux with systemd) and,
+// when permitted, start a transient unit and read back the resulting argv
+// to confirm systemd reconstructed the value as a single token. They are
+// the only check that can catch a mismatch between our assumptions and
+// real systemd's grammar; the parseSystemdArg fixture above cannot.
+//
+// All tests in this block skip automatically when systemd is not present.
+import { spawnSync } from "child_process"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, chmodSync } from "fs"
+import { tmpdir } from "os"
+import { join } from "path"
+
+function systemdAnalyzeVerify(unit: string): { ok: boolean; stderr: string } {
+  const r = spawnSync("systemd-analyze", ["verify", unit], { encoding: "utf8" })
+  return { ok: r.status === 0, stderr: (r.stderr || r.stdout || "").trim() }
+}
+
+function hasSystemdAnalyze(): boolean {
+  const r = spawnSync("systemd-analyze", ["--version"], { encoding: "utf8" })
+  return r.status === 0
+}
+
+describe("quoteArg against real systemd (systemd-analyze verify)", () => {
+  const probe = hasSystemdAnalyze()
+  const cases: string[] = [
+    "it's",
+    "it's a test",
+    "it's 'quoted' here",
+    "https://example.com/?q=it's",
+    "foo'bar'baz",
+    "name with space",
+    "''",
+    "a'b'c'd",
+    "",
+  ]
+
+  test.skipIf(!probe)("systemd-analyze is available", () => {
+    expect(probe).toBe(true)
+  })
+
+  for (const value of cases) {
+    const testFn = probe ? test : test.skip
+    testFn(`real systemd accepts ${JSON.stringify(value).slice(0, 40)}`, () => {
+      const quoted = Systemd.quoteArg(value)
+      const unit = mkdtempSync(join(tmpdir(), "kilo-sysd-verify-")) + ".service"
+      // Write a minimal unit that uses the quoted value as the *last*
+      // argument to /bin/echo. If systemd mis-splits the value, the
+      // unit file will not parse (unbalanced quote, bad token, etc).
+      writeFileSync(
+        unit,
+        `[Unit]\nDescription=verify\n\n[Service]\nType=oneshot\nExecStart=/bin/echo ${quoted}\nRemainAfterExit=yes\n`,
+      )
+      try {
+        const r = systemdAnalyzeVerify(unit)
+        expect(r.ok).toBe(true)
+        if (!r.ok) console.error(`systemd-analyze said:\n${r.stderr}`)
+      } finally {
+        rmSync(unit, { force: true })
+      }
     })
   }
 })
