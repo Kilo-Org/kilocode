@@ -299,11 +299,16 @@ export function useFileMention(
   }
 
   let snapping = false
+  let last: { start: number; end: number } | undefined
   const snapSelection = (textarea: HTMLTextAreaElement): void => {
     if (snapping) return
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
-    if (start === end) return // cursor, not a selection
+    const dir = textarea.selectionDirection
+    if (start === end) {
+      last = undefined
+      return // cursor, not a selection
+    }
 
     const val = textarea.value
     const paths = mentionedPaths()
@@ -311,16 +316,23 @@ export function useFileMention(
     let snappedEnd = end
 
     const startRange = findMentionRange(val, start, paths)
-    if (startRange) snapped = startRange.start
+    if (startRange) {
+      const shrink = dir === "backward" && last?.start === startRange.start && last.end === end
+      snapped = shrink ? startRange.end : startRange.start
+    }
 
     const endRange = findMentionRange(val, end, paths)
-    if (endRange) snappedEnd = endRange.end
+    if (endRange) {
+      const shrink = dir === "forward" && last?.start === start && last.end === endRange.end
+      snappedEnd = shrink ? endRange.start : endRange.end
+    }
 
     if (snapped !== start || snappedEnd !== end) {
       snapping = true
-      textarea.setSelectionRange(snapped, snappedEnd, textarea.selectionDirection)
+      textarea.setSelectionRange(snapped, snappedEnd, dir)
       snapping = false
     }
+    last = { start: snapped, end: snappedEnd }
   }
 
   const seedFromText = (text: string) => {
