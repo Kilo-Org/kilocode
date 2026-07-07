@@ -124,6 +124,7 @@ export const dict = {
 
   "ui.tool.read": "读取",
   "ui.tool.loaded": "已加载",
+  "ui.tool.swePruned": "SWE-Pruner · 保留 {{total}} 行中的 {{kept}} 行", // kilocode_change
   "ui.tool.list": "列表",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",

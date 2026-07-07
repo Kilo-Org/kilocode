@@ -139,6 +139,7 @@ export const dict: Record<string, string> = {
 
   "ui.tool.read": "Читання",
   "ui.tool.loaded": "Завантажено",
+  "ui.tool.swePruned": "SWE-Pruner · збережено {{kept}} з {{total}} рядків", // kilocode_change
   "ui.tool.list": "Список",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",

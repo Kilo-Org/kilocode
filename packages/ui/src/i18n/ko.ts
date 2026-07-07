@@ -121,6 +121,7 @@ export const dict = {
 
   "ui.tool.read": "읽기",
   "ui.tool.loaded": "로드됨",
+  "ui.tool.swePruned": "SWE-Pruner · {{total}}줄 중 {{kept}}줄 유지", // kilocode_change
   "ui.tool.list": "목록",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",

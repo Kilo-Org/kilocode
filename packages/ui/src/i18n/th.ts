@@ -122,6 +122,7 @@ export const dict = {
 
   "ui.tool.read": "อ่าน",
   "ui.tool.loaded": "โหลดแล้ว",
+  "ui.tool.swePruned": "SWE-Pruner · เก็บไว้ {{kept}} จาก {{total}} บรรทัด", // kilocode_change
   "ui.tool.list": "รายการ",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",

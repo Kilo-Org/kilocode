@@ -121,6 +121,7 @@ export const dict = {
 
   "ui.tool.read": "Leer",
   "ui.tool.loaded": "Cargado",
+  "ui.tool.swePruned": "SWE-Pruner · {{kept}} de {{total}} líneas conservadas", // kilocode_change
   "ui.tool.list": "Listar",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",

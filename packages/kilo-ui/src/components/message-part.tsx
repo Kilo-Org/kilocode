@@ -1632,7 +1632,7 @@ function swePruned(metadata: Record<string, unknown>) {
   if (typeof value !== "object" || value === null) return undefined
   const info = value as { kept?: unknown; total?: unknown }
   if (typeof info.kept !== "number" || typeof info.total !== "number") return undefined
-  return `SWE-Pruner · ${info.kept}/${info.total}`
+  return { kept: info.kept, total: info.total }
 }
 
 function ToolLoadedFile(props: { text: string; animate?: boolean; onClick?: () => void }) {
@@ -1792,7 +1792,9 @@ ToolRegistry.register({
             />
           )}
         </For>
-        <Show when={pruned()}>{(info) => <ToolLoadedFile text={info()} animate={props.reveal} />}</Show>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+        </Show>
       </>
     )
   },
@@ -1891,7 +1893,9 @@ ToolRegistry.register({
             )}
           </Show>
         </BasicTool>
-        <Show when={pruned()}>{(info) => <ToolLoadedFile text={info()} animate={props.reveal} />}</Show>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+        </Show>
       </>
     )
   },

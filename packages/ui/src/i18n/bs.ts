@@ -125,6 +125,7 @@ export const dict = {
 
   "ui.tool.read": "Čitanje",
   "ui.tool.loaded": "Učitano",
+  "ui.tool.swePruned": "SWE-Pruner · zadržano {{kept}} od {{total}} redova", // kilocode_change
   "ui.tool.list": "Listanje",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",

@@ -127,6 +127,7 @@ export const dict = {
 
   "ui.tool.read": "Oku",
   "ui.tool.loaded": "Yüklendi",
+  "ui.tool.swePruned": "SWE-Pruner · {{total}} satırdan {{kept}} tanesi korundu", // kilocode_change
   "ui.tool.list": "Listele",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
