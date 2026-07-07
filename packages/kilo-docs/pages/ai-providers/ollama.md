@@ -10,6 +10,12 @@ Kilo Code supports running models locally using Ollama. This provides privacy, o
 
 **Website:** [https://ollama.com/](https://ollama.com/)
 
+{% callout type="info" title="Local Ollama vs. Ollama Cloud" %}
+Use the **Ollama** provider for a local Ollama daemon started with `ollama serve`. Local models use the `ollama/<model_name>` format, for example `ollama/qwen3-coder:30b`, and connect to your local base URL.
+
+**Ollama Cloud** appears in Kilo Gateway and BYOK flows. It is a hosted provider path and does not connect to `http://localhost:11434`.
+{% /callout %}
+
 <!-- <image src="/docs/img/providers/ollama-devstral-snake.png" alt="Vibe coding a Snake game using devstral" width="500" />
 *Vibe coding a Snake game using devstral* -->
 
@@ -68,7 +74,7 @@ You need to have at least 32k to get decent results, but increasing the context 
 
 To configure the context window, set "Context Window Size (num_ctx)" in the API Provider settings.
 
-### Configure the Timout
+### Configure the Timeout
 
 By default, API requests time out after 10 minutes. Local models can be slow, if you hit this timeout you can consider increasing it here: VS Code Extensions panel > Kilo Code gear menu > Settings > API Request Timeout.
 
@@ -85,6 +91,8 @@ The extension stores this in your `kilo.json` config file. You can also edit the
 {% tab label="CLI" %}
 
 Ollama runs locally, so no API key is needed. Configure the base URL if Ollama is running on a different host:
+
+Use `ollama/<model_name>` for the selected model. If you see `ollama-cloud/...`, you are using the hosted Kilo Gateway/BYOK provider instead of your local Ollama server.
 
 **Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
 

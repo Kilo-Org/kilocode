@@ -169,6 +169,7 @@ function resolve(ctx: InstanceContext) {
       resolvePromptParts: () => Effect.die(new Error("resolvePromptParts is not used by this test")),
       prompt: () => Effect.die(new Error("prompt is not used by this test")),
     },
+    memoryCache: {},
   }).pipe(Effect.provideService(InstanceRef, ctx))
 }
 

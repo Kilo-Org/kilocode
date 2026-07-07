@@ -37,6 +37,7 @@ import { SandboxApi } from "@/kilocode/server/httpapi/groups/sandbox"
 import { SessionImportApi } from "@/kilocode/server/httpapi/groups/session-import"
 import { SuggestionApi } from "@/kilocode/server/httpapi/groups/suggestion"
 import { TelemetryApi } from "@/kilocode/server/httpapi/groups/telemetry"
+import { MemoryApi } from "@/kilocode/server/httpapi/groups/memory" // kilocode_change
 // kilocode_change end
 import { Authorization } from "./middleware/authorization"
 import { SchemaErrorMiddleware } from "./middleware/schema-error"
@@ -84,6 +85,7 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(SessionImportApi)
   .addHttpApi(SuggestionApi)
   .addHttpApi(TelemetryApi)
+  .addHttpApi(MemoryApi)
   // kilocode_change end
   .middleware(SchemaErrorMiddleware)
 

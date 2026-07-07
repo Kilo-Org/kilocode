@@ -220,7 +220,7 @@ describe("external_directory allow config protection", () => {
           expect(requests[0]).toMatchObject({
             id: PermissionID.make("permission_bash_external_write"),
             permission: "external_directory",
-            metadata: { disableAlways: true },
+            metadata: { disableAlways: true, configProtected: true },
           })
 
           yield* reply({ requestID: PermissionID.make("permission_bash_external_write"), reply: "reject" })

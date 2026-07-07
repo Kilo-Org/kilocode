@@ -4,9 +4,9 @@ import { parseMemoryCommand, type MemoryOperation, type ParsedMemoryCommand } fr
 type Case = {
   name: string
   input: string
-  result: "none" | "inspect" | "operation" | "usage"
+  result: "none" | "help" | "show" | "operation" | "usage"
   operation?: MemoryOperation
-  mode?: "status" | "on" | "off"
+  mode?: "on" | "off"
   confirm?: boolean
   text?: string
   query?: string
@@ -17,7 +17,8 @@ const cases = (await Bun.file(new URL("./command-cases.json", import.meta.url)).
 
 function expected(item: Case): ParsedMemoryCommand | undefined {
   if (item.result === "none") return
-  if (item.result === "inspect") return { kind: "inspect" }
+  if (item.result === "help") return { kind: "help" }
+  if (item.result === "show") return { kind: "show" }
   if (item.result === "usage") return { kind: "usage", reason: item.reason ?? "" }
   if (!item.operation) throw new Error(`Missing operation for fixture: ${item.name}`)
   if (item.operation === "remember" || item.operation === "correct") {

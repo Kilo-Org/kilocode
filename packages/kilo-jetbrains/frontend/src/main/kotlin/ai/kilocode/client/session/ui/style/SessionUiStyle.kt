@@ -165,6 +165,7 @@ object SessionUiStyle {
         /** Tool session-view preview limits and state colors. */
         object Tool {
             const val BODY_LINES = 15
+            const val TASK_LINES = 10
             const val PREVIEW_LIMIT = 20_000
 
             fun pending(): Color = UiStyle.Colors.weak()

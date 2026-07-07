@@ -289,10 +289,12 @@ export const layer = Layer.effect(
         sessionID: request.sessionID,
         permission: request.permission,
         patterns: request.patterns,
-        // kilocode_change start — inject disableAlways metadata for config paths
+        // kilocode_change start — inject disableAlways + configProtected metadata for config paths
         metadata: {
           ...request.metadata,
-          ...(isProtected ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true } : {}),
+          ...(isProtected
+            ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true, [ConfigProtection.CONFIG_PROTECTED_KEY]: true }
+            : {}),
         },
         // kilocode_change end
         always: request.always,

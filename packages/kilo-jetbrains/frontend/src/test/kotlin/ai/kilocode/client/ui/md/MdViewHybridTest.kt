@@ -9,16 +9,10 @@ import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
-import com.intellij.openapi.editor.HighlighterColors
-import com.intellij.openapi.editor.colors.CodeInsightColors
-import com.intellij.openapi.editor.colors.EditorColors
-import com.intellij.openapi.editor.colors.EditorColorsManager
-import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeRegistry
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.UnknownFileType
-import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -29,16 +23,16 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Color
-import java.awt.Font
 import java.awt.Point
+import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
+import java.net.URI
 import javax.swing.Box
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 import javax.swing.event.HyperlinkEvent
 import javax.swing.text.html.HTML
 import javax.swing.text.html.HTMLDocument
-import java.awt.datatransfer.DataFlavor
 
 @Suppress("UnstableApiUsage")
 class MdViewHybridTest : BasePlatformTestCase() {
@@ -771,6 +765,91 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals(pane.background, pane.viewport.background)
     }
 
+    fun `test table renders in horizontal scroll pane without an editor`() {
+        view.set("| a | b |\n|---|---|\n| 1 | 2 |")
+        val pane = scrolls().single()
+        val inner = pane.viewport.view as JBHtmlPane
+
+        assertTrue(editors().isEmpty())
+        assertTrue(htmls().isEmpty())
+        assertTrue(inner.text.contains("<table>"))
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, pane.horizontalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, pane.verticalScrollBarPolicy)
+        assertTrue(pane.horizontalScrollBar.preferredSize.height > 0)
+        assertEquals(0, pane.verticalScrollBar.preferredSize.width)
+    }
+
+    fun `test wide table width is bounded and boxed`() {
+        val header = (1..10).joinToString("|", prefix = "|", postfix = "|") { " column$it " }
+        val sep = (1..10).joinToString("|", prefix = "|", postfix = "|") { "---" }
+        val row = (1..10).joinToString("|", prefix = "|", postfix = "|") { " ${"x".repeat(20)} " }
+        view.set("$header\n$sep\n$row")
+        val pane = scrolls().single()
+        val inner = pane.viewport.view as JBHtmlPane
+
+        assertEquals(0, pane.preferredSize.width)
+        assertTrue(inner.preferredSize.width > pane.preferredSize.width)
+        assertTrue(pane.maximumSize.width > 1000)
+    }
+
+    fun `test table pane reserves full table height and does not clip vertically`() {
+        val rows = (1..8).joinToString("\n") { "| r${it}c1 | r${it}c2 |" }
+        view.set("| a | b |\n|---|---|\n$rows")
+        val pane = scrolls().single()
+        val inner = pane.viewport.view as JBHtmlPane
+
+        layout(width = 420)
+
+        val bar = pane.horizontalScrollBar.preferredSize.height
+        assertTrue("pane preferred height should cover the rendered table", pane.preferredSize.height >= inner.preferredSize.height + bar)
+        assertTrue("table should not be clipped vertically", pane.height >= inner.preferredSize.height)
+    }
+
+    fun `test table separates surrounding prose runs`() {
+        view.set("intro\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\noutro")
+
+        val html = htmls()
+        assertEquals(2, html.size)
+        assertEquals(1, scrolls().size)
+        assertTrue(editors().isEmpty())
+        assertEquals(2, struts().size)
+        assertTrue(html[0].text.contains("intro"))
+        assertTrue(html[1].text.contains("outro"))
+        assertTrue((scrolls().single().viewport.view as JBHtmlPane).text.contains("<table>"))
+    }
+
+    fun `test rerendering table reuses retained scroll pane and html child`() {
+        view.set("| a | b |\n|---|---|\n| 1 | 2 |")
+        val pane = scrolls().single()
+        val inner = pane.viewport.view as JBHtmlPane
+
+        view.set("| a | b |\n|---|---|\n| 3 | 4 |")
+
+        assertSame(pane, scrolls().single())
+        assertSame(inner, scrolls().single().viewport.view)
+        assertEquals(1, scrolls().size)
+        assertTrue(inner.text.contains("4"))
+    }
+
+    fun `test replacing table with prose disposes the scroll pane`() {
+        view.set("| a | b |\n|---|---|\n| 1 | 2 |")
+        assertEquals(1, scrolls().size)
+
+        view.set("plain prose")
+        drainEdt()
+
+        assertTrue(scrolls().isEmpty())
+        assertTrue(htmls().single().text.contains("plain prose"))
+    }
+
+    fun `test clear disposes table scroll pane`() {
+        view.set("| a | b |\n|---|---|\n| 1 | 2 |")
+        view.clear()
+
+        assertEquals("", view.markdown())
+        assertTrue(scrolls().isEmpty())
+    }
+
     fun `test clear resets source and components`() {
         view.set("```\ncode\n```")
         view.clear()
@@ -906,6 +985,25 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals("https://example.com", received.single().href)
     }
 
+    fun `test link listener receives activated prose link with component`() {
+        val received = mutableListOf<MdView.LinkEvent>()
+        view.addLinkListener { received.add(it) }
+        view.set("See [docs](https://example.com)")
+        val pane = htmls().single()
+        val event = HyperlinkEvent(
+            pane,
+            HyperlinkEvent.EventType.ACTIVATED,
+            URI("https://example.com").toURL(),
+            "https://example.com",
+        )
+
+        pane.hyperlinkListeners.forEach { it.hyperlinkUpdate(event) }
+
+        val link = received.single()
+        assertEquals("https://example.com", link.href)
+        assertSame(pane, link.component)
+    }
+
     fun `test markdown root and code child expose selection copy provider`() {
         Disposer.dispose(view)
         disposed = true
@@ -929,6 +1027,26 @@ class MdViewHybridTest : BasePlatformTestCase() {
             assertEquals("alpha", CopyPasteManager.getInstance().getContents(DataFlavor.stringFlavor))
         } finally {
             Disposer.dispose(local)
+            selection.dispose()
+        }
+    }
+
+    fun `test setSelection resyncs blocks and code child exposes selection copy provider`() {
+        view.set("```text\nalpha code\n```")
+        val old = editors().single().getEditor(true)!!
+        val selection = SessionSelection()
+        try {
+            view.setSelection(selection)
+            drainEdt()
+            val field = editors().single()
+            val child = CopyProviderSink()
+
+            (field as UiDataProvider).uiDataSnapshot(child)
+
+            assertTrue(old.isDisposed)
+            assertNotNull(child.copy)
+            assertEquals("alpha code", field.text)
+        } finally {
             selection.dispose()
         }
     }
@@ -960,37 +1078,4 @@ class MdViewHybridTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
     }
 
-    private fun customStyle(): SessionEditorStyle {
-        val scheme = EditorColorsManager.getInstance().globalScheme.clone() as EditorColorsScheme
-        scheme.setAttributes(
-            HighlighterColors.TEXT,
-            TextAttributes(Color(0x10, 0x20, 0x30), Color(0x01, 0x02, 0x03), null, null, Font.PLAIN),
-        )
-        scheme.setAttributes(
-            DefaultLanguageHighlighterColors.DOC_COMMENT,
-            TextAttributes(Color(0x33, 0x44, 0x55), null, null, null, Font.PLAIN),
-        )
-        scheme.setAttributes(
-            DefaultLanguageHighlighterColors.LINE_COMMENT,
-            TextAttributes(Color(0x44, 0x55, 0x66), null, null, null, Font.PLAIN),
-        )
-        scheme.setAttributes(
-            DefaultLanguageHighlighterColors.DOC_CODE_INLINE,
-            TextAttributes(Color(0xAA, 0xBB, 0xCC), Color(0x11, 0x22, 0x33), null, null, Font.PLAIN),
-        )
-        scheme.setAttributes(
-            DefaultLanguageHighlighterColors.STRING,
-            TextAttributes(Color(0xCC, 0x88, 0x66), null, null, null, Font.PLAIN),
-        )
-        scheme.setAttributes(
-            DefaultLanguageHighlighterColors.DOC_CODE_BLOCK,
-            TextAttributes(Color(0xDD, 0xEE, 0xFF), Color(0x44, 0x55, 0x66), null, null, Font.PLAIN),
-        )
-        scheme.setAttributes(
-            CodeInsightColors.HYPERLINK_ATTRIBUTES,
-            TextAttributes(Color(0x77, 0x88, 0x99), null, null, null, Font.PLAIN),
-        )
-        scheme.setColor(EditorColors.PREVIEW_BORDER_COLOR, Color(0x22, 0x33, 0x44))
-        return SessionEditorStyle.create(scheme = scheme, family = "Courier New", size = 21)
-    }
 }

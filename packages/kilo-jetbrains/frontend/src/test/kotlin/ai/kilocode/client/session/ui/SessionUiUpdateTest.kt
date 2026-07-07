@@ -160,6 +160,24 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
     }
 
+    fun `test user compaction marker renders without prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto("cp1", "ses", "u1", "compaction"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.Default, mv.sessionViewKind)
+        assertEquals(listOf("cp1"), mv.partIds())
+        assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
+    }
+
+    fun `test user text message keeps prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.UserPrompt, mv.sessionViewKind)
+    }
+
     // ------ generic fallback ------
 
     fun `test unknown part type falls back to GenericView`() {

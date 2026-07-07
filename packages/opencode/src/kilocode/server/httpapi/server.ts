@@ -18,6 +18,7 @@ import { indexingHandlers } from "./handlers/indexing"
 import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
+import { memoryHandlers } from "./handlers/memory"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
 import { sandboxHandlers } from "./handlers/sandbox"
@@ -37,6 +38,7 @@ export const provide = Layer.provide([
   interactiveTerminalHandlers,
   kiloGatewayHandlers,
   kilocodeHandlers,
+  memoryHandlers,
   networkHandlers,
   remoteHandlers,
   sandboxHandlers,

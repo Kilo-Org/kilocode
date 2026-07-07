@@ -1,4 +1,4 @@
-import { MemoryOperations } from "./ops"
+import { MemoryOperations } from "./operations"
 import { MemoryRedact } from "./redact"
 import { MemoryShared } from "../recall/shared"
 import type { MemoryFiles } from "../storage/store"
@@ -9,6 +9,7 @@ export type CaptureSourceItem = {
   text: string
   file?: MemoryOperations.Add["file"]
   section?: string
+  key?: string
 }
 
 export type CaptureDetail = {
@@ -157,6 +158,7 @@ export function duplicateOps(input: {
   items: CaptureSourceItem[]
 }) {
   const skipped = [...input.skipped]
+  const existing = new Set(input.items.map((item) => item.id))
   const ops = input.ops.filter((item) => {
     if (item.action !== "add") return true
     const rejected = MemoryOperations.reject(item)
@@ -164,6 +166,9 @@ export function duplicateOps(input: {
       skipped.push(rejected)
       return false
     }
+    // Exact-key upsert: same file/section/key as an existing entry is an update, not a duplicate —
+    // route it to apply (which updates the line in place) instead of dropping it here.
+    if (item.file && existing.has(MemoryOperations.id(item))) return true
     const source = duplicate({
       text: `${item.key} ${item.text}`,
       items: input.items,
@@ -199,7 +204,8 @@ export function notice(input: {
   skipped: CaptureSkip[]
   tokens: number
 }): CaptureDetail | undefined {
-  const references = MemoryShared.refs(input.ops)
+  const ops = input.ops.filter((item) => item.action !== "add" || !MemoryOperations.secret(item))
+  const references = MemoryShared.refs(ops)
   if (input.count > 0) {
     return {
       type: "saved",
@@ -207,7 +213,7 @@ export function notice(input: {
       tokens: input.tokens,
       operationCount: input.count,
       sources: references,
-      files: MemoryShared.files(input.ops),
+      files: MemoryShared.files(ops),
     }
   }
   return {
@@ -217,6 +223,6 @@ export function notice(input: {
     operationCount: 0,
     skippedCount: input.skipped.length,
     sources: references,
-    files: MemoryShared.files(input.ops),
+    files: MemoryShared.files(ops),
   }
 }
