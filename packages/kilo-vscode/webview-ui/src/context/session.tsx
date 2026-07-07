@@ -2269,10 +2269,9 @@ export const SessionProvider: ParentComponent = (props) => {
       dismissQuestion(q.id)
     }
 
-    const fresh = !sid && !draftID
-    const effectiveDraftID = fresh ? crypto.randomUUID() : draftID
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
-    if (fresh && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, text, files, review)
@@ -2343,10 +2342,9 @@ export const SessionProvider: ParentComponent = (props) => {
       dismissQuestion(q.id)
     }
 
-    const fresh = !sid && !draftID
-    const effectiveDraftID = fresh ? crypto.randomUUID() : draftID
+    const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
-    if (fresh && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
