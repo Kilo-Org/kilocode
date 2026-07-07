@@ -1,4 +1,5 @@
 import normalization.NormalizeOpenApiSpecTask
+import org.gradle.api.tasks.WriteProperties
 
 plugins {
     alias(libs.plugins.rpc)
@@ -15,18 +16,35 @@ kotlin {
 val generatedApi = layout.buildDirectory.dir("generated/openapi/src/main/kotlin")
 val rawSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.raw.json")
 val generatedSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.json")
+val generatedProps = layout.buildDirectory.dir("generated/kilo-props")
+
+val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirectory.file("package.json")).asText.map { text ->
+    Regex("\"version\"\\s*:\\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1)
+        ?: error("Could not read version from package.json")
+}
 
 sourceSets {
     main {
-        resources.srcDir(layout.buildDirectory.dir("generated/cli"))
+        resources.srcDir(generatedProps)
         kotlin.srcDir(generatedApi)
     }
 }
 
+val writeKiloProperties by tasks.registering(WriteProperties::class) {
+    description = "Write pinned Kilo CLI properties"
+    val out = generatedProps.map { it.file("kilo.properties") }
+    destinationFile.set(out)
+    property("cli.version", pinnedCliVersion)
+}
+
 val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
     description = "Generate CLI OpenAPI spec into the build directory"
-    opencodeDir.set(rootProject.layout.projectDirectory.dir("../opencode"))
-    serverSrcDir.set(rootProject.layout.projectDirectory.dir("../opencode/src/server"))
+    cliVersion.set(pinnedCliVersion)
+    token.set(
+        providers.environmentVariable("GH_TOKEN")
+            .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+    )
+    cacheDir.set(layout.buildDirectory.dir("cli-cache"))
     spec.set(rawSpec)
 }
 
@@ -83,48 +101,18 @@ val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
 }
 
 tasks.named("compileKotlin") {
-    dependsOn(fixGeneratedApi)
+    dependsOn(fixGeneratedApi, writeKiloProperties)
     inputs.dir(generatedApi)
+}
+
+tasks.named("processResources") {
+    dependsOn(writeKiloProperties)
 }
 
 tasks.named("compileTestKotlin") {
     dependsOn(fixGeneratedApi)
     inputs.dir(generatedApi)
 }
-
-val cliDir = layout.buildDirectory.dir("generated/cli/cli")
-val production = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false)
-
-val prepareLocalCli by tasks.registering(PrepareLocalCliTask::class) {
-    description = "Prepare the local-platform CLI binary for JetBrains backend runs"
-    root.set(rootProject.layout.projectDirectory)
-    dir.set(cliDir)
-    bunPath.convention(
-        providers.gradleProperty("kilo.bun.path")
-            .orElse(providers.environmentVariable("BUN_EXE"))
-    )
-}
-
-val requiredPlatforms = listOf(
-    "darwin-arm64",
-    "darwin-x64",
-    "linux-arm64",
-    "linux-x64",
-    "windows-x64",
-    "windows-arm64",
-)
-
-val prod = production
-val checkCli by tasks.registering(CheckCliTask::class) {
-    description = "Verify CLI binaries exist before packaging"
-    dir.set(cliDir)
-    this.production.set(prod)
-    platforms.set(requiredPlatforms)
-}
-
-// CLI binaries are verified only at packaging time (buildPlugin), not at
-// processResources time, so that Kotlin compile and tests work without binaries.
-// Wire checkCli to buildPlugin in the root build.gradle.kts instead.
 
 dependencies {
     intellijPlatform {
@@ -137,6 +125,7 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.okhttp)
     implementation(libs.okhttp.sse)
+    implementation(libs.commons.compress)
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.okhttp.mockwebserver)

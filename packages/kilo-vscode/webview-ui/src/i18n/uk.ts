@@ -386,6 +386,7 @@ export const dict = {
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
   "speechToText.tooltip.error": "Помилка голосового введення. Натисніть, щоб очистити.",
@@ -1193,6 +1194,8 @@ export const dict = {
 
   "common.retry": "Спробувати ще раз",
   "common.refresh": "Оновити",
+  "common.reload": "Перезавантажити",
+  "common.reloadDescription": "Перезавантажити конфігурацію, навички, агентів та команди з диска",
 
   "profile.title": "Профіль",
   "profile.notLoggedIn": "Не увійшов",
@@ -1429,6 +1432,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Обмежити доступ до мережі",
   "settings.sandboxing.network.description":
     "Блокуйте вихідний доступ до мережі для команд, ініційованих моделлю, та HTTP-інструментів. Локальні MCP-сервери й хуки плагінів працюють поза цим обмеженням. Трафік провайдерів та інференсу моделей залишається доступним.",
+
+  "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
+  "settings.sandboxing.writablePaths.description":
+    "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1575,6 +1582,7 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
+  "settings.context.compaction.title": "Стискання",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1582,6 +1590,42 @@ export const dict = {
   "settings.context.prune.description": "Видаляти старі виводи інструментів під час стиснення",
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
   "settings.context.watcherPatterns.description": "Glob-шаблони для файлів, які спостерігач має ігнорувати",
+
+  "settings.context.memory.title": "Пам’ять",
+  "settings.context.memory.project.title": "Пам’ять проєкту",
+  "settings.context.memory.autoSave.title": "Автозбереження пам’яті проєкту",
+  "settings.context.memory.autoSave.description":
+    "Автоматично зберігає сталі факти проєкту із завершених ходів, коли пам’ять увімкнено.",
+  "settings.context.memory.index.title": "Індекс пам’яті",
+  "settings.context.memory.status.notLoaded": "Не завантажено",
+  "settings.context.memory.status.disabled": "Вимкнено",
+  "settings.context.memory.status.enabledTokensOps":
+    "Увімкнено - ~{{session}} токенів стартового контексту в цій сесії - ~{{tokens}} токенів у збереженому індексі - остання операція {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Увімкніть пам’ять, щоб створити файли пам’яті проєкту.",
+  "settings.context.memory.inspect": "Перевірити",
+  "settings.context.memory.rebuild": "Перебудувати індекс пам’яті",
+  "chat.memory.on": "Пам’ять увімкнено",
+  "chat.memory.label": "Пам’ять · {{tokens}} токенів",
+  "chat.memory.status.loading": "Завантаження стану пам’яті",
+  "chat.memory.session.tokens": "Стартовий контекст цієї сесії: {{tokens}} токенів",
+  "chat.memory.total.tokens": "Збережений індекс: {{tokens}} токенів",
+  "chat.memory.project.enabled": "Пам’ять проєкту увімкнено",
+  "chat.memory.project.disabled": "Пам’ять проєкту вимкнено",
+  "chat.memory.command.failed": "Команду пам’яті не виконано",
+  "chat.memory.savedOperations": "Остання операція пам’яті: {{count}} операцій",
+  "chat.memory.inspect": "Перевірити пам’ять",
+  "chat.memory.remember": "Запам’ятати",
+  "chat.memory.forget": "Забути",
+  "chat.memory.rebuild": "Перебудувати індекс",
+  "chat.memory.disable": "Вимкнути пам’ять",
+  "chat.memory.badge.injected": "Пам’ять додано",
+  "chat.memory.badge.recalled": "Пам’ять відновлено",
+  "chat.memory.badge.startupCtx": "стартовий ctx",
+  "chat.memory.badge.items": "{{count}} елементів",
+  "chat.memory.badge.tokens": "{{tokens}} токенів",
+  "chat.memory.badge.recalledDetail": "Пам’ять відновлено: {{count}} елементів - {{tokens}} токенів",
+  "chat.memory.badge.files": "Файли пам’яті: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Використовувати власний prompt",

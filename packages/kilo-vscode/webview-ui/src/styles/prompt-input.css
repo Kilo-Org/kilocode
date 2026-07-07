@@ -656,6 +656,11 @@
   }
 }
 
+.prompt-speech-button--starting {
+  cursor: progress;
+  opacity: 0.7;
+}
+
 .prompt-speech-button--recording::after {
   content: "";
   position: absolute;

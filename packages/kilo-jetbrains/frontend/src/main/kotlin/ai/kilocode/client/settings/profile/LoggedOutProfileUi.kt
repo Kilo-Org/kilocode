@@ -181,7 +181,7 @@ internal class LoggedOutProfileUi(
     }
 
     private fun resolveMode(status: KiloAppStatusDto, login: LoginState): OutMode = when {
-        status == KiloAppStatusDto.DISCONNECTED || status == KiloAppStatusDto.CONNECTING || status == KiloAppStatusDto.MIGRATION_REQUIRED -> OutMode.CONNECTING
+        status == KiloAppStatusDto.DISCONNECTED || status == KiloAppStatusDto.DOWNLOADING || status == KiloAppStatusDto.CONNECTING || status == KiloAppStatusDto.MIGRATION_REQUIRED -> OutMode.CONNECTING
         status == KiloAppStatusDto.ERROR -> OutMode.APP_ERROR
         login is LoginState.Initiating -> OutMode.INITIATING
         login is LoginState.Pending -> OutMode.AUTH

@@ -234,4 +234,34 @@ describe("sandbox policy", () => {
     expect(roots(ctx)).not.toContain(dirs.approved)
     expect(Exit.isFailure(result)).toBe(true)
   })
+
+  test("makes configured extra writable paths writable while unlisted paths stay denied", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.a, dirs.a, dirs)
+    const policy = profile(ctx, "deny", [dirs.approved])
+    const result = await Effect.runPromise(
+      Effect.all({
+        extra: runSandbox(policy, assertWrite(path.join(dirs.approved, "allowed.txt")).pipe(Effect.exit)),
+        other: runSandbox(policy, assertWrite(path.join(dirs.b, "denied.txt")).pipe(Effect.exit)),
+      }),
+    )
+
+    expect(policy.filesystem.allowWrite.map((rule) => rule.path)).toContain(dirs.approved)
+    expect(roots(ctx)).not.toContain(dirs.approved)
+    expect(Exit.isSuccess(result.extra)).toBe(true)
+    expect(Exit.isFailure(result.other)).toBe(true)
+  })
+
+  test("keeps .git denied inside a configured extra writable path", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.a, dirs.a, dirs)
+    const policy = profile(ctx, "deny", [dirs.approved])
+    const result = await Effect.runPromise(
+      runSandbox(policy, assertWrite(path.join(dirs.approved, ".git", "config")).pipe(Effect.exit)),
+    )
+
+    expect(Exit.isFailure(result)).toBe(true)
+  })
 })

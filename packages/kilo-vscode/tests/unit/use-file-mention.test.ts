@@ -5,19 +5,29 @@ import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/type
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function textarea(value: string, cursor: number, dir: "ltr" | "rtl") {
-  const state = { cursor }
+function textarea(
+  value: string,
+  cursor: number,
+  dir: "ltr" | "rtl",
+  selection?: { end: number; direction: SelectionDirection },
+) {
+  const state = { start: cursor, end: selection?.end ?? cursor, direction: selection?.direction ?? "none" }
   return {
     value,
     get selectionStart() {
-      return state.cursor
+      return state.start
     },
     get selectionEnd() {
-      return state.cursor
+      return state.end
+    },
+    get selectionDirection() {
+      return state.direction
     },
     matches: (selector: string) => selector === `:dir(${dir})`,
-    setSelectionRange: (start: number) => {
-      state.cursor = start
+    setSelectionRange: (start: number, end = start, direction: SelectionDirection = "none") => {
+      state.start = start
+      state.end = end
+      state.direction = direction
     },
   } as unknown as HTMLTextAreaElement
 }
@@ -318,6 +328,70 @@ describe("useFileMention", () => {
     input.setSelectionRange(end + 1, end + 1)
     await wait(0)
     expect(input.selectionStart).toBe(end + 1)
+
+    dispose.fn?.()
+  })
+
+  it("shrinks a left-to-right shift selection across a mention", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const path = "README.md"
+    const text = `A @${path} B`
+    const start = text.indexOf("@")
+    const end = start + path.length + 1
+    mention.addPaths([path], "/repo")
+
+    const input = textarea(text, end - 1, "ltr", { end: text.length, direction: "backward" })
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(start)
+    expect(input.selectionEnd).toBe(text.length)
+
+    input.setSelectionRange(start + 1, text.length, "backward")
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(end)
+    expect(input.selectionEnd).toBe(text.length)
+    expect(input.selectionDirection).toBe("backward")
+
+    dispose.fn?.()
+  })
+
+  it("shrinks a right-to-left shift selection across a mention", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const path = "README.md"
+    const text = `ی @${path} س`
+    const start = text.indexOf("@")
+    const end = start + path.length + 1
+    mention.addPaths([path], "/repo")
+
+    const input = textarea(text, end - 1, "rtl", { end: text.length, direction: "backward" })
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(start)
+    expect(input.selectionEnd).toBe(text.length)
+
+    input.setSelectionRange(start + 1, text.length, "backward")
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(end)
+    expect(input.selectionEnd).toBe(text.length)
+    expect(input.selectionDirection).toBe("backward")
 
     dispose.fn?.()
   })

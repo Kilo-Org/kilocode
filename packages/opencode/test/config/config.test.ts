@@ -547,70 +547,114 @@ it.instance("prefers .kilo directory config over legacy .kilocode", () =>
 )
 // kilocode_change end
 
-it.instance("handles environment variable substitution", () =>
+// kilocode_change start - project config is untrusted: {env:} rejected; {file:} confined to the project root
+it.instance("rejects environment variable substitution in project config", () =>
   withProcessEnv(
     "TEST_VAR",
     "test-user",
     Effect.gen(function* () {
       const test = yield* TestInstance
       yield* writeConfigEffect(test.directory, {
-        $schema: "https://app.kilo.ai/config.json", // kilocode_change
+        $schema: "https://app.kilo.ai/config.json",
         username: "{env:TEST_VAR}",
       })
       const config = yield* Config.use.get()
-      expect(config.username).toBe("test-user")
+      expect(config.username).not.toBe("test-user")
+      const issues = yield* Config.Service.use((svc) => svc.warnings())
+      expect(issues.length).toBeGreaterThan(0)
     }),
   ),
 )
 
-it.instance("preserves env variables when adding $schema to config", () =>
-  withProcessEnv(
-    "PRESERVE_VAR",
-    "secret_value",
-    Effect.gen(function* () {
-      const test = yield* TestInstance
-      // Config without $schema - should trigger auto-add
-      yield* AppFileSystem.use.writeWithDirs(
-        path.join(test.directory, "kilo.json"), // kilocode_change
-        JSON.stringify({ username: "{env:PRESERVE_VAR}" }),
-      )
-      const config = yield* Config.use.get()
-      expect(config.username).toBe("secret_value")
-
-      // Read the file to verify the env variable was preserved
-      const content = yield* AppFileSystem.use.readFileString(path.join(test.directory, "kilo.json")) // kilocode_change
-      expect(content).toContain("{env:PRESERVE_VAR}")
-      expect(content).not.toContain("secret_value")
-      expect(content).toContain("$schema")
-    }),
-  ),
-)
-
-it.instance("handles file inclusion substitution", () =>
+it.instance("allows {file:} that stays inside the project root", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
-    yield* AppFileSystem.use.writeWithDirs(path.join(test.directory, "included.txt"), "test-user")
+    yield* AppFileSystem.use.writeWithDirs(path.join(test.directory, "included.txt"), "in-project")
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
+      $schema: "https://app.kilo.ai/config.json",
       username: "{file:included.txt}",
     })
     const config = yield* Config.use.get()
-    expect(config.username).toBe("test-user")
+    expect(config.username).toBe("in-project")
   }),
 )
 
-it.instance("handles file inclusion with replacement tokens", () =>
+it.instance("rejects {file:} that reads an absolute path from project config", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
-    yield* AppFileSystem.use.writeWithDirs(path.join(test.directory, "included.md"), "const out = await Bun.$`echo hi`")
     yield* writeConfigEffect(test.directory, {
-      $schema: "https://app.kilo.ai/config.json", // kilocode_change
-      username: "{file:included.md}",
+      $schema: "https://app.kilo.ai/config.json",
+      username: "{file:/etc/passwd}",
     })
     const config = yield* Config.use.get()
-    expect(config.username).toBe("const out = await Bun.$`echo hi`")
+    expect(config.username ?? "").not.toContain("root:")
   }),
 )
+
+it.instance("rejects {file:} that escapes the project root with parent directories", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const outside = path.join(path.dirname(test.directory), "secret.txt")
+    yield* AppFileSystem.use.writeWithDirs(outside, "outside-secret")
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      username: "{file:../secret.txt}",
+    })
+    const config = yield* Config.use.get()
+    expect(config.username).not.toBe("outside-secret")
+  }),
+)
+
+it.instance("rejects {file:} that escapes the project root through a symlink", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const outside = path.join(path.dirname(test.directory), "secret.txt")
+    const link = path.join(test.directory, "secret-link")
+    yield* AppFileSystem.use.writeWithDirs(outside, "outside-secret")
+    yield* Effect.promise(() => fs.symlink(outside, link))
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      username: "{file:secret-link}",
+    })
+    const config = yield* Config.use.get()
+    expect(config.username).not.toBe("outside-secret")
+  }),
+)
+
+it.instance("blocks provider apiKey {file:} exfiltration that escapes the project root", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const outside = path.join(path.dirname(test.directory), "creds.txt")
+    yield* AppFileSystem.use.writeWithDirs(outside, "leaked-credential")
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://app.kilo.ai/config.json",
+      provider: {
+        "openai-compatible": {
+          options: { baseURL: "http://127.0.0.1:4444/v1", apiKey: "{file:../creds.txt}" },
+          models: { "test-model": { name: "Test Model" } },
+        },
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(JSON.stringify(config.provider ?? {})).not.toContain("leaked-credential")
+  }),
+)
+
+it.instance("still allows global config to read absolute files", () =>
+  withGlobalConfig({}, ({ dir }) =>
+    Effect.gen(function* () {
+      const secret = path.join(dir, "secret.txt")
+      yield* AppFileSystem.use.writeWithDirs(secret, "global-secret")
+      yield* writeConfigEffect(dir, {
+        $schema: "https://app.kilo.ai/config.json",
+        username: `{file:${secret}}`,
+      })
+      const config = yield* Config.use.get()
+      expect(config.username).toBe("global-secret")
+    }),
+  ),
+)
+// kilocode_change end
 
 const accountTokenIt = configIt({
   account: Layer.mock(Account.Service)({
@@ -1758,8 +1802,11 @@ envIsolationWellKnown.it.instance(
     Effect.gen(function* () {
       process.env.TEST_TOKEN = "preexisting-token"
       const config = yield* Config.use.get()
+      // The well-known header (trusted source) resolves the auth-provided token...
       expect(envIsolationWellKnown.seen.authorization).toBe("Bearer test-token")
-      expect(config.username).toBe("test-token")
+      // ...but the project config token is untrusted and must not be substituted.
+      expect(config.username).not.toBe("test-token")
+      // ...and the auth env used for substitution must not leak into the real process env.
       expect(process.env.TEST_TOKEN).toBe("preexisting-token")
     }),
   { git: true, config: { username: "{env:TEST_TOKEN}" } },

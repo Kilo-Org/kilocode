@@ -50,8 +50,13 @@ const mockVscode = {
     notebookDocuments: [] as Array<unknown>,
     onDidOpenTextDocument: () => ({ dispose: noop }),
     onDidChangeTextDocument: () => ({ dispose: noop }),
+    onDidSaveTextDocument: () => ({ dispose: noop }),
     onDidCloseTextDocument: () => ({ dispose: noop }),
     onDidChangeConfiguration: () => ({ dispose: noop }),
+    openTextDocument: async (input: { content?: string; language?: string }) => ({
+      getText: () => input.content ?? "",
+      languageId: input.language ?? "plaintext",
+    }),
     getConfiguration: () => ({
       get: <T>(_key: string, value?: T) => value,
       update: async () => {},
@@ -81,6 +86,7 @@ const mockVscode = {
     tabGroups: { all: [] },
     showTextDocument: async () => {},
     showInformationMessage: async () => undefined,
+    showErrorMessage: async () => undefined,
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
     createOutputChannel: () => ({

@@ -69,7 +69,12 @@ export const SandboxButtonBase: Component<SandboxButtonBaseProps> = (props) => {
         language.t(props.enabled ? "prompt.action.sandbox.enabled" : "prompt.action.sandbox.disabled"))
 
   return (
-    <Tooltip value={tooltip()} contentClass={unavailable() ? undefined : props.tooltipClass} placement="top">
+    <Tooltip
+      value={tooltip()}
+      contentClass={unavailable() ? undefined : props.tooltipClass}
+      placement="top"
+      openDelay={0}
+    >
       <Button
         variant="ghost"
         size="small"

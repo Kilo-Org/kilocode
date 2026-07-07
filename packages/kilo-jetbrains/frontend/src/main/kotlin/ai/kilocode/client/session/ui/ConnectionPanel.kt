@@ -120,6 +120,8 @@ class ConnectionPanel(
 
             is SessionControllerEvent.ConnectionChanged.ShowConnecting -> showConnecting()
 
+            is SessionControllerEvent.ConnectionChanged.ShowDownloading -> showDownloading(event.percent, event.version, event.platform)
+
             is SessionControllerEvent.ConnectionChanged.ShowError -> {
                 showError(event.summary, event.detail)
                 showPanel()
@@ -137,6 +139,22 @@ class ConnectionPanel(
     private fun showConnecting() {
         label.foreground = UiStyle.Colors.weak()
         label.text = KiloBundle.message("session.connection.connecting")
+        detail = null
+        expanded = false
+        toggle.isVisible = false
+        retry.isVisible = false
+        renderDetails()
+        showPanel()
+    }
+
+    private fun showDownloading(percent: Int, version: String?, platform: String?) {
+        label.foreground = UiStyle.Colors.weak()
+        val pct = percent.coerceIn(0, 100)
+        label.text = if (version != null && platform != null) {
+            KiloBundle.message("session.connection.downloading.version", version, platform, pct)
+        } else {
+            KiloBundle.message("session.connection.downloading", pct)
+        }
         detail = null
         expanded = false
         toggle.isVisible = false
