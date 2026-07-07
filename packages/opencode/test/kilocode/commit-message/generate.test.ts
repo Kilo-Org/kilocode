@@ -27,6 +27,12 @@ const defaultGitContext: GitContext = {
 let mockGitContext: GitContext = { ...defaultGitContext }
 let captured: { path: string; selected?: string[] } = { path: "" }
 
+function lastPrompt(): string | undefined {
+  const args = stream.mock.calls[stream.mock.calls.length - 1]
+  if (!args) return undefined
+  return (args[0] as { agent?: { prompt?: string } }).agent?.prompt
+}
+
 mock.module("@/agent/agent", () => ({
   ...realAgent,
   Agent: {},
@@ -162,6 +168,37 @@ describe("commit-message.generate", () => {
     test("uses custom prompt when provided", async () => {
       const result = await generateCommitMessage({ path: "/repo", prompt: "Write a haiku commit message." })
       expect(result.message).toBeTruthy()
+      expect(lastPrompt()).toContain("Write a haiku commit message.")
+    })
+  })
+
+  describe("language", () => {
+    test("does not add language instruction when language is omitted", async () => {
+      await generateCommitMessage({ path: "/repo" })
+      const prompt = lastPrompt()
+      expect(prompt).toBeTruthy()
+      expect(prompt).not.toContain("Language Requirement")
+    })
+
+    test("does not add language instruction when language is English", async () => {
+      await generateCommitMessage({ path: "/repo", language: "en" })
+      const prompt = lastPrompt()
+      expect(prompt).toBeTruthy()
+      expect(prompt).not.toContain("Language Requirement")
+    })
+
+    test("adds language instruction for non-English languages", async () => {
+      await generateCommitMessage({ path: "/repo", language: "zh" })
+      const prompt = lastPrompt()
+      expect(prompt).toContain("Language Requirement")
+      expect(prompt).toContain("following language: zh")
+    })
+
+    test("appends language instruction to custom prompt", async () => {
+      await generateCommitMessage({ path: "/repo", prompt: "Write a haiku commit message.", language: "zh" })
+      const prompt = lastPrompt()
+      expect(prompt).toContain("Write a haiku commit message.")
+      expect(prompt).toContain("Language Requirement")
     })
   })
 })

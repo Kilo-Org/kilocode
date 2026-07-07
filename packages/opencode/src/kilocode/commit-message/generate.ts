@@ -98,6 +98,11 @@ For significant changes, include a detailed body explaining the changes.
 
 Return ONLY the commit message in the conventional format, nothing else.`
 
+function languageInstruction(language?: string): string {
+  if (!language || language.toLowerCase() === "en") return ""
+  return `\n\n## Language Requirement\nCRITICAL: You MUST generate the commit message in the following language: ${language}. The entire commit message including type, scope, description, body, and footer MUST be in this language.`
+}
+
 function buildUserMessage(ctx: GitContext): string {
   const fileList = ctx.files.map((f) => `${f.status} ${f.path}`).join("\n")
   const diffs = ctx.files
@@ -162,7 +167,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     hidden: true,
     options: {},
     permission: [],
-    prompt: request.prompt || SYSTEM_PROMPT,
+    prompt: (request.prompt || SYSTEM_PROMPT) + languageInstruction(request.language),
     temperature: 0.3,
   }
 

@@ -18,6 +18,9 @@ export const CommitMessagePayload = Schema.Struct({
   previousMessage: Schema.optional(Schema.String).annotate({
     description: "Previously generated message — triggers regeneration with a different result",
   }),
+  language: Schema.optional(Schema.String).annotate({
+    description: "Target language for the generated commit message (e.g. zh, en). Falls back to English.",
+  }),
 })
 
 const CommitMessageResponse = Schema.Struct({
