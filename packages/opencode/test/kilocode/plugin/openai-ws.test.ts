@@ -3,9 +3,9 @@ import { EventEmitter } from "node:events"
 import { createServer, type IncomingMessage, type Server as HttpServer } from "node:http"
 import net, { type AddressInfo, type Socket } from "node:net"
 import WebSocket, { WebSocketServer } from "ws"
-import { ProviderError } from "../../src/provider/error"
-import { OpenAIWebSocket } from "../../src/plugin/openai/ws"
-import { OpenAIWebSocketPool, TITLE_HEADER } from "../../src/plugin/openai/ws-pool"
+import { ProviderError } from "../../../src/provider/error"
+import { OpenAIWebSocket } from "../../../src/plugin/openai/ws"
+import { OpenAIWebSocketPool, TITLE_HEADER } from "../../../src/plugin/openai/ws-pool"
 
 describe("plugin.openai.ws", () => {
   test("derives websocket URLs and sends auth plus protocol headers", async () => {
@@ -231,18 +231,26 @@ describe("plugin.openai.ws-pool", () => {
     fetch.close()
   })
 
-  test("invalidates but does not reuse a socket after terminal failure frames", async () => {
+  test("reuses the lane after a failure terminal that arrives mid-content", async () => {
     let connections = 0
     await using server = await createWebSocketServer((socket) => {
       connections += 1
       socket.once("message", () => {
-        socket.send(JSON.stringify({ type: connections === 1 ? "response.failed" : "response.completed" }))
+        if (connections === 1) {
+          socket.send(JSON.stringify({ type: "response.created" }))
+          socket.send(JSON.stringify({ type: "response.output_text.delta", delta: "partial" }))
+          socket.send(JSON.stringify({ type: "response.failed" }))
+          return
+        }
+        socket.send(JSON.stringify({ type: "response.completed" }))
       })
     })
     const fetch = OpenAIWebSocketPool.createWebSocketFetch({
       url: server.url,
     })
 
+    // Real output already streamed, so the failure terminal passes through as-is
+    // (the turn cannot be safely retried) and the socket is invalidated.
     const first = await fetch(server.url, streamRequest())
     expect(await first.text()).toContain('data: {"type":"response.failed"}')
 
@@ -250,6 +258,60 @@ describe("plugin.openai.ws-pool", () => {
     expect(await second.text()).toContain('data: {"type":"response.completed"}')
     expect(connections).toBe(2)
     expect(server.httpRequests).toHaveLength(0)
+    fetch.close()
+  })
+
+  test("errors and retries a failure terminal that arrives before any content", async () => {
+    let connections = 0
+    await using server = await createWebSocketServer((socket) => {
+      connections += 1
+      socket.once("message", () => {
+        socket.send(
+          JSON.stringify({
+            type: "response.failed",
+            response: { error: { message: "model produced no output" } },
+          }),
+        )
+      })
+    })
+    const fetch = OpenAIWebSocketPool.createWebSocketFetch({
+      url: server.url,
+      streamRetries: 1,
+    })
+
+    const first = await fetch(server.url, streamRequest())
+    expect((await readTextError(first.text())).message).toContain("model produced no output")
+    const second = await fetch(server.url, streamRequest())
+    const third = await fetch(server.url, streamRequest())
+
+    // After the retry budget is exhausted the lane falls back to HTTP instead
+    // of replaying into the same no-content failure forever.
+    expect(await second.text()).toBe("http")
+    expect(await third.text()).toBe("http")
+    expect(connections).toBe(2)
+    expect(server.httpRequests).toHaveLength(2)
+    fetch.close()
+  })
+
+  test("errors a no-content failure that follows only lifecycle events", async () => {
+    await using server = await createWebSocketServer((socket) => {
+      socket.once("message", () => {
+        // response.created always precedes output. A failure after only lifecycle
+        // events is still an empty turn and must surface as an error instead of a
+        // silent [DONE] the loop would persist as finish:"unknown".
+        socket.send(JSON.stringify({ type: "response.created" }))
+        socket.send(JSON.stringify({ type: "response.in_progress" }))
+        socket.send(JSON.stringify({ type: "response.failed", response: { error: { message: "empty turn" } } }))
+      })
+    })
+    const fetch = OpenAIWebSocketPool.createWebSocketFetch({
+      url: server.url,
+    })
+
+    const first = await fetch(server.url, streamRequest())
+    const text = await readTextError(first.text())
+    expect(text.message).toContain("empty turn")
+    expect(text).toBeInstanceOf(ProviderError.ResponseStreamError)
     fetch.close()
   })
 

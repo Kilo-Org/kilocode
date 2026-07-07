@@ -135,6 +135,7 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
   let cleanupSocket = () => {}
   let completed = false
   let emitted = false
+  let content = false // kilocode_change - track real content emitted before a terminal event
   let idleTimer: ReturnType<typeof setTimeout> | undefined
 
   function cleanup() {
@@ -210,6 +211,19 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
       }
     }
 
+    // kilocode_change start - a failure terminal that arrives before any content
+    // must surface as a stream error so the pool's onConnectionInvalid records
+    // the failure, tears down this lane's socket, and falls back to HTTP. Passing
+    // it through as a clean [DONE] yields an empty turn the loop persists as
+    // finish:"unknown", which permanently wedges the conversation's socket lane
+    // (every resume replays into the same failure). Once content has streamed the
+    // turn cannot be safely retried, so it still passes through below.
+    if (isFailureTerminal(event) && !content) {
+      invalidate(new ProviderError.ResponseStreamError(failureMessage(event)))
+      return
+    }
+    // kilocode_change end
+
     if (!emitted) options.onFirstEvent?.()
     controller?.enqueue(
       encoder.encode(
@@ -220,6 +234,7 @@ export function streamResponsesWebSocket(options: StreamResponsesWebSocketOption
       ),
     )
     emitted = true
+    if (isContentEvent(event)) content = true // kilocode_change - lifecycle events (e.g. response.created) are not retry-blocking content
     resetIdleTimeout("idle timeout waiting for websocket")
 
     if (!event) return
@@ -330,5 +345,37 @@ function closeMessage(message: string, code: number, reason: Buffer) {
   if (reason.length > 0) details.push(reason.toString())
   return `${message} (${details.join(": ")})`
 }
+
+// kilocode_change start - terminal events of the OpenAI Responses stream that
+// indicate the turn ended without a usable completion.
+function isFailureTerminal(event: Record<string, unknown> | undefined): event is Record<string, unknown> {
+  return event?.type === "response.failed" || event?.type === "response.incomplete" || event?.type === "error"
+}
+
+// Whether an event carries model output. Lifecycle events (response.created,
+// response.in_progress, response.queued) and terminal events do not — a failure
+// after only those still counts as a no-content turn that is safe to retry.
+function isContentEvent(event: Record<string, unknown> | undefined) {
+  const type = event?.type
+  if (typeof type !== "string" || !type.startsWith("response.")) return false
+  if (isFailureTerminal(event) || type === "response.completed" || type === "response.done") return false
+  return type !== "response.created" && type !== "response.in_progress" && type !== "response.queued"
+}
+
+// human-readable message for a no-content failure terminal.
+// Codex failure events carry the error under either `error` or `response.error`.
+function failureMessage(event: Record<string, unknown>) {
+  for (const source of [event, event.response]) {
+    if (typeof source !== "object" || source === null) continue
+    const error = (source as Record<string, unknown>).error
+    if (typeof error === "object" && error !== null) {
+      const message = (error as Record<string, unknown>).message
+      if (typeof message === "string" && message.length > 0) return message
+    }
+  }
+  if (typeof event.message === "string" && event.message.length > 0) return event.message
+  return `WebSocket response ${typeof event.type === "string" ? event.type : "failed"} before any content`
+}
+// kilocode_change end
 
 export * as OpenAIWebSocket from "./ws"
