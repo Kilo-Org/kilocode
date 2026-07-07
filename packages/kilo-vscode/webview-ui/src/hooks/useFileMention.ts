@@ -15,12 +15,6 @@ import {
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
 
-const rtl = (textarea: HTMLTextAreaElement): boolean => {
-  if (textarea.matches(":dir(rtl)")) return true
-  if (textarea.matches(":dir(ltr)")) return false
-  return getComputedStyle(textarea).direction === "rtl"
-}
-
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
   onMessage: (handler: (message: ExtensionMessage) => void) => () => void
@@ -286,16 +280,26 @@ export function useFileMention(
     // Only when there's no active selection
     if (textarea.selectionStart !== textarea.selectionEnd) return false
 
-    const forward = e.key === (rtl(textarea) ? "ArrowLeft" : "ArrowRight")
-    // Check where the cursor WOULD land after the native move
-    const next = forward ? cursor + 1 : cursor - 1
-    const range = findMentionRange(textarea.value, next, mentionedPaths())
-    if (!range) return false
+    const val = textarea.value
 
-    e.preventDefault()
-    const pos = forward ? range.end : range.start
-    textarea.setSelectionRange(pos, pos)
-    return true
+    // Let the VS Code WebView textarea perform its native bidi-aware caret move,
+    // then read the updated selection and snap only if it landed inside a mention.
+    setTimeout(() => {
+      if (textarea.value !== val) return
+      if (textarea.selectionStart !== textarea.selectionEnd) return
+
+      const next = textarea.selectionStart ?? 0
+      if (next === cursor) return
+
+      const range = findMentionRange(val, next, mentionedPaths())
+      if (!range) return
+
+      const pos = next > cursor ? range.end : range.start
+      if (pos === next) return
+
+      textarea.setSelectionRange(pos, pos)
+    }, 0)
+    return false
   }
 
   let snapping = false

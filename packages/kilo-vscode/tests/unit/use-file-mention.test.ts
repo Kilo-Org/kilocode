@@ -215,7 +215,7 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
-  it("keeps mention block arrow navigation aligned with left-to-right prompt direction", async () => {
+  it("snaps a native forward caret move over a mention", async () => {
     const ctx = {
       postMessage: () => {},
       onMessage: () => () => {},
@@ -232,19 +232,27 @@ describe("useFileMention", () => {
 
     const right = key("ArrowRight")
     const input = textarea(text, "See ".length, "ltr")
-    expect(mention.handleArrowKey(right.event, input)).toBe(true)
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+    expect(right.state.prevented).toBe(0)
+
+    const positionAfterArrowRight = "See @".length
+    input.setSelectionRange(positionAfterArrowRight, positionAfterArrowRight)
+    await wait(0)
     expect(input.selectionStart).toBe("See @src/main.ts".length)
-    expect(right.state.prevented).toBe(1)
 
     const left = key("ArrowLeft")
-    expect(mention.handleArrowKey(left.event, input)).toBe(true)
+    expect(mention.handleArrowKey(left.event, input)).toBe(false)
+    expect(left.state.prevented).toBe(0)
+
+    const positionAfterArrowLeft = "See @src/main.t".length
+    input.setSelectionRange(positionAfterArrowLeft, positionAfterArrowLeft)
+    await wait(0)
     expect(input.selectionStart).toBe("See ".length)
-    expect(left.state.prevented).toBe(1)
 
     dispose.fn?.()
   })
 
-  it("keeps mention block arrow navigation aligned for right-to-left languages", async () => {
+  it("snaps a native right-to-left caret move over a mention", async () => {
     const ctx = {
       postMessage: () => {},
       onMessage: () => () => {},
@@ -261,14 +269,22 @@ describe("useFileMention", () => {
 
     const left = key("ArrowLeft")
     const input = textarea(text, "فایل ".length, "rtl")
-    expect(mention.handleArrowKey(left.event, input)).toBe(true)
+    expect(mention.handleArrowKey(left.event, input)).toBe(false)
+    expect(left.state.prevented).toBe(0)
+
+    const positionAfterArrowLeft = "فایل @".length
+    input.setSelectionRange(positionAfterArrowLeft, positionAfterArrowLeft)
+    await wait(0)
     expect(input.selectionStart).toBe("فایل @src/main.ts".length)
-    expect(left.state.prevented).toBe(1)
 
     const right = key("ArrowRight")
-    expect(mention.handleArrowKey(right.event, input)).toBe(true)
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+    expect(right.state.prevented).toBe(0)
+
+    const positionAfterArrowRight = "فایل @src/main.t".length
+    input.setSelectionRange(positionAfterArrowRight, positionAfterArrowRight)
+    await wait(0)
     expect(input.selectionStart).toBe("فایل ".length)
-    expect(right.state.prevented).toBe(1)
 
     dispose.fn?.()
   })
