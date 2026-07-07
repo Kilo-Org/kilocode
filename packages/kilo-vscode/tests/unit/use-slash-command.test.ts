@@ -107,7 +107,7 @@ describe("select", () => {
       value: "/newexisting text",
       selectionStart: 4,
       setSelectionRange: () => {},
-    } as unknown as unknown as HTMLTextAreaElement
+    } as unknown as HTMLTextAreaElement
     const setText = (text: string) => {
       currentText = text
     }
@@ -143,7 +143,7 @@ describe("select", () => {
         selectionStart = start
       },
       focus: () => {},
-    } as unknown as unknown as HTMLTextAreaElement
+    } as unknown as HTMLTextAreaElement
     const setText = (text: string) => {
       currentText = text
     }
@@ -169,7 +169,7 @@ describe("select", () => {
       value: "/newexisting text",
       selectionStart: 2,
       setSelectionRange: () => {},
-    } as unknown as unknown as HTMLTextAreaElement
+    } as unknown as HTMLTextAreaElement
     const setText = (text: string) => {
       currentText = text
     }
