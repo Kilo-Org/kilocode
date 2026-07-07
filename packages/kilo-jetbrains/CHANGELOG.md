@@ -152,6 +152,23 @@
 
 ## [Unreleased]
 
+## [7.0.2] - 2026-07-07
+
+### Added
+
+- First GA release of the native Kilo extension for JetBrains IDEs.
+- Download the pinned Kilo Core release at runtime instead of bundling CLI binaries, keeping the JetBrains plugin smaller while verifying downloaded archives before use.
+- Show Kilo Core runtime details from the JetBrains plugin so users can see which Core release is active.
+
+### Fixed
+
+- Improve JetBrains runtime CLI download reliability by pruning stale binaries, using the shell environment for PATH resolution, and surfacing exact release-resolution failures.
+
+### Changed
+
+- Polish JetBrains chat UI with auto-collapsing reasoning previews, clearer retry/offline footer state, and more balanced prompt, code, question, todo, history, and popup spacing.
+- Show the active routed model name and remote status more consistently in CLI runtime surfaces.
+
 ## [7.0.2-rc.2] - 2026-07-07
 
 ### Added

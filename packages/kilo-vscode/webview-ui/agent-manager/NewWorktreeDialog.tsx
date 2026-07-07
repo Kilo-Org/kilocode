@@ -468,6 +468,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     }}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     rows={3}
+                    dir="auto"
                   />
                 </div>
               </div>

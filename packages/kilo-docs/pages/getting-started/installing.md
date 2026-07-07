@@ -124,11 +124,10 @@ If you plan to remain on that version for a while, you may also want to temporar
 
 ## Next Steps
 
-After installation, check out these resources to get started:
+After installation:
 
-- [Quickstart Guide](/docs/getting-started/quickstart) - Get up and running in minutes
-- [Setting Up Authentication](/docs/getting-started/setup-authentication) - Configure your AI provider
-- [Your First Task](/docs/code-with-ai/agents/chat-interface) - Learn the basics of working with Kilo Code
+1. **[Set up authentication](/docs/getting-started/setup-authentication)** to configure your AI provider
+2. **[Run your first task](/docs/getting-started/quickstart)** — Learn how to chat with Kilo to complete tasks
 
 ## Getting Support
 
