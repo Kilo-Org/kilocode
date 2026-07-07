@@ -26,6 +26,7 @@ import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+import { SpeechToTextPrewarm } from "./components/speech-to-text/SpeechToTextPrewarm"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
 // that shows child session parts inline in the VS Code sidebar.
@@ -410,6 +411,7 @@ const App: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
+                          <SpeechToTextPrewarm />
                           <DisplayProvider>
                             <WorkStyleProvider>
                               <IndexingProvider>
