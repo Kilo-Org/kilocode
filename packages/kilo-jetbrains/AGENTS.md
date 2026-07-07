@@ -14,7 +14,7 @@
 
 - `plugin.xml` `<content>` entries ↔ module XML descriptors (`kilo.jetbrains.{shared,frontend,backend}.xml`)
 - Service classes ↔ `<applicationService>`/`<projectService>` entries in the corresponding module XML
-- `script/build.ts` platform list ↔ `backend/build.gradle.kts` `requiredPlatforms` list
+- `packages/kilo-jetbrains/package.json` version ↔ GitHub CLI release tag consumed by the backend downloader
 
 ## IntelliJ Platform Source Lookup
 
@@ -153,7 +153,9 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 ## CLI Integration
 
-- CLI process spawning, extraction, and lifecycle belong in `backend`.
+- CLI process spawning, download, extraction, and lifecycle belong in `backend`.
+- The plugin does not bundle CLI binaries. At connect time the backend downloads the GitHub Release asset for the version pinned in `packages/kilo-jetbrains/package.json`; `backend` resources include `kilo.properties` with `cli.version` for split-mode RPC and runtime use.
+- The generated API client is produced from the pinned release binary by running `kilo generate` during the Gradle OpenAPI generation task.
 - For OS and environment checks, prefer IntelliJ Platform classes over raw JVM APIs such as `System.getProperty(...)` or `System.getenv(...)`.
 - Detect architecture with `com.intellij.util.system.CpuArch.CURRENT`, not `System.getProperty("os.arch")`.
 - Detect OS with `com.intellij.openapi.util.SystemInfo.isMac` / `isLinux` / `isWindows`.
@@ -187,22 +189,21 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 ## Build and Verification
 
-- **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, prepare production CLI binaries, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.
+- **Marketplace version build**: Use `script/build-version.sh <version>` from `packages/kilo-jetbrains/` to clean, build, sign, and verify the JetBrains Marketplace plugin ZIP. Pass `--skip-verification` only when explicitly needed.
 - **Test version build**: If the user asks for a JetBrains test build, still require a version and use `script/build-version.sh <version> --skip-signing --skip-verification` from `packages/kilo-jetbrains/` so no signing secrets are needed. Add `--skip-clean` only when the user wants a faster incremental test build.
-- **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. Does NOT require CLI binaries.
-- **Full build**: `bun run build` from `packages/kilo-jetbrains/` (prepares CLI binaries + runs Gradle `buildPlugin`).
-- **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present in `backend/build/generated/cli/`; run `bun run build --prepare-cli` first).
+- **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. A cold build downloads the pinned CLI release via `generateOpenApiSpec` and needs network access; Gradle-cached incremental runs skip the download. It does not bundle per-platform CLI binaries.
+- **Full build**: `bun run build` from `packages/kilo-jetbrains/` (runs Gradle `buildPlugin`).
+- **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/`.
 - **Java checks**: Do not run `java -version` as a routine preflight. Gradle commands already fail clearly when Java is missing or incompatible; check Java only when diagnosing that failure mode.
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
-- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally and prepares the local-platform CLI binary automatically. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
-- **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — prepares the local-platform CLI binary automatically; if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
-- **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does NOT build CLI binaries.
+- **Run split mode**: `./gradlew --no-configuration-cache runIdeSplitMode` or the checked-in `Run IDE (Split Mode)` configuration — launches backend and frontend locally. Emulate latency via the Split Mode widget (requires internal mode: `-Didea.is.internal=true`).
+- **Run split backend**: `./gradlew --no-configuration-cache runIdeBackend` — if it exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting.
+- **Run in monolithic sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
 
 ### CLI/SDK Change Awareness
 
-- JetBrains runtime behavior depends on the bundled CLI artifact under `backend/build/generated/cli/`; Gradle-only tasks and sandbox runs do not rebuild it.
-- If there are relevant changes outside `packages/kilo-jetbrains/` in the CLI (`packages/opencode/`) or SDK/API generation paths (`packages/sdk/js/`, server endpoints, OpenAPI outputs), warn the user that the JetBrains run may be using stale generated CLI or SDK artifacts.
-- Do not regenerate or rebuild those artifacts automatically just because such changes exist. Ask the user whether to refresh them first, typically with `bun run build --prepare-cli` from `packages/kilo-jetbrains/` for CLI artifacts and `./script/generate.ts` from the repo root for server/API SDK changes.
+- JetBrains runtime behavior depends on the downloaded CLI release pinned by `packages/kilo-jetbrains/package.json`; local `packages/opencode/` changes are not used unless published and pinned.
+- If there are relevant server/API changes outside `packages/kilo-jetbrains/`, warn the user that JetBrains may need a newly published/pinned CLI release and regenerated SDK artifacts.
 
 ## UI Guidelines
 

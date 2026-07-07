@@ -158,6 +158,14 @@ export function useSlashCommand(
       action: sandbox.action,
       enabled: sandbox.enabled,
     },
+    {
+      name: "reload",
+      description: "Reload config, skills, agents, and commands from disk",
+      hints: ["refresh"],
+      action: () => {
+        vscode.postMessage({ type: "reload" })
+      },
+    },
   ]
 
   const excluded = () => {

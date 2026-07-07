@@ -1833,6 +1833,14 @@ class SessionController(
             )
         }
 
+        if (app.status == KiloAppStatusDto.DOWNLOADING) {
+            return SessionControllerEvent.ConnectionChanged.ShowDownloading(
+                app.downloadPercent ?: 0,
+                app.downloadVersion,
+                app.downloadPlatform,
+            )
+        }
+
         if (workspace.status == KiloWorkspaceStatusDto.ERROR) {
             return SessionControllerEvent.ConnectionChanged.ShowError(
                 KiloBundle.message("session.connection.error.workspace"),

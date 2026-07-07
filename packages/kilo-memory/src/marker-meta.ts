@@ -20,6 +20,7 @@ export namespace MemoryMarkerMeta {
     type: Type
     tokens: number
     count: number
+    files: string[]
   }
 
   export function metadata(marker: Info) {
@@ -30,7 +31,6 @@ export namespace MemoryMarkerMeta {
         tokens: marker.tokens,
         count: marker.count,
         files: marker.files,
-        sources: marker.files,
       },
     }
   }
@@ -89,13 +89,14 @@ export namespace MemoryMarkerMeta {
       const value = meta as { type?: unknown; tokens?: unknown; count?: unknown; files?: unknown; sources?: unknown }
       const type = value.type === "startup" ? "startup" : "recall"
       const tokens = typeof value.tokens === "number" ? value.tokens : 0
+      // `sources` fallback covers parts persisted before the key was dropped from metadata().
       const files = Array.isArray(value.files)
         ? value.files.filter((item) => typeof item === "string")
         : Array.isArray(value.sources)
           ? value.sources.filter((item) => typeof item === "string")
           : []
       const count = typeof value.count === "number" ? value.count : files.length
-      return { type, tokens, count }
+      return { type, tokens, count, files }
     }
     return undefined
   }

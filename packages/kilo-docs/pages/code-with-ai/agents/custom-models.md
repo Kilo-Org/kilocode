@@ -385,10 +385,14 @@ You can also set options that apply to all models from a provider:
 
 | Option | Type | Description |
 |---|---|---|
-| `apiKey` | `string` | API key (supports `{env:VAR}` syntax) |
+| `apiKey` | `string` | API key (supports `{env:VAR}` and `{file:...}` syntax in trusted config — see note below) |
 | `baseURL` | `string` | Override the provider's base API URL |
 | `timeout` | `number \| false` | Request timeout in milliseconds. Defaults to `300000` (5 minutes); set to `false` to disable |
 | `chunkTimeout` | `number` | Timeout in milliseconds between streamed response chunks. If no chunk arrives within this window, the request is aborted and retried. This catches silent provider dropouts where the TCP connection stays open but SSE streaming stops. Recommended: `15000`–`30000` (15–30 seconds) for providers with unreliable streaming. |
+
+{% callout type="warning" title="{env:} / {file:} only resolve in trusted config" %}
+`{env:VAR}` and `{file:...}` references in `apiKey` (or any option) are resolved **only** when the config lives in a trusted location: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` / `opencode.json` committed to a repository **cannot** resolve `{env:VAR}` — the reference is ignored and a warning is logged, so a provider configured this way in a repo will not authenticate. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` just by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root — references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected. Keep provider credentials in your global config.
+{% /callout %}
 
 ## Filtering Available Models
 

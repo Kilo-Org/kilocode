@@ -152,6 +152,11 @@
 
 ## [Unreleased]
 
+## [7.0.2-rc.1] - 2026-07-07
+
+### Added
+- Download the pinned Kilo Core release at runtime instead of bundling every CLI binary in the JetBrains plugin, keeping the Marketplace package smaller while still verifying downloaded artifacts.
+
 ## [7.0.1] - 2026-07-06
 
 ### Added

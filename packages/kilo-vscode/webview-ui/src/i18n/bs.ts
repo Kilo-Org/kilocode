@@ -387,6 +387,7 @@ export const dict = {
     "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.starting": "Pokretanje mikrofona... Sačekajte prije nego što progovorite.",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
   "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
   "speechToText.tooltip.error": "Glasovni unos nije uspio. Kliknite da očistite.",
@@ -1245,6 +1246,8 @@ export const dict = {
 
   "common.retry": "Pokušaj ponovo",
   "common.refresh": "Osvježi",
+  "common.reload": "Učitaj ponovo",
+  "common.reloadDescription": "Učitaj ponovo konfiguraciju, vještine, agente i naredbe s diska",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Niste prijavljeni",
@@ -1443,6 +1446,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Ograniči pristup mreži",
   "settings.sandboxing.network.description":
     "Blokiraj odlazni mrežni pristup za naredbe koje potiču od modela i HTTP alate. Lokalni MCP serveri i hookovi dodataka izvršavaju se izvan ovog ograničenja. Saobraćaj za inferenciju pružatelja i modela ostaje dostupan.",
+
+  "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
+  "settings.sandboxing.writablePaths.description":
+    "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1624,6 +1631,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
+  "settings.context.compaction.title": "Kompresija",
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
@@ -1631,6 +1639,42 @@ export const dict = {
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",
   "settings.context.watcherPatterns.description": "Glob uzorci za datoteke koje promatrač treba ignorirati",
+
+  "settings.context.memory.title": "Memorija",
+  "settings.context.memory.project.title": "Memorija projekta",
+  "settings.context.memory.autoSave.title": "Automatsko spremanje memorije projekta",
+  "settings.context.memory.autoSave.description":
+    "Automatski sprema trajne činjenice projekta iz završenih koraka kada je memorija uključena.",
+  "settings.context.memory.index.title": "Indeks memorije",
+  "settings.context.memory.status.notLoaded": "Nije učitana",
+  "settings.context.memory.status.disabled": "Onemogućena",
+  "settings.context.memory.status.enabledTokensOps":
+    "Omogućena - ~{{session}} tokena početnog konteksta u ovoj sesiji - ~{{tokens}} tokena spremljenog indeksa - zadnja op. {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Omogućite memoriju za kreiranje datoteka memorije projekta.",
+  "settings.context.memory.inspect": "Pregledaj",
+  "settings.context.memory.rebuild": "Ponovo izgradi indeks memorije",
+  "chat.memory.on": "Memorija uključena",
+  "chat.memory.label": "Memorija · {{tokens}} tokena",
+  "chat.memory.status.loading": "Učitavanje statusa memorije",
+  "chat.memory.session.tokens": "Početni kontekst ove sesije: {{tokens}} tokena",
+  "chat.memory.total.tokens": "Spremljeni indeks: {{tokens}} tokena",
+  "chat.memory.project.enabled": "Memorija projekta omogućena",
+  "chat.memory.project.disabled": "Memorija projekta onemogućena",
+  "chat.memory.command.failed": "Komanda memorije nije uspjela",
+  "chat.memory.savedOperations": "Zadnja operacija memorije: {{count}} op.",
+  "chat.memory.inspect": "Pregledaj memoriju",
+  "chat.memory.remember": "Zapamti",
+  "chat.memory.forget": "Zaboravi",
+  "chat.memory.rebuild": "Ponovo izgradi indeks",
+  "chat.memory.disable": "Onemogući memoriju",
+  "chat.memory.badge.injected": "Memorija ubačena",
+  "chat.memory.badge.recalled": "Memorija opozvana",
+  "chat.memory.badge.startupCtx": "početni ctx",
+  "chat.memory.badge.items": "{{count}} stavki",
+  "chat.memory.badge.tokens": "{{tokens}} tokena",
+  "chat.memory.badge.recalledDetail": "Memorija opozvana: {{count}} stavki - {{tokens}} tokena",
+  "chat.memory.badge.files": "Datoteke memorije: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Koristi prilagođeni prompt",
