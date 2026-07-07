@@ -17,6 +17,7 @@ export interface TimelineBar {
   width: number
   height: number
   idx: number
+  msgId: string
 }
 
 function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBar[] {
@@ -39,6 +40,7 @@ function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBa
     width: sz[i]!.width,
     height: sz[i]!.height,
     idx: i,
+    msgId: item.msg.id,
   }))
 }
 
@@ -46,6 +48,7 @@ export const TaskTimeline: Component = () => {
   const session = useSession()
   let ref: HTMLDivElement | undefined
   let dragging = false
+  let dragMoved = false
   let startX = 0
   let startScroll = 0
   const [hover, setHover] = createSignal(-1)
@@ -135,11 +138,19 @@ export const TaskTimeline: Component = () => {
     hideTip()
     if (!ref) return
     dragging = true
+    dragMoved = false
     startX = e.clientX
     startScroll = ref.scrollLeft
     ref.setPointerCapture(e.pointerId)
     ref.style.cursor = "grabbing"
     ref.style.userSelect = "none"
+  }
+
+  const jumpToMessage = (idx: number) => {
+    const bar = bars()[idx]
+    if (!bar) return
+    setActive(idx)
+    window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { id: bar.msgId } }))
   }
 
   const onPointerMove = (e: PointerEvent) => {
@@ -150,15 +161,18 @@ export const TaskTimeline: Component = () => {
       if (idx < 0) return hideTip()
       return showTip(idx)
     }
+    if (Math.abs(e.clientX - startX) > 3) dragMoved = true
     ref.scrollLeft = startScroll - (e.clientX - startX)
   }
 
   const onPointerUp = (e: PointerEvent) => {
     if (!ref) return
+    const wasDragging = dragging
     dragging = false
     if (ref.hasPointerCapture(e.pointerId)) ref.releasePointerCapture(e.pointerId)
     ref.style.cursor = "grab"
     ref.style.userSelect = ""
+    if (wasDragging && !dragMoved) jumpToMessage(pointerIndex(e))
   }
 
   const onWheel = (e: WheelEvent) => {
@@ -169,6 +183,11 @@ export const TaskTimeline: Component = () => {
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      jumpToMessage(selected())
+      return
+    }
     if (!ref || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return
     e.preventDefault()
     const idx = navigate(selected(), bars().length, e.key)
