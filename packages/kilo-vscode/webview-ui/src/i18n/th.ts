@@ -1426,6 +1426,10 @@ export const dict = {
   "settings.sandboxing.network.title": "จำกัดการเข้าถึงเครือข่าย",
   "settings.sandboxing.network.description":
     "บล็อกการเข้าถึงเครือข่ายขาออกจากคำสั่งที่มาจากโมเดลและเครื่องมือ HTTP เซิร์ฟเวอร์ MCP ภายในเครื่องและฮุกของปลั๊กอินทำงานอยู่นอกข้อจำกัดนี้ การรับส่งข้อมูลสำหรับการอนุมานของผู้ให้บริการและโมเดลยังคงใช้งานได้",
+
+  "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
+  "settings.sandboxing.writablePaths.description":
+    "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",

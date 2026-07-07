@@ -1447,6 +1447,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Ограничить доступ к сети",
   "settings.sandboxing.network.description":
     "Блокировать исходящий доступ к сети для команд, инициированных моделью, и HTTP-инструментов. Локальные серверы MCP и хуки плагинов не подпадают под это ограничение. Трафик к провайдерам и моделям для инференса остаётся доступным.",
+
+  "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
+  "settings.sandboxing.writablePaths.description":
+    "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",

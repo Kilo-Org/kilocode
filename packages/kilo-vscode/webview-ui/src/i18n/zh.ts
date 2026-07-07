@@ -1400,6 +1400,10 @@ export const dict = {
   "settings.sandboxing.network.title": "限制网络访问",
   "settings.sandboxing.network.description":
     "阻止模型发起的命令和 HTTP 工具进行出站网络访问。本地 MCP 服务器和插件钩子不受此限制。提供商和模型推理流量仍然可用。",
+
+  "settings.sandboxing.writablePaths.title": "额外可写路径",
+  "settings.sandboxing.writablePaths.description":
+    "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

@@ -1437,6 +1437,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Ağ Erişimini Kısıtla",
   "settings.sandboxing.network.description":
     "Model tarafından başlatılan komutların ve HTTP araçlarının giden ağ erişimini engelleyin. Yerel MCP sunucuları ve eklenti kancaları bu kısıtlamanın dışında çalışır. Sağlayıcı ve model çıkarım trafiği kullanılabilir durumda kalır.",
+
+  "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
+  "settings.sandboxing.writablePaths.description":
+    "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",

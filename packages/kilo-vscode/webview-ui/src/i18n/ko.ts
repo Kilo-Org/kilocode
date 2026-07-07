@@ -1430,6 +1430,10 @@ export const dict = {
   "settings.sandboxing.network.title": "네트워크 액세스 제한",
   "settings.sandboxing.network.description":
     "모델이 실행한 명령과 HTTP 도구의 아웃바운드 네트워크 액세스를 차단합니다. 로컬 MCP 서버와 플러그인 훅에는 이 제한이 적용되지 않습니다. 공급자 및 모델 추론 트래픽은 계속 사용할 수 있습니다.",
+
+  "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
+  "settings.sandboxing.writablePaths.description":
+    "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",

@@ -1364,6 +1364,10 @@ export const dict = {
   "settings.sandboxing.network.title": "限制網路存取",
   "settings.sandboxing.network.description":
     "封鎖模型發起的命令和 HTTP 工具的對外網路存取。本機 MCP 伺服器和外掛程式鉤子不受此限制。供應商與模型推論流量仍然可用。",
+
+  "settings.sandboxing.writablePaths.title": "額外可寫路徑",
+  "settings.sandboxing.writablePaths.description":
+    "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",

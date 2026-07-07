@@ -1476,6 +1476,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Restreindre l'accès au réseau",
   "settings.sandboxing.network.description":
     "Bloquer l'accès réseau sortant des commandes provenant du modèle et des outils HTTP. Les serveurs MCP locaux et les hooks de plugin ne sont pas soumis à cette restriction. Le trafic d'inférence des fournisseurs et des modèles reste disponible.",
+
+  "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
+  "settings.sandboxing.writablePaths.description":
+    "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",

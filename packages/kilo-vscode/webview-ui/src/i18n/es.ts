@@ -1461,6 +1461,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Restringir el acceso a la red",
   "settings.sandboxing.network.description":
     "Bloquea el acceso saliente a la red para los comandos iniciados por el modelo y las herramientas HTTP. Los servidores MCP locales y los hooks de plugins no están sujetos a esta restricción. El tráfico de proveedores y de inferencia de modelos sigue estando disponible.",
+
+  "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
+  "settings.sandboxing.writablePaths.description":
+    "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",

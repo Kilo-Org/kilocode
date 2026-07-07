@@ -424,6 +424,10 @@ export const Info = Schema.Struct({
         description:
           "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)",
       }),
+      sandbox_writable_paths: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description:
+          "Additional filesystem paths the sandbox allows writes to (e.g. ['/tmp', '/var/log']). These are merged with the default writable paths when the sandbox is active.",
+      }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
@@ -773,6 +777,9 @@ export const layer = Layer.effect(
         // kilocode_change start
         const merge = Effect.fnUntraced(function* (source: string, next: Info, kind?: ConfigPlugin.Scope) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
+          // sandbox_writable_paths is security-sensitive — only global config may set it.
+          // A project kilo.json must not widen the sandbox beyond the user's intent.
+          if (scope === "local") delete next.experimental?.sandbox_writable_paths
           const scoped = KilocodeConfig.scopeIndexing(next, scope)
           result = mergeConfigConcatArrays(result, scoped)
           return yield* mergePluginOrigins(source, scoped.plugin, scope)
