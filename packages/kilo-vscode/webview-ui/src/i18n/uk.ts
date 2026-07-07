@@ -1194,6 +1194,8 @@ export const dict = {
 
   "common.retry": "Спробувати ще раз",
   "common.refresh": "Оновити",
+  "common.reload": "Перезавантажити",
+  "common.reloadDescription": "Перезавантажити конфігурацію, навички, агентів та команди з диска",
 
   "profile.title": "Профіль",
   "profile.notLoggedIn": "Не увійшов",

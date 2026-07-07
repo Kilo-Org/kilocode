@@ -1207,6 +1207,8 @@ export const dict = {
 
   "common.retry": "重试",
   "common.refresh": "刷新",
+  "common.reload": "重新加载",
+  "common.reloadDescription": "重新加载磁盘上的配置、技能、智能体和命令",
 
   "profile.title": "个人资料",
   "profile.notLoggedIn": "未登录",

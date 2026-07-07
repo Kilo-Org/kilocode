@@ -932,6 +932,10 @@ export interface RetryConnectionRequest {
   type: "retryConnection"
 }
 
+export interface ReloadRequest {
+  type: "reload"
+}
+
 // Open a sub-agent session in a read-only editor panel
 export interface OpenSubAgentViewerRequest {
   type: "openSubAgentViewer"
@@ -1342,6 +1346,7 @@ export type WebviewMessage =
   | DiffViewerSetBaseBranchRequest
   | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest
+  | ReloadRequest
   | OpenSubAgentViewerRequest
   | PreviewImageRequest
   | SaveImageRequest

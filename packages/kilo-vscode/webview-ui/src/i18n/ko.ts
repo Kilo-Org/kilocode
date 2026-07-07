@@ -1191,6 +1191,8 @@ export const dict = {
 
   "common.retry": "재시도",
   "common.refresh": "새로고침",
+  "common.reload": "새로고침",
+  "common.reloadDescription": "디스크에서 구성, 스킬, 에이전트 및 명령을 새로고침합니다",
 
   "profile.title": "프로필",
   "profile.notLoggedIn": "로그인하지 않음",

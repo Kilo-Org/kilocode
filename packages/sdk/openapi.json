@@ -13085,6 +13085,71 @@
         ]
       }
     },
+    "/instance/reload": {
+      "post": {
+        "tags": ["instance-reload"],
+        "operationId": "instance.reload",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Instance reloaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Instance reloaded"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.",
+        "summary": "Reload instance",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.instance.reload({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/interactive-terminal": {
       "get": {
         "tags": ["interactive-terminal"],
@@ -27895,6 +27960,23 @@
         "required": ["defaultModel", "models", "aliases"],
         "additionalProperties": false
       },
+      "ConflictError": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["ConflictError"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "message"],
+        "additionalProperties": false
+      },
       "InteractiveTerminalSnapshot": {
         "type": "object",
         "properties": {
@@ -37060,6 +37142,10 @@
     {
       "name": "indexing",
       "description": "Kilo indexing routes."
+    },
+    {
+      "name": "instance-reload",
+      "description": "Kilo instance reload route."
     },
     {
       "name": "interactive-terminal",

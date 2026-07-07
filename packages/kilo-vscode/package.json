@@ -422,6 +422,11 @@
         "command": "kilo-code.new.takeHeapSnapshot",
         "title": "Take Heap Snapshot",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.reload",
+        "title": "Reload Config and Skills",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [

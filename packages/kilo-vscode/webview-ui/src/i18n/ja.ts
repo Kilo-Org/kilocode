@@ -1234,6 +1234,8 @@ export const dict = {
 
   "common.retry": "再試行",
   "common.refresh": "更新",
+  "common.reload": "再読み込み",
+  "common.reloadDescription": "ディスクから設定、スキル、エージェント、コマンドを再読み込みします",
 
   "profile.title": "プロフィール",
   "profile.notLoggedIn": "ログインしていません",

@@ -1260,6 +1260,8 @@ export const dict = {
 
   "common.retry": "Erneut versuchen",
   "common.refresh": "Aktualisieren",
+  "common.reload": "Neu laden",
+  "common.reloadDescription": "Konfiguration, Skills, Agents und Befehle vom Datenträger neu laden",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nicht angemeldet",

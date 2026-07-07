@@ -1245,6 +1245,8 @@ export const dict = {
 
   "common.retry": "Повторить",
   "common.refresh": "Обновить",
+  "common.reload": "Перезагрузить",
+  "common.reloadDescription": "Перезагрузить конфигурацию, навыки, агентов и команды с диска",
 
   "profile.title": "Профиль",
   "profile.notLoggedIn": "Не авторизован",

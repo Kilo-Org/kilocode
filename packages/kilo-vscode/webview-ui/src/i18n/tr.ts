@@ -1196,6 +1196,8 @@ export const dict = {
 
   "common.retry": "Tekrar Dene",
   "common.refresh": "Yenile",
+  "common.reload": "Yeniden yükle",
+  "common.reloadDescription": "Diskten yapılandırma, yetenekler, ajanlar ve komutları yeniden yükle",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Giriş yapılmadı",

@@ -1171,6 +1171,8 @@ export const dict = {
 
   "common.retry": "重試",
   "common.refresh": "重新整理",
+  "common.reload": "重新載入",
+  "common.reloadDescription": "重新載入磁碟上的設定、技能、智慧代理和命令",
 
   "profile.title": "個人資料",
   "profile.notLoggedIn": "尚未登入",

@@ -1157,6 +1157,8 @@ export const dict = {
 
   "common.retry": "Retry",
   "common.refresh": "Refresh",
+  "common.reload": "Reload",
+  "common.reloadDescription": "Reload config, skills, agents, and commands from disk",
 
   "profile.title": "Profile",
   "profile.notLoggedIn": "Not logged in",

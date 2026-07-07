@@ -117,6 +117,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/status` | - | View status |
 | `/themes` | - | Switch theme |
 | `/help` | - | Show help |
+| `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
 | `/exit` | `/quit`, `/q` | Exit the app |
 

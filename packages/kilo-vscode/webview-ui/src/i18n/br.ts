@@ -1205,6 +1205,8 @@ export const dict = {
 
   "common.retry": "Tentar novamente",
   "common.refresh": "Atualizar",
+  "common.reload": "Recarregar",
+  "common.reloadDescription": "Recarregar configuração, habilidades, agentes e comandos do disco",
 
   "profile.title": "Perfil",
   "profile.notLoggedIn": "Não conectado",

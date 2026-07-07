@@ -530,6 +530,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   registerHeapSnapshot(context, connectionService)
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.new.reload", () => {
+      provider.reload().catch((e) => console.error("[Kilo New] reload command failed:", e))
+    }),
+  )
+
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)
   registerTerminalActions(context, provider, agentManagerProvider)
