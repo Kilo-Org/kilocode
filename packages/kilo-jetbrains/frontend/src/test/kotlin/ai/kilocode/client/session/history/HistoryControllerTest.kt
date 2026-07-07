@@ -9,6 +9,9 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.layout.Align
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -19,12 +22,18 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.SearchTextField
+import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.KeyEvent
 import java.time.Instant
@@ -34,6 +43,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JComponent
 import javax.swing.KeyStroke
+import javax.swing.ScrollPaneConstants
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
@@ -200,6 +210,30 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertFalse(renderer.runningVisible())
     }
 
+    fun `test history renderer uses trailing time with squeezable title`() {
+        val item = LocalHistoryItem(session("ses_1", "Long ".repeat(80)))
+        val controller = controller()
+        controller.local.replace(listOf(item))
+        val renderer = LocalHistoryRenderer(controller.local)
+        val view = renderer.getListCellRendererComponent(javax.swing.JList(arrayOf(item)), item, 0, false, false)
+
+        val title = UIUtil.uiTraverser(view).filter(SimpleColoredComponent::class.java).firstOrNull() ?: error("missing title")
+        val head = title.parent
+        assertTrue(head.layout is BorderLayout)
+        assertSame(title, (head.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER))
+
+        val time = UIUtil.uiTraverser(view).filter(JBLabel::class.java)
+            .first { it.text == HistoryTime.relative(item) }
+        val main = time.parent
+        assertTrue(main.layout is BorderLayout)
+        assertSame(time, (main.layout as BorderLayout).getLayoutComponent(BorderLayout.EAST))
+
+        val row = main.parent as JComponent
+        val ins = row.border.getBorderInsets(row)
+        assertEquals(ins.left, ins.right)
+        assertEquals(UiStyle.Gap.lg(), ins.right)
+    }
+
     fun `test history panel sync updates running badges`() {
         rpc.listed += session("ses_1", "Local One")
         val panel = HistoryPanel(parent, controller())
@@ -291,11 +325,29 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(1, panel.itemCount())
     }
 
+    fun `test history panels do not scroll horizontally`() {
+        rpc.listed += session("ses_1", "Local ".repeat(80))
+        rpc.cloud += cloud("cloud_1", "Cloud ".repeat(80))
+        val panel = HistoryPanel(parent, controller())
+        flush()
+
+        assertNoHorizontalScroll(panel)
+        panel.clickCloud()
+        flush()
+
+        assertNoHorizontalScroll(panel)
+    }
+
     fun `test panel shows back button with tabs`() {
         val panel = HistoryPanel(parent, controller())
         flush()
 
         assertEquals(KiloBundle.message("history.back"), panel.backText())
+        val backs = UIUtil.uiTraverser(panel.component).filter(HoverIcon::class.java)
+            .filter { it.toolTipText == KiloBundle.message("history.back") }
+            .toList()
+        assertTrue(backs.isNotEmpty())
+        assertTrue(backs.all { it.parent is Align })
 
         panel.clickCloud()
         flush()
@@ -853,6 +905,26 @@ class HistoryControllerTest : BasePlatformTestCase() {
         override fun showHistory() {}
         override fun openSession(ref: SessionRef) {}
     }
+
+    private fun assertNoHorizontalScroll(panel: HistoryPanel) {
+        assertEquals(0, panel.component.insets.right)
+
+        val searches = UIUtil.uiTraverser(panel.component).filter(SearchTextField::class.java).toList()
+        assertTrue(searches.isNotEmpty())
+        assertTrue(searches.all { inset(it.parent as JComponent) == UiStyle.Gap.lg() })
+
+        val scrolls = UIUtil.uiTraverser(panel.component).filter(JBScrollPane::class.java).toList()
+            .filter { it.viewport.view is JBList<*> }
+        assertTrue(scrolls.isNotEmpty())
+        assertTrue(scrolls.all { it.horizontalScrollBarPolicy == ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER })
+        assertTrue(scrolls.all { it.viewportBorder.getBorderInsets(it).right == UiStyle.Gap.lg() })
+
+        val lists = UIUtil.uiTraverser(panel.component).filter(JBList::class.java).toList()
+        assertTrue(lists.isNotEmpty())
+        assertTrue(lists.all { it.getScrollableTracksViewportWidth() })
+    }
+
+    private fun inset(component: JComponent) = component.border.getBorderInsets(component).right
 
     private fun collect(controller: HistoryController): MutableList<String> {
         val events = mutableListOf<String>()

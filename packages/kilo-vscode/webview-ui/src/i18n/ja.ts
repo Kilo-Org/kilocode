@@ -385,6 +385,7 @@ export const dict = {
     "クリックすると、ファイルシステムへの書き込みを制限します。サンドボックス設定により、ネットワークアクセスは引き続き許可されます。",
 
   "speechToText.tooltip.start": "Kilo Gatewayで音声入力を開始",
+  "speechToText.tooltip.starting": "マイクを起動中... まだ話さないでください。",
   "speechToText.tooltip.stop": "音声キャプチャを停止",
   "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
   "speechToText.tooltip.error": "音声入力に失敗しました。クリックしてクリア。",
@@ -1233,6 +1234,8 @@ export const dict = {
 
   "common.retry": "再試行",
   "common.refresh": "更新",
+  "common.reload": "再読み込み",
+  "common.reloadDescription": "ディスクから設定、スキル、エージェント、コマンドを再読み込みします",
 
   "profile.title": "プロフィール",
   "profile.notLoggedIn": "ログインしていません",
@@ -1432,6 +1435,10 @@ export const dict = {
   "settings.sandboxing.network.title": "ネットワークアクセスを制限",
   "settings.sandboxing.network.description":
     "モデルから発行されたコマンドと HTTP ツールによる外部ネットワークアクセスをブロックします。ローカル MCP サーバーとプラグインフックは、この制限の対象外です。プロバイダーおよびモデルへの推論通信は引き続き利用できます。",
+
+  "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
+  "settings.sandboxing.writablePaths.description":
+    "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1610,6 +1617,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "ファイル編集前にチェックポイントを作成して以前の状態を復元可能にする",
   "settings.context.autoCompaction.title": "自動圧縮",
   "settings.context.autoCompaction.description": "コンテキストが上限に達する前に自動的に圧縮",
+  "settings.context.compaction.title": "圧縮",
   "settings.context.compactionLimit.title": "自動圧縮の上限",
   "settings.context.compactionLimit.description":
     "コンテキストがモデルウィンドウのこの割合に達したら圧縮します。安全バッファーのみを使用するには空欄のままにしてください。",
@@ -1617,6 +1625,42 @@ export const dict = {
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",
   "settings.context.watcherPatterns.description": "ウォッチャーが無視すべきファイルのglobパターン",
+
+  "settings.context.memory.title": "メモリ",
+  "settings.context.memory.project.title": "プロジェクトメモリ",
+  "settings.context.memory.autoSave.title": "プロジェクトメモリを自動保存",
+  "settings.context.memory.autoSave.description":
+    "メモリが有効なとき、完了したターンから永続的なプロジェクト情報を自動保存します。",
+  "settings.context.memory.index.title": "メモリインデックス",
+  "settings.context.memory.status.notLoaded": "未読み込み",
+  "settings.context.memory.status.disabled": "無効",
+  "settings.context.memory.status.enabledTokensOps":
+    "有効 - このセッションの起動コンテキスト ~{{session}} トークン - 保存済みインデックス ~{{tokens}} トークン - 最後の操作 {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "メモリを有効にしてプロジェクトメモリファイルを作成します。",
+  "settings.context.memory.inspect": "検査",
+  "settings.context.memory.rebuild": "メモリインデックスを再構築",
+  "chat.memory.on": "メモリ オン",
+  "chat.memory.label": "メモリ · {{tokens}} トークン",
+  "chat.memory.status.loading": "メモリ状態を読み込み中",
+  "chat.memory.session.tokens": "このセッションの起動コンテキスト: {{tokens}} トークン",
+  "chat.memory.total.tokens": "保存済みインデックス: {{tokens}} トークン",
+  "chat.memory.project.enabled": "プロジェクトメモリが有効です",
+  "chat.memory.project.disabled": "プロジェクトメモリが無効です",
+  "chat.memory.command.failed": "メモリコマンドに失敗しました",
+  "chat.memory.savedOperations": "最後のメモリ操作: {{count}} 件",
+  "chat.memory.inspect": "メモリを検査",
+  "chat.memory.remember": "記憶",
+  "chat.memory.forget": "忘れる",
+  "chat.memory.rebuild": "インデックスを再構築",
+  "chat.memory.disable": "メモリを無効化",
+  "chat.memory.badge.injected": "メモリを注入しました",
+  "chat.memory.badge.recalled": "メモリを呼び出しました",
+  "chat.memory.badge.startupCtx": "起動ctx",
+  "chat.memory.badge.items": "{{count}} 件",
+  "chat.memory.badge.tokens": "{{tokens}} トークン",
+  "chat.memory.badge.recalledDetail": "メモリを呼び出しました: {{count}} 件 - {{tokens}} トークン",
+  "chat.memory.badge.files": "メモリファイル: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "カスタム prompt を使用",

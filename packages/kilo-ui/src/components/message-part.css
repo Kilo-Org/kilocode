@@ -412,6 +412,35 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   margin-bottom: 0px;
 }
 
+[data-slot="tool-read-images"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+  max-width: min(100%, 64ch);
+}
+
+[data-slot="tool-read-image"] {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  border: 1px solid var(--border-weak-base);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--border-strong-base);
+  }
+}
+
+[data-slot="tool-read-image-img"] {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+}
+
 [data-component="todos"] {
   [data-slot="message-part-todo-hidden"] {
     padding: 2px 0 2px 28px;

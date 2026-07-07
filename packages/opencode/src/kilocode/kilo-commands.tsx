@@ -218,6 +218,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
               <DialogKiloTeamSelect
                 organizations={profile.organizations!}
                 currentOrgId={currentOrgId}
+                hasPersonalAccount={profile.hasPersonalAccount !== false}
                 onSelect={async (orgId) => {
                   try {
                     // Switch to team immediately using server endpoint

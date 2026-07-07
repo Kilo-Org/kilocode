@@ -61,6 +61,8 @@ import { drafts, imageDrafts, reviewDrafts } from "../../utils/draft-store"
 import { ReviewComments } from "./ReviewComments"
 import { partReview, reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { MEMORY_USAGE, parseMemoryCommand } from "../../utils/memory-command"
+import { useMemory } from "../../context/memory"
 
 const scrolls = new Map<string, number>()
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
@@ -91,6 +93,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
+  const projectMemory = useMemory()
   const sid = () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID() ?? undefined
   const ctx = () => {
     const id = props.boxId
@@ -936,8 +939,60 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     transcribeAndSend()
   }
 
+  const runMemory = (memory: NonNullable<ReturnType<typeof parseMemoryCommand>>) => {
+    if (memory.kind === "usage") {
+      showToast({ variant: "error", title: language.t("chat.memory.command.failed"), description: memory.reason })
+      return false
+    }
+    if (memory.kind === "help") {
+      showToast({ variant: "default", title: "/memory", description: MEMORY_USAGE })
+      return true
+    }
+    if (isDisabled() || speech.active() || terminal.pending() || git.pending() || props.blocked?.()) return false
+    const status = projectMemory.status()
+    if (
+      memory.kind === "operation" &&
+      (memory.operation === "remember" || memory.operation === "correct" || memory.operation === "forget") &&
+      status &&
+      !status.state.enabled
+    ) {
+      showToast({ variant: "error", title: language.t("chat.memory.project.disabled") })
+      return false
+    }
+    if (memory.kind === "show") vscode.postMessage({ type: "memoryShow", sessionID: sid() })
+    if (memory.kind === "operation") {
+      vscode.postMessage({
+        type: "memoryOperation",
+        operation: memory.operation,
+        sessionID: sid(),
+        ...(memory.operation === "auto" ? { mode: memory.mode } : {}),
+        ...(memory.operation === "purge" ? { confirm: memory.confirm } : {}),
+        ...(memory.operation === "remember" || memory.operation === "correct" ? { text: memory.text } : {}),
+        ...(memory.operation === "forget" ? { query: memory.query } : {}),
+      })
+    }
+    return true
+  }
+
   const handleSend = async () => {
     const draft = text().trim()
+
+    const memory = parseMemoryCommand(draft)
+    if (memory) {
+      if (!runMemory(memory)) return
+      history.append(draft)
+      setText("")
+      clearReviewComments()
+      imageAttach.clear()
+      mention.closeMention()
+      slash.close()
+      drafts.delete(draftKey())
+      reviewDrafts.delete(draftKey())
+      imageDrafts.delete(draftKey())
+      scrolls.delete(draftKey())
+      if (textareaRef) textareaRef.style.height = "auto"
+      return
+    }
 
     // Detect slash command (hoisted for both client and server command checks).
     // Prioritize exact name matches over hint/alias matches so that a server

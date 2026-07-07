@@ -152,6 +152,26 @@
 
 ## [Unreleased]
 
+## [7.0.2-rc.2] - 2026-07-07
+
+### Added
+- Show compact previews for collapsed reasoning blocks so long assistant reasoning stays readable without taking over the transcript.
+- Add clearer Kilo Core runtime information and diagnostics for release download failures.
+
+### Fixed
+- Resolve the CLI executable using the user's shell environment so custom PATH setups work when sessions start from JetBrains.
+- Keep retry and offline status visible in the session footer while preserving transcript context.
+- Prevent oversized header popups by capping preview content.
+
+### Changed
+- Download the required Kilo Core release at runtime and prune stale cached runtime binaries automatically.
+- Polish JetBrains chat spacing, prompt input behavior, question/todo layout, history scrolling, code block padding, and session background colors.
+
+## [7.0.2-rc.1] - 2026-07-07
+
+### Added
+- Download the pinned Kilo Core release at runtime instead of bundling every CLI binary in the JetBrains plugin, keeping the Marketplace package smaller while still verifying downloaded artifacts.
+
 ## [7.0.1] - 2026-07-06
 
 ### Added

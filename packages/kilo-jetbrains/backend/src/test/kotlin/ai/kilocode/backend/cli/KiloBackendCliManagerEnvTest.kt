@@ -80,6 +80,15 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
+    fun `isolation disabled - base PATH is preserved`() {
+        val path = "/opt/homebrew/bin:/usr/bin"
+
+        val env = manager.buildEnv("pwd123", mapOf("PATH" to path))
+
+        assertEquals(path, env["PATH"])
+    }
+
+    @Test
     fun `isolation disabled - no XDG storage overrides are injected`() {
         val env = manager.buildEnv("pwd123", emptyMap())
 

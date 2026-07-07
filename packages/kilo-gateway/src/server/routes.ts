@@ -101,6 +101,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     email: z.string(),
     name: z.string().optional(),
     organizations: z.array(Organization).optional(),
+    selectedOrganizationId: z.string().optional(),
+    hasPersonalAccount: z.boolean().optional(),
   })
 
   const Balance = z.object({

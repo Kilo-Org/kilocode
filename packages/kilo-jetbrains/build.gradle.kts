@@ -221,7 +221,6 @@ tasks {
 
     runIdeBackend {
         splitModeServerPort.set(splitPort)
-        dependsOn(":backend:prepareLocalCli")
         dependsOn(":backend:processResources")
     }
 
@@ -231,17 +230,12 @@ tasks {
 
     runIdeSplitMode {
         splitModeServerPort.set(splitPort)
-        dependsOn(":backend:prepareLocalCli")
         dependsOn(":backend:processResources")
     }
 }
 
-project(":backend").tasks.named("processResources") {
-    mustRunAfter(":backend:prepareLocalCli")
-}
-
 // Compile-only typecheck: verifies Kotlin compiles (including generated API client)
-// without running processResources, CLI binary prep, or buildPlugin.
+// without running buildPlugin.
 tasks.register("typecheck") {
     dependsOn(
         ":shared:compileKotlin",
@@ -250,12 +244,6 @@ tasks.register("typecheck") {
         ":frontend:compileTestKotlin",
         ":backend:compileTestKotlin",
     )
-}
-
-// CLI binaries must be present before packaging. Wire the check here (not in
-// :backend:processResources) so compile/test tasks work without CLI binaries.
-tasks.named("buildPlugin") {
-    dependsOn(":backend:checkCli")
 }
 
 tasks.named<JavaExec>("runIde") {

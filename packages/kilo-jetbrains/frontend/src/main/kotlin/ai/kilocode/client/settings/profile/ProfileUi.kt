@@ -163,7 +163,7 @@ internal class ProfileUi(
         val p = prof
         // When loading/connecting and already showing the logged-in card, stay on it to
         // avoid focus loss during reconnects, initial loads, and org switches.
-        val transientLoad = s == KiloAppStatusDto.CONNECTING || s == KiloAppStatusDto.LOADING || s == KiloAppStatusDto.MIGRATION_REQUIRED
+        val transientLoad = s == KiloAppStatusDto.DOWNLOADING || s == KiloAppStatusDto.CONNECTING || s == KiloAppStatusDto.LOADING || s == KiloAppStatusDto.MIGRATION_REQUIRED
         if (transientLoad && shown == Card.LOGGED_IN) return Card.LOGGED_IN
         return when {
             s == KiloAppStatusDto.DISCONNECTED || transientLoad -> Card.LOGGED_OUT

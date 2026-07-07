@@ -405,6 +405,20 @@ class KiloBackendWorkspaceTest {
     }
 
     @Test
+    fun `workspace maps missing session timestamps to zero`() = runBlocking {
+        mock.sessions = """[
+            {"id":"ses_1","slug":"s","projectID":"p","directory":"/test/project","title":"T","version":"1","time":{"created":null,"updated":null}}
+        ]"""
+        val app = setup()
+        val ws = ready(app)
+        loaded(ws)
+
+        val session = ws.sessions().sessions.single()
+        assertEquals(0.0, session.time.created)
+        assertEquals(0.0, session.time.updated)
+    }
+
+    @Test
     fun `workspace creates session in its directory`() = runBlocking {
         mock.sessionCreate = """{"id":"ses_new","slug":"n","projectID":"p","directory":"/test/project","title":"New","version":"1","time":{"created":1,"updated":1}}"""
         val app = setup()

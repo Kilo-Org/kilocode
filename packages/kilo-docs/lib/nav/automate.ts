@@ -10,7 +10,6 @@ export const AutomateNav: NavSection[] = [
         href: "/automate/code-reviews/overview",
         children: "Code Reviews",
         subLinks: [
-          { href: "/automate/code-reviews/overview", children: "Overview" },
           { href: "/automate/code-reviews/github", children: "GitHub" },
           { href: "/automate/code-reviews/gitlab", children: "GitLab" },
         ],
@@ -19,7 +18,6 @@ export const AutomateNav: NavSection[] = [
         href: "/automate/agent-manager",
         children: "Agent Manager",
         subLinks: [
-          { href: "/automate/agent-manager", children: "Reference" },
           { href: "/automate/agent-manager-workflows", children: "Workflows" },
         ],
       },
@@ -42,7 +40,6 @@ export const AutomateNav: NavSection[] = [
         href: "/automate/mcp/overview",
         children: "MCP",
         subLinks: [
-          { href: "/automate/mcp/overview", children: "MCP Overview" },
           {
             href: "/automate/mcp/using-in-kilo-code",
             children: "Using MCP in Kilo Code",

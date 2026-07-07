@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
@@ -20,6 +21,8 @@ import com.intellij.util.ui.JBUI
  *
  * Reacts to [SessionModelEvent.StateChanged]:
  * - [SessionState.Busy] → shows an animated spinner and [SessionState.Busy.text]
+ * - [SessionState.Retry] → shows an animated spinner and retry detail
+ * - [SessionState.Offline] → shows offline detail without a spinner
  * - Any other state -> hidden
  *
  * Owned by [SessionMessageListPanel], which always re-anchors it as the last child so it
@@ -30,9 +33,12 @@ class ProgressPanel(
     parent: Disposable,
 ) : Stack(StackAxis.HORIZONTAL, UiStyle.Gap.md()), SessionEditorStyleTarget {
 
+    private var style = SessionEditorStyle.current()
+    private var state: SessionState = SessionState.Idle
     private val label = JBLabel().apply {
-        foreground = UiStyle.Colors.weak()
+        foreground = style.editorForeground
     }
+    private val spinner = JBLabel(AnimatedIcon.Default())
 
     init {
         isOpaque = false
@@ -45,7 +51,7 @@ class ProgressPanel(
         )
         applyStyle(SessionEditorStyle.current())
 
-        next(JBLabel(AnimatedIcon.Default()))
+        next(spinner)
         next(label)
 
         model.addListener(parent) { event ->
@@ -56,22 +62,47 @@ class ProgressPanel(
     /** Exposed for test assertions. */
     fun labelText(): String = label.text
 
+    /** Exposed for test assertions. */
+    fun labelForeground() = label.foreground
+
     private fun onState(state: SessionState) {
+        this.state = state
         when (state) {
             is SessionState.Busy -> {
+                spinner.isVisible = true
                 label.text = state.text
-                label.foreground = UiStyle.Colors.weak()
+                label.foreground = style.editorForeground
                 isVisible = true
             }
-            is SessionState.Loading -> isVisible = false
+            is SessionState.Retry -> {
+                spinner.isVisible = true
+                label.text = retryText(state)
+                label.foreground = UiStyle.Colors.warningLabelForeground()
+                isVisible = true
+            }
+            is SessionState.Offline -> {
+                spinner.isVisible = false
+                label.text = state.message.ifBlank { KiloBundle.message("session.status.offline") }
+                label.foreground = UiStyle.Colors.errorLabelForeground()
+                isVisible = true
+            }
             else -> isVisible = false
         }
         revalidate()
         repaint()
     }
 
+    private fun retryText(state: SessionState.Retry): String {
+        val base = state.message.ifBlank { KiloBundle.message("session.status.retry") }
+        return if (state.attempt > 0) {
+            KiloBundle.message("session.status.retry.attempt", base, state.attempt)
+        } else base
+    }
+
     override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
         label.font = style.regularFont
+        if (state is SessionState.Busy) label.foreground = style.editorForeground
         revalidate()
         repaint()
     }

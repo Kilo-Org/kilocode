@@ -21,6 +21,8 @@ export const Profile = Schema.Struct({
   email: Schema.String,
   name: Schema.optional(Schema.String),
   organizations: Schema.optional(Schema.Array(Organization)),
+  selectedOrganizationId: Schema.optional(Schema.String),
+  hasPersonalAccount: Schema.optional(Schema.Boolean),
 })
 
 export const Balance = Schema.Struct({
