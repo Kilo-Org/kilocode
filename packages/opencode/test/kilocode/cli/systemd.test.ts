@@ -327,7 +327,8 @@ describe("quoteArg against real systemd (systemd-analyze verify)", () => {
     const testFn = probe ? test : test.skip
     testFn(`real systemd accepts ${JSON.stringify(value).slice(0, 40)}`, () => {
       const quoted = Systemd.quoteArg(value)
-      const unit = mkdtempSync(join(tmpdir(), "kilo-sysd-verify-")) + ".service"
+      const dir = mkdtempSync(join(tmpdir(), "kilo-sysd-verify-"))
+      const unit = join(dir, "verify.service")
       // Write a minimal unit that uses the quoted value as the *last*
       // argument to /bin/echo. If systemd mis-splits the value, the
       // unit file will not parse (unbalanced quote, bad token, etc).
@@ -340,7 +341,7 @@ describe("quoteArg against real systemd (systemd-analyze verify)", () => {
         expect(r.ok).toBe(true)
         if (!r.ok) console.error(`systemd-analyze said:\n${r.stderr}`)
       } finally {
-        rmSync(unit, { force: true })
+        rmSync(dir, { recursive: true, force: true })
       }
     })
   }
