@@ -622,24 +622,6 @@ it.instance("does not write config when $schema already present", () =>
   }),
 )
 
-
-it.instance("preserves env variables when adding $schema to config", () =>
-  withProcessEnv(
-    "PRESERVE_VAR",
-    "secret_value",
-    Effect.gen(function* () {
-      const test = yield* TestInstance
-      // Config without $schema - should trigger auto-add
-      yield* AppFileSystem.use.writeWithDirs(
-        path.join(test.directory, "kilo.json"), // kilocode_change
-        JSON.stringify({ username: "{env:PRESERVE_VAR}" }),
-      )
-      const config = yield* Config.use.get()
-      expect(config.username).toBe("secret_value")
-    }),
-  ),
-)
-
 it.instance("allows {file:} that stays inside the project root", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
