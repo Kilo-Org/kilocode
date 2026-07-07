@@ -50,6 +50,7 @@ import { Worktree } from "@/worktree"
 import { Pty } from "@/pty"
 import { PtyTicket } from "@/pty/ticket"
 import { Installation } from "@/installation"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 import { ShareNext } from "@/share/share-next"
 import { SessionShare } from "@/share/session"
 import { SyncEvent } from "@/sync"
@@ -119,6 +120,7 @@ const FeatureLayer = Layer.mergeAll(
   Pty.defaultLayer,
   PtyTicket.defaultLayer,
   Installation.defaultLayer,
+  MemoryService.layer, // kilocode_change
   ShareNext.defaultLayer,
   SessionShare.defaultLayer,
   SyncEvent.defaultLayer,

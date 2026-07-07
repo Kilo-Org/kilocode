@@ -21,6 +21,10 @@ import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
+import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
+import { MemoryMarker } from "@/kilocode/memory/marker"
+import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
+import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
@@ -186,6 +190,69 @@ export namespace KiloSessionPrompt {
   export interface EnvCache {
     block?: string
     user?: string
+  }
+
+  export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return KiloToolRegistry.memoryToolsEnabled({ ctx: input.ctx })
+  }
+
+  export function memoryCache(): MemoryMarker.Cache {
+    return {}
+  }
+
+  // Pin the injected memory block per session. Reading the live index every step/turn
+  // (each session digest rewrites it) busts the provider prompt cache for instructions +
+  // the whole history. Build once at session start and reuse the same block verbatim,
+  // which also excludes this session's own digest from its index.
+  type PinnedMemory = { blocks: string[]; enabled: boolean; marker?: MemoryMarker.Info }
+  const PINNED_MEMORY_MAX = 512
+  const pinnedMemory = new Map<string, PinnedMemory>()
+
+  function writePinnedMemory(sessionID: string, value: PinnedMemory) {
+    pinnedMemory.set(sessionID, value)
+    if (pinnedMemory.size > PINNED_MEMORY_MAX) {
+      const oldest = pinnedMemory.keys().next().value
+      if (oldest !== undefined) pinnedMemory.delete(oldest)
+    }
+  }
+
+  /** Test-only: drop the per-session pinned memory block cache. */
+  export function clearPinnedMemory() {
+    pinnedMemory.clear()
+  }
+
+  // Returns the injected memory blocks only; the caller keeps upstream's env line untouched and appends
+  // these. Pinned per session (built once at the first step, reused byte-identically after).
+  export const memoryInject = Effect.fn("KiloSessionPrompt.memoryInject")(function* (input: {
+    ctx: MemoryPaths.Ctx
+    sessionID: SessionID
+    record: boolean
+    cache: MemoryMarker.Cache
+  }) {
+    const enabled = yield* memoryToolEnabled({ ctx: input.ctx })
+    const cached = pinnedMemory.get(input.sessionID)
+    const built =
+      cached?.enabled === enabled
+        ? cached
+        : yield* KilocodeSystemPrompt.memoryBlocks({
+            ctx: input.ctx,
+            sessionID: input.sessionID,
+            record: input.record,
+            enabled,
+          }).pipe(
+            Effect.map((mem) => ({ blocks: mem.blocks, enabled, marker: mem.marker })),
+            Effect.tap((mem) => Effect.sync(() => writePinnedMemory(input.sessionID, mem))),
+          )
+    MemoryMarker.startup({ marker: built.marker, cache: input.cache })
+    return built.blocks
+  })
+
+  export function memoryPart(input: {
+    sessionID: SessionID
+    message: MessageV2.Assistant
+    cache: MemoryMarker.Cache
+  }) {
+    return MemoryMarker.part(input)
   }
 
   /**

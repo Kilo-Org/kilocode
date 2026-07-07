@@ -47,6 +47,7 @@ import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { KiloHeadless } from "../../src/kilocode/permission/headless"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
@@ -141,6 +142,7 @@ function makeHttp() {
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
     status,
+    MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))

@@ -1,6 +1,8 @@
 import { Effect } from "effect"
 import { mkdir, rm } from "fs/promises"
 import path from "path"
+import { KiloMemory } from "@kilocode/kilo-memory/effect"
+import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { array, check, object } from "../../server/httpapi-exercise/assertions"
 import { http, route } from "../../server/httpapi-exercise/dsl"
 import type { Scenario, ScenarioContext } from "../../server/httpapi-exercise/types"
@@ -18,6 +20,16 @@ function file(ctx: ScenarioContext, name: string, content: string) {
     await Bun.write(target, content)
     return target
   })
+}
+
+function memory(ctx: ScenarioContext) {
+  const dir = directory(ctx)
+  return MemoryPaths.root({ ctx: { directory: dir, worktree: dir } })
+}
+
+function enable(ctx: ScenarioContext) {
+  const dir = directory(ctx)
+  return Effect.promise(() => KiloMemory.enable({ ctx: { directory: dir, worktree: dir } }))
 }
 
 const edit = {
@@ -191,6 +203,144 @@ export const kiloScenarios: Scenario[] = [
   http.protected.get("/indexing/status", "indexing.status").json(200, object),
   http.protected.get("/indexing/models", "indexing.models").json(200, object),
   http.protected.get("/indexing/warnings", "indexing.warnings").json(200, array),
+  http.protected.get("/memory/status", "memory.status").json(200, (body) => {
+    object(body)
+    object(body.state)
+    object(body.index)
+    check(body.state.enabled === false, "memory should start disabled")
+    check(body.state.autoConsolidate === true, "memory auto-save should be configured on by default")
+    check(body.index.estimatedTokens === 0, "missing memory should report zero tokens")
+  }),
+  http.protected
+    .post("/memory/enable", "memory.enable")
+    .mutating()
+    .json(200, (body) => {
+      object(body)
+      object(body.state)
+      object(body.index)
+      check(body.state.enabled === true, "enable should turn memory on")
+      check(typeof body.index.text === "string", "enable should return index text")
+    }),
+  http.protected
+    .post("/memory/configure", "memory.configure")
+    .mutating()
+    .seeded(enable)
+    .at((ctx) => ({
+      path: "/memory/configure",
+      headers: ctx.headers(),
+      body: { autoConsolidate: false },
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.state)
+      check(body.state.enabled === true, "configure should preserve enabled state")
+      check(body.state.autoConsolidate === false, "configure should update auto-save")
+    }),
+  http.protected
+    .post("/memory/rebuild", "memory.rebuild")
+    .mutating()
+    .seeded(enable)
+    .json(200, (body) => {
+      object(body)
+      object(body.state)
+      object(body.index)
+      check(body.state.enabled === true, "rebuild should preserve enabled state")
+    }),
+  http.protected
+    .post("/memory/remember", "memory.remember")
+    .mutating()
+    .seeded(enable)
+    .at((ctx) => ({
+      path: "/memory/remember",
+      headers: ctx.headers(),
+      body: { key: "httpapi_memory", text: "Use the HTTP API memory scenario as a stable test fact." },
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.index)
+      check(body.operationCount === 1, "remember should apply one operation")
+      check(String(body.index.text).includes("httpapi_memory"), "remember should update the index")
+    }),
+  http.protected
+    .post("/memory/correct", "memory.correct")
+    .mutating()
+    .seeded(enable)
+    .at((ctx) => ({
+      path: "/memory/correct",
+      headers: ctx.headers(),
+      body: { key: "httpapi_correction", text: "Prefer correction memory when a prior fact is wrong." },
+    }))
+    .json(200, (body) => {
+      object(body)
+      object(body.index)
+      check(body.operationCount === 1, "correction should apply one operation")
+      check(String(body.index.text).includes("httpapi_correction"), "correction should update the index")
+    }),
+  http.protected
+    .post("/memory/forget", "memory.forget")
+    .mutating()
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        const root = memory(ctx)
+        yield* enable(ctx)
+        yield* Effect.promise(() =>
+          KiloMemory.apply({
+            root,
+            ops: [{ action: "add", key: "httpapi_forget", text: "This fact should be removed by the route." }],
+          }),
+        )
+        return root
+      }),
+    )
+    .at((ctx) => ({ path: "/memory/forget", headers: ctx.headers(), body: { query: "httpapi_forget" } }))
+    .json(200, (body) => {
+      object(body)
+      object(body.index)
+      check(body.removed === 1, "forget should remove one matching line")
+      check(!String(body.index.text).includes("httpapi_forget"), "forget should rebuild without the removed fact")
+    }),
+  http.protected
+    .post("/memory/purge", "memory.purge")
+    .mutating()
+    .seeded(enable)
+    .at((ctx) => ({
+      path: "/memory/purge",
+      headers: ctx.headers(),
+      body: { confirm: true },
+    }))
+    .json(200, (body) => {
+      object(body)
+      check(body.purged === true, "purge should remove the memory root")
+    }),
+  http.protected
+    .get("/memory/show", "memory.show")
+    .seeded((ctx) =>
+      Effect.gen(function* () {
+        yield* enable(ctx)
+        yield* Effect.promise(() =>
+          KiloMemory.apply({
+            root: memory(ctx),
+            ops: [{ action: "add", key: "httpapi_show", text: "Show should expose persisted memory." }],
+          }),
+        )
+      }),
+    )
+    .json(200, (body) => {
+      object(body)
+      object(body.sources)
+      check(String(body.index).includes("httpapi_show"), "show should include generated index")
+      check(String(body.items).includes("httpapi_show"), "show should include generated items")
+      check(String(body.sources.project).includes("httpapi_show"), "show should include source memory")
+    }),
+  http.protected
+    .post("/memory/disable", "memory.disable")
+    .mutating()
+    .seeded(enable)
+    .json(200, (body) => {
+      object(body)
+      object(body.state)
+      check(body.state.enabled === false, "disable should turn memory off")
+    }),
   http.protected.get("/kilo/profile", "kilo.profile").probe({ path: "/path" }).status(401),
   http.protected.get("/kilo/auth-status", "kilo.authStatus").json(200, (body) => {
     object(body)

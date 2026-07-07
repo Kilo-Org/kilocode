@@ -320,20 +320,6 @@ export const TuiThreadCommand = cmd({
             events: createEventSource(client),
           }
 
-      try {
-        await validateSession({
-          url: transport.url, // kilocode_change
-          sessionID: localSessionID(args), // kilocode_change
-          directory: cwd,
-          fetch: transport.fetch,
-          headers: transport.headers, // kilocode_change
-        })
-      } catch (error) {
-        UI.error(errorMessage(error))
-        process.exitCode = 1
-        return
-      }
-
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})
       }, 1000).unref?.()
@@ -358,6 +344,20 @@ export const TuiThreadCommand = cmd({
           args.cloudFork = false
         }
         // kilocode_change end
+
+        try {
+          await validateSession({
+            url: transport.url, // kilocode_change
+            sessionID: localSessionID(args), // kilocode_change
+            directory: cwd,
+            fetch: transport.fetch,
+            headers: transport.headers, // kilocode_change
+          })
+        } catch (error) {
+          UI.error(errorMessage(error))
+          process.exitCode = 1
+          return
+        }
 
         // kilocode_change start
         await start({

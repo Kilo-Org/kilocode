@@ -51,6 +51,7 @@ import { SyncEvent } from "../../src/sync"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import * as Log from "@opencode-ai/core/util/log"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { TestLLMServer } from "../lib/llm-server"
@@ -145,6 +146,7 @@ function makeHttp() {
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
     status,
+    MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))

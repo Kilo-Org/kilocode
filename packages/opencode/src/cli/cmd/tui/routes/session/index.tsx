@@ -110,6 +110,7 @@ import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-mo
 
 import { formatMarkdownTables } from "../../util/markdown"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
+import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory" // kilocode_change
 // kilocode_change end
 import { nextThinkingMode, reasoningSummary, useThinkingMode, type ThinkingMode } from "../../context/thinking"
 import { getScrollAcceleration } from "../../util/scroll"
@@ -451,6 +452,8 @@ export function Session() {
       kv.set(keys.lastSeenAt, Date.now())
     })
   })
+
+  onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
 
   const exit = useExit()
 
@@ -1456,6 +1459,7 @@ export function Session() {
                         toBottom()
                       }}
                       sessionID={route.sessionID}
+                      directory={session()?.directory}
                       right={<TuiPluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
                     />
                   </TuiPluginRuntime.Slot>
@@ -1705,6 +1709,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
+              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} /> {/* kilocode_change */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>

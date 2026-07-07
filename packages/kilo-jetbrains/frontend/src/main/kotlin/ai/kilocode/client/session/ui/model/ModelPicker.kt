@@ -379,11 +379,6 @@ class ModelPicker : PickerButton() {
                     e.consume()
                     return
                 }
-                if (expanded && e.clickCount < 2) {
-                    list.selectedIndex = row
-                    syncDetails()
-                    return
-                }
                 activate(value)
             }
         })

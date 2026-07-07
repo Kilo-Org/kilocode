@@ -203,9 +203,9 @@ internal class SettingsListView(
         val item = model.getElementAt(idx)
         val selected = idx == list.selectedIndex
         val id = if (enabled) {
-            settingsListCellAt(list, bounds, e.point, item, selected)
+            settingsListCellAt(list, idx, e.point, selected)
         } else {
-            settingsListCellBounds(list, bounds, item, selected)
+            settingsListCellBounds(list, idx, selected)
                 .entries
                 .firstOrNull { it.value.contains(e.point) }
                 ?.key

@@ -64,6 +64,7 @@ import { RepositoryCache } from "../../src/reference/repository-cache"
 import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 
 void Log.init({ print: false })
 
@@ -133,6 +134,7 @@ function makeHttp() {
     status,
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
+    MemoryService.layer, // kilocode_change
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))

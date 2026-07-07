@@ -4,26 +4,25 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.layout.StackAxis
 import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BasicStroke
-import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import javax.swing.Icon
-import javax.swing.BoxLayout
-import javax.swing.JPanel
 
 class TodoListPanel(
     todos: List<TodoDto> = emptyList(),
     private var before: Int = 0,
     private var after: Int = 0,
-) : JPanel() {
+) : Stack(StackAxis.VERTICAL) {
 
     private var items = todos
     private var style = SessionEditorStyle.current()
@@ -32,11 +31,7 @@ class TodoListPanel(
     private val later = JBLabel()
 
     init {
-        layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.md())
-        add(prior)
-        add(later)
+        border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad())
         applyStyle(style)
         sync()
     }
@@ -86,13 +81,13 @@ class TodoListPanel(
     private fun sync() {
         removeAll()
         rows.clear()
-        add(prior)
+        next(prior)
         items.forEach { todo ->
             val row = Row(todo, style)
             rows.add(row)
-            add(row.panel)
+            next(row.panel)
         }
-        add(later)
+        next(later)
         syncHidden()
     }
 
@@ -122,11 +117,10 @@ class TodoListPanel(
             icon = this@Row.icon
         }
         val text = JBLabel()
-        val panel = JPanel(BorderLayout(UiStyle.Gap.sm(), 0)).apply {
-            isOpaque = false
+        val panel = Stack.horizontal(UiStyle.Gap.sm()).apply {
             border = JBUI.Borders.empty(UiStyle.Gap.xs(), 0)
-            add(check, BorderLayout.WEST)
-            add(text, BorderLayout.CENTER)
+            next(check)
+            next(text)
         }
 
         init {
