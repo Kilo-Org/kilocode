@@ -7,7 +7,6 @@ import { Config } from "../../config/config"
 import { Instance } from "../../project/instance"
 import { Global } from "@/global"
 import { Telemetry } from "@kilocode/kilo-telemetry"
-import { ProviderID, ModelID } from "@/provider/schema"
 import { Provider } from "../../provider/provider" // kilocode_change
 import z from "zod"
 import path from "path"
