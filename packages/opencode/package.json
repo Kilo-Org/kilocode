@@ -117,6 +117,7 @@
     "@opencode-ai/llm": "workspace:*",
     "@opencode-ai/script": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
+    "@openguardrails/core": "0.1.1",
     "@openrouter/ai-sdk-provider": "2.9.0",
     "@opentelemetry/api": "1.9.0",
     "@opentelemetry/sdk-trace-base": "2.6.1",

@@ -21,6 +21,7 @@ import { PartID } from "./schema"
 import * as Log from "@opencode-ai/core/util/log"
 import { EffectBridge } from "@/effect/bridge"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
+import { Classifier } from "@/kilocode/classifier" // kilocode_change
 
 const log = Log.create({ service: "session.tools" })
 
@@ -69,6 +70,20 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           sessionID: input.session.id,
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
         },
+        // kilocode_change start — classifier gate. evaluate() self-disables when the
+        // classifier is off; run.run provides the captured request context (R=never).
+        classifier: () =>
+          run.run(
+            Classifier.evaluate({
+              tool: req.permission,
+              toolInput: args,
+              messages: input.messages,
+              fallbackModel: input.model,
+              sessionID: input.session.id,
+              abort: options.abortSignal!,
+            }),
+          ),
+        // kilocode_change end
       }).pipe(Effect.orDie),
   })
   // kilocode_change end

@@ -488,6 +488,7 @@
         "@opencode-ai/llm": "workspace:*",
         "@opencode-ai/script": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
+        "@openguardrails/core": "0.1.1",
         "@openrouter/ai-sdk-provider": "2.9.0",
         "@opentelemetry/api": "1.9.0",
         "@opentelemetry/sdk-trace-base": "2.6.1",
@@ -1528,6 +1529,8 @@
     "@opencode-ai/storybook": ["@opencode-ai/storybook@workspace:packages/storybook"],
 
     "@opencode-ai/ui": ["@opencode-ai/ui@workspace:packages/ui"],
+
+    "@openguardrails/core": ["@openguardrails/core@0.1.1", "", {}, "sha512-mXzUte1MFZGe1RWXhvhcGz/L8bcGYzM8CuEdid8qa07g23WXR6zFV/S6IuvKHWBLkBpU+rK9rqM7ocCz4TWkyg=="],
 
     "@openrouter/ai-sdk-provider": ["@openrouter/ai-sdk-provider@2.9.0", "", { "peerDependencies": { "ai": "^6.0.0", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-Seva+NCa0WUQnJIUE5GzHsUv1WTIeyqwz0ELl2VtS6NP+eF+77yCXGFVOMbvoCM7QMjlnhv7931e89R+8pJdcQ=="],
 

@@ -110,11 +110,23 @@ export class DeniedError extends Schema.TaggedErrorClass<DeniedError>()("Permiss
   }
 }
 
+// kilocode_change start — classifier-issued denial (deny-and-continue). Modeled on
+// DeniedError so it surfaces as a tool error the agent reacts to, without halting the turn.
+export class ClassifierDeniedError extends Schema.TaggedErrorClass<ClassifierDeniedError>()(
+  "PermissionClassifierDeniedError",
+  { reason: Schema.String },
+) {
+  override get message() {
+    return `The command-approval classifier blocked this tool call: ${this.reason}. Find a safer approach rather than routing around the block.`
+  }
+}
+// kilocode_change end
+
 export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Permission.NotFoundError", {
   requestID: PermissionID,
 }) {}
 
-export type Error = DeniedError | RejectedError | CorrectedError
+export type Error = DeniedError | RejectedError | CorrectedError | ClassifierDeniedError // kilocode_change
 
 export const AskInput = Schema.Struct({
   ...Request.fields,
@@ -123,6 +135,14 @@ export const AskInput = Schema.Struct({
   hardRuleset: Schema.optional(Ruleset), // kilocode_change
 }).annotate({ identifier: "PermissionAskInput" })
 export type AskInput = Schema.Schema.Type<typeof AskInput>
+
+// kilocode_change start — classifier gate callback (provided by the call site, never over the wire)
+export type ClassifierDecision =
+  | { kind: "allow" }
+  | { kind: "block"; reason: string }
+  | { kind: "ask"; reason: string }
+export type ClassifierThunk = () => Effect.Effect<ClassifierDecision | undefined>
+// kilocode_change end
 
 export const ReplyInput = Schema.Struct({
   requestID: PermissionID,
@@ -145,7 +165,7 @@ export const AllowEverythingInput = z.object({
 // kilocode_change end
 
 export interface Interface {
-  readonly ask: (input: AskInput) => Effect.Effect<void, Error>
+  readonly ask: (input: AskInput & { classifier?: ClassifierThunk }) => Effect.Effect<void, Error> // kilocode_change
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   // kilocode_change start
@@ -243,7 +263,7 @@ export const layer = Layer.effect(
       }),
     )
 
-    const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
+    const ask = Effect.fn("Permission.ask")(function* (input: AskInput & { classifier?: ClassifierThunk }) {
       const { approved, pending } = yield* InstanceState.get(state)
       // kilocode_change start
       const { ruleset, hardRuleset, ...request } = input
@@ -274,6 +294,16 @@ export const layer = Layer.effect(
         // kilocode_change end
         needsAsk = true
       }
+
+      // kilocode_change start — classifier gate: consult only on the would-auto-approve path
+      if (!needsAsk && input.classifier) {
+        const decision = yield* input.classifier()
+        if (decision?.kind === "block") {
+          return yield* new ClassifierDeniedError({ reason: decision.reason })
+        }
+        if (decision?.kind === "ask") needsAsk = true
+      }
+      // kilocode_change end
 
       if (!needsAsk) return
 

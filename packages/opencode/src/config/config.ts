@@ -39,6 +39,7 @@ import { ConfigModelID } from "./model-id"
 import { ConfigParse } from "./parse"
 import { ConfigPaths } from "./paths"
 import { ConfigPermission } from "./permission"
+import { ConfigClassifier } from "./classifier" // kilocode_change
 import { ConfigPlugin } from "./plugin"
 import { ConfigProvider } from "./provider"
 import { ConfigReference } from "./reference"
@@ -337,6 +338,11 @@ export const Info = Schema.Struct({
   }),
   layout: Schema.optional(ConfigLayout.Layout).annotate({ description: "@deprecated Always uses stretch layout." }),
   permission: Schema.optional(ConfigPermission.Info),
+  // kilocode_change start — LLM command-approval classifier (issue #9138)
+  classifier: Schema.optional(ConfigClassifier.Info).annotate({
+    description: "LLM-based command-approval classifier. Gates what would otherwise auto-approve.",
+  }),
+  // kilocode_change end
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   attachment: Schema.optional(ConfigAttachment.Info).annotate({
     description: "Attachment processing configuration, including image size limits and resizing behavior",

@@ -171,6 +171,7 @@ export namespace KiloSessionPrompt {
     agent: Agent.Info
     session: Session.Info
     request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
+    classifier?: Permission.ClassifierThunk // kilocode_change — classifier gate callback
   }) {
     const agent = (yield* input.agents.get(input.agent.name)) ?? input.agent
     const session = yield* input.sessions
@@ -180,6 +181,7 @@ export namespace KiloSessionPrompt {
       ...input.request,
       ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
       hardRuleset: hardPermissions({ agent }),
+      classifier: input.classifier, // kilocode_change
     })
   })
 
