@@ -32,6 +32,9 @@ const KEEP_TAIL = 5
 const MERGE_GAP = 2
 const MAX_KEEP_RATIO = 0.9
 const TIMEOUT_MS = 15_000
+const CLOSE = "\n</content>"
+const FILE = "\n<type>file</type>\n<content>\n"
+const REMINDER = `${CLOSE}\n\n<system-reminder>\n`
 
 const DESCRIPTION = [
   "Optional focus question used to prune this tool's output to only the relevant lines.",
@@ -126,10 +129,27 @@ export function kept(ranges: Range[]) {
   return ranges.reduce((sum, [start, end]) => sum + (end - start + 1), 0)
 }
 
+function partition(tool: string, result: Tool.ExecuteResult) {
+  if (tool !== "read") return { body: result.output, tail: "", extra: 0 }
+  const loaded = result.metadata["loaded"]
+  if (!Array.isArray(loaded) || loaded.some((item) => typeof item !== "string")) return undefined
+  const start = result.output.indexOf(FILE)
+  const index = start < 0 ? -1 : result.output.indexOf(REMINDER, start + FILE.length)
+  if (loaded.length === 0) return index < 0 ? { body: result.output, tail: "", extra: 0 } : undefined
+  if (index < 0) return undefined
+  const split = index + CLOSE.length
+  const tail = result.output.slice(split)
+  return {
+    body: result.output.slice(0, split),
+    tail,
+    extra: tail.split("\n").length - 1,
+  }
+}
+
 /** Reassemble the output from keep-ranges, marking omitted sections inline. */
-export function assemble(lines: string[], ranges: Range[], total: number) {
+export function assemble(lines: string[], ranges: Range[], total: number, extra = 0) {
   const parts: string[] = [
-    `[SWE-Pruner: kept ${kept(ranges)} of ${total} output lines relevant to the focus question. Omitted sections are marked below; call the tool again without ${PARAMETER} for the full output.]`,
+    `[SWE-Pruner: kept ${kept(ranges) + extra} of ${total + extra} output lines relevant to the focus question. Omitted sections are marked below; call the tool again without ${PARAMETER} for the full output.]`,
   ]
   let cursor = 1
   for (const [start, end] of ranges) {
@@ -158,7 +178,12 @@ const resolve = Effect.fn("SwePruner.resolve")(function* () {
   return (yield* provider.getSmallModel(ref.providerID)) ?? (yield* provider.getModel(ref.providerID, ref.modelID))
 })
 
-const skim = Effect.fn("SwePruner.skim")(function* (input: { question: string; output: string; abort?: AbortSignal }) {
+const skim = Effect.fn("SwePruner.skim")(function* (input: {
+  question: string
+  output: string
+  extra: number
+  abort?: AbortSignal
+}) {
   const provider = yield* Provider.Service
   const model = yield* resolve()
   const language = yield* provider.getLanguage(model)
@@ -190,7 +215,11 @@ const skim = Effect.fn("SwePruner.skim")(function* (input: { question: string; o
   if (!ranges) return undefined
   const keep = kept(ranges)
   if (keep / lines.length > MAX_KEEP_RATIO) return undefined
-  return { output: assemble(lines, ranges, lines.length), kept: keep, total: lines.length }
+  return {
+    output: assemble(lines, ranges, lines.length, input.extra),
+    kept: keep + input.extra,
+    total: lines.length + input.extra,
+  }
 })
 
 /** Prune a tool result when a focus question was provided. Fails open to the original result. */
@@ -203,10 +232,13 @@ export const sweep = Effect.fn("SwePruner.sweep")(function* (input: {
   const focus = question(input.args)
   if (!focus) return input.result
   if (input.result.metadata["truncated"] === true) return input.result
-  const size = input.result.output.length
+  // Nearby instructions are appended to read output and must reach the main model unchanged.
+  const part = partition(input.tool, input.result)
+  if (!part) return input.result
+  const size = part.body.length
   if (size < MIN_CHARS || size > MAX_CHARS) return input.result
-  if (input.result.output.split("\n").length < MIN_LINES) return input.result
-  const pruned = yield* skim({ question: focus, output: input.result.output, abort: input.abort }).pipe(
+  if (part.body.split("\n").length < MIN_LINES) return input.result
+  const pruned = yield* skim({ question: focus, output: part.body, extra: part.extra, abort: input.abort }).pipe(
     Effect.catchCause((cause) => {
       log.error("skim failed, returning full output", { tool: input.tool, cause })
       return Effect.succeed(undefined)
@@ -216,7 +248,7 @@ export const sweep = Effect.fn("SwePruner.sweep")(function* (input: {
   log.info("pruned", { tool: input.tool, kept: pruned.kept, total: pruned.total })
   return {
     ...input.result,
-    output: pruned.output,
+    output: pruned.output + part.tail,
     metadata: {
       ...input.result.metadata,
       swePruner: { question: focus, kept: pruned.kept, total: pruned.total },

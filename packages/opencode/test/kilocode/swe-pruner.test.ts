@@ -1,5 +1,62 @@
 import { describe, expect, test } from "bun:test"
+import type { LanguageModelV3, LanguageModelV3CallOptions } from "@ai-sdk/provider"
+import { Effect } from "effect"
+import { Config } from "../../src/config/config"
 import { SwePruner } from "../../src/kilocode/swe-pruner"
+import { Provider } from "../../src/provider/provider"
+import { ModelID, ProviderID } from "../../src/provider/schema"
+
+const pid = ProviderID.make("test")
+const mid = ModelID.make("swe-pruner-test")
+
+function model(): Provider.Model {
+  return {
+    id: mid,
+    providerID: pid,
+    api: { id: mid, npm: "test-provider", url: "" },
+    limit: { context: 100_000, output: 4_000 },
+    capabilities: {
+      toolcall: true,
+      attachment: false,
+      reasoning: false,
+      temperature: true,
+      input: { text: true, image: false, audio: false, video: false },
+      output: { text: true, image: false, audio: false, video: false },
+    },
+  } as unknown as Provider.Model
+}
+
+function provider(seen: string[]): Provider.Interface {
+  const mdl = model()
+  const lang = {
+    specificationVersion: "v3",
+    provider: "test",
+    modelId: mid,
+    supportedUrls: {},
+    doGenerate: async (input: LanguageModelV3CallOptions) => {
+      seen.push(JSON.stringify(input))
+      return {
+        content: [{ type: "text", text: "1-10" }],
+        finishReason: { unified: "stop" },
+        usage: {
+          inputTokens: { total: 12 },
+          outputTokens: { total: 8 },
+          raw: {},
+        },
+        warnings: [],
+        providerMetadata: {},
+        request: {},
+        response: {},
+      }
+    },
+  } as unknown as LanguageModelV3
+  return {
+    defaultModel: () => Effect.succeed({ providerID: pid, modelID: mid }),
+    getSmallModel: () => Effect.succeed(mdl),
+    getModel: () => Effect.succeed(mdl),
+    getLanguage: () => Effect.succeed(lang),
+  } as unknown as Provider.Interface
+}
 
 describe("SwePruner.question", () => {
   test("extracts a non-empty focus question from raw args", () => {
@@ -135,5 +192,35 @@ describe("SwePruner.kept", () => {
         [10, 10],
       ]),
     ).toBe(6)
+  })
+})
+
+describe("SwePruner.sweep", () => {
+  test("preserves dynamically loaded instructions outside the pruned output", async () => {
+    const lines = Array.from({ length: 60 }, (_, index) => `${index + 1}: ${"source content ".repeat(4)}`)
+    const body = `<path>/repo/pkg/source.ts</path>\n<type>file</type>\n<content>\n${lines.join("\n")}\n</content>`
+    const rules = Array.from({ length: 10 }, (_, index) => `Keep instruction ${index + 1} intact.`)
+    const tail = `\n\n<system-reminder>\nInstructions from: /repo/pkg/AGENTS.md\n${rules.join("\n")}\n</system-reminder>`
+    const seen: string[] = []
+    const result = await SwePruner.sweep({
+      tool: "read",
+      args: { context_focus_question: "Where is the relevant source content?" },
+      result: {
+        title: "source.ts",
+        output: body + tail,
+        metadata: { truncated: false, loaded: ["/repo/pkg/AGENTS.md"] },
+      },
+    }).pipe(
+      Effect.provideService(Provider.Service, provider(seen)),
+      Effect.provideService(Config.Service, { get: () => Effect.succeed({}) } as Config.Interface),
+      Effect.runPromise,
+    )
+
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toContain("source content")
+    expect(seen[0]).not.toContain(rules[0])
+    expect(result.output).toEndWith(tail)
+    expect(result.metadata["loaded"]).toEqual(["/repo/pkg/AGENTS.md"])
+    expect(result.metadata["swePruner"]).toMatchObject({ kept: 29, total: 78 })
   })
 })
