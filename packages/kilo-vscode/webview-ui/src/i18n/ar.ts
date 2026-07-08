@@ -381,6 +381,7 @@ export const dict = {
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
   "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
@@ -1183,6 +1184,8 @@ export const dict = {
 
   "common.retry": "إعادة المحاولة",
   "common.refresh": "تحديث",
+  "common.reload": "إعادة التحميل",
+  "common.reloadDescription": "إعادة تحميل التكوين والمهارات والوكلاء والأوامر من القرص",
 
   "profile.title": "الملف الشخصي",
   "profile.notLoggedIn": "لم يتم تسجيل الدخول",
@@ -1411,6 +1414,10 @@ export const dict = {
   "settings.sandboxing.network.title": "تقييد الوصول إلى الشبكة",
   "settings.sandboxing.network.description":
     "احظر الوصول الصادر إلى الشبكة من الأوامر الصادرة عن النموذج وأدوات HTTP. تعمل خوادم MCP المحلية وخطافات المكونات الإضافية خارج هذا التقييد. تظل حركة مرور استدلال الموفّر والنموذج متاحة.",
+
+  "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
+  "settings.sandboxing.writablePaths.description":
+    "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1583,6 +1590,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
+  "settings.context.compaction.title": "الضغط",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
@@ -1590,6 +1598,42 @@ export const dict = {
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
   "settings.context.watcherPatterns.description": "أنماط glob للملفات التي يجب على المراقب تجاهلها",
+
+  "settings.context.memory.title": "الذاكرة",
+  "settings.context.memory.project.title": "ذاكرة المشروع",
+  "settings.context.memory.autoSave.title": "حفظ ذاكرة المشروع تلقائيًا",
+  "settings.context.memory.autoSave.description":
+    "حفظ حقائق المشروع الدائمة تلقائيًا من الجولات المكتملة عند تفعيل الذاكرة.",
+  "settings.context.memory.index.title": "فهرس الذاكرة",
+  "settings.context.memory.status.notLoaded": "غير محمّلة",
+  "settings.context.memory.status.disabled": "معطّلة",
+  "settings.context.memory.status.enabledTokensOps":
+    "مفعّلة - ~{{session}} رموز سياق بدء التشغيل في هذه الجلسة - ~{{tokens}} رموز في الفهرس المخزّن - آخر عملية {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "فعّل الذاكرة لإنشاء ملفات ذاكرة المشروع.",
+  "settings.context.memory.inspect": "فحص",
+  "settings.context.memory.rebuild": "إعادة بناء فهرس الذاكرة",
+  "chat.memory.on": "الذاكرة مفعّلة",
+  "chat.memory.label": "الذاكرة · {{tokens}} رمز",
+  "chat.memory.status.loading": "جارٍ تحميل حالة الذاكرة",
+  "chat.memory.session.tokens": "سياق بدء التشغيل في هذه الجلسة: {{tokens}} رموز",
+  "chat.memory.total.tokens": "الفهرس المخزّن: {{tokens}} رموز",
+  "chat.memory.project.enabled": "ذاكرة المشروع مفعّلة",
+  "chat.memory.project.disabled": "ذاكرة المشروع معطّلة",
+  "chat.memory.command.failed": "فشل أمر الذاكرة",
+  "chat.memory.savedOperations": "آخر عملية ذاكرة: {{count}} عمليات",
+  "chat.memory.inspect": "فحص الذاكرة",
+  "chat.memory.remember": "تذكّر",
+  "chat.memory.forget": "انسَ",
+  "chat.memory.rebuild": "إعادة بناء الفهرس",
+  "chat.memory.disable": "تعطيل الذاكرة",
+  "chat.memory.badge.injected": "تم حقن الذاكرة",
+  "chat.memory.badge.recalled": "تم استدعاء الذاكرة",
+  "chat.memory.badge.startupCtx": "سياق البدء",
+  "chat.memory.badge.items": "{{count}} عناصر",
+  "chat.memory.badge.tokens": "{{tokens}} رموز",
+  "chat.memory.badge.recalledDetail": "تم استدعاء الذاكرة: {{count}} عناصر - {{tokens}} رموز",
+  "chat.memory.badge.files": "ملفات الذاكرة: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "استخدام prompt مخصص",

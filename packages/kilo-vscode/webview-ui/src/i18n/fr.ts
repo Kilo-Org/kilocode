@@ -390,6 +390,7 @@ export const dict = {
     "Cliquez pour restreindre les écritures dans le système de fichiers. L'accès au réseau reste autorisé par vos paramètres de sandbox.",
 
   "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
+  "speechToText.tooltip.starting": "Démarrage du microphone... Attendez avant de parler.",
   "speechToText.tooltip.stop": "Arrêter la capture audio",
   "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
   "speechToText.tooltip.error": "La saisie vocale a échoué. Cliquez pour effacer.",
@@ -1262,6 +1263,9 @@ export const dict = {
 
   "common.retry": "Réessayer",
   "common.refresh": "Actualiser",
+  "common.reload": "Recharger",
+  "common.reloadDescription":
+    "Recharger la configuration, les compétences, les agents et les commandes depuis le disque",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Non connecté",
@@ -1470,6 +1474,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Restreindre l'accès au réseau",
   "settings.sandboxing.network.description":
     "Bloquer l'accès réseau sortant des commandes provenant du modèle et des outils HTTP. Les serveurs MCP locaux et les hooks de plugin ne sont pas soumis à cette restriction. Le trafic d'inférence des fournisseurs et des modèles reste disponible.",
+
+  "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
+  "settings.sandboxing.writablePaths.description":
+    "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1658,6 +1666,7 @@ export const dict = {
   "settings.context.autoCompaction.title": "Compaction automatique",
   "settings.context.autoCompaction.description":
     "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",
+  "settings.context.compaction.title": "Compactage",
   "settings.context.compactionLimit.title": "Limite de compactage automatique",
   "settings.context.compactionLimit.description":
     "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
@@ -1665,6 +1674,42 @@ export const dict = {
   "settings.context.prune.description": "Supprimer les anciennes sorties d'outils pendant la compaction",
   "settings.context.watcherPatterns": "Motifs d'ignorance de l'observateur",
   "settings.context.watcherPatterns.description": "Motifs glob pour les fichiers que l'observateur doit ignorer",
+
+  "settings.context.memory.title": "Mémoire",
+  "settings.context.memory.project.title": "Mémoire du projet",
+  "settings.context.memory.autoSave.title": "Enregistrement automatique de la mémoire du projet",
+  "settings.context.memory.autoSave.description":
+    "Enregistrer automatiquement les faits durables du projet à partir des tours terminés lorsque la mémoire est activée.",
+  "settings.context.memory.index.title": "Index de mémoire",
+  "settings.context.memory.status.notLoaded": "Non chargée",
+  "settings.context.memory.status.disabled": "Désactivée",
+  "settings.context.memory.status.enabledTokensOps":
+    "Activée - ~{{session}} tokens de contexte initial dans cette session - ~{{tokens}} tokens dans l’index stocké - dernière opération {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Activez la mémoire pour créer les fichiers de mémoire du projet.",
+  "settings.context.memory.inspect": "Inspecter",
+  "settings.context.memory.rebuild": "Reconstruire l’index de mémoire",
+  "chat.memory.on": "Mémoire activée",
+  "chat.memory.label": "Mémoire · {{tokens}} tokens",
+  "chat.memory.status.loading": "Chargement de l’état de la mémoire",
+  "chat.memory.session.tokens": "Contexte initial de cette session : {{tokens}} tokens",
+  "chat.memory.total.tokens": "Index stocké : {{tokens}} tokens",
+  "chat.memory.project.enabled": "Mémoire du projet activée",
+  "chat.memory.project.disabled": "Mémoire du projet désactivée",
+  "chat.memory.command.failed": "La commande de mémoire a échoué",
+  "chat.memory.savedOperations": "Dernière opération de mémoire : {{count}} ops",
+  "chat.memory.inspect": "Inspecter la mémoire",
+  "chat.memory.remember": "Mémoriser",
+  "chat.memory.forget": "Oublier",
+  "chat.memory.rebuild": "Reconstruire l’index",
+  "chat.memory.disable": "Désactiver la mémoire",
+  "chat.memory.badge.injected": "Mémoire injectée",
+  "chat.memory.badge.recalled": "Mémoire rappelée",
+  "chat.memory.badge.startupCtx": "ctx initial",
+  "chat.memory.badge.items": "{{count}} éléments",
+  "chat.memory.badge.tokens": "{{tokens}} tokens",
+  "chat.memory.badge.recalledDetail": "Mémoire rappelée : {{count}} éléments - {{tokens}} tokens",
+  "chat.memory.badge.files": "Fichiers mémoire : {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Utiliser un prompt personnalisé",

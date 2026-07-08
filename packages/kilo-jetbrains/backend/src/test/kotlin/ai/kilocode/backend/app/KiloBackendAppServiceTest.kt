@@ -3,18 +3,21 @@ package ai.kilocode.backend.app
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.cli.CliServer
+import ai.kilocode.backend.cli.CliDownload
 import ai.kilocode.backend.rpc.appStateDto
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
@@ -67,7 +70,8 @@ class KiloBackendAppServiceTest {
 
         override fun process(): Process? = null
 
-        override suspend fun init(): CliServer.State {
+        override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit): CliServer.State {
+            onResolved()
             if (starts.getAndIncrement() == 0) {
                 val socket = ServerSocket(0)
                 srv = socket
@@ -100,6 +104,46 @@ class KiloBackendAppServiceTest {
         val ready = svc.appState.value as KiloAppState.Ready
         assertNotNull(ready.data.config)
         assertNotNull(ready.data.notifications)
+    }
+
+    @Test
+    fun `download progress maps to app state before ready`() = runBlocking {
+        val resolved = CompletableDeferred<Unit>()
+        val signal = CompletableDeferred<Unit>()
+        val server = object : CliServer {
+            override var forceExtract = false
+            override fun process(): Process? = null
+            override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit): CliServer.State {
+                onProgress(CliDownload(37, "1.2.3", "darwin-arm64"))
+                resolved.await()
+                onResolved()
+                signal.await()
+                return CliServer.State.Ready(mock.start(), mock.password)
+            }
+            override fun exited(proc: Process) {}
+            override fun stop() {}
+            override fun dispose() {}
+        }
+        val svc = KiloBackendAppService.create(scope, server, log)
+        val job = scope.launch { svc.connect() }
+
+        val downloading = withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Downloading }
+        }
+        assertEquals(KiloAppState.Downloading(37, "1.2.3", "darwin-arm64"), downloading)
+        val dto = appStateDto(downloading)
+        assertEquals(37, dto.downloadPercent)
+        assertEquals("1.2.3", dto.downloadVersion)
+        assertEquals("darwin-arm64", dto.downloadPlatform)
+
+        resolved.complete(Unit)
+        withTimeout(5_000) {
+            svc.appState.first { it == KiloAppState.Connecting }
+        }
+
+        signal.complete(Unit)
+        ready(svc)
+        job.join()
     }
 
     @Test
@@ -389,7 +433,7 @@ class KiloBackendAppServiceTest {
         val failing = object : ai.kilocode.backend.cli.CliServer {
             override var forceExtract = false
             override fun process(): Process? = null
-            override suspend fun init() = ai.kilocode.backend.cli.CliServer.State.Error(
+            override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit) = ai.kilocode.backend.cli.CliServer.State.Error(
                 message = "CLI startup failed",
                 details = "stderr: missing dependency",
             )
@@ -804,8 +848,34 @@ class KiloBackendAppServiceTest {
         assertEquals("alice@test.com", dto.profile?.email)
         assertEquals("Alice", dto.profile?.name)
         assertEquals("ADMIN", dto.profile?.organizations?.firstOrNull()?.role)
+        // The pinned CLI does not expose hasPersonalAccount yet; the mapper defaults it to true.
+        assertTrue(dto.profile?.hasPersonalAccount ?: false)
         assertEquals(42.5, dto.profile?.balance?.balance)
         assertEquals("org_1", dto.profile?.currentOrgId)
+    }
+
+    @Test
+    fun `ready dto hides unknown profile amounts`() = runBlocking {
+        mock.profile = """{
+            "profile":{"email":"alice@test.com","name":"Alice"},
+            "balance":{"balance":null},
+            "kiloPass":{
+                "currentPeriodBaseCreditsUsd":null,
+                "currentPeriodUsageUsd":null,
+                "currentPeriodBonusCreditsUsd":null,
+                "nextBillingAt":null
+            },
+            "currentOrgId":null
+        }""".trimIndent()
+        val svc = create()
+        svc.connect()
+
+        ready(svc)
+
+        val dto = appStateDto(svc.appState.value)
+        assertEquals("alice@test.com", dto.profile?.email)
+        assertNull(dto.profile?.balance)
+        assertNull(dto.profile?.kiloPass)
     }
 
     @Test

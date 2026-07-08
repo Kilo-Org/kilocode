@@ -390,6 +390,7 @@ export const dict = {
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
@@ -1198,6 +1199,8 @@ export const dict = {
 
   "common.retry": "Opnieuw proberen",
   "common.refresh": "Vernieuwen",
+  "common.reload": "Herladen",
+  "common.reloadDescription": "Herlaad configuratie, vaardigheden, agents en opdrachten vanaf schijf",
 
   "profile.title": "Profiel",
   "profile.notLoggedIn": "Niet ingelogd",
@@ -1441,6 +1444,10 @@ export const dict = {
   "settings.sandboxing.network.title": "Netwerktoegang beperken",
   "settings.sandboxing.network.description":
     "Blokkeer uitgaande netwerktoegang voor door het model geïnitieerde opdrachten en HTTP-tools. Lokale MCP-servers en plugin-hooks vallen buiten deze beperking. Netwerkverkeer voor providers en modelinferentie blijft beschikbaar.",
+
+  "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
+  "settings.sandboxing.writablePaths.description":
+    "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1591,6 +1598,7 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
+  "settings.context.compaction.title": "Compactie",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
@@ -1598,6 +1606,42 @@ export const dict = {
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
   "settings.context.watcherPatterns.description": "Glob-patronen voor bestanden die de watcher moet negeren",
+
+  "settings.context.memory.title": "Geheugen",
+  "settings.context.memory.project.title": "Projectgeheugen",
+  "settings.context.memory.autoSave.title": "Projectgeheugen automatisch opslaan",
+  "settings.context.memory.autoSave.description":
+    "Sla duurzame projectfeiten automatisch op uit voltooide beurten wanneer geheugen is ingeschakeld.",
+  "settings.context.memory.index.title": "Geheugenindex",
+  "settings.context.memory.status.notLoaded": "Niet geladen",
+  "settings.context.memory.status.disabled": "Uitgeschakeld",
+  "settings.context.memory.status.enabledTokensOps":
+    "Ingeschakeld - ~{{session}} startcontexttokens in deze sessie - ~{{tokens}} tokens in opgeslagen index - laatste bewerking {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Schakel geheugen in om projectgeheugenbestanden te maken.",
+  "settings.context.memory.inspect": "Inspecteren",
+  "settings.context.memory.rebuild": "Geheugenindex opnieuw opbouwen",
+  "chat.memory.on": "Geheugen aan",
+  "chat.memory.label": "Geheugen · {{tokens}} tokens",
+  "chat.memory.status.loading": "Geheugenstatus laden",
+  "chat.memory.session.tokens": "Startcontext deze sessie: {{tokens}} tokens",
+  "chat.memory.total.tokens": "Opgeslagen index: {{tokens}} tokens",
+  "chat.memory.project.enabled": "Projectgeheugen ingeschakeld",
+  "chat.memory.project.disabled": "Projectgeheugen uitgeschakeld",
+  "chat.memory.command.failed": "Geheugenopdracht mislukt",
+  "chat.memory.savedOperations": "Laatste geheugenbewerking: {{count}} bewerkingen",
+  "chat.memory.inspect": "Geheugen inspecteren",
+  "chat.memory.remember": "Onthouden",
+  "chat.memory.forget": "Vergeten",
+  "chat.memory.rebuild": "Index opnieuw opbouwen",
+  "chat.memory.disable": "Geheugen uitschakelen",
+  "chat.memory.badge.injected": "Geheugen geïnjecteerd",
+  "chat.memory.badge.recalled": "Geheugen opgehaald",
+  "chat.memory.badge.startupCtx": "startctx",
+  "chat.memory.badge.items": "{{count}} items",
+  "chat.memory.badge.tokens": "{{tokens}} tokens",
+  "chat.memory.badge.recalledDetail": "Geheugen opgehaald: {{count}} items - {{tokens}} tokens",
+  "chat.memory.badge.files": "Geheugenbestanden: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",

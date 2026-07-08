@@ -152,6 +152,43 @@
 
 ## [Unreleased]
 
+## [7.0.2] - 2026-07-07
+
+### Added
+
+- First GA release of the native Kilo extension for JetBrains IDEs.
+- Download the pinned Kilo Core release at runtime instead of bundling CLI binaries, keeping the JetBrains plugin smaller while verifying downloaded archives before use.
+- Show Kilo Core runtime details from the JetBrains plugin so users can see which Core release is active.
+
+### Fixed
+
+- Improve JetBrains runtime CLI download reliability by pruning stale binaries, using the shell environment for PATH resolution, and surfacing exact release-resolution failures.
+
+### Changed
+
+- Polish JetBrains chat UI with auto-collapsing reasoning previews, clearer retry/offline footer state, and more balanced prompt, code, question, todo, history, and popup spacing.
+- Show the active routed model name and remote status more consistently in CLI runtime surfaces.
+
+## [7.0.2-rc.2] - 2026-07-07
+
+### Added
+- Show compact previews for collapsed reasoning blocks so long assistant reasoning stays readable without taking over the transcript.
+- Add clearer Kilo Core runtime information and diagnostics for release download failures.
+
+### Fixed
+- Resolve the CLI executable using the user's shell environment so custom PATH setups work when sessions start from JetBrains.
+- Keep retry and offline status visible in the session footer while preserving transcript context.
+- Prevent oversized header popups by capping preview content.
+
+### Changed
+- Download the required Kilo Core release at runtime and prune stale cached runtime binaries automatically.
+- Polish JetBrains chat spacing, prompt input behavior, question/todo layout, history scrolling, code block padding, and session background colors.
+
+## [7.0.2-rc.1] - 2026-07-07
+
+### Added
+- Download the pinned Kilo Core release at runtime instead of bundling every CLI binary in the JetBrains plugin, keeping the Marketplace package smaller while still verifying downloaded artifacts.
+
 ## [7.0.1] - 2026-07-06
 
 ### Added

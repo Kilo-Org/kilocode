@@ -105,6 +105,9 @@
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
+        <action id="Kilo.CoreInfo"
+                class="ai.kilocode.client.actions.CoreInfoAction"/>
+
         <action id="Kilo.OpenSettings"
                 class="ai.kilocode.client.actions.OpenSettingsAction"/>
 
@@ -114,9 +117,11 @@
         <action id="Kilo.OpenGlobalConfig"
                 class="ai.kilocode.client.actions.OpenGlobalConfigAction"/>
 
-        <group id="Kilo.CliGroup" text="CLI" popup="true">
+        <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
+            <separator/>
+            <reference ref="Kilo.CoreInfo"/>
         </group>
 
         <group id="Kilo.OpenConfigGroup" text="Config Files" popup="true">

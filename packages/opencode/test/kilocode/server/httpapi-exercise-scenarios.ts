@@ -682,4 +682,14 @@ export const kiloScenarios: Scenario[] = [
     .post("/telemetry/setEnabled", "telemetry.setEnabled")
     .at((ctx) => ({ path: "/telemetry/setEnabled", headers: ctx.headers(), body: { enabled: true } }))
     .json(200, (body) => check(body === true, "telemetry enabled update should return true")),
+  http.protected
+    .post("/instance/reload", "instance.reload")
+    .mutating()
+    .seeded((ctx) => ctx.session({ title: "Reload" }))
+    .at((ctx) => ({
+      path: `/instance/reload?directory=${encodeURIComponent(directory(ctx))}`,
+      headers: ctx.headers(),
+      body: {},
+    }))
+    .json(200, (body) => check(body === true, "instance reload should return true")),
 ]

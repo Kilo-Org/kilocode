@@ -80,6 +80,7 @@ import { deleteDraftsForSession } from "../utils/draft-store"
 import { createAbortState } from "./abort-state"
 import { clearIfOn, createCloudPrune } from "./session-cloud-prune"
 import { isSameSessionTree } from "./model-usage"
+import { createDraftAgentSeed } from "./session-agent"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
@@ -555,7 +556,17 @@ export const SessionProvider: ParentComponent = (props) => {
     if (sessionID) return store.agentSelections[sessionID] ?? defaultAgent()
     return selectedAgentName()
   }
-
+  const agentDrafts = createDraftAgentSeed({
+    selections: () => store.agentSelections,
+    pending: pendingAgentSelection,
+    active: (draft) => !!submissionMap[draft],
+    set: (draft, agent) => setStore("agentSelections", draft, agent),
+    drop: (draft) =>
+      setStore(
+        "agentSelections",
+        produce((agents) => void delete agents[draft]),
+      ),
+  })
   const agentNames = createMemo(() => new Set(agents().map((agent) => agent.name)))
 
   const { pendingCloudPrune, prune: pruneCloudOrphans } = createCloudPrune((m) => setStore("parts", produce(m)), stash)
@@ -1319,6 +1330,7 @@ export const SessionProvider: ParentComponent = (props) => {
             for (const key of sessionVariantKeys(variants, draftID)) delete variants[key]
           }),
         )
+        agentDrafts.promote(draftID)
       } else if (pendingAgent && !store.agentSelections[session.id]) {
         setStore("agentSelections", session.id, pendingAgent)
         setPendingAgentSelection(null)
@@ -1835,6 +1847,7 @@ export const SessionProvider: ParentComponent = (props) => {
     })
 
     if (!message.sessionID && message.draftID) {
+      if (draftSessionID() !== message.draftID) agentDrafts.prune(message.draftID)
       setDraftSessionID(message.draftID)
     }
   }
@@ -2258,6 +2271,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, text, files, review)
@@ -2330,6 +2344,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const effectiveDraftID = !sid && !draftID ? crypto.randomUUID() : draftID
     const scope = effectiveDraftID ?? sid
+    if (!sid && !draftID && effectiveDraftID) agentDrafts.seed(effectiveDraftID)
     if (scope) {
       clearClose(scope)
       addOptimistic(scope, messageID, `/${command} ${args}`.trim(), files)
@@ -2500,11 +2515,13 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     // Reset agent selection to default for the new session (model overrides persist)
+    agentDrafts.prune(draftSessionID())
     setPendingAgentSelection(defaultAgent())
     vscode.postMessage({ type: "createSession" })
   }
 
   function clearCurrentSession() {
+    agentDrafts.prune(draftSessionID())
     setUserClearedSession(true)
     setCurrentSessionID(undefined)
     setDraftSessionID(undefined)
@@ -2553,6 +2570,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // they update even while disconnected. Bailing out here when not connected
     // froze the chat on the previous session while the side diff (resolved from
     // the worktree selection) still moved (the reported "only the diff changes").
+    agentDrafts.prune(draftSessionID())
     setCurrentSessionID(id)
     setDraftSessionID(id)
     setUserClearedSession(false)
@@ -2599,6 +2617,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     const key = `cloud:${cloudSessionId}`
+    agentDrafts.prune(draftSessionID())
     setCloudPreviewId(cloudSessionId)
     setCurrentSessionID(key)
     setDraftSessionID(key)
