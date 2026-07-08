@@ -2641,6 +2641,7 @@ export type StackCatalogResponse = {
         resources: Array<{
           ref: string
           default: boolean
+          curated?: boolean
           trust: "official" | "provider" | "community"
           maturity: "stable" | "preview" | "beta" | "experimental" | "alpha" | "unsupported"
           source: string
@@ -2664,6 +2665,8 @@ export type StackCatalogResponse = {
                 description?: string
               }
           >
+          deprecated?: boolean
+          replacement?: string
         }>
       }>
       categories: Array<Objects>
@@ -2834,6 +2837,7 @@ export type StackCatalogResponse = {
         }
   }>
   expected_resources: Array<string>
+  catalog_origin?: "served" | "fallback"
 }
 
 export type StackMarketplaceUnavailableError = {
@@ -10672,7 +10676,7 @@ export type KiloProfileResponses = {
       currentPeriodBaseCreditsUsd: number
       currentPeriodUsageUsd: number
       currentPeriodBonusCreditsUsd: number
-      nextBillingAt?: string | null
+      nextBillingAt?: string
     } | null
     currentOrgId: string | null
   }

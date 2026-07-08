@@ -35,12 +35,13 @@ const resources = [
   resource(refs.mcp, "mcp"),
 ]
 
-function association(ref: Stack.ResourceRef, enabled: boolean) {
+function association(ref: Stack.ResourceRef, enabled: boolean, curated = true) {
   const item = resources.find((candidate) => candidate.ref === ref)
   if (!item) throw new Error(`Missing resource fixture ${ref}`)
   return {
     ref,
     default: enabled,
+    curated,
     trust: item.trust,
     maturity: item.maturity,
     source: item.source,

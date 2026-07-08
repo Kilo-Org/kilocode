@@ -16,9 +16,6 @@ export const IssueCode = Schema.Literals([
   "unsafe_default",
   "unplaced_technology",
   "unreferenced_resource",
-  "technology_count_mismatch",
-  "placement_count_mismatch",
-  "duplicate_placement_mismatch",
   "expected_resource_collision",
   "expected_resource_missing",
   "unexpected_resource",
@@ -157,11 +154,11 @@ export function validate(source: Stack.Catalog, manifest: ReadonlyArray<Stack.Re
             message: `Association metadata for ${association.ref} is stale.`,
           })
         }
-        if (association.default && !defaultable(resource)) {
+        if (association.default && (!defaultable(resource) || !association.curated)) {
           issues.push({
             code: "unsafe_default",
             path: target,
-            message: `Only stable first-party Skills and MCP servers may be enabled by default.`,
+            message: `Only stable first-party Skills and MCP servers in Kilo-curated associations may be enabled by default.`,
           })
         }
       }
@@ -208,34 +205,6 @@ export function validate(source: Stack.Catalog, manifest: ReadonlyArray<Stack.Re
       })
     }
 
-    if (vertical.id !== "data") continue
-    if (vertical.technologies.length !== 100) {
-      issues.push({
-        code: "technology_count_mismatch",
-        path: `${base}.technologies`,
-        message: `Data must contain exactly 100 technologies; found ${vertical.technologies.length}.`,
-      })
-    }
-    const total = [...counts.values()].reduce((sum, count) => sum + count, 0)
-    if (total !== 103) {
-      issues.push({
-        code: "placement_count_mismatch",
-        path: `${base}.categories`,
-        message: `Data must contain exactly 103 category placements; found ${total}.`,
-      })
-    }
-    const duplicates = [...counts.entries()]
-      .filter(([, count]) => count > 1)
-      .map(([id, count]) => `${id}:${count}`)
-      .toSorted()
-    const approved = ["apache-hudi:2", "aws-glue:2", "azure-data-factory:2"]
-    if (JSON.stringify(duplicates) !== JSON.stringify(approved)) {
-      issues.push({
-        code: "duplicate_placement_mismatch",
-        path: `${base}.categories`,
-        message: `Data duplicate placements must be Apache Hudi, AWS Glue, and Azure Data Factory; found ${duplicates.join(", ") || "none"}.`,
-      })
-    }
   }
 
   for (const resource of source.resources) {

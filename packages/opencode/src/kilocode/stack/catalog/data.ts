@@ -2126,6 +2126,7 @@ function assoc(ref: Stack.ResourceRef): Stack.Association {
   return {
     ref: item.ref,
     default: enabled,
+    curated: true,
     trust: item.trust,
     maturity: item.maturity,
     source: item.source,

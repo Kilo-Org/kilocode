@@ -7,6 +7,7 @@ import { Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { applyEdits, modify } from "jsonc-parser"
 import { Marketplace } from "@/kilocode/marketplace"
+import { CatalogSource } from "@/kilocode/stack/catalog/source"
 import { StackRuntime } from "@/kilocode/stack/runtime"
 import { Stack } from "@/kilocode/stack/schema"
 import { StackService } from "@/kilocode/stack/service"
@@ -130,7 +131,10 @@ function layer(cache: string, value: HttpClient.HttpClient) {
   const market = Marketplace.layer({ endpoint, cacheDir: cache }).pipe(
     Layer.provide(Layer.succeed(HttpClient.HttpClient, value)),
   )
-  return StackService.layer.pipe(Layer.provide(market))
+  return StackService.layer.pipe(
+    Layer.provide(CatalogSource.snapshotLayer),
+    Layer.provide(market),
+  )
 }
 
 function selected(root = ".") {
@@ -502,6 +506,7 @@ describe("Stack orchestration service", () => {
           }),
         )
         const serviceLayer = StackService.layer.pipe(
+          Layer.provide(CatalogSource.snapshotLayer),
           Layer.provide(pausing),
           Layer.provide(
             Marketplace.layer({ endpoint, cacheDir: cache }).pipe(
@@ -567,6 +572,7 @@ describe("Stack orchestration service", () => {
           }),
         )
         const serviceLayer = StackService.layer.pipe(
+          Layer.provide(CatalogSource.snapshotLayer),
           Layer.provide(defective),
           Layer.provide(
             Marketplace.layer({ endpoint, cacheDir: cache }).pipe(
@@ -613,6 +619,7 @@ describe("Stack orchestration service", () => {
           }),
         )
         const serviceLayer = StackService.layer.pipe(
+          Layer.provide(CatalogSource.snapshotLayer),
           Layer.provide(flaky),
           Layer.provide(
             Marketplace.layer({ endpoint, cacheDir: cache }).pipe(

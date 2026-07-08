@@ -94,15 +94,23 @@ export namespace Stack {
   })
   export type Resource = Schema.Schema.Type<typeof Resource>
 
+  export const CatalogOrigin = Schema.Literals(["served", "fallback"])
+  export type CatalogOrigin = Schema.Schema.Type<typeof CatalogOrigin>
+
   export const Association = Schema.Struct({
     ref: ResourceRef,
     default: Schema.Boolean,
+    /** True when this association is Kilo-curated (authoritative for defaults).
+     * False or absent when supplied as an advisory publisher tag. */
+    curated: Schema.optional(Schema.Boolean),
     trust: Trust,
     maturity: Maturity,
     source: Source,
     rationale: Schema.String.check(Schema.isMinLength(1)),
     warnings: Schema.Array(Schema.String),
     parameters: Schema.optional(Schema.Array(Parameter)),
+    deprecated: Schema.optional(Schema.Boolean),
+    replacement: Schema.optional(ResourceRef),
   })
   export type Association = Schema.Schema.Type<typeof Association>
 
@@ -278,6 +286,8 @@ export namespace Stack {
     catalog: Catalog,
     resources: Schema.Array(ResourceSummary),
     expected_resources: Schema.Array(ResourceRef),
+    /** Indicates whether the catalog was resolved from the served Marketplace document or the bundled fallback snapshot. */
+    catalog_origin: Schema.optional(CatalogOrigin),
   })
   export type CatalogResponse = Schema.Schema.Type<typeof CatalogResponse>
 

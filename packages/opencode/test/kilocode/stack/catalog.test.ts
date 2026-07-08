@@ -329,6 +329,14 @@ describe("Data Engineering catalog", () => {
     }
   })
 
+  test("all snapshot associations carry curated:true", () => {
+    for (const technology of data.technologies) {
+      for (const association of technology.resources) {
+        expect(association.curated, association.ref).toBeTrue()
+      }
+    }
+  })
+
   test("defaults stable official Skills and MCP servers, deduplicating shared resources", () => {
     const selected = [Stack.TechnologyID.make("apache-airflow"), Stack.TechnologyID.make("astronomer")]
     const refs = defaults(builtin, selected)
@@ -384,26 +392,6 @@ describe("catalog invariants", () => {
     expect(codes).toContain("technology_id_collision")
   })
 
-  test("reports Data count and approved duplicate-placement drift", () => {
-    const fewer = { ...data, technologies: data.technologies.slice(1) }
-    const repeated = {
-      ...data,
-      categories: [
-        {
-          ...data.categories[0],
-          technologies: [...data.categories[0].technologies, data.categories[0].technologies[2]],
-        },
-        ...data.categories.slice(1),
-      ],
-    }
-    expect(validate({ ...builtin, verticals: [fewer] }, expected).map((issue) => issue.code)).toContain(
-      "technology_count_mismatch",
-    )
-    const codes = validate({ ...builtin, verticals: [repeated] }, expected).map((issue) => issue.code)
-    expect(codes).toContain("placement_count_mismatch")
-    expect(codes).toContain("duplicate_placement_mismatch")
-  })
-
   test("reports unsafe defaults and duplicate expected Marketplace IDs", () => {
     const technology = data.technologies.find((item) => item.id === "apache-kafka")
     if (!technology) throw new Error("Apache Kafka fixture is missing")
@@ -425,6 +413,31 @@ describe("catalog invariants", () => {
     )
     expect(validate(builtin, [...expected, expected[0]]).map((issue) => issue.code)).toContain(
       "expected_resource_collision",
+    )
+  })
+
+  test("reports unsafe defaults for non-curated associations with default:true on defaultable resources", () => {
+    // An advisory (curated:false) association must not be allowed to set default=true
+    // on even a stable first-party skill or MCP — only curated associations may do so.
+    const technology = data.technologies.find((item) => item.id === "dbt")
+    if (!technology) throw new Error("dbt fixture is missing")
+    const mcpAssoc = technology.resources.find((r) => r.ref === "mcp:dbt")
+    if (!mcpAssoc) throw new Error("mcp:dbt association is missing")
+    const vertical = {
+      ...data,
+      technologies: data.technologies.map((item) =>
+        item.id === "dbt"
+          ? {
+              ...item,
+              resources: item.resources.map((r) =>
+                r.ref === "mcp:dbt" ? { ...r, default: true, curated: false } : r,
+              ),
+            }
+          : item,
+      ),
+    }
+    expect(validate({ ...builtin, verticals: [vertical] }, expected).map((issue) => issue.code)).toContain(
+      "unsafe_default",
     )
   })
 

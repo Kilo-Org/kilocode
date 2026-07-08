@@ -1,7 +1,6 @@
 import { Effect } from "effect"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Stack } from "../schema"
-import { builtin } from "./index"
 
 export type ProjectTechContext = {
   readonly dir: string
@@ -316,9 +315,14 @@ const registry: Partial<Record<string, Detector>> = {
     ),
 }
 
-export function detect(ctx: ProjectTechContext): Stack.Detection[] {
+/**
+ * Emit normalized technology IDs + evidence for all technologies found in `catalog` whose
+ * detector heuristic matches the `ctx`. Technology IDs not present in the detector registry
+ * are silently skipped; unknown IDs emitted by future catalog versions are never returned.
+ */
+export function detect(ctx: ProjectTechContext, catalog: Stack.Catalog): Stack.Detection[] {
   const out: Stack.Detection[] = []
-  for (const vertical of builtin.verticals) {
+  for (const vertical of catalog.verticals) {
     for (const technology of vertical.technologies) {
       const detector = registry[technology.id]
       if (!detector) continue

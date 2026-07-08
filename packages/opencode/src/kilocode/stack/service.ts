@@ -2,8 +2,8 @@ import { Cause, Context, Effect, Exit, Layer, Ref, Schema } from "effect"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import type { Item, Manifest, ResolvedMcp, SkillItem } from "../marketplace/schema"
 import { Marketplace } from "../marketplace/service"
-import { builtin, expectedMarketplaceResources } from "./catalog"
 import { buildContext, detect as detectTechnologies } from "./catalog/detect"
+import { CatalogSource } from "./catalog/source"
 import { Planner } from "./planner"
 import { StackRuntime } from "./runtime"
 import { Stack } from "./schema"
@@ -130,13 +130,14 @@ export namespace StackService {
   }
 
   function state(
+    catalog: Stack.Catalog,
     snapshot: StackStore.Snapshot,
     manifest: Manifest | undefined,
     inventory: Planner.Inventory,
   ): Stack.StateResponse {
     const value = draft(snapshot.stack)
     const plan = Planner.plan({
-      catalog: builtin,
+      catalog,
       marketplace: manifest,
       draft: value,
       inventory,
@@ -144,7 +145,7 @@ export namespace StackService {
       config_revision: snapshot.revision,
       platform: platform(),
     })
-    const resolution = Planner.resolve(builtin, value)
+    const resolution = Planner.resolve(catalog, value)
     const desired = new Map(resolution.resources.map((item) => [item.ref, item]))
     const actions = new Map(plan.actions.map((action) => [action.resource, action]))
     const receipts = snapshot.stack?.managed ?? {}
@@ -179,7 +180,7 @@ export namespace StackService {
       resources,
       conflicts: plan.conflicts,
       config_revision: snapshot.revision,
-      catalog_revision: builtin.revision,
+      catalog_revision: catalog.revision,
     }
   }
 
@@ -190,6 +191,7 @@ export namespace StackService {
       const store = yield* StackStore.Service
       const runtime = yield* StackRuntime.Service
       const fs = yield* AppFileSystem.Service
+      const catalogSource = yield* CatalogSource.Service
 
       const manifest = Effect.fnUntraced(function* () {
         return yield* marketplace
@@ -201,20 +203,20 @@ export namespace StackService {
         return yield* store.read().pipe(Effect.mapError(() => new InvalidConfigError({ message: INVALID_CONFIG })))
       })
 
-      const inventory = Effect.fnUntraced(function* (current: StackStore.Snapshot) {
+      const inventory = Effect.fnUntraced(function* (current: StackStore.Snapshot, resolved: Stack.Catalog) {
         const managed = Object.keys(current.stack?.managed ?? {}).map((ref) => Stack.ResourceRef.make(ref))
-        const targets = [...new Set([...builtin.resources.map((resource) => resource.ref), ...managed])]
+        const targets = [...new Set([...resolved.resources.map((resource) => resource.ref), ...managed])]
         return yield* runtime
           .inventory(current.mcp, targets, managed)
           .pipe(Effect.catchCause(() => new InvalidConfigError({ message: INVALID_CONFIG })))
       })
 
-      const load = Effect.fnUntraced(function* () {
+      const load = Effect.fnUntraced(function* (resolved: Stack.Catalog) {
         const first = yield* snapshot()
-        const local = yield* inventory(first)
+        const local = yield* inventory(first, resolved)
         const latest = yield* snapshot()
         if (latest.revision === first.revision) return { snapshot: first, inventory: local }
-        return { snapshot: latest, inventory: yield* inventory(latest) }
+        return { snapshot: latest, inventory: yield* inventory(latest, resolved) }
       })
 
       const decode = Effect.fnUntraced(function* (input: Stack.Draft) {
@@ -225,34 +227,38 @@ export namespace StackService {
 
       const catalog = Effect.fn("Stack.catalog")(function* () {
         yield* InstanceState.context
+        const { catalog: cat, origin } = yield* catalogSource.get()
         const source = (yield* manifest()).manifest
         const found = items(source)
-        const resources = builtin.resources.map((entry): Stack.ResourceSummary => {
+        const expected = cat.resources.map((r) => r.ref).toSorted()
+        const resources = cat.resources.map((entry): Stack.ResourceSummary => {
           const item = found.get(entry.ref)
           if (!item) return { resource: entry, availability: "missing", reason: "Resource is absent from Marketplace." }
           const reason = unavailable(item)
           if (reason) return { resource: entry, availability: "blocked", reason, item }
           return { resource: entry, availability: "available", item }
         })
-        return { catalog: builtin, resources, expected_resources: expectedMarketplaceResources }
+        return { catalog: cat, resources, expected_resources: expected, catalog_origin: origin }
       })
 
       const get = Effect.fn("Stack.get")(function* () {
         yield* InstanceState.context
-        const current = yield* load()
+        const { catalog: cat } = yield* catalogSource.get()
+        const current = yield* load(cat)
         const source = (yield* manifest()).manifest
-        return state(current.snapshot, source, current.inventory)
+        return state(cat, current.snapshot, source, current.inventory)
       })
 
       const preview = Effect.fn("Stack.preview")(function* (input: Stack.Draft) {
         yield* InstanceState.context
-        const current = yield* load()
+        const { catalog: cat } = yield* catalogSource.get()
+        const current = yield* load(cat)
         const source = yield* marketplace.manifest().pipe(
           Effect.map((value) => value.manifest),
           Effect.catch(() => Effect.succeed(undefined)),
         )
         return Planner.plan({
-          catalog: builtin,
+          catalog: cat,
           marketplace: source,
           draft: yield* decode(input),
           inventory: current.inventory,
@@ -265,10 +271,11 @@ export namespace StackService {
       const apply = Effect.fn("Stack.apply")(function* (input: Stack.Draft, hash: Stack.Digest) {
         yield* InstanceState.context
         const selected = yield* decode(input)
+        const { catalog: cat } = yield* catalogSource.get()
         const body = Effect.scoped(
           Effect.gen(function* () {
             yield* InstanceState.context
-            const loaded = yield* load()
+            const loaded = yield* load(cat)
             const current = loaded.snapshot
             const local = loaded.inventory
             const source = yield* marketplace.manifest().pipe(
@@ -276,7 +283,7 @@ export namespace StackService {
               Effect.catch(() => Effect.succeed(undefined)),
             )
             const plan = Planner.plan({
-              catalog: builtin,
+              catalog: cat,
               marketplace: source,
               draft: selected,
               inventory: local,
@@ -412,7 +419,7 @@ export namespace StackService {
             )
             const next = yield* Schema.decodeUnknownEffect(Stack.Config)({
               version: 1,
-              catalog_revision: builtin.revision,
+              catalog_revision: cat.revision,
               verticals: plan.draft.verticals,
               resources: plan.draft.resources,
               managed,
@@ -502,7 +509,7 @@ export namespace StackService {
               }
               return {
                 results: plan.actions.map(success),
-                state: state(refreshed, source, verified),
+                state: state(cat, refreshed, source, verified),
               }
             })
 
@@ -551,9 +558,10 @@ export namespace StackService {
 
       const detect = Effect.fn("Stack.detect")(function* () {
         yield* InstanceState.context
+        const { catalog: cat } = yield* catalogSource.get()
         const dir = yield* InstanceState.directory
         const ctx = yield* buildContext(dir, fs)
-        return { detections: detectTechnologies(ctx) }
+        return { detections: detectTechnologies(ctx, cat) }
       })
 
       return Service.of({ catalog, get, preview, apply, detect })
@@ -561,6 +569,7 @@ export namespace StackService {
   )
 
   export const defaultLayer = layer.pipe(
+    Layer.provide(CatalogSource.defaultLayer),
     Layer.provide(StackRuntime.defaultLayer),
     Layer.provide(StackStore.defaultLayer),
     Layer.provide(Marketplace.defaultLayer),

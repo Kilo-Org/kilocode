@@ -149,7 +149,9 @@ export namespace Planner {
           technologies: new Set<Stack.TechnologyID>(),
           warnings: new Set<string>(),
         }
-        group.default = group.default || association.default
+        // Only Kilo-curated associations may promote a resource to default.
+        // Advisory (publisher-supplied) associations surface the resource as a candidate but never set default.
+        if (association.curated === true) group.default = group.default || association.default
         group.technologies.add(technology.id)
         association.warnings.forEach((warning) => group.warnings.add(warning))
         groups.set(association.ref, group)

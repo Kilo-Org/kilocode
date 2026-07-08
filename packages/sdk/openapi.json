@@ -13079,14 +13079,7 @@
                               "type": "number"
                             },
                             "nextBillingAt": {
-                              "anyOf": [
-                                {
-                                  "type": "string"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -25225,6 +25218,9 @@
                                 "default": {
                                   "type": "boolean"
                                 },
+                                "curated": {
+                                  "type": "boolean"
+                                },
                                 "trust": {
                                   "type": "string",
                                   "enum": ["official", "provider", "community"]
@@ -25318,6 +25314,13 @@
                                       }
                                     ]
                                   }
+                                },
+                                "deprecated": {
+                                  "type": "boolean"
+                                },
+                                "replacement": {
+                                  "type": "string",
+                                  "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
                                 }
                               },
                               "required": ["ref", "default", "trust", "maturity", "source", "rationale", "warnings"],
@@ -26065,6 +26068,10 @@
               "type": "string",
               "pattern": "^(?:skill|mcp):[a-z0-9]+(?:-[a-z0-9]+)*$"
             }
+          },
+          "catalog_origin": {
+            "type": "string",
+            "enum": ["served", "fallback"]
           }
         },
         "required": ["catalog", "resources", "expected_resources"],

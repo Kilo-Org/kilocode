@@ -3,19 +3,20 @@ import { describe, expect, test } from "bun:test"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Layer } from "effect"
 import { buildContext, contextFrom, detect, type ProjectTechContext } from "@/kilocode/stack/catalog/detect"
+import { builtin } from "@/kilocode/stack/catalog"
 import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const it = testEffect(Layer.mergeAll(AppFileSystem.defaultLayer))
 
 function ids(ctx: ProjectTechContext): string[] {
-  return detect(ctx)
+  return detect(ctx, builtin)
     .map((d) => String(d.technology))
     .toSorted()
 }
 
 function evidenceFor(ctx: ProjectTechContext, technology: string): string | undefined {
-  return detect(ctx).find((d) => String(d.technology) === technology)?.evidence
+  return detect(ctx, builtin).find((d) => String(d.technology) === technology)?.evidence
 }
 
 describe("Stack detection registry", () => {
@@ -94,7 +95,7 @@ describe("Stack detection registry", () => {
       packageJson: { dependencies: { "snowflake-sdk": "^1", redis: "^4" } },
       requirementsText: "mlflow\n",
     })
-    for (const d of detect(ctx)) expect(String(d.vertical)).toBe("data")
+    for (const d of detect(ctx, builtin)) expect(String(d.vertical)).toBe("data")
   })
 
   test("every detection carries a non-empty evidence string", () => {
@@ -104,7 +105,7 @@ describe("Stack detection registry", () => {
       requirementsText: "mlflow\n",
       files: ["dbt_project.yml"],
     })
-    for (const d of detect(ctx)) expect(d.evidence.length).toBeGreaterThan(0)
+    for (const d of detect(ctx, builtin)) expect(d.evidence.length).toBeGreaterThan(0)
   })
 })
 
@@ -134,7 +135,7 @@ describe("Stack buildContext", () => {
       yield* fs.writeWithDirs(path.join(test.directory, "src", "index.ts"), "console.log(1)\n")
 
       const ctx = yield* buildContext(test.directory, fs)
-      expect(detect(ctx)).toEqual([])
+      expect(detect(ctx, builtin)).toEqual([])
     }),
   )
 })
