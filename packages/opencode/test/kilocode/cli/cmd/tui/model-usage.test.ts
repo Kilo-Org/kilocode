@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { Session } from "@kilocode/sdk/v2"
+import { createRoot } from "solid-js"
 import {
   failed,
   formatRate,
@@ -7,6 +8,7 @@ import {
   isSessionTreeMember,
   select,
   type SessionModelUsage,
+  useModelUsage,
 } from "@/kilocode/plugins/model-usage"
 
 const session = (id: string, parentID?: string) =>
@@ -85,4 +87,67 @@ describe("TUI model usage", () => {
     ])
     expect(formatRate({ input: 100, output: 0, reasoning: 0, cache: { read: 300, write: 100 } })).toBe("60.0%")
   })
+
+  test("shares usage and transfers subscriptions between plugin wrappers", async () => {
+    const state = { session: { get: () => undefined } }
+    let calls = 0
+    const client = {
+      kilocode: {
+        sessionModelUsage: () => {
+          calls++
+          return Promise.resolve({ data })
+        },
+      },
+    }
+    const wrapper = () => {
+      let active = 0
+      const api = {
+        state,
+        client,
+        event: {
+          on: () => {
+            active++
+            let open = true
+            return () => {
+              if (!open) return
+              open = false
+              active--
+            }
+          },
+        },
+      }
+      return { api, active: () => active }
+    }
+    const first = wrapper()
+    const second = wrapper()
+    const mount = (api: Parameters<typeof useModelUsage>[0]) => {
+      let dispose = () => {}
+      createRoot((stop) => {
+        dispose = stop
+        useModelUsage(api, () => "ses_current")
+      })
+      return () => dispose()
+    }
+
+    const disposeFirst = mount(first.api)
+    const disposeSecond = mount(second.api)
+    await waitFor(() => first.active() > 0)
+    expect(calls).toBe(1)
+    expect(second.active()).toBe(0)
+
+    disposeFirst()
+    await waitFor(() => second.active() > 0)
+    expect(first.active()).toBe(0)
+
+    disposeSecond()
+    expect(second.active()).toBe(0)
+  })
 })
+
+async function waitFor(check: () => boolean) {
+  const start = Date.now()
+  while (!check()) {
+    if (Date.now() - start > 1_000) throw new Error("timed out waiting for Solid lifecycle")
+    await new Promise((resolve) => setTimeout(resolve, 1))
+  }
+}
