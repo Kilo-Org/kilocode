@@ -1653,6 +1653,10 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "เช่น สร้าง commit messages เป็นภาษาสเปนตามรูปแบบ conventional commits คืนค่าเฉพาะ commit message เท่านั้น",
 
+  "settings.commitMessage.language.sync": "ซิงค์กับภาษา UI",
+  "settings.commitMessage.language.title": "ภาษา",
+  "settings.commitMessage.language.description": "เลือกภาษาใดที่จะใช้สําหรับข้อความ commit ที่สร้างโดย AI:",
+
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
   "settings.display.fontSize.title": "ขนาดฟอนต์",

@@ -10087,6 +10087,7 @@ export type CommitMessageGenerateData = {
     path: string
     selectedFiles?: Array<string>
     previousMessage?: string
+    language?: string
   }
   path?: never
   query?: {

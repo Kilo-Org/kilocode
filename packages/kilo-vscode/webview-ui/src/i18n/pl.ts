@@ -1684,6 +1684,11 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "np. Generuj commit messages w języku hiszpańskim zgodnie z formatem conventional commits. Zwróć TYLKO commit message.",
 
+  "settings.commitMessage.language.sync": "Synchronizacja z językiem UI",
+  "settings.commitMessage.language.title": "Język",
+  "settings.commitMessage.language.description":
+    "Wybierz, jaki język używać do wiadomości generowanych przez sztuczną inteligencję:",
+
   "settings.display.username.title": "Nazwa użytkownika",
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.fontSize.title": "Rozmiar czcionki",

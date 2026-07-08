@@ -1478,6 +1478,11 @@ export const dict = {
     "Prompt di sistema inviato all'AI quando genera messaggi di commit. Sostituisce completamente il prompt predefinito.",
   "settings.commitMessage.prompt.placeholder":
     "es. Genera messaggi di commit in spagnolo seguendo il formato conventional commits. Restituisci SOLO il messaggio di commit.",
+
+  "settings.commitMessage.language.sync": "Sincronizzazione con la lingua dell'interfaccia utente",
+  "settings.commitMessage.language.title": "Lingua",
+  "settings.commitMessage.language.description": "Scegli quale lingua usare per i messaggi di commit generati da AI:",
+
   "settings.display.username.title": "Nome utente",
   "settings.display.username.description": "Nome utente personalizzato mostrato nelle conversazioni",
   "settings.display.fontSize.title": "Dimensione font",
