@@ -1,7 +1,7 @@
 import type { Ignore } from "ignore"
 import path from "path"
 
-import { getDefaultModelId } from "./model-registry"
+import { getDefaultModelId, getModelDimension } from "./model-registry"
 import { resolveEmbeddingProfile } from "./embedding-profile"
 
 import { OpenAiEmbedder } from "./embedders/openai"
@@ -61,9 +61,10 @@ export class CodeIndexServiceFactory {
     }
   }
 
-  public createEmbedder(): IEmbedder {
+  public createEmbedder(dimensionOverride?: number): IEmbedder {
     const config = this.configManager.getConfig()
     const provider = config.embedderProvider
+    const dimension = dimensionOverride ?? config.modelDimension
 
     if (provider === "kilo") {
       if (!config.kiloOptions?.apiKey) throw new Error("Kilo API key is required for embedding.")
@@ -73,7 +74,7 @@ export class CodeIndexServiceFactory {
         baseUrl: config.kiloOptions.baseUrl,
         organizationId: config.kiloOptions.organizationId,
         modelId: config.modelId,
-        dimensions: config.modelDimension,
+        dimensions: dimension,
       })
     }
     if (provider === "openai") {
@@ -82,7 +83,7 @@ export class CodeIndexServiceFactory {
     }
     if (provider === "ollama") {
       if (!config.ollamaOptions?.baseUrl) throw new Error("Ollama base URL is required for embedding.")
-      return new CodeIndexOllamaEmbedder(config.ollamaOptions.baseUrl, config.modelId, config.modelDimension)
+      return new CodeIndexOllamaEmbedder(config.ollamaOptions.baseUrl, config.modelId, dimension)
     }
     if (provider === "openai-compatible") {
       if (!config.openAiCompatibleOptions?.baseUrl) throw new Error("OpenAI-compatible base URL is required.")
@@ -116,7 +117,7 @@ export class CodeIndexServiceFactory {
         config.modelId,
         undefined,
         config.openRouterOptions.specificProvider,
-        config.modelDimension,
+        dimension,
       )
     }
     if (provider === "voyage") {
@@ -169,9 +170,9 @@ export class CodeIndexServiceFactory {
     }
   }
 
-  public createVectorStore(workspacePath = this.workspacePath): IVectorStore {
+  public createVectorStore(workspacePath = this.workspacePath, dimensionOverride?: number): IVectorStore {
     const config = this.configManager.getConfig()
-    const profile = resolveEmbeddingProfile(config.embedderProvider, config.modelId, config.modelDimension)
+    const profile = resolveEmbeddingProfile(config.embedderProvider, config.modelId, dimensionOverride ?? config.modelDimension)
 
     if (!profile || profile.dimension <= 0) {
       throw new Error(
@@ -246,31 +247,55 @@ export class CodeIndexServiceFactory {
     )
   }
 
-  public createServices(
+  public async detectEmbeddingDimension(embedder: IEmbedder): Promise<number> {
+    log.info("detecting embedding dimension", { provider: embedder.embedderInfo.name })
+    const response = await embedder.createEmbeddings(["test"])
+    const dimension = response.embeddings[0]?.length
+    if (!dimension || dimension <= 0) {
+      throw new Error(`Failed to detect embedding dimension: invalid response from ${embedder.embedderInfo.name}`)
+    }
+    log.info("detected embedding dimension", { provider: embedder.embedderInfo.name, dimension })
+    return dimension
+  }
+
+  public async createServices(
     cacheManager: CacheManager,
     ignoreInstance: Ignore,
-  ): {
+  ): Promise<{
     embedder: IEmbedder
     vectorStore: IVectorStore
     parser: ICodeParser
     scanner: DirectoryScanner
     fileWatcher: IFileWatcher
-  } {
+  }> {
     if (!this.configManager.isFeatureConfigured) {
       throw new Error("Code indexing is not configured. Save your settings to start indexing.")
     }
 
     const config = this.configManager.getConfig()
+    const modelId = config.modelId ?? getDefaultModelId(config.embedderProvider)
+    const registryDimension = getModelDimension(config.embedderProvider, modelId)
+
     log.info("creating indexing services", {
       workspacePath: this.workspacePath,
       provider: config.embedderProvider,
       vectorStore: config.vectorStoreProvider,
-      model: config.modelId ?? getDefaultModelId(config.embedderProvider),
+      model: modelId,
       configured: config.isConfigured,
     })
 
-    const embedder = this.createEmbedder()
-    const vectorStore = this.createVectorStore()
+    let effectiveDimension: number | undefined
+    if (config.modelDimension) {
+      effectiveDimension = config.modelDimension
+    } else if (registryDimension) {
+      effectiveDimension = registryDimension
+    } else {
+      const detectionEmbedder = this.createEmbedder()
+      effectiveDimension = await this.detectEmbeddingDimension(detectionEmbedder)
+    }
+
+    const embedder = this.createEmbedder(effectiveDimension)
+    const vectorStore = this.createVectorStore(this.workspacePath, effectiveDimension)
     const parser = codeParser
     const scanner = this.createDirectoryScanner(embedder, vectorStore, parser, ignoreInstance)
     const fileWatcher = this.createFileWatcher(embedder, vectorStore, cacheManager, ignoreInstance)
@@ -278,6 +303,7 @@ export class CodeIndexServiceFactory {
     log.info("indexing services created", {
       workspacePath: this.workspacePath,
       provider: embedder.embedderInfo.name,
+      dimension: effectiveDimension,
     })
 
     return { embedder, vectorStore, parser, scanner, fileWatcher }
