@@ -10,6 +10,13 @@ import { getGitContext } from "./git-context"
 
 const log = Log.create({ service: "commit-message" })
 
+export class NoChangesError extends Error {
+  constructor() {
+    super("No changes found to generate a commit message for")
+    this.name = "CommitMessageNoChanges"
+  }
+}
+
 export const CommitMessageRuntime = {
   context(repoPath: string, selectedFiles?: string[]) {
     return getGitContext(repoPath, selectedFiles)
@@ -146,7 +153,7 @@ const TIMEOUT_MS = 30_000
 export async function generateCommitMessage(request: CommitMessageRequest): Promise<CommitMessageResponse> {
   const ctx = await CommitMessageRuntime.context(request.path, request.selectedFiles)
   if (ctx.files.length === 0) {
-    throw new Error("No changes found to generate a commit message for")
+    throw new NoChangesError()
   }
 
   log.info("generating", {

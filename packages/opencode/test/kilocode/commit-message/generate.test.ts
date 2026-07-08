@@ -42,7 +42,7 @@ mock.module("@opencode-ai/core/util/log", () => ({
   }),
 }))
 
-import { CommitMessageRuntime, generateCommitMessage } from "../../../src/kilocode/commit-message/generate"
+import { CommitMessageRuntime, generateCommitMessage, NoChangesError } from "../../../src/kilocode/commit-message/generate"
 
 const context = spyOn(CommitMessageRuntime, "context").mockImplementation(async (repoPath, selectedFiles) => {
   captured = { path: repoPath, selected: selectedFiles }
@@ -133,11 +133,14 @@ describe("commit-message.generate", () => {
   })
 
   describe("error on no changes", () => {
-    test("throws when no git changes are found", async () => {
+    test("throws NoChangesError when no git changes are found", async () => {
       mockGitContext = { branch: "main", recentCommits: [], files: [] }
-      await expect(generateCommitMessage({ path: "/repo" })).rejects.toThrow(
-        "No changes found to generate a commit message for",
-      )
+      const err = await generateCommitMessage({ path: "/repo" }).catch((e) => e)
+      expect(err).toBeInstanceOf(NoChangesError)
+      if (err instanceof NoChangesError) {
+        expect(err.message).toBe("No changes found to generate a commit message for")
+        expect(err.name).toBe("CommitMessageNoChanges")
+      }
     })
   })
 

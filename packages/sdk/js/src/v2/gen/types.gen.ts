@@ -1693,6 +1693,7 @@ export type Config = {
     continue_loop_on_deny?: boolean
     sandbox?: boolean
     sandbox_restrict_network?: boolean
+    sandbox_writable_paths?: Array<string>
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }
@@ -2410,6 +2411,10 @@ export type BackgroundProcessLogs = {
   id: string
   sessionID: string
   output: string
+}
+
+export type CommitMessageNoChangesError = {
+  message: string
 }
 
 export type ConfigOverlayResponse = {
@@ -10101,6 +10106,10 @@ export type CommitMessageGenerateErrors = {
    * BadRequest | InvalidRequestError
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * CommitMessageNoChangesError
+   */
+  422: CommitMessageNoChangesError
 }
 
 export type CommitMessageGenerateError = CommitMessageGenerateErrors[keyof CommitMessageGenerateErrors]

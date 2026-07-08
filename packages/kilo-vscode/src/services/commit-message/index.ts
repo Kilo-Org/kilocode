@@ -119,7 +119,7 @@ export function registerCommitMessageService(
           }
           const msg = getErrorMessage(error)
           console.error("[Kilo New] Failed to generate commit message:", msg)
-          vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+          vscode.window.showErrorMessage(msg || "Failed to generate commit message. Please try again.")
         })
     },
   )
