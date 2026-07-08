@@ -165,6 +165,38 @@ export namespace Provider {
   }
 
   const CUSTOM_LOADERS: Record<string, CustomLoader> = {
+    // kilocode_change start - NVIDIA provider for Z.ai GLM-5.2 and Nemotron models
+    nvidia: async (provider) => {
+      const baseURL = provider.options?.baseURL ?? "https://integrate.api.nvidia.com/v1"
+      const models = provider.models ?? {}
+
+      // Get API key from provider options, with fallback to environment variable
+      const apiKey = provider.options?.apiKey ?? Env.get("NVIDIA_API_KEY") ?? ""
+
+      // kilocode_change - only autoload when a key or explicit config options exist;
+      // the static snapshot ships GLM models, so autoloading unconditionally would
+      // surface an unusable nvidia/z-ai/glm-5.2 in clean/pure lanes with no key.
+      if (!apiKey && !provider.options?.baseURL) {
+        return {
+          autoload: false,
+          options: {},
+        }
+      }
+
+      return {
+        autoload: Object.keys(models).length > 0,
+        options: {
+          baseURL,
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        },
+        async getModel(sdk: any, modelID: string) {
+          return sdk.languageModel(modelID)
+        },
+      }
+    },
+    // kilocode_change end
     async anthropic() {
       return {
         autoload: false,

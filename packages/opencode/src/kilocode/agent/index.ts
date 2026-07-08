@@ -7,8 +7,11 @@ import { Config } from "../../config/config"
 import { Instance } from "../../project/instance"
 import { Global } from "@/global"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { ProviderID, ModelID } from "@/provider/schema"
+import { Provider } from "../../provider/provider" // kilocode_change
 import z from "zod"
 import path from "path"
+import { Flag } from "@/flag/flag" // kilocode_change
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -216,6 +219,12 @@ export function patchAgents(
   cfg: Config.Info,
   kilo: KiloData,
 ) {
+  // kilocode_change start - native Kilo agent defaults fall back to the configured
+  // model instead of the hardcoded NVIDIA GLM. When cfg.model is unset, leave it
+  // undefined so the global fallback decides - never force GLM.
+  const defaultModel = cfg.model ? Provider.parseModel(cfg.model) : undefined
+  // kilocode_change end
+
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
     agents.code = { ...agents.build, name: "code" }
@@ -279,97 +288,105 @@ export function patchAgents(
     }
   }
 
-  // Add debug agent
-  agents.debug = {
-    name: "debug",
-    description: "Diagnose and fix software issues with systematic debugging methodology.",
-    prompt: PROMPT_DEBUG,
-    options: {},
-    permission: Permission.merge(
-      defaults,
-      Permission.fromConfig({
-        question: "allow",
-        plan_enter: "allow",
-      }),
-      user,
-    ),
-    mode: "primary",
-    native: true,
-  }
+  // kilocode_change start - only add native Kilo extras (debug/orchestrator/ask)
+  // outside pure/clean mode so the configured roster is the only thing exposed.
+  if (!Flag.KILO_PURE) {
+    // Add debug agent
+    agents.debug = {
+      name: "debug",
+      description: "Diagnose and fix software issues with systematic debugging methodology.",
+      prompt: PROMPT_DEBUG,
+      options: {},
+      permission: Permission.merge(
+        defaults,
+        Permission.fromConfig({
+          question: "allow",
+          plan_enter: "allow",
+        }),
+        user,
+      ),
+      mode: "primary",
+      native: true,
+      model: defaultModel, // kilocode_change - fall back to cfg.model
+    }
 
-  // Add orchestrator agent
-  agents.orchestrator = {
-    name: "orchestrator",
-    description: "Coordinate complex tasks by delegating to specialized agents in parallel.",
-    prompt: PROMPT_ORCHESTRATOR,
-    options: {},
-    permission: Permission.merge(
-      defaults,
-      Permission.fromConfig({
-        "*": "deny",
-        read: "allow",
-        grep: "allow",
-        glob: "allow",
-        list: "allow",
-        question: "allow",
-        task: "allow",
-        todoread: "allow",
-        todowrite: "allow",
-        webfetch: "allow",
-        websearch: "allow",
-        codesearch: "allow",
-        codebase_search: "allow",
-        external_directory: {
-          [Truncate.GLOB]: "allow",
-        },
-      }),
-      user,
-      // Enforce bash deny after user so user config cannot re-enable shell
-      Permission.fromConfig({
-        bash: "deny",
-      }),
-    ),
-    mode: "primary",
-    native: true,
-    deprecated: true,
-  }
+    // Add orchestrator agent
+    agents.orchestrator = {
+      name: "orchestrator",
+      description: "Coordinate complex tasks by delegating to specialized agents in parallel.",
+      prompt: PROMPT_ORCHESTRATOR,
+      options: {},
+      permission: Permission.merge(
+        defaults,
+        Permission.fromConfig({
+          "*": "deny",
+          read: "allow",
+          grep: "allow",
+          glob: "allow",
+          list: "allow",
+          question: "allow",
+          task: "allow",
+          todoread: "allow",
+          todowrite: "allow",
+          webfetch: "allow",
+          websearch: "allow",
+          codesearch: "allow",
+          codebase_search: "allow",
+          external_directory: {
+            [Truncate.GLOB]: "allow",
+          },
+        }),
+        user,
+        // Enforce bash deny after user so user config cannot re-enable shell
+        Permission.fromConfig({
+          bash: "deny",
+        }),
+      ),
+      mode: "primary",
+      native: true,
+      deprecated: true,
+      model: defaultModel, // kilocode_change - fall back to cfg.model
+    }
 
-  // Add ask agent
-  agents.ask = {
-    name: "ask",
-    description: "Get answers and explanations without making changes to the codebase.",
-    prompt: PROMPT_ASK,
-    options: {},
-    permission: Permission.merge(
-      defaults,
-      user, // user before ask-specific so ask's deny+allowlist wins
-      Permission.fromConfig({
-        "*": "deny",
-        bash: readOnlyBash,
-        read: {
-          "*": "allow",
-          "*.env": "ask",
-          "*.env.*": "ask",
-          "*.env.example": "allow",
-        },
-        grep: "allow",
-        glob: "allow",
-        list: "allow",
-        question: "allow",
-        webfetch: "allow",
-        websearch: "allow",
-        codesearch: "allow",
-        codebase_search: "allow",
-        external_directory: {
-          [Truncate.GLOB]: "allow",
-        },
-        ...kilo.mcpRules,
-      }),
-      user.filter((r: Permission.Rule) => r.action === "deny"), // re-apply user denies so explicit MCP blocks win over mcpRules
-    ),
-    mode: "primary",
-    native: true,
+    // Add ask agent
+    agents.ask = {
+      name: "ask",
+      description: "Get answers and explanations without making changes to the codebase.",
+      prompt: PROMPT_ASK,
+      options: {},
+      permission: Permission.merge(
+        defaults,
+        user, // user before ask-specific so ask's deny+allowlist wins
+        Permission.fromConfig({
+          "*": "deny",
+          bash: readOnlyBash,
+          read: {
+            "*": "allow",
+            "*.env": "ask",
+            "*.env.*": "ask",
+            "*.env.example": "allow",
+          },
+          grep: "allow",
+          glob: "allow",
+          list: "allow",
+          question: "allow",
+          webfetch: "allow",
+          websearch: "allow",
+          codesearch: "allow",
+          codebase_search: "allow",
+          external_directory: {
+            [Truncate.GLOB]: "allow",
+          },
+          ...kilo.mcpRules,
+        }),
+        user.filter((r: Permission.Rule) => r.action === "deny"), // re-apply user denies so explicit MCP blocks win over mcpRules
+      ),
+      mode: "primary",
+      native: true,
+      model: defaultModel, // kilocode_change - fall back to cfg.model
+    }
   }
+  // kilocode_change end
 }
 
 export const RemoveError = NamedError.create(

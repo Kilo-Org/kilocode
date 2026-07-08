@@ -85,6 +85,13 @@ export namespace Agent {
           const skillDirs = yield* skill.dirs()
           const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
 
+          // kilocode_change start - native agent defaults fall back to the configured
+          // model instead of the hardcoded NVIDIA GLM so a clean/pure lane never
+          // surfaces z-ai/glm-5.2. When cfg.model is unset, leave it undefined so the
+          // global fallback (cfg.model / first provider) decides - never force GLM.
+          const defaultModel = cfg.model ? Provider.parseModel(cfg.model) : undefined
+          // kilocode_change end
+
           const baseDefaults = Permission.fromConfig({
             // kilocode_change: renamed from defaults
             "*": "allow",
@@ -127,6 +134,7 @@ export namespace Agent {
               ),
               mode: "primary",
               native: true,
+              model: defaultModel, // kilocode_change - fall back to cfg.model, not hardcoded GLM
             },
             plan: {
               name: "plan",
@@ -151,6 +159,7 @@ export namespace Agent {
               ),
               mode: "primary",
               native: true,
+              model: defaultModel, // kilocode_change - fall back to cfg.model, not hardcoded GLM
             },
             general: {
               name: "general",
@@ -165,6 +174,7 @@ export namespace Agent {
               options: {},
               mode: "subagent",
               native: true,
+              model: defaultModel, // kilocode_change - fall back to cfg.model, not hardcoded GLM
             },
             explore: {
               name: "explore",
@@ -192,6 +202,7 @@ export namespace Agent {
               options: {},
               mode: "subagent",
               native: true,
+              model: defaultModel, // kilocode_change - fall back to cfg.model, not hardcoded GLM
             },
             compaction: {
               name: "compaction",
@@ -223,6 +234,7 @@ export namespace Agent {
                 user,
               ),
               prompt: PROMPT_TITLE,
+              model: defaultModel, // kilocode_change - fall back to cfg.model, not hardcoded GLM
             },
             summary: {
               name: "summary",
@@ -238,6 +250,7 @@ export namespace Agent {
                 user,
               ),
               prompt: PROMPT_SUMMARY,
+              model: defaultModel, // kilocode_change - fall back to cfg.model, not hardcoded GLM
             },
           }
 
