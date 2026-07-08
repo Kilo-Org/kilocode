@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test"
+import type { Config } from "../../src/config/config"
 import { SwePruner } from "../../src/kilocode/swe-pruner"
+
+describe("SwePruner.enabled", () => {
+  test("is enabled by default but permits explicit opt-out", () => {
+    expect(SwePruner.enabled({} as Config.Info)).toBe(true)
+    expect(SwePruner.enabled({ experimental: { swe_pruner: true } } as Config.Info)).toBe(true)
+    expect(SwePruner.enabled({ experimental: { swe_pruner: false } } as Config.Info)).toBe(false)
+  })
+})
 
 describe("SwePruner.question", () => {
   test("extracts a non-empty focus question from raw args", () => {

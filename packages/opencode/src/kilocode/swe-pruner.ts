@@ -52,7 +52,7 @@ const INSTRUCTION = [
 ].join(" ")
 
 export function enabled(cfg: Config.Info) {
-  return cfg.experimental?.swe_pruner === true
+  return cfg.experimental?.swe_pruner ?? true
 }
 
 export function prunable(tool: string) {

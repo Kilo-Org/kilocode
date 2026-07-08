@@ -426,7 +426,7 @@ export const Info = Schema.Struct({
       }),
       swe_pruner: Schema.optional(Schema.Boolean).annotate({
         description:
-          "Enable SWE-Pruner: task-aware pruning of large read/grep tool outputs guided by a focus question provided by the agent (default: false)",
+          "Enable SWE-Pruner: task-aware pruning of large read/grep tool outputs guided by a focus question provided by the agent (default: true; set to false to opt out)",
       }),
       swe_pruner_model: Schema.optional(Schema.String).annotate({
         description:
