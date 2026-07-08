@@ -101,12 +101,14 @@ describe("TUI model usage", () => {
     }
     const wrapper = () => {
       let active = 0
+      let starts = 0
       const api = {
         state,
         client,
         event: {
           on: () => {
             active++
+            starts++
             let open = true
             return () => {
               if (!open) return
@@ -116,7 +118,7 @@ describe("TUI model usage", () => {
           },
         },
       }
-      return { api, active: () => active }
+      return { api, active: () => active, starts: () => starts }
     }
     const first = wrapper()
     const second = wrapper()
@@ -130,12 +132,19 @@ describe("TUI model usage", () => {
     }
 
     const disposeFirst = mount(first.api)
+    const disposeDuplicate = mount(first.api)
     const disposeSecond = mount(second.api)
     await waitFor(() => first.active() > 0)
     expect(calls).toBe(1)
     expect(second.active()).toBe(0)
 
+    const starts = first.starts()
     disposeFirst()
+    expect(first.active()).toBeGreaterThan(0)
+    expect(first.starts()).toBe(starts)
+    expect(second.active()).toBe(0)
+
+    disposeDuplicate()
     await waitFor(() => second.active() > 0)
     expect(first.active()).toBe(0)
 

@@ -80,7 +80,7 @@ function createStore(api: UsageApi) {
         const count = (clients.get(client) ?? 1) - 1
         if (count > 0) clients.set(client, count)
         if (count <= 0) clients.delete(client)
-        if (owner === client) {
+        if (owner === client && count <= 0) {
           deactivate()
           const next = clients.keys().next().value
           if (next) activate(next)
