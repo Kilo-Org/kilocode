@@ -6,7 +6,7 @@ export type CaptureDiff = {
 }
 
 // Build/generated output: machine-produced files that are never a user edit.
-const generatedDenyList =
+const generated =
   /(^|\/)(dist|build|out|coverage|node_modules|\.next|target|vendor|generated|gen|__snapshots__)(\/|$)|(^|\/)[^/]*\.(min|gen)\.[^/]+$|\.map$/i
 
 /** Any non-generated file change. Presence-based: numstat only lists changed files, and binary
@@ -15,7 +15,7 @@ export function hasUserEdit(diffs: Pick<CaptureDiff, "file">[]) {
   return diffs.some((item) => {
     const file = item.file ?? ""
     if (!file) return false
-    return !generatedDenyList.test(file)
+    return !generated.test(file)
   })
 }
 
@@ -27,7 +27,7 @@ export function hasSubstantialDiff(diffs: Pick<CaptureDiff, "file" | "additions"
   return diffs.some((item) => {
     const file = item.file ?? ""
     if (!file) return false
-    if (generatedDenyList.test(file)) return false
+    if (generated.test(file)) return false
     return item.additions + item.deletions >= 20
   })
 }
