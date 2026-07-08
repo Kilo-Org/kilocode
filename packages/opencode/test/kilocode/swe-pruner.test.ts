@@ -200,7 +200,7 @@ describe("SwePruner.sweep", () => {
     const lines = Array.from({ length: 60 }, (_, index) => `${index + 1}: ${"source content ".repeat(4)}`)
     const body = `<path>/repo/pkg/source.ts</path>\n<type>file</type>\n<content>\n${lines.join("\n")}\n</content>`
     const rules = Array.from({ length: 10 }, (_, index) => `Keep instruction ${index + 1} intact.`)
-    const tail = `\n\n<system-reminder>\nInstructions from: /repo/pkg/AGENTS.md\n${rules.join("\n")}\n</system-reminder>`
+    const tail = `\n\n<system-reminder>\nInstructions from: /repo/pkg/AGENTS.md\n${rules.join("\r\n")}\n</system-reminder>`
     const seen: string[] = []
     const result = await SwePruner.sweep({
       tool: "read",
