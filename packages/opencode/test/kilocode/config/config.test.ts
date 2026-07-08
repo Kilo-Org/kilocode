@@ -616,6 +616,77 @@ describe("linked worktree config", () => {
   })
 })
 
+describe("opencode config migration notice", () => {
+  const withGlobalConfig = async <T>(dir: string, fn: () => Promise<T> | T): Promise<T> => {
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = dir
+    try {
+      return await fn()
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+    }
+  }
+
+  test("detects a project .opencode directory", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    await Filesystem.write(path.join(tmp.path, ".opencode", "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    // Isolate the global config dir so a real ~/.config/opencode on the host cannot interfere.
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const found = KilocodeConfig.detectOpencodeConfig({ directory: tmp.path, scanProject: true })
+      expect(found).toEqual([path.join(tmp.path, ".opencode")])
+    })
+  })
+
+  test("detects a global opencode config directory", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    const opencodeDir = path.join(globalTmp.path, "opencode")
+    await Filesystem.write(path.join(opencodeDir, "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const found = KilocodeConfig.detectOpencodeConfig({ directory: tmp.path, scanProject: true })
+      expect(found).toEqual([opencodeDir])
+    })
+  })
+
+  test("skips the project scan when disabled", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    await Filesystem.write(path.join(tmp.path, ".opencode", "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const found = KilocodeConfig.detectOpencodeConfig({ directory: tmp.path, scanProject: false })
+      expect(found).toEqual([])
+    })
+  })
+
+  test("builds a dismissible notification when opencode config exists", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    await Filesystem.write(path.join(tmp.path, ".opencode", "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const notice = KilocodeConfig.opencodeConfigNotification({ directory: tmp.path, scanProject: true })
+      expect(notice?.id).toBe(KilocodeConfig.OPENCODE_NOTIFICATION_ID)
+      expect(notice?.message).toContain(path.join(tmp.path, ".opencode"))
+      expect(notice?.action?.actionURL).toBe(KilocodeConfig.CONFIG_DOCS_URL)
+      expect(notice?.showIn).toEqual(["cli", "extension"])
+    })
+  })
+
+  test("returns no notification when nothing needs migrating", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const notice = KilocodeConfig.opencodeConfigNotification({ directory: tmp.path, scanProject: true })
+      expect(notice).toBeUndefined()
+    })
+  })
+})
+
 describe("bash permission migration", () => {
   for (const action of ["allow", "ask", "deny"] as const) {
     test(`preserves string-form ${action} permission in jsonc`, async () => {
