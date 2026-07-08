@@ -19,6 +19,7 @@ import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.MessageToolbar
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.TextView
+import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
@@ -80,6 +81,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     fun `test empty panel has no turns`() {
         assertEquals(0, panel.turnCount())
         assertEquals("", panel.dump())
+    }
+
+    fun `test transcript content has symmetric side padding`() {
+        model.upsertMessage(msg("a1", "assistant"))
+
+        panel.setSize(600, 400)
+        panel.doLayout()
+        val turn = panel.components.first { it is TurnView }
+        val left = turn.x
+        val right = panel.width - turn.x - turn.width
+
+        assertEquals(right, left)
     }
 
     // ------ TurnAdded ------

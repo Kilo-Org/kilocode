@@ -43,6 +43,6 @@ class UiStyleTest : BasePlatformTestCase() {
         assertTrue(JBUI.scale(SessionUiStyle.View.Layout.VERTICAL_PADDING) > 0)
         assertTrue(JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING) > 0)
         assertTrue(SessionUiStyle.View.Tool.BODY_LINES > 0)
-        assertTrue(SessionUiStyle.View.Reasoning.BODY_LINES > 0)
+        assertEquals(5, SessionUiStyle.View.Reasoning.BODY_LINES)
     }
 }

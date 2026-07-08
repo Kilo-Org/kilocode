@@ -490,6 +490,7 @@ class QuestionView(
     private fun buildCustomEditor(): SessionEditorTextField {
         val ed = SessionEditorTextField(project, selection = selection)
         ed.border = JBUI.Borders.empty()
+        ed.setFontInheritedFromLAF(false)
         ed.setPlaceholder(KiloBundle.message("session.question.custom.placeholder"))
         ed.setShowPlaceholderWhenFocused(true)
         ed.setOneLineMode(false)
@@ -502,6 +503,7 @@ class QuestionView(
             ex.scrollPane.background = style.editorScheme.defaultBackground
             ex.scrollPane.viewport.background = style.editorScheme.defaultBackground
             ex.settings.isUseSoftWraps = true
+            ex.settings.isPaintSoftWraps = false
             ex.settings.isAdditionalPageAtBottom = false
             ex.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         }

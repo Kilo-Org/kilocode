@@ -48,8 +48,10 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.actions.PasteAction
 import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -57,8 +59,10 @@ import com.intellij.openapi.fileTypes.PlainTextLanguage
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.EditorCustomization
 import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
@@ -80,6 +84,7 @@ import java.awt.KeyboardFocusManager
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
+import java.awt.event.FocusEvent
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -150,6 +155,38 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertFalse(hasFloatingToolbar(editor.component))
     }
 
+    fun `test prompt editor disables spellchecking`() {
+        var applied: EditorEx? = null
+        val provider = object : SpellCheckingEditorCustomizationProvider() {
+            override fun getDisabledCustomization(): EditorCustomization {
+                return EditorCustomization { ed -> applied = ed }
+            }
+        }
+        ApplicationManager.getApplication().replaceService(
+            SpellCheckingEditorCustomizationProvider::class.java,
+            provider,
+            testRootDisposable,
+        )
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+
+        assertSame(editor, applied)
+    }
+
+    fun `test prompt editor horizontal insets use dedicated prompt inset`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val ins = editor.scrollPane.viewportBorder.getBorderInsets(editor.scrollPane)
+        val pad = JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET)
+
+        assertEquals(pad, ins.left)
+        assertEquals(pad, ins.right)
+    }
+
     fun `test prompt focus outline follows editor focus`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 260, 400)
@@ -161,10 +198,15 @@ class PromptPanelTest : BasePlatformTestCase() {
         val focus = TestFocusManager()
         KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
         try {
+            assertEquals(SessionUiStyle.View.Prompt.separator().rgb, paint(panel, panel.width / 2, 0).rgb)
             assertTrue(JBUI.CurrentTheme.Focus.focusColor().rgb != paint(panel, panel.width / 2, 1).rgb)
 
             focus.focus(editor.contentComponent)
+            editor.contentComponent.focusListeners.forEach {
+                it.focusGained(FocusEvent(editor.contentComponent, FocusEvent.FOCUS_GAINED))
+            }
 
+            assertTrue(SessionUiStyle.View.Prompt.separator().rgb != paint(panel, panel.width / 2, 0).rgb)
             assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width / 2, 1).rgb)
         } finally {
             KeyboardFocusManager.setCurrentKeyboardFocusManager(current)

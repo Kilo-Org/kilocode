@@ -16,8 +16,10 @@ import okhttp3.Response
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
+import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 import kotlin.math.roundToInt
@@ -36,54 +38,112 @@ class KiloCliDownloader(
     companion object {
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
+        private val LOCKS = ConcurrentHashMap<String, Any>()
     }
 
     suspend fun resolve(version: String, force: Boolean = false, onProgress: (CliDownload) -> Unit = {}): File =
         withContext(Dispatchers.IO) {
-            val platform = KiloCliPlatform.current()
-            val dir = File(File(root, version), platform)
-            val exe = File(dir, "bin/${KiloCliPlatform.exe()}")
-            val done = File(dir, ".complete")
-            val cached = done.takeIf { it.isFile }?.readText()?.trim()
-            val ext = KiloCliPlatform.archive(platform)
-            val archive = File(dir, "kilo-$platform.$ext")
+            locked {
+                val platform = KiloCliPlatform.current()
+                val dir = File(File(root, version), platform)
+                val exe = File(dir, "bin/${KiloCliPlatform.exe()}")
+                val done = File(dir, ".complete")
+                val ext = KiloCliPlatform.archive(platform)
 
-            if (!force && exe.isFile && cached != null && cached.matches(DIGEST)) {
-                log.info("Using cached Kilo CLI $version for $platform at ${exe.absolutePath}")
-                if (!SystemInfo.isWindows) exe.setExecutable(true)
-                prune(version)
-                return@withContext exe
-            }
+                if (!force) {
+                    cached(version, platform, exe, done)?.let { return@locked it }
+                }
 
-            val digest = asset(version, platform, ext)
+                val digest = asset(version, platform, ext)
+                val stage = stage(version, platform)
+                try {
+                    val archive = File(stage, "kilo-$platform.$ext")
+                    val staged = File(stage, "bin/${KiloCliPlatform.exe()}")
+                    val complete = File(stage, ".complete")
 
-            if (dir.exists()) {
-                log.info("Deleting cached CLI $version under ${dir.absolutePath}")
-                if (!dir.deleteRecursively()) {
-                    throw IllegalStateException("Failed to delete cached Kilo CLI $version under ${dir.absolutePath}")
+                    log.info(
+                        "Kilo CLI $version for $platform is not cached; downloading new release into ${stage.absolutePath}"
+                    )
+                    onProgress(CliDownload(0, version, platform))
+                    download(version, platform, ext, archive, onProgress)
+                    verify(archive, digest)
+                    log.info(
+                        "Downloaded Kilo CLI $version for $platform to ${archive.absolutePath} (size=${archive.length()} bytes)"
+                    )
+                    extract(archive, stage)
+                    if (!staged.isFile) {
+                        throw IllegalStateException("Downloaded CLI archive did not contain bin/${KiloCliPlatform.exe()}")
+                    }
+                    if (!SystemInfo.isWindows) staged.setExecutable(true)
+                    if (archive.exists() && !archive.delete()) {
+                        log.warn("Failed to delete extracted Kilo CLI archive ${archive.absolutePath}")
+                    }
+                    complete.writeText("$digest\n")
+                    replace(dir, stage)
+                    onProgress(CliDownload(100, version, platform))
+                    prune(version)
+                    exe
+                } finally {
+                    if (stage.exists() && !stage.deleteRecursively()) {
+                        log.warn("Failed to delete staged Kilo CLI download ${stage.absolutePath}")
+                    }
                 }
             }
-
-            if (!dir.isDirectory && !dir.mkdirs()) {
-                throw IllegalStateException("Failed to create Kilo CLI cache directory ${dir.absolutePath}")
-            }
-
-            log.info("Kilo CLI $version for $platform is not cached; downloading new release into ${dir.absolutePath}")
-            onProgress(CliDownload(0, version, platform))
-            download(version, platform, ext, archive, onProgress)
-            verify(archive, digest)
-            log.info("Downloaded Kilo CLI $version for $platform to ${archive.absolutePath} (size=${archive.length()} bytes)")
-            extract(archive, dir)
-            if (!exe.isFile) throw IllegalStateException("Downloaded CLI archive did not contain bin/${KiloCliPlatform.exe()}")
-            if (!SystemInfo.isWindows) exe.setExecutable(true)
-            if (archive.exists() && !archive.delete()) {
-                log.warn("Failed to delete extracted Kilo CLI archive ${archive.absolutePath}")
-            }
-            done.writeText("$digest\n")
-            onProgress(CliDownload(100, version, platform))
-            prune(version)
-            exe
         }
+
+    private fun cached(version: String, platform: String, exe: File, done: File): File? {
+        val digest = done.takeIf { it.isFile }?.readText()?.trim()
+        if (!exe.isFile || digest == null || !digest.matches(DIGEST)) return null
+        log.info("Using cached Kilo CLI $version for $platform at ${exe.absolutePath}")
+        if (!SystemInfo.isWindows) exe.setExecutable(true)
+        prune(version)
+        return exe
+    }
+
+    private fun <T> locked(block: () -> T): T {
+        if (!root.isDirectory && !root.mkdirs()) {
+            throw IllegalStateException("Failed to create Kilo CLI cache root ${root.absolutePath}")
+        }
+        val file = File(root, ".lock").canonicalFile
+        val mutex = LOCKS.computeIfAbsent(file.absolutePath) { Any() }
+        return synchronized(mutex) {
+            RandomAccessFile(file, "rw").channel.use { channel ->
+                channel.lock().use { block() }
+            }
+        }
+    }
+
+    private fun stage(version: String, platform: String): File {
+        val tmp = File(root, ".tmp")
+        val dir = File(tmp, "$version-$platform-${System.nanoTime()}")
+        if (!dir.isDirectory && !dir.mkdirs()) {
+            throw IllegalStateException("Failed to create Kilo CLI staging directory ${dir.absolutePath}")
+        }
+        return dir
+    }
+
+    private fun replace(dir: File, stage: File) {
+        val parent = dir.parentFile
+        if (!parent.isDirectory && !parent.mkdirs()) {
+            throw IllegalStateException("Failed to create Kilo CLI cache directory ${parent.absolutePath}")
+        }
+
+        val backup = File(parent, ".${dir.name}.backup-${System.nanoTime()}")
+        if (dir.exists() && !dir.renameTo(backup)) {
+            throw IllegalStateException("Failed to move existing Kilo CLI cache ${dir.absolutePath} aside")
+        }
+        if (stage.renameTo(dir)) {
+            if (backup.exists() && !backup.deleteRecursively()) {
+                log.warn("Failed to delete previous Kilo CLI cache ${backup.absolutePath}")
+            }
+            return
+        }
+
+        if (backup.exists() && !backup.renameTo(dir)) {
+            log.warn("Failed to restore previous Kilo CLI cache ${backup.absolutePath} to ${dir.absolutePath}")
+        }
+        throw IllegalStateException("Failed to install Kilo CLI cache ${stage.absolutePath} to ${dir.absolutePath}")
+    }
 
     private fun fail(message: String): Nothing {
         log.warn(message)
@@ -248,7 +308,7 @@ class KiloCliDownloader(
     private fun prune(keep: String) {
         val entries = root.listFiles() ?: return
         for (entry in entries) {
-            if (!entry.isDirectory || entry.name == keep) continue
+            if (!entry.isDirectory || entry.name == keep || entry.name.startsWith(".")) continue
             log.info("Removing stale Kilo CLI version ${entry.absolutePath}")
             if (!entry.deleteRecursively()) {
                 log.warn("Failed to remove stale Kilo CLI version ${entry.absolutePath}")

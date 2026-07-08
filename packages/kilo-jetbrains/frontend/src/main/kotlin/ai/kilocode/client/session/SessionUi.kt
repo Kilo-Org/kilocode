@@ -201,11 +201,11 @@ class SessionUi(
         Disposer.register(this, popup)
         buildUi()
         Disposer.register(this, selection)
+        applyStyle(style)
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
         bindMigration()
-        applyStyle(style)
         onStateChanged(controller.model.state)
         loaded?.let(::finishOpen)
     }
@@ -307,9 +307,7 @@ class SessionUi(
 
         sessionContent = JPanel(BorderLayout())
 
-        blankBody = JPanel(BorderLayout()).apply {
-            isOpaque = false
-        }
+        blankBody = JPanel(BorderLayout())
 
         load = LoadingPanel()
         progressBody = load
@@ -605,8 +603,8 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
-        if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (controller.model.showSession) return messageBody
+        if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (state is SessionState.Loading) return progressBody
         return blankBody
     }
@@ -786,6 +784,7 @@ class SessionUi(
         editorTheme = style.editorScheme
         colorTheme = UIManager.getLookAndFeel()
         background = style.editorBackground
+        root.background = style.editorBackground
         root.content.background = style.editorBackground
         sessionContent.background = style.editorBackground
         blankBody.background = style.editorBackground

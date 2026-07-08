@@ -5,6 +5,7 @@ import ai.kilocode.backend.dev.KiloDevMode
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
+import com.intellij.util.EnvironmentUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -91,7 +92,7 @@ class KiloBackendCliManager(
     }
 
     // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
-    internal fun buildEnv(pwd: String, base: Map<String, String> = System.getenv()): Map<String, String> =
+    internal fun buildEnv(pwd: String, base: Map<String, String> = EnvironmentUtil.getEnvironmentMap()): Map<String, String> =
         buildKiloCliEnv(pwd, base, log)
 
     private suspend fun spawn(cli: File): CliServer.State =
@@ -238,7 +239,7 @@ private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask","bash":"ask"}}
 // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
 internal fun buildKiloCliEnv(
     pwd: String,
-    base: Map<String, String> = System.getenv(),
+    base: Map<String, String> = EnvironmentUtil.getEnvironmentMap(),
     log: KiloLog = KiloLog.create(KiloBackendCliManager::class.java),
 ): Map<String, String> = buildMap {
     putAll(base)
