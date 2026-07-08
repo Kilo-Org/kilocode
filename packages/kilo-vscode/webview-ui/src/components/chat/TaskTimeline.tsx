@@ -8,6 +8,7 @@ import { Portal } from "solid-js/web"
 import { useSession } from "../../context/session"
 import { color, label } from "../../utils/timeline/colors"
 import { geometry, hit, navigate } from "../../utils/timeline/geometry"
+import { dispatchTimelineHighlight } from "../../utils/timeline/highlight"
 import { sizes, pinned, MAX_HEIGHT } from "../../utils/timeline/sizes"
 import type { Part, Message } from "../../types/messages"
 
@@ -116,6 +117,15 @@ export const TaskTimeline: Component = () => {
 
   createEffect(on(bars, hideTip, { defer: true }))
 
+  // Highlight the chat part behind the hovered/focused bar, using its own
+  // color, so it's easy to follow which bar belongs to which tool call.
+  createEffect(() => {
+    const idx = hover()
+    const bar = idx >= 0 ? bars()[idx] : undefined
+    dispatchTimelineHighlight(bar ? { msgId: bar.msgId, partId: bar.partId } : undefined)
+  })
+  onCleanup(() => dispatchTimelineHighlight(undefined))
+
   const showTip = (idx: number) => {
     const item = layout().items[idx]
     const bar = bars()[idx]
@@ -174,7 +184,12 @@ export const TaskTimeline: Component = () => {
     if (ref.hasPointerCapture(e.pointerId)) ref.releasePointerCapture(e.pointerId)
     ref.style.cursor = "grab"
     ref.style.userSelect = ""
-    if (wasDragging && !dragMoved) jumpToMessage(pointerIndex(e))
+    if (!wasDragging || dragMoved) return
+    const idx = pointerIndex(e)
+    jumpToMessage(idx)
+    // onPointerDown hid the tip pre-emptively in case this turned into a
+    // drag; restore it for the clicked bar since the pointer is still on it.
+    showTip(idx)
   }
 
   const onWheel = (e: WheelEvent) => {

@@ -28,6 +28,9 @@ import { useServer } from "../../context/server"
 import { snapshotProgress } from "../../context/session-utils"
 import { planDisplayPath } from "../../utils/plan-path"
 import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
+import { color as timelineColor } from "../../utils/timeline/colors"
+import type { Part as TimelinePart } from "../../types/messages"
+import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
@@ -125,6 +128,8 @@ interface AssistantMessageProps {
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
+  /** Part behind the currently hovered/focused task-timeline bar, if any. */
+  highlight?: () => TimelineHighlight | undefined
 }
 
 type ToolStateProps = {
@@ -280,6 +285,13 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return part as unknown as ToolPart
           })
 
+          // Lights up when this part is behind the hovered/focused task-timeline
+          // bar, using that bar's own color so the two stay easy to correlate.
+          const highlighted = createMemo(() => {
+            const h = props.highlight?.()
+            return h?.msgId === props.message.id && h?.partId === part.id
+          })
+
           return (
             <Show
               when={
@@ -291,7 +303,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                 PART_MAPPING[part.type]
               }
             >
-              <div data-component="tool-part-wrapper" data-part-type={part.type}>
+              <div
+                data-component="tool-part-wrapper"
+                data-part-type={part.type}
+                data-timeline-highlight={highlighted() ? "" : undefined}
+                style={
+                  highlighted() ? { "--timeline-color": timelineColor(part as unknown as TimelinePart) } : undefined
+                }
+              >
                 <Show
                   when={activeQuestion()}
                   fallback={

@@ -226,6 +226,11 @@
   flex-direction: column;
   gap: 6px;
   width: 100%;
+  /* Reserves extra room, on top of the turn's own 4px padding, for the
+     task-timeline highlight strip (see [data-component="tool-part-wrapper"]
+     below) to sit further from the card edge with a visible gap. Scoped to
+     assistant content only so user bubbles/diffs stay unaffected. */
+  padding-left: 4px;
 }
 
 [data-component="assistant-memory-badge"] {
@@ -249,6 +254,46 @@
   width: 100%;
   max-width: var(--chat-readable-width);
   margin-inline: auto;
+}
+
+/* Lights up the part behind a hovered/focused task-timeline bar, using the
+   bar's own color, so it's easy to follow which bar belongs to which tool
+   call (mirrors the legacy extension's task-timeline row gutter highlight).
+   Drawn as an absolutely positioned strip flush with the card's left edge,
+   not an inset box-shadow: a box-shadow paints as part of the wrapper's own
+   background layer, underneath every child, so tool cards with a negative-
+   margin background (bleeding past this edge) would otherwise cover it.
+   An absolutely positioned element always paints above normal-flow
+   (position: static) children, so it stays visible without needing to
+   extend past the wrapper's own box — virtua's row virtualizer clips its
+   content to exactly that box (`overflow: clip`), so anything drawn outside
+   it (e.g. a negative left offset) gets clipped entirely once rows are
+   virtualized. */
+[data-component="tool-part-wrapper"] {
+  position: relative;
+}
+
+[data-component="tool-part-wrapper"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  /* .vscode-session-turn-assistant's extra 4px padding-left (see above) plus
+     the turn's own 4px gives 8px of gutter here before virtua's clip edge.
+     Sit 1px inside that edge for safety, leaving a clear gap before the card
+     (which starts at 0). */
+  left: -7px;
+  width: 3px;
+  border-radius: 2px 0 0 2px;
+  background: var(--timeline-color, transparent);
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+[data-component="tool-part-wrapper"][data-timeline-highlight]::before {
+  opacity: 0.9;
 }
 
 .chat-view .message-list-content > .revert-banner,
