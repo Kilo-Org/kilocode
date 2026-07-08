@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rm, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -316,5 +316,30 @@ describe("FileWatcher", () => {
 
     expect(result.status).toBe("skipped")
     expect(result.reason).toBe("File is ignored by .gitignore or .kilocodeignore")
+  })
+
+  test("processFile skips files matched by nested .gitignore during incremental updates", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    try {
+      const cacheDir = path.join(root, ".cache")
+      const dir = path.join(root, "pkg")
+      const file = path.join(dir, "secret.ts")
+
+      await mkdir(cacheDir, { recursive: true })
+      await mkdir(dir, { recursive: true })
+      await writeFile(path.join(dir, ".gitignore"), "secret.ts\n")
+      await writeFile(file, "export const secret = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const watcher = new FileWatcher(root, cache, createEmbedder(), undefined, await loadIgnore(root))
+      const result = await watcher.processFile(file)
+
+      expect(result.status).toBe("skipped")
+      expect(result.reason).toBe("File is ignored by .gitignore or .kilocodeignore")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })

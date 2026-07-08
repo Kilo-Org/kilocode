@@ -3,7 +3,6 @@ import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
 import { v5 as uuidv5 } from "uuid"
-import type { Ignore } from "ignore"
 import { Emitter, type Disposable } from "../runtime"
 import {
   QDRANT_CODE_BLOCK_NAMESPACE,
@@ -33,6 +32,7 @@ import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
 import type { WorktreeOverlay } from "../worktree-overlay"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import type { IgnoreMatcher } from "../shared/load-ignore"
 
 const log = Log.create({ service: "file-watcher" })
 
@@ -43,7 +43,7 @@ const log = Log.create({ service: "file-watcher" })
  * so the watcher works outside VS Code (CLI, tests, headless).
  */
 export class FileWatcher implements IFileWatcher {
-  private ignoreInstance?: Ignore
+  private ignoreInstance?: IgnoreMatcher
   private watcher?: ChokidarFSWatcher
   private accumulatedEvents: Map<string, { path: string; type: "create" | "change" | "delete" }> = new Map()
   private batchProcessDebounceTimer?: NodeJS.Timeout
@@ -70,7 +70,7 @@ export class FileWatcher implements IFileWatcher {
     private readonly cacheManager: CacheManager,
     private embedder?: IEmbedder,
     private vectorStore?: IVectorStore,
-    ignoreInstance?: Ignore,
+    ignoreInstance?: IgnoreMatcher,
     batchSegmentThreshold?: number,
     maxBatchRetries?: number,
     private readonly onTelemetry?: IndexingTelemetryReporter,
