@@ -137,6 +137,8 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
 - <https://kilo.ai/docs/customize/workflows>
   <!-- packages/opencode/src/config/config.ts -->
+- <https://kilo.ai/docs/getting-started/settings>
+  <!-- packages/opencode/src/kilocode/config/config.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
 - <https://kilo.ai/kiloclaw>

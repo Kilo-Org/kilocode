@@ -157,6 +157,32 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const lookup = createMemo(() => new Map(partition().direct.map((row) => [row.key, row])))
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
+
+  // Clicking a bar in the task timeline scrolls the transcript to that message.
+  // Jumps land instantly (no smooth animation): while pinned at the bottom, a
+  // smooth scroll's initial frames sit within createAutoScroll's near-bottom
+  // threshold, which resumes auto-follow mid-animation and snaps back down.
+  const onScrollToMessage = (e: Event) => {
+    const detail = (e as CustomEvent<{ id: string; partId?: string }>).detail
+    if (!detail?.id) return
+    const matches = rows().filter((r) => r.type === "assistant" && r.message.id === detail.id)
+    // Long messages split into multiple rows (chunks); land on the chunk that
+    // actually contains the clicked part, not just the message's first chunk.
+    const row = matches.find((r) => r.type === "assistant" && r.parts.some((p) => p.id === detail.partId)) ?? matches[0]
+    if (!row) return
+    autoScroll.pause()
+    const index = keys().indexOf(row.key)
+    if (index >= 0) {
+      virtualizer()?.scrollToIndex(index, { align: "start" })
+      return
+    }
+    const el = scrollEl()
+    const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(row.key)}"]`)
+    target?.scrollIntoView({ block: "start" })
+  }
+  window.addEventListener("scrollToMessage", onScrollToMessage)
+  onCleanup(() => window.removeEventListener("scrollToMessage", onScrollToMessage))
+
   const measurement = createMemo(() => {
     const id = session.currentSessionID()
     const token = layout()

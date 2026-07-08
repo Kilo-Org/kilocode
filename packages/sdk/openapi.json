@@ -11979,6 +11979,9 @@
                   },
                   "previousMessage": {
                     "type": "string"
+                  },
+                  "language": {
+                    "type": "string"
                   }
                 },
                 "required": ["path"],

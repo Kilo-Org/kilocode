@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../cli-backend/connection-service"
 import { getErrorMessage } from "../../kilo-provider-utils"
+import { getCommitMessageLanguage } from "../i18n"
 
 let lastGeneratedMessage: string | undefined
 let lastWorkspacePath: string | undefined
@@ -94,7 +95,7 @@ export function registerCommitMessageService(
 
             try {
               const { data } = await client.commitMessage.generate(
-                { path, selectedFiles: undefined, previousMessage },
+                { path, selectedFiles: undefined, previousMessage, language: getCommitMessageLanguage(vscode) },
                 { throwOnError: true, signal: controller.signal },
               )
               const message = data.message
@@ -119,7 +120,7 @@ export function registerCommitMessageService(
           }
           const msg = getErrorMessage(error)
           console.error("[Kilo New] Failed to generate commit message:", msg)
-          vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
+          vscode.window.showErrorMessage(msg || "Failed to generate commit message. Please try again.")
         })
     },
   )
