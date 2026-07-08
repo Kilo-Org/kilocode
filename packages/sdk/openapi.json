@@ -11957,6 +11957,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "CommitMessageNoChangesError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitMessageNoChangesError"
+                }
+              }
+            }
           }
         },
         "description": "Generate a commit message using AI based on the current git diff.",
@@ -11978,6 +11988,9 @@
                     }
                   },
                   "previousMessage": {
+                    "type": "string"
+                  },
+                  "language": {
                     "type": "string"
                   }
                 },
@@ -25165,6 +25178,12 @@
               "sandbox_restrict_network": {
                 "type": "boolean"
               },
+              "sandbox_writable_paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
               "swe_pruner": {
                 "type": "boolean"
               },
@@ -27332,6 +27351,16 @@
           }
         },
         "required": ["id", "sessionID", "output"],
+        "additionalProperties": false
+      },
+      "CommitMessageNoChangesError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
         "additionalProperties": false
       },
       "ConfigOverlayResponse": {

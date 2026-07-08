@@ -1659,6 +1659,11 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "bijv. Genereer commit messages in het Spaans volgens het conventional commits formaat. Retourneer ALLEEN de commit message.",
 
+  "settings.commitMessage.language.sync": "Synchroniseren met UI taal",
+  "settings.commitMessage.language.title": "Taal",
+  "settings.commitMessage.language.description":
+    "Kies welke taal je wilt gebruiken voor AI-gegenereerde commitberichten:",
+
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.fontSize.title": "Lettergrootte",

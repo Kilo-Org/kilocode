@@ -466,6 +466,16 @@ export const kiloScenarios: Scenario[] = [
     .at((ctx) => ({ path: "/commit-message", headers: ctx.headers(), body: {} }))
     .status(400),
   http.protected
+    .post("/commit-message", "commitMessage.generate")
+    .at((ctx) => ({ path: "/commit-message", headers: ctx.headers(), body: { path: directory(ctx) } }))
+    .json(422, (body) => {
+      object(body)
+      check(
+        body.message === "No changes found to generate a commit message for",
+        "no changes should surface a real 422 message, not a masked 500",
+      )
+    }),
+  http.protected
     .post("/session/{sessionID}/branch-name", "branchName.generate")
     .at((ctx) => ({
       path: route("/session/{sessionID}/branch-name", { sessionID: "ses_httpapi_missing" }),

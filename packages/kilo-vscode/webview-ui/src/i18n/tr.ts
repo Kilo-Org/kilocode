@@ -1646,6 +1646,11 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "örn. conventional commits formatını izleyerek İspanyolca commit messages oluştur. SADECE commit message döndür.",
 
+  "settings.commitMessage.language.sync": "Kullanıcı Arayüzü Dili ile Senkronizasyon",
+  "settings.commitMessage.language.title": "Dil",
+  "settings.commitMessage.language.description":
+    "AI tarafından oluşturulan commit mesajları için hangi dili kullanacağınızı seçin:",
+
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.fontSize.title": "Yazı Tipi Boyutu",

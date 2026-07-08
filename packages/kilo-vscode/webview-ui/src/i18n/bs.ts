@@ -1692,6 +1692,10 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "npr. Generiši commit messages na španskom jeziku prateći conventional commits format. Vrati SAMO commit message.",
 
+  "settings.commitMessage.language.sync": "Sinkronizacija sa jezikom korisničkog sučelja",
+  "settings.commitMessage.language.title": "Jezik",
+  "settings.commitMessage.language.description": "Izaberite koji jezik koristiti za poruke koje generiše AI:",
+
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.fontSize.title": "Veličina fonta",

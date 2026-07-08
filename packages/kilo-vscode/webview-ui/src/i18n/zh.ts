@@ -1615,6 +1615,10 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "例如：按照 conventional commits 格式用西班牙语生成 commit messages。只返回 commit message。",
 
+  "settings.commitMessage.language.sync": "跟随界面语言",
+  "settings.commitMessage.language.title": "语言",
+  "settings.commitMessage.language.description": "选择用于 AI 生成 commit message 的语言：",
+
   "settings.display.username.title": "用户名",
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.fontSize.title": "字体大小",
