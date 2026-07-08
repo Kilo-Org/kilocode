@@ -5,20 +5,29 @@ export type CaptureDiff = {
   deletions: number
 }
 
-const durable =
-  /(^|\/)(AGENTS\.md|README(?:\.[^/]*)?|docs?\/.+|package\.json|bun\.lock|pnpm-lock\.yaml|package-lock\.json|turbo\.json|tsconfig[^/]*\.json|vite\.config|eslint|biome|prettier|kilo\.json|\.kilo\/.+|[^/]*(test|spec|config|command|agent|workflow)[^/]*\.(ts|tsx|js|json|md|yml|yaml))$/i
-const generated =
+// Build/generated output: machine-produced files that are never a user edit.
+const generatedDenyList =
   /(^|\/)(dist|build|out|coverage|node_modules|\.next|target|vendor|generated|gen|__snapshots__)(\/|$)|(^|\/)[^/]*\.(min|gen)\.[^/]+$|\.map$/i
 
-export function hasDurableDiff(diffs: Pick<CaptureDiff, "file" | "additions" | "deletions">[]) {
+/** Any non-generated file change. Presence-based: numstat only lists changed files, and binary
+ * edits report 0/0, so churn must not be required. */
+export function hasUserEdit(diffs: Pick<CaptureDiff, "file">[]) {
   return diffs.some((item) => {
     const file = item.file ?? ""
     if (!file) return false
-    // Generated output wins over the durable allowlist: a copied dist/package.json or a vendored doc
-    // is build output, not a user edit.
-    if (generated.test(file)) return false
-    if (durable.test(file)) return true
-    // Fall back to churn size so any language counts, not just files matching the pattern above.
+    return !generatedDenyList.test(file)
+  })
+}
+
+/** A change big enough to consolidate immediately instead of waiting for the interval throttle.
+ * Churn-only, so every language/ecosystem is treated the same; build output is excluded. Text edits
+ * (human or agent) always carry real +/- counts — only binary files are 0/0, so a binary edit is
+ * never substantial here, but still counts as work via hasUserEdit. */
+export function hasSubstantialDiff(diffs: Pick<CaptureDiff, "file" | "additions" | "deletions">[]) {
+  return diffs.some((item) => {
+    const file = item.file ?? ""
+    if (!file) return false
+    if (generatedDenyList.test(file)) return false
     return item.additions + item.deletions >= 20
   })
 }
