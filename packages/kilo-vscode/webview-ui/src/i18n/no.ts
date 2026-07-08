@@ -1633,8 +1633,7 @@ export const dict = {
 
   "settings.commitMessage.language.sync": "Sync med UI-språk",
   "settings.commitMessage.language.title": "Språk",
-  "settings.commitMessage.language.description":
-    "Velg hvilket språk du skal bruke for AI-genererte commit-meldinger:",
+  "settings.commitMessage.language.description": "Velg hvilket språk du skal bruke for AI-genererte commit-meldinger:",
 
   "settings.display.username.title": "Brukernavn",
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",

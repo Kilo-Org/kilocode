@@ -1603,8 +1603,7 @@ export const dict = {
 
   "settings.commitMessage.language.sync": "مزامنة مع لغة واجهة المستخدم",
   "settings.commitMessage.language.title": "اللغة",
-  "settings.commitMessage.language.description":
-    "اختر اللغة المستخدمة لرسائل الالتزام التي تولدها الذكاء الاصطناعي:",
+  "settings.commitMessage.language.description": "اختر اللغة المستخدمة لرسائل الالتزام التي تولدها الذكاء الاصطناعي:",
 
   "settings.display.username.title": "اسم المستخدم",
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",

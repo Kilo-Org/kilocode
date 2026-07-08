@@ -1630,8 +1630,7 @@ export const dict = {
 
   "settings.commitMessage.language.sync": "UI言語と同期",
   "settings.commitMessage.language.title": "言語",
-  "settings.commitMessage.language.description":
-    "AIが生成するコミットメッセージに使用する言語を選択:",
+  "settings.commitMessage.language.description": "AIが生成するコミットメッセージに使用する言語を選択:",
 
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",

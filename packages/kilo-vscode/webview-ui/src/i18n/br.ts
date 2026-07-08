@@ -1651,8 +1651,7 @@ export const dict = {
 
   "settings.commitMessage.language.sync": "Sincronizar com idioma da interface",
   "settings.commitMessage.language.title": "Idioma",
-  "settings.commitMessage.language.description":
-    "Escolha qual idioma usar para as mensagens de commit geradas por AI:",
+  "settings.commitMessage.language.description": "Escolha qual idioma usar para as mensagens de commit geradas por AI:",
 
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",

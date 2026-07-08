@@ -1644,8 +1644,7 @@ export const dict = {
 
   "settings.commitMessage.language.sync": "Sinkronizacija sa jezikom korisničkog sučelja",
   "settings.commitMessage.language.title": "Jezik",
-  "settings.commitMessage.language.description":
-    "Izaberite koji jezik koristiti za poruke koje generiše AI:",
+  "settings.commitMessage.language.description": "Izaberite koji jezik koristiti za poruke koje generiše AI:",
 
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",

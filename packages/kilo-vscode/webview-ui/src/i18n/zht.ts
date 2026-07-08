@@ -1536,8 +1536,7 @@ export const dict = {
 
   "settings.commitMessage.language.sync": "跟隨介面語言",
   "settings.commitMessage.language.title": "語言",
-  "settings.commitMessage.language.description":
-    "選擇用於 AI 產生 commit message 的語言：",
+  "settings.commitMessage.language.description": "選擇用於 AI 產生 commit message 的語言：",
 
   "settings.display.username.title": "使用者名稱",
   "settings.display.username.description": "對話中顯示的自訂使用者名稱",
