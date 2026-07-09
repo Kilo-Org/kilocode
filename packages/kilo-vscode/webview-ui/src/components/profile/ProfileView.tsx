@@ -254,8 +254,6 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                 </Card>
               </Show>
 
-              {usage()}
-
               {/* Balance */}
               <Show when={data().balance}>
                 {(balance) => (
@@ -310,6 +308,8 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                   {language.t("profile.action.logout")}
                 </Button>
               </div>
+
+              {usage()}
             </div>
           )}
         </Show>
