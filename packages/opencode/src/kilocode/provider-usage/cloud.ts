@@ -78,9 +78,10 @@ export function plans(state: CloudState) {
   return state.plans.value
     .filter(
       (item) =>
-        item.planId === "minimax-token-plan-plus" &&
+        item.planId.startsWith("minimax-token-plan-") &&
         item.providerId === "minimax" &&
-        (item.status === "active" || item.status === "past_due"),
+        (item.status === "active" || item.status === "past_due") &&
+        route(item, state.byok) !== "replaced",
     )
     .sort((a, b) => a.id.localeCompare(b.id))
 }
