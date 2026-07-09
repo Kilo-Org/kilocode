@@ -1,5 +1,5 @@
 import { Component, For, Show } from "solid-js"
-import type { ProviderUsageData } from "../../types/messages"
+import type { KiloPassState, ProviderUsageData } from "../../types/messages"
 import type { ProviderUsageSnapshot } from "@kilocode/sdk/v2/client"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card, CardActions, CardDescription, CardTitle } from "@kilocode/kilo-ui/card"
@@ -7,14 +7,18 @@ import { Progress } from "@kilocode/kilo-ui/progress"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tag } from "@kilocode/kilo-ui/tag"
 import { useLanguage } from "../../context/language"
+import { localeToBcp47 } from "../../context/language-utils"
 import { formatWindowValue, windowProgress } from "./provider-usage-format"
 
 export interface ProviderUsageCardsProps {
   data: ProviderUsageData | undefined
   loading: boolean
   error?: string
+  kiloPass?: KiloPassState | null
+  showKiloPass: boolean
   onRefresh: () => void
   onOpen: (url: string) => void
+  onGetKiloPass: () => void
 }
 
 type Language = ReturnType<typeof useLanguage>
@@ -176,6 +180,82 @@ const UsageCard: Component<{
   </Card>
 )
 
+const KiloPassCard: Component<{
+  pass?: KiloPassState | null
+  onGet: () => void
+  language: Language
+}> = (props) => {
+  const progress = () => {
+    if (!props.pass) return 0
+    return Math.min(100, (props.pass.currentPeriodUsageUsd / Math.max(1, props.pass.currentPeriodBaseCreditsUsd)) * 100)
+  }
+  const renewal = () => {
+    const value = props.pass?.nextBillingAt
+    if (!value) return undefined
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return undefined
+    return new Intl.DateTimeFormat(localeToBcp47(props.language.locale()), {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).format(date)
+  }
+  return (
+    <Card class="provider-usage-card">
+      <div class="provider-usage-heading">
+        <div>
+          <CardTitle icon={false}>Kilo</CardTitle>
+          <CardDescription>Kilo Pass</CardDescription>
+        </div>
+        <Tag>{props.language.t("profile.usage.source.viaKilo")}</Tag>
+      </div>
+      <Show
+        when={props.pass}
+        fallback={
+          <CardActions>
+            <Button variant="secondary" size="small" onClick={props.onGet}>
+              {props.language.t("profile.pass.subscribe")}
+            </Button>
+          </CardActions>
+        }
+      >
+        {(pass) => (
+          <div class="provider-usage-resources">
+            <div class="provider-usage-row">
+              <div class="provider-usage-row-heading">
+                <span>Current period</span>
+                <strong>
+                  ${Math.round(pass().currentPeriodUsageUsd)} / ${Math.round(pass().currentPeriodBaseCreditsUsd)}
+                </strong>
+              </div>
+              <Progress
+                value={progress()}
+                minValue={0}
+                maxValue={100}
+                aria-label={`Kilo Pass: ${Math.round(progress())}% used`}
+              />
+            </div>
+            <Show when={pass().currentPeriodBonusCreditsUsd > 0}>
+              <div class="provider-usage-row-heading">
+                <span>{props.language.t("profile.pass.bonus")}</span>
+                <strong>+${pass().currentPeriodBonusCreditsUsd.toFixed(2)}</strong>
+              </div>
+            </Show>
+            <Show when={renewal()}>
+              {(date) => (
+                <div class="provider-usage-row-heading">
+                  <span>{props.language.t("profile.pass.renews")}</span>
+                  <strong>{date()}</strong>
+                </div>
+              )}
+            </Show>
+          </div>
+        )}
+      </Show>
+    </Card>
+  )
+}
+
 const BillingCard: Component<{
   billing: NonNullable<ProviderUsageData["kiloBilling"]>
   onOpen: (url: string) => void
@@ -239,45 +319,52 @@ export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) =>
         </Button>
       </div>
 
-      <Show
-        when={props.data}
-        fallback={
-          <Show
-            when={!props.loading && props.error}
-            fallback={
-              <div class="provider-usage-loading">
-                <Spinner />
-              </div>
-            }
-          >
-            {(error) => (
-              <Card variant="warning">
-                <CardDescription>{error()}</CardDescription>
-              </Card>
-            )}
-          </Show>
-        }
-      >
-        {(data) => (
-          <div class="provider-usage-list">
+      <div class="provider-usage-list">
+        <Show when={props.showKiloPass}>
+          <KiloPassCard pass={props.kiloPass} onGet={props.onGetKiloPass} language={language} />
+        </Show>
+        <Show
+          when={props.data}
+          fallback={
             <Show
-              when={data().items.length > 0}
+              when={!props.loading && props.error}
               fallback={
-                <Card>
-                  <CardDescription>{language.t("profile.usage.empty")}</CardDescription>
-                </Card>
+                <div class="provider-usage-loading">
+                  <Spinner />
+                </div>
               }
             >
-              <For each={data().items}>
-                {(item) => <UsageCard item={item} onOpen={props.onOpen} language={language} />}
-              </For>
+              {(error) => (
+                <Card variant="warning">
+                  <CardDescription>{error()}</CardDescription>
+                </Card>
+              )}
             </Show>
-            <Show when={data().kiloBilling}>
-              {(billing) => <BillingCard billing={billing()} onOpen={props.onOpen} language={language} />}
-            </Show>
-          </div>
-        )}
-      </Show>
+          }
+        >
+          {(data) => (
+            <>
+              <Show
+                when={data().items.length > 0}
+                fallback={
+                  <Show when={!props.showKiloPass && !data().kiloBilling}>
+                    <Card>
+                      <CardDescription>{language.t("profile.usage.empty")}</CardDescription>
+                    </Card>
+                  </Show>
+                }
+              >
+                <For each={data().items}>
+                  {(item) => <UsageCard item={item} onOpen={props.onOpen} language={language} />}
+                </For>
+              </Show>
+              <Show when={data().kiloBilling}>
+                {(billing) => <BillingCard billing={billing()} onOpen={props.onOpen} language={language} />}
+              </Show>
+            </>
+          )}
+        </Show>
+      </div>
     </section>
   )
 }
