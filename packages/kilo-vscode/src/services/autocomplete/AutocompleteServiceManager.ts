@@ -308,9 +308,6 @@ export class AutocompleteServiceManager {
     }
 
     this.taskId = crypto.randomUUID()
-    TelemetryProxy.capture(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
-      taskId: this.taskId,
-    })
 
     const document = editor.document
 
@@ -341,6 +338,11 @@ export class AutocompleteServiceManager {
 
         await editor.edit((editBuilder) => {
           editBuilder.insert(position, insertText)
+        })
+
+        TelemetryProxy.capture(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
+          taskId: this.taskId,
+          chars: insertText.length,
         })
       }
     }

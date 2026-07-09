@@ -3,6 +3,7 @@ import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "./schema"
 import { QuestionID } from "@/question/schema" // kilocode_change
+import { KiloAgentUsage } from "@/kilocode/usage/agent-edits" // kilocode_change
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Effect, Layer, Context, Schema } from "effect"
 
@@ -87,6 +88,9 @@ export const layer = Layer.effect(
       yield* bus.publish(Event.Status, { sessionID, status })
       if (status.type === "idle") {
         yield* bus.publish(Event.Idle, { sessionID })
+        // kilocode_change start
+        yield* Effect.sync(() => KiloAgentUsage.flush(sessionID))
+        // kilocode_change end
         data.delete(sessionID)
         return
       }

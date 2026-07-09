@@ -9,6 +9,7 @@ import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID, PartID } from "./schema"
 import { SessionRunState } from "./run-state"
 import { SessionSummary } from "./summary"
+import { KiloAgentUsage } from "@/kilocode/usage/agent-edits" // kilocode_change
 
 const log = Log.create({ service: "session.revert" })
 
@@ -77,6 +78,16 @@ export const layer = Layer.effect(
       // reflects changes being undone (files on disk still have AI modifications)
       const range = all.filter((msg) => msg.info.id >= rev.messageID)
       const diffs = yield* summary.computeDiff({ messages: range })
+      // kilocode_change end
+
+      // kilocode_change start - enterprise usage: mark checkpoint-reverted files
+      yield* Effect.sync(() => {
+        const paths = [
+          ...patches.flatMap((patch) => patch.files),
+          ...diffs.map((diff) => diff.file).filter((file): file is string => Boolean(file)),
+        ]
+        KiloAgentUsage.markReverted(input.sessionID, paths)
+      })
       // kilocode_change end
 
       yield* snap.revert(patches)

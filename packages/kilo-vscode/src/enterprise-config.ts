@@ -62,7 +62,7 @@ export function resolveGlobalConfigDir(): string {
 function readSettings(): ApiSettings {
   const cfg = vscode.workspace.getConfiguration(CONFIG_KEY)
   return {
-    enabled: cfg.get<boolean>("enabled", true),
+    enabled: cfg.get<boolean>("enabled", false),
     providerId: cfg.get<string>("providerId", "ruiyumaas"),
     baseUrl: cfg.get<string>("baseUrl", "https://ruiyumaas.com/v1"),
     apiKey: cfg.get<string>("apiKey", ""),

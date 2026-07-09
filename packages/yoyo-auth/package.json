@@ -1,0 +1,89 @@
+{
+  "name": "yoyo-auth",
+  "displayName": "驭码登录",
+  "description": "企业 SSO 门卫：登录前完成 OIDC，经本地代理为 Kilo Code 注入 JWT，无需修改 Kilo 源码。",
+  "version": "0.1.0",
+  "publisher": "yoyo-local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.105.1"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished", "onUri"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "yoyo-auth",
+          "title": "驭码登录",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "yoyo-auth": [
+        {
+          "type": "webview",
+          "id": "yoyo-auth.login",
+          "name": "登录"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "yoyo-auth.login",
+        "title": "驭码：SSO 登录"
+      },
+      {
+        "command": "yoyo-auth.logout",
+        "title": "驭码：退出登录"
+      },
+      {
+        "command": "yoyo-auth.openKilo",
+        "title": "驭码：打开 Kilo Code"
+      }
+    ],
+    "configuration": {
+      "title": "驭码登录",
+      "properties": {
+        "yoyo-auth.gatewayUrl": {
+          "type": "string",
+          "default": "",
+          "description": "APISIX / Engine 网关根地址（如 https://wab.flyfishphp.cn）。代理将转发到此地址。"
+        },
+        "yoyo-auth.platformUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Platform OIDC 登录页根地址。留空则使用 gatewayUrl。"
+        },
+        "yoyo-auth.enginePath": {
+          "type": "string",
+          "default": "/kilo",
+          "description": "Engine 在网关下的路径前缀。"
+        },
+        "yoyo-auth.proxyPort": {
+          "type": "number",
+          "default": 0,
+          "description": "本地 JWT 代理端口。0 表示自动选择空闲端口。"
+        },
+        "yoyo-auth.autoConfigureKilo": {
+          "type": "boolean",
+          "default": true,
+          "description": "登录成功后自动写入 Kilo Code 远端连接设置（指向本地代理）。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production && bunx vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@types/vscode": "^1.105.0",
+    "esbuild": "^0.27.2",
+    "typescript": "^5.9.3"
+  }
+}

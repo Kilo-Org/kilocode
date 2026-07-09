@@ -41,7 +41,11 @@ args=(compose)
 for p in "${profiles[@]}"; do
   args+=(--profile "$p")
 done
-args+=(up -d "${services[@]}")
+args+=(up -d)
+if [[ "$BUILD" -eq 1 ]]; then
+  args+=(--force-recreate --no-deps kilo-engine)
+fi
+args+=("${services[@]}")
 
 echo "[deploy-cloud] docker ${args[*]}"
 docker "${args[@]}"

@@ -1,4 +1,54 @@
+consumers:
+  - username: enterprise
+    plugins:
+      jwt-auth:
+        key: enterprise-jwt
+        secret: change-me-enterprise-jwt-secret-32chars
+
 routes:
+  - id: kilo-engine-jwt
+    uri: /kilo/*
+    priority: 25
+    methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    vars:
+      - ["http_authorization", "~~", "^Bearer .+"]
+    upstream:
+      type: roundrobin
+      nodes:
+        "enterprise-bridge:8080": 1
+      timeout:
+        connect: 10
+        send: 300
+        read: 300
+    plugins:
+      jwt-auth: {}
+      proxy-rewrite:
+        regex_uri:
+          - "^/kilo/(.*)"
+          - "/$1"
+        headers:
+          set:
+            Authorization: "Basic __KILO_ENGINE_BASIC__"
+      response-rewrite:
+        headers:
+          set:
+            X-Accel-Buffering: "no"
+      limit-count:
+        count: 100
+        time_window: 60
+        rejected_code: 429
+        key_type: var
+        key: remote_addr
+        policy: local
+      file-logger:
+        path: /usr/local/apisix/logs/enterprise-audit.log
+
   - id: kilo-engine
     uri: /kilo/*
     methods:
@@ -34,16 +84,53 @@ routes:
         policy: local
       file-logger:
         path: /usr/local/apisix/logs/enterprise-audit.log
-    # SSE: disable buffering via plugin metadata where supported;
-    # for nginx upstream, set via custom nginx snippet in production.
-  - id: license-verify
-    uri: /api/v1/license/*
+
+  - id: platform-admin-public
+    uri: /admin/*
+    priority: 25
+    methods:
+      - GET
+    upstream:
+      type: roundrobin
+      nodes:
+        "enterprise-platform:8090": 1
+
+  - id: platform-auth-public
+    uri: /api/v1/auth/*
+    priority: 20
     methods:
       - GET
       - POST
     upstream:
       type: roundrobin
       nodes:
-        "license-mock:19090": 1
+        "enterprise-platform:8090": 1
+
+  - id: platform-license-public
+    uri: /api/v1/license/*
+    priority: 20
+    methods:
+      - GET
+      - POST
+    upstream:
+      type: roundrobin
+      nodes:
+        "enterprise-platform:8090": 1
+
+  - id: platform-api-jwt
+    uri: /api/v1/*
+    priority: 10
+    methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+    upstream:
+      type: roundrobin
+      nodes:
+        "enterprise-platform:8090": 1
+    plugins:
+      jwt-auth: {}
 
 #END

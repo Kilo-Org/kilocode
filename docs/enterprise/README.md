@@ -32,10 +32,26 @@
 | [PHASE1-VSCODE-CLOUD-TUNNEL.md](./PHASE1-VSCODE-CLOUD-TUNNEL.md) | 研发 | **SSH 隧道联调**（公网 9080 未通时） |
 | [PHASE1-SECURITY-REVIEW.md](./PHASE1-SECURITY-REVIEW.md) | 安全 | License 原型评审模板 |
 | [PHASE1-PHASE2-BACKLOG.md](./PHASE1-PHASE2-BACKLOG.md) | PM | Phase 2 待办 |
+| [PHASE2-PLAN.md](./PHASE2-PLAN.md) | PM / 研发 | **Phase 2 开发计划与六周流程**（含 SSO） |
+| [PHASE2-W2-CHECKLIST.md](./PHASE2-W2-CHECKLIST.md) | 研发 | **W2** License + RBAC |
+| [PHASE2-KICKOFF.md](./PHASE2-KICKOFF.md) | PM | Phase 2 启动会纪要模板 |
+| [ADMIN-ANT-DESIGN-PRO.md](./ADMIN-ANT-DESIGN-PRO.md) | 前端 / 全栈 | **管理后台 Ant Design Pro 开发文档**（8 模块规格、API、排期） |
+| [P2-USAGE-ANALYTICS-SPEC-v1.md](./P2-USAGE-ANALYTICS-SPEC-v1.md) | PM / QA | **P2 IDE 使用统计口径与验收表**（§7 已验收 2026-07-09） |
+| [P2-USAGE-ANALYTICS-CHANGES.md](./P2-USAGE-ANALYTICS-CHANGES.md) | 研发 | P2 使用统计实现变更台账 |
+| [P2-ASSESSMENT-SPEC-v1.md](./P2-ASSESSMENT-SPEC-v1.md) | PM / 研发 | **P2 效能考核（V3 个人模型；经理/渗透率可后期补）** |
+| [P2-ASSESSMENT-CHANGES.md](./P2-ASSESSMENT-CHANGES.md) | 研发 | P2 效能考核实现变更台账 |
+| [AI编程效能度量考核方案_V3.xlsx](./AI编程效能度量考核方案_V3.xlsx) | PM / HR | V3 考核模型与 95 人样例 |
 
 ## 部署资产
 
 代码与配置见仓库 `deploy/enterprise/`（Compose、APISIX、桥接 POC、脚本）。
+
+**客户源码仓 skycode（GitHub）发布流程**（内网研发用，不进客户仓）：
+
+| 文档 | 说明 |
+|---|---|
+| [../../deploy/enterprise/skycode/DELIVERY-WORKFLOW.md](../../deploy/enterprise/skycode/DELIVERY-WORKFLOW.md) | **日常开发后 export → commit → push 步骤** |
+| [../../deploy/enterprise/skycode/MANIFEST.md](../../deploy/enterprise/skycode/MANIFEST.md) | 客户仓白名单 / 黑名单 |
 
 联调辅助脚本（仓库根 `scripts/`）：
 

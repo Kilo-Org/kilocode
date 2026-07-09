@@ -1,0 +1,24 @@
+{
+  "name": "enterprise-admin-ui",
+  "private": true,
+  "scripts": {
+    "dev": "max dev",
+    "build": "max build && node scripts/sync-static.mjs",
+    "sync": "node scripts/sync-static.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "npx tsx --test tests/access.test.ts"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/pro-components": "^2.8.6",
+    "@umijs/max": "^4.4.6",
+    "antd": "^5.24.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "typescript": "^5.7.3"
+  }
+}

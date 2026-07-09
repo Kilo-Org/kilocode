@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { captureEnterpriseUsage } from "../../enterprise/usage"
 import { TelemetryEventName, type TelemetryPropertiesProvider } from "./types"
 import { buildTelemetryPayload, buildTelemetryAuthHeader } from "./telemetry-proxy-utils"
 
@@ -44,10 +45,11 @@ export class TelemetryProxy {
    * Fire-and-forget capture. Enriches with provider properties, then POSTs to CLI.
    */
   capture(event: TelemetryEventName, properties?: Record<string, unknown>) {
+    const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
+    captureEnterpriseUsage(built.event, built.properties)
+
     if (!this.isVSCodeTelemetryEnabled()) return
     if (!this.url || !this.password) return
-
-    const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
     const payload = JSON.stringify(built)
     const auth = buildTelemetryAuthHeader(this.password)
 

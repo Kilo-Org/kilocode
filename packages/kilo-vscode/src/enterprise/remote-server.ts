@@ -1,6 +1,9 @@
 import { engineBaseUrl } from "./gateway"
 import type { EnterpriseSettings, RemoteServerSettings } from "./settings"
 import { enterpriseSettings, remotePassword } from "./settings"
+import { gatekeeperDirectRemote } from "../gatekeeper/remote-auth"
+
+const SSO = "gatekeeper-sso"
 
 export type RemoteEndpoint = {
   baseUrl: string
@@ -17,11 +20,11 @@ export function remoteEndpoint(settings?: EnterpriseSettings): RemoteEndpoint | 
   if (!raw) return null
 
   const password = remotePassword(remote)
-  if (!password) return null
+  if (!password && !gatekeeperDirectRemote()) return null
 
   const baseUrl = raw.replace(/\/+$/, "")
   const port = portFromUrl(baseUrl)
-  return { baseUrl, port, password }
+  return { baseUrl, port, password: password || SSO }
 }
 
 function portFromUrl(baseUrl: string): number {

@@ -46,3 +46,16 @@ export function createKiloFallbackProvider() {
     models: {},
   }
 }
+
+type ProviderFilter = {
+  disabled_providers?: string[]
+  enabled_providers?: string[]
+}
+
+export function kiloGatewayHidden(cfg: ProviderFilter): boolean {
+  const disabled = cfg.disabled_providers ?? []
+  if (disabled.includes(KILO_PROVIDER_ID)) return true
+  const enabled = cfg.enabled_providers ?? []
+  if (enabled.length > 0 && !enabled.includes(KILO_PROVIDER_ID)) return true
+  return false
+}

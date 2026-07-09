@@ -2,8 +2,25 @@
   "$schema": "https://app.kilo.ai/config.json",
   "model": "ruiyumaas/glm-5.1",
   "small_model": "ruiyumaas/glm-5",
+  "default_agent": "ask",
   "enabled_providers": ["ruiyumaas"],
   "disabled_providers": ["kilo"],
+  // 企业 POC：关闭自动 compaction，避免 compact 后 autocontinue 合成用户消息导致「停不下来」。
+  // 不修改 CLI 内核；agent steps 限制 runLoop 最大步数。
+  "compaction": {
+    "auto": false,
+    "threshold_percent": 85
+  },
+  "permission": {
+    "suggest": "deny"
+  },
+  "experimental": {
+    "continue_loop_on_deny": false
+  },
+  "agent": {
+    "ask": { "steps": 2 },
+    "code": { "steps": 3 }
+  },
   "provider": {
     "ruiyumaas": {
       "name": "Ruiyu MaaS",

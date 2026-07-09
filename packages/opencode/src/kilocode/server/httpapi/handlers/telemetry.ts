@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { forwardPlatformUsage } from "@/kilocode/usage/platform"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { TelemetryCapturePayload, TelemetrySetEnabledPayload } from "../groups/telemetry"
 
@@ -10,9 +11,13 @@ export const telemetryHandlers = HttpApiBuilder.group(InstanceHttpApi, "telemetr
       payload: typeof TelemetryCapturePayload.Type
     }) {
       // fire-and-forget: log instead of swallowing
-      yield* Effect.sync(() =>
-        Telemetry.track(ctx.payload.event as any, ctx.payload.properties as Record<string, unknown> | undefined),
-      ).pipe(Effect.catchCause((cause) => Effect.logWarning("telemetry.capture failed", cause)))
+      yield* Effect.sync(() => {
+        Telemetry.track(ctx.payload.event as any, ctx.payload.properties as Record<string, unknown> | undefined)
+        forwardPlatformUsage(
+          ctx.payload.event,
+          ctx.payload.properties as Record<string, unknown> | undefined,
+        )
+      }).pipe(Effect.catchCause((cause) => Effect.logWarning("telemetry.capture failed", cause)))
       return true
     })
 

@@ -12,14 +12,20 @@
     "packages/kilo-vscode/dist": true
   },
   "typescript.tsc.autoDetect": "off",
-  "kilo-code.new.enterprise.productName": "YoYo Code Enterprise（测试云）",
+  "kilo-code.new.enterprise.productName": "YoYo Code Enterprise（wab 测试云）",
+  "kilo-code.new.enterprise.gatewayUrl": "https://wab.flyfishphp.cn",
   "kilo-code.new.enterprise.remoteServer.enabled": true,
-  "kilo-code.new.enterprise.remoteServer.url": "http://43.143.227.210:9080/kilo",
-  "kilo-code.new.enterprise.remoteServer.password": "abc12345",
+  "kilo-code.new.enterprise.remoteServer.url": "/kilo",
   "kilo-code.new.enterprise.license.enabled": true,
-  "kilo-code.new.enterprise.license.serverUrl": "http://43.143.227.210:9080",
+  "kilo-code.new.enterprise.license.serverUrl": "https://wab.flyfishphp.cn",
   "kilo-code.new.enterprise.license.key": "poc-demo-key",
   "kilo-code.new.enterprise.license.offlinePath": "",
   "kilo-code.new.enterprise.license.offlinePublicKeyPath": "",
-  "kilo-code.new.customApi.enabled": false
+  "kilo-code.new.enterprise.sso.enabled": true,
+  "kilo-code.new.enterprise.sso.platformUrl": "https://wab.flyfishphp.cn",
+  "kilo-code.new.customApi.enabled": false,
+  "kilo-code.new.autocomplete.enableChatAutocomplete": false,
+  "kilo-code.new.gatekeeper.gatewayUrl": "https://wab.flyfishphp.cn",
+  "kilo-code.new.gatekeeper.platformUrl": "https://wab.flyfishphp.cn",
+  "kilo-code.new.enterprise.remoteServer.password": "gatekeeper-sso"
 }

@@ -93,12 +93,29 @@
       "kilo-code-ActivityBar": [
         {
           "type": "webview",
+          "id": "kilo-code.GatekeeperLogin",
+          "name": "登录",
+          "when": "kilo-code.gatekeeper.needsLogin"
+        },
+        {
+          "type": "webview",
           "id": "kilo-code.SidebarProvider",
-          "name": "Kilo Code"
+          "name": "Kilo Code",
+          "when": "!kilo-code.gatekeeper.needsLogin"
         }
       ]
     },
     "commands": [
+      {
+        "command": "kilo-code.new.gatekeeper.login",
+        "title": "企业 SSO 登录",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.gatekeeper.logout",
+        "title": "退出企业登录",
+        "category": "Kilo Code"
+      },
       {
         "command": "kilo-code.new.plusButtonClicked",
         "title": "New Task",
@@ -1047,6 +1064,66 @@
           "type": "boolean",
           "default": false,
           "description": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
+        },
+        "kilo-code.new.gatekeeper.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "启用企业 SSO 门卫：未登录时显示登录页，登录后直连云端 Engine（Bearer JWT）。"
+        },
+        "kilo-code.new.gatekeeper.gatewayUrl": {
+          "type": "string",
+          "default": "",
+          "description": "企业网关地址（如 https://wab.flyfishphp.cn）。设置后自动启用门卫。"
+        },
+        "kilo-code.new.gatekeeper.platformUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Platform OIDC 地址。留空则使用 gatewayUrl。"
+        },
+        "kilo-code.new.gatekeeper.enginePath": {
+          "type": "string",
+          "default": "/kilo",
+          "description": "Engine 在网关下的路径前缀。"
+        },
+        "kilo-code.new.gatekeeper.autoConfigureRemote": {
+          "type": "boolean",
+          "default": true,
+          "description": "登录成功后自动写入 enterprise 远端连接设置（直连网关）。"
+        },
+        "kilo-code.new.enterprise.gatewayUrl": {
+          "type": "string",
+          "default": "",
+          "description": "APISIX 网关根地址。门卫登录后会自动写入云端地址。"
+        },
+        "kilo-code.new.enterprise.remoteServer.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "连接远端 Kilo Engine（由门卫登录自动配置）。"
+        },
+        "kilo-code.new.enterprise.remoteServer.url": {
+          "type": "string",
+          "default": "/kilo",
+          "description": "远端 Engine 路径。"
+        },
+        "kilo-code.new.enterprise.remoteServer.password": {
+          "type": "string",
+          "default": "",
+          "description": "远端 Basic 密码（门卫模式下由插件自动设置）。"
+        },
+        "kilo-code.new.enterprise.license.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "启用 License 在线校验。"
+        },
+        "kilo-code.new.enterprise.license.serverUrl": {
+          "type": "string",
+          "default": "",
+          "description": "License 校验服务地址。"
+        },
+        "kilo-code.new.enterprise.license.key": {
+          "type": "string",
+          "default": "",
+          "description": "License Key。"
         }
       }
     }
@@ -1059,6 +1136,7 @@
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "watch:cli": "bun script/watch-cli.ts",
     "package": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js --production",
+    "package:yoyo": "bun run prepare:cli-binary && bun run rebuild-sdk && bun script/package-yoyo.ts",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",

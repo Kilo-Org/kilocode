@@ -1,0 +1,85 @@
+import { defineConfig } from "@umijs/max"
+
+export default defineConfig({
+  base: "/admin/",
+  publicPath: "/admin/",
+  hash: true,
+  antd: {},
+  access: {},
+  model: {},
+  initialState: {},
+  request: {},
+  layout: {
+    title: "企业控制面",
+    locale: false,
+  },
+  routes: [
+    { path: "/user/login", layout: false, component: "./User/Login" },
+    { path: "/403", component: "./403" },
+    { path: "/", component: "./Home" },
+    {
+      path: "/tenants",
+      name: "租户管理",
+      icon: "TeamOutlined",
+      access: "canTenants",
+      component: "./Tenants",
+    },
+    {
+      path: "/users",
+      name: "用户管理",
+      icon: "UserOutlined",
+      access: "canUsers",
+      component: "./Users",
+    },
+    {
+      path: "/usage",
+      name: "用量统计",
+      icon: "BarChartOutlined",
+      access: "canUsage",
+      component: "./Usage",
+    },
+    {
+      path: "/model",
+      name: "模型配置",
+      icon: "ApiOutlined",
+      access: "canModel",
+      component: "./Model",
+    },
+    {
+      path: "/index",
+      name: "代码索引",
+      icon: "DatabaseOutlined",
+      access: "canIndex",
+      component: "./IndexPlaceholder",
+    },
+    {
+      path: "/security",
+      name: "安全报告",
+      icon: "SafetyOutlined",
+      access: "canSecurity",
+      component: "./SecurityPlaceholder",
+    },
+    {
+      path: "/monitor",
+      name: "系统监控",
+      icon: "DashboardOutlined",
+      access: "canMonitor",
+      component: "./Monitor",
+    },
+    {
+      path: "/audit",
+      name: "审计日志",
+      icon: "AuditOutlined",
+      access: "canAudit",
+      component: "./Audit",
+    },
+    { path: "*", component: "./Home" },
+  ],
+  proxy: {
+    "/api": {
+      target: "http://127.0.0.1:8090",
+      changeOrigin: true,
+    },
+  },
+  npmClient: "npm",
+})

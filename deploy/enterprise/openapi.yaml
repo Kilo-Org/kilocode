@@ -1,13 +1,377 @@
 openapi: 3.0.3
 info:
-  title: Enterprise Platform API (Phase 1 draft)
-  version: 0.1.0
-  description: Layer 3/4 契约草案。Phase 1 仅 License 与 Engine 健康检查落地。
+  title: Enterprise Platform API
+  version: 0.5.0
+  description: |
+    Phase 2 企业控制面 Platform（8090）。
+    管理后台 Ant Design Pro 对接；License 校验、RBAC、OIDC、模型配置下发。
 
 paths:
+  /health:
+    get:
+      summary: Platform 健康检查
+      tags: [system]
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/v1/version:
+    get:
+      summary: 服务版本与 phase
+      tags: [system]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  phase:
+                    type: string
+
+  /api/v1/auth/status:
+    get:
+      summary: OIDC 是否启用
+      tags: [auth]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  issuer:
+                    type: string
+                  login:
+                    type: string
+
+  /api/v1/auth/login:
+    get:
+      summary: OIDC 登录跳转
+      tags: [auth]
+      responses:
+        "302":
+          description: 重定向至 IdP
+        "503":
+          description: OIDC 未配置
+
+  /api/v1/auth/callback:
+    get:
+      summary: OIDC 回调，签发 JWT
+      tags: [auth]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+
+  /api/v1/auth/dev-token:
+    post:
+      summary: 开发用 JWT（PLATFORM_AUTH_DEV=1）
+      tags: [auth]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+
+  /api/v1/auth/me:
+    get:
+      summary: 当前用户（Bearer JWT）
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+
+  /api/v1/tenants:
+    get:
+      summary: 租户列表
+      tags: [tenants]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Tenant"
+    post:
+      summary: 新建租户（sys_admin）
+      tags: [tenants]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: ok
+
+  /api/v1/tenants/{id}/licenses:
+    post:
+      summary: 客户上传供应商签发的离线 License
+      description: |
+        商业模式：License 由软件供应商在客户环境外离线签发（RSA 私钥不出供应商）；
+        客户私有化 Platform 内置验签公钥，租户管理员将收到的 .json 授权文件上传至本接口完成激活。
+        sys_admin 可为任意租户代传；tenant_admin 仅本租户。
+      tags: [tenants]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfflineLicenseFile"
+      responses:
+        "200":
+          description: 导入成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+        "400":
+          description: 格式/签名/过期无效
+        "403":
+          description: 无权限
+        "409":
+          description: license key 已绑定其他租户
+
+  /api/v1/tenants/{id}:
+    patch:
+      summary: 编辑租户
+      tags: [tenants]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                status:
+                  type: string
+                  enum: [active, suspended]
+      responses:
+        "200":
+          description: ok
+
+  /api/v1/users:
+    get:
+      summary: 租户用户列表
+      tags: [users]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+
+  /api/v1/users/{id}:
+    get:
+      summary: 用户详情（含 oidc_sub）
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+        "404":
+          description: not_found
+
+  /api/v1/users/{id}/roles:
+    post:
+      summary: 分配角色（三员互斥校验）
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+      responses:
+        "200":
+          description: ok
+        "409":
+          description: 三员互斥冲突
+    delete:
+      summary: 移除角色
+      tags: [users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+      responses:
+        "200":
+          description: ok
+
+  /api/v1/roles:
+    get:
+      summary: 可选角色列表
+      tags: [roles]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Role"
+
+  /api/v1/usage/summary:
+    get:
+      summary: 用量摘要
+      tags: [usage]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  licenseUsage:
+                    type: integer
+                  users:
+                    type: integer
+
+  /api/v1/usage/detail:
+    get:
+      summary: 用量明细（按日 / 按终端）
+      tags: [usage]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+            maximum: 90
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageDetail"
+
+  /api/v1/licenses/status:
+    get:
+      summary: 本租户授权到期提醒状态
+      description: |
+        当最早有效 License 距到期 ≤15 天时 `expiringSoon=true`，供管理后台全局横幅提醒。
+        未激活或已过期时不提醒（沿用现有 verify/只读策略）。
+      tags: [license]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseStatus"
+
+  /api/v1/licenses:
+    get:
+      summary: 本租户 License 列表
+      tags: [license]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/License"
+
   /api/v1/license/verify:
     post:
-      summary: 校验 License（在线）
+      summary: 校验 License（插件在线）
+      tags: [license]
       requestBody:
         required: true
         content:
@@ -25,45 +389,392 @@ paths:
                   enum: [vscode, jetbrains, cli]
       responses:
         "200":
-          description: 校验结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseVerifyResponse"
+        "403":
+          description: 无效 Key
+
+  /api/v1/model-config:
+    get:
+      summary: 读模型配置
+      tags: [model]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelConfig"
+    put:
+      summary: 保存模型配置
+      tags: [model]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModelConfig"
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: invalid_api_key_env 等
+
+  /api/v1/model-config/apply:
+    post:
+      summary: 下发 Engine（写入 generated.kilo.jsonc）
+      tags: [model]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: path / provider / model
+
+  /api/v1/monitor/health:
+    get:
+      summary: 组件探活
+      tags: [monitor]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  valid:
-                    type: boolean
-                  token:
-                    type: string
-                  expiresAt:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HealthItem"
+                  at:
                     type: string
                     format: date-time
-                  readonly:
-                    type: boolean
-                  message:
-                    type: string
-        "403":
-          description: 无效 Key
+
+  /api/v1/audit/logs:
+    get:
+      summary: 审计日志（筛选 + 分页）
+      tags: [audit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditLog"
+                  total:
+                    type: integer
 
   /global/health:
     get:
-      summary: Kilo Engine 健康检查（经网关时为 /kilo/global/health）
+      summary: Kilo Engine 健康检查（经网关 /kilo/global/health）
+      tags: [engine]
       security:
         - basicAuth: []
       responses:
         "200":
           description: 服务正常
 
-  /internal/v1/chat:
-    post:
-      summary: 桥接层标准对话接口（Phase 2）
-      description: Phase 1 由 bridge POC 透传至 Engine，未实现业务转换。
-      responses:
-        "501":
-          description: Phase 1 未实现
-
 components:
   securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
     basicAuth:
       type: http
       scheme: basic
+
+  parameters:
+    TenantId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+
+    MeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        roles:
+          type: array
+          items:
+            type: string
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        licenseExpiresAt:
+          type: string
+          format: date-time
+        licenseDaysLeft:
+          type: integer
+        licenseExpiringSoon:
+          type: boolean
+
+    OfflineLicenseFile:
+      type: object
+      required: [key, expiresAt]
+      properties:
+        key:
+          type: string
+          description: License 唯一标识
+        expiresAt:
+          type: string
+          format: date-time
+          description: 到期时间（RFC3339）
+        signature:
+          type: string
+          description: RSA-SHA256 签名（Base64）
+        algorithm:
+          type: string
+          example: RSA-SHA256
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        displayName:
+          type: string
+        status:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        ssoBound:
+          type: boolean
+
+    UserDetail:
+      allOf:
+        - $ref: "#/components/schemas/User"
+        - type: object
+          properties:
+            oidcSub:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+
+    Role:
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+        level:
+          type: integer
+
+    UsageDetail:
+      type: object
+      properties:
+        days:
+          type: integer
+        daily:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+        clients:
+          type: array
+          items:
+            type: object
+            properties:
+              client:
+                type: string
+              machineId:
+                type: string
+              count:
+                type: integer
+              lastAt:
+                type: string
+                format: date-time
+
+    License:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        licenseKey:
+          type: string
+          description: 脱敏展示
+        expiresAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, readonly, frozen]
+        usageCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        daysLeft:
+          type: integer
+          description: 距到期剩余天数（仅 expiringSoon 时返回）
+        expiringSoon:
+          type: boolean
+          description: 距到期 ≤15 天
+
+    LicenseStatus:
+      type: object
+      properties:
+        activated:
+          type: boolean
+          description: 是否已上传过 License
+        expiresAt:
+          type: string
+          format: date-time
+          description: 最早有效 License 到期时间
+        daysLeft:
+          type: integer
+        expiringSoon:
+          type: boolean
+
+    LicenseVerifyResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        token:
+          type: string
+        expiresAt:
+          type: string
+        readonly:
+          type: boolean
+        message:
+          type: string
+
+    ModelConfig:
+      type: object
+      required: [provider, defaultModel]
+      properties:
+        provider:
+          type: string
+          enum: [deepseek, qwen, glm, minimax]
+        apiBase:
+          type: string
+        defaultModel:
+          type: string
+        smallModel:
+          type: string
+        fallbackProvider:
+          type: string
+        apiKeyEnv:
+          type: string
+          description: Engine 容器环境变量名；下发为 {env:NAME}，非明文密钥
+          example: KILO_CUSTOM_API_KEY
+
+    HealthItem:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        status:
+          type: string
+        code:
+          type: integer
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+        summary:
+          type: string
+        actorId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time

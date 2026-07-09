@@ -1,9 +1,20 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
-  "model": "deepseek/deepseek-chat",
-  "small_model": "deepseek/deepseek-coder",
+  "model": "deepseek/deepseek-v4-pro",
+  "small_model": "deepseek/deepseek-v4-flash",
+  "default_agent": "ask",
   "enabled_providers": ["deepseek"],
   "disabled_providers": ["kilo"],
+  "compaction": {
+    "auto": false,
+    "threshold_percent": 85
+  },
+  "permission": {
+    "suggest": "deny"
+  },
+  "experimental": {
+    "continue_loop_on_deny": false
+  },
   "provider": {
     "deepseek": {
       "name": "DeepSeek",
@@ -14,13 +25,23 @@
         "baseURL": "https://api.deepseek.com/v1"
       },
       "models": {
+        "deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro",
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash",
+          "tool_call": true,
+          "limit": { "context": 128000, "output": 8192 }
+        },
         "deepseek-chat": {
-          "name": "DeepSeek Chat",
+          "name": "DeepSeek Chat (legacy, 2026-07-24 弃用)",
           "tool_call": true,
           "limit": { "context": 64000, "output": 8192 }
         },
-        "deepseek-coder": {
-          "name": "DeepSeek Coder",
+        "deepseek-reasoner": {
+          "name": "DeepSeek Reasoner (legacy, 2026-07-24 弃用)",
           "tool_call": true,
           "limit": { "context": 64000, "output": 8192 }
         }

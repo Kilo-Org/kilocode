@@ -60,7 +60,7 @@ const ProvidersTab: Component = () => {
 
   const disabledProviders = createMemo(() => config().disabled_providers ?? [])
   const disabledIds = createMemo(() => new Set(disabledProviders()))
-  const providers = createMemo(() => providersWithKiloFallback(provider.providers()))
+  const providers = createMemo(() => providersWithKiloFallback(provider.providers(), config()))
   const disabledOptions = createMemo(() => disabledProviderOptions(providers(), disabledProviders()))
 
   function source(item: Provider): ProviderSource | undefined {

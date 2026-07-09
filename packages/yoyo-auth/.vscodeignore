@@ -1,0 +1,7 @@
+dist/**
+node_modules/**
+src/**
+tsconfig.json
+esbuild.js
+**/*.ts
+!dist/**

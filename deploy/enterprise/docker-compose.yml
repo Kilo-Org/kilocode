@@ -12,6 +12,7 @@ services:
       KILO_SERVER_PASSWORD: ${KILO_SERVER_PASSWORD:?set KILO_SERVER_PASSWORD in .env}
       KILO_CUSTOM_API_KEY: ${KILO_CUSTOM_API_KEY:-}
       KILO_CUSTOM_API_BASE_URL: ${KILO_CUSTOM_API_BASE_URL:-}
+      KILO_DISABLE_AUTOCOMPACT: ${KILO_DISABLE_AUTOCOMPACT:-1}
     ports:
       - "${KILO_ENGINE_BIND:-4096}:4096"
     volumes:
@@ -88,6 +89,113 @@ services:
       - "${LICENSE_MOCK_BIND:-19090}:19090"
     restart: unless-stopped
 
+  postgres:
+    profiles: ["platform"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${PLATFORM_PG_USER:-kilo}
+      POSTGRES_PASSWORD: ${PLATFORM_PG_PASSWORD:?set PLATFORM_PG_PASSWORD in .env}
+      POSTGRES_DB: ${PLATFORM_PG_DB:-enterprise}
+    volumes:
+      - platform-pg-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    profiles: ["platform"]
+    image: redis:7-alpine
+    volumes:
+      - platform-redis-data:/data
+    restart: unless-stopped
+
+  enterprise-platform:
+    profiles: ["platform"]
+    build:
+      context: ./platform
+      dockerfile: Dockerfile
+    environment:
+      PLATFORM_LISTEN: ":8090"
+      PLATFORM_PG_URL: postgres://${PLATFORM_PG_USER:-kilo}:${PLATFORM_PG_PASSWORD}@postgres:5432/${PLATFORM_PG_DB:-enterprise}?sslmode=disable
+      PLATFORM_REDIS_URL: redis://redis:6379/0
+      PLATFORM_MIGRATIONS_DIR: /migrations
+      PLATFORM_JWT_SECRET: ${PLATFORM_JWT_SECRET:?set PLATFORM_JWT_SECRET in .env}
+      PLATFORM_JWT_KEY: ${PLATFORM_JWT_KEY:-enterprise-jwt}
+      PLATFORM_AUTH_DEV: ${PLATFORM_AUTH_DEV:-1}
+      PLATFORM_DEFAULT_TENANT_ID: ${PLATFORM_DEFAULT_TENANT_ID:-00000000-0000-0000-0000-000000000001}
+      PLATFORM_OIDC_ISSUER: ${PLATFORM_OIDC_ISSUER:-}
+      PLATFORM_OIDC_CLIENT_ID: ${PLATFORM_OIDC_CLIENT_ID:-}
+      PLATFORM_OIDC_CLIENT_SECRET: ${PLATFORM_OIDC_CLIENT_SECRET:-}
+      PLATFORM_OIDC_REDIRECT_URL: ${PLATFORM_OIDC_REDIRECT_URL:-}
+      PLATFORM_OIDC_BROWSER_REDIRECT: ${PLATFORM_OIDC_BROWSER_REDIRECT:-/admin/}
+      PLATFORM_OIDC_VSCODE_URI: ${PLATFORM_OIDC_VSCODE_URI:-vscode://yoyo-local.yoyo-code/enterprise/callback}
+      PLATFORM_ENGINE_CONFIG_PATH: /config-out/generated.kilo.jsonc
+      PLATFORM_MONITOR_ENGINE_URL: http://kilo-engine:4096
+      PLATFORM_MONITOR_BRIDGE_URL: http://enterprise-bridge:8080
+      PLATFORM_MONITOR_GATEWAY_URL: http://apisix:9080
+      PLATFORM_MONITOR_ENGINE_PASS: ${KILO_SERVER_PASSWORD:-}
+      PLATFORM_LICENSE_PUBLIC_KEY_PATH: ${PLATFORM_LICENSE_PUBLIC_KEY_PATH:-/samples/license-dev-public.pem}
+    volumes:
+      - ./config:/config-out
+      - ./samples/license-dev-public.pem:/samples/license-dev-public.pem:ro
+    ports:
+      - "${PLATFORM_BIND:-127.0.0.1:8090}:8090"
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  logto-db:
+    profiles: ["logto"]
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LOGTO_PG_PASSWORD:-logto}
+      POSTGRES_DB: logto
+    volumes:
+      - logto-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d logto"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  logto:
+    profiles: ["logto"]
+    image: svhd/logto:${LOGTO_TAG:-latest}
+    depends_on:
+      logto-db:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "npm run cli db seed -- --swe && npm start"]
+    environment:
+      TRUST_PROXY_HEADER: "1"
+      DB_URL: postgres://postgres:${LOGTO_PG_PASSWORD:-logto}@logto-db:5432/logto
+      ENDPOINT: ${LOGTO_ENDPOINT:-http://127.0.0.1:3001}
+      ADMIN_ENDPOINT: ${LOGTO_ADMIN_ENDPOINT:-http://127.0.0.1:3002}
+    ports:
+      - "${LOGTO_BIND:-127.0.0.1:3001}:3001"
+      - "${LOGTO_ADMIN_BIND:-127.0.0.1:3002}:3002"
+    restart: unless-stopped
+
+  caddy:
+    # 仅当宿主机 80/443 空闲时使用。云机已有宝塔 Nginx 时请用 nginx/README.md，勿启本服务。
+    profiles: ["tls"]
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CADDY_EMAIL: ${CADDY_EMAIL:-admin@flyfishphp.cn}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
 volumes:
   kilo-data:
   qdrant-data:
+  platform-pg-data:
+  platform-redis-data:
+  logto-pg-data:
+  caddy-data:
+  caddy-config:

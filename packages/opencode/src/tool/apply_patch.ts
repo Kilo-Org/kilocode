@@ -14,6 +14,7 @@ import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
+import { KiloAgentUsage } from "@/kilocode/usage/agent-edits" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
@@ -278,6 +279,23 @@ export const ApplyPatchTool = Tool.define(
           yield* bus.publish(File.Event.Edited, { file: edited })
         }
       }
+
+      // kilocode_change start
+      yield* Effect.sync(() => {
+        for (const change of fileChanges) {
+          if (change.type === "delete") continue
+          const path = change.movePath ?? change.filePath
+          KiloAgentUsage.recordEdit({
+            sessionID: ctx.sessionID,
+            tool: "apply_patch",
+            path,
+            old: change.oldContent,
+            next: change.newContent,
+            chars: change.additions + change.deletions,
+          })
+        }
+      })
+      // kilocode_change end
 
       // Publish file change events
       for (const update of updates) {

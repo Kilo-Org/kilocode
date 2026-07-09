@@ -91,6 +91,7 @@ import {
 import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
+import { postEnterpriseUsage } from "./enterprise/usage"
 // legacy-migration start
 import {
   checkAndShowMigrationWizard,
@@ -2687,6 +2688,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     let resolved: { sid: string; dir: string } | undefined
     try {
       resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
+
+      if (text.trim()) {
+        postEnterpriseUsage({
+          ide: "vscode",
+          occurred_at: new Date().toISOString(),
+          event: "agent.task.triggered",
+          metrics: {},
+        })
+      }
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {

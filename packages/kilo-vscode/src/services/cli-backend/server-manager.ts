@@ -8,8 +8,10 @@ import { resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
 import { customApiEnv, whenEnterpriseConfigReady } from "../../enterprise-config"
-import { remoteEndpoint } from "../../enterprise/remote-server"
-import { enterpriseSettings } from "../../enterprise/settings"
+import { enterpriseUsageEnv } from "../../enterprise/usage"
+import { remoteEndpoint, type RemoteEndpoint } from "../../enterprise/remote-server"
+import { whenGatekeeperReady } from "../../gatekeeper"
+import { gatekeeperAuthTag, remoteAuthHeader } from "../../gatekeeper/remote-auth"
 
 export interface ServerInstance {
   port: number
@@ -39,6 +41,7 @@ export function resolveManagedServerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessE
 export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
+  private tag = ""
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -51,6 +54,18 @@ export class ServerManager {
   async getServer(): Promise<ServerInstance> {
     console.log("[Kilo New] ServerManager: 🔍 getServer called")
     await whenEnterpriseConfigReady()
+    await whenGatekeeperReady()
+    const tag = await gatekeeperAuthTag(this.context)
+    if (this.instance && this.tag !== tag) {
+      console.log("[Kilo New] ServerManager: ♻️ Gatekeeper token changed — resetting cached server")
+      this.dispose()
+    }
+    this.tag = tag
+    const remote = remoteEndpoint()
+    if (this.instance && !this.matches(remote)) {
+      console.log("[Kilo New] ServerManager: ♻️ Remote settings changed — resetting cached server")
+      this.dispose()
+    }
     if (this.instance) {
       console.log("[Kilo New] ServerManager: ♻️ Returning existing instance:", { port: this.instance.port })
       return this.instance
@@ -62,7 +77,6 @@ export class ServerManager {
     }
 
     console.log("[Kilo New] ServerManager: 🚀 Starting server...")
-    const remote = remoteEndpoint()
     this.startupPromise = remote ? this.connectRemote(remote) : this.startServer()
     try {
       this.instance = await this.startupPromise
@@ -73,8 +87,18 @@ export class ServerManager {
     }
   }
 
+  private matches(remote: RemoteEndpoint | null): boolean {
+    if (!this.instance) return false
+    if (remote) {
+      const base = remote.baseUrl.replace(/\/+$/, "")
+      const current = this.instance.baseUrl.replace(/\/+$/, "")
+      return this.instance.process === null && current === base && this.instance.password === remote.password
+    }
+    return this.instance.process !== null
+  }
+
   private async connectRemote(remote: { baseUrl: string; port: number; password: string }): Promise<ServerInstance> {
-    const authHeader = `Basic ${Buffer.from(`kilo:${remote.password}`).toString("base64")}`
+    const authHeader = await remoteAuthHeader(this.context, remote.password)
     const healthUrl = `${remote.baseUrl}/global/health`
     console.log("[Kilo New] ServerManager: 🌐 Remote engine:", healthUrl)
     const res = await fetch(healthUrl, { headers: { Authorization: authHeader } })
@@ -105,6 +129,8 @@ export class ServerManager {
     const stat = fs.statSync(cliPath)
     console.log("[Kilo New] ServerManager: 📄 CLI isFile:", stat.isFile())
     console.log("[Kilo New] ServerManager: 📄 CLI mode (octal):", (stat.mode & 0o777).toString(8))
+
+    const usageEnv = await enterpriseUsageEnv(this.context)
 
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
@@ -162,6 +188,7 @@ export class ServerManager {
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...customApiEnv(),
+          ...usageEnv,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...resolveTreeSitterEnv(this.context.extensionPath),
         },

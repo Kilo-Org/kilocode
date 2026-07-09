@@ -24,6 +24,13 @@ $paths = @(
   "packages/kilo-indexing",
   "packages/kilo-telemetry",
   "packages/plugin",
+  "packages/plugin-atomic-chat",
+  "packages/http-recorder",
+  "packages/llm",
+  "packages/ui",
+  "packages/kilo-ui",
+  "packages/kilo-web-ui",
+  "packages/kilo-console",
   "packages/sdk/js",
   "deploy/enterprise"
 )
@@ -35,10 +42,8 @@ $exclude = @(
   "--exclude=packages/opencode/bin",
   "--exclude=packages/kilo-vscode",
   "--exclude=packages/kilo-jetbrains",
-  "--exclude=packages/kilo-ui",
   "--exclude=packages/kilo-docs",
   "--exclude=packages/storybook",
-  "--exclude=packages/ui",
   "--exclude=*.vsix",
   "--exclude=deploy/enterprise/dist"
 )

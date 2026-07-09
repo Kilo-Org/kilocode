@@ -1,0 +1,66 @@
+# skycode 客户仓 — 复制本文件为仓库根目录 `.gitignore`
+# 详见 deploy/enterprise/skycode/MANIFEST.md
+
+# --- 内部文档与运维 ---
+docs/enterprise/
+scripts/
+.kilo/
+.opencode/
+
+# --- License 签发（供应商专属）---
+deploy/enterprise/scripts/gen-offline-license.mjs
+deploy/enterprise/mock-license.mjs
+deploy/enterprise/samples/offline-license.signed.json
+deploy/enterprise/samples/license-dev-public.pem
+deploy/enterprise/samples/license-dev-private.pem
+**/license-dev-private.pem
+
+# --- 内网打包 / 测试域配置 ---
+packages/kilo-vscode/script/package-yoyo.ts
+deploy/enterprise/scripts/pack-for-cloud.ps1
+deploy/enterprise/caddy/
+deploy/enterprise/nginx/
+deploy/enterprise/dist/
+
+# --- 非交付包 ---
+packages/yoyo-auth/
+packages/kilo-jetbrains/
+packages/kilo-docs/
+packages/storybook/
+
+# --- 构建产物与归档 ---
+node_modules/
+dist/
+ts-dist/
+.turbo/
+*.vsix
+*.tgz
+kilocode-cloud.tgz
+packages/opencode/dist/
+packages/opencode/bin/
+
+# --- 密钥与环境 ---
+.env
+.env.local
+.env.*
+!.env.example
+*.pem
+!**/*.example.pem
+
+# --- 临时与本地 ---
+tmp/
+tmp-*
+*.log
+.DS_Store
+*.code-workspace
+.kilo-dev/
+telemetry-id
+
+# --- 合同与内部方案（根目录）---
+企业私有化*.md
+*外包开发合同*
+
+# --- 可选：不上传上游 CI / 多语言 README ---
+# .github/
+# README.*.md
+# !README.md

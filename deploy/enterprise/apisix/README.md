@@ -7,12 +7,22 @@ cd deploy/enterprise
 docker compose --profile gateway up -d
 ```
 
-## 路由
+## 路由（W3）
 
-| 路径 | 上游 |
-|---|---|
-| `/kilo/*` | `kilo-engine:4096` |
-| `/api/v1/license/*` | `license-mock:19090`（profile license） |
+| 路径 | 上游 | 鉴权 |
+|---|---|---|
+| `/kilo/*` | `enterprise-bridge:8080` | 无（Phase 1） |
+| `/api/v1/auth/*` | `enterprise-platform:8090` | 公开 |
+| `/api/v1/license/*` | `enterprise-platform:8090` | 公开 |
+| `/api/v1/*` | `enterprise-platform:8090` | `jwt-auth` |
+
+**JWT：** `apisix.yaml` 中 consumer `secret` 须与 `.env` 的 `PLATFORM_JWT_SECRET` 一致；payload 含 `key: enterprise-jwt`（`PLATFORM_JWT_KEY`）。
+
+启动 gateway + platform：
+
+```bash
+docker compose --profile gateway --profile platform up -d apisix enterprise-platform
+```
 
 ## SSE 要点
 

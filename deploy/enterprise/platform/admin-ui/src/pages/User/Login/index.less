@@ -1,0 +1,49 @@
+html,
+body,
+#root {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #001529 0%, #1677ff 100%);
+}
+
+.login-wrap {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  .ant-pro-form-login-container {
+    min-width: unset !important;
+    overflow: hidden !important;
+    padding-inline: 0 !important;
+  }
+
+  .ant-pro-form-login-main {
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  .ant-pro-form-login-main .ant-form,
+  .ant-pro-form-login-main .ant-form-item,
+  .ant-pro-form-login-main .ant-input-affix-wrapper {
+    max-width: 100%;
+  }
+
+  .login-extra {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+  }
+}

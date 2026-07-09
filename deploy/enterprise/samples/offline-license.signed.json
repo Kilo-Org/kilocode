@@ -1,6 +1,6 @@
 {
-  "key": "enterprise-offline-demo",
-  "expiresAt": "2027-12-31T23:59:59.000Z",
-  "signature": "nMrtYElg/mr9WqPHvVoTQWPv4G1Cb0C6BPxW6yi40QG+EHCGoxEIU1JL6Eo45Xl2Yu0HUm37JPD14yK08oS+Us3isfzQxoamBFIFa5WXL/IeUekSaPnwJfaR6ke+RK85L0nEMSevyUa3jF8SKd/RrxlrlaGDuMD5rQh0uQ4OqnOX5c4ButGL2OvuKSGmDJzwt1rh1IckPWu+q+kwoI23bz63GQKOSCVwq31/kxcrrHXTMyLjUB+GpYjs67UWt2A4WiJFpHSFj2qlZMOvSJwg4o6cd+ct4zXFMAgd8Po/fsJdwbBkH2TY51KcXjOTefW/dpEE3eR0QmYYjHIqSpUcNQ==",
+  "key": "cloud-test-soon",
+  "expiresAt": "2026-07-09T20:17:24.300Z",
+  "signature": "WvnIMN7V9e/fKUPxoyGlYkw9+bIC01eXPkfd/f8KOiNPV/7lQp3NJyDsJ22vDgvmgXi7NiG0YCP3e6Go2ryjvdOL6DIwVYogGw6900bsO8eJes9PmigBD7wniS1ug+I8WCYNviHh+Mw2PxNcwOUMfHlyuF13w4zpuzcm2bioWgkcnqduzhlvgKkeZ5xO3AO3w00OvRNiMoyvForzPvhR64fHWsawFbJQPPC+9NnDcTg+fFHdnQNQ6mRZ0EeLJwcwUMpC7i/BLXtYyIKN3wf8wl3iOf/VC9gpT/85LeUidHTVFskwZCoDNmZr7UuiPYzkyTZY8R3JU+rHls7+l7V2Tg==",
   "algorithm": "RSA-SHA256"
 }

@@ -1,15 +1,16 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
-import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/client"
+import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
-import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { resolveEventSessionId as resolveEventSessionIdPure, type SSEPayload } from "./connection-utils"
 import { ensureLicense, licenseBlocksConnect } from "../../enterprise/license"
+import { remoteAuthHeader } from "../../gatekeeper/remote-auth"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
-type SSEEventListener = (event: Event, directory?: string) => void
-type StateListener = (state: ConnectionState) => void
-type SSEEventFilter = (event: Event, directory?: string) => boolean
+type SSEEventListener = (event: SSEPayload, directory?: string) => void
+type StateListener = (state: ConnectionState, error?: Error) => void
+type SSEEventFilter = (event: SSEPayload, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
@@ -21,10 +22,11 @@ type DirectoryProvider = () => string[]
 function isNotFound(err: unknown) {
   if (!err || typeof err !== "object") return false
   const obj = err as Record<string, unknown>
-  if (obj.name === "NotFoundError") return true
+  if (obj.name === "NotFoundError" || obj._tag === "NotFound") return true
   if (obj.status === 404) return true
   if (obj.data && typeof obj.data === "object") {
-    return (obj.data as Record<string, unknown>).name === "NotFoundError"
+    const data = obj.data as Record<string, unknown>
+    if (data.name === "NotFoundError" || data._tag === "NotFound") return true
   }
   return false
 }
@@ -32,6 +34,7 @@ function isNotFound(err: unknown) {
 // Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
+const SSE_CONNECT_TIMEOUT_MS = 45_000
 
 /**
  * Reject all pending network-offline waits for a given directory.
@@ -66,6 +69,7 @@ export class KiloConnectionService {
   private info: { port: number } | null = null
   private config: ServerConfig | null = null
   private state: ConnectionState = "disconnected"
+  private error: Error | null = null
   private connectPromise: Promise<void> | null = null
   private healthPollTimer: ReturnType<typeof setInterval> | null = null
   private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
@@ -79,6 +83,9 @@ export class KiloConnectionService {
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
+  private readonly permissionDirs = new Map<string, string>()
+  private readonly questionDirs = new Map<string, string>()
+  private questionRevision = 0
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -118,7 +125,7 @@ export class KiloConnectionService {
       await this.connectPromise
     } catch (error) {
       // If doConnect() fails before SSE can emit a state transition, avoid leaving consumers stuck in "connecting".
-      this.setState("error")
+      this.setState("error", this.error ?? (error instanceof Error ? error : new Error(String(error))))
       throw error
     } finally {
       this.connectPromise = null
@@ -192,6 +199,11 @@ export class KiloConnectionService {
     return this.state
   }
 
+  /** Last connection error. Cleared when a new connection attempt begins. */
+  getConnectionError(): Error | null {
+    return this.error
+  }
+
   /**
    * Subscribe to SSE events. Returns unsubscribe function.
    */
@@ -240,12 +252,85 @@ export class KiloConnectionService {
    * Best-effort sessionID extraction for an SSE event.
    * Returns undefined for global events.
    */
-  resolveEventSessionId(event: Event): string | undefined {
+  resolveEventSessionId(event: SSEPayload): string | undefined {
     return resolveEventSessionIdPure(
       event,
       (messageId) => this.messageSessionIdsByMessageId.get(messageId),
       (messageId, sessionId) => this.recordMessageSessionId(messageId, sessionId),
     )
+  }
+
+  recordPermissionDirectory(requestID: string, directory: string): void {
+    this.permissionDirs.set(requestID, directory)
+  }
+
+  getPermissionDirectory(requestID: string): string | undefined {
+    return this.permissionDirs.get(requestID)
+  }
+
+  clearPermissionDirectory(requestID: string): void {
+    this.permissionDirs.delete(requestID)
+  }
+
+  prunePermissionDirectories(active: Set<string>, dirs?: Set<string>): void {
+    for (const [key, dir] of this.permissionDirs) {
+      if (active.has(key)) continue
+      if (dirs && !dirs.has(dir)) continue
+      this.permissionDirs.delete(key)
+    }
+  }
+
+  recordQuestionDirectory(requestID: string, directory: string): void {
+    this.questionDirs.set(requestID, directory)
+  }
+
+  getQuestionDirectory(requestID: string): string | undefined {
+    return this.questionDirs.get(requestID)
+  }
+
+  clearQuestionDirectory(requestID: string): void {
+    this.questionDirs.delete(requestID)
+  }
+
+  pruneQuestionDirectories(active: Set<string>, dirs?: Set<string>): void {
+    const size = this.questionDirs.size
+    for (const [key, dir] of this.questionDirs) {
+      if (active.has(key)) continue
+      if (dirs && !dirs.has(dir)) continue
+      this.questionDirs.delete(key)
+    }
+    if (this.questionDirs.size !== size) this.questionRevision += 1
+  }
+
+  getQuestionRevision(): number {
+    return this.questionRevision
+  }
+
+  handlePermissionEvent(event: SSEPayload, directory?: string): void {
+    if (event.type === "permission.asked") {
+      if (directory) this.recordPermissionDirectory(event.properties.id, directory)
+      return
+    }
+    if (event.type === "permission.replied") {
+      this.clearPermissionDirectory(event.properties.requestID)
+    }
+  }
+
+  handleQuestionEvent(event: SSEPayload, directory?: string): void {
+    if (event.type === "question.asked") {
+      if (directory) this.recordQuestionDirectory(event.properties.id, directory)
+      this.questionRevision += 1
+      return
+    }
+    if (event.type === "question.replied") {
+      this.clearQuestionDirectory(event.properties.requestID)
+      this.questionRevision += 1
+      return
+    }
+    if (event.type === "question.rejected") {
+      this.clearQuestionDirectory(event.properties.requestID)
+      this.questionRevision += 1
+    }
   }
 
   /**
@@ -407,7 +492,7 @@ export class KiloConnectionService {
       if (qs) {
         for (const q of qs) {
           const { error } = await this.client.question.reject({ requestID: q.id, directory: dir })
-          if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
+          if (error && !isNotFound(error)) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
       await drainSuggestions(this.client, dir)
@@ -513,6 +598,9 @@ export class KiloConnectionService {
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
     this.directoryProviders.clear()
+    this.permissionDirs.clear()
+    this.questionDirs.clear()
+    this.questionRevision = 0
     this.messageSessionIdsByMessageId.clear()
     this.focused.clear()
     this.opened.clear()
@@ -528,12 +616,14 @@ export class KiloConnectionService {
     this.config = null
     this.info = null
     this.state = "disconnected"
+    this.error = null
   }
 
-  private setState(state: ConnectionState): void {
+  private setState(state: ConnectionState, error?: Error): void {
     this.state = state
+    this.error = state === "error" ? (error ?? this.error) : null
     for (const listener of this.stateListeners) {
-      listener(state)
+      listener(state, this.error ?? undefined)
     }
   }
 
@@ -572,8 +662,9 @@ export class KiloConnectionService {
     try {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 3000)
+      const auth = await remoteAuthHeader(this.context, password)
       const res = await fetch(`${baseUrl}/global/health`, {
-        headers: { Authorization: `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}` },
+        headers: { Authorization: auth },
         signal: controller.signal,
       })
       clearTimeout(timer)
@@ -604,7 +695,7 @@ export class KiloConnectionService {
     this.config = config
 
     // Create SDK client with Basic Auth header
-    const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
+    const authHeader = await remoteAuthHeader(this.context, server.password)
     this.client = createKiloClient({
       baseUrl: config.baseUrl,
       headers: {
@@ -627,13 +718,15 @@ export class KiloConnectionService {
 
     // Wire SSE events → broadcast to all registered listeners
     this.sseClient.onEvent((event, directory) => {
+      this.handlePermissionEvent(event, directory)
+      this.handleQuestionEvent(event, directory)
       for (const listener of this.eventListeners) {
         listener(event, directory)
       }
     })
 
-    this.sseClient.onError(() => {
-      this.setState("error")
+    this.sseClient.onError((err) => {
+      this.setState("error", err instanceof Error ? err : new Error(String(err)))
     })
 
     // Wire SSE state → broadcast to all registered state listeners
@@ -657,7 +750,17 @@ export class KiloConnectionService {
 
     this.sseClient.connect()
 
-    await connectedPromise
+    const timeout = new Promise<never>((_, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            "SSE connection timed out. If using enterprise SSO, try reloading the window or logging in again.",
+          ),
+        )
+      }, SSE_CONNECT_TIMEOUT_MS)
+      timer.unref?.()
+    })
+    await Promise.race([connectedPromise, timeout])
 
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)

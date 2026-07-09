@@ -6,5 +6,6 @@
   "kilo-code.new.enterprise.license.enabled": true,
   "kilo-code.new.enterprise.license.serverUrl": "http://43.143.227.210:9080",
   "kilo-code.new.enterprise.license.key": "poc-demo-key",
-  "kilo-code.new.customApi.enabled": false
+  "kilo-code.new.customApi.enabled": false,
+  "kilo-code.new.autocomplete.enableChatAutocomplete": false
 }

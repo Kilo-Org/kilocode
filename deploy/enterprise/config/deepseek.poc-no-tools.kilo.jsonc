@@ -1,0 +1,47 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "deepseek/deepseek-v4-pro",
+  "small_model": "deepseek/deepseek-v4-flash",
+  "enabled_providers": ["deepseek"],
+  "disabled_providers": ["kilo"],
+  "compaction": {
+    "auto": false,
+    "threshold_percent": 85
+  },
+  "permission": {
+    "suggest": "deny"
+  },
+  "provider": {
+    "deepseek": {
+      "name": "DeepSeek",
+      "npm": "@ai-sdk/openai-compatible",
+      "api": "https://api.deepseek.com/v1",
+      "options": {
+        "apiKey": "{env:KILO_CUSTOM_API_KEY}",
+        "baseURL": "https://api.deepseek.com/v1"
+      },
+      "models": {
+        "deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro (POC, no tools)",
+          "tool_call": false,
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash (POC, no tools)",
+          "tool_call": false,
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "deepseek-chat": {
+          "name": "DeepSeek Chat (POC, no tools)",
+          "tool_call": false,
+          "limit": { "context": 64000, "output": 8192 }
+        },
+        "deepseek-reasoner": {
+          "name": "DeepSeek Reasoner (POC, no tools)",
+          "tool_call": false,
+          "limit": { "context": 64000, "output": 8192 }
+        }
+      }
+    }
+  }
+}

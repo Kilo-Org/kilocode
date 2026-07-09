@@ -1,0 +1,19 @@
+# Let's Encrypt 联系邮箱（证书续期通知）
+{
+	email {$CADDY_EMAIL:admin@flyfishphp.cn}
+}
+
+# Logto OIDC（用户登录）
+logto.wab.flyfishphp.cn {
+	reverse_proxy logto:3001
+}
+
+# Logto 管理控制台
+logto-admin.wab.flyfishphp.cn {
+	reverse_proxy logto:3002
+}
+
+# 企业控制面（Admin + API）
+wab.flyfishphp.cn {
+	reverse_proxy enterprise-platform:8090
+}

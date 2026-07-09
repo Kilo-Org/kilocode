@@ -1,0 +1,11 @@
+{
+  "kilo-code.new.gatekeeper.enabled": true,
+  "kilo-code.new.gatekeeper.gatewayUrl": "https://wab.flyfishphp.cn",
+  "kilo-code.new.gatekeeper.platformUrl": "https://wab.flyfishphp.cn",
+  "kilo-code.new.gatekeeper.enginePath": "/kilo",
+  "kilo-code.new.gatekeeper.autoConfigureRemote": true,
+  "kilo-code.new.enterprise.license.enabled": true,
+  "kilo-code.new.enterprise.license.serverUrl": "https://wab.flyfishphp.cn",
+  "kilo-code.new.enterprise.license.key": "poc-demo-key",
+  "kilo-code.new.customApi.enabled": false
+}

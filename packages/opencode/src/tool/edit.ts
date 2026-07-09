@@ -20,6 +20,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import * as Bom from "@/util/bom"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
+import { KiloAgentUsage } from "@/kilocode/usage/agent-edits" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
@@ -207,6 +208,19 @@ export const EditTool = Tool.define(
           )
 
           const filediff: Snapshot.FileDiff = cachedFilediff ?? buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
+
+          // kilocode_change start
+          yield* Effect.sync(() =>
+            KiloAgentUsage.recordEdit({
+              sessionID: ctx.sessionID,
+              tool: "edit",
+              path: filePath,
+              old: contentOld,
+              next: contentNew,
+              chars: filediff.additions + filediff.deletions,
+            }),
+          )
+          // kilocode_change end
 
           yield* ctx.metadata({
             metadata: {

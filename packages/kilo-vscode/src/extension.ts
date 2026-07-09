@@ -27,6 +27,8 @@ import { markWorkspace } from "./util/spotlight"
 import { customApiEnv, startEnterpriseConfig, whenEnterpriseConfigReady } from "./enterprise-config"
 import { registerEnterpriseAbout } from "./enterprise/about"
 import { ensureLicense, licenseBlocksConnect } from "./enterprise/license"
+import { refreshEnterpriseUsage } from "./enterprise/usage"
+import { registerGatekeeper, handleGatekeeperUri, disposeGatekeeper } from "./gatekeeper"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -52,6 +54,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Write custom API config before any CLI spawn.
   startEnterpriseConfig(context)
   registerEnterpriseAbout(context)
+  registerGatekeeper(context)
+  void refreshEnterpriseUsage(context)
 
   void whenEnterpriseConfigReady().then(async () => {
     const license = await ensureLicense(context)
@@ -505,6 +509,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerUriHandler({
       async handleUri(uri: vscode.Uri) {
+        if (await handleGatekeeperUri(context, uri)) return
+
         const sessionMatch = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
         const sessionId = sessionMatch?.[1]
         if (sessionId) {
@@ -562,6 +568,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 export async function deactivate() {
   shuttingDown = true
+  await disposeGatekeeper()
   await agentManager?.shutdown()
   TelemetryProxy.getInstance().shutdown()
 }
