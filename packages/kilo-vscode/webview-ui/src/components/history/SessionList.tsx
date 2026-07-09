@@ -210,7 +210,9 @@ const SessionList: Component<SessionListProps> = (props) => {
       >
         {(s) => (
           <>
-            <span data-slot="list-item-title" dir="auto">{name(s)}</span>
+            <span data-slot="list-item-title" dir="auto">
+              {name(s)}
+            </span>
             <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
             <Show when={session.currentSessionID() === s.id}>
               <span class="sr-only">{language.t("session.current")}</span>

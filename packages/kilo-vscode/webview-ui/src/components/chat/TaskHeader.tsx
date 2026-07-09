@@ -179,7 +179,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 startRename()
               }}
             >
-              <span data-slot="task-header-title-label" dir="auto">{title()}</span>
+              <span data-slot="task-header-title-label" dir="auto">
+                {title()}
+              </span>
             </span>
           </Show>
         </div>
