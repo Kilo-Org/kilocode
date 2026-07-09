@@ -23,6 +23,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
+import { ThinkingSelectorBase } from "../components/shared/ThinkingSelector"
 import { createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import type { ReviewComment } from "../../diff-viewer/review-comments"
@@ -925,6 +926,70 @@ export const TabBarSingleTab: Story = {
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
         </div>
       </div>
+    </StoryProviders>
+  ),
+}
+
+// ---------------------------------------------------------------------------
+// NewWorktreeDialog — inline selector popovers must escape the dialog scroll
+// containers. Regression: the reasoning-variant and mode pickers were clipped
+// by .am-nv-dialog-content (overflow-y: auto) and .am-prompt-input-container
+// (overflow: hidden) because the overflow escape hatch only covered the model
+// picker. This fixture reproduces the real clipping chain (same CSS classes +
+// the real inline ThinkingSelectorBase with portal={false}) so a screenshot
+// baseline catches any future regression. Rendered inline (no dialog portal)
+// because the visual-regression harness screenshots #storybook-root.
+// ---------------------------------------------------------------------------
+
+const VariantPickerOpener = () => {
+  let frame = 0
+  let attempts = 0
+  const open = () => {
+    if (document.querySelector("[data-component='popover-content']")) return
+    if (attempts++ >= 120) return
+    window.dispatchEvent(new CustomEvent("openVariantPicker"))
+    frame = requestAnimationFrame(open)
+  }
+  onMount(() => {
+    frame = requestAnimationFrame(open)
+  })
+  onCleanup(() => cancelAnimationFrame(frame))
+  return null
+}
+
+export const NewWorktreeVariantDropdown1280: Story = {
+  name: "NewWorktreeDialog — variant dropdown open",
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <StoryProviders noPadding>
+      {/* Filler pushes the prompt container to the bottom of the dialog content.
+          The variant popover opens upward from the trigger, extending above the
+          container's top edge. Without the overflow escape fix, .am-prompt-input-container
+          (overflow: hidden + position: relative) clips the top of the popover. */}
+      <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+        <div class="am-nv-dialog">
+          <div class="am-nv-dialog-content">
+            <div style={{ height: "500px", "flex-shrink": 0 }} />
+            <div
+              class="prompt-input-container am-prompt-input-container"
+              style={{ position: "relative", "flex-shrink": 0 }}
+            >
+              <div class="prompt-input-hint">
+                <div class="prompt-input-hint-selectors">
+                  <ThinkingSelectorBase
+                    variants={["low", "medium", "high"]}
+                    value="low"
+                    onSelect={() => {}}
+                    portal={false}
+                    deferDismiss
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <VariantPickerOpener />
     </StoryProviders>
   ),
 }

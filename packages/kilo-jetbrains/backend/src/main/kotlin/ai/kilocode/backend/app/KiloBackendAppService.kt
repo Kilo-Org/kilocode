@@ -57,6 +57,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -97,7 +98,7 @@ class KiloBackendAppService private constructor(
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
-        private const val READY_TIMEOUT_MS = 5_000L
+        private const val READY_TIMEOUT_MS = 120_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -118,6 +119,7 @@ class KiloBackendAppService private constructor(
     private var loader: Job? = null
     private var closed = false
     private val loadLock = Any()
+    private val rev = AtomicLong()
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
@@ -146,7 +148,7 @@ class KiloBackendAppService private constructor(
     suspend fun connect() {
         mutex.withLock {
             val current = _appState.value
-            if (current is KiloAppState.Ready || current is KiloAppState.Connecting || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) return
+            if (current is KiloAppState.Ready || current is KiloAppState.Downloading || current is KiloAppState.Connecting || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) return
             ensureWatcher()
             connection.connect()
         }
@@ -179,6 +181,7 @@ class KiloBackendAppService private constructor(
                     ensureWatcher()
                     connection.connect()
                 }
+                is KiloAppState.Downloading,
                 KiloAppState.Connecting,
                 is KiloAppState.Loading -> Unit
                 is KiloAppState.MigrationRequired -> {
@@ -231,10 +234,11 @@ class KiloBackendAppService private constructor(
         when (_appState.value) {
             is KiloAppState.Ready -> return
             is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+            is KiloAppState.Downloading,
             is KiloAppState.Loading,
             KiloAppState.Connecting -> {
                 val state = withTimeoutOrNull(timeoutMs) {
-                    appState.first { it !is KiloAppState.Loading && it !is KiloAppState.Connecting }
+                    appState.first { it !is KiloAppState.Downloading && it !is KiloAppState.Loading && it !is KiloAppState.Connecting }
                 }
                 when (state) {
                     is KiloAppState.Ready -> return
@@ -292,7 +296,7 @@ class KiloBackendAppService private constructor(
     private suspend fun reconnect() {
         mutex.withLock {
             val current = _appState.value
-            if (current is KiloAppState.Ready || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
+            if (current is KiloAppState.Ready || current is KiloAppState.Downloading || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
                 log.info("reconnect: already ${current::class.simpleName} — skipping")
                 return
             }
@@ -307,6 +311,7 @@ class KiloBackendAppService private constructor(
             connection.state.collect { next ->
                 when (next) {
                     ConnectionState.Disconnected -> _appState.value = KiloAppState.Disconnected
+                    is ConnectionState.Downloading -> _appState.value = KiloAppState.Downloading(next.percent, next.version, next.platform)
                     ConnectionState.Connecting -> _appState.value = KiloAppState.Connecting
                     is ConnectionState.Connected -> {
                         load()
@@ -335,7 +340,6 @@ class KiloBackendAppService private constructor(
     private fun load() {
         synchronized(loadLock) {
             loader?.cancel()
-            eventWatcher?.cancel()
             loader = cs.launch {
                 val start = System.currentTimeMillis()
                 log.info("Application starting — loading config, profile, notifications")
@@ -652,7 +656,7 @@ class KiloBackendAppService private constructor(
     private fun setAppReady(data: AppData) {
         warnings = data.warnings
         if (data.warnings.isNotEmpty()) warnAppWarnings(data.warnings)
-        _appState.value = KiloAppState.Ready(data)
+        _appState.value = KiloAppState.Ready(data, rev.incrementAndGet())
     }
 
     private fun setAppError(message: String, errors: List<LoadError>) {

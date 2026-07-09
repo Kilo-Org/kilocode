@@ -468,6 +468,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     }}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     rows={3}
+                    dir="auto"
                   />
                 </div>
               </div>
@@ -525,7 +526,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       tooltip={
                         <SandboxTooltipContent
                           enabled={sandbox() ?? false}
-                          network={config().experimental?.sandbox_restrict_network !== false}
+                          network={config().sandbox?.network !== "allow"}
                         />
                       }
                       tooltipClass="prompt-sandbox-tooltip-content"

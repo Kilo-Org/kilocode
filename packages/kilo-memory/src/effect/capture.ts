@@ -10,17 +10,18 @@ import {
   evidence,
   fallbackDigest,
   guardReason,
-  hasDurableDiff,
+  hasSubstantialDiff,
+  hasUserEdit,
   mergeOps,
   notice,
   parseDigest,
   parseJson,
   parseOps,
+  salvageTyped,
   skipped,
   summarize,
   summarizeDiffs,
   typedPrompt,
-  typedSchema,
   usage,
   verifySkips,
   type CaptureReason,
@@ -28,7 +29,7 @@ import {
   type CaptureSourceItem,
 } from "../capture/capture"
 import { MemoryDigest } from "../capture/digest"
-import type { MemoryOperations } from "../capture/ops"
+import { MemoryOperations } from "../capture/operations"
 import { MemoryRedact } from "../capture/redact"
 import { MemorySchema } from "../schema"
 import { MemoryShared } from "../recall/shared"
@@ -39,6 +40,7 @@ import { MemoryService } from "./service"
 import { MemoryTimers } from "./timers"
 
 const MESSAGE_WINDOW = 24
+const FALLBACK_RETRY_MS = 60_000
 
 /** Heuristic: an assistant answer that mostly restates injected instructions/source files is not
  * durable project memory and should not be consolidated. */
@@ -50,6 +52,16 @@ function provenance(input: { assistant: string }) {
   )
   const list = assistant.split("\n").filter((line) => /^\s*[-*]\s+\S/.test(line)).length
   return markers >= 4 || (markers >= 3 && list >= 2)
+}
+
+/** When the turn actually edited an instruction/docs file, an assistant answer that names AGENTS.md /
+ * CLAUDE.md many times is real work on that file — not a restatement of injected context — so the
+ * provenance suppressor must not fire. */
+function editsInstructionDocs(diffs: { file?: string }[]) {
+  return diffs.some((item) => {
+    const file = item.file ?? ""
+    return /(^|\/)(AGENTS\.md|CLAUDE\.md)$/i.test(file) || /(^|\/)docs?\//i.test(file)
+  })
 }
 
 function typedExisting(memory: MemoryService.Interface, root: string) {
@@ -138,33 +150,79 @@ export namespace MemoryCapture {
     const summary = summarize({ user, assistant, max: state.limits.maxSessionLineChars })
     const diffs = view.diffs
     const changed = summarizeDiffs(diffs)
-    const durable = hasDurableDiff(diffs)
+    const substantial = hasSubstantialDiff(diffs)
+    const edited = hasUserEdit(diffs)
     const completed = !input.reason || input.reason === "completed"
     // Echo = short lookup answered from memory with no file changes. Long recall-assisted answers
     // (research, investigations) carry new content and must still be digested.
-    const echo = !durable && assistant.length < 1200 && view.recalledMemory
-    const sourced = provenance({ assistant })
+    const echo = !edited && assistant.length < 1200 && view.recalledMemory
+    // Echo gates the digest only. Typed capture is bounded by the interval throttle, and the typed
+    // prompt is the language-agnostic content filter for lookup/correction turns.
+    const sourced = provenance({ assistant }) && !editsInstructionDocs(diffs)
     const session = completed && !echo && Boolean(summary)
     const prior = session
       ? yield* memory.session({ root, sessionID: input.sessionID, max: state.limits.maxSessionLineChars })
       : undefined
-    const priorTime = prior?.time ? Date.parse(prior.time) : 0
+    const time = prior?.time ? Date.parse(prior.time) || 0 : 0
+    // Retry fallback stubs soon, but not every close while the model is failing.
+    const priorTime = prior?.fallback ? (now - time >= FALLBACK_RETRY_MS ? 0 : time) : time
     const plan = capturePlan({
       reason: input.reason,
       summary,
       echo,
-      durable,
+      substantial,
+      edited,
       priorTime,
       now,
       minIntervalMs: state.capture.minIntervalMs,
-      lastConsolidatedAt: state.stats.lastConsolidatedAt,
+      lastTypedConsolidationAt: state.stats.lastTypedConsolidationAt,
       bypassInterval: input.bypassInterval,
       autoConsolidate: state.autoConsolidate,
     })
     const digestDue = plan.digestDue
     const typedCall = plan.typedCall
+    const fallback = MemoryRedact.text(
+      fallbackDigest({
+        prior: prior?.fallback ? undefined : prior?.summary,
+        summary,
+        max: state.limits.maxSessionLineChars,
+      }),
+    )
+    const safe = MemoryDigest.empty(fallback) ? "" : fallback
 
-    if (plan.skipReason) return yield* skip(plan.skipReason, plan.idleFlush ? { idleFlush: true } : undefined)
+    if (plan.skipReason) {
+      // Interrupted/error close: record the non-LLM fallback digest (zero model cost) tagged with the
+      // close reason so an aborted turn still leaves a trace instead of a stale digest.
+      if (plan.fallbackDigest && safe) {
+        yield* memory.recordSession({
+          root,
+          sessionID: input.sessionID,
+          topic: "",
+          summary: safe,
+          time: now,
+          tokens: 0,
+          fallback: true,
+        })
+        yield* memory.decide({
+          root,
+          decision: {
+            kind: "digest",
+            trigger: "turn-close",
+            sessionID: input.sessionID,
+            result: "fallback",
+            llm: false,
+            parsed: false,
+            fallback: true,
+            reason: input.reason,
+            tokens: 0,
+            operationCount: 1,
+            skippedCount: 0,
+            summary: `session digest fallback on ${input.reason ?? "close"}`,
+          },
+        })
+      }
+      return yield* skip(plan.skipReason, plan.idleFlush ? { idleFlush: true } : undefined)
+    }
     yield* Effect.promise(() =>
       MemoryEvents.publish({
         event: "status",
@@ -191,10 +249,6 @@ export namespace MemoryCapture {
             return resolution.handle
           })
         : undefined
-    const fallback = MemoryRedact.text(
-      fallbackDigest({ prior: prior?.summary, summary, max: state.limits.maxSessionLineChars }),
-    )
-    const safe = MemoryDigest.empty(fallback) ? "" : fallback
     const digestEffect = digestDue
       ? Effect.gen(function* () {
           const body = cap(
@@ -202,8 +256,8 @@ export namespace MemoryCapture {
               { title: "latest_user", body: user },
               { title: "latest_assistant", body: assistant || "(no assistant text)" },
               { title: "diff_summary", body: changed || "(none)" },
-              { title: "previous_digest", body: prior?.summary },
-              { title: "max_characters", body: String(state.limits.maxSessionLineChars) },
+              ...(prior?.summary && !prior.fallback ? [{ title: "previous_digest", body: prior.summary }] : []),
+              { title: "max_characters", body: String(MemorySchema.maxStoredDigestSummary) },
             ]),
             state.limits.maxConsolidationInputBytes,
           )
@@ -257,10 +311,25 @@ export namespace MemoryCapture {
           if (!parsed) {
             return { topic: "", summary: safe, tokens: usage(result.result.usage), reason: "parse_error" }
           }
-          const parsedDigest = parseDigest(parsed, fallback, state.limits.maxSessionLineChars)
+          const raw = MemoryRedact.text(parsed.summary)
+          const parsedDigest = parseDigest(
+            {
+              ...parsed,
+              topic: MemoryRedact.text(parsed.topic),
+              summary: raw,
+            },
+            fallback,
+            MemorySchema.maxStoredDigestSummary,
+          )
+          if (/^\s*User:\s/.test(raw) && /\bResult:\s/.test(raw)) {
+            return { topic: "", summary: safe, tokens: usage(result.result.usage), reason: "template_echo" }
+          }
+          if (!raw.trim() && parsedDigest.summary) {
+            return { topic: "", summary: safe, tokens: usage(result.result.usage), reason: "empty_digest" }
+          }
           return {
-            topic: MemoryRedact.text(parsedDigest.topic),
-            summary: MemoryRedact.text(parsedDigest.summary),
+            topic: parsedDigest.topic,
+            summary: parsedDigest.summary,
             tokens: usage(result.result.usage),
             reason: undefined as string | undefined,
           }
@@ -285,30 +354,35 @@ export namespace MemoryCapture {
                   text: "Instruction/source provenance answers are not durable project memory.",
                 },
               ] satisfies CaptureSkip[],
-              fallbackOperationCount: 0,
+              existingKeys: [] as string[],
             }
           }
           const existing = yield* typedExisting(memory, root)
           const items = yield* typedItems(memory, root)
+          // Exact existing entry ids + keys, for reconciling auto removes/supersedes downstream.
+          const inventoryKeys = [...new Set(items.flatMap((item) => [item.id, ...(item.key ? [item.key] : [])]))]
           const sessions = yield* memory.recent({
             root,
             limit: state.limits.maxSessionFiles,
             max: state.limits.maxSessionLineChars,
           })
+          // Dedup context (existing_memory + recent_memory_digests) leads the transcript fields so tail
+          // truncation by cap() sheds the assistant/diff bulk first — the model keeps the memory it must
+          // not re-save even as stored memory grows.
           const body = cap(
             evidence([
               { title: "close_reason", body: input.reason ?? "completed" },
               { title: "latest_user", body: user },
-              { title: "latest_assistant", body: assistant || "(no assistant text)" },
-              { title: "diff_summary", body: changed || "(none)" },
               { title: "existing_memory", body: existing },
-              { title: "recent_session_context", body: recent },
               {
                 title: "recent_memory_digests",
                 body: sessions
                   .map((item) => `${item.file} session=${item.id} ${item.time} :: ${item.summary}`)
                   .join("\n"),
               },
+              { title: "latest_assistant", body: assistant || "(no assistant text)" },
+              { title: "diff_summary", body: changed || "(none)" },
+              { title: "recent_session_context", body: recent },
             ]),
             state.limits.maxConsolidationInputBytes,
           )
@@ -342,11 +416,11 @@ export namespace MemoryCapture {
               fallback: true,
               reason: result.reason,
               skipped: [] as CaptureSkip[],
-              fallbackOperationCount: 0,
+              existingKeys: inventoryKeys,
             }
           }
           const parsed = yield* Effect.try({
-            try: () => parseJson(typedSchema, result.result.text),
+            try: () => salvageTyped(result.result.text),
             catch: (error) => error,
           }).pipe(
             Effect.catch((err: unknown) =>
@@ -365,7 +439,7 @@ export namespace MemoryCapture {
               fallback: true,
               reason: "parse_error",
               skipped: [] as CaptureSkip[],
-              fallbackOperationCount: 0,
+              existingKeys: inventoryKeys,
             }
           }
           const verified = verifySkips({ skipped: parsed.skipped, items })
@@ -376,7 +450,7 @@ export namespace MemoryCapture {
             fallback: false,
             reason: undefined as string | undefined,
             skipped: deduped.skipped,
-            fallbackOperationCount: 0,
+            existingKeys: inventoryKeys,
           }
         })
       : Effect.succeed({
@@ -385,7 +459,7 @@ export namespace MemoryCapture {
           fallback: false,
           reason: undefined as string | undefined,
           skipped: [] as CaptureSkip[],
-          fallbackOperationCount: 0,
+          existingKeys: [] as string[],
         })
     // Digest and typed consolidation are independent model calls; run them concurrently.
     const [digest, generated] = yield* Effect.all([digestEffect, typedEffect], { concurrency: 2 })
@@ -398,6 +472,7 @@ export namespace MemoryCapture {
         summary: digest.summary,
         time: now,
         tokens: digest.tokens,
+        fallback: Boolean(digest.reason),
       })
     }
     if (digestDue) {
@@ -424,11 +499,16 @@ export namespace MemoryCapture {
       })
     }
 
-    const ops = mergeOps(generated.ops)
-      .filter((item) => item.action !== "remove")
-      .slice(0, state.capture.maxOpsPerRun)
+    // Apply adds only: a same-key add supersedes/updates an existing fact in place. reconcile also
+    // surfaces exact-key auto-removes, but V0 keeps hard removes explicit-only — auto-capture never
+    // deletes memory it merely paraphrased (or wrongly flags), so reconciled.removes is not applied.
+    const reconciled = MemoryOperations.reconcile({ ops: mergeOps(generated.ops), keys: generated.existingKeys })
+    const ops = reconciled.ops.slice(0, state.capture.maxOpsPerRun)
     const project =
       ops.length > 0 ? yield* memory.apply({ root, ops, trigger: "turn-close", tokens: generated.tokens }) : undefined
+    // Apply-time skips (content gate + secret, both redacted at creation) surface in the typed audit
+    // record alongside the model's own declared skips.
+    const applied: CaptureSkip[] = [...generated.skipped, ...(project?.skipped ?? [])]
     const count = project?.operationCount ?? 0
     if (typedCall) {
       yield* memory.decide({
@@ -444,16 +524,15 @@ export namespace MemoryCapture {
           reason: generated.reason,
           tokens: generated.tokens,
           operationCount: count,
-          skippedCount: generated.skipped.length,
-          fallbackOperationCount: generated.fallbackOperationCount,
-          skipped: generated.skipped,
+          skippedCount: applied.length,
+          skipped: applied,
           operations: auditOps(ops),
           files: [...new Set(ops.flatMap((item) => (item.action === "add" && item.file ? [item.file] : [])))],
           summary: generated.fallback
             ? `typed consolidation skipped after ${generated.reason ?? "model failure"}`
             : count > 0
               ? `typed consolidation saved ${count} ops`
-              : `typed consolidation skipped ${generated.skipped.length} candidates`,
+              : `typed consolidation skipped ${applied.length} candidates`,
         },
       })
     }
@@ -467,7 +546,8 @@ export namespace MemoryCapture {
         tokens,
         count,
         digest: Boolean(digest.summary),
-        skipped: generated.skipped,
+        typed: typedCall,
+        skipped: applied,
       })
     }
     const updated = yield* memory.state({ root })
@@ -476,7 +556,7 @@ export namespace MemoryCapture {
       ? notice({
           count,
           ops,
-          skipped: generated.skipped,
+          skipped: applied,
           tokens: generated.tokens,
         })
       : undefined
@@ -503,7 +583,7 @@ export namespace MemoryCapture {
     // Brief message only: API errors carry response headers/bodies that would flood the host log.
     const err = Cause.squash(cause)
     MemoryLog.warn("memory capture failed", {
-      err: (err instanceof Error ? err.message : String(err)).slice(0, 200),
+      err: MemoryRedact.text(err instanceof Error ? err.message : String(err)).slice(0, 200),
     })
   }
 }

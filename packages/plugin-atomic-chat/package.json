@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/plugin-atomic-chat",
-  "version": "7.4.1",
+  "version": "7.4.3",
   "description": "Kilo Code plugin for Atomic Chat: auto-detection and dynamic model discovery (OpenAI-compatible local API)",
   "type": "module",
   "license": "MIT",

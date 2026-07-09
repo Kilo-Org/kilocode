@@ -85,7 +85,7 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).toContain(
       'const sandboxVisible = () => features().sandboxControls && !session.currentSessionID()?.startsWith("cloud:")',
     )
-    expect(src).not.toContain("config().experimental?.sandbox === true")
+    expect(src).not.toContain("config().sandbox?.enabled === true")
     expect(src).toContain("<Show when={sandboxVisible()}>")
     expect(src).toContain("{ action: toggleSandbox, enabled: () => sandboxVisible() && !sandboxDisabled() }")
     expect(src).toContain('if (!sandboxVisible()) hidden.add("sandbox")')
@@ -121,9 +121,7 @@ describe("PromptInput sandbox toggle", () => {
   })
 
   it("explains filesystem and network state without changing the lock icon", () => {
-    expect(src).toContain(
-      "const sandboxNetworkEnabled = () => config().experimental?.sandbox_restrict_network !== false",
-    )
+    expect(src).toContain('const sandboxNetworkEnabled = () => config().sandbox?.network !== "allow"')
     expect(src).toContain("<SandboxTooltipContent enabled={sandboxEnabled()} network={sandboxNetworkEnabled()} />")
     expect(src).toContain('tooltipClass="prompt-sandbox-tooltip-content"')
     expect(button).toContain('<Icon name="lock" size="small" />')

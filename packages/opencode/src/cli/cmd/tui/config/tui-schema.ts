@@ -87,4 +87,9 @@ export const TuiInfo = Schema.Struct({
   scroll_acceleration: Schema.optional(ScrollAcceleration),
   diff_style: Schema.optional(DiffStyle),
   mouse: Schema.optional(Schema.Boolean).annotate({ description: "Enable or disable mouse capture (default: true)" }),
+  // kilocode_change start - vim modal editing toggle
+  vim: Schema.optional(Schema.Boolean).annotate({
+    description: "Enable vim modal editing in the prompt input (default: false)",
+  }),
+  // kilocode_change end
 })

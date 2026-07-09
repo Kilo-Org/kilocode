@@ -18,6 +18,7 @@ Return exactly one line:
 - null when there is not yet a clear, stable workstream
 
 Return null for greetings, acknowledgements, capability questions, casual conversation, vague requests, unresolved brainstorming, or messages that only select an option without enough preceding context.
+Return null when the messages only ask a question or check a status and do not describe work to perform (for example "is X fixed?", "check whether ...").
 A concrete implementation, investigation, planning, documentation, or research task is a valid workstream.
 Name the durable goal or outcome, not a tentative implementation detail. Prefer an action and object, such as fix-token-refresh-race or research-branch-naming.
 If the user asks for a specific branch name, prefer that name.

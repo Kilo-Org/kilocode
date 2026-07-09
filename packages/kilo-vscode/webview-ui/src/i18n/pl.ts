@@ -387,6 +387,7 @@ export const dict = {
     "Kliknij, aby ograniczyć zapisy w systemie plików. Ustawienia sandboxa nadal zezwalają na dostęp do sieci.",
 
   "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe z Kilo Gateway",
+  "speechToText.tooltip.starting": "Uruchamianie mikrofonu... Poczekaj, zanim zaczniesz mówić.",
   "speechToText.tooltip.stop": "Zatrzymaj przechwytywanie dźwięku",
   "speechToText.tooltip.transcribing": "Transkrybowanie... Kliknij, aby anulować.",
   "speechToText.tooltip.error": "Wprowadzanie głosowe nie powiodło się. Kliknij, aby wyczyścić.",
@@ -954,6 +955,7 @@ export const dict = {
   "provider.custom.models.name.label": "Nazwa",
   "provider.custom.models.name.placeholder": "Nazwa wyświetlana",
   "provider.custom.models.reasoning.label": "Rozumowanie",
+  "provider.custom.models.modalities.image": "Obraz",
   "provider.custom.models.variants.label": "Warianty",
   "provider.custom.models.variants.add": "Dodaj wariant",
   "provider.custom.models.variants.remove": "Usuń wariant",
@@ -1201,6 +1203,8 @@ export const dict = {
 
   "common.retry": "Ponów",
   "common.refresh": "Odśwież",
+  "common.reload": "Przeładuj",
+  "common.reloadDescription": "Przeładuj konfigurację, umiejętności, agentów i polecenia z dysku",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Nie zalogowano",
@@ -1383,6 +1387,12 @@ export const dict = {
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
+  "settings.experimental.imageGeneration.title": "Generowanie obrazów",
+  "settings.experimental.imageGeneration.description": "Włącz generowanie obrazów przez AI",
+  "settings.experimental.imageGenerationModel.title": "Model obrazu",
+  "settings.experimental.imageGenerationModel.description": "Model generowania obrazów",
+  "settings.experimental.imageGenerationModel.placeholder": "Domyślny (Auto Router)",
+
   "settings.experimental.speechToText.title": "Mowa na tekst",
   "settings.experimental.speechToText.description":
     "Włącz wprowadzanie głosowe w polach promptów przy użyciu konta Kilo za pośrednictwem Kilo Gateway.",
@@ -1400,6 +1410,16 @@ export const dict = {
   "settings.sandboxing.network.title": "Ogranicz dostęp do sieci",
   "settings.sandboxing.network.description":
     "Blokuj wychodzący dostęp do sieci z poleceń pochodzących od modelu i narzędzi HTTP. Lokalne serwery MCP i hooki wtyczek nie podlegają temu ograniczeniu. Ruch do dostawców i modeli na potrzeby wnioskowania pozostaje dostępny.",
+
+  "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
+  "settings.sandboxing.writablePaths.description":
+    "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Włącz SWE-Pruner: przycinanie obszernych danych wyjściowych narzędzi odczytu, wyszukiwania i powłoki z uwzględnieniem zadania, kierowane pytaniem przewodnim dostarczonym przez agenta",
+  "settings.experimental.swePrunerModel.title": "Model SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Model używany do przycinania wyników narzędzi; domyślnie skonfigurowany mały model",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
   "settings.experimental.remote.title": "Sterowanie Remote",
@@ -1572,8 +1592,8 @@ export const dict = {
     "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
 
   "settings.autoApprove.description":
@@ -1622,6 +1642,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
   "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
+  "settings.context.compaction.title": "Kompaktowanie",
   "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
   "settings.context.compactionLimit.description":
     "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
@@ -1629,6 +1650,42 @@ export const dict = {
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",
   "settings.context.watcherPatterns.description": "Wzorce glob dla plików do ignorowania",
+
+  "settings.context.memory.title": "Pamięć",
+  "settings.context.memory.project.title": "Pamięć projektu",
+  "settings.context.memory.autoSave.title": "Automatycznie zapisuj pamięć projektu",
+  "settings.context.memory.autoSave.description":
+    "Automatycznie zapisuje trwałe fakty projektu z zakończonych tur, gdy pamięć jest włączona.",
+  "settings.context.memory.index.title": "Indeks pamięci",
+  "settings.context.memory.status.notLoaded": "Nie wczytano",
+  "settings.context.memory.status.disabled": "Wyłączona",
+  "settings.context.memory.status.enabledTokensOps":
+    "Włączona - ~{{session}} tokenów kontekstu startowego w tej sesji - ~{{tokens}} tokenów w zapisanym indeksie - ostatnia operacja {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Włącz pamięć, aby utworzyć pliki pamięci projektu.",
+  "settings.context.memory.inspect": "Sprawdź",
+  "settings.context.memory.rebuild": "Odbuduj indeks pamięci",
+  "chat.memory.on": "Pamięć włączona",
+  "chat.memory.label": "Pamięć · {{tokens}} tokenów",
+  "chat.memory.status.loading": "Ładowanie stanu pamięci",
+  "chat.memory.session.tokens": "Kontekst startowy tej sesji: {{tokens}} tokenów",
+  "chat.memory.total.tokens": "Zapisany indeks: {{tokens}} tokenów",
+  "chat.memory.project.enabled": "Pamięć projektu włączona",
+  "chat.memory.project.disabled": "Pamięć projektu wyłączona",
+  "chat.memory.command.failed": "Polecenie pamięci nie powiodło się",
+  "chat.memory.savedOperations": "Ostatnia operacja pamięci: {{count}} operacji",
+  "chat.memory.inspect": "Sprawdź pamięć",
+  "chat.memory.remember": "Zapamiętaj",
+  "chat.memory.forget": "Zapomnij",
+  "chat.memory.rebuild": "Odbuduj indeks",
+  "chat.memory.disable": "Wyłącz pamięć",
+  "chat.memory.badge.injected": "Pamięć wstrzyknięta",
+  "chat.memory.badge.recalled": "Pamięć przywołana",
+  "chat.memory.badge.startupCtx": "ctx startowy",
+  "chat.memory.badge.items": "{{count}} elementów",
+  "chat.memory.badge.tokens": "{{tokens}} tokenów",
+  "chat.memory.badge.recalledDetail": "Pamięć przywołana: {{count}} elementów - {{tokens}} tokenów",
+  "chat.memory.badge.files": "Pliki pamięci: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Użyj niestandardowego prompt",
@@ -1639,6 +1696,11 @@ export const dict = {
     "Systemowy prompt wysyłany do AI podczas generowania commit messages. Zastępuje to całkowicie domyślny prompt.",
   "settings.commitMessage.prompt.placeholder":
     "np. Generuj commit messages w języku hiszpańskim zgodnie z formatem conventional commits. Zwróć TYLKO commit message.",
+
+  "settings.commitMessage.language.sync": "Synchronizacja z językiem UI",
+  "settings.commitMessage.language.title": "Język",
+  "settings.commitMessage.language.description":
+    "Wybierz, jaki język używać do wiadomości generowanych przez sztuczną inteligencję:",
 
   "settings.display.username.title": "Nazwa użytkownika",
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",

@@ -74,7 +74,6 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableWithId
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.progress.runBlockingCancellable
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -202,11 +201,11 @@ class SessionUi(
         Disposer.register(this, popup)
         buildUi()
         Disposer.register(this, selection)
+        applyStyle(style)
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
         bindMigration()
-        applyStyle(style)
         onStateChanged(controller.model.state)
         loaded?.let(::finishOpen)
     }
@@ -308,9 +307,7 @@ class SessionUi(
 
         sessionContent = JPanel(BorderLayout())
 
-        blankBody = JPanel(BorderLayout()).apply {
-            isOpaque = false
-        }
+        blankBody = JPanel(BorderLayout())
 
         load = LoadingPanel()
         progressBody = load
@@ -369,6 +366,7 @@ class SessionUi(
             onEnhance = controller::enhancePrompt,
             onMentions = ::mentionParts,
             completion = completion,
+            cs = cs,
         )
         connection = ConnectionPanel(this, controller)
         root.addOverlay(connection) { pane, child ->
@@ -605,8 +603,8 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
-        if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (controller.model.showSession) return messageBody
+        if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (state is SessionState.Loading) return progressBody
         return blankBody
     }
@@ -695,9 +693,9 @@ class SessionUi(
         spec.available,
     )
 
-    private fun mentionParts(text: String): List<PromptPartDto> = runBlockingCancellable {
+    private suspend fun mentionParts(text: String): List<PromptPartDto> {
         val names = MentionAction.ALL.mapTo(mutableSetOf()) { it.name }
-        promptMentionParts(
+        return promptMentionParts(
             text = text,
             directory = workspace.directory,
             reserved = names,
@@ -786,6 +784,7 @@ class SessionUi(
         editorTheme = style.editorScheme
         colorTheme = UIManager.getLookAndFeel()
         background = style.editorBackground
+        root.background = style.editorBackground
         root.content.background = style.editorBackground
         sessionContent.background = style.editorBackground
         blankBody.background = style.editorBackground

@@ -20,7 +20,7 @@ describe("NewWorktreeDialog sandbox toggle", () => {
     expect(src).toContain("sandbox: sandboxVisible() ? sandboxOverride() : undefined")
     expect(src).toContain("const sandboxVisible = () => features().sandboxControls")
     expect(provider).toContain("await this.fetchAndSendSandboxDefault(message.contextDirectory, message.requestID)")
-    expect(src).not.toContain("createSignal(config().experimental?.sandbox === true)")
+    expect(src).not.toContain("createSignal(config().sandbox?.enabled === true)")
     expect(src).not.toContain("visible as isSandboxVisible")
   })
 })

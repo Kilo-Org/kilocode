@@ -384,6 +384,7 @@ export const dict = {
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
   "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
   "speechToText.tooltip.stop": "Остановить захват звука",
   "speechToText.tooltip.transcribing": "Распознавание... Нажмите для отмены.",
   "speechToText.tooltip.error": "Ошибка голосового ввода. Нажмите, чтобы очистить.",
@@ -995,6 +996,7 @@ export const dict = {
   "provider.custom.models.name.label": "Название",
   "provider.custom.models.name.placeholder": "Отображаемое имя",
   "provider.custom.models.reasoning.label": "Рассуждение",
+  "provider.custom.models.modalities.image": "Изображение",
   "provider.custom.models.variants.label": "Варианты",
   "provider.custom.models.variants.add": "Добавить вариант",
   "provider.custom.models.variants.remove": "Удалить вариант",
@@ -1244,6 +1246,8 @@ export const dict = {
 
   "common.retry": "Повторить",
   "common.refresh": "Обновить",
+  "common.reload": "Перезагрузить",
+  "common.reloadDescription": "Перезагрузить конфигурацию, навыки, агентов и команды с диска",
 
   "profile.title": "Профиль",
   "profile.notLoggedIn": "Не авторизован",
@@ -1425,6 +1429,12 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
+  "settings.experimental.imageGeneration.title": "Генерация изображений",
+  "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
+  "settings.experimental.imageGenerationModel.title": "Модель изображений",
+  "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
+  "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
+
   "settings.experimental.speechToText.title": "Речь в текст",
   "settings.experimental.speechToText.description":
     "Включите голосовой ввод в полях запросов, используя вашу учетную запись Kilo через Kilo Gateway.",
@@ -1441,6 +1451,16 @@ export const dict = {
   "settings.sandboxing.network.title": "Ограничить доступ к сети",
   "settings.sandboxing.network.description":
     "Блокировать исходящий доступ к сети для команд, инициированных моделью, и HTTP-инструментов. Локальные серверы MCP и хуки плагинов не подпадают под это ограничение. Трафик к провайдерам и моделям для инференса остаётся доступным.",
+
+  "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
+  "settings.sandboxing.writablePaths.description":
+    "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Включить SWE-Pruner: обрезка больших объёмов вывода инструментов чтения, поиска и командной оболочки с учётом задачи и на основе предоставленного агентом фокус-вопроса",
+  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1573,8 +1593,8 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
-  "settings.experimental.sandbox.title": "Песочница",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Песочница",
+  "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":
@@ -1621,6 +1641,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
+  "settings.context.compaction.title": "Сжатие",
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
@@ -1628,6 +1649,42 @@ export const dict = {
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",
   "settings.context.watcherPatterns.description": "Glob-шаблоны для файлов, которые наблюдатель должен игнорировать",
+
+  "settings.context.memory.title": "Память",
+  "settings.context.memory.project.title": "Память проекта",
+  "settings.context.memory.autoSave.title": "Автосохранение памяти проекта",
+  "settings.context.memory.autoSave.description":
+    "Автоматически сохраняет устойчивые факты проекта из завершённых ходов, когда память включена.",
+  "settings.context.memory.index.title": "Индекс памяти",
+  "settings.context.memory.status.notLoaded": "Не загружена",
+  "settings.context.memory.status.disabled": "Отключена",
+  "settings.context.memory.status.enabledTokensOps":
+    "Включена - ~{{session}} токенов начального контекста в этой сессии - ~{{tokens}} токенов в сохранённом индексе - последняя операция {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Включите память, чтобы создать файлы памяти проекта.",
+  "settings.context.memory.inspect": "Проверить",
+  "settings.context.memory.rebuild": "Перестроить индекс памяти",
+  "chat.memory.on": "Память включена",
+  "chat.memory.label": "Память · {{tokens}} токенов",
+  "chat.memory.status.loading": "Загрузка состояния памяти",
+  "chat.memory.session.tokens": "Начальный контекст этой сессии: {{tokens}} токенов",
+  "chat.memory.total.tokens": "Сохранённый индекс: {{tokens}} токенов",
+  "chat.memory.project.enabled": "Память проекта включена",
+  "chat.memory.project.disabled": "Память проекта отключена",
+  "chat.memory.command.failed": "Команда памяти не выполнена",
+  "chat.memory.savedOperations": "Последняя операция памяти: {{count}} операций",
+  "chat.memory.inspect": "Проверить память",
+  "chat.memory.remember": "Запомнить",
+  "chat.memory.forget": "Забыть",
+  "chat.memory.rebuild": "Перестроить индекс",
+  "chat.memory.disable": "Отключить память",
+  "chat.memory.badge.injected": "Память внедрена",
+  "chat.memory.badge.recalled": "Память извлечена",
+  "chat.memory.badge.startupCtx": "начальный ctx",
+  "chat.memory.badge.items": "{{count}} элементов",
+  "chat.memory.badge.tokens": "{{tokens}} токенов",
+  "chat.memory.badge.recalledDetail": "Память извлечена: {{count}} элементов - {{tokens}} токенов",
+  "chat.memory.badge.files": "Файлы памяти: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Использовать пользовательский prompt",
@@ -1638,6 +1695,10 @@ export const dict = {
     "Системный prompt, отправляемый ИИ при генерации commit messages. Это полностью заменяет prompt по умолчанию.",
   "settings.commitMessage.prompt.placeholder":
     "напр., Сгенерируй commit messages на испанском языке в формате conventional commits. Верни ТОЛЬКО commit message.",
+
+  "settings.commitMessage.language.sync": "Синхронизация с языком пользовательского интерфейса",
+  "settings.commitMessage.language.title": "Язык",
+  "settings.commitMessage.language.description": "Выберите язык для сообщений, генерированных ИИ:",
 
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",

@@ -5,7 +5,6 @@ import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.components.JBLabel
@@ -35,6 +34,8 @@ internal class SessionScroll(
         private const val FOLLOW_PASSES = 6
     }
 
+    private var style = SessionEditorStyle.current()
+
     val component = JBScrollPane(body).apply {
         border = JBUI.Borders.empty()
         verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
@@ -46,7 +47,6 @@ internal class SessionScroll(
     val view: JComponent? get() = component.viewport.view as? JComponent
     var onScroll: (() -> Unit)? = null
 
-    private var style = SessionEditorStyle.current()
     private var tail = true
     private var auto = false
     private var opening = false
@@ -202,8 +202,8 @@ internal class SessionScroll(
     @RequiresEdt
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        component.background = SessionUiStyle.Transcript.bgColor()
-        component.viewport.background = SessionUiStyle.Transcript.bgColor()
+        component.background = style.editorBackground
+        component.viewport.background = style.editorBackground
         syncIcon()
         messages.applyStyle(style)
         val view = component.viewport.view

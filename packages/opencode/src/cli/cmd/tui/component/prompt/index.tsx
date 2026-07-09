@@ -67,14 +67,19 @@ import { TuiSlash } from "@/kilocode/cli/cmd/tui/slash"
 import { isAllowEverything } from "@/kilocode/cli/cmd/tui/app"
 import * as AgentRequirements from "@/kilocode/cli/agent-requirements"
 import { createCostAlertController } from "@/kilocode/cli/cmd/tui/cost-alert"
+import { MemoryPrompt } from "@/kilocode/cli/cmd/tui/component/memory-prompt"
 // kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { type WorkspaceStatus } from "../workspace-label"
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useLeaderActive, useOpencodeKeymap } from "../../keymap"
 import { useTuiConfig } from "../../context/tui-config"
+// kilocode_change start - vim modal editing for the prompt
+import { useVim, VimModeIndicator, vimToggleCommand } from "@/kilocode/cli/cmd/tui/component/prompt"
+// kilocode_change end
 
 export type PromptProps = {
   sessionID?: string
+  directory?: string // kilocode_change
   visible?: boolean
   disabled?: boolean
   onSubmit?: () => void
@@ -210,6 +215,16 @@ export function Prompt(props: PromptProps) {
   const [workspaceCreatingDots, setWorkspaceCreatingDots] = createSignal(3)
   const [warpNotice, setWarpNotice] = createSignal<string>()
   const [cursorVersion, setCursorVersion] = createSignal(0)
+  // kilocode_change start - vim modal editing for the prompt
+  const vim = useVim({
+    input: () => input,
+    disabled: () => props.disabled ?? false,
+    autocompleteVisible: () => Boolean(auto()?.visible),
+    getVimEnabled: () => Boolean(kv.get("vim_enabled", tuiConfig.vim ?? false)),
+    bumpCursor: () => setCursorVersion((value) => value + 1),
+    cursorVersion: () => cursorVersion(),
+  })
+  // kilocode_change end
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const yolo = createMemo(() => TuiAutoApprove.show(props.sessionID)) // kilocode_change
   const yoloGlobal = createMemo(() => isAllowEverything(sync.data.config.permission)) // kilocode_change
@@ -634,6 +649,15 @@ export function Prompt(props: PromptProps) {
           input.cursorOffset = Bun.stringWidth(content)
         },
       },
+      // kilocode_change start - vim modal editing toggle (palette + /vim)
+      vimToggleCommand({
+        vimEnabled: vim.vimEnabled,
+        setVimEnabled: (value) => kv.set("vim_enabled", value),
+        resetVim: vim.resetVim,
+        clearDialog: () => dialog.clear(),
+        showToast: (message) => toast.show({ message, variant: "info" }),
+      }),
+      // kilocode_change end
       {
         title: "Skills",
         name: "prompt.skills",
@@ -693,6 +717,7 @@ export function Prompt(props: PromptProps) {
       "prompt.stash",
       "prompt.stash.pop",
       "prompt.stash.list",
+      "prompt.vim.toggle", // kilocode_change
       "session.interrupt",
       "workspace.set",
     ]),
@@ -725,6 +750,7 @@ export function Prompt(props: PromptProps) {
         parts: [],
       })
       setStore("extmarkToPartIndex", new Map())
+      vim.resetVim() // kilocode_change - return to insert mode after the prompt is cleared
     },
     submit() {
       void submit()
@@ -877,6 +903,7 @@ export function Prompt(props: PromptProps) {
           input.clear()
           setStore("prompt", { input: "", parts: [] })
           setStore("extmarkToPartIndex", new Map())
+          vim.resetVim() // kilocode_change
           dialog.clear()
         },
       },
@@ -892,6 +919,7 @@ export function Prompt(props: PromptProps) {
             setStore("prompt", { input: entry.input, parts: entry.parts })
             restoreExtmarksFromParts(entry.parts)
             input.gotoBufferEnd()
+            vim.resetVim() // kilocode_change
           }
           dialog.clear()
         },
@@ -909,6 +937,7 @@ export function Prompt(props: PromptProps) {
                 setStore("prompt", { input: entry.input, parts: entry.parts })
                 restoreExtmarksFromParts(entry.parts)
                 input.gotoBufferEnd()
+                vim.resetVim() // kilocode_change
               }}
             />
           ))
@@ -1031,6 +1060,7 @@ export function Prompt(props: PromptProps) {
             setStore("prompt", item)
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromParts(item.parts)
+            vim.resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = 0
           },
         },
@@ -1067,6 +1097,7 @@ export function Prompt(props: PromptProps) {
             setStore("prompt", item)
             setStore("mode", item.mode ?? "normal")
             restoreExtmarksFromParts(item.parts)
+            vim.resetVim() // kilocode_change - recalled history starts in insert mode
             input.cursorOffset = input.plainText.length
           },
         },
@@ -1116,6 +1147,32 @@ export function Prompt(props: PromptProps) {
       void exit()
       return true
     }
+    // kilocode_change start
+    const memory = await MemoryPrompt.run({
+      text: store.prompt.input,
+      client: sdk.client,
+      workspace: project.workspace.current(),
+      directory: props.directory,
+      toast,
+      dialog,
+      renderer,
+      done: () => {
+        history.append({
+          ...store.prompt,
+          mode: store.mode,
+        })
+        input.extmarks.clear()
+        setStore("prompt", {
+          input: "",
+          parts: [],
+        })
+        setStore("extmarkToPartIndex", new Map())
+        props.onSubmit?.()
+        input.clear()
+      },
+    })
+    if (memory) return true
+    // kilocode_change end
     const selectedModel = local.model.current()
     if (!selectedModel) {
       void promptModelWarning()
@@ -1345,6 +1402,7 @@ export function Prompt(props: PromptProps) {
       }, 50)
     }
     input.clear()
+    vim.resetVim() // kilocode_change - drop back to insert mode after sending
     return true
   }
   const exit = useExit()
@@ -1505,6 +1563,7 @@ export function Prompt(props: PromptProps) {
       parts: [],
     })
     setStore("extmarkToPartIndex", new Map())
+    vim.resetVim() // kilocode_change - don't leak stale vim mode/selection into an emptied prompt
   }
 
   // kilocode_change start - cost-alert logic lives under kilocode/; only prompt mutation stays here
@@ -1644,11 +1703,18 @@ export function Prompt(props: PromptProps) {
                 setCursorVersion((value) => value + 1)
                 if (store.mode === "normal") auto()?.onCursorChange()
               }}
-              onKeyDown={(e: { preventDefault(): void }) => {
+              /* kilocode_change - KeyEvent type for vim key routing */ onKeyDown={(e: KeyEvent) => {
                 if (props.disabled) {
                   e.preventDefault()
                   return
                 }
+                // kilocode_change start - route keys through the vim layer when enabled
+                if (vim.vimOnKey(e)) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  return
+                }
+                // kilocode_change end
               }}
               onSubmit={() => {
                 // IME: double-defer so the last composed character (e.g. Korean
@@ -1714,6 +1780,18 @@ export function Prompt(props: PromptProps) {
                             Locale.titlecase(local.agent.current()?.name ?? ""))}{" "}
                         {/* kilocode_change end */}
                       </text>
+                      {/* kilocode_change start - vim mode indicator */}
+                      <VimModeIndicator
+                        when={() => vim.vimEnabled() && store.mode !== "shell"}
+                        mode={vim.vimMode}
+                        fade={fadeColor}
+                        textMuted={() => theme.textMuted}
+                        info={() => theme.info}
+                        warning={() => theme.warning}
+                        success={() => theme.success}
+                        alpha={agentMetaAlpha}
+                      />
+                      {/* kilocode_change end */}
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
                           <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>

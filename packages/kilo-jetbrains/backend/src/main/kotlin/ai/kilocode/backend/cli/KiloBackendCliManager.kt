@@ -5,8 +5,7 @@ import ai.kilocode.backend.dev.KiloDevMode
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.util.SystemInfo
-import com.intellij.util.system.CpuArch
+import com.intellij.util.EnvironmentUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -20,7 +19,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Manages the Kilo CLI binary lifecycle.
  *
- * Extracts the bundled CLI from JAR resources into IntelliJ's system directory,
+ * Downloads the pinned CLI into IntelliJ's system directory,
  * spawns `kilo serve --port 0`, and exposes the result as [State].
  *
  * Concurrency is handled by the owning [KiloBackendAppService] — all public
@@ -50,9 +49,10 @@ class KiloBackendCliManager(
 
     override fun process(): Process? = process
 
-    override suspend fun init(): CliServer.State {
+    override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit): CliServer.State {
         return try {
-            val path = extractCli()
+            val path = resolveCli(onProgress)
+            onResolved()
             log.info("CLI binary path: ${path.absolutePath} (size=${path.length()} bytes)")
             withTimeout(STARTUP_TIMEOUT_MS) {
                 spawn(path)
@@ -84,55 +84,21 @@ class KiloBackendCliManager(
         cleanup(proc, "stop()")
     }
 
-    private fun extractCli(): File {
-        val platform = platform()
-        val exe = if (SystemInfo.isWindows) "kilo.exe" else "kilo"
-        val target = File(PathManager.getSystemPath(), "kilo/bin/$exe")
-        val worker = File(target.parentFile, "kilo-sandbox-mutation-worker.js")
-
-        if (forceExtract) {
-            log.info("Force re-extracting CLI resources under ${target.parentFile.absolutePath}")
-            if (target.exists()) target.delete()
-            if (worker.exists()) worker.delete()
-            forceExtract = false
+    private suspend fun resolveCli(onProgress: (CliDownload) -> Unit): File {
+        val force = forceExtract
+        forceExtract = false
+        if (!KiloProps.pinned()) {
+            if (force) log.info("Force re-extracting local repo CLI ${KiloProps.cliVersion()}")
+            val cli = KiloRepoCli.extract(force)
+            onProgress(CliDownload(100, KiloProps.cliVersion(), KiloCliPlatform.current()))
+            return cli
         }
-
-        extractResource("cli/$platform/$exe", target, executable = true)
-        if (worker.exists()) worker.delete()
-        extractResource("cli/$platform/kilo-sandbox-mutation-worker.js", worker, executable = false)
-        return target
-    }
-
-    private fun extractResource(resource: String, target: File, executable: Boolean) {
-        val loader = javaClass.classLoader
-        val url = loader.getResource(resource)
-            ?: throw IllegalStateException("CLI resource not found in JAR resources at $resource")
-
-        val size = url.openConnection().contentLengthLong
-        if (size >= 0 && target.exists() && target.length() == size) {
-            log.info("CLI resource up-to-date at ${target.absolutePath}")
-            if (executable && !SystemInfo.isWindows) {
-                target.setExecutable(true)
-            }
-            return
-        }
-
-        log.info("Extracting CLI resource to ${target.absolutePath}")
-        target.parentFile.mkdirs()
-
-        url.openStream().use { input ->
-            target.outputStream().use { output ->
-                input.copyTo(output)
-            }
-        }
-
-        if (executable && !SystemInfo.isWindows) {
-            target.setExecutable(true)
-        }
+        if (force) log.info("Force re-downloading CLI ${KiloProps.cliVersion()}")
+        return KiloCliDownloader(log = log).resolve(KiloProps.cliVersion(), force, onProgress)
     }
 
     // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
-    internal fun buildEnv(pwd: String, base: Map<String, String> = System.getenv()): Map<String, String> =
+    internal fun buildEnv(pwd: String, base: Map<String, String> = EnvironmentUtil.getEnvironmentMap()): Map<String, String> =
         buildKiloCliEnv(pwd, base, log)
 
     private suspend fun spawn(cli: File): CliServer.State =
@@ -267,21 +233,6 @@ class KiloBackendCliManager(
         runCatching { proc.outputStream.close() }.onFailure { log.info("CLI stdin stream close skipped: ${it.message}") }
     }
 
-    private fun platform(): String {
-        val os = when {
-            SystemInfo.isMac -> "darwin"
-            SystemInfo.isLinux -> "linux"
-            SystemInfo.isWindows -> "windows"
-            else -> throw IllegalStateException("Unsupported OS: ${System.getProperty("os.name")}")
-        }
-        val arch = when (CpuArch.CURRENT) {
-            CpuArch.ARM64 -> "arm64"
-            CpuArch.X86_64 -> "x64"
-            else -> throw IllegalStateException("Unsupported architecture: ${CpuArch.CURRENT}")
-        }
-        return "$os-$arch"
-    }
-
     private fun generatePassword(): String {
         val bytes = ByteArray(32)
         SecureRandom().nextBytes(bytes)
@@ -294,7 +245,7 @@ private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask","bash":"ask"}}
 // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
 internal fun buildKiloCliEnv(
     pwd: String,
-    base: Map<String, String> = System.getenv(),
+    base: Map<String, String> = EnvironmentUtil.getEnvironmentMap(),
     log: KiloLog = KiloLog.create(KiloBackendCliManager::class.java),
 ): Map<String, String> = buildMap {
     putAll(base)

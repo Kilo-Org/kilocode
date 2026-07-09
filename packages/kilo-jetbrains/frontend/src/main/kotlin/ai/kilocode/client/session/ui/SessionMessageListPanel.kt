@@ -82,8 +82,8 @@ class SessionMessageListPanel(
 
     init {
         isOpaque = true
-        background = SessionUiStyle.Transcript.bgColor()
         Disposer.register(parent, this)
+        applyStyle(style)
 
         model.addListener(parent) { event ->
             when (event) {
@@ -385,7 +385,7 @@ class SessionMessageListPanel(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = SessionUiStyle.Transcript.bgColor()
+        background = style.editorBackground
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)

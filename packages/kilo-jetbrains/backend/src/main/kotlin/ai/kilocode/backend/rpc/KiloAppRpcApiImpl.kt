@@ -9,6 +9,8 @@ import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
+import ai.kilocode.backend.cli.KiloCliPlatform
+import ai.kilocode.backend.cli.KiloProps
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.KiloAppRpcApi
@@ -50,6 +52,10 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         app.appState.map(::dto).distinctUntilChanged()
 
     override suspend fun health(): HealthDto = app.health()
+
+    override suspend fun cliVersion(): String = KiloProps.cliVersion()
+
+    override suspend fun cliPlatform(): String = KiloCliPlatform.current()
 
     override suspend fun retry() = app.retry()
 
@@ -109,6 +115,12 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
     when (state) {
         KiloAppState.Disconnected -> KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
+        is KiloAppState.Downloading -> KiloAppStateDto(
+            status = KiloAppStatusDto.DOWNLOADING,
+            downloadPercent = state.percent,
+            downloadVersion = state.version,
+            downloadPlatform = state.platform,
+        )
         KiloAppState.Connecting -> KiloAppStateDto(KiloAppStatusDto.CONNECTING)
         is KiloAppState.Loading -> KiloAppStateDto(
             status = KiloAppStatusDto.LOADING,
@@ -143,12 +155,19 @@ internal fun profileDto(p: KiloProfile200Response): ProfileDto = ProfileDto(
     organizations = p.profile.organizations.orEmpty().map { org ->
         ProfileOrganizationDto(id = org.id, name = org.name, role = org.role)
     },
-    balance = p.balance?.let { ProfileBalanceDto(balance = it.balance) },
+    // The pinned CLI release does not expose hasPersonalAccount yet, so default to
+    // showing the personal account. Flip back to p.profile.hasPersonalAccount once a
+    // CLI release ships the field.
+    hasPersonalAccount = true,
+    balance = p.balance?.balance?.let { ProfileBalanceDto(balance = it) },
     kiloPass = p.kiloPass?.let {
+        val base = it.currentPeriodBaseCreditsUsd ?: return@let null
+        val usage = it.currentPeriodUsageUsd ?: return@let null
+        val bonus = it.currentPeriodBonusCreditsUsd ?: return@let null
         ProfileKiloPassDto(
-            currentPeriodBaseCreditsUsd = it.currentPeriodBaseCreditsUsd,
-            currentPeriodUsageUsd = it.currentPeriodUsageUsd,
-            currentPeriodBonusCreditsUsd = it.currentPeriodBonusCreditsUsd,
+            currentPeriodBaseCreditsUsd = base,
+            currentPeriodUsageUsd = usage,
+            currentPeriodBonusCreditsUsd = bonus,
             nextBillingAt = it.nextBillingAt,
         )
     },

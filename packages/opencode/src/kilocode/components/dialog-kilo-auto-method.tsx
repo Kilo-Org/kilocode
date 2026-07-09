@@ -87,6 +87,7 @@ export function KiloAutoMethod(props: KiloAutoMethodProps) {
             organizations={profile.organizations!}
             userEmail={profile.email}
             providerID={props.providerID}
+            hasPersonalAccount={profile.hasPersonalAccount !== false}
             useSDK={props.useSDK}
             useTheme={props.useTheme}
             DialogModel={props.DialogModel}

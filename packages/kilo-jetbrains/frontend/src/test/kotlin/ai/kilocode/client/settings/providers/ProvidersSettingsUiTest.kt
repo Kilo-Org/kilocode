@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings.providers
 
 import ai.kilocode.client.app.KiloProviderService
+import ai.kilocode.client.settings.base.SettingsListConfig
 import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListRenderer
 import ai.kilocode.client.settings.base.SettingsListActionCell
@@ -366,36 +367,33 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     fun `test renderer hit test maps actions`() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT))
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
-            val areas = actionBounds(list, bounds, row, selected = true)
+            val list = hitList(row)
+            val areas = actionBounds(list, selected = true)
 
-            assertEquals(ProviderListAction.CONNECT, actionAt(list, bounds, center(areas.getValue(ProviderListAction.CONNECT)), row, selected = true))
-            assertEquals(ProviderListAction.OAUTH, actionAt(list, bounds, center(areas.getValue(ProviderListAction.OAUTH)), row, selected = true))
-            assertNull(actionAt(list, bounds, Point(4, 4), row, selected = true))
-            assertTrue(actionBounds(list, bounds, row, selected = false).isEmpty())
+            assertEquals(ProviderListAction.CONNECT, actionAt(list, center(areas.getValue(ProviderListAction.CONNECT)), selected = true))
+            assertEquals(ProviderListAction.OAUTH, actionAt(list, center(areas.getValue(ProviderListAction.OAUTH)), selected = true))
+            assertNull(actionAt(list, Point(4, 4), selected = true))
+            assertTrue(actionBounds(list, selected = false).isEmpty())
         }
     }
 
     fun `test renderer keeps connected disconnect action visible when unselected`() {
         edt {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Connected providers", listOf(ProviderListAction.DISCONNECT), connected = true)
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
-            val area = actionBounds(list, bounds, row, selected = false).getValue(ProviderListAction.DISCONNECT)
+            val list = hitList(row)
+            val area = actionBounds(list, selected = false).getValue(ProviderListAction.DISCONNECT)
 
-            assertEquals(ProviderListAction.DISCONNECT, actionAt(list, bounds, center(area), row, selected = false))
+            assertEquals(ProviderListAction.DISCONNECT, actionAt(list, center(area), selected = false))
         }
     }
 
     fun `test renderer ignores disabled env disconnect action`() {
         edt {
             val row = ProviderListRow(provider("env", "Env", source = "env"), "All providers", listOf(ProviderListAction.DISCONNECT))
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
-            val area = actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.DISCONNECT)
+            val list = hitList(row)
+            val area = actionBounds(list, selected = true).getValue(ProviderListAction.DISCONNECT)
 
-            assertNull(actionAt(list, bounds, center(area), row, selected = true))
+            assertNull(actionAt(list, center(area), selected = true))
         }
     }
 
@@ -444,15 +442,14 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     fun `test disabled provider rows hide action labels and hit targets`() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT), disabled = true)
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
+            val list = hitList(row)
             val renderer = renderer(row)
 
             render(renderer, list, row, selected = true)
 
             assertTrue(visibleActions(row, selected = true).isEmpty())
-            assertTrue(actionBounds(list, bounds, row, selected = true).isEmpty())
-            assertNull(actionAt(list, bounds, Point(300, 24), row, selected = true))
+            assertTrue(actionBounds(list, selected = true).isEmpty())
+            assertNull(actionAt(list, Point(300, 24), selected = true))
             assertTrue(actionTexts(renderer).isEmpty())
         }
     }
@@ -529,15 +526,22 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test action bounds are vertically centered`() {
+    fun `test action hit target spans the full rendered button`() {
         edt {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Popular providers", listOf(ProviderListAction.CONNECT))
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 10, 320, 80)
-            val area = actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.CONNECT)
+            val list = hitList(row)
+            val bounds = list.getCellBounds(0, 0)
+            val area = actionBounds(list, selected = true).getValue(ProviderListAction.CONNECT)
 
-            assertTrue(kotlin.math.abs((bounds.y + bounds.height / 2) - (area.y + area.height / 2)) <= 1)
             assertTrue(bounds.contains(area))
+            // The button is right-aligned within the row.
+            assertTrue(area.x >= bounds.x + bounds.width / 2)
+            // Every horizontal slice of the drawn button resolves to the action, including the left
+            // edge that regressed when hit-testing ignored the New UI selection insets.
+            val y = area.y + area.height / 2
+            assertEquals(ProviderListAction.CONNECT, actionAt(list, Point(area.x + 1, y), selected = true))
+            assertEquals(ProviderListAction.CONNECT, actionAt(list, Point(area.x + area.width - 1, y), selected = true))
+            assertNull(actionAt(list, Point(area.x - 2, y), selected = true))
         }
     }
 
@@ -900,13 +904,24 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         .filter { it.iconWidth == JBUI.scale(20) && it.iconHeight == JBUI.scale(20) }
         .map { Dimension(it.iconWidth, it.iconHeight) }
 
-    private fun actionAt(list: JBList<ProviderListRow>, bounds: Rectangle, point: Point, row: ProviderListRow, selected: Boolean): ProviderListAction? {
-        val id = settingsListCellAt(list, bounds, point, row, selected) ?: return null
+    /** Builds a list wired with the real [SettingsListRenderer] and laid out, so hit-testing matches what is drawn. */
+    private fun hitList(row: ProviderListRow): JBList<ProviderListRow> {
+        val model = CollectionListModel<ProviderListRow>(listOf(row))
+        val list = JBList(model)
+        list.cellRenderer = SettingsListRenderer(model as CollectionListModel<SettingsListItem>, SettingsListConfig.Preferred)
+        list.size = Dimension(320, 200)
+        list.doLayout()
+        UIUtil.dispatchAllInvocationEvents()
+        return list
+    }
+
+    private fun actionAt(list: JBList<ProviderListRow>, point: Point, selected: Boolean): ProviderListAction? {
+        val id = settingsListCellAt(list, 0, point, selected) ?: return null
         return ProviderListAction.entries.firstOrNull { it.name == id }
     }
 
-    private fun actionBounds(list: JBList<ProviderListRow>, bounds: Rectangle, row: ProviderListRow, selected: Boolean): Map<ProviderListAction, Rectangle> {
-        val cells = settingsListCellBounds(list, bounds, row, selected)
+    private fun actionBounds(list: JBList<ProviderListRow>, selected: Boolean): Map<ProviderListAction, Rectangle> {
+        val cells = settingsListCellBounds(list, 0, selected)
         return cells.mapNotNull { (id, rect) -> ProviderListAction.entries.firstOrNull { it.name == id }?.let { it to rect } }.toMap()
     }
 

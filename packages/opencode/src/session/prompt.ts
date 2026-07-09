@@ -1386,6 +1386,7 @@ export const layer = Layer.effect(
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
+      const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
@@ -1595,6 +1596,7 @@ export const layer = Layer.effect(
             bypassAgentCheck,
             messages: msgs,
             promptOps,
+            memoryCache, // kilocode_change
           }).pipe(
             Effect.provideService(Plugin.Service, plugin),
             Effect.provideService(Permission.Service, permission),
@@ -1603,6 +1605,10 @@ export const layer = Layer.effect(
             Effect.provideService(ToolRegistry.Service, registry),
             Effect.provideService(MCP.Service, mcp),
             Effect.provideService(Truncate.Service, truncate),
+            // kilocode_change start - SWE-Pruner (experimental)
+            Effect.provideService(Config.Service, config),
+            Effect.provideService(Provider.Service, provider),
+            // kilocode_change end
           )
 
           if (lastUser.format?.type === "json_schema") {
@@ -1649,9 +1655,10 @@ export const layer = Layer.effect(
           // kilocode_change end
 
           // kilocode_change start - persistently prune stale tool outputs when payload is already large
-          const [skills, env, instructions] = yield* Effect.all([
+          const [skills, env, mem, instructions] = yield* Effect.all([
             sys.skills(agent),
             sys.environment(model, lastUser.editorContext), // kilocode_change
+            KiloSessionPrompt.memoryInject({ ctx, sessionID, record: step === 1, cache: memoryCache }), // kilocode_change
             instruction.system().pipe(Effect.orDie),
           ])
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
@@ -1669,7 +1676,7 @@ export const layer = Layer.effect(
             if (nextSize > REQUEST_PRUNE_BYTES) log.warn("payload still large after pruning", { size: nextSize })
           }
           // kilocode_change end
-          const system = [...env, ...instructions, ...(skills ? [skills] : [])]
+          const system = [...env, ...mem, ...instructions, ...(skills ? [skills] : [])] // kilocode_change
           const format = lastUser.format ?? { type: "text" as const }
           if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
           const result = yield* handle.process({
@@ -1696,6 +1703,11 @@ export const layer = Layer.effect(
                 : undefined,
             // kilocode_change end
           })
+
+          // kilocode_change start - persist a lightweight marker when this assistant step had memory context
+          const marker = KiloSessionPrompt.memoryPart({ sessionID, message: handle.message, cache: memoryCache })
+          if (marker) yield* sessions.updatePart(marker)
+          // kilocode_change end
 
           if (structured !== undefined) {
             handle.message.structured = structured

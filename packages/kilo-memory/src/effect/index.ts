@@ -1,5 +1,5 @@
 import { Memory } from "../memory"
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemorySchema } from "../schema"
 import { MemoryFiles } from "../storage/store"
 import { MemoryToken } from "../recall/token"
@@ -298,7 +298,14 @@ export namespace KiloMemory {
   }
 
   export async function recordSession(
-    input: Input & { sessionID: string; topic?: string; summary: string; time?: number; tokens?: number },
+    input: Input & {
+      sessionID: string
+      topic?: string
+      summary: string
+      time?: number
+      tokens?: number
+      fallback?: boolean
+    },
   ) {
     const output = await Memory.recordSession({
       root: await prepare(input),
@@ -307,6 +314,7 @@ export namespace KiloMemory {
       summary: input.summary,
       time: input.time,
       tokens: input.tokens,
+      fallback: input.fallback,
     })
     if (output.skipped) {
       await MemoryEvents.publish({

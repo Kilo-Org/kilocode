@@ -176,13 +176,23 @@ class SettingsListViewTest : BasePlatformTestCase() {
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
-            val bounds = view.list.getCellBounds(0, 0)
-            val area = settingsListCellBounds(view.list, bounds, row, selected = true).getValue("edit")
+            val area = settingsListCellBounds(view.list, 0, selected = true).getValue("edit")
             val point = Point(area.x + area.width - 1, area.y + area.height - 1)
 
             click(view, point)
 
             assertEquals(listOf("with:edit"), calls)
+        }
+    }
+
+    fun `test action hit test ignores stale indexes`() {
+        edt {
+            val view = SettingsListView("Empty") { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null, SettingsListCell("edit", "Edit"))))
+            layout(view)
+
+            assertNull(settingsListCellAt(view.list, -1, Point(0, 0), selected = true))
+            assertNull(settingsListCellAt(view.list, view.list.model.size, Point(0, 0), selected = true))
         }
     }
 
@@ -218,8 +228,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
-            val bounds = view.list.getCellBounds(0, 0)
-            val area = settingsListCellBounds(view.list, bounds, row, selected = true).getValue("edit")
+            val area = settingsListCellBounds(view.list, 0, selected = true).getValue("edit")
 
             click(view, center(area))
 

@@ -377,6 +377,7 @@ export const dict = {
   "prompt.action.sandbox.description.disabledNetworkAllowed": "點擊以限制檔案系統寫入。沙盒設定仍允許網路存取。",
 
   "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
+  "speechToText.tooltip.starting": "正在啟動麥克風... 請稍後再說。",
   "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
   "speechToText.tooltip.error": "語音輸入失敗。點擊清除。",
@@ -927,6 +928,7 @@ export const dict = {
   "provider.custom.models.name.label": "名稱",
   "provider.custom.models.name.placeholder": "顯示名稱",
   "provider.custom.models.reasoning.label": "推理",
+  "provider.custom.models.modalities.image": "圖片",
   "provider.custom.models.variants.label": "變體",
   "provider.custom.models.variants.add": "新增變體",
   "provider.custom.models.variants.remove": "移除變體",
@@ -1170,6 +1172,8 @@ export const dict = {
 
   "common.retry": "重試",
   "common.refresh": "重新整理",
+  "common.reload": "重新載入",
+  "common.reloadDescription": "重新載入磁碟上的設定、技能、智慧代理和命令",
 
   "profile.title": "個人資料",
   "profile.notLoggedIn": "尚未登入",
@@ -1344,6 +1348,12 @@ export const dict = {
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
+  "settings.experimental.imageGeneration.title": "圖像生成",
+  "settings.experimental.imageGeneration.description": "啟用 AI 圖像生成",
+  "settings.experimental.imageGenerationModel.title": "圖像模型",
+  "settings.experimental.imageGenerationModel.description": "圖像生成模型",
+  "settings.experimental.imageGenerationModel.placeholder": "預設 (Auto Router)",
+
   "settings.experimental.speechToText.title": "語音轉文字",
   "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
   "settings.models.speechToText.disabledDescription":
@@ -1358,6 +1368,15 @@ export const dict = {
   "settings.sandboxing.network.title": "限制網路存取",
   "settings.sandboxing.network.description":
     "封鎖模型發起的命令和 HTTP 工具的對外網路存取。本機 MCP 伺服器和外掛程式鉤子不受此限制。供應商與模型推論流量仍然可用。",
+
+  "settings.sandboxing.writablePaths.title": "額外可寫路徑",
+  "settings.sandboxing.writablePaths.description":
+    "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "啟用 SWE-Pruner：根據智能體提供的聚焦問題，對讀取、搜尋與 shell 工具的大型輸出進行任務感知裁剪",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
+  "settings.experimental.swePrunerModel.description": "用於裁剪工具輸出的模型;預設為已設定的小模型",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1480,8 +1499,8 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
-  "settings.experimental.sandbox.title": "沙盒",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "沙盒",
+  "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
   "settings.autoApprove.description":
@@ -1517,12 +1536,48 @@ export const dict = {
   "settings.checkpoints.enable.description": "在檔案編輯前建立檢查點，以便恢復之前的狀態",
   "settings.context.autoCompaction.title": "自動壓縮",
   "settings.context.autoCompaction.description": "在上下文達到限制前自動壓縮",
+  "settings.context.compaction.title": "壓縮",
   "settings.context.compactionLimit.title": "自動壓縮限制",
   "settings.context.compactionLimit.description": "當上下文達到模型視窗的此百分比時進行壓縮。留空則僅使用安全緩衝區。",
   "settings.context.prune.title": "修剪舊輸出",
   "settings.context.prune.description": "壓縮期間移除舊的工具輸出",
   "settings.context.watcherPatterns": "檔案監視器忽略模式",
   "settings.context.watcherPatterns.description": "監視器應忽略的檔案的 glob 模式",
+
+  "settings.context.memory.title": "記憶",
+  "settings.context.memory.project.title": "專案記憶",
+  "settings.context.memory.autoSave.title": "自動儲存專案記憶",
+  "settings.context.memory.autoSave.description": "啟用記憶時，自動從已完成回合儲存持久專案事實。",
+  "settings.context.memory.index.title": "記憶索引",
+  "settings.context.memory.status.notLoaded": "未載入",
+  "settings.context.memory.status.disabled": "已停用",
+  "settings.context.memory.status.enabledTokensOps":
+    "已啟用 - 此工作階段啟動內容約 {{session}} 個 token - 已儲存索引約 {{tokens}} 個 token - 上次操作 {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "啟用記憶以建立專案記憶檔案。",
+  "settings.context.memory.inspect": "檢查",
+  "settings.context.memory.rebuild": "重建記憶索引",
+  "chat.memory.on": "記憶開啟",
+  "chat.memory.label": "記憶 · {{tokens}} 個 token",
+  "chat.memory.status.loading": "正在載入記憶狀態",
+  "chat.memory.session.tokens": "此工作階段啟動內容：{{tokens}} 個 token",
+  "chat.memory.total.tokens": "已儲存索引：{{tokens}} 個 token",
+  "chat.memory.project.enabled": "專案記憶已啟用",
+  "chat.memory.project.disabled": "專案記憶已停用",
+  "chat.memory.command.failed": "記憶命令失敗",
+  "chat.memory.savedOperations": "上次記憶操作：{{count}} 次操作",
+  "chat.memory.inspect": "檢查記憶",
+  "chat.memory.remember": "記住",
+  "chat.memory.forget": "忘記",
+  "chat.memory.rebuild": "重建索引",
+  "chat.memory.disable": "停用記憶",
+  "chat.memory.badge.injected": "已注入記憶",
+  "chat.memory.badge.recalled": "已召回記憶",
+  "chat.memory.badge.startupCtx": "啟動 ctx",
+  "chat.memory.badge.items": "{{count}} 項",
+  "chat.memory.badge.tokens": "{{tokens}} 個 token",
+  "chat.memory.badge.recalledDetail": "已召回記憶：{{count}} 項 - {{tokens}} 個 token",
+  "chat.memory.badge.files": "記憶檔案：{{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "使用自訂 prompt",
@@ -1533,6 +1588,10 @@ export const dict = {
     "在產生 commit messages 時發送給 AI 的系統 prompt。這將完全取代預設的 prompt。",
   "settings.commitMessage.prompt.placeholder":
     "例如：按照 conventional commits 格式用西班牙語產生 commit messages。只回傳 commit message。",
+
+  "settings.commitMessage.language.sync": "跟隨介面語言",
+  "settings.commitMessage.language.title": "語言",
+  "settings.commitMessage.language.description": "選擇用於 AI 產生 commit message 的語言：",
 
   "settings.display.username.title": "使用者名稱",
   "settings.display.username.description": "對話中顯示的自訂使用者名稱",

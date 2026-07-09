@@ -20,12 +20,14 @@ import { DisplayProvider } from "./context/display"
 import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
 import { AgentRequirementsProvider } from "./context/agent-requirements"
+import { MemoryProvider } from "./context/memory"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageBridge } from "./context/language-bridge"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+import { SpeechToTextPrewarm } from "./components/speech-to-text/SpeechToTextPrewarm"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
 // that shows child session parts inline in the VS Code sidebar.
@@ -37,6 +39,7 @@ import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import { FeedbackProvider } from "./context/feedback"
 import { KiloEmbeddingModelsProvider } from "./context/kilo-embedding-models"
+import { ImageModelsProvider } from "./context/image-models"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
@@ -409,21 +412,26 @@ const App: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
+                          <SpeechToTextPrewarm />
                           <DisplayProvider>
                             <WorkStyleProvider>
                               <IndexingProvider>
                                 <KiloEmbeddingModelsProvider>
-                                  <NotificationsProvider>
-                                    <SessionProvider>
-                                      <AgentRequirementsProvider>
-                                        <FeedbackProvider>
-                                          <DataBridge>
-                                            <AppContent />
-                                          </DataBridge>
-                                        </FeedbackProvider>
-                                      </AgentRequirementsProvider>
-                                    </SessionProvider>
-                                  </NotificationsProvider>
+                                  <ImageModelsProvider>
+                                    <NotificationsProvider>
+                                      <SessionProvider>
+                                        <AgentRequirementsProvider>
+                                          <MemoryProvider>
+                                            <FeedbackProvider>
+                                              <DataBridge>
+                                                <AppContent />
+                                              </DataBridge>
+                                            </FeedbackProvider>
+                                          </MemoryProvider>
+                                        </AgentRequirementsProvider>
+                                      </SessionProvider>
+                                    </NotificationsProvider>
+                                  </ImageModelsProvider>
                                 </KiloEmbeddingModelsProvider>
                               </IndexingProvider>
                             </WorkStyleProvider>

@@ -2709,10 +2709,11 @@ body.am-wt-dragging-active * {
   overflow-y: auto;
 }
 
-.am-nv-dialog .am-prompt-input-container:has([class~="model-selector-popover"][data-component="popover-content"]),
-.am-nv-dialog-content:has([class~="model-selector-popover"][data-component="popover-content"]),
-[data-component="dialog"]:has(.am-nv-dialog [class~="model-selector-popover"][data-component="popover-content"])
-  [data-slot="dialog-body"] {
+/* While any inline (non-portaled) selector popover is open, let it escape the
+   dialog's scroll containers. Covers model, thinking-variant, and mode pickers. */
+.am-nv-dialog .am-prompt-input-container:has([data-component="popover-content"]),
+.am-nv-dialog-content:has([data-component="popover-content"]),
+[data-component="dialog"]:has(.am-nv-dialog [data-component="popover-content"]) [data-slot="dialog-body"] {
   overflow: visible;
 }
 

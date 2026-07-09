@@ -213,12 +213,45 @@ describe("sendMessage / sendCommand draft id contract", () => {
     // from ":pending:<id>" to ":session:<newSessionId>". The user loses the
     // typed message and the new session starts empty.
     const body = extractFunctionBody(source, "sendMessage")
-    expect(body).toMatch(/!sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
   })
 
   it("sendCommand mints a draftID when there is no current session and none was supplied", () => {
     const body = extractFunctionBody(source, "sendCommand")
-    expect(body).toMatch(/!sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
+    expect(body).toMatch(/const effectiveDraftID = !sid && !draftID \? crypto\.randomUUID\(\) : draftID/)
+  })
+
+  it("sendMessage seeds the pending agent before resolving the draft-scoped agent", () => {
+    // Fresh draft IDs are created after ModeSwitcher stored the selected mode in
+    // pendingAgentSelection(). The draft scope must inherit that pending agent
+    // before promptAgent(scope) runs, otherwise the first send pairs the selected
+    // model with the default agent's system prompt.
+    const body = extractFunctionBody(source, "sendMessage")
+    expect(body).toMatch(
+      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
+    )
+  })
+
+  it("sendCommand seeds the pending agent before resolving the draft-scoped agent", () => {
+    const body = extractFunctionBody(source, "sendCommand")
+    expect(body).toMatch(
+      /if \(!sid && !draftID && effectiveDraftID\) agentDrafts\.seed\(effectiveDraftID\)[\s\S]*const agent = promptAgent\(scope\)/,
+    )
+  })
+
+  it("does not clear a newer pending agent when a seeded draft is promoted", () => {
+    const body = extractFunctionBody(source, "handleSessionCreated")
+    const draftBlock = body.match(/if \(draftID\) \{([\s\S]*?)\} else if/)
+    expect(draftBlock).not.toBeNull()
+    expect(draftBlock![1]).not.toContain("setPendingAgentSelection(null)")
+  })
+
+  it("prunes seeded draft agents only after the draft is abandoned", () => {
+    const failed = extractFunctionBody(source, "handleSendMessageFailed")
+    expect(source).toMatch(/const agentDrafts = createDraftAgentSeed/)
+    expect(source).toContain("active: (draft) => !!submissionMap[draft]")
+    expect(failed).toContain("draftSessionID() !== message.draftID")
+    expect(failed).toContain("agentDrafts.prune(message.draftID)")
   })
 })
 

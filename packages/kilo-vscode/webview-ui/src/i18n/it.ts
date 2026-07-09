@@ -767,6 +767,7 @@ export const dict = {
   "provider.custom.models.name.label": "Nome",
   "provider.custom.models.name.placeholder": "Nome visualizzato",
   "provider.custom.models.reasoning.label": "Reasoning",
+  "provider.custom.models.modalities.image": "Immagine",
   "provider.custom.models.variants.label": "Variants",
   "provider.custom.models.variants.add": "Aggiungi variante",
   "provider.custom.models.variants.remove": "Rimuovi variante",
@@ -1006,6 +1007,8 @@ export const dict = {
   "deviceAuth.error.detailsTitle": "Dettagli errore accesso",
   "common.retry": "Riprova",
   "common.refresh": "Aggiorna",
+  "common.reload": "Ricarica",
+  "common.reloadDescription": "Ricarica configurazione, competenze, agenti e comandi dal disco",
   "profile.title": "Profilo",
   "profile.notLoggedIn": "Accesso non effettuato",
   "profile.action.login": "Accedi con Kilo Code",
@@ -1220,6 +1223,12 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.codebaseSearch.title": "Ricerca codebase",
   "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
+  "settings.experimental.imageGeneration.title": "Generazione di immagini",
+  "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
+  "settings.experimental.imageGenerationModel.title": "Modello di immagine",
+  "settings.experimental.imageGenerationModel.description": "Modello di generazione di immagini",
+  "settings.experimental.imageGenerationModel.placeholder": "Predefinito (Auto Router)",
+
   "settings.experimental.nativeNotebookTools.title": "Strumenti nativi per notebook",
   "settings.experimental.nativeNotebookTools.description":
     "Abilita strumenti sperimentali per leggere, modificare ed eseguire i notebook di VS Code",
@@ -1229,6 +1238,16 @@ export const dict = {
   "settings.sandboxing.network.title": "Limita l'accesso alla rete",
   "settings.sandboxing.network.description":
     "Blocca l'accesso in uscita alla rete per i comandi avviati dal modello e gli strumenti HTTP. I server MCP locali e gli hook dei plugin operano al di fuori di questa restrizione. Il traffico verso i provider e per l'inferenza dei modelli rimane disponibile.",
+
+  "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
+  "settings.sandboxing.writablePaths.description":
+    "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Abilita SWE-Pruner: potatura degli output di grandi dimensioni degli strumenti di lettura, ricerca e shell, che tiene conto del compito ed è guidata da una domanda di focalizzazione fornita dall'agente",
+  "settings.experimental.swePrunerModel.title": "Modello SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Modello usato per potare le uscite degli strumenti; per impostazione predefinita, il modello piccolo configurato",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",
@@ -1287,8 +1306,8 @@ export const dict = {
     "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",
 
   "settings.agentBehaviour.skillPaths": "Percorsi cartelle skill",
@@ -1422,10 +1441,47 @@ export const dict = {
     "Crea checkpoint prima delle modifiche ai file così puoi ripristinare stati precedenti",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
+  "settings.context.compaction.title": "Compattazione",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",
   "settings.context.watcherPatterns.description": "Pattern glob per file che il watcher deve ignorare",
+  "settings.context.memory.title": "Memoria",
+  "settings.context.memory.project.title": "Memoria del progetto",
+  "settings.context.memory.autoSave.title": "Salvataggio automatico memoria progetto",
+  "settings.context.memory.autoSave.description":
+    "Salva automaticamente fatti durevoli del progetto dai turni completati quando la memoria è attiva.",
+  "settings.context.memory.index.title": "Indice della memoria",
+  "settings.context.memory.status.notLoaded": "Non caricata",
+  "settings.context.memory.status.disabled": "Disattivata",
+  "settings.context.memory.status.enabledTokensOps":
+    "Attivata - ~{{session}} token di contesto iniziale in questa sessione - ~{{tokens}} token nell’indice salvato - ultima operazione {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Attiva la memoria per creare i file di memoria del progetto.",
+  "settings.context.memory.inspect": "Ispeziona",
+  "settings.context.memory.rebuild": "Ricostruisci indice della memoria",
+  "chat.memory.on": "Memoria attivata",
+  "chat.memory.label": "Memoria · {{tokens}} token",
+  "chat.memory.status.loading": "Caricamento stato memoria",
+  "chat.memory.session.tokens": "Contesto iniziale di questa sessione: {{tokens}} token",
+  "chat.memory.total.tokens": "Indice salvato: {{tokens}} token",
+  "chat.memory.project.enabled": "Memoria del progetto attivata",
+  "chat.memory.project.disabled": "Memoria del progetto disattivata",
+  "chat.memory.command.failed": "Comando memoria non riuscito",
+  "chat.memory.savedOperations": "Ultima operazione di memoria: {{count}} ops",
+  "chat.memory.inspect": "Ispeziona memoria",
+  "chat.memory.remember": "Ricorda",
+  "chat.memory.forget": "Dimentica",
+  "chat.memory.rebuild": "Ricostruisci indice",
+  "chat.memory.disable": "Disattiva memoria",
+  "chat.memory.badge.injected": "Memoria iniettata",
+  "chat.memory.badge.recalled": "Memoria richiamata",
+  "chat.memory.badge.startupCtx": "ctx iniziale",
+  "chat.memory.badge.items": "{{count}} elementi",
+  "chat.memory.badge.tokens": "{{tokens}} token",
+  "chat.memory.badge.recalledDetail": "Memoria richiamata: {{count}} elementi - {{tokens}} token",
+  "chat.memory.badge.files": "File di memoria: {{files}}",
+
   "settings.commitMessage.title": "Messaggio commit",
   "settings.commitMessage.override.title": "Usa prompt personalizzato",
   "settings.commitMessage.override.description":
@@ -1435,6 +1491,11 @@ export const dict = {
     "Prompt di sistema inviato all'AI quando genera messaggi di commit. Sostituisce completamente il prompt predefinito.",
   "settings.commitMessage.prompt.placeholder":
     "es. Genera messaggi di commit in spagnolo seguendo il formato conventional commits. Restituisci SOLO il messaggio di commit.",
+
+  "settings.commitMessage.language.sync": "Sincronizzazione con la lingua dell'interfaccia utente",
+  "settings.commitMessage.language.title": "Lingua",
+  "settings.commitMessage.language.description": "Scegli quale lingua usare per i messaggi di commit generati da AI:",
+
   "settings.display.username.title": "Nome utente",
   "settings.display.username.description": "Nome utente personalizzato mostrato nelle conversazioni",
   "settings.display.fontSize.title": "Dimensione font",
@@ -1724,6 +1785,7 @@ export const dict = {
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.starting": "Avvio del microfono... Attendi prima di parlare.",
   "speechToText.tooltip.stop": "Interrompi acquisizione",
   "speechToText.tooltip.transcribing": "Trascrizione... Fai clic per annullare.",
   "speechToText.tooltip.error": "Input vocale fallito. Fai clic per cancellare.",

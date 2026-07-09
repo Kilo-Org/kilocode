@@ -45,7 +45,7 @@ export function fallbackDigest(input: { prior?: string; summary: string; max: nu
 
 export function parseDigest(input: CaptureDigest, fallback: string, max: number) {
   const summary = MemoryShared.brief(input.summary.trim() || fallback, max)
-  const topic = MemoryShared.brief(input.topic.trim() || summary.split(/[.;:]/)[0] || summary, 80)
+  const topic = MemoryShared.brief(input.topic.trim() || summary.split(/[.;]/)[0] || summary, 80)
   if (MemoryDigest.empty({ topic, summary })) return { topic: "", summary: "" }
   return { topic, summary }
 }

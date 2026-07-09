@@ -48,6 +48,8 @@ describe("model usage", () => {
     expect(modelUsageName(models[0], providers)).toBe("Qwen 3.7 Plus")
     expect(modelUsageName(models[1], providers)).toBe("MiniMax M3")
     expect(modelUsageName({ ...models[0], modelID: "moonshotai/kimi-k2.7-code-20260612" }, {})).toBe("kimi-k2.7-code")
+    // Routed free-variant ids keep their name instead of collapsing to the ":free" suffix
+    expect(modelUsageName({ ...models[0], modelID: "tencent/hy3:free" }, {})).toBe("hy3:free")
   })
 
   test("matches sessions through their top-level tree", () => {

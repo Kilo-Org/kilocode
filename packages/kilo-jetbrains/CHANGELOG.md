@@ -1,5 +1,49 @@
 # Changelog
 
+## 7.4.2
+
+### Patch Changes
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`f3c886b`](https://github.com/Kilo-Org/kilocode/commit/f3c886b3fafe040a9d9d139792a2cae934d30754) - Fix prompt submission in JetBrains IDEs when sending messages with file or git-change mentions.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`6469e9c`](https://github.com/Kilo-Org/kilocode/commit/6469e9c19694d63bfedcba7d69df244ab9bf7d14) - Fix unreliable clicks on inline action buttons (Connect, OAuth, Disconnect, Enable) in the JetBrains provider, agent, and MCP settings lists so the whole button is clickable.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`dd0a632`](https://github.com/Kilo-Org/kilocode/commit/dd0a6323fb25e6533fd8dcf133f447c7de7a5478) - Show a focus outline around the JetBrains prompt input.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`e70b4fa`](https://github.com/Kilo-Org/kilocode/commit/e70b4fa9b9879a6477033ffc7440e79e68eee60c) - Improve JetBrains session and code block padding alignment.
+
+- [#11975](https://github.com/Kilo-Org/kilocode/pull/11975) [`2746e69`](https://github.com/Kilo-Org/kilocode/commit/2746e69a138189ba7d6aba1f8e78c619cb60794b) - Reduce JetBrains plugin size by downloading the Kilo Core release on first connect.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`166fe23`](https://github.com/Kilo-Org/kilocode/commit/166fe23ca46908e5a49f05f60efffc9abffe7ddf) - Show subagent tool activity inline in JetBrains session transcripts.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`30407a3`](https://github.com/Kilo-Org/kilocode/commit/30407a3e12561d8d89d05b83ee320d03199a5d36) - Fix JetBrains prompt pickers so reasoning effort opens above the button and expanded model details still allow one-click model selection.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`71c2970`](https://github.com/Kilo-Org/kilocode/commit/71c2970c69371d9d99ac1f6977e490f6a5de81e5) - Cap JetBrains reasoning and shell hover previews to a compact popup size.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`76e4eb8`](https://github.com/Kilo-Org/kilocode/commit/76e4eb8a1690adaed5537b9d51538f2694f70062) - Match the JetBrains progress text color to transcript text.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`6e388ea`](https://github.com/Kilo-Org/kilocode/commit/6e388ea23ba54b00e343ec8df461a1d6f4ccf275) - Hide the JetBrains editor floating toolbar from the Kilo prompt input.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`f837a7e`](https://github.com/Kilo-Org/kilocode/commit/f837a7eed39314d57763f34838ca6db6b84bb472) - Hide the JetBrains prompt separator while the prompt is focused.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`e70b4fa`](https://github.com/Kilo-Org/kilocode/commit/e70b4fa9b9879a6477033ffc7440e79e68eee60c) - Balance JetBrains prompt input text padding.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`b909d77`](https://github.com/Kilo-Org/kilocode/commit/b909d77b63a6dcf6554d0a1202c1885d47891f40) - Disable spellchecking in the JetBrains prompt input.
+
+- [#11975](https://github.com/Kilo-Org/kilocode/pull/11975) [`62c41e2`](https://github.com/Kilo-Org/kilocode/commit/62c41e21c6cff2ef9686de5ef678de33173c54bc) - Remove old JetBrains CLI binaries so they no longer accumulate in the IDE cache. Only the active version is kept, the downloaded archive is deleted after extraction, and reinstalling re-downloads a fresh binary.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`0141801`](https://github.com/Kilo-Org/kilocode/commit/01418017f9d73d02c2deac4d8289d473d4547e54) - Auto-collapse JetBrains reasoning blocks when they finish streaming, keep manual expand/collapse choices, and preview collapsed reasoning on hover.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`76e4eb8`](https://github.com/Kilo-Org/kilocode/commit/76e4eb8a1690adaed5537b9d51538f2694f70062) - Use the session background across the JetBrains chat view from initial render.
+
+- [#11978](https://github.com/Kilo-Org/kilocode/pull/11978) [`1f9e6a4`](https://github.com/Kilo-Org/kilocode/commit/1f9e6a493d726c549ab2aa8046be4777c7c1990f) - Fix the JetBrains plugin finding shell-installed tools like bun and gh when launched from Finder or Dock.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`eb59ad6`](https://github.com/Kilo-Org/kilocode/commit/eb59ad6b134b1123055c4ab4adde8f055346bb91) - Balance JetBrains shell command tooltip padding when a horizontal scrollbar is present.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`66cef1b`](https://github.com/Kilo-Org/kilocode/commit/66cef1b662b085f0a4f6d05c5be94969a6c02f07) - Increase JetBrains todo checklist inner padding.
+
+- [#11932](https://github.com/Kilo-Org/kilocode/pull/11932) [`59baa02`](https://github.com/Kilo-Org/kilocode/commit/59baa02340df12742062b0432c47f74e1be7d5f3) - Use the standard transcript font for JetBrains prompt text and custom question responses.
+
 ## 7.4.0
 
 ### Minor Changes
@@ -151,6 +195,59 @@
 ### Patch Changes
 
 ## [Unreleased]
+
+## [7.0.2] - 2026-07-07
+
+### Added
+
+- First GA release of the native Kilo extension for JetBrains IDEs.
+- Download the pinned Kilo Core release at runtime instead of bundling CLI binaries, keeping the JetBrains plugin smaller while verifying downloaded archives before use.
+- Show Kilo Core runtime details from the JetBrains plugin so users can see which Core release is active.
+
+### Fixed
+
+- Improve JetBrains runtime CLI download reliability by pruning stale binaries, using the shell environment for PATH resolution, and surfacing exact release-resolution failures.
+
+### Changed
+
+- Polish JetBrains chat UI with auto-collapsing reasoning previews, clearer retry/offline footer state, and more balanced prompt, code, question, todo, history, and popup spacing.
+- Show the active routed model name and remote status more consistently in CLI runtime surfaces.
+
+## [7.0.2-rc.2] - 2026-07-07
+
+### Added
+
+- Show compact previews for collapsed reasoning blocks so long assistant reasoning stays readable without taking over the transcript.
+- Add clearer Kilo Core runtime information and diagnostics for release download failures.
+
+### Fixed
+
+- Resolve the CLI executable using the user's shell environment so custom PATH setups work when sessions start from JetBrains.
+- Keep retry and offline status visible in the session footer while preserving transcript context.
+- Prevent oversized header popups by capping preview content.
+
+### Changed
+
+- Download the required Kilo Core release at runtime and prune stale cached runtime binaries automatically.
+- Polish JetBrains chat spacing, prompt input behavior, question/todo layout, history scrolling, code block padding, and session background colors.
+
+## [7.0.2-rc.1] - 2026-07-07
+
+### Added
+
+- Download the pinned Kilo Core release at runtime instead of bundling every CLI binary in the JetBrains plugin, keeping the Marketplace package smaller while still verifying downloaded artifacts.
+
+## [7.0.1] - 2026-07-06
+
+### Added
+
+- Launch the first public Kilo JetBrains release with native JetBrains sessions and remote development support.
+
+## [7.0.1-rc.15] - 2026-07-06
+
+### Fixed
+
+- Improve transcript rendering, prompt focus styling, settings clicks, and prompt picker interactions.
 
 ## [7.0.1-rc.14] - 2026-07-02
 

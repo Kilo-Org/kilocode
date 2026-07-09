@@ -1,4 +1,5 @@
 import { readFileSync, statSync } from "node:fs"
+import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
@@ -12,6 +13,7 @@ import { Changed } from "./event"
 import * as Network from "./network"
 import { SandboxPreference } from "./preference"
 import * as SandboxState from "./state"
+import { SandboxConfig } from "./config"
 import { SandboxStore } from "./store"
 
 export type Snapshot = SandboxStore.Snapshot
@@ -38,8 +40,8 @@ const resolveInitial = Effect.fn("SandboxPolicy.resolveInitial")(function* (dire
   const cfg = yield* (yield* Config.Service).get()
   const chosen = yield* SandboxState.read(sessionID)
   const pref = yield* Effect.promise(() => SandboxPreference.read(directory))
-  const mode = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
-  return initial(chosen?.enabled, pref, cfg.experimental?.sandbox ?? false, mode)
+  const fallback = SandboxConfig.resolve(cfg)
+  return initial(chosen?.enabled, pref, fallback.enabled, fallback.mode)
 })
 function locked<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
   return Effect.acquireUseRelease(
@@ -92,7 +94,11 @@ function isolated(ctx: InstanceContext) {
   return linked(path.resolve(ctx.directory), path.resolve(ctx.worktree))
 }
 
-export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] = "deny"): Profile {
+export function profile(
+  ctx: InstanceContext,
+  mode: Profile["network"]["mode"] = "deny",
+  extraWritable?: readonly string[],
+): Profile {
   const project = isolated(ctx)
     ? [ctx.directory]
     : ctx.directory === ctx.worktree
@@ -108,6 +114,7 @@ export function profile(ctx: InstanceContext, mode: Profile["network"]["mode"] =
     Global.Path.bin,
     Global.Path.log,
     Global.Path.repos,
+    ...(extraWritable ?? []),
   ].map(root)
   return {
     filesystem: {
@@ -164,9 +171,12 @@ const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: Sessi
 
 export const configuredSupport = Effect.fn("SandboxPolicy.configuredSupport")(function* () {
   const cfg = yield* (yield* Config.Service).get()
-  const mode = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
-  return backendSupport({ mode, allowedHosts: [] })
+  return backendSupport({ mode: SandboxConfig.resolve(cfg).mode, allowedHosts: [] })
 })
+
+export function fallback(config: Config.Info) {
+  return SandboxConfig.resolve(config)
+}
 
 export const status = Effect.fn("SandboxPolicy.status")(function* (sessionID: SessionID) {
   const current = yield* snapshot(sessionID)
@@ -297,7 +307,10 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
     const current = yield* snapshot(sessionID)
     const support = backendSupport({ mode: current.state.mode, allowedHosts: [] })
     if (!current.state.enabled || !support.available) return yield* unrestricted(effect)
-    return yield* runSandbox(profile(yield* InstanceState.context, current.state.mode), effect)
+    const cfg = yield* (yield* Config.Service).get()
+    const raw = cfg.sandbox?.writable_paths
+    const extraWritable = raw?.map((p) => (p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p))
+    return yield* runSandbox(profile(yield* InstanceState.context, current.state.mode, extraWritable), effect)
   })
 }
 

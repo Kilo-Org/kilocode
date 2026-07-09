@@ -133,7 +133,11 @@ internal class SettingsListRenderer(
 }
 
 internal class SettingsListActionCell : JBLabel() {
+    var cellId: String = ""
+        private set
+
     fun update(cell: SettingsListCell) {
+        cellId = cell.id
         text = if (cell.iconOnly) "" else cell.label
         icon = cell.icon
         toolTipText = cell.label.takeIf { it.isNotBlank() }
