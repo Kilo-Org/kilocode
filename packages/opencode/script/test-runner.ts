@@ -1,20 +1,15 @@
 // kilocode_change - new file
-//
-// Custom test runner that executes each test file in its own isolated process.
-// Prevents cross-contamination between test files by ensuring separate PIDs,
-// temp directories, in-memory databases, and environment state.
+// Runs validated domains in reusable processes while retaining one process per
+// file for domains that have not been migrated yet.
 
+import fs from "fs/promises"
 import os from "os"
 import path from "path"
-import fs from "fs/promises"
+import { TestGroup } from "./kilocode/test-groups"
 import { TestProfile } from "./kilocode/test-profile"
 
 const root = path.resolve(import.meta.dir, "..")
 const argv = process.argv.slice(2)
-
-// ---------------------------------------------------------------------------
-// Help
-// ---------------------------------------------------------------------------
 
 if (argv.includes("--help") || argv.includes("-h")) {
   console.log(
@@ -22,43 +17,68 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "",
       "Usage: bun run script/test-runner.ts [options] [patterns...]",
       "",
-      "Runs test files in isolated parallel processes to prevent cross-contamination.",
+      "Runs validated semantic domains with isolated fallback for all other files.",
       "",
       "Options:",
-      "  --ci                 Enable JUnit XML output to .artifacts/unit/junit.xml",
-      "  --concurrency <N>    Max parallel processes (default: min(4, CPU count))",
-      "  --timeout <ms>       Per-test timeout passed to bun test (default: 60000)",
-      "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
-      "  --retries <N>        Extra attempts for failing files (default: 1)",
+      "  --ci                 Write JUnit XML to .artifacts/unit/junit.xml",
+      "  --concurrency <N>    Max parallel test processes (default: min(4, CPU count))",
+      "  --timeout <ms>       Per-test timeout passed to Bun (default: 60000)",
+      "  --file-timeout <ms>  Per-process timeout (default: 300000)",
+      "  --retries <N>        Extra attempts for isolated files only (default: 1)",
       "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
-      "  --bail               Stop on first failure",
-      "  --dots               Show compact dot progress",
-      "  --verbose            Show full output for every file",
+      "  --domain <name>      Run one semantic test domain",
+      "  --bail               Stop scheduling groups after the first failure",
+      "  --dots               Show compact progress",
+      "  --verbose            Show output for every process",
       "  -h, --help           Show this help",
-      "",
-      "Positional:",
-      "  [patterns...]        Filter test files by substring match",
       "",
     ].join("\n"),
   )
   process.exit(0)
 }
 
-// ---------------------------------------------------------------------------
-// CLI parsing
-// ---------------------------------------------------------------------------
+function value(name: string) {
+  const flag = `--${name}`
+  const found = argv.filter((arg) => arg === flag || arg.startsWith(`${flag}=`))
+  if (found.length === 0) return
+  if (found.length > 1) {
+    console.error(`Duplicate option: ${flag}`)
+    process.exit(2)
+  }
+  const arg = found[0]
+  if (arg !== flag) return arg.slice(flag.length + 1)
+  const index = argv.indexOf(flag)
+  const next = argv[index + 1]
+  if (next !== undefined) return next
+  console.error(`Missing value for ${flag}`)
+  process.exit(2)
+}
 
-function opt(name: string, fallback: number) {
-  const i = argv.indexOf(`--${name}`)
-  return i >= 0 && i + 1 < argv.length ? Number(argv[i + 1]) || fallback : fallback
+function number(name: string, fallback: number) {
+  const input = value(name)
+  if (input === undefined) return fallback
+  const parsed = Number(input)
+  if (Number.isInteger(parsed) && parsed > 0) return parsed
+  console.error(`Invalid value for --${name}: ${input || "missing"}`)
+  process.exit(2)
 }
 
 function text(name: string) {
-  const i = argv.indexOf(`--${name}`)
-  if (i < 0) return
-  const value = argv[i + 1]
-  if (value && !value.startsWith("-")) return value
+  const input = value(name)
+  if (input === undefined) return
+  if (input && !input.startsWith("-")) return input
   console.error(`Missing value for --${name}`)
+  process.exit(2)
+}
+
+const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile", "--domain"])
+const boolean = new Set(["--ci", "--bail", "--dots", "--verbose", "--help", "-h"])
+for (const arg of argv) {
+  if (!arg.startsWith("-")) continue
+  const flag = arg.split("=", 1)[0]
+  if (valued.has(flag) && (arg === flag || arg.startsWith(`${flag}=`))) continue
+  if (boolean.has(arg)) continue
+  console.error(`Unknown option: ${arg}`)
   process.exit(2)
 }
 
@@ -66,13 +86,11 @@ const ci = argv.includes("--ci")
 const bail = argv.includes("--bail")
 const verbose = argv.includes("--verbose")
 const dots = !verbose && (ci || argv.includes("--dots"))
-// Cap concurrency at 4 even on bigger runners: the bottleneck is shared
-// resources (ports, global filesystem like ~/.local/share/kilo), not CPU.
-// Eight parallel processes was triggering port/FS races, not going faster.
-const concurrency = opt("concurrency", Math.min(4, os.cpus().length))
-const timeout = opt("timeout", 60000)
-const deadline = opt("file-timeout", 300000)
-const retries = opt("retries", 1)
+const concurrency = number("concurrency", Math.min(4, os.cpus().length))
+const timeout = number("timeout", 60_000)
+const deadline = number("file-timeout", 300_000)
+const retries = number("retries", 1)
+const domain = text("domain")
 const flag = text("profile")
 const env = process.env.KILO_TEST_PROFILE?.trim() || undefined
 if (flag && env && flag !== env) {
@@ -80,74 +98,70 @@ if (flag && env && flag !== env) {
   process.exit(2)
 }
 const profile = flag ?? env
-
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile"])
-const patterns = argv.filter((arg, i) => {
+const patterns = argv.filter((arg, index) => {
   if (arg.startsWith("-")) return false
-  if (i > 0 && valued.has(argv[i - 1])) return false
-  return true
+  return index === 0 || !valued.has(argv[index - 1])
 })
-
-// ---------------------------------------------------------------------------
-// Colors
-// ---------------------------------------------------------------------------
-
-const tty = !!process.stdout.isTTY
-const green = (s: string) => (tty ? `\x1b[32m${s}\x1b[0m` : s)
-const red = (s: string) => (tty ? `\x1b[31m${s}\x1b[0m` : s)
-const yellow = (s: string) => (tty ? `\x1b[33m${s}\x1b[0m` : s)
-const dim = (s: string) => (tty ? `\x1b[2m${s}\x1b[0m` : s)
-const bold = (s: string) => (tty ? `\x1b[1m${s}\x1b[0m` : s)
-
-// ---------------------------------------------------------------------------
-// File discovery
-// ---------------------------------------------------------------------------
 
 const glob = new Bun.Glob("**/*.test.{ts,tsx}")
 const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") })))
   .map((file) => file.replaceAll("\\", "/"))
-  .sort()
-
-export const skipped = new Set([
-  // Upstream browser OAuth integration tests bind the fixed callback port and
-  // race with other parallel OAuth tests in CI.
-  "mcp/oauth-browser.test.ts",
-])
-
+  .toSorted()
+const eligible = all.filter((file) => !TestGroup.excluded.has(file))
+const grouped = TestGroup.resolve(eligible)
+if (!grouped.ok) {
+  console.error(grouped.error)
+  process.exit(2)
+}
 const selected = (() => {
-  if (!profile) return all
+  if (!profile) return eligible
   const result = TestProfile.resolve(profile, all)
   if (!result.ok) {
     console.error(result.error)
     process.exit(2)
   }
-  const blocked = result.files.filter((file) => skipped.has(file))
+  const blocked = result.files.filter((file) => TestGroup.excluded.has(file))
   if (blocked.length > 0) {
-    console.error(`Test profile "${profile}" contains skipped files:\n${blocked.map((file) => `- ${file}`).join("\n")}`)
+    console.error(
+      `Test profile "${profile}" contains excluded files:\n${blocked.map((file) => `- ${file}`).join("\n")}`,
+    )
     process.exit(2)
   }
   console.log(`Using test profile "${profile}": ${result.description} (${result.files.length} files)`)
   return result.files
 })()
-const matched =
+const scoped = (() => {
+  if (!domain) return selected
+  const group = grouped.groups.find((group) => group.name === domain)
+  if (!group) {
+    console.error(
+      `Unknown test domain: ${domain}\nAvailable domains: ${grouped.groups.map((group) => group.name).join(", ")}`,
+    )
+    process.exit(2)
+  }
+  const allowed = new Set(group.files)
+  return selected.filter((file) => allowed.has(file))
+})()
+const files =
   patterns.length > 0
-    ? selected.filter((file) =>
+    ? scoped.filter((file) =>
         patterns.some((pattern) => file.includes(pattern) || path.join("test", file).includes(pattern)),
       )
-    : selected
-const files = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
-
+    : scoped
 if (files.length === 0) {
   console.log("No test files found")
   process.exit(0)
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+type Unit = {
+  id: number
+  name: string
+  files: string[]
+  weight: number
+  isolated: boolean
+}
 
-type Result = {
-  file: string
+type Result = Unit & {
   passed: boolean
   code: number
   stdout: string
@@ -155,76 +169,133 @@ type Result = {
   duration: number
   timedout: boolean
   attempts: number
+  report: string
 }
 
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
-
-const xmldir = ci ? path.join(os.tmpdir(), `opencode-junit-${process.pid}`) : ""
-if (ci) await fs.mkdir(xmldir, { recursive: true })
-
-const counter = { done: 0 }
-const pad = String(files.length).length
-const progress = { width: 80 }
-const marks = {
-  pass: ".",
-  retry: "R",
-  fail: "F",
-  timeout: "T",
-} as const
-const legend = `Legend: ${marks.pass}=pass ${marks.retry}=pass-after-retry ${marks.fail}=fail ${marks.timeout}=timeout`
-
-// ---------------------------------------------------------------------------
-// Run a single test file
-// ---------------------------------------------------------------------------
-
-async function run(file: string): Promise<Result> {
-  const target = path.join("test", file)
-  const cmd = ["bun", "test", target, "--timeout", String(timeout)]
-
-  if (ci) {
-    const name = file.replace(/[/\\]/g, "_") + ".xml"
-    cmd.push("--reporter=junit", `--reporter-outfile=${path.join(xmldir, name)}`)
+const chosen = new Set(files)
+const weights = new Map(files.map((file) => [file, Bun.file(path.join(root, "test", file)).size]))
+const pending: Omit<Unit, "id">[] = []
+for (const group of grouped.groups) {
+  const members = group.files.filter((file) => chosen.has(file))
+  if (members.length === 0) continue
+  if (group.mode === "domain") {
+    pending.push({
+      name: group.name,
+      files: members,
+      weight: members.reduce((sum, file) => sum + weights.get(file)!, 0),
+      isolated: false,
+    })
+    continue
   }
+  for (const file of members) {
+    pending.push({
+      name: `${group.name}:${file}`,
+      files: [file],
+      weight: weights.get(file)!,
+      isolated: true,
+    })
+  }
+}
+const units = pending
+  .filter((unit) => unit.files.length > 0)
+  .toSorted((a, b) => b.weight - a.weight || a.name.localeCompare(b.name))
+  .map((unit, id) => ({ ...unit, id }))
+const covered = units.flatMap((unit) => unit.files)
+if (covered.length !== files.length || new Set(covered).size !== files.length) {
+  console.error(`Runner plan covers ${covered.length} entries for ${files.length} selected files`)
+  process.exit(2)
+}
 
+const run = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-test-run-"))
+const xmldir = path.join(run, "junit")
+if (ci) await fs.mkdir(xmldir, { recursive: true })
+const launches = { value: 0 }
+
+async function execute(unit: Unit, attempt: number): Promise<Result> {
+  launches.value++
+  const report = path.join(xmldir, `${unit.id}-${attempt}.xml`)
+  const cmd = [
+    process.execPath,
+    "test",
+    ...unit.files.map((file) => path.join("test", file)),
+    "--isolate",
+    "--only-failures",
+    "--timeout",
+    String(timeout),
+  ]
+  if (process.platform !== "win32") cmd.push("--no-orphans")
+  if (ci) cmd.push("--reporter=junit", `--reporter-outfile=${report}`)
   const start = performance.now()
-  const killed = { value: false }
-
+  const timedout = { value: false }
   const proc = Bun.spawn(cmd, {
     cwd: root,
+    env: {
+      ...process.env,
+      ...(unit.isolated ? {} : { KILO_TEST_ROOT: run }),
+      ...(profile ? { KILO_TEST_PROFILE: profile } : {}),
+    },
     stdout: "pipe",
     stderr: "pipe",
+    windowsHide: true,
+    detached: process.platform !== "win32",
   })
-
   const timer = setTimeout(() => {
-    killed.value = true
-    proc.kill()
+    timedout.value = true
+    if (process.platform === "win32") {
+      const child = Bun.spawnSync(["taskkill", "/pid", String(proc.pid), "/t", "/f"], {
+        stdout: "ignore",
+        stderr: "ignore",
+        windowsHide: true,
+      })
+      if (child.exitCode !== 0) {
+        console.error(`Failed to terminate timed out test process tree ${proc.pid}`)
+        proc.kill(9)
+      }
+      return
+    }
+    try {
+      process.kill(-proc.pid, "SIGKILL")
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ESRCH")
+        console.error("Failed to terminate test process group", error)
+      proc.kill(9)
+    }
   }, deadline)
-
   const [stdout, stderr, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
   ])
-
   clearTimeout(timer)
-
   return {
-    file,
-    passed: code === 0,
+    ...unit,
+    passed: code === 0 && !timedout.value,
     code,
     stdout,
     stderr,
     duration: performance.now() - start,
-    timedout: killed.value,
-    attempts: 1,
+    timedout: timedout.value,
+    attempts: attempt,
+    report,
   }
 }
 
-// ---------------------------------------------------------------------------
-// Report a single result
-// ---------------------------------------------------------------------------
+async function runUnit(unit: Unit, attempt = 1): Promise<Result> {
+  const result = await execute(unit, attempt)
+  if (result.passed || !unit.isolated || stopped.value || attempt > retries) return result
+  return runUnit(unit, attempt + 1)
+}
+
+const tty = !!process.stdout.isTTY
+const color = (code: number, value: string) => (tty ? `\x1b[${code}m${value}\x1b[0m` : value)
+const green = (value: string) => color(32, value)
+const red = (value: string) => color(31, value)
+const yellow = (value: string) => color(33, value)
+const dim = (value: string) => color(2, value)
+const bold = (value: string) => color(1, value)
+const marks = { pass: ".", retry: "R", fail: "F", timeout: "T" } as const
+const count = { value: 0 }
+const width = String(units.length).length
 
 function mark(result: Result) {
   if (result.timedout) return marks.timeout
@@ -234,254 +305,186 @@ function mark(result: Result) {
 }
 
 function report(result: Result) {
-  counter.done++
+  count.value++
   if (dots) {
     process.stdout.write(mark(result))
-    if (counter.done % progress.width === 0) process.stdout.write("\n")
+    if (count.value % 80 === 0) process.stdout.write("\n")
     return
   }
-
-  const idx = String(counter.done).padStart(pad)
-  const secs = (result.duration / 1000).toFixed(1)
-  const tries = result.attempts > 1 ? dim(` [attempt ${result.attempts}/${retries + 1}]`) : ""
-
-  if (result.timedout) {
-    console.log(
-      `[${idx}/${files.length}] ${red("TIME")} ${result.file} ${dim(`(${secs}s - exceeded ${deadline / 1000}s)`)}${tries}`,
-    )
-    return
-  }
-
-  if (!result.passed) {
-    console.log(`[${idx}/${files.length}] ${red("FAIL")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
-    if (verbose && result.stderr.trim()) console.log(result.stderr)
-    if (verbose && result.stdout.trim()) console.log(result.stdout)
-    return
-  }
-
-  if (result.attempts > 1) {
-    console.log(`[${idx}/${files.length}] ${yellow("FLAKY")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
-    if (verbose && result.stdout.trim()) console.log(dim(result.stdout))
-    return
-  }
-
-  console.log(`[${idx}/${files.length}] ${green("PASS")} ${result.file} ${dim(`(${secs}s)`)}`)
+  const index = String(count.value).padStart(width)
+  const seconds = (result.duration / 1000).toFixed(1)
+  const label = result.timedout
+    ? red("TIME")
+    : !result.passed
+      ? red("FAIL")
+      : result.attempts > 1
+        ? yellow("FLAKY")
+        : green("PASS")
+  console.log(
+    `[${index}/${units.length}] ${label} ${result.name} ${dim(`(${seconds}s, ${result.files.length} files)`)}`,
+  )
   if (verbose && result.stdout.trim()) console.log(dim(result.stdout))
+  if (verbose && result.stderr.trim()) console.log(result.stderr)
 }
 
-// ---------------------------------------------------------------------------
-// Parallel execution
-// ---------------------------------------------------------------------------
-
-console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
-if (dots) console.log(dim(legend))
+const domains = units.filter((unit) => !unit.isolated).length
+console.log(
+  `\nRunning ${bold(String(files.length))} test files in ${bold(String(units.length))} processes ` +
+    `(${domains} reusable ${domains === 1 ? "domain" : "domains"}, concurrency ${concurrency})`,
+)
+if (dots)
+  console.log(
+    dim(`Legend: ${marks.pass}=pass ${marks.retry}=pass-after-retry ${marks.fail}=fail ${marks.timeout}=timeout`),
+  )
 console.log()
 
 const start = performance.now()
+const queue = [...units]
 const results: Result[] = []
-const queue = [...files]
 const stopped = { value: false }
-
-const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+const workers = Array.from({ length: Math.min(concurrency, units.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
-    const file = queue.shift()!
-    let result = await run(file)
-    // Retry failing files up to `retries` extra times. Bugs still fail on every
-    // attempt; contention-based flakes (port races, slow FS, slow spawn) recover.
-    // Preserve the last attempt's stdout/stderr/duration so a truly broken file
-    // still shows a useful diagnostic.
-    while (!result.passed && result.attempts <= retries && !stopped.value) {
-      const retry = await run(file)
-      retry.attempts = result.attempts + 1
-      result = retry
-    }
+    const result = await runUnit(queue.shift()!)
     results.push(result)
     report(result)
     if (bail && !result.passed) stopped.value = true
   }
 })
-
 await Promise.all(workers)
-
-if (dots && counter.done % progress.width !== 0) console.log()
+if (dots && count.value % 80 !== 0) console.log()
 
 const elapsed = (performance.now() - start) / 1000
-
-// ---------------------------------------------------------------------------
-// Failure details
-// ---------------------------------------------------------------------------
-
-const failures = results.filter((r) => !r.passed).sort((a, b) => a.file.localeCompare(b.file))
-
+const failures = results.filter((result) => !result.passed).toSorted((a, b) => a.name.localeCompare(b.name))
 if (failures.length > 0 && !verbose) {
   console.log(`\n${bold(red("--- FAILURES ---"))}\n`)
-  for (const f of failures) {
-    const tag = f.timedout ? " (TIMED OUT)" : ""
-    console.log(`${bold(red(f.file))}${tag}:`)
-    const output = (f.stderr || f.stdout).trim()
+  for (const failure of failures) {
+    console.log(`${bold(red(failure.name))} (${failure.files.join(", ")}):`)
+    const output = (failure.stderr || failure.stdout).trim()
     if (output)
       console.log(
         output
           .split("\n")
-          .map((l) => "  " + l)
+          .map((line) => `  ${line}`)
           .join("\n"),
       )
     console.log()
   }
 }
 
-// ---------------------------------------------------------------------------
-// Summary
-// ---------------------------------------------------------------------------
-
-const passed = results.filter((r) => r.passed).length
-const flaky = results.filter((r) => r.passed && r.attempts > 1)
-
-console.log(
-  `\n${bold(String(results.length))} files | ` +
-    `${green(passed + " passed")} | ` +
-    `${failures.length > 0 ? red(failures.length + " failed") : failures.length + " failed"} | ` +
-    `${flaky.length > 0 ? yellow(flaky.length + " flaky") : flaky.length + " flaky"} | ` +
-    `${elapsed.toFixed(1)}s\n`,
-)
-
+const flaky = results.filter((result) => result.passed && result.attempts > 1)
 if (flaky.length > 0) {
-  const sorted = flaky.slice().sort((a, b) => a.file.localeCompare(b.file))
-
-  console.log(`${bold(yellow("--- FLAKY (passed on retry) ---"))}\n`)
-  for (const r of sorted) {
-    console.log(`  ${yellow(r.file)} ${dim(`(passed on attempt ${r.attempts}/${retries + 1})`)}`)
+  console.log(`${bold(yellow("--- FLAKY DEDICATED FILES ---"))}\n`)
+  for (const result of flaky.toSorted((a, b) => a.files[0].localeCompare(b.files[0]))) {
+    console.log(`  ${yellow(result.files[0])} ${dim(`(passed on attempt ${result.attempts}/${retries + 1})`)}`)
   }
   console.log()
 
-  // Surface flakies to the GitHub Actions UI so reviewers don't have to scan
-  // the raw log. Annotations show up on the PR; the step summary is visible at
-  // the bottom of the job page and in the workflow summary email.
   if (process.env.GITHUB_ACTIONS === "true") {
-    for (const r of sorted) {
-      const repo = `packages/opencode/test/${r.file}`
-      console.log(`::warning file=${repo},title=Flaky test file::passed on attempt ${r.attempts} of ${retries + 1}`)
+    for (const result of flaky) {
+      const file = `packages/opencode/test/${result.files[0]}`
+      console.log(
+        `::warning file=${file},title=Flaky test file::passed on attempt ${result.attempts} of ${retries + 1}`,
+      )
     }
-
     const summary = process.env.GITHUB_STEP_SUMMARY
     if (summary) {
-      const md = [
-        "### ⚠️ Flaky test files (passed on retry)",
-        "",
-        `${sorted.length} file${sorted.length === 1 ? "" : "s"} needed more than one attempt to pass.`,
-        "",
-        "| File | Attempts |",
-        "|---|---|",
-        ...sorted.map((r) => `| \`${r.file}\` | ${r.attempts}/${retries + 1} |`),
-        "",
-      ].join("\n")
-      await fs.appendFile(summary, md + "\n")
+      const rows = flaky
+        .toSorted((a, b) => a.files[0].localeCompare(b.files[0]))
+        .map((result) => `| \`${result.files[0]}\` | ${result.attempts}/${retries + 1} |`)
+      await fs.appendFile(
+        summary,
+        ["### Flaky test files", "", "| File | Attempts |", "|---|---|", ...rows, ""].join("\n"),
+      )
     }
   }
 }
 
-// ---------------------------------------------------------------------------
-// JUnit XML merge (CI mode)
-// ---------------------------------------------------------------------------
-
+const invalid: string[] = []
 if (ci) {
-  await merge()
-  await fs.rm(xmldir, { recursive: true, force: true }).catch((err) => {
-    console.error("cleanup failed:", err)
-  })
-}
-
-process.exit(failures.length > 0 ? 1 : 0)
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-async function merge() {
-  const dir = path.join(root, ".artifacts", "unit")
-  await fs.mkdir(dir, { recursive: true })
-
+  const output = path.join(root, ".artifacts", "unit", "junit.xml")
+  await fs.mkdir(path.dirname(output), { recursive: true })
   const suites: string[] = []
-  const counts = { tests: 0, failures: 0, errors: 0 }
-
-  for (const file of files) {
-    const name = file.replace(/[/\\]/g, "_") + ".xml"
-    const fpath = path.join(xmldir, name)
-    const found = await Bun.file(fpath).exists()
-
-    if (found) {
-      const content = await Bun.file(fpath).text()
-      const extracted = extract(content)
-      if (extracted) {
-        suites.push(extracted)
-        // Counts come from the outer <testsuites ...> root attributes, not from
-        // regex-scanning the inner content, so nested <testsuite> blocks (bun
-        // emits one per `describe`) don't get double-counted.
-        const root = content.match(/<testsuites\b([^>]*)>/)
-        if (root) {
-          counts.tests += attr(root[1], "tests")
-          counts.failures += attr(root[1], "failures")
-          counts.errors += attr(root[1], "errors")
-        }
-        continue
-      }
+  const counts = { tests: 0, failures: 0, errors: 0, skipped: 0 }
+  for (const result of results) {
+    const file = Bun.file(result.report)
+    const exists = await file.exists()
+    const content = exists ? await file.text() : ""
+    const inner = extractSuites(content)
+    const root = content.match(/<testsuites\b([^>]*)>/)
+    if (inner !== undefined && root) {
+      suites.push(inner)
+      counts.tests += attribute(root[1], "tests")
+      counts.failures += attribute(root[1], "failures")
+      counts.errors += attribute(root[1], "errors")
+      counts.skipped += attribute(root[1], "skipped")
+      continue
     }
+    if (!exists && result.passed && result.isolated) continue
 
-    // No valid XML produced - generate synthetic entry for failed files
-    const result = results.find((r) => r.file === file)
-    if (!result || result.passed) continue
-
-    const secs = (result.duration / 1000).toFixed(3)
-    const msg = result.timedout
-      ? `Test file timed out after ${deadline / 1000}s`
-      : `Test process exited with code ${result.code}`
-    const detail = esc((result.stderr || result.stdout || msg).slice(0, 10000))
-
-    suites.push(
-      `  <testsuite name="${esc(file)}" tests="1" failures="1" errors="0" time="${secs}">\n` +
-        `    <testcase name="${esc(file)}" classname="${esc(file)}" time="${secs}">\n` +
-        `      <failure message="${esc(msg)}">${detail}</failure>\n` +
-        `    </testcase>\n` +
-        `  </testsuite>`,
-    )
-    counts.tests++
-    counts.failures++
+    invalid.push(result.name)
+    const seconds = (result.duration / 1000).toFixed(3)
+    const message = result.timedout
+      ? `Test process timed out after ${deadline / 1000}s`
+      : result.code === 0
+        ? "Test process produced no valid JUnit report"
+        : `Test process exited with code ${result.code}`
+    const detail = escapeXml((result.stderr || result.stdout || message).slice(0, 10_000))
+    for (const test of result.files) {
+      suites.push(
+        `  <testsuite name="${escapeXml(test)}" tests="1" failures="1" errors="0" skipped="0" time="${seconds}">\n` +
+          `    <testcase name="${escapeXml(test)}" classname="${escapeXml(result.name)}" time="${seconds}">\n` +
+          `      <failure message="${escapeXml(message)}">${detail}</failure>\n` +
+          `    </testcase>\n` +
+          `  </testsuite>`,
+      )
+      counts.tests++
+      counts.failures++
+    }
   }
-
-  const body = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    `<testsuites tests="${counts.tests}" failures="${counts.failures}" errors="${counts.errors}" time="${elapsed.toFixed(3)}">`,
-    ...suites,
-    "</testsuites>",
-    "",
-  ].join("\n")
-
-  await Bun.write(path.join(dir, "junit.xml"), body)
+  await Bun.write(
+    output,
+    [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      `<testsuites tests="${counts.tests}" failures="${counts.failures}" errors="${counts.errors}" skipped="${counts.skipped}" time="${elapsed.toFixed(3)}">`,
+      ...suites,
+      "</testsuites>",
+      "",
+    ].join("\n"),
+  )
 }
 
-// Grab everything between the outer <testsuites ...> and </testsuites> of a
-// per-file JUnit XML. Preserves nested <testsuite> blocks verbatim — the
-// previous hand-rolled walker matched the first </testsuite> it found, which
-// closed an inner suite and left the outer one dangling in the merged output.
-function extract(content: string): string {
+await fs.rm(run, { recursive: true, force: true, maxRetries: 30, retryDelay: 100 })
+const passed = results.filter((result) => result.passed).reduce((sum, result) => sum + result.files.length, 0)
+const failed = failures.reduce((sum, result) => sum + result.files.length, 0)
+console.log(
+  `\n${bold(String(results.reduce((sum, result) => sum + result.files.length, 0)))} files | ` +
+    `${green(`${passed} passed`)} | ` +
+    `${failed > 0 ? red(`${failed} failed in ${failures.length} processes`) : "0 failed"} | ` +
+    `${launches.value} launches | ${elapsed.toFixed(1)}s\n`,
+)
+if (invalid.length > 0)
+  console.error(`Missing or invalid JUnit reports:\n${invalid.map((name) => `- ${name}`).join("\n")}`)
+process.exit(failures.length > 0 || invalid.length > 0 ? 1 : 0)
+
+function extractSuites(content: string) {
   const open = content.match(/<testsuites\b[^>]*>/)
-  if (!open) return ""
+  if (!open) return
   const start = open.index! + open[0].length
   const end = content.lastIndexOf("</testsuites>")
-  if (end === -1 || end <= start) return ""
+  if (end === -1 || end < start) return
   return content.slice(start, end).trim()
 }
 
-function attr(attrs: string, name: string): number {
-  const m = attrs.match(new RegExp(`\\b${name}="(\\d+)"`))
-  return m ? Number(m[1]) : 0
+function attribute(input: string, name: string) {
+  const match = input.match(new RegExp(`\\b${name}="(\\d+)"`))
+  return match ? Number(match[1]) : 0
 }
 
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;")
+function escapeXml(input: string) {
+  return input
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;")
 }
