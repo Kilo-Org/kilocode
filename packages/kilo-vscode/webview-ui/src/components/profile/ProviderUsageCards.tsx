@@ -20,8 +20,7 @@ export interface ProviderUsageCardsProps {
 type Language = ReturnType<typeof useLanguage>
 
 const source = (item: ProviderUsageSnapshot, language: Language) => {
-  if (item.sourceKind === "kilo_managed")
-    return language.t("profile.usage.source.viaKilo")
+  if (item.sourceKind === "kilo_managed") return language.t("profile.usage.source.viaKilo")
   if (item.sourceKind === "codex") return language.t("profile.usage.source.chatgpt")
   return language.t("profile.usage.source.direct")
 }
