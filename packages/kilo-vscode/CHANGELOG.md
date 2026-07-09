@@ -1,5 +1,20 @@
 # kilo-code
 
+## 7.4.4
+
+### Patch Changes
+
+- [#12049](https://github.com/Kilo-Org/kilocode/pull/12049) [`394af39`](https://github.com/Kilo-Org/kilocode/commit/394af39c64b2920fa8c84f14670f213820cef2ec) - Configure sandboxing through first-class sandbox settings, and show its controls in the dedicated Sandboxing page for all supported macOS and Linux users while keeping it disabled by default.
+
+- Updated dependencies [[`394af39`](https://github.com/Kilo-Org/kilocode/commit/394af39c64b2920fa8c84f14670f213820cef2ec)]:
+  - @kilocode/sdk@7.5.0
+  - @kilocode/kilo-ui@7.4.4
+  - @kilocode/plugin@7.4.4
+  - @opencode-ai/ui@7.4.4
+  - @kilocode/kilo-gateway@7.4.4
+  - @kilocode/kilo-indexing@7.4.4
+  - @opencode-ai/core@7.4.4
+
 ## 7.4.3
 
 ## 7.4.2

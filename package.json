@@ -151,6 +151,6 @@
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.4.3",
+  "version": "7.4.4",
   "peerDependencies": {}
 }
