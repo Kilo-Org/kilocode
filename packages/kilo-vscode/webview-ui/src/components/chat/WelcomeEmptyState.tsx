@@ -41,7 +41,7 @@ export const WelcomeEmptyState: Component<WelcomeEmptyStateProps> = (props) => {
           <For each={recent()}>
             {(item) => (
               <button class="recent-session-item" onClick={() => props.onSelectSession?.(item.id)}>
-                <span class="recent-session-title">{item.title || language.t("session.untitled")}</span>
+                <span class="recent-session-title" dir="auto">{item.title || language.t("session.untitled")}</span>
                 <span class="recent-session-date">{formatRelativeDate(item.updatedAt)}</span>
               </button>
             )}

@@ -2554,7 +2554,7 @@ const AgentManagerContent: Component = () => {
                             session.selectSession(s.id)
                           }}
                         >
-                          <span class="am-item-title">{s.title || t("agentManager.session.untitled")}</span>
+                          <span class="am-item-title" dir="auto">{s.title || t("agentManager.session.untitled")}</span>
                           <span class="am-item-time">{formatRelativeDate(s.updatedAt)}</span>
                           <div class="am-item-promote">
                             <TooltipKeybind

@@ -169,7 +169,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
       >
         {(s) => (
           <>
-            <span data-slot="list-item-title">{s.title}</span>
+            <span data-slot="list-item-title" dir="auto">{s.title}</span>
             <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
           </>
         )}
