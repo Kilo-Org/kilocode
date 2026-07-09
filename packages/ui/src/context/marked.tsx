@@ -29,6 +29,13 @@ const BLOCK = /^\$\$\n((?:\\[^]|[^\\])+?)\n\$\$(?:\n|$)/
 const INLINE = /^\$\$(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\$\$/
 // kilocode_change end
 
+// kilocode_change start: isolate KaTeX from the markdown root dir=auto.
+function renderKatex(text: string, options: katex.KatexOptions): string {
+  const html = katex.renderToString(text, options)
+  return `<span dir="auto">${html}</span>`
+}
+// kilocode_change end
+
 function renderMathInText(text: string): string {
   let result = text
 
@@ -36,10 +43,12 @@ function renderMathInText(text: string): string {
   const displayMathRegex = /\$\$([\s\S]*?)\$\$/g
   result = result.replace(displayMathRegex, (_, math) => {
     try {
-      return katex.renderToString(math, {
+      // kilocode_change start
+      return renderKatex(math, {
         displayMode: true,
         throwOnError: false,
       })
+      // kilocode_change end
     } catch {
       return `$$${math}$$`
     }
@@ -266,121 +275,125 @@ export async function deferredHighlight(
 }
 // kilocode_change end
 
+// kilocode_change start: expose the parser setup for Kilo markdown tests.
+export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser }) => {
+  // kilocode_change start: two-pass parser — first pass skips Shiki highlighting
+  // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
+  // Code blocks render as plain <pre><code data-lang="..."> immediately.
+  // The Markdown component calls deferredHighlight() after DOM paint.
+  const parser = marked.use(
+    {
+      renderer: {
+        link({ href, title, text }) {
+          const titleAttr = title ? ` title="${title}"` : ""
+          return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+        },
+        // kilocode_change start
+        codespan({ text }) {
+          const file = parseFilePath(text)
+          const escaped = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")
+          if (file) {
+            const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
+            const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
+            return `<code class="file-link" dir="auto" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
+          }
+          return `<code dir="auto">${escaped}</code>`
+        },
+        code({ text, lang }) {
+          const escaped = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")
+          // Normalize aliases (e.g. "c++" → "cpp") before stripping special
+          // chars, so "c++" doesn't become "c" (wrong language highlight).
+          const normalized = lang ? (LANG_ALIASES[lang] ?? lang) : ""
+          const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
+          const data = safe.toLowerCase() === "mermaid" ? "mermaid" : safe
+          const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
+          return `<pre dir="auto"><code${attr}>${escaped}</code></pre>`
+        },
+        // kilocode_change end
+      },
+    },
+    // kilocode_change start: enable only double-dollar math.
+    // Single $ is far more common as a currency symbol in agent responses
+    // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
+    // marked-katex-extension inline tokenizer because Marked falls through
+    // to later tokenizers when an override returns undefined.
+    {
+      extensions: [
+        {
+          name: "doubleKatexBlock",
+          level: "block" as const,
+          tokenizer(src) {
+            const match = src.match(BLOCK)
+            const text = match?.[1]
+            if (!match || !text) return undefined
+            return {
+              type: "doubleKatexBlock",
+              raw: match[0],
+              text: text.trim(),
+            }
+          },
+          renderer(token) {
+            return `${renderKatex(token.text, { displayMode: true, throwOnError: false })}\n`
+          },
+        } satisfies TokenizerAndRendererExtension,
+        {
+          name: "doubleKatexInline",
+          level: "inline" as const,
+          start(src) {
+            const index = src.indexOf("$$")
+            if (index === -1) return undefined
+            return index
+          },
+          tokenizer(src) {
+            const match = src.match(INLINE)
+            const text = match?.[1]
+            if (!match || !text) return undefined
+            return {
+              type: "doubleKatexInline",
+              raw: match[0],
+              text: text.trim(),
+            }
+          },
+          renderer(token) {
+            return renderKatex(token.text, { displayMode: true, throwOnError: false })
+          },
+        } satisfies TokenizerAndRendererExtension,
+      ],
+    } satisfies MarkedExtension,
+    // kilocode_change end
+    // kilocode_change: markedShiki removed — the custom `code` renderer
+    // above returns plain <pre><code data-lang="..."> and markdown.tsx
+    // calls deferredHighlight() after paint. Running Shiki inside parse
+    // blocks the main thread on session switches (issue #6221).
+  )
+  // kilocode_change end
+
+  if (props.nativeParser) {
+    const nativeParser = props.nativeParser
+    return {
+      async parse(markdown: string): Promise<string> {
+        const html = await nativeParser(markdown)
+        const withMath = renderMathExpressions(html)
+        return highlightCodeBlocks(withMath)
+      },
+    }
+  }
+
+  return parser
+}
+
 export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({
   name: "Marked",
-  init: (props: { nativeParser?: NativeMarkdownParser }) => {
-    // kilocode_change start: two-pass parser — first pass skips Shiki highlighting
-    // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
-    // Code blocks render as plain <pre><code data-lang="..."> immediately.
-    // The Markdown component calls deferredHighlight() after DOM paint.
-    const parser = marked.use(
-      {
-        renderer: {
-          link({ href, title, text }) {
-            const titleAttr = title ? ` title="${title}"` : ""
-            return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
-          },
-          // kilocode_change start
-          codespan({ text }) {
-            const file = parseFilePath(text)
-            const escaped = text
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#39;")
-            if (file) {
-              const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
-              const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-              return `<code class="file-link" dir="auto" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
-            }
-            return `<code dir="auto">${escaped}</code>`
-          },
-          code({ text, lang }) {
-            const escaped = text
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#39;")
-            // Normalize aliases (e.g. "c++" → "cpp") before stripping special
-            // chars, so "c++" doesn't become "c" (wrong language highlight).
-            const normalized = lang ? (LANG_ALIASES[lang] ?? lang) : ""
-            const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
-            const data = safe.toLowerCase() === "mermaid" ? "mermaid" : safe
-            const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
-            return `<pre dir="auto"><code${attr}>${escaped}</code></pre>`
-          },
-          // kilocode_change end
-        },
-      },
-      // kilocode_change start: enable only double-dollar math.
-      // Single $ is far more common as a currency symbol in agent responses
-      // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
-      // marked-katex-extension inline tokenizer because Marked falls through
-      // to later tokenizers when an override returns undefined.
-      {
-        extensions: [
-          {
-            name: "doubleKatexBlock",
-            level: "block" as const,
-            tokenizer(src) {
-              const match = src.match(BLOCK)
-              const text = match?.[1]
-              if (!match || !text) return undefined
-              return {
-                type: "doubleKatexBlock",
-                raw: match[0],
-                text: text.trim(),
-              }
-            },
-            renderer(token) {
-              return `${katex.renderToString(token.text, { displayMode: true, throwOnError: false })}\n`
-            },
-          } satisfies TokenizerAndRendererExtension,
-          {
-            name: "doubleKatexInline",
-            level: "inline" as const,
-            start(src) {
-              const index = src.indexOf("$$")
-              if (index === -1) return undefined
-              return index
-            },
-            tokenizer(src) {
-              const match = src.match(INLINE)
-              const text = match?.[1]
-              if (!match || !text) return undefined
-              return {
-                type: "doubleKatexInline",
-                raw: match[0],
-                text: text.trim(),
-              }
-            },
-            renderer(token) {
-              return katex.renderToString(token.text, { displayMode: true, throwOnError: false })
-            },
-          } satisfies TokenizerAndRendererExtension,
-        ],
-      } satisfies MarkedExtension,
-      // kilocode_change end
-      // kilocode_change: markedShiki removed — the custom `code` renderer
-      // above returns plain <pre><code data-lang="..."> and markdown.tsx
-      // calls deferredHighlight() after paint. Running Shiki inside parse
-      // blocks the main thread on session switches (issue #6221).
-    )
-    // kilocode_change end
-
-    if (props.nativeParser) {
-      const nativeParser = props.nativeParser
-      return {
-        async parse(markdown: string): Promise<string> {
-          const html = await nativeParser(markdown)
-          const withMath = renderMathExpressions(html)
-          return highlightCodeBlocks(withMath)
-        },
-      }
-    }
-
-    return parser
-  },
+  init: createMarkedParser,
 })
+// kilocode_change end
