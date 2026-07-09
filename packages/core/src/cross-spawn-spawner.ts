@@ -1,6 +1,8 @@
 import type * as Arr from "effect/Array"
 import { NodeFileSystem, NodeSink, NodeStream } from "@effect/platform-node"
 import * as NodePath from "@effect/platform-node/NodePath"
+import { prepareCommand as prepareSandbox } from "@kilocode/sandbox" // kilocode_change
+import { tap as tapStdio, tapped } from "./kilocode/stdio-tap" // kilocode_change - Bun drops buffered stdio on close
 import * as Deferred from "effect/Deferred"
 import * as Effect from "effect/Effect"
 import * as Exit from "effect/Exit"
@@ -245,13 +247,13 @@ export const make = Effect.gen(function* () {
   ) => {
     let stdout = proc.stdout
       ? NodeStream.fromReadable({
-          evaluate: () => proc.stdout!,
+          evaluate: () => tapped(proc, "stdout"), // kilocode_change - read the spawn-time tap
           onError: (cause) => toPlatformError("fromReadable(stdout)", toError(cause), command),
         })
       : Stream.empty
     let stderr = proc.stderr
       ? NodeStream.fromReadable({
-          evaluate: () => proc.stderr!,
+          evaluate: () => tapped(proc, "stderr"), // kilocode_change - read the spawn-time tap
           onError: (cause) => toPlatformError("fromReadable(stderr)", toError(cause), command),
         })
       : Stream.empty
@@ -266,6 +268,7 @@ export const make = Effect.gen(function* () {
     Effect.callback<readonly [NodeChildProcess.ChildProcess, ExitSignal], PlatformError.PlatformError>((resume) => {
       const signal = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
       const proc = launch(command.command, command.args, opts)
+      tapStdio(proc) // kilocode_change - must run in the same tick as spawn
       let end = false
       let exit: readonly [code: number | null, signal: NodeJS.Signals | null] | undefined
       proc.on("error", (err) => {
@@ -362,24 +365,29 @@ export const make = Effect.gen(function* () {
     function* (command) {
       switch (command._tag) {
         case "StandardCommand": {
-          const sin = stdin(command.options)
-          const sout = stdio(command.options, "stdout")
-          const serr = stdio(command.options, "stderr")
-          const extra = fds(command.options)
           const dir = yield* cwd(command.options)
+          // kilocode_change start - prepare agent-scoped commands through the selected sandbox backend
+          const target = yield* prepareSandbox(command, dir, env(command.options))
+          const sin = stdin(target.options)
+          const sout = stdio(target.options, "stdout")
+          const serr = stdio(target.options, "stderr")
+          const extra = fds(target.options)
+          // kilocode_change end
 
           const [proc, signal] = yield* Effect.acquireRelease(
-            spawn(command, {
+            // kilocode_change start - spawn the prepared command and options
+            spawn(target, {
               cwd: dir,
-              env: env(command.options),
+              env: env(target.options),
               stdio: stdios(sin, sout, serr, extra),
-              detached: command.options.detached ?? process.platform !== "win32",
-              shell: command.options.shell,
+              detached: target.options.detached ?? process.platform !== "win32",
+              shell: target.options.shell,
+              // kilocode_change end
               windowsHide: process.platform === "win32",
             }),
             Effect.fnUntraced(function* ([proc, signal]) {
               const done = yield* Deferred.isDone(signal)
-              const kill = timeout(proc, command, command.options)
+              const kill = timeout(proc, command, target.options) // kilocode_change
               if (done) {
                 const [code] = yield* Deferred.await(signal)
                 if (process.platform === "win32") return yield* Effect.void
@@ -388,14 +396,16 @@ export const make = Effect.gen(function* () {
               }
               const send = (s: NodeJS.Signals) =>
                 Effect.catch(killGroup(command, proc, s), () => killOne(command, proc, s))
-              const sig = command.options.killSignal ?? "SIGTERM"
+              // kilocode_change start - preserve kill options from the prepared command
+              const sig = target.options.killSignal ?? "SIGTERM"
               const attempt = send(sig).pipe(Effect.andThen(Deferred.await(signal)), Effect.asVoid)
-              const escalated = command.options.forceKillAfter
+              const escalated = target.options.forceKillAfter
                 ? Effect.timeoutOrElse(attempt, {
-                    duration: command.options.forceKillAfter,
+                    duration: target.options.forceKillAfter,
                     orElse: () => send("SIGKILL").pipe(Effect.andThen(Deferred.await(signal)), Effect.asVoid),
                   })
                 : attempt
+              // kilocode_change end
               return yield* Effect.ignore(escalated)
             }),
           )

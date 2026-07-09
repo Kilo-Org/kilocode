@@ -1,25 +1,35 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.plugin.KiloPluginSettings
+import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.SessionState
-import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.model.Tool
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.ProviderDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.onCompletion
 
 class PromptLifecycleTest : SessionControllerTestBase() {
 
@@ -43,6 +53,51 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals("user", event.properties["source"])
         assertEquals("false", event.properties["hasExistingSession"])
         assertEquals("short", event.properties["textLength"])
+    }
+
+    fun `test prompt records aggregate mention telemetry`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        val m = controller()
+        val files = listOf(
+            PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///repo/src/A.kt",
+                source = PartSourceDto("file", PartSourceTextDto("@src/A.kt", 0.0, 9.0), path = "src/A.kt"),
+            ),
+            PromptPartDto(
+                type = "file",
+                mime = "text/plain",
+                url = "file:///repo/src/B.kt",
+                source = PartSourceDto("file", PartSourceTextDto("@src/B.kt", 10.0, 19.0), path = "/repo/src/B.kt"),
+            ),
+            PromptPartDto(
+                type = "text",
+                text = "diff",
+                source = PartSourceDto("resource", PartSourceTextDto("@git-changes", 20.0, 32.0), path = "git-changes"),
+            ),
+        )
+
+        flush()
+        edt { m.prompt("review", files) }
+        flush()
+
+        val sent = appRpc.telemetry.single { it.event == "Conversation Send Clicked" }
+        assertEquals("true", sent.properties["hasMentions"])
+        assertEquals("3", sent.properties["mentionCount"])
+        assertEquals("2", sent.properties["fileMentionCount"])
+        assertEquals("1", sent.properties["resourceMentionCount"])
+        assertFalse(sent.properties.containsValue("@src/A.kt"))
+        assertFalse(sent.properties.containsValue("src/A.kt"))
+        assertFalse(sent.properties.containsValue("/repo/src/B.kt"))
+        val message = appRpc.telemetry.single { it.event == "Conversation Message" }
+        assertEquals("true", message.properties["hasMentions"])
+        assertEquals("3", message.properties["mentionCount"])
+        assertEquals("2", message.properties["fileMentionCount"])
+        assertEquals("1", message.properties["resourceMentionCount"])
+        assertFalse(message.properties.containsValue("@git-changes"))
+        assertFalse(message.properties.containsValue("git-changes"))
     }
 
     fun `test PermissionAsked moves state to AwaitingPermission`() {
@@ -578,6 +633,122 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertTrue("Root state must not be changed by child non-permission events", stateEvents.isEmpty())
     }
 
+    fun `test child tool update is stored on parent task part`() {
+        val (m, _, modelEvents) = prompted()
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        emit(taskPart("ses_child"), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_child", childTool("child_read", "read")))
+
+        val task = m.model.content("msg1", "part_task") as Tool
+        assertEquals("ses_child", task.childSessionId)
+        assertEquals(1, task.childTools.size)
+        assertEquals("read", task.childTools[0].name)
+        assertNull(m.model.content("child_msg", "child_read"))
+        assertTrue(modelEvents.any { it.toString() == "ContentUpdated msg1/part_task" })
+    }
+
+    fun `test child tool removed updates parent task part`() {
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        emit(taskPart("ses_child"), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_child", childTool("child_read", "read")), flush = false)
+        emit(ChatEventDto.PartRemoved("ses_child", "child_msg", "child_read"))
+
+        val task = m.model.content("msg1", "part_task") as Tool
+        assertTrue(task.childTools.isEmpty())
+    }
+
+    fun `test history load backfills child tools`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+        projectRpc.state.value = workspaceReady()
+        rpc.histories["ses_test"] = mutableListOf(
+            MessageWithPartsDto(
+                msg("msg1", "ses_test", "assistant"),
+                listOf(taskPart("ses_child").part),
+            ),
+        )
+        rpc.histories["ses_child"] = mutableListOf(
+            MessageWithPartsDto(
+                msg("child_msg", "ses_child", "assistant"),
+                listOf(childTool("child_read", "read"), childTool("child_grep", "grep")),
+            ),
+        )
+
+        val m = controller("ses_test")
+        flush()
+
+        val task = m.model.content("msg1", "part_task") as Tool
+        assertEquals(listOf("read", "grep"), task.childTools.map { it.name })
+        assertNull(m.model.content("child_msg", "child_read"))
+    }
+
+    fun `test stale child history does not overwrite live child tool update`() {
+        rpc.historyGate = CompletableDeferred()
+        rpc.histories["ses_child"] = mutableListOf(
+            MessageWithPartsDto(
+                msg("child_msg", "ses_child", "assistant"),
+                listOf(childTool("child_read", "grep")),
+            ),
+        )
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        emit(taskPart("ses_child"), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_child", childTool("child_read", "read")))
+
+        var task = m.model.content("msg1", "part_task") as Tool
+        assertEquals(listOf("read"), task.childTools.map { it.name })
+
+        rpc.historyGate!!.complete(Unit)
+        flush()
+
+        task = m.model.content("msg1", "part_task") as Tool
+        assertEquals(listOf("read"), task.childTools.map { it.name })
+    }
+
+    fun `test stale child history does not resurrect live removed child tool`() {
+        rpc.historyGate = CompletableDeferred()
+        rpc.histories["ses_child"] = mutableListOf(
+            MessageWithPartsDto(
+                msg("child_msg", "ses_child", "assistant"),
+                listOf(childTool("child_read", "read")),
+            ),
+        )
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        emit(taskPart("ses_child"), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_child", childTool("child_read", "read")), flush = false)
+        emit(ChatEventDto.PartRemoved("ses_child", "child_msg", "child_read"))
+
+        var task = m.model.content("msg1", "part_task") as Tool
+        assertTrue(task.childTools.isEmpty())
+
+        rpc.historyGate!!.complete(Unit)
+        flush()
+
+        task = m.model.content("msg1", "part_task") as Tool
+        assertTrue(task.childTools.isEmpty())
+    }
+
+    fun `test task child rekey cancels old child subscription`() {
+        val closed = CopyOnWriteArrayList<String>()
+        rpc.eventFlow = { id, _ -> rpc.events.onCompletion { closed.add(id) } }
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        emit(taskPart("ses_child"))
+        emit(taskPart("ses_new"))
+        settle()
+
+        assertTrue("closed=$closed", closed.contains("ses_child"))
+
+        emit(ChatEventDto.PermissionAsked("ses_child", childPermission("old_perm", "ses_child")), flush = false)
+        emit(ChatEventDto.PermissionAsked("ses_new", childPermission("new_perm", "ses_new")))
+
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+        val perm = (m.model.state as SessionState.AwaitingPermission).permission
+        assertEquals("new_perm", perm.id)
+        assertEquals("ses_new", perm.sessionId)
+    }
+
     fun `test root permission event is not processed as child permission`() {
         val (m, _, _) = prompted()
 
@@ -598,12 +769,23 @@ class PromptLifecycleTest : SessionControllerTestBase() {
             type = "tool",
             tool = "task",
             metadata = mapOf("sessionId" to childSessionId),
+            input = mapOf("subagent_type" to "explore", "description" to "Find files"),
         ),
     )
 
-    private fun childPermission(id: String) = PermissionRequestDto(
+    private fun childTool(id: String, name: String) = PartDto(
         id = id,
         sessionID = "ses_child",
+        messageID = "child_msg",
+        type = "tool",
+        tool = name,
+        state = "completed",
+        input = mapOf("filePath" to "src/Main.kt", "pattern" to "query"),
+    )
+
+    private fun childPermission(id: String, sid: String = "ses_child") = PermissionRequestDto(
+        id = id,
+        sessionID = sid,
         permission = "edit",
         patterns = listOf("*.kt"),
         always = emptyList(),

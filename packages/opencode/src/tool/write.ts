@@ -50,7 +50,7 @@ export const WriteTool = Tool.define(
           const exists = yield* fs.existsSafe(filepath)
           // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
           // derive the BOM flag from the detected encoding label instead of the decoded text.
-          const pre = exists ? yield* EncodedIO.read(filepath) : { text: "", encoding: "utf-8" }
+          const pre = exists ? yield* EncodedIO.read(fs, filepath) : { text: "", encoding: "utf-8" }
           const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
           // kilocode_change end
           const next = Bom.split(params.content)
@@ -71,9 +71,9 @@ export const WriteTool = Tool.define(
             },
           })
 
-          yield* EncodedIO.write(filepath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces fs.writeWithDirs
+          yield* EncodedIO.write(fs, filepath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces fs.writeWithDirs
           if (yield* format.file(filepath)) {
-            yield* Bom.syncFile(fs, filepath, desiredBom)
+            yield* EncodedIO.sync(fs, filepath, desiredBom, source.encoding)
           }
           yield* bus.publish(File.Event.Edited, { file: filepath })
           yield* bus.publish(FileWatcher.Event.Updated, {

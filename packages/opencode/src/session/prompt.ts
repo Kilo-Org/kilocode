@@ -6,10 +6,12 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
+import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
@@ -109,10 +111,18 @@ function isOrphanedInterruptedTool(part: MessageV2.ToolPart) {
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  // kilocode_change start - prompt can fail on unmet agent requirements
+  readonly prompt: (
+    input: PromptInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
   readonly loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError>
-  readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  // kilocode_change start - commands can fail on unmet agent requirements
+  readonly command: (
+    input: CommandInput,
+  ) => Effect.Effect<MessageV2.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -749,14 +759,15 @@ export const layer = Layer.effect(
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent
-      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!ag) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name) // kilocode_change
+        const hint = available.length ? ` Available agents: ${available.join(", ")}` : "" // kilocode_change
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
+        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
+      yield* agents.guardRequirements(ag) // kilocode_change - enforce requirements before creating a turn
 
       const current = Database.use((db) =>
         db
@@ -1375,6 +1386,7 @@ export const layer = Layer.effect(
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
+      const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
@@ -1584,6 +1596,7 @@ export const layer = Layer.effect(
             bypassAgentCheck,
             messages: msgs,
             promptOps,
+            memoryCache, // kilocode_change
           }).pipe(
             Effect.provideService(Plugin.Service, plugin),
             Effect.provideService(Permission.Service, permission),
@@ -1592,6 +1605,10 @@ export const layer = Layer.effect(
             Effect.provideService(ToolRegistry.Service, registry),
             Effect.provideService(MCP.Service, mcp),
             Effect.provideService(Truncate.Service, truncate),
+            // kilocode_change start - SWE-Pruner (experimental)
+            Effect.provideService(Config.Service, config),
+            Effect.provideService(Provider.Service, provider),
+            // kilocode_change end
           )
 
           if (lastUser.format?.type === "json_schema") {
@@ -1638,9 +1655,10 @@ export const layer = Layer.effect(
           // kilocode_change end
 
           // kilocode_change start - persistently prune stale tool outputs when payload is already large
-          const [skills, env, instructions] = yield* Effect.all([
+          const [skills, env, mem, instructions] = yield* Effect.all([
             sys.skills(agent),
             sys.environment(model, lastUser.editorContext), // kilocode_change
+            KiloSessionPrompt.memoryInject({ ctx, sessionID, record: step === 1, cache: memoryCache }), // kilocode_change
             instruction.system().pipe(Effect.orDie),
           ])
           let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
@@ -1658,7 +1676,7 @@ export const layer = Layer.effect(
             if (nextSize > REQUEST_PRUNE_BYTES) log.warn("payload still large after pruning", { size: nextSize })
           }
           // kilocode_change end
-          const system = [...env, ...instructions, ...(skills ? [skills] : [])]
+          const system = [...env, ...mem, ...instructions, ...(skills ? [skills] : [])] // kilocode_change
           const format = lastUser.format ?? { type: "text" as const }
           if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
           const result = yield* handle.process({
@@ -1674,7 +1692,22 @@ export const layer = Layer.effect(
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
+            // kilocode_change start - feed the provider-reported context size from the last finished
+            // turn into the output-token cap, so image/vision input is measured by the provider
+            // rather than by encoded payload bytes (see KiloLLM.capOutputTokens). Summary messages
+            // are skipped like in the isOverflow check above: their reported input reflects the
+            // pre-compaction history, not the trimmed context of the next request.
+            reportedContextTokens:
+              lastFinished && lastFinished.summary !== true
+                ? KiloSessionOverflow.count(lastFinished.tokens)
+                : undefined,
+            // kilocode_change end
           })
+
+          // kilocode_change start - persist a lightweight marker when this assistant step had memory context
+          const marker = KiloSessionPrompt.memoryPart({ sessionID, message: handle.message, cache: memoryCache })
+          if (marker) yield* sessions.updatePart(marker)
+          // kilocode_change end
 
           if (structured !== undefined) {
             handle.message.structured = structured
@@ -1824,6 +1857,69 @@ export const layer = Layer.effect(
         throw error
       }
       const agentName = cmd.agent ?? input.agent
+      // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
+      const legacy = legacyReviewMessage(input.command)
+      if (legacy) {
+        const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+        if (!agent) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        const model = yield* Effect.gen(function* () {
+          if (cmd.model) return Provider.parseModel(cmd.model)
+          if (cmd.agent && agent.model) return agent.model
+          if (input.model) return Provider.parseModel(input.model)
+          return yield* currentModel(input.sessionID)
+        })
+        yield* getModel(model.providerID, model.modelID, input.sessionID)
+        const text = `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`
+        const user = yield* createUserMessage({
+          sessionID: input.sessionID,
+          messageID: input.messageID,
+          model,
+          agent: agent.name,
+          variant: input.variant,
+          parts: [{ type: "text", text }, ...(input.parts ?? [])],
+        })
+        yield* sessions.touch(input.sessionID)
+        const ctx = yield* InstanceState.context
+        const completed = Date.now()
+        const info: MessageV2.Assistant = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: user.info.id,
+          sessionID: input.sessionID,
+          mode: agent.name,
+          agent: agent.name,
+          variant: user.info.model.variant,
+          path: { cwd: ctx.directory, root: ctx.worktree },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: user.info.model.modelID,
+          providerID: user.info.model.providerID,
+          time: { created: completed, completed },
+          finish: "stop",
+        })
+        const part: MessageV2.TextPart = yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: legacy,
+        })
+        const result = { info, parts: [part] }
+        yield* bus.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: result.info.id,
+        })
+        return result
+      }
+      // kilocode_change end
 
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
@@ -1877,14 +1973,15 @@ export const layer = Layer.effect(
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
 
-      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!agent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name) // kilocode_change
+        const hint = available.length ? ` Available agents: ${available.join(", ")}` : "" // kilocode_change
+        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` }) // kilocode_change
+        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
+      yield* agents.guardRequirements(agent) // kilocode_change - command agent overrides must satisfy requirements
 
       const templateParts = yield* resolvePromptParts(template)
       KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry

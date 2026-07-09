@@ -40,6 +40,23 @@ export const dict = {
   "marketplace.install.scope": "作用域",
   "marketplace.install.scope.project": "專案",
   "marketplace.install.scope.global": "全域",
+  "marketplace.install.scope.project.description":
+    "僅限此專案。安裝的檔案可以提交至版本控制並與你的團隊分享。",
+  "marketplace.install.scope.global.description": "此電腦上的所有專案。儲存在你的使用者設定中。",
+  "marketplace.install.destination": "安裝位置",
+  "marketplace.install.about.mcp":
+    "MCP 伺服器為 Kilo 提供用於處理外部服務或本機程式的額外工具。",
+  "marketplace.install.about.agent": "智能體會新增一個具有專屬指示和權限的可重複使用角色。",
+  "marketplace.install.about.skill": "技能會新增特定任務的指示和資源，Kilo 可在需要時載入它們。",
+  "marketplace.install.mcp.warning":
+    "MCP 伺服器可以執行本機命令或連線至外部服務。除非你的權限允許自動使用，否則 Kilo 會在使用其工具前請求許可。",
+  "marketplace.install.project.warning":
+    "專案檔案可能會提交至版本控制。除非設定引用了環境變數，否則請勿在此儲存密鑰。",
+  "marketplace.install.learnMore": "瞭解 Marketplace 安裝的運作方式",
+  "marketplace.install.learnMcp": "深入瞭解 MCP",
+  "marketplace.install.installedAt": "已安裝至 {{path}}",
+  "marketplace.intro": "為一個專案或所有專案安裝可重複使用的智能體、技能和 MCP 工具。",
+  "marketplace.intro.learnMore": "關於 Marketplace",
   "marketplace.install.prerequisites": "先決條件",
   "marketplace.install.installing": "安裝中...",
   "marketplace.install.cancel": "取消",
@@ -56,7 +73,9 @@ export const dict = {
   "marketplace.search": "搜尋...",
   "marketplace.filter.all": "所有項目",
   "marketplace.filter.notInstalled": "未安裝",
+  "marketplace.filter.relevant": "與我的工作區相關",
   "marketplace.empty": "找不到項目",
+  "marketplace.empty.relevant": "找不到與此工作區相關的市集項目。",
   "marketplace.badge.mcpServer": "MCP 伺服器",
   "marketplace.badge.mode": "模式",
   "marketplace.card.by": "作者：{{author}}",
@@ -89,6 +108,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "在具有乾淨上下文的新工作階段中實作",
   "plan.followup.answer.continue": "在此繼續",
   "plan.followup.answer.continue.description": "在本工作階段中實作計畫",
+  "plan.followup.answer.keepRefining": "繼續完善",
+  "plan.followup.answer.keepRefining.description": "繼續規劃，暫不實作",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "快照速度較慢",

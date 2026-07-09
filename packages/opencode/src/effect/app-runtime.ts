@@ -50,6 +50,7 @@ import { Worktree } from "@/worktree"
 import { Pty } from "@/pty"
 import { PtyTicket } from "@/pty/ticket"
 import { Installation } from "@/installation"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 import { ShareNext } from "@/share/share-next"
 import { SessionShare } from "@/share/session"
 import { SyncEvent } from "@/sync"
@@ -59,6 +60,7 @@ import { DataMigration } from "@/data-migration"
 import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 
 const CoreLayer = Layer.mergeAll(
   Npm.defaultLayer,
@@ -85,6 +87,7 @@ const CoreLayer = Layer.mergeAll(
 
 const SessionLayer = Layer.mergeAll(
   Question.defaultLayer,
+  Notebook.defaultLayer, // kilocode_change
   Permission.defaultLayer,
   Todo.defaultLayer,
   Session.defaultLayer,
@@ -117,6 +120,7 @@ const FeatureLayer = Layer.mergeAll(
   Pty.defaultLayer,
   PtyTicket.defaultLayer,
   Installation.defaultLayer,
+  MemoryService.layer, // kilocode_change
   ShareNext.defaultLayer,
   SessionShare.defaultLayer,
   SyncEvent.defaultLayer,

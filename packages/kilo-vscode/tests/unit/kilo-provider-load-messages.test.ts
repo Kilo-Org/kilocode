@@ -1,4 +1,5 @@
 import { describe, it, expect, spyOn } from "bun:test"
+import * as vscode from "vscode"
 import type { PartUpdate } from "../../src/shared/stream-messages"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -61,20 +62,36 @@ function createClient(options?: {
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
   abortFailures?: string[]
+  createDeferred?: Deferred<{ data: unknown }>
+  supportDeferred?: Deferred<{ data: { available: boolean; reason?: string } }>
+  sandboxDeferred?: Deferred<{ data: unknown }>
+  sandboxStarted?: Deferred<void>
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
   const aborted: { sessionID: string; directory?: string }[] = []
   const prompted: Array<Record<string, unknown>> = []
   const reverted: Array<Record<string, unknown>> = []
+  const created: Array<Record<string, unknown>> = []
+  const sandboxed: Array<Record<string, unknown>> = []
+  const sandboxSupport: Array<Record<string, unknown>> = []
+  const configReads: Array<Record<string, unknown>> = []
   return {
     calls,
     stopped,
     aborted,
     prompted,
     reverted,
+    created,
+    sandboxed,
+    sandboxSupport,
+    configReads,
     session: {
       list: async () => ({ data: [] }),
+      create: async (params: Record<string, unknown>) => {
+        created.push(params)
+        return options?.createDeferred?.promise ?? { data: mkSession() }
+      },
       get: async (params: { sessionID: string; directory?: string }) => {
         if (options?.sessionGet) return options.sessionGet(params)
         return { data: options?.sessionData ?? null }
@@ -104,6 +121,21 @@ function createClient(options?: {
         return { data: {} }
       },
     },
+    sandbox: {
+      support: async (params: Record<string, unknown>) => {
+        sandboxSupport.push(params)
+        return options?.supportDeferred?.promise ?? { data: { available: true } }
+      },
+      toggle: async (params: Record<string, unknown>) => {
+        sandboxed.push(params)
+        options?.sandboxStarted?.resolve(undefined)
+        return (
+          options?.sandboxDeferred?.promise ?? {
+            data: { directory: "/repo", enabled: true, available: true, version: 1 },
+          }
+        )
+      },
+    },
     backgroundProcess: {
       stopSession: async (params: { sessionID: string; directory?: string }) => {
         stopped.push(params)
@@ -112,7 +144,12 @@ function createClient(options?: {
     },
     provider: { list: async () => ({ data: { all: [], connected: {}, default: {} } }) },
     app: { agents: async () => ({ data: [] }) },
-    config: { get: async () => ({ data: {} }) },
+    config: {
+      get: async (params: Record<string, unknown>) => {
+        configReads.push(params)
+        return { data: {} }
+      },
+    },
     kilo: {
       notifications: async () => ({ data: [] }),
       profile: async () => ({ data: {} }),
@@ -122,7 +159,25 @@ function createClient(options?: {
 }
 
 function createConnection(client: ReturnType<typeof createClient>) {
+  const state = { value: undefined as boolean | undefined, revision: 0, pending: Promise.resolve() }
   return {
+    sandboxPreference: {
+      explicit: () => state.value,
+      resolve: (fallback: boolean) => state.value ?? fallback,
+      wait: () => state.pending,
+      set: (enabled: boolean, validate?: () => Promise<void>) => {
+        const update = state.pending
+          .catch(() => undefined)
+          .then(async () => {
+            await validate?.()
+            state.value = enabled
+            state.revision += 1
+          })
+        state.pending = update
+        return update
+      },
+      onChange: () => () => undefined,
+    },
     connect: async () => {},
     getClient: () => client,
     onEventFiltered: () => () => undefined,
@@ -132,6 +187,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onProfileChanged: () => () => undefined,
     onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
+    onModelSelectorExpandedChanged: () => () => undefined,
     onClearPendingPrompts: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
@@ -149,7 +205,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
 type ProviderInternals = {
   connectionState: State
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
-  currentSession: { id: string; directory?: string; revert?: { messageID: string } } | null
+  currentSession: { id: string; directory?: string; cost?: number; revert?: { messageID: string } } | null
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
@@ -162,8 +218,13 @@ type ProviderInternals = {
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
   handleAbort: (sid?: string) => Promise<void>
+  handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
+  setMaxCost: (value: unknown) => void
   handleRevertSession: (sid: string, messageID: string) => Promise<void>
-  handleSendMessage: (text: string, messageID?: string, sessionID?: string) => Promise<void>
+  handleSendMessage: (text: string, messageID?: string, sessionID?: string, draftID?: string) => Promise<void>
+  fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
+  handleSetSandboxDefault: (enabled: boolean, requestID: string, directory?: string) => Promise<void>
+  handleToggleSandbox: (input: { sessionID: string; requestID: string }) => Promise<void>
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -180,6 +241,10 @@ function makeProvider(client: ReturnType<typeof createClient>) {
     },
   }
   return { provider, internal, sent }
+}
+
+function mockMaxCost(internal: ProviderInternals, value: number) {
+  internal.setMaxCost(value)
 }
 
 describe("KiloProvider.handleAbort", () => {
@@ -243,6 +308,133 @@ describe("KiloProvider.handleAbort", () => {
     expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "busy" })
     expect(error).toHaveBeenCalledTimes(1)
     error.mockRestore()
+  })
+})
+
+describe("KiloProvider sandbox status", () => {
+  it("ignores events from another directory for the same session", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    internal.sessionDirectories.set("s1", "/repo")
+    internal.trackedSessionIds.add("s1")
+
+    internal.handleEvent({
+      type: "sandbox.status.changed",
+      properties: { sessionID: "s1", directory: "/other", enabled: true, available: true, version: 1 },
+    })
+    expect(sent.some((message) => (message as { type?: string }).type === "sandboxStatus")).toBe(false)
+
+    internal.handleEvent({
+      type: "sandbox.status.changed",
+      properties: { sessionID: "s1", directory: "/repo", enabled: true, available: true, version: 1 },
+    })
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sandboxStatus", sessionID: "s1", directory: "/repo" }))
+  })
+})
+
+describe("KiloProvider sandbox toggle", () => {
+  it("remembers a blank composer toggle without creating a session", async () => {
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+
+    await internal.handleSetSandboxDefault(true, "sandbox-1")
+
+    expect(client.created).toHaveLength(0)
+    expect(client.sandboxed).toHaveLength(0)
+    expect(sent).toContainEqual(
+      expect.objectContaining({
+        type: "sandboxDefaultStatus",
+        requestID: "sandbox-1",
+        desired: true,
+        enabled: true,
+      }),
+    )
+    expect(notice).toHaveBeenCalledWith("Sandbox enabled for new sessions")
+    notice.mockRestore()
+  })
+
+  it("resolves a blank worktree default against the routed directory", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+
+    await internal.fetchAndSendSandboxDefault("/repo/.kilo/worktrees/wt-1")
+
+    expect(client.configReads).toEqual([{ directory: "/repo/.kilo/worktrees/wt-1" }])
+    expect(client.sandboxSupport).toEqual([{ directory: "/repo/.kilo/worktrees/wt-1" }])
+  })
+
+  it("waits for a blank toggle before creating the first prompt session", async () => {
+    const support = defer<{ data: { available: boolean } }>()
+    const client = createClient({ supportDeferred: support })
+    const { internal } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    const toggle = internal.handleSetSandboxDefault(true, "sandbox-1")
+    const send = internal.handleSendMessage("hello", "message-1", undefined, "draft-1")
+    await Promise.resolve()
+    expect(client.created).toHaveLength(0)
+
+    support.resolve({ data: { available: true } })
+    await Promise.all([toggle, send])
+    expect(client.created).toEqual([
+      expect.objectContaining({ metadata: { "kilocode.sandbox": { enabled: true, version: 0 } } }),
+    ])
+    expect(client.prompted).toHaveLength(1)
+  })
+
+  it("does not create a first prompt session when the blank toggle fails", async () => {
+    const log = spyOn(console, "error").mockImplementation(() => {})
+    const support = defer<{ data: { available: boolean; reason?: string } }>()
+    const client = createClient({ supportDeferred: support })
+    const { internal, sent } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    const toggle = internal.handleSetSandboxDefault(true, "sandbox-1")
+    const send = internal.handleSendMessage("hello", "message-1", undefined, "draft-1")
+    await Promise.resolve()
+    expect(client.created).toHaveLength(0)
+    support.resolve({ data: { available: false, reason: "unsupported" } })
+    await Promise.all([toggle, send])
+
+    expect(client.created).toHaveLength(0)
+    expect(client.prompted).toHaveLength(0)
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sendMessageFailed", messageID: "message-1" }))
+    log.mockRestore()
+  })
+
+  it("reports the disabled state in a native notification", async () => {
+    const notice = spyOn(vscode.window, "showInformationMessage").mockResolvedValue(undefined)
+    const sandbox = defer<{ data: unknown }>()
+    const client = createClient({ sandboxDeferred: sandbox })
+    const { internal } = makeProvider(client)
+    internal.currentSession = mkSession()
+
+    const toggle = internal.handleToggleSandbox({ sessionID: "s1", requestID: "sandbox-1" })
+    sandbox.resolve({ data: { directory: "/repo", enabled: false, available: true, version: 2 } })
+    await toggle
+
+    expect(notice).toHaveBeenCalledTimes(1)
+    expect(notice).toHaveBeenCalledWith("Sandbox disabled")
+    notice.mockRestore()
+  })
+
+  it("snapshots the remembered default before sending the first prompt", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    await internal.handleSetSandboxDefault(true, "sandbox-1")
+    await internal.handleSendMessage("hello", "message-1", undefined, "draft-1")
+
+    expect(client.created).toEqual([
+      expect.objectContaining({
+        directory: "/repo",
+        metadata: { "kilocode.sandbox": { enabled: true, version: 0 } },
+      }),
+    ])
+    expect(client.sandboxed).toHaveLength(0)
+    expect(client.prompted).toHaveLength(1)
   })
 })
 
@@ -649,6 +841,234 @@ describe("KiloProvider.handleDeleteSession / background processes", () => {
 })
 
 describe("KiloProvider.handleLoadMessages / slim payload", () => {
+  it("shows a cost alert even when cost arrives after the session is idle", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent({
+      type: "session.status",
+      properties: { sessionID: "s1", status: { type: "idle" } },
+    })
+
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+
+    expect(sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.46",
+    })
+  })
+
+  it("shares the in-memory limit across provider instances", () => {
+    const settings = makeProvider(createClient())
+    const chat = makeProvider(createClient())
+    mockMaxCost(settings.internal, 1)
+    chat.internal.trackedSessionIds.add("s1")
+
+    chat.internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+
+    expect(chat.sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.50",
+    })
+  })
+
+  it("remembers continue for that session and limit", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+
+    await internal.handleCostAlertResponse("s1", 1, "continue")
+    sent.length = 0
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+
+    expect(
+      sent.some((msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "sessionCostAlert"),
+    ).toBe(false)
+  })
+
+  it("re-alerts after stop when the session reruns above the limit", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+    await internal.handleCostAlertResponse("s1", 1, "stop")
+
+    // Same run: alert already shown, no duplicate within same run
+    sent.length = 0
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+    expect(
+      sent.some((msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "sessionCostAlert"),
+    ).toBe(false)
+
+    // New run (busy rearms): alert fires again since stop does not ack the limit
+    sent.length = 0
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+    internal.handleEvent({
+      type: "session.updated",
+      properties: {
+        sessionID: "s1",
+        info: {
+          id: "s1",
+          cost: 1.46,
+        },
+      },
+    })
+
+    expect(sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.46",
+    })
+  })
+
+  it("alerts from message.updated assistant cost — the reliable cost signal", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+
+    expect(sent).toContainEqual({
+      type: "sessionCostAlert",
+      sessionID: "s1",
+      limit: 1,
+      cost: "$1.50",
+    })
+  })
+
+  it("does not re-alert on repeated busy status while already active", () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }, "/repo")
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+    sent.length = 0
+
+    internal.handleEvent({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }, "/repo")
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 1.5 },
+      },
+    })
+
+    expect(
+      sent.some((msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "sessionCostAlert"),
+    ).toBe(false)
+  })
+
+  it("does not block sends above the limit", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.currentSession = { ...mkSession(), cost: 2 }
+    internal.gatherEditorContext = async () => ({})
+
+    await internal.handleSendMessage("hello", "m1", "s1")
+
+    expect(client.prompted).toHaveLength(1)
+  })
+
+  it("aborts when the cost alert is stopped", async () => {
+    const client = createClient()
+    const { internal, sent } = makeProvider(client)
+    mockMaxCost(internal, 1)
+    internal.trackedSessionIds.add("s1")
+    internal.handleEvent({ type: "session.status", properties: { sessionID: "s1", status: { type: "busy" } } }, "/repo")
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "s1",
+        info: { id: "m1", sessionID: "s1", role: "assistant", time: { created: 1 }, cost: 2 },
+      },
+    })
+
+    await internal.handleCostAlertResponse("s1", 1, "stop")
+
+    expect(client.aborted).toContainEqual({ sessionID: "s1", directory: "/repo" })
+    expect(sent).toContainEqual({ type: "sessionCostAlertResolved", sessionID: "s1", limit: 1 })
+    expect(sent).toContainEqual({ type: "sessionTurnClosed", sessionID: "s1", reason: "interrupted" })
+  })
+
   it("strips transcript-only metadata before posting messages to the webview", async () => {
     const user = mkMessage("m1", "user", 1)
     const assistant = mkMessage("m2", "assistant", 2)

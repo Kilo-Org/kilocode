@@ -47,6 +47,25 @@ export const dict = {
   "marketplace.install.scope": "Opseg",
   "marketplace.install.scope.project": "Projekat",
   "marketplace.install.scope.global": "Globalno",
+  "marketplace.install.scope.project.description":
+    "Samo ovaj projekat. Instalirane datoteke mogu se dodati u kontrolu verzija i dijeliti s vašim timom.",
+  "marketplace.install.scope.global.description":
+    "Svi projekti na ovom računaru. Čuva se u vašoj korisničkoj konfiguraciji.",
+  "marketplace.install.destination": "Odredište instalacije",
+  "marketplace.install.about.mcp":
+    "MCP server pruža Kilu dodatne alate za rad s vanjskim servisima ili lokalnim programima.",
+  "marketplace.install.about.agent": "Agent dodaje višekratnu ulogu s vlastitim uputama i dozvolama.",
+  "marketplace.install.about.skill":
+    "Vještina dodaje upute i resurse za određene zadatke koje Kilo može učitati kada su potrebni.",
+  "marketplace.install.mcp.warning":
+    "MCP serveri mogu pokretati lokalne naredbe ili se povezivati s vanjskim servisima. Kilo će zatražiti dozvolu prije korištenja njihovih alata, osim ako vaše dozvole to automatski dopuštaju.",
+  "marketplace.install.project.warning":
+    "Datoteke projekta mogu se dodati u kontrolu verzija. Ne čuvajte tajne ovdje osim ako konfiguracija upućuje na varijablu okruženja.",
+  "marketplace.install.learnMore": "Saznajte kako funkcionišu instalacije s Marketplacea",
+  "marketplace.install.learnMcp": "Saznajte više o MCP-u",
+  "marketplace.install.installedAt": "Instalirano u {{path}}",
+  "marketplace.intro": "Instalirajte višekratne agente, vještine i MCP alate za jedan ili sve projekte.",
+  "marketplace.intro.learnMore": "O Marketplaceu",
   "marketplace.install.prerequisites": "Preduslovi",
   "marketplace.install.installing": "Instalacija...",
   "marketplace.install.cancel": "Otkaži",
@@ -64,7 +83,9 @@ export const dict = {
   "marketplace.search": "Pretraži...",
   "marketplace.filter.all": "Sve stavke",
   "marketplace.filter.notInstalled": "Nije instalirano",
+  "marketplace.filter.relevant": "Relevantno za moj radni prostor",
   "marketplace.empty": "Nema pronađenih stavki",
+  "marketplace.empty.relevant": "Nisu pronađene relevantne stavke marketplacea za ovaj radni prostor.",
   "marketplace.badge.mcpServer": "MCP Server",
   "marketplace.badge.mode": "Režim",
   "marketplace.card.by": "od {{author}}",
@@ -97,6 +118,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implementiraj u novoj sesiji s čistim kontekstom",
   "plan.followup.answer.continue": "Nastavi ovdje",
   "plan.followup.answer.continue.description": "Implementiraj plan u ovoj sesiji",
+  "plan.followup.answer.keepRefining": "Nastavi dorađivati",
+  "plan.followup.answer.keepRefining.description": "Nastavi planirati bez implementacije za sada",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Snapshot je spor",

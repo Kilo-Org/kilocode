@@ -9,6 +9,7 @@ import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { MarketplacePanelProvider } from "./MarketplacePanelProvider"
+import { MarketplaceNotifier } from "./services/marketplace/notifier"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { KiloConnectionService } from "./services/cli-backend"
@@ -24,11 +25,12 @@ import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
-import { customApiEnv, startEnterpriseConfig, whenEnterpriseConfigReady } from "./enterprise-config"
+import { startEnterpriseConfig, whenEnterpriseConfigReady } from "./enterprise-config"
 import { registerEnterpriseAbout } from "./enterprise/about"
 import { ensureLicense, licenseBlocksConnect } from "./enterprise/license"
 import { refreshEnterpriseUsage } from "./enterprise/usage"
 import { registerGatekeeper, handleGatekeeperUri, disposeGatekeeper } from "./gatekeeper"
+import { createNotebookBridge } from "./services/notebook"
 
 let agentManager: AgentManagerProvider | undefined
 let shuttingDown = false
@@ -70,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
-  const attention = new AttentionService(connectionService)
+  const notebookBridge = createNotebookBridge(connectionService)
   let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
   const remember = (patch: RestoreState) => {
     const next = { ...restore, ...patch }
@@ -202,6 +204,13 @@ export function activate(context: vscode.ExtensionContext) {
       return [...dirs]
     },
   )
+  const attention = new AttentionService(connectionService, {
+    approve: (event, directory) => autoApprove.approve(event, directory),
+  })
+
+  // Prewarm only after all global event consumers are ready.
+  ensureBackendForAutocomplete(connectionService)
+
   provider.setAutoApproveController(autoApprove)
   agentManagerHost.setAutoApproveController(autoApprove)
 
@@ -286,6 +295,13 @@ export function activate(context: vscode.ExtensionContext) {
   settingsEditorProvider.setRemoteService(remoteService)
   const marketplacePanelProvider = new MarketplacePanelProvider(context.extensionUri, connectionService, context)
   context.subscriptions.push(settingsEditorProvider, marketplacePanelProvider)
+
+  // Surface a discardable notification when a marketplace item matches the workspace.
+  const marketplaceNotifier = new MarketplaceNotifier(connectionService, context, (item) =>
+    marketplacePanelProvider.openInstall(item),
+  )
+  context.subscriptions.push(marketplaceNotifier)
+  marketplaceNotifier.start()
 
   // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
   const subAgentViewerProvider = new SubAgentViewerProvider(context.extensionUri, connectionService, context)
@@ -405,6 +421,26 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
       settingsEditorProvider.openPanel("settings", "indexing")
+    }),
+    vscode.commands.registerCommand("kilo-code.new.showMemory", async () => {
+      if (agentManagerProvider.isActive()) {
+        await agentManagerProvider.showMemory()
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      if (target === provider) await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await target.waitForReady()
+      await target.showMemory()
+    }),
+    vscode.commands.registerCommand("kilo-code.new.toggleMemory", async () => {
+      if (agentManagerProvider.isActive()) {
+        await agentManagerProvider.toggleMemory()
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      if (target === provider) await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await target.waitForReady()
+      await target.toggleMemory()
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
@@ -540,6 +576,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   registerHeapSnapshot(context, connectionService)
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.new.reload", () => {
+      provider.reload().catch((e) => console.error("[Kilo New] reload command failed:", e))
+    }),
+  )
+
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)
   registerTerminalActions(context, provider, agentManagerProvider)
@@ -561,6 +603,7 @@ export function activate(context: vscode.ExtensionContext) {
       attention.dispose()
       browserAutomationService.dispose()
       provider.dispose()
+      notebookBridge.dispose()
       connectionService.dispose()
     },
   })

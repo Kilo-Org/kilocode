@@ -117,6 +117,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/status` | - | View status |
 | `/themes` | - | Switch theme |
 | `/help` | - | Show help |
+| `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
@@ -133,8 +134,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | Command | Description |
 |---|---|
 | `/init` | Create/update AGENTS.md file for the project |
-| `/local-review` | Review code changes |
-| `/local-review-uncommitted` | Review uncommitted changes |
+| `/review` | Review code changes |
 
 ## Local Code Reviews
 
@@ -144,8 +144,11 @@ Review your code locally before pushing — catch issues early without waiting f
 
 | Command | Description |
 |---|---|
-| `/local-review` | Review current branch changes vs base branch |
-| `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged) |
+| `/review` | Review staged, unstaged, and untracked changes (the default with no arguments) |
+| `/review uncommitted [guidance]` | Review uncommitted changes with optional guidance |
+| `/review branch [base] [guidance]` | Review the current branch against its detected or specified base, with optional guidance |
+| `/review <commit-hash>` | Review a specific commit |
+| `/review <PR URL or number>` | Review a pull request |
 
 ## Config Reference
 
@@ -210,10 +213,6 @@ There is no notification slash command or command-palette toggle. Use Kilo Conso
 ## Slash Commands
 
 The CLI's interactive mode supports slash commands for common operations. The main commands are documented above in the [Interactive Slash Commands](#interactive-slash-commands) section.
-
-{% callout type="tip" %}
-**Confused about /newtask vs /smol in the IDE?** See the [Using Agents](/docs/code-with-ai/agents/using-agents#understanding-newtask-vs-smol) documentation for details.
-{% /callout %}
 
 ## Permissions
 
@@ -335,10 +334,14 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 
 | Scope | Path |
 |---|---|
-| **Global** | `~/.config/kilo/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
-| **Project** | `./opencode.json` or `./.opencode/` in project root |
+| **Global** | `~/.config/kilo/kilo.json[c]` or legacy `opencode.json[c]` (Windows config dir may vary) |
+| **Project** | `./kilo.json[c]`, legacy `./opencode.json[c]`, or config inside `./.kilo/` (legacy `./.kilocode/` is also read) |
 
 Project-level configuration takes precedence over global settings.
+
+{% callout type="warning" %}
+**Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
+{% /callout %}
 
 ### Key Configuration Options
 
@@ -465,6 +468,10 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
   }
 }
 ```
+
+{% callout type="warning" title="Only works in trusted config" %}
+`{env:VAR}` (and `{file:...}`) references are resolved **only** in trusted config: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` / `opencode.json` committed to a repository **cannot** use `{env:VAR}` — the reference is ignored and a warning is logged. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` simply by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root — references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected.
+{% /callout %}
 
 For full details on all configuration options including compaction, file watchers, plugins, and experimental features, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
 

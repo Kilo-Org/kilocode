@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
@@ -71,6 +72,7 @@ class FileAttachment(id: String) : Content(id) {
     var mime: String = "application/octet-stream"
     var url: String = ""
     var filename: String? = null
+    var source: PartSourceDto? = null
 }
 
 /** Tool invocation with lifecycle state. */
@@ -80,6 +82,8 @@ class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()
+    var childSessionId: String? = null
+    var childTools: List<Tool> = emptyList()
     var output: String? = null
     var error: String? = null
     var time: PartTimeDto? = null

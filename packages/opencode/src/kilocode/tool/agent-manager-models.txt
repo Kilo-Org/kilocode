@@ -1,0 +1,5 @@
+Search the models available to Agent Manager sessions and inspect their reasoning variants.
+
+Use this tool before `agent_manager` when you need to pick a model or reasoning effort. Results are grouped by model, not by provider, because you select a model and Agent Manager chooses the provider for you. With no arguments it returns the top available models (capped at 20); pass `query` to search by model name or ID, and `offset` to page further. The query is matched leniently: it is case-insensitive, ignores spacing and punctuation, and is order-independent, so `opus claude`, `glm5.2`, and `gpt5` all work. You do not need the exact model name.
+
+Each result includes the model name, its reasoning variant names, and the providers that offer it (informational only). Pass the model name back as the `agent_manager` task `model`. Agent Manager resolves the provider automatically, preferring the provider used by the current turn and falling back to the Kilo Gateway, so you do not need to choose a provider yourself.

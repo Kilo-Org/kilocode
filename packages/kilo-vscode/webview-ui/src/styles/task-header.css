@@ -254,11 +254,11 @@
 .task-header-tokens {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 2px 6px;
   padding: 0 8px;
   font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
-  white-space: nowrap;
 }
 
 .task-header-tokens-label {
@@ -269,6 +269,124 @@
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.task-header-usage-trigger {
+  display: flex;
+  align-items: center;
+  width: calc(100% - 16px);
+  min-height: 28px;
+  height: auto;
+  margin: 0 8px;
+  padding: 2px 0;
+  border-radius: 3px;
+  color: inherit;
+}
+
+.task-header-usage-trigger:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.task-header-usage-trigger:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+.task-header-usage-trigger .task-header-tokens {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+}
+
+.task-header-usage [data-slot="collapsible-arrow"] {
+  opacity: 1;
+}
+
+.task-header-usage-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(320px, 45vh);
+  margin: 4px 8px 2px;
+  padding-left: 8px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-weak-base);
+}
+
+.task-header-usage-provider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.task-header-usage-provider h4 {
+  margin: 0;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+}
+
+.task-header-usage-model {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.task-header-usage-model + .task-header-usage-model {
+  padding-top: 4px;
+}
+
+.task-header-usage-model-name {
+  overflow: hidden;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-header-usage-meta {
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-slot="task-header-memory"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  min-width: 0;
+}
+
+/* Passed to the shared Tooltip via its `class` prop (no data-slot API), so the trigger stretches. */
+.task-header-memory-tooltip {
+  display: inline-flex;
+  flex: 1;
+  min-width: 0;
+}
+
+[data-slot="task-header-memory-status"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-foreground);
+}
+
+[data-slot="task-header-memory-actions"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 /* Expand toggle */

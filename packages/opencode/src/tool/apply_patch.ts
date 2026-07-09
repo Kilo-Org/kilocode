@@ -121,7 +121,7 @@ export const ApplyPatchTool = Tool.define(
             // kilocode_change start - encoding-aware read so non-UTF-8 files decode without
             // mojibake; the resulting diff, additions/deletions counts, and permission-prompt
             // metadata shown to the user must reflect the real file contents.
-            const read = yield* EncodedIO.read(filePath).pipe(
+            const read = yield* EncodedIO.read(afs, filePath).pipe(
               Effect.catch((error) =>
                 Effect.fail(
                   new Error(
@@ -181,7 +181,7 @@ export const ApplyPatchTool = Tool.define(
 
           case "delete": {
             // kilocode_change start - encoding-aware read so non-UTF-8 files decode without corruption
-            const deleteRead = yield* EncodedIO.read(filePath).pipe(
+            const deleteRead = yield* EncodedIO.read(afs, filePath).pipe(
               Effect.catch((error) =>
                 Effect.fail(
                   new Error(
@@ -247,19 +247,19 @@ export const ApplyPatchTool = Tool.define(
         switch (change.type) {
           case "add":
             // Create parent directories (recursive: true is safe on existing/root dirs)
-            yield* EncodedIO.write(change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+            yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
             updates.push({ file: change.filePath, event: "add" })
             break
 
           case "update":
-            yield* EncodedIO.write(change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+            yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
             updates.push({ file: change.filePath, event: "change" })
             break
 
           case "move":
             if (change.movePath) {
               // Create parent directories (recursive: true is safe on existing/root dirs)
-              yield* EncodedIO.write(change.movePath!, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+              yield* EncodedIO.write(afs, change.movePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
               yield* afs.remove(change.filePath)
               updates.push({ file: change.filePath, event: "unlink" })
               updates.push({ file: change.movePath, event: "add" })
@@ -274,7 +274,7 @@ export const ApplyPatchTool = Tool.define(
 
         if (edited) {
           if (yield* format.file(edited)) {
-            yield* Bom.syncFile(afs, edited, change.bom)
+            yield* EncodedIO.sync(afs, edited, change.bom, change.encoding)
           }
           yield* bus.publish(File.Event.Edited, { file: edited })
         }

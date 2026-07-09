@@ -15,6 +15,7 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
@@ -45,16 +46,30 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(root.blocker.isVisible)
     }
 
-    fun `test bottom stack contains connection and prompt only`() {
+    fun `test session surfaces use session background from initial render`() {
+        val bg = SessionEditorStyle.current().editorBackground
+        val root = find<SessionRootPanel>(ui)
+        val pane = scrollComponent() as JBScrollPane
+
+        assertEquals(bg, ui.background)
+        assertEquals(bg, root.content.background)
+        assertEquals(bg, pane.background)
+        assertEquals(bg, pane.viewport.background)
+
+        showMessages()
+
+        assertEquals(bg, find<SessionMessageListPanel>(ui).background)
+    }
+
+    fun `test prompt is docked and connection is overlaid`() {
         val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
-        assertSame(root.content, stack.parent)
-        assertSame(stack, connection.parent)
+        assertSame(root.content, prompt.parent)
+        assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
-        assertEquals(listOf(connection, prompt), stack.components.toList())
+        assertFalse(root.content.components.contains(connection))
     }
 
     fun `test drop overlay is attached under root overlay layer`() {
@@ -140,19 +155,35 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
     }
 
-    fun `test connection panel uses stack width and sits above prompt`() {
+    fun `test connection panel overlays above full prompt width`() {
+        val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
         val prompt = find<PromptPanel>(ui)
-        val stack = prompt.parent
 
         showConnection()
         layout()
 
         assertTrue(connection.isVisible)
-        assertEquals(0, connection.x)
-        assertEquals(stack.width, connection.width)
+        assertSame(root.overlay, connection.parent)
+        assertEquals(prompt.x, connection.x)
         assertEquals(prompt.width, connection.width)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
+    }
+
+    fun `test expanded connection panel remains anchored above prompt`() {
+        val connection = find<ConnectionPanel>(ui)
+        val prompt = find<PromptPanel>(ui)
+
+        connection.onEvent(SessionControllerEvent.ConnectionChanged.ShowError(
+            "CLI startup failed",
+            "line 1\nline 2",
+        ))
+        layout()
+        connection.clickSummary()
+        layout()
+
+        assertTrue(connection.detailsVisible())
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
     }
 
     fun `test connection panel is unaffected by active question view`() {
@@ -170,7 +201,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<QuestionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<QuestionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -189,7 +220,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(find<PermissionView>(ui).isVisible)
         assertSame(find<SessionMessageListPanel>(ui), find<PermissionView>(ui).parent)
         assertEquals(top, connection.y)
-        assertTrue(connection.y + connection.height <= prompt.y)
+        assertEquals(prompt.y - SessionUiStyle.View.Outline.width(), connection.y + connection.height)
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
@@ -281,25 +312,27 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
-    fun `test retry status renders in loading panel instead of message body`() {
+    fun `test retry status keeps transcript and shows message in footer`() {
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
-        controller().model.setState(SessionState.Retry("Cannot connect to API", attempt = 2, next = 1_234L))
+        controller().model.setState(SessionState.Retry("The usage limit has been reached", attempt = 4, next = 0L))
         layout()
 
-        val panel = find<LoadingPanel>(ui)
+        val panel = find<SessionMessageListPanel>(ui)
         assertSame(panel, scrollView())
-        assertEquals("Cannot connect to API", panel.labelText())
+        assertTrue(panel.progress.isVisible)
+        assertEquals("The usage limit has been reached (attempt 4)", panel.progress.labelText())
 
         controller().model.setState(SessionState.Idle)
         layout()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertSame(panel, scrollView())
+        assertFalse(panel.progress.isVisible)
     }
 
-    fun `test offline status renders in loading panel with fallback`() {
+    fun `test offline status keeps transcript and shows message in footer`() {
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
@@ -307,9 +340,65 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         controller().model.setState(SessionState.Offline("", requestId = "req1"))
         layout()
 
-        val panel = find<LoadingPanel>(ui)
+        val panel = find<SessionMessageListPanel>(ui)
         assertSame(panel, scrollView())
-        assertEquals("Connection offline", panel.labelText())
+        assertTrue(panel.progress.isVisible)
+        assertEquals("Connection offline", panel.progress.labelText())
+    }
+
+    fun `test busy progress footer uses transcript foreground`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(SessionState.Busy("Considering next steps..."))
+        layout()
+
+        val panel = find<SessionMessageListPanel>(ui)
+        assertTrue(panel.progress.isVisible)
+        assertEquals(SessionEditorStyle.current().editorForeground, panel.progress.labelForeground())
+    }
+
+    fun `test retry before transcript shows loading panel`() {
+        ui = newUi(displayMs = 1_000)
+
+        controller().model.setState(SessionState.Retry("The usage limit has been reached", attempt = 4, next = 0L))
+        layout()
+
+        assertSame(find<LoadingPanel>(ui), scrollView())
+    }
+
+    fun `test retry offline churn retains transcript panel and footer`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        val panel = find<SessionMessageListPanel>(ui)
+        val progress = panel.progress
+        val count = panel.componentCount
+
+        repeat(100) { i ->
+            controller().model.setState(SessionState.Retry("Rate limited", attempt = i + 1, next = 0L))
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertTrue(panel.progress.isVisible)
+
+            controller().model.setState(SessionState.Offline("Connection offline", requestId = "req$i"))
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertTrue(panel.progress.isVisible)
+
+            controller().model.setState(SessionState.Idle)
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertFalse(panel.progress.isVisible)
+        }
     }
 
     fun `test empty explicit session id shows message body`() {

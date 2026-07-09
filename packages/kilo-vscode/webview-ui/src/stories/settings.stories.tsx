@@ -12,6 +12,7 @@ import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
 import ModelsTab from "../components/settings/ModelsTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
+import AutoApproveTab from "../components/settings/AutoApproveTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
 import type { AgentConfig, CommandConfig, Config } from "../types/messages"
@@ -51,6 +52,28 @@ export const SettingsPanel: Story = {
   ),
 }
 
+export const AutoApproveBashOnly: Story = {
+  name: "AutoApproveTab — Bash-only config defaults",
+  render: () => (
+    <StoryProviders config={{ permission: { bash: { "*": "ask", "git status *": "allow" } } } as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <AutoApproveTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const SandboxingPanel: Story = {
+  name: "Settings — sandboxing controls",
+  render: () => (
+    <StoryProviders config={{ sandbox: { network: "deny" } }} features={{ sandboxControls: true }}>
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (
@@ -58,6 +81,30 @@ export const ProvidersConfigure: Story = {
       <div style={{ "max-height": "700px", overflow: "auto" }}>
         <ProvidersTab />
       </div>
+    </StoryProviders>
+  ),
+}
+
+/** Opens the Disabled Providers collapsible on mount so the expanded list has coverage. */
+function OpenDisabledProviders() {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      ref?.querySelector<HTMLButtonElement>('[data-slot="collapsible-trigger"]')?.click()
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      <ProvidersTab />
+    </div>
+  )
+}
+
+export const ProvidersDisabledExpanded: Story = {
+  name: "ProvidersTab — disabled providers expanded",
+  render: () => (
+    <StoryProviders config={{ disabled_providers: ["openai", "anthropic"] } as any}>
+      <OpenDisabledProviders />
     </StoryProviders>
   ),
 }

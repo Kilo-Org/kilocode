@@ -499,7 +499,12 @@ describe("session.llm.ai-sdk adapter", () => {
     expect(events).toHaveLength(1)
     const stepFinish = events[0]
     if (stepFinish.type !== "step-finish") throw new Error("expected step-finish")
-    expect(stepFinish.providerMetadata).toEqual({ anthropic: { cacheCreationInputTokens: 300 } })
+    // kilocode_change start
+    expect(stepFinish.providerMetadata).toEqual({
+      anthropic: { cacheCreationInputTokens: 300 },
+      kilocode: { routedModelID: "claude-3-5-sonnet" },
+    })
+    // kilocode_change end
     expect(stepFinish.usage?.cacheWriteInputTokens).toBeUndefined()
     expect(stepFinish.usage?.cacheReadInputTokens).toBe(200)
 
@@ -1899,4 +1904,100 @@ describe("session.llm.stream", () => {
       }),
     },
   )
+
+  // kilocode_change start
+  it.instance(
+    "repairs whitespace-padded tool names and executes the correct tool",
+    () =>
+      Effect.gen(function* () {
+        const fixture = loadFixture(alibabaQwenFixture.providerID, alibabaQwenFixture.modelID)
+        let toolExecuted = false
+
+        waitRequest(
+          "/chat/completions",
+          createEventResponse(
+            [
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      role: "assistant",
+                      content: null,
+                      tool_calls: [{ index: 0, id: "call-1", type: "function", function: { name: " bash", arguments: "" } }],
+                    },
+                  },
+                ],
+              },
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "{}" } }] } }],
+              },
+              {
+                id: "chatcmpl-1",
+                object: "chat.completion.chunk",
+                choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+              },
+            ],
+            true,
+          ),
+        )
+
+        const resolved = yield* Provider.use.getModel(
+          ProviderID.make(alibabaQwenFixture.providerID),
+          ModelID.make(fixture.model.id),
+        )
+        const sessionID = SessionID.make("session-test-repair")
+        const agent = {
+          name: "test",
+          mode: "primary",
+          options: {},
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        } satisfies Agent.Info
+
+        const user = {
+          id: MessageID.make("msg_user-repair"),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: agent.name,
+          model: { providerID: ProviderID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+        } satisfies MessageV2.User
+
+        yield* drain({
+          user,
+          sessionID,
+          model: resolved,
+          agent,
+          system: ["You are a helpful assistant."],
+          messages: [{ role: "user", content: "Run bash" }],
+          tools: {
+            bash: tool({
+              description: "Run bash",
+              inputSchema: z.object({}),
+              execute: async () => {
+                toolExecuted = true
+                return { output: "" }
+              },
+            }),
+          },
+        })
+
+        expect(toolExecuted).toBe(true)
+      }),
+    {
+      config: () => ({
+        enabled_providers: [alibabaQwenFixture.providerID],
+        provider: {
+          [alibabaQwenFixture.providerID]: {
+            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
+          },
+        },
+      }),
+    },
+  )
+  // kilocode_change end
 })

@@ -135,6 +135,7 @@ export function createDialogProviderOptions() {
           gutter: failedGutter ?? (connected && onboarded() ? () => <text fg={theme.success}>✓</text> : undefined), // kilocode_change
           async onSelect() {
             if (consoleManaged) return
+            if (KiloProvider.selectProvider({ providerID, replace: dialog.replace, model: DialogModel })) return // kilocode_change
 
             const methods = sync.data.provider_auth[providerID] ?? [
               {

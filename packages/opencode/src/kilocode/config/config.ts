@@ -43,11 +43,8 @@ export namespace KilocodeConfig {
   /** All config file names in precedence order (kilo + opencode). */
   export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
 
-  /** Directory suffixes that Kilo recognizes in addition to .opencode. */
+  /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
-
-  /** All config directory suffixes Kilo can update, including upstream .opencode. */
-  export const ALL_CONFIG_DIR_SUFFIXES = [".kilo", ".kilocode", ".opencode"] as const
 
   /** Path patterns for resolving kilo agent names from file paths. */
   export const AGENT_PATTERNS = ["/.kilo/agent/", "/.kilo/agents/", "/.kilocode/agent/", "/.kilocode/agents/"] as const
@@ -73,7 +70,7 @@ export namespace KilocodeConfig {
     worktree?: string
   }) {
     const dirs = yield* input.fs
-      .up({ targets: [...ALL_CONFIG_DIR_SUFFIXES], start: input.directory, stop: input.worktree })
+      .up({ targets: [...KILO_DIR_SUFFIXES], start: input.directory, stop: input.worktree })
       .pipe(Effect.orDie)
     const roots = yield* input.fs
       .up({ targets: [...ALL_CONFIG_FILES], start: input.directory, stop: input.worktree })
@@ -437,6 +434,64 @@ export namespace KilocodeConfig {
 
   /** Check whether a directory path should be treated as a config directory (for loading config files). */
   export function isConfigDir(dir: string, flagDir?: string): boolean {
-    return dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir.endsWith(".opencode") || dir === flagDir
+    return dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir === flagDir
+  }
+
+  // ── Opencode config migration notice ─────────────────────────────────
+
+  /** Client-neutral docs page describing where Kilo reads configuration from. */
+  export const CONFIG_DOCS_URL = "https://kilo.ai/docs/getting-started/settings"
+
+  /** Stable id for the synthetic "move your opencode config" notification (used for client-side dismissal). */
+  export const OPENCODE_NOTIFICATION_ID = "kilo.local.opencode-config-detected"
+
+  /**
+   * Detect leftover opencode config directories. Kilo used to fall back to
+   * opencode configuration but no longer reads `.opencode` directories.
+   * Returns the existing `.opencode` locations (global + project), highest first.
+   */
+  export function detectOpencodeConfig(input: { directory: string; worktree?: string; scanProject: boolean }): string[] {
+    const found: string[] = []
+
+    // Global opencode config dir (sibling of the kilo global config dir, e.g. ~/.config/opencode).
+    const globalDir = path.join(path.dirname(Global.Path.config), "opencode")
+    if (existsSync(globalDir)) found.push(globalDir)
+
+    // Project `.opencode` directories, walked from the working directory up to the worktree root.
+    if (input.scanProject) {
+      let current = input.directory
+      while (true) {
+        const candidate = path.join(current, ".opencode")
+        if (existsSync(candidate) && !found.includes(candidate)) found.push(candidate)
+        if (input.worktree === current) break
+        const parent = path.dirname(current)
+        if (parent === current) break
+        current = parent
+      }
+    }
+
+    return found
+  }
+
+  /**
+   * Build the synthetic notification shown when a leftover `.opencode` config
+   * directory is found. Returns undefined when nothing needs migrating.
+   * The shape matches the gateway `Notification` schema so it can be appended
+   * to the cloud notifications list and reuse each client's dismissal path.
+   */
+  export function opencodeConfigNotification(input: { directory: string; worktree?: string; scanProject: boolean }) {
+    const found = detectOpencodeConfig(input)
+    if (found.length === 0) return undefined
+    const suffix = found.length > 1 ? ` (and ${found.length - 1} more)` : ""
+    return {
+      id: OPENCODE_NOTIFICATION_ID,
+      title: "Move your opencode configuration",
+      message:
+        `Kilo no longer falls back to opencode configuration. ` +
+        `Found opencode config at ${found[0]}${suffix}. ` +
+        `Move it into a .kilo directory (project) or ${Global.Path.config} (global).`,
+      action: { actionText: "Learn more", actionURL: CONFIG_DOCS_URL },
+      showIn: ["cli", "extension"],
+    }
   }
 }

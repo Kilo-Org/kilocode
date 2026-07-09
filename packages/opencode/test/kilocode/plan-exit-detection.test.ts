@@ -149,6 +149,29 @@ async function waitQuestion(sessionID: string) {
   }
 }
 
+function userMessage(input: { sessionID: SessionID; agent: string; text: string }) {
+  const id = MessageID.ascending()
+  return {
+    info: {
+      id,
+      role: "user",
+      sessionID: input.sessionID,
+      time: { created: Date.now() },
+      agent: input.agent,
+      model,
+    },
+    parts: [
+      {
+        id: PartID.ascending(),
+        messageID: id,
+        sessionID: input.sessionID,
+        type: "text",
+        text: input.text,
+      },
+    ],
+  } satisfies MessageV2.WithParts
+}
+
 function content(message: MessageV2.WithParts) {
   return message.parts
     .filter((part): part is MessageV2.TextPart => part.type === "text")
@@ -338,10 +361,14 @@ describe("plan_exit detection", () => {
         expect(question.questions[0].options.map((item) => item.label)).toEqual([
           PlanFollowup.ANSWER_NEW_SESSION,
           PlanFollowup.ANSWER_CONTINUE,
+          PlanFollowup.ANSWER_KEEP_REFINING,
         ])
         expect(question.questions[0].options.find((item) => item.label === PlanFollowup.ANSWER_CONTINUE)?.mode).toBe(
           "code",
         )
+        expect(
+          question.questions[0].options.find((item) => item.label === PlanFollowup.ANSWER_KEEP_REFINING)?.mode,
+        ).toBe("plan")
         await questions.reject(question.id)
         await expect(pending).resolves.toBe("break")
       } finally {
@@ -646,6 +673,79 @@ describe("plan_exit detection", () => {
       expect(text.replaceAll(path.sep, "/")).toContain(".plans/fix.md")
       expect(text).toContain("Project/user instructions about plan location")
       expect(text).not.toContain("No plan file exists yet")
+    }))
+
+  test("native plan reminder creates the default plan directory", () =>
+    withInstance(async () => {
+      const session = await sessions.create({})
+      const dir = path.dirname(Session.plan(session, Instance.current))
+      await expect(fs.stat(dir).then(() => true, () => false)).resolves.toBe(false)
+
+      const id = MessageID.ascending()
+      const user: MessageV2.WithParts = {
+        info: {
+          id,
+          role: "user",
+          sessionID: session.id,
+          time: { created: Date.now() },
+          agent: "plan",
+          model,
+        },
+        parts: [
+          {
+            id: PartID.ascending(),
+            messageID: id,
+            sessionID: session.id,
+            type: "text",
+            text: "Create a plan.",
+          },
+        ],
+      }
+
+      await KiloSessionPrompt.insertPlanReminders({
+        agent: { name: "plan", options: {} },
+        session,
+        userMessage: user,
+        messages: [user],
+      })
+
+      await expect(fs.stat(dir).then((stat) => stat.isDirectory())).resolves.toBe(true)
+    }))
+
+  test("native plan reminder keeps in-chat approval for clients without follow-up support", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      try {
+        const session = await sessions.create({})
+
+        process.env.KILO_CLIENT = "vscode"
+        const supported = userMessage({ sessionID: session.id, agent: "plan", text: "Create a plan." })
+        await KiloSessionPrompt.insertPlanReminders({
+          agent: { name: "plan", options: {} },
+          session,
+          userMessage: supported,
+          messages: [supported],
+        })
+        const supportedText = content(supported)
+        expect(supportedText).toContain("client follow-up after plan_exit asks whether to implement")
+        expect(supportedText).not.toContain("Finalize and save the plan")
+
+        process.env.KILO_CLIENT = "acp"
+        const acp = userMessage({ sessionID: session.id, agent: "plan", text: "Create a plan." })
+        await KiloSessionPrompt.insertPlanReminders({
+          agent: { name: "plan", options: {} },
+          session,
+          userMessage: acp,
+          messages: [acp],
+        })
+        const text = content(acp)
+        expect(text).toContain("Finalize and save the plan")
+        expect(text).toContain("Continue refining")
+        expect(text).not.toContain("client follow-up after plan_exit asks")
+      } finally {
+        if (prev === undefined) delete process.env.KILO_CLIENT
+        else process.env.KILO_CLIENT = prev
+      }
     }))
 
   test("native plan reminder prefers project plan path instructions over fallback", () =>

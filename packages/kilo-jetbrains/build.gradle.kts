@@ -3,26 +3,21 @@ import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.InstrumentCodeTask
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
-import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.SplitModeTarget
+import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.PluginInstallationTarget
 import java.time.LocalDate
 
 group = "ai.kilocode.jetbrains"
 
-val ports = 49152..65535
-
-fun fallback(): Int {
-    return ports.random()
-}
-
 fun port(value: String): Int {
     val text = value.trim()
-    if (text.isEmpty()) return fallback()
-    val n = text.toIntOrNull()
-        ?: error("kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random high port")
-    require(n in 0..65535) {
-        "kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random high port"
+    require(text.isNotEmpty()) {
+        "kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random port"
     }
-    if (n == 0) return fallback()
+    val n = text.toIntOrNull()
+        ?: error("kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random port")
+    require(n in 0..65535) {
+        "kilo.splitModeServerPort must be an integer from 0 to 65535; use 0 or omit it for a random port"
+    }
     return n
 }
 
@@ -87,6 +82,7 @@ fun gitTag(): String? {
 }
 
 val release = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false).get()
+val pinned = providers.gradleProperty("kilo.cli.pinned").map { it.trim().toBoolean() }.orElse(true).get()
 val override = providers.gradleProperty("kilo.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
 val prop = providers.gradleProperty("kilo.jetbrains.version").orNull?.trim()?.takeIf { it.isNotEmpty() }
 val tag = gitTag()?.removePrefix("jetbrains/v")
@@ -94,8 +90,12 @@ val ver = override?.let(::checked) ?: prop?.let(::checked) ?: if (release) check
     tag ?: error("Missing JetBrains plugin version. Publish builds must set kilo.jetbrains.version or run from a jetbrains/v<version> tag."),
 ) else checked(tag ?: "0.0.0-dev")
 
+if (release && !pinned) error(
+    "kilo.cli.pinned=false is a dev-only mode and cannot be released. Set kilo.cli.pinned=true before a production/publish build."
+)
+
 val channel = providers.gradleProperty("kilo.channel").map { it.trim() }.orElse("default")
-val splitPort = providers.gradleProperty("kilo.splitModeServerPort").orNull?.let(::port) ?: fallback()
+val splitPort = providers.gradleProperty("kilo.splitModeServerPort").map(::port).orElse(0)
 val isolated = providers.gradleProperty("kilo.dev.storage.isolated").map { it.toBoolean() }.orElse(false)
 val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
     providers.provider { rootProject.layout.projectDirectory.asFile.parentFile.parentFile.canonicalPath }
@@ -180,7 +180,7 @@ dependencies {
 
 intellijPlatform {
     splitMode = true
-    splitModeTarget = SplitModeTarget.BOTH
+    pluginInstallationTarget = PluginInstallationTarget.BOTH
 
     pluginConfiguration {
         id = "ai.kilocode.jetbrains"
@@ -226,17 +226,21 @@ tasks {
 
     runIdeBackend {
         splitModeServerPort.set(splitPort)
-        dependsOn(":backend:prepareLocalCli")
+        dependsOn(":backend:processResources")
+    }
+
+    runIdeFrontend {
+        splitModeServerPort.set(splitPort)
+    }
+
+    runIdeSplitMode {
+        splitModeServerPort.set(splitPort)
         dependsOn(":backend:processResources")
     }
 }
 
-project(":backend").tasks.named("processResources") {
-    mustRunAfter(":backend:prepareLocalCli")
-}
-
 // Compile-only typecheck: verifies Kotlin compiles (including generated API client)
-// without running processResources, CLI binary prep, or buildPlugin.
+// without running buildPlugin.
 tasks.register("typecheck") {
     dependsOn(
         ":shared:compileKotlin",
@@ -245,12 +249,6 @@ tasks.register("typecheck") {
         ":frontend:compileTestKotlin",
         ":backend:compileTestKotlin",
     )
-}
-
-// CLI binaries must be present before packaging. Wire the check here (not in
-// :backend:processResources) so compile/test tasks work without CLI binaries.
-tasks.named("buildPlugin") {
-    dependsOn(":backend:checkCli")
 }
 
 tasks.named<JavaExec>("runIde") {

@@ -14,7 +14,15 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const theme = () => props.api.theme.current
   const msg = createMemo(() => props.api.state.session.messages(props.session_id))
   const session = createMemo(() => props.api.state.session.get(props.session_id))
-  const cost = createMemo(() => session()?.cost ?? 0)
+  // kilocode_change start
+  const cost = createMemo(() => {
+    const total = msg().reduce((sum, item) => {
+      if (item.role !== "assistant") return sum
+      return sum + (item.cost ?? 0)
+    }, 0)
+    return Math.max(session()?.cost ?? 0, total)
+  })
+  // kilocode_change end
 
   const state = createMemo(() => {
     const last = msg().findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)

@@ -1,5 +1,8 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileLinks
+import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.openSessionLink
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -20,7 +23,8 @@ import javax.swing.JButton
 open class TextView(
     text: Text,
     transparent: Boolean = true,
-    openUrl: (String) -> Unit = {},
+    private val openFile: SessionFileOpener = { _, _ -> },
+    private val openUrl: (String) -> Unit = {},
     selection: SessionSelection? = null,
 ) : PartView() {
 
@@ -35,7 +39,7 @@ open class TextView(
         isOpaque = false
         Disposer.register(this, md)
         md.opaque = !transparent
-        md.addLinkListener { openUrl(it.href) }
+        md.addLinkListener { onLink(it) }
         applyStyle(SessionEditorStyle.current())
         add(md.component, BorderLayout.CENTER)
         add(toolbar, BorderLayout.SOUTH)
@@ -78,7 +82,13 @@ open class TextView(
     /** Current markdown source — used by tests to assert rendered content. */
     fun markdown(): String = md.markdown()
 
+    internal fun simulateLink(href: String) = md.simulateLink(href)
+
     internal fun contentOpaque() = md.opaque
+
+    protected open fun onLink(event: MdView.LinkEvent) {
+        openSessionLink(event, openFile, openUrl)
+    }
 
     override fun applyStyle(style: SessionEditorStyle) {
         val font = styleFont(style)
@@ -100,7 +110,7 @@ open class TextView(
 
     protected open fun styleBackground(style: SessionEditorStyle) = style.editorBackground
 
-    private fun refresh() {
+    protected fun refresh() {
         revalidate()
         repaint()
     }

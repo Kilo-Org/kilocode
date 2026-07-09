@@ -13,7 +13,7 @@ import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, localSessionID, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { TuiConfig } from "./config/tui"
@@ -179,9 +179,11 @@ export const TuiThreadCommand = cmd({
       // kilocode_change start - default TUI sessions attach to the daemon unless explicitly disabled
       if (await KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start })) return
       // kilocode_change end
+      const auth = KiloTuiThreadDaemon.workerAuth() // kilocode_change - protect TUI-owned HTTP routes from unauthenticated local callers
       const env = sanitizedProcessEnv({
         [KILO_PROCESS_ROLE]: "worker",
         [KILO_RUN_ID]: ensureRunID(),
+        ...auth.env, // kilocode_change
         KILO_BACKGROUND_PROCESS_PORTS: "true", // kilocode_change - TUI surfaces inferred background process ports
       })
 
@@ -308,26 +310,15 @@ export const TuiThreadCommand = cmd({
         ? {
             url: (await client.call("server", network)).url,
             fetch: undefined,
+            headers: auth.headers, // kilocode_change
             events: undefined,
           }
         : {
             url: "http://kilo.internal",
             fetch: createWorkerFetch(client),
+            headers: auth.headers, // kilocode_change
             events: createEventSource(client),
           }
-
-      try {
-        await validateSession({
-          url: transport.url, // kilocode_change
-          sessionID: args.session,
-          directory: cwd,
-          fetch: transport.fetch,
-        })
-      } catch (error) {
-        UI.error(errorMessage(error))
-        process.exitCode = 1
-        return
-      }
 
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})
@@ -340,6 +331,7 @@ export const TuiThreadCommand = cmd({
           const sdk = createKiloClient({
             baseUrl: transport.url,
             fetch: transport.fetch,
+            headers: transport.headers, // kilocode_change
             directory: cwd,
           })
           const id = await importCloudSession(sdk, args.session).catch(() => undefined)
@@ -353,6 +345,20 @@ export const TuiThreadCommand = cmd({
         }
         // kilocode_change end
 
+        try {
+          await validateSession({
+            url: transport.url, // kilocode_change
+            sessionID: localSessionID(args), // kilocode_change
+            directory: cwd,
+            fetch: transport.fetch,
+            headers: transport.headers, // kilocode_change
+          })
+        } catch (error) {
+          UI.error(errorMessage(error))
+          process.exitCode = 1
+          return
+        }
+
         // kilocode_change start
         await start({
           // kilocode_change - shared lazy loader also supports daemon attach
@@ -365,6 +371,7 @@ export const TuiThreadCommand = cmd({
           config,
           directory: cwd,
           fetch: transport.fetch,
+          headers: transport.headers, // kilocode_change
           events: transport.events,
           args: {
             continue: args.continue,

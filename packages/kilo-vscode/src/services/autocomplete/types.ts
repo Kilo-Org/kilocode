@@ -32,6 +32,7 @@ export interface AutocompleteInput {
   isUntitledFile: boolean
   completionId: string
   filepath: string
+  languageId?: string
   pos: Position
   recentlyVisitedRanges: AutocompleteCodeSnippet[]
   recentlyEditedRanges: RecentlyEditedRange[]
@@ -52,6 +53,7 @@ export interface FillInAtCursorSuggestion {
   text: string
   prefix: string
   suffix: string
+  scope: string
 }
 
 export interface MatchingSuggestionResult {
@@ -105,6 +107,7 @@ export interface LastSuggestionInfo extends AutocompleteContext {
 }
 
 export interface PendingRequest {
+  scope: string
   prefix: string
   suffix: string
   promise: Promise<void>
@@ -199,6 +202,7 @@ export function contextToAutocompleteInput(context: AutocompleteSuggestionContex
     isUntitledFile: context.document.isUntitled,
     completionId: crypto.randomUUID(),
     filepath: context.document.uri.fsPath,
+    languageId: context.document.languageId,
     pos: { line: position.line, character: position.character },
     recentlyVisitedRanges,
     recentlyEditedRanges,

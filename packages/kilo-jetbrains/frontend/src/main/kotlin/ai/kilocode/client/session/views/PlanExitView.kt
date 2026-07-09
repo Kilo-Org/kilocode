@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
@@ -8,11 +9,16 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.md.MdViewFactory
+import ai.kilocode.client.session.openSessionLink
 import com.intellij.openapi.util.Disposer
 import java.awt.BorderLayout
 
-class PlanExitView(tool: Tool, openFile: (String) -> Unit, selection: SessionSelection? = null) : PartView() {
-    constructor(tool: Tool, openFile: (String) -> Unit) : this(tool, openFile, null)
+class PlanExitView(
+    tool: Tool,
+    private val openFile: SessionFileOpener,
+    private val openUrl: (String) -> Unit = {},
+    selection: SessionSelection? = null,
+) : PartView() {
 
     companion object {
         fun canRender(tool: Tool): Boolean = tool.name == "plan_exit" && tool.state == ToolExecState.COMPLETED
@@ -27,7 +33,7 @@ class PlanExitView(tool: Tool, openFile: (String) -> Unit, selection: SessionSel
         layout = BorderLayout()
         isOpaque = false
         Disposer.register(this, md)
-        md.addLinkListener { openFile(it.href) }
+        md.addLinkListener { openSessionLink(it, openFile, openUrl) }
         add(md.component, BorderLayout.CENTER)
         applyStyle(SessionEditorStyle.current())
         sync()

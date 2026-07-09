@@ -41,6 +41,26 @@ export const dict = {
   "marketplace.install.scope": "범위",
   "marketplace.install.scope.project": "프로젝트",
   "marketplace.install.scope.global": "글로벌",
+  "marketplace.install.scope.project.description":
+    "이 프로젝트에만 적용됩니다. 설치된 파일을 버전 관리에 추가하고 팀과 공유할 수 있습니다.",
+  "marketplace.install.scope.global.description":
+    "이 컴퓨터의 모든 프로젝트에 적용됩니다. 사용자 구성에 저장됩니다.",
+  "marketplace.install.destination": "설치 위치",
+  "marketplace.install.about.mcp":
+    "MCP 서버는 외부 서비스나 로컬 프로그램과 작업할 수 있는 추가 도구를 Kilo에 제공합니다.",
+  "marketplace.install.about.agent": "에이전트는 자체 지침과 권한을 가진 재사용 가능한 역할을 추가합니다.",
+  "marketplace.install.about.skill":
+    "스킬은 필요할 때 Kilo가 불러올 수 있는 작업별 지침과 리소스를 추가합니다.",
+  "marketplace.install.mcp.warning":
+    "MCP 서버는 로컬 명령을 실행하거나 외부 서비스에 연결할 수 있습니다. 권한 설정에서 자동으로 허용하지 않는 한 Kilo는 도구를 사용하기 전에 권한을 요청합니다.",
+  "marketplace.install.project.warning":
+    "프로젝트 파일이 버전 관리에 추가될 수 있습니다. 구성에서 환경 변수를 참조하는 경우가 아니면 여기에 비밀 정보를 저장하지 마세요.",
+  "marketplace.install.learnMore": "Marketplace 설치 방식 알아보기",
+  "marketplace.install.learnMcp": "MCP 자세히 알아보기",
+  "marketplace.install.installedAt": "{{path}}에 설치됨",
+  "marketplace.intro":
+    "재사용 가능한 에이전트, 스킬 및 MCP 도구를 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
+  "marketplace.intro.learnMore": "Marketplace 정보",
   "marketplace.install.prerequisites": "사전 요구 사항",
   "marketplace.install.installing": "설치 중...",
   "marketplace.install.cancel": "취소",
@@ -57,7 +77,9 @@ export const dict = {
   "marketplace.search": "검색...",
   "marketplace.filter.all": "모든 항목",
   "marketplace.filter.notInstalled": "설치되지 않음",
+  "marketplace.filter.relevant": "내 작업 영역과 관련됨",
   "marketplace.empty": "항목을 찾을 수 없음",
+  "marketplace.empty.relevant": "이 작업 영역과 관련된 마켓플레이스 항목을 찾을 수 없습니다.",
   "marketplace.badge.mcpServer": "MCP 서버",
   "marketplace.badge.mode": "모드",
   "marketplace.card.by": "제작: {{author}}",
@@ -90,6 +112,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "깨끗한 컨텍스트의 새 세션에서 구현",
   "plan.followup.answer.continue": "여기서 계속하기",
   "plan.followup.answer.continue.description": "이 세션에서 계획 구현",
+  "plan.followup.answer.keepRefining": "계속 다듬기",
+  "plan.followup.answer.keepRefining.description": "아직 구현하지 않고 계획을 계속 진행",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "스냅샷이 느립니다",

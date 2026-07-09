@@ -1,6 +1,6 @@
 [versions]
 intellij-platform = "2026.1"
-intellij-gradle-plugin = "2.16.0"
+intellij-gradle-plugin = "2.17.0"
 intellij-rpc-plugin = "2.3.20-RC2-0.1"
 kotlin-jvm-plugin = "2.3.20"
 kotlin-serialization-plugin = "2.3.20"
@@ -11,6 +11,7 @@ detekt = "1.23.8"
 commonmark = "0.28.0"
 zxing = "3.5.3"
 changelog = "2.5.0"
+commons-compress = "1.28.0"
 
 [libraries]
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
@@ -23,6 +24,7 @@ okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-serialization" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version = "1.10.2" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 
 [plugins]
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

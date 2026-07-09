@@ -242,6 +242,71 @@ describe("kilocode indexing config", () => {
   })
 })
 
+describe("kilocode sandbox config", () => {
+  test("prevents project config from weakening sandbox policy", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, {
+        $schema: "https://app.kilo.ai/config.json",
+        sandbox: { enabled: true, network: "deny", writable_paths: ["/tmp/global"] },
+      })
+      await writeConfig(tmp.path, {
+        sandbox: { enabled: false, network: "allow", writable_paths: ["/tmp/project"] },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.sandbox).toEqual({ enabled: true, network: "deny", writable_paths: ["/tmp/global"] })
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
+  test("allows project config to strengthen sandbox policy", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await writeConfig(globalTmp.path, {
+        sandbox: { enabled: false, network: "allow", writable_paths: ["/tmp/global"] },
+      })
+      await writeConfig(tmp.path, {
+        sandbox: { enabled: true, network: "deny", writable_paths: ["/tmp/project"] },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const config = await load()
+          expect(config.sandbox).toEqual({ enabled: true, network: "deny", writable_paths: ["/tmp/global"] })
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+})
+
 describe("custom provider model config", () => {
   test("persists and removes reasoning across a global config reload", async () => {
     await using globalTmp = await tmpdir()
@@ -413,6 +478,96 @@ describe("agent config", () => {
   })
 })
 
+describe("project config directory precedence", () => {
+  test("prefers .kilo over legacy .kilocode and ignores .opencode", async () => {
+    await using tmp = await tmpdir()
+    const entries = [
+      {
+        root: ".opencode",
+        source: "opencode",
+        config: {
+          username: "opencode",
+          model: "test/opencode",
+          small_model: "test/opencode",
+        },
+        names: ["shared", "legacy", "opencode-only"],
+      },
+      {
+        root: ".kilocode",
+        source: "kilocode",
+        config: {
+          username: "kilocode",
+          model: "test/kilocode",
+        },
+        names: ["shared", "legacy"],
+      },
+      {
+        root: ".kilo",
+        source: "kilo",
+        config: {
+          username: "kilo",
+        },
+        names: ["shared"],
+      },
+    ] as const
+
+    for (const item of entries) {
+      const dir = path.join(tmp.path, item.root)
+      await writeConfig(dir, {
+        $schema: "https://app.kilo.ai/config.json",
+        ...item.config,
+      })
+      for (const name of item.names) {
+        await Filesystem.write(
+          path.join(dir, "command", `${name}.md`),
+          `---\ndescription: ${item.source} command\n---\n${item.source} command template`,
+        )
+        await Filesystem.write(
+          path.join(dir, "agent", `${name}.md`),
+          `---\ndescription: ${item.source} agent\nmode: subagent\n---\n${item.source} agent prompt`,
+        )
+      }
+      await Filesystem.write(path.join(dir, "plugin", `${item.source}.ts`), "export default {}")
+    }
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+
+        expect(config.username).toBe("kilo")
+        expect(config.model).toBe("test/kilocode")
+        expect(config.small_model).toBeUndefined()
+
+        expect(config.command?.shared).toMatchObject({
+          description: "kilo command",
+          template: "kilo command template",
+        })
+        expect(config.command?.legacy).toMatchObject({
+          description: "kilocode command",
+          template: "kilocode command template",
+        })
+        expect(config.command?.["opencode-only"]).toBeUndefined()
+
+        expect(config.agent?.shared).toMatchObject({
+          description: "kilo agent",
+          prompt: "kilo agent prompt",
+        })
+        expect(config.agent?.legacy).toMatchObject({
+          description: "kilocode agent",
+          prompt: "kilocode agent prompt",
+        })
+        expect(config.agent?.["opencode-only"]).toBeUndefined()
+
+        const plugins = JSON.stringify(config.plugin)
+        expect(plugins).toContain("kilocode.ts")
+        expect(plugins).toContain("kilo.ts")
+        expect(plugins).not.toContain("opencode.ts")
+      },
+    })
+  })
+})
+
 describe("linked worktree config", () => {
   test("uses primary config directories as local fallbacks", async () => {
     await using primary = await tmpdir({ git: true })
@@ -449,6 +604,10 @@ describe("linked worktree config", () => {
     try {
       await Bun.write(path.join(directory, "placeholder"), "")
       await Bun.write(
+        path.join(primary.path, "packages", ".opencode", "kilo.jsonc"),
+        JSON.stringify({ snapshot: true, autoupdate: false, share: "auto", default_agent: "opencode-only" }),
+      )
+      await Bun.write(
         path.join(primary.path, "packages", ".kilocode", "kilo.jsonc"),
         JSON.stringify({ snapshot: true, autoupdate: "notify", share: "disabled" }),
       )
@@ -460,6 +619,7 @@ describe("linked worktree config", () => {
       expect(config.snapshot).toBe(false)
       expect(config.autoupdate).toBe("notify")
       expect(config.share).toBe("manual")
+      expect(config.default_agent).toBeUndefined()
     } finally {
       await $`git worktree remove --force ${worktree}`.cwd(primary.path).quiet().nothrow()
     }
@@ -483,6 +643,77 @@ describe("linked worktree config", () => {
       else process.env["KILO_CONFIG_DIR"] = previous
       await $`git worktree remove --force ${worktree}`.cwd(primary.path).quiet().nothrow()
     }
+  })
+})
+
+describe("opencode config migration notice", () => {
+  const withGlobalConfig = async <T>(dir: string, fn: () => Promise<T> | T): Promise<T> => {
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = dir
+    try {
+      return await fn()
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+    }
+  }
+
+  test("detects a project .opencode directory", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    await Filesystem.write(path.join(tmp.path, ".opencode", "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    // Isolate the global config dir so a real ~/.config/opencode on the host cannot interfere.
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const found = KilocodeConfig.detectOpencodeConfig({ directory: tmp.path, scanProject: true })
+      expect(found).toEqual([path.join(tmp.path, ".opencode")])
+    })
+  })
+
+  test("detects a global opencode config directory", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    const opencodeDir = path.join(globalTmp.path, "opencode")
+    await Filesystem.write(path.join(opencodeDir, "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const found = KilocodeConfig.detectOpencodeConfig({ directory: tmp.path, scanProject: true })
+      expect(found).toEqual([opencodeDir])
+    })
+  })
+
+  test("skips the project scan when disabled", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    await Filesystem.write(path.join(tmp.path, ".opencode", "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const found = KilocodeConfig.detectOpencodeConfig({ directory: tmp.path, scanProject: false })
+      expect(found).toEqual([])
+    })
+  })
+
+  test("builds a dismissible notification when opencode config exists", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    await Filesystem.write(path.join(tmp.path, ".opencode", "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const notice = KilocodeConfig.opencodeConfigNotification({ directory: tmp.path, scanProject: true })
+      expect(notice?.id).toBe(KilocodeConfig.OPENCODE_NOTIFICATION_ID)
+      expect(notice?.message).toContain(path.join(tmp.path, ".opencode"))
+      expect(notice?.action?.actionURL).toBe(KilocodeConfig.CONFIG_DOCS_URL)
+      expect(notice?.showIn).toEqual(["cli", "extension"])
+    })
+  })
+
+  test("returns no notification when nothing needs migrating", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+
+    await withGlobalConfig(path.join(globalTmp.path, "kilo"), () => {
+      const notice = KilocodeConfig.opencodeConfigNotification({ directory: tmp.path, scanProject: true })
+      expect(notice).toBeUndefined()
+    })
   })
 })
 

@@ -7,6 +7,11 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelAutoRoutingDto
+import ai.kilocode.rpc.dto.ModelCapabilitiesDto
+import ai.kilocode.rpc.dto.ModelCostDto
+import ai.kilocode.rpc.dto.ModelOptionsDto
+import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.TodoDto
@@ -41,6 +46,10 @@ class SessionModel {
 
     private val entries = LinkedHashMap<String, Message>()
     private val turnEntries = LinkedHashMap<String, Turn>()
+    private val hiddenText = mutableSetOf<Pair<String, String>>()
+    private val childRefs = HashMap<String, ChildRef>()
+    private val childTools = HashMap<String, LinkedHashMap<String, Tool>>()
+    private val childRemoved = HashMap<String, MutableSet<String>>()
 
     var app: KiloAppStateDto = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
     var version: String? = null
@@ -139,7 +148,9 @@ class SessionModel {
 
     @RequiresEdt
     fun removeMessage(id: String) {
-        if (entries.remove(id) == null) return
+        val msg = entries.remove(id) ?: return
+        for (part in msg.parts.values) untrackChild(part)
+        hiddenText.removeAll { it.first == id }
         fire(SessionModelEvent.MessageRemoved(id))
         regroup()
         updateHeader()
@@ -147,8 +158,10 @@ class SessionModel {
 
     @RequiresEdt
     fun removeContent(messageId: String, contentId: String) {
+        hiddenText.remove(messageId to contentId)
         val msg = entries[messageId] ?: return
-        if (msg.parts.remove(contentId) == null) return
+        val old = msg.parts.remove(contentId) ?: return
+        untrackChild(old)
         fire(SessionModelEvent.ContentRemoved(messageId, contentId))
         updateHeader()
     }
@@ -157,6 +170,16 @@ class SessionModel {
     fun updateContent(messageId: String, dto: PartDto) {
         if (dto.type in SILENT_PART_TYPES) return
         val msg = entries[messageId] ?: return
+        val key = messageId to dto.id
+        if (hiddenSynthetic(msg, dto)) {
+            hiddenText.add(key)
+            if (msg.parts.remove(dto.id) != null) {
+                fire(SessionModelEvent.ContentRemoved(messageId, dto.id))
+                updateHeader()
+            }
+            return
+        }
+        hiddenText.remove(key)
         val existing = msg.parts[dto.id]
         if (empty(dto)) {
             if (existing is Text) removeContent(messageId, dto.id)
@@ -168,13 +191,45 @@ class SessionModel {
         }
         val content = fromDto(dto)
         msg.parts[dto.id] = content
+        trackChild(messageId, content)
         fire(SessionModelEvent.ContentAdded(messageId, content))
+        updateHeader()
+    }
+
+    @RequiresEdt
+    fun upsertChildTool(child: String, dto: PartDto, replace: Boolean = true) {
+        if (dto.type != "tool") return
+        val ref = childRefs[child] ?: return
+        val msg = entries[ref.messageId] ?: return
+        val parent = msg.parts[ref.partId] as? Tool ?: return
+        val tool = fromDto(dto) as? Tool ?: return
+        val tools = childTools.getOrPut(child) { LinkedHashMap() }
+        if (replace) childRemoved[child]?.remove(dto.id)
+        if (!replace && childRemoved[child]?.contains(dto.id) == true) return
+        if (!replace && tools.containsKey(dto.id)) return
+        tools[dto.id] = tool
+        parent.childTools = tools.values.toList()
+        fire(SessionModelEvent.ContentUpdated(ref.messageId, parent))
+        updateHeader()
+    }
+
+    @RequiresEdt
+    fun removeChildTool(child: String, partId: String) {
+        childRemoved.getOrPut(child) { mutableSetOf() }.add(partId)
+        val ref = childRefs[child] ?: return
+        val tools = childTools[child] ?: return
+        if (tools.remove(partId) == null) return
+        val msg = entries[ref.messageId] ?: return
+        val parent = msg.parts[ref.partId] as? Tool ?: return
+        parent.childTools = tools.values.toList()
+        fire(SessionModelEvent.ContentUpdated(ref.messageId, parent))
         updateHeader()
     }
 
     @RequiresEdt
     fun appendDelta(messageId: String, contentId: String, delta: String) {
         val msg = entries[messageId] ?: return
+        if (hiddenText.contains(messageId to contentId)) return
         val existing = msg.parts[contentId]
         val created = existing == null
         if (existing != null) {
@@ -238,6 +293,10 @@ class SessionModel {
     @RequiresEdt
     fun loadHistory(history: List<MessageWithPartsDto>) {
         entries.clear()
+        childRefs.clear()
+        childTools.clear()
+        childRemoved.clear()
+        hiddenText.clear()
         session = null
         state = SessionState.Idle
         diff = emptyList()
@@ -247,9 +306,14 @@ class SessionModel {
             val item = Message(msg.info)
             for (part in msg.parts) {
                 if (part.type in SILENT_PART_TYPES) continue
+                if (hiddenSynthetic(item, part)) {
+                    hiddenText.add(msg.info.id to part.id)
+                    continue
+                }
                 if (empty(part)) continue
                 val content = fromDto(part, part.text)
                 item.parts[content.id] = content
+                trackChild(msg.info.id, content)
             }
             entries[msg.info.id] = item
         }
@@ -262,6 +326,10 @@ class SessionModel {
     fun clear() {
         entries.clear()
         turnEntries.clear()
+        childRefs.clear()
+        childTools.clear()
+        childRemoved.clear()
+        hiddenText.clear()
         session = null
         state = SessionState.Idle
         diff = emptyList()
@@ -382,19 +450,28 @@ class SessionModel {
                 existing.mime = dto.mime ?: "application/octet-stream"
                 existing.url = dto.url ?: ""
                 existing.filename = dto.filename
+                existing.source = dto.source
             }
             is Tool -> {
+                val old = existing.childSessionId
                 existing.kind = toolKind(dto.tool)
                 existing.state = parseToolState(dto.state)
                 existing.callId = dto.callID
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
+                existing.childSessionId = childID(existing)
+                if (old != null && old != existing.childSessionId) {
+                    childRefs.remove(old)
+                    childTools.remove(old)
+                    childRemoved.remove(old)
+                }
                 existing.output = dto.output
                 existing.error = dto.error
                 existing.time = dto.time
                 existing.todos = dto.todos
                 existing.todoView = dto.todoView
+                trackChild(messageId, existing)
             }
             is Compaction -> return
             is StepFinish -> {
@@ -410,6 +487,9 @@ class SessionModel {
 
     private fun empty(dto: PartDto) = dto.type == "text" && dto.text?.isNotBlank() != true
 
+    private fun hiddenSynthetic(msg: Message, dto: PartDto) =
+        msg.info.role == "user" && dto.type == "text" && dto.synthetic == true
+
     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
         val content = text ?: dto.text
         return when (dto.type) {
@@ -424,6 +504,7 @@ class SessionModel {
                 mime = dto.mime ?: "application/octet-stream"
                 url = dto.url ?: ""
                 filename = dto.filename
+                source = dto.source
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
                 state = parseToolState(dto.state)
@@ -431,6 +512,7 @@ class SessionModel {
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata
+                childSessionId = childID(this)
                 output = dto.output
                 error = dto.error
                 time = dto.time
@@ -449,6 +531,21 @@ class SessionModel {
 
     private fun fire(event: SessionModelEvent) {
         for (l in listeners) l.onEvent(event)
+    }
+
+    private fun trackChild(messageId: String, content: Content) {
+        val tool = content as? Tool ?: return
+        val child = tool.childSessionId ?: return
+        childRefs[child] = ChildRef(messageId, tool.id)
+        tool.childTools = childTools[child]?.values?.toList() ?: emptyList()
+    }
+
+    private fun untrackChild(content: Content) {
+        val tool = content as? Tool ?: return
+        val child = tool.childSessionId ?: return
+        childRefs.remove(child)
+        childTools.remove(child)
+        childRemoved.remove(child)
     }
 
     private fun updateHeader() {
@@ -569,6 +666,13 @@ private fun parseToolState(raw: String?): ToolExecState = when (raw) {
     else -> ToolExecState.PENDING
 }
 
+private data class ChildRef(val messageId: String, val partId: String)
+
+private fun childID(tool: Tool): String? {
+    if (tool.name != "task") return null
+    return tool.metadata["sessionId"]
+}
+
 data class AgentItem(
     val name: String,
     val display: String,
@@ -581,11 +685,22 @@ data class ModelItem(
     val display: String,
     val provider: String,
     val providerName: String,
+    val inputPrice: Double? = null,
+    val outputPrice: Double? = null,
+    val contextLength: Long? = null,
+    val releaseDate: String? = null,
+    val latest: Boolean? = null,
     val recommendedIndex: Double?,
     val free: Boolean,
     val byok: Boolean = false,
     val variants: List<String>,
     val limit: ModelLimitItem?,
+    val cost: ModelCostDto? = null,
+    val capabilities: ModelCapabilitiesDto? = null,
+    val options: ModelOptionsDto? = null,
+    val autoRouting: ModelAutoRoutingDto? = null,
+    val terminalBench: ModelTerminalBenchDto? = null,
+    val reasoning: Boolean = false,
     val attachment: Boolean = false,
     val mayTrainOnYourPrompts: Boolean = false,
 ) {

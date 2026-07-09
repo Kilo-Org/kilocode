@@ -4,6 +4,7 @@ import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -46,6 +47,17 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("/test/.kilo/plans/a.md"), rpc.opened)
     }
 
+    fun `test openPath passes line and column to backend`() = runBlocking {
+        rpc.fileMatches = listOf(WorkspaceFileDto("/test/src/Foo.kt", "Foo.kt"))
+
+        val ok = withContext(Dispatchers.Default) {
+            service.openPath("/test", "src/Foo.kt", line = 12, column = 3)
+        }
+
+        assertTrue(ok)
+        assertEquals(listOf(FakeWorkspaceRpcApi.Opened("/test/src/Foo.kt", 12, 3)), rpc.openedFiles)
+    }
+
     fun `test openPath returns false when no match exists`() = runBlocking {
         val ok = withContext(Dispatchers.Default) {
             service.openPath("/test", ".kilo/plans/missing.md")
@@ -66,5 +78,23 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
         assertFalse(ok)
         assertEquals(listOf("/test/.kilo/plans/a.md"), rpc.opened)
+    }
+
+    fun `test searchFiles rethrows cancellation`() = runBlocking {
+        val err = CancellationException("stale completion")
+        rpc.search = { throw err }
+
+        val seen = try {
+            withContext(Dispatchers.Default) {
+                service.searchFiles("/test", "dep")
+            }
+            fail("expected cancellation")
+            null
+        } catch (e: CancellationException) {
+            e
+        }
+
+        assertEquals(err.message, seen?.message)
+        assertEquals(listOf("dep"), rpc.searchQueries)
     }
 }

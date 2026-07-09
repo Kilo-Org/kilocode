@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageErrorDto
+import ai.kilocode.rpc.dto.SessionStatusDto
 
 /**
  * Verifies that:
@@ -157,5 +158,52 @@ class ProgressTrackingTest : SessionControllerTestBase() {
         assertNotNull(last)
         val text = (last!!.state as SessionState.Busy).text
         assertTrue(text.contains("Running", ignoreCase = true))
+    }
+
+    fun `test PartUpdated clears Retry back to Busy`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.SessionStatusChanged(
+            "ses_test",
+            SessionStatusDto("retry", "The usage limit has been reached", attempt = 4, next = 0L),
+        ))
+        assertTrue(m.model.state is SessionState.Retry)
+
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
+        emit(ChatEventDto.PartUpdated("ses_test", part("p1", "ses_test", "msg1", "text", text = "hello")))
+
+        assertSession(
+            """
+            assistant#msg1
+            text#p1:
+              hello
+
+            [code] [kilo/gpt-5] [busy] [writing response]
+            """,
+            m,
+        )
+    }
+
+    fun `test PartUpdated clears Offline back to Busy`() {
+        val (m, _, _) = prompted()
+
+        emit(ChatEventDto.SessionStatusChanged(
+            "ses_test",
+            SessionStatusDto("offline", "Connection offline", requestID = "req1"),
+        ))
+        assertTrue(m.model.state is SessionState.Offline)
+
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
+        emit(ChatEventDto.PartUpdated("ses_test", part("p1", "ses_test", "msg1", "tool", tool = "bash")))
+
+        assertSession(
+            """
+            assistant#msg1
+            tool#p1 bash [PENDING]
+
+            [code] [kilo/gpt-5] [busy] [running commands]
+            """,
+            m,
+        )
     }
 }

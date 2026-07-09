@@ -58,7 +58,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [projectConfig, setProjectConfig] = createSignal<Config>({})
   const [settings, setSettings] = createSignal<Record<string, unknown>>({})
-  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false })
+  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false, sandboxControls: false })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
@@ -96,6 +96,12 @@ export const ConfigProvider: ParentComponent = (props) => {
       })
       return
     }
+    if (message.type === "indexingSettingsLoaded") {
+      mergeSettings({
+        "indexing.showButtonWhenDisabled": message.settings.showButtonWhenDisabled,
+      })
+      return
+    }
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
@@ -105,6 +111,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
       setFeatures(message.features)
       setSaved(message.config)
+      if (message.settings) mergeSettings(message.settings)
       if (message.globalConfig !== undefined) {
         setGlobalConfig(mergeScopedConfig(message.globalConfig, globalDraft()))
         setSavedGlobal(message.globalConfig)
@@ -155,6 +162,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         }
         setFeatures(message.features)
       }
+      if (message.settings) mergeSettings(message.settings)
       setSaved(message.config)
       return
     }
@@ -177,6 +185,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const requestInitialData = () => {
     vscode.postMessage({ type: "requestConfig" })
     vscode.postMessage({ type: "requestAutocompleteSettings" })
+    vscode.postMessage({ type: "requestIndexingSettings" })
   }
 
   // Request config immediately; if the extension's httpClient is not yet ready,

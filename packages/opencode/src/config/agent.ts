@@ -17,6 +17,7 @@ import { Bus } from "@/bus"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import type { Warning } from "./config"
+import { Requirements } from "@/kilocode/agent-requirements"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
@@ -47,6 +48,14 @@ const AgentSchema = Schema.StructWithRest(
     }),
     // kilocode_change end
     mode: Schema.optional(Schema.Literals(["subagent", "primary", "all"])),
+    // kilocode_change start - typed metadata carriers so they never fall into `options` (provider params)
+    displayName: Schema.optional(Schema.String).annotate({
+      description: "Human-readable name shown in the UI (e.g. for organization or marketplace agents)",
+    }),
+    source: Schema.optional(Schema.String).annotate({
+      description: "Origin marker for managed agents (organization | global | project)",
+    }),
+    // kilocode_change end
     hidden: Schema.optional(Schema.Boolean).annotate({
       description: "Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)",
     }),
@@ -61,6 +70,7 @@ const AgentSchema = Schema.StructWithRest(
     // kilocode_change end
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
     permission: Schema.optional(ConfigPermission.Info),
+    requirements: Schema.optional(Requirements), // kilocode_change
   }),
   [Schema.Record(Schema.String, Schema.Any)],
 )
@@ -74,6 +84,8 @@ const KNOWN_KEYS = new Set([
   "temperature",
   "top_p",
   "mode",
+  "displayName", // kilocode_change
+  "source", // kilocode_change
   "hidden",
   "color",
   "steps",
@@ -82,6 +94,7 @@ const KNOWN_KEYS = new Set([
   "permission",
   "disable",
   "tools",
+  "requirements", // kilocode_change
 ])
 
 // Post-parse normalisation:
@@ -121,8 +134,8 @@ export const Info = AgentSchema.pipe(
 ).annotate({ identifier: "AgentConfig" })
 export type Info = Schema.Schema.Type<typeof Info>
 
-// kilocode_change start
-export async function load(dir: string, warnings?: Warning[]) {
+// kilocode_change start - trusted gates {env:}; fileScope confines untrusted agent prompt {file:} reads
+export async function load(dir: string, warnings?: Warning[], trusted?: boolean, fileScope?: ConfigVariable.FileScope) {
   // kilocode_change end
   const result: Record<string, Info> = {}
   for (const item of await Glob.scan("{agent,agents}/**/*.md", {
@@ -155,7 +168,9 @@ export async function load(dir: string, warnings?: Warning[]) {
 
     const name = configEntryNameFromPath(path.relative(dir, item), ["agent/", "agents/"])
 
-    // kilocode_change start - substitute agent prompt variables relative to the agent file
+    // kilocode_change start - substitute agent prompt variables relative to the agent file. Project agents are
+    // untrusted (no {env:}, {file:} confined to fileScope.root); a rejected substitution must skip only this
+    // agent with a warning, not fail the whole config load, mirroring the frontmatter-parse handling above.
     const prompt = await ConfigVariable.substitute({
       text: md.content.trim(),
       type: "virtual",
@@ -163,7 +178,17 @@ export async function load(dir: string, warnings?: Warning[]) {
       source: item,
       missing: "empty",
       escapeJson: false,
+      trusted,
+      fileScope,
+    }).catch((err): string | undefined => {
+      const message =
+        (ConfigError.InvalidError.isInstance(err) ? err.data.message : undefined) ??
+        `Failed to substitute variables in agent ${item}`
+      if (warnings) warnings.push({ path: item, message })
+      log.error("failed to substitute agent prompt", { agent: item, err })
+      return undefined
     })
+    if (prompt === undefined) continue
     const config = {
       name,
       ...md.data,

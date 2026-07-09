@@ -397,25 +397,26 @@ export const McpLogoutCommand = effectCmd({
 })
 
 async function resolveConfigPath(baseDir: string, global = false) {
-  // kilocode_change start - prefer kilo.json/.kilo over opencode.json/.opencode
-  // Check for existing config files (prefer .jsonc over .json, check .kilo/ and .opencode/ subdirectory too)
-  const candidates = [
-    path.join(baseDir, "kilo.json"),
+  // kilocode_change start - prefer supported Kilo config directories over root files
+  const roots = [
     path.join(baseDir, "kilo.jsonc"),
-    path.join(baseDir, "opencode.json"),
+    path.join(baseDir, "kilo.json"),
     path.join(baseDir, "opencode.jsonc"),
+    path.join(baseDir, "opencode.json"),
   ]
-
-  if (!global) {
-    candidates.push(
-      path.join(baseDir, ".kilo", "kilo.json"),
-      path.join(baseDir, ".kilo", "kilo.jsonc"),
-      path.join(baseDir, ".kilo", "opencode.json"),
-      path.join(baseDir, ".kilo", "opencode.jsonc"),
-      path.join(baseDir, ".opencode", "opencode.json"),
-      path.join(baseDir, ".opencode", "opencode.jsonc"),
-    )
-  }
+  const candidates = global
+    ? roots
+    : [
+        path.join(baseDir, ".kilo", "kilo.jsonc"),
+        path.join(baseDir, ".kilo", "kilo.json"),
+        path.join(baseDir, ".kilo", "opencode.jsonc"),
+        path.join(baseDir, ".kilo", "opencode.json"),
+        path.join(baseDir, ".kilocode", "kilo.jsonc"),
+        path.join(baseDir, ".kilocode", "kilo.json"),
+        path.join(baseDir, ".kilocode", "opencode.jsonc"),
+        path.join(baseDir, ".kilocode", "opencode.json"),
+        ...roots,
+      ]
 
   for (const candidate of candidates) {
     if (await Filesystem.exists(candidate)) {
