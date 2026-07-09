@@ -5,6 +5,8 @@ import { isRecord } from "@/util/record"
 import { OpenAIWebSocket } from "./ws"
 
 export const TITLE_HEADER = "x-kilo-title"
+export const RESPONSES_LITE_HEADER = "x-openai-internal-codex-responses-lite"
+export const RESPONSES_LITE_CLIENT_METADATA = "ws_request_header_x_openai_internal_codex_responses_lite"
 
 const log = Log.create({ service: "plugin.openai.ws" })
 
@@ -105,7 +107,16 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
       })
       const response = OpenAIWebSocket.streamResponsesWebSocket({
         socket: entry.socket,
-        body,
+        body:
+          internalHeaders[RESPONSES_LITE_HEADER] === "true"
+            ? {
+                ...body,
+                client_metadata: {
+                  ...(isRecord(body.client_metadata) ? body.client_metadata : {}),
+                  [RESPONSES_LITE_CLIENT_METADATA]: "true",
+                },
+              }
+            : body,
         idleTimeout,
         signal: init?.signal ?? undefined,
         onFirstEvent: () => resolveFirstEvent(true),
