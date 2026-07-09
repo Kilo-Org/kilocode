@@ -46,6 +46,11 @@ const variant = (item: ProviderUsageSnapshot) => {
   return "normal" as const
 }
 
+const order = (items: ProviderUsageSnapshot[]) =>
+  [...items].sort(
+    (left, right) => Number(left.sourceKind !== "kilo_managed") - Number(right.sourceKind !== "kilo_managed"),
+  )
+
 const UsageCard: Component<{
   item: ProviderUsageSnapshot
   onOpen: (url: string) => void
@@ -354,7 +359,7 @@ export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) =>
                   </Show>
                 }
               >
-                <For each={data().items}>
+                <For each={order(data().items)}>
                   {(item) => <UsageCard item={item} onOpen={props.onOpen} language={language} />}
                 </For>
               </Show>
