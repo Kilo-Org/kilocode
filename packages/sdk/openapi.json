@@ -14387,16 +14387,6 @@
                 }
               }
             }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_Unauthorized"
-                }
-              }
-            }
           }
         },
         "description": "List image-capable models from the Kilo Gateway OpenRouter passthrough",
@@ -14404,7 +14394,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.models.images({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.models.images({\n  ...\n})"
           }
         ]
       }
@@ -15565,6 +15555,249 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.notebook.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/ide-lsp": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.ideLsp.list",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending IDE code intelligence requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IdeLspRequest"
+                  },
+                  "description": "Pending IDE code intelligence requests"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "List pending IDE code intelligence requests for the routed workspace.",
+        "summary": "List pending IDE code intelligence requests",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.ideLsp.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/ide-lsp/{requestID}/reply": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.ideLsp.reply",
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/IdeLspRequestID"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "IDE code intelligence reply accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "IDE code intelligence reply accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Complete a pending IDE code intelligence request with a structured result.",
+        "summary": "Reply to an IDE code intelligence request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "result": {
+                    "$ref": "#/components/schemas/IdeLspResult"
+                  }
+                },
+                "required": ["result"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.ideLsp.reply({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/ide-lsp/{requestID}/reject": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.ideLsp.reject",
+        "parameters": [
+          {
+            "name": "requestID",
+            "in": "path",
+            "schema": {
+              "$ref": "#/components/schemas/IdeLspRequestID"
+            },
+            "required": true
+          },
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "IDE code intelligence rejection accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "IDE code intelligence rejection accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Complete a pending IDE code intelligence request with a structured host error.",
+        "summary": "Reject an IDE code intelligence request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "$ref": "#/components/schemas/IdeLspFailure"
+                  }
+                },
+                "required": ["error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.ideLsp.reject({\n  ...\n})"
           }
         ]
       }
@@ -20213,6 +20446,12 @@
             "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
           },
           {
+            "$ref": "#/components/schemas/EventKilocodeIdeLspRequested"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeIdeLspCancelled"
+          },
+          {
             "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
           },
           {
@@ -20814,6 +21053,51 @@
           }
         },
         "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "IdeLspRequestID": {
+        "type": "string"
+      },
+      "IdeLspRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/IdeLspRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "goToDefinition",
+              "findReferences",
+              "goToImplementation",
+              "workspaceSymbol",
+              "documentSymbol",
+              "typeHierarchy"
+            ]
+          },
+          "filePath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "character": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": ["id", "sessionID", "operation", "filePath"],
         "additionalProperties": false
       },
       "NotebookRequestID": {
@@ -23396,6 +23680,12 @@
                 "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
               },
               {
+                "$ref": "#/components/schemas/EventKilocodeIdeLspRequested"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeIdeLspCancelled"
+              },
+              {
                 "$ref": "#/components/schemas/EventKilocodeNotebookRequested"
               },
               {
@@ -25272,6 +25562,9 @@
                 "type": "boolean"
               },
               "native_notebook_tools": {
+                "type": "boolean"
+              },
+              "ide_code_intelligence": {
                 "type": "boolean"
               },
               "speech_to_text_model": {
@@ -28189,6 +28482,94 @@
         "required": ["agent", "directory", "enabled", "state", "skills", "mcps", "vscode_extensions"],
         "additionalProperties": false
       },
+      "IdeLspEntry": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "filePath": {
+            "type": "string"
+          },
+          "startLine": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "endLine": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "preview": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": ["filePath", "startLine", "endLine"],
+        "additionalProperties": false
+      },
+      "IdeLspResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "goToDefinition",
+              "findReferences",
+              "goToImplementation",
+              "workspaceSymbol",
+              "documentSymbol",
+              "typeHierarchy"
+            ]
+          },
+          "indexing": {
+            "type": "boolean"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdeLspEntry"
+            },
+            "maxItems": 500
+          },
+          "supertypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdeLspEntry"
+            },
+            "maxItems": 500
+          },
+          "subtypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdeLspEntry"
+            },
+            "maxItems": 500
+          }
+        },
+        "required": ["operation", "entries"],
+        "additionalProperties": false
+      },
+      "IdeLspFailure": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["cancelled", "disconnected", "timeout", "indexing", "invalid_path", "not_found", "unsupported"]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      },
       "NotebookOutput": {
         "type": "object",
         "properties": {
@@ -30849,6 +31230,55 @@
               }
             },
             "required": ["requestID", "sessionID", "mode", "tasks"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventKilocodeIdeLspRequested": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.ideLsp.requested"]
+          },
+          "properties": {
+            "$ref": "#/components/schemas/IdeLspRequest"
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventKilocodeIdeLspCancelled": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.ideLsp.cancelled"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "requestID": {
+                "$ref": "#/components/schemas/IdeLspRequestID"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["cancelled", "disposed", "timeout"]
+              }
+            },
+            "required": ["requestID", "sessionID", "reason"],
             "additionalProperties": false
           }
         },

@@ -60,6 +60,7 @@ import { DataMigration } from "@/data-migration"
 import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { IdeLsp } from "@/kilocode/ide-lsp/service" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 
 const CoreLayer = Layer.mergeAll(
@@ -87,6 +88,7 @@ const CoreLayer = Layer.mergeAll(
 
 const SessionLayer = Layer.mergeAll(
   Question.defaultLayer,
+  IdeLsp.defaultLayer, // kilocode_change
   Notebook.defaultLayer, // kilocode_change
   Permission.defaultLayer,
   Todo.defaultLayer,

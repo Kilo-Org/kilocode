@@ -404,6 +404,9 @@ export const Info = Schema.Struct({
       native_notebook_tools: Schema.optional(Schema.Boolean).annotate({
         description: "Enable native tools for reading, editing, and executing VS Code notebooks",
       }),
+      ide_code_intelligence: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable IntelliJ PSI-backed code-intelligence tool (JetBrains only)",
+      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),

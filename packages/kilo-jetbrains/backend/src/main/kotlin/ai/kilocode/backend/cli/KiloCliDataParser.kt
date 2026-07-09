@@ -90,6 +90,33 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import java.util.concurrent.ConcurrentHashMap
 
+data class IdeLspRequestInfo(
+    val id: String,
+    val sessionID: String,
+    val operation: String,
+    val filePath: String,
+    val line: Int?,
+    val character: Int?,
+    val query: String?,
+)
+
+data class IdeLspEntryInfo(
+    val name: String? = null,
+    val kind: String? = null,
+    val filePath: String,
+    val startLine: Int,
+    val endLine: Int,
+    val preview: String? = null,
+)
+
+data class IdeLspResultInfo(
+    val operation: String,
+    val indexing: Boolean = false,
+    val entries: List<IdeLspEntryInfo> = emptyList(),
+    val supertypes: List<IdeLspEntryInfo>? = null,
+    val subtypes: List<IdeLspEntryInfo>? = null,
+)
+
 /**
  * Stateless parser that centralizes all CLI server response parsing.
  *
@@ -121,6 +148,62 @@ object KiloCliDataParser {
      */
     fun extractEventType(data: String): String =
         TYPE_REGEX.find(data)?.groupValues?.get(1) ?: "unknown"
+
+    fun extractDirectory(data: String): String? =
+        tryParseObject(data)?.str("directory")
+
+    fun parseIdeLspRequestId(data: String): String? {
+        val obj = tryParseObject(data) ?: return null
+        val payload = obj["payload"]?.jsonObject ?: obj
+        val props = payload["properties"]?.jsonObject ?: payload
+        return props.str("requestID") ?: props.str("id")
+    }
+
+    fun parseIdeLspRequests(raw: String): List<IdeLspRequestInfo> {
+        val arr = tryParseArray(raw) ?: return emptyList()
+        return arr.mapNotNull { elem ->
+            val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            IdeLspRequestInfo(
+                id = obj.str("id") ?: return@mapNotNull null,
+                sessionID = obj.str("sessionID") ?: "",
+                operation = obj.str("operation") ?: return@mapNotNull null,
+                filePath = obj.str("filePath") ?: return@mapNotNull null,
+                line = obj.long("line")?.safeInt(),
+                character = obj.long("character")?.safeInt(),
+                query = obj.str("query"),
+            )
+        }
+    }
+
+    fun buildIdeLspReplyJson(result: IdeLspResultInfo): String =
+        """{"result":${buildIdeLspResultJson(result)}}"""
+
+    fun buildIdeLspRejectJson(code: String, message: String): String =
+        """{"error":{"code":${escape(code)},"message":${escape(message)}}}"""
+
+    private fun buildIdeLspResultJson(result: IdeLspResultInfo): String {
+        val fields = mutableListOf(
+            "\"operation\":${escape(result.operation)}",
+            "\"entries\":${buildIdeLspEntriesJson(result.entries)}",
+        )
+        if (result.indexing) fields += "\"indexing\":true"
+        result.supertypes?.let { fields += "\"supertypes\":${buildIdeLspEntriesJson(it)}" }
+        result.subtypes?.let { fields += "\"subtypes\":${buildIdeLspEntriesJson(it)}" }
+        return "{${fields.joinToString(",")}}"
+    }
+
+    private fun buildIdeLspEntriesJson(entries: List<IdeLspEntryInfo>): String =
+        entries.joinToString(prefix = "[", postfix = "]") { entry ->
+            val fields = mutableListOf(
+                "\"filePath\":${escape(entry.filePath)}",
+                "\"startLine\":${entry.startLine}",
+                "\"endLine\":${entry.endLine}",
+            )
+            entry.name?.let { fields += "\"name\":${escape(it)}" }
+            entry.kind?.let { fields += "\"kind\":${escape(it)}" }
+            entry.preview?.let { fields += "\"preview\":${escape(it)}" }
+            "{${fields.joinToString(",")}}"
+        }
 
     /**
      * Parse an SSE chat event into a [ChatEventDto].

@@ -14,6 +14,8 @@ export type Event =
   | EventTuiSessionSelect
   | EventSandboxStatusChanged
   | EventKilocodeAgentManagerStart
+  | EventKilocodeIdeLspRequested
+  | EventKilocodeIdeLspCancelled
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventIndexingStatus
@@ -198,6 +200,24 @@ export type EventTuiSessionSelect = {
      */
     sessionID: string
   }
+}
+
+export type IdeLspRequestId = string
+
+export type IdeLspRequest = {
+  id: IdeLspRequestId
+  sessionID: string
+  operation:
+    | "goToDefinition"
+    | "findReferences"
+    | "goToImplementation"
+    | "workspaceSymbol"
+    | "documentSymbol"
+    | "typeHierarchy"
+  filePath: string
+  line?: number
+  character?: number
+  query?: string
 }
 
 export type NotebookRequestId = string
@@ -1047,6 +1067,8 @@ export type GlobalEvent = {
     | EventTuiSessionSelect
     | EventSandboxStatusChanged
     | EventKilocodeAgentManagerStart
+    | EventKilocodeIdeLspRequested
+    | EventKilocodeIdeLspCancelled
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventIndexingStatus
@@ -1706,6 +1728,7 @@ export type Config = {
     image_generation_model?: string
     agent_requirements?: boolean
     native_notebook_tools?: boolean
+    ide_code_intelligence?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
     primary_tools?: Array<string>
@@ -2648,6 +2671,34 @@ export type AgentRequirementResult = {
   }
 }
 
+export type IdeLspEntry = {
+  name?: string
+  kind?: string
+  filePath: string
+  startLine: number
+  endLine: number
+  preview?: string
+}
+
+export type IdeLspResult = {
+  operation:
+    | "goToDefinition"
+    | "findReferences"
+    | "goToImplementation"
+    | "workspaceSymbol"
+    | "documentSymbol"
+    | "typeHierarchy"
+  indexing?: boolean
+  entries: Array<IdeLspEntry>
+  supertypes?: Array<IdeLspEntry>
+  subtypes?: Array<IdeLspEntry>
+}
+
+export type IdeLspFailure = {
+  code: "cancelled" | "disconnected" | "timeout" | "indexing" | "invalid_path" | "not_found" | "unsupported"
+  message: string
+}
+
 export type NotebookOutput = {
   mime: string
   text?: string
@@ -3444,6 +3495,22 @@ export type EventKilocodeAgentManagerStart = {
       }
       variant?: string
     }>
+  }
+}
+
+export type EventKilocodeIdeLspRequested = {
+  id: string
+  type: "kilocode.ideLsp.requested"
+  properties: IdeLspRequest
+}
+
+export type EventKilocodeIdeLspCancelled = {
+  id: string
+  type: "kilocode.ideLsp.cancelled"
+  properties: {
+    requestID: IdeLspRequestId
+    sessionID: string
+    reason: "cancelled" | "disposed" | "timeout"
   }
 }
 
@@ -11567,6 +11634,106 @@ export type KilocodeNotebookListResponses = {
 }
 
 export type KilocodeNotebookListResponse = KilocodeNotebookListResponses[keyof KilocodeNotebookListResponses]
+
+export type KilocodeIdeLspListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/ide-lsp"
+}
+
+export type KilocodeIdeLspListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeIdeLspListError = KilocodeIdeLspListErrors[keyof KilocodeIdeLspListErrors]
+
+export type KilocodeIdeLspListResponses = {
+  /**
+   * Pending IDE code intelligence requests
+   */
+  200: Array<IdeLspRequest>
+}
+
+export type KilocodeIdeLspListResponse = KilocodeIdeLspListResponses[keyof KilocodeIdeLspListResponses]
+
+export type KilocodeIdeLspReplyData = {
+  body?: {
+    result: IdeLspResult
+  }
+  path: {
+    requestID: IdeLspRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/ide-lsp/{requestID}/reply"
+}
+
+export type KilocodeIdeLspReplyErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeIdeLspReplyError = KilocodeIdeLspReplyErrors[keyof KilocodeIdeLspReplyErrors]
+
+export type KilocodeIdeLspReplyResponses = {
+  /**
+   * IDE code intelligence reply accepted
+   */
+  200: boolean
+}
+
+export type KilocodeIdeLspReplyResponse = KilocodeIdeLspReplyResponses[keyof KilocodeIdeLspReplyResponses]
+
+export type KilocodeIdeLspRejectData = {
+  body?: {
+    error: IdeLspFailure
+  }
+  path: {
+    requestID: IdeLspRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/ide-lsp/{requestID}/reject"
+}
+
+export type KilocodeIdeLspRejectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeIdeLspRejectError = KilocodeIdeLspRejectErrors[keyof KilocodeIdeLspRejectErrors]
+
+export type KilocodeIdeLspRejectResponses = {
+  /**
+   * IDE code intelligence rejection accepted
+   */
+  200: boolean
+}
+
+export type KilocodeIdeLspRejectResponse = KilocodeIdeLspRejectResponses[keyof KilocodeIdeLspRejectResponses]
 
 export type KilocodeNotebookReplyData = {
   body?: {

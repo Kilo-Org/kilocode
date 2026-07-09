@@ -70,6 +70,53 @@ class KiloCliDataParserTest {
             assertEquals("unknown", KiloCliDataParser.extractEventType(""))
         }
 
+        @Test
+        fun `ide lsp event helpers - parse directory and cancel id`() {
+            val data = """{
+                "directory": "/repo",
+                "payload": {
+                    "type": "kilocode.ideLsp.cancelled",
+                    "properties": { "requestID": "ilr_1", "reason": "cancelled" }
+                }
+            }"""
+
+            assertEquals("/repo", KiloCliDataParser.extractDirectory(data))
+            assertEquals("ilr_1", KiloCliDataParser.parseIdeLspRequestId(data))
+        }
+
+        @Test
+        fun `ide lsp requests - parse list response`() {
+            val result = KiloCliDataParser.parseIdeLspRequests(
+                """[{"id":"ilr_1","sessionID":"ses_1","operation":"goToDefinition","filePath":"/repo/A.kt","line":4,"character":2}]"""
+            )
+
+            assertEquals(1, result.size)
+            assertEquals("ilr_1", result[0].id)
+            assertEquals("goToDefinition", result[0].operation)
+            assertEquals("/repo/A.kt", result[0].filePath)
+            assertEquals(4, result[0].line)
+            assertEquals(2, result[0].character)
+        }
+
+        @Test
+        fun `ide lsp reply builders - emit CLI payload shapes`() {
+            val result = IdeLspResultInfo(
+                operation = "typeHierarchy",
+                entries = listOf(IdeLspEntryInfo(name = "A", kind = "PsiClass", filePath = "/repo/A.kt", startLine = 1, endLine = 3)),
+                supertypes = emptyList(),
+                subtypes = emptyList(),
+            )
+
+            assertEquals(
+                """{"result":{"operation":"typeHierarchy","entries":[{"filePath":"/repo/A.kt","startLine":1,"endLine":3,"name":"A","kind":"PsiClass"}],"supertypes":[],"subtypes":[]}}""",
+                KiloCliDataParser.buildIdeLspReplyJson(result),
+            )
+            assertEquals(
+                """{"error":{"code":"invalid_path","message":"outside workspace"}}""",
+                KiloCliDataParser.buildIdeLspRejectJson("invalid_path", "outside workspace"),
+            )
+        }
+
         // ---- parseChatEvent — GlobalEvent wrapper ----
 
         @Test
