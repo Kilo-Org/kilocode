@@ -8,7 +8,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import DeviceAuthCard from "./DeviceAuthCard"
 import type { ProfileData, ProviderUsageData, DeviceAuthState } from "../../types/messages"
-import { ProviderUsageCards } from "./ProviderUsageCards"
+import { PersonalTopUpsCard, ProviderUsageCards } from "./ProviderUsageCards"
 
 export type { ProfileData }
 
@@ -291,6 +291,8 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                   </Card>
                 )}
               </Show>
+
+              <PersonalTopUpsCard data={props.providerUsage} onOpen={openExternal} />
 
               {/* Action buttons */}
               <div style={{ display: "flex", gap: "8px" }}>
