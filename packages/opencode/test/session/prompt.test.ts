@@ -295,6 +295,89 @@ describe("session.prompt regression", () => {
     }
   })
 
+  test("routes a leading @mention deterministically without an orchestrator model turn", async () => {
+    let calls = 0
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) {
+          return new Response("not found", { status: 404 })
+        }
+        calls++
+        return new Response(chat("FRONTEND_OK"), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: {
+                    apiKey: "test-key",
+                    baseURL: `${server.url.origin}/v1`,
+                  },
+                },
+              },
+              agent: {
+                orchestrator: {
+                  model: "alibaba/qwen-plus",
+                },
+                frontend: {
+                  mode: "subagent",
+                  model: "alibaba/qwen-plus",
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const session = await Session.create({ title: "Deterministic routing regression" })
+          const result = await SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "orchestrator",
+            parts: [
+              { type: "text", text: "@frontend No tools. Say exactly: FRONTEND_OK" },
+              {
+                type: "agent",
+                name: "frontend",
+                source: { value: "@frontend", start: 0, end: 9 },
+              },
+            ],
+          })
+
+          expect(result.info.role).toBe("assistant")
+
+          const toolPart = result.parts.find((part) => part.type === "tool" && part.tool === "task")
+          expect(toolPart).toBeDefined()
+          if (toolPart && toolPart.type === "tool" && toolPart.state.status === "completed") {
+            expect(toolPart.state.input.subagent_type).toBe("frontend")
+          }
+
+          const msgs = await Session.messages({ sessionID: session.id })
+          expect(msgs.filter((msg) => msg.info.role === "assistant")).toHaveLength(1)
+          expect(calls).toBe(1)
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
+
   test("records aborted errors when prompt is cancelled mid-stream", async () => {
     const ready = defer<void>()
     const server = Bun.serve({

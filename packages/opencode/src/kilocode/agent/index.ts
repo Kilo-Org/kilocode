@@ -16,6 +16,7 @@ import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
 import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
+import PROMPT_FRONTEND from "./prompt/frontend.txt" // kilocode_change - specialist subagents
 
 // Kilo-specific read-only safety contract prepended to the explore agent prompt.
 // Keeps the upstream explore.txt untouched; the contract is layered on here so the
@@ -329,6 +330,27 @@ export function patchAgents(
       })(),
     }
   }
+
+  // kilocode_change start - keep frontend available in clean/pure source lanes
+  agents.frontend = {
+    name: "frontend",
+    description:
+      "UI/frontend specialist for SolidJS webviews, kilo-ui, app/desktop renderers, and @opentui/solid TUI. Prefer over general for component/style/JSX work.",
+    prompt: PROMPT_FRONTEND,
+    options: {},
+    permission: Permission.merge(
+      defaults,
+      Permission.fromConfig({
+        todowrite: "deny",
+        task: "deny",
+      }),
+      user,
+    ),
+    mode: "subagent",
+    native: true,
+    model: defaultModel, // kilocode_change - fall back to cfg.model
+  }
+  // kilocode_change end
 
   // kilocode_change start - only add native Kilo extras (debug/orchestrator/ask)
   // outside pure/clean mode so the configured roster is the only thing exposed.

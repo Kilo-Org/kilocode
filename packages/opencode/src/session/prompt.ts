@@ -575,6 +575,19 @@ export namespace SessionPrompt {
           } satisfies MessageV2.TextPart)
         }
 
+        // kilocode_change start - short-circuit after deterministic @mention
+        // routing so the orchestrator does not get a chance to answer the
+        // routed request directly after the task tool runs.
+        if (KiloSessionPrompt.consumeRoutedMention(lastUser.id)) {
+          log.info("short-circuit after routed @mention subtask", {
+            sessionID,
+            agent: task.agent,
+            userMessageID: lastUser.id,
+          })
+          break
+        }
+        // kilocode_change end
+
         continue
       }
 
@@ -1423,6 +1436,15 @@ export namespace SessionPrompt {
         part,
       })
     })
+
+    // kilocode_change start - deterministic @mention routing
+    await KiloSessionPrompt.routeLeadingAgentMention({
+      parts,
+      sessionID: input.sessionID,
+      agent,
+      messageID: info.id,
+    })
+    // kilocode_change end
 
     await Session.updateMessage(info)
     for (const part of parts) {
