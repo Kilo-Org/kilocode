@@ -60,15 +60,20 @@ describe("MiniMax usage normalization", () => {
     expect(direct.windows[0]?.remaining).not.toBe(1)
   })
 
-  test("treats status 3 as out of plan for direct and managed usage", () => {
+  test("omits video quotas while preserving image quota state", () => {
     const value = decode({
       base_resp: { status_code: 0 },
       model_remains: [
         {
           model_name: "video",
-          current_interval_total_count: 0,
-          current_interval_usage_count: 0,
-          current_interval_status: 3,
+          current_interval_remaining_percent: 100,
+          current_interval_status: 1,
+        },
+        {
+          model_name: "image",
+          current_interval_remaining_percent: 70,
+          current_interval_status: 1,
+          current_weekly_status: 3,
         },
         {
           model_name: "general",
@@ -81,8 +86,14 @@ describe("MiniMax usage normalization", () => {
     const direct = normalize(value, options)
     const managed = normalize(value, { ...options, sourceKind: "kilo_managed", planID: "minimax-token-plan-plus" })
 
-    expect(direct.windows.find((window) => window.id === "video-interval")?.state).toBe("not_in_plan")
-    expect(managed.windows.find((window) => window.id === "video-interval")?.state).toBe("not_in_plan")
+    expect(direct.windows.some((window) => window.resource === "video")).toBe(false)
+    expect(managed.windows.some((window) => window.resource === "video")).toBe(false)
+    expect(direct.windows.find((window) => window.id === "image-interval")).toMatchObject({
+      resource: "image",
+      remaining: 70,
+      state: "active",
+    })
+    expect(managed.windows.find((window) => window.id === "image-weekly")?.state).toBe("not_in_plan")
     expect(direct.windows.find((window) => window.id === "general-interval")?.state).toBe("unknown")
   })
 

@@ -206,12 +206,14 @@ export function normalize(
     planState?: UsageSnapshot["planState"]
   },
 ): UsageSnapshot {
-  const rows = native.model_remains.flatMap((row) =>
-    (["interval", "weekly"] as const).flatMap((kind) => {
-      const value = window(row, kind, input.fetchedAt)
-      return value ? [value] : []
-    }),
-  )
+  const rows = native.model_remains
+    .filter((row) => row.model_name !== "video")
+    .flatMap((row) =>
+      (["interval", "weekly"] as const).flatMap((kind) => {
+        const value = window(row, kind, input.fetchedAt)
+        return value ? [value] : []
+      }),
+    )
   const windows = rows.map((row) => row.value)
   const availabilityState = windows.some((item) => item.state === "active" || item.state === "unlimited")
     ? "available"
