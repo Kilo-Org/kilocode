@@ -29,6 +29,8 @@ You can edit MCP settings from the Kilo Code settings UI:
 
 From here you can add, edit, enable/disable, and delete MCP servers. Changes are written directly to the appropriate config file.
 
+If the UI cannot add a server, edit a Kilo config file directly and add the server under the top-level `mcp` key. For project-specific servers, edit `./kilo.json` or `./kilo.jsonc` if your project already has one; otherwise use `./.kilo/kilo.json` or `./.kilo/kilo.jsonc` for a cleaner setup. For servers you want in every workspace, use `~/.config/kilo/kilo.json` or `~/.config/kilo/kilo.jsonc`.
+
 ### Config Format
 
 MCP servers are configured under the `mcp` key in `kilo.jsonc`:
@@ -82,18 +84,6 @@ The CLI accepts several config filenames. The recommended file is `kilo.json`:
 | **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`, `opencode.jsonc`, `opencode.json` |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-MCP server configurations can be managed at two levels: **global** (applies across all workspaces) and **project-level** (specific to a single project). Project-level configuration takes precedence over global settings.
-
-| Scope | Path | Description |
-|---|---|---|
-| **Global** | `mcp_settings.json` | Accessible via VS Code settings. Applies across all workspaces. |
-| **Project** | `.kilocode/mcp.json` | In your project root. Auto-detected by Kilo Code. |
-
-Project-level configs can be committed to version control to share with your team.
-
-{% /tab %}
 {% /tabs %}
 
 ## Configuration Format
@@ -121,29 +111,6 @@ Add MCP servers under the `mcp` key in your config file. Each server has a uniqu
 ```
 
 You can disable a server by setting `enabled` to `false` without removing it from your config.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-Both global and project-level files use a JSON format with a `mcpServers` object containing named server configurations:
-
-```json
-{
-  "mcpServers": {
-    "server1": {
-      "command": "python",
-      "args": ["/path/to/server.py"],
-      "env": {
-        "API_KEY": "your_api_key"
-      },
-      "alwaysAllow": ["tool1", "tool2"],
-      "disabled": false
-    }
-  }
-}
-```
-
-_Example of MCP Server config in Kilo Code (STDIO Transport)_
 
 {% /tab %}
 {% /tabs %}
@@ -205,25 +172,6 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 | `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-```json
-{
-  "mcpServers": {
-    "local-server": {
-      "command": "node",
-      "args": ["/path/to/server.js"],
-      "env": {
-        "API_KEY": "your_api_key"
-      },
-      "alwaysAllow": ["tool1", "tool2"],
-      "disabled": false
-    }
-  }
-}
-```
-
-{% /tab %}
 {% /tabs %}
 
 ### Streamable HTTP Transport
@@ -267,25 +215,6 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 | `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
 | `headers` | Object | No | HTTP headers to send with requests. |
 | `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-```json
-{
-  "mcpServers": {
-    "remote-server": {
-      "type": "streamable-http",
-      "url": "https://your-server-url.com/mcp",
-      "headers": {
-        "Authorization": "Bearer your-token"
-      },
-      "alwaysAllow": ["tool3"],
-      "disabled": false
-    }
-  }
-}
-```
 
 {% /tab %}
 {% /tabs %}
@@ -386,37 +315,6 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-### Editing MCP Settings Files
-
-You can edit both global and project-level MCP configuration files directly from the Kilo Code settings.
-
-1. Click the {% codicon name="gear" /%} icon in the top navigation of the Kilo Code pane to open `Settings`.
-2. Click the `Agent Behaviour` tab on the left side
-3. Select the `MCP Servers` sub-tab
-4. Click the appropriate button:
-   - **`Edit Global MCP`**: Opens the global `mcp_settings.json` file.
-   - **`Edit Project MCP`**: Opens the project-specific `.kilocode/mcp.json` file. If this file doesn't exist, Kilo Code will create it for you.
-
-{% image src="/docs/img/using-mcp-in-kilo-code/mcp-installed-config.png" alt="Edit Global MCP and Edit Project MCP buttons" width="600" caption="Edit Global MCP and Edit Project MCP buttons" /%}
-
-### Deleting a Server
-
-1. Press the {% codicon name="trash" /%} next to the MCP server you would like to delete
-2. Press the `Delete` button on the confirmation box
-
-{% image src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-5.png" alt="Delete confirmation box" width="400" caption="Delete confirmation box" /%}
-
-### Restarting a Server
-
-1. Press the {% codicon name="refresh" /%} button next to the MCP server you would like to restart
-
-### Enabling or Disabling a Server
-
-1. Press the {% codicon name="activate" /%} toggle switch next to the MCP server to enable/disable it
-
-{% /tab %}
 {% /tabs %}
 
 ### Network Timeout
@@ -430,15 +328,6 @@ Set the `timeout` field (in milliseconds) in the server's config entry. The defa
 {% tab label="CLI" %}
 
 Set the `timeout` field (in milliseconds) in the server's config entry. The default is 30000 (30 seconds).
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-To set the maximum time to wait for a response after a tool call to the MCP server:
-
-1. Click the `Network Timeout` pulldown at the bottom of the individual MCP server's config box and change the time. Default is 1 minute but it can be set between 30 seconds and 5 minutes.
-
-{% image src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-6.png" alt="Network Timeout pulldown" width="400" caption="Network Timeout pulldown" /%}
 
 {% /tab %}
 {% /tabs %}
@@ -483,19 +372,6 @@ Add `permission` entries to your config to auto-approve specific tools. MCP tool
   }
 }
 ```
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-MCP tool auto-approval works on a per-tool basis and is disabled by default. To configure auto-approval:
-
-1. First enable the global "Use MCP servers" auto-approval option in [auto-approving-actions](/docs/getting-started/settings/auto-approving-actions)
-2. Navigate to Settings > Agent Behaviour > MCP Servers, then locate the specific tool you want to auto-approve
-3. Check the `Always allow` checkbox next to the tool name
-
-{% image src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-7.png" alt="Always allow checkbox for MCP tools" width="120" caption="Always allow checkbox for MCP tools" /%}
-
-When enabled, Kilo Code will automatically approve this specific tool without prompting. Note that the global "Use MCP servers" setting takes precedence - if it's disabled, no MCP tools will be auto-approved.
 
 {% /tab %}
 {% /tabs %}
@@ -559,39 +435,6 @@ Use `npx` directly:
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
       "enabled": true
-    }
-  }
-}
-```
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-### Windows
-
-Use `cmd` as the command and put the rest of the invocation in `args`:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-puppeteer"]
-    }
-  }
-}
-```
-
-### macOS and Linux
-
-Use `npx` directly:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
     }
   }
 }
@@ -687,14 +530,6 @@ Example: "Analyze the performance of my API" might use an MCP tool that tests AP
 - **Permission Errors:** Ensure API keys and credentials are set in your `kilo.jsonc` config or via `{env:VARIABLE_NAME}` references.
 - **Tool Not Available:** Confirm the server is properly implementing the tool and it is not disabled (`"enabled": false`) in your config.
 - **Slow Performance:** Increase the `timeout` value for the specific MCP server in your config.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-- **Server Not Responding:** Check if the server process is running and verify network connectivity
-- **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).
-- **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
-- **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
 
 {% /tab %}
 {% /tabs %}

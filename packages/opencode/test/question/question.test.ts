@@ -1,10 +1,10 @@
-import { afterEach, expect } from "bun:test" // kilocode_change - blocking behavior now uses the scoped service test helper
+import { afterEach, expect } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer, Queue } from "effect"
 import { Question } from "../../src/question"
-import { Instance } from "../../src/project/instance"
+import { InstanceRef } from "../../src/effect/instance-ref"
 import { InstanceRuntime } from "../../src/project/instance-runtime"
 import { QuestionID } from "../../src/question/schema"
-import { disposeAllInstances, provideInstance, reloadTestInstance, tmpdirScoped } from "../fixture/fixture" // kilocode_change - blocking coverage no longer uses the Promise facade fixture
+import { disposeAllInstances, provideInstance, reloadTestInstance, tmpdirScoped } from "../fixture/fixture"
 import { SessionID } from "../../src/session/schema"
 import { testEffect } from "../lib/effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -213,22 +213,26 @@ it.instance(
   { git: true },
 )
 
-// kilocode_change start - preserve upstream unknown-request failure behavior during facade migration
 it.instance(
   "reply - fails for unknown requestID",
   () =>
     Effect.gen(function* () {
-      const id = QuestionID.make("que_unknown")
-      const exit = yield* replyEffect({ requestID: id, answers: [["Option 1"]] }).pipe(Effect.exit)
+      const exit = yield* replyEffect({
+        requestID: QuestionID.make("que_unknown"),
+        answers: [["Option 1"]],
+      }).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)
-      if (!Exit.isFailure(exit)) return
-      const err = Cause.squash(exit.cause)
-      expect(err).toBeInstanceOf(Question.NotFoundError)
-      if (err instanceof Question.NotFoundError) expect(err.requestID).toBe(id)
+      if (Exit.isFailure(exit)) {
+        expect(Cause.squash(exit.cause)).toMatchObject({ _tag: "Question.NotFoundError", requestID: "que_unknown" })
+        // kilocode_change start - preserve upstream unknown-request failure behavior during facade migration
+        const err = Cause.squash(exit.cause)
+        expect(err).toBeInstanceOf(Question.NotFoundError)
+        if (err instanceof Question.NotFoundError) expect(err.requestID).toBe(QuestionID.make("que_unknown"))
+        // kilocode_change end
+      }
     }),
   { git: true },
 )
-// kilocode_change end
 
 // reject tests
 
@@ -290,22 +294,23 @@ it.instance(
   { git: true },
 )
 
-// kilocode_change start - preserve upstream unknown-request failure behavior during facade migration
 it.instance(
   "reject - fails for unknown requestID",
   () =>
     Effect.gen(function* () {
-      const id = QuestionID.make("que_unknown")
-      const exit = yield* rejectEffect(id).pipe(Effect.exit)
+      const exit = yield* rejectEffect(QuestionID.make("que_unknown")).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)
-      if (!Exit.isFailure(exit)) return
-      const err = Cause.squash(exit.cause)
-      expect(err).toBeInstanceOf(Question.NotFoundError)
-      if (err instanceof Question.NotFoundError) expect(err.requestID).toBe(id)
+      if (Exit.isFailure(exit)) {
+        expect(Cause.squash(exit.cause)).toMatchObject({ _tag: "Question.NotFoundError", requestID: "que_unknown" })
+        // kilocode_change start - preserve upstream unknown-request failure behavior during facade migration
+        const err = Cause.squash(exit.cause)
+        expect(err).toBeInstanceOf(Question.NotFoundError)
+        if (err instanceof Question.NotFoundError) expect(err.requestID).toBe(QuestionID.make("que_unknown"))
+        // kilocode_change end
+      }
     }),
   { git: true },
 )
-// kilocode_change end
 
 // multiple questions tests
 
@@ -454,7 +459,10 @@ it.live("pending question rejects on instance dispose", () =>
     }).pipe(provideInstance(dir), Effect.forkScoped)
 
     expect(yield* waitForPending(1).pipe(provideInstance(dir))).toHaveLength(1)
-    const ctx = yield* Effect.sync(() => Instance.current).pipe(provideInstance(dir))
+    const ctx = yield* Effect.gen(function* () {
+      return yield* InstanceRef
+    }).pipe(provideInstance(dir))
+    if (!ctx) return yield* Effect.die(new Error("missing test instance"))
     yield* Effect.promise(() => InstanceRuntime.disposeInstance(ctx))
 
     const exit = yield* Fiber.await(fiber)

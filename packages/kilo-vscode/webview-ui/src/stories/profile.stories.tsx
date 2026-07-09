@@ -25,6 +25,7 @@ const loggedInProfile: ProfileData = {
     ],
   },
   balance: { balance: 42.5 },
+  kiloPass: null,
   currentOrgId: null,
 }
 
@@ -33,7 +34,13 @@ const personalProfile: ProfileData = {
     email: "solo@example.com",
     name: "Solo Dev",
   },
-  balance: { balance: 7.25 },
+  balance: { balance: 267.59 },
+  kiloPass: {
+    currentPeriodBaseCreditsUsd: 199,
+    currentPeriodUsageUsd: 73.27,
+    currentPeriodBonusCreditsUsd: 99.5,
+    nextBillingAt: "2026-07-01T00:00:00.000Z",
+  },
   currentOrgId: null,
 }
 

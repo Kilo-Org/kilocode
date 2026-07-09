@@ -23,15 +23,17 @@ export function openFileInEditor(
   prefix = "Kilo",
 ): void {
   const uri = vscode.Uri.file(filePath)
-  const target = Math.max(1, Math.floor(line ?? 1))
-  const col = column !== undefined && column > 0 ? column - 1 : 0
-  const pos = new vscode.Position(target - 1, col)
-  const selection = new vscode.Range(pos, pos)
+  const options: vscode.TextDocumentShowOptions = { viewColumn, preview: true }
+  if (line !== undefined && line > 0) {
+    const target = Math.max(1, Math.floor(line))
+    const col = column !== undefined && column > 0 ? column - 1 : 0
+    const pos = new vscode.Position(target - 1, col)
+    options.selection = new vscode.Range(pos, pos)
+  }
 
-  vscode.workspace.openTextDocument(uri).then(
-    (doc) => vscode.window.showTextDocument(doc, { viewColumn, preview: true, selection }),
-    (err) => console.error(`[Kilo New] ${prefix}: Failed to open file:`, uri.fsPath, err),
-  )
+  void vscode.commands
+    .executeCommand("vscode.open", uri, options)
+    .then(undefined, (err) => console.error(`[Kilo New] ${prefix}: Failed to open file:`, uri.fsPath, err))
 }
 
 export function openWorkspaceRelativeFile(relativePath: string, line?: number, column?: number): void {

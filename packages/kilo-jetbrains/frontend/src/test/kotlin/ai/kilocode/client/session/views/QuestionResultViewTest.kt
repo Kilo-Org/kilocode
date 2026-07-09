@@ -7,12 +7,16 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBTextArea
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
+import javax.swing.Icon
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.border.Border
 
@@ -102,6 +106,22 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         assertTrue(view.bodyText().contains("Manual verification, Unit tests"))
     }
 
+    fun `test answer rows keep standard gap after question text`() {
+        val view = QuestionResultView(completedTool(
+            input = mapOf("questions" to """[{"question":"Q1"}]"""),
+            metadata = mapOf("answers" to """[["A1"]]"""),
+        ))
+
+        view.toggle()
+        val root = view.node(0)
+        val body = root.node(1)
+        val row = body.node(0)
+        val text = row.components[0] as JBTextArea
+        val ins = text.border.getBorderInsets(text)
+
+        assertEquals(UiStyle.Gap.xs(), ins.bottom)
+    }
+
     fun `test label shows count of non-empty answers`() {
         val tool = completedTool(
             input = mapOf("questions" to """[{"question":"Q1"},{"question":"Q2"}]"""),
@@ -129,6 +149,24 @@ class QuestionResultViewTest : BasePlatformTestCase() {
 
         view.toggle()
         assertFalse("Should be collapsed after second toggle", view.isExpanded())
+    }
+
+    fun `test toggle uses right and down chevron icons`() {
+        val view = QuestionResultView(completedTool(
+            input = mapOf("questions" to """[{"question":"Q1"}]"""),
+            metadata = mapOf("answers" to """[["A1"]]"""),
+        ))
+
+        assertTrue(icons(view).contains(SessionViewIcons.chevronCollapsed))
+        assertTrue(icons(view).contains(SessionViewIcons.chevronRight))
+        val closed = SessionViewIcons.chevronCollapsed
+
+        view.toggle()
+
+        assertTrue(icons(view).contains(SessionViewIcons.chevronExpanded))
+        assertTrue(icons(view).contains(SessionViewIcons.chevronDown))
+        assertEquals(closed.iconWidth, SessionViewIcons.chevronExpanded.iconWidth)
+        assertEquals(closed.iconHeight, SessionViewIcons.chevronExpanded.iconHeight)
     }
 
     fun `test hover only changes header background`() {
@@ -160,7 +198,7 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
         )
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is QuestionResultView)
     }
@@ -170,14 +208,14 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = emptyMap(),
             metadata = emptyMap(),
         )
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is ToolView)
     }
 
     fun `test view factory falls back to tool view for running question`() {
         val tool = runningTool("question")
-        val view = ViewFactory.create(tool, {}) {}
+        val view = ViewFactory.create(tool, { _, _ -> }) {}
 
         assertTrue(view is ToolView)
     }
@@ -308,6 +346,17 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         assertEquals(rgb, Color(image.getRGB(0, 2), true).rgb)
         assertEquals(rgb, Color(image.getRGB(4, 2), true).rgb)
         assertEquals(rgb, Color(image.getRGB(2, 4), true).rgb)
+    }
+
+    private fun icons(component: Component): List<Icon> {
+        val found = mutableListOf<Icon>()
+        collect(component, found)
+        return found
+    }
+
+    private fun collect(component: Component, found: MutableList<Icon>) {
+        if (component is JLabel) component.icon?.let(found::add)
+        if (component is Container) component.components.forEach { collect(it, found) }
     }
 
 }

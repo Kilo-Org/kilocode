@@ -6,6 +6,7 @@ import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
+import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.UIManager
 
@@ -47,6 +48,65 @@ object UiStyle {
         fun arc() = JBUI.scale(8)
     }
 
+    /** Filled badge styles shared across JetBrains UI surfaces. */
+    object Badge {
+        interface Style {
+            fun bg(): Color
+
+            fun fg(): Color
+        }
+
+        object Primary : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.History.activityBadgeBackground",
+                JBUI.CurrentTheme.Link.Foreground.ENABLED,
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.History.activityBadgeForeground",
+                Color.WHITE,
+            )
+        }
+
+        object Secondary : Style {
+            override fun bg(): Color = JBColor.lazy {
+                UIManager.getColor("Badge.background")
+                    ?: UIManager.getColor("Label.infoBackground")
+                    ?: Colors.blend(Colors.contentBackground(), Colors.fg(), 0.16f)
+            }
+
+            override fun fg(): Color = JBColor.lazy {
+                UIManager.getColor("Badge.foreground")
+                    ?: UIManager.getColor("Label.infoForeground")
+                    ?: UIUtil.getLabelForeground()
+            }
+        }
+
+        object Highlight : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.ModelPicker.freeBadgeBackground",
+                JBColor(0x95D6AC, 0x7FCA99),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.ModelPicker.freeBadgeForeground",
+                JBColor.WHITE,
+            )
+        }
+
+        object Alert : Style {
+            override fun bg(): Color = JBColor.namedColor(
+                "Kilo.History.runningBadgeBackground",
+                JBColor(0xF5C542, 0x7A5A00),
+            )
+
+            override fun fg(): Color = JBColor.namedColor(
+                "Kilo.History.runningBadgeForeground",
+                JBColor(Color.BLACK, Color.WHITE),
+            )
+        }
+    }
+
     /** Theme-aware colors and color math used by multiple UI surfaces. */
     object Colors {
         fun bg(): Color = UIUtil.getPanelBackground()
@@ -72,36 +132,6 @@ object UiStyle {
                 ?: UIManager.getColor("ComboBox.nonEditableBackground")
                 ?: UIUtil.getPanelBackground()
         }
-
-        /** Filled badge surface using platform badge/info colors with a soft theme-derived fallback. */
-        fun badgeBg(): Color = JBColor.lazy {
-            UIManager.getColor("Badge.background")
-                ?: UIManager.getColor("Label.infoBackground")
-                ?: blend(contentBackground(), fg(), 0.16f)
-        }
-
-        /** Filled badge text color paired with [badgeBg]. */
-        fun badgeFg(): Color = JBColor(Color.BLACK, UIUtil.getLabelForeground())
-
-        fun runningBadgeBg(): Color = JBColor.namedColor(
-            "Kilo.History.runningBadgeBackground",
-            JBColor(0xF5C542, 0x7A5A00),
-        )
-
-        fun runningBadgeFg(): Color = JBColor.namedColor(
-            "Kilo.History.runningBadgeForeground",
-            JBColor(Color.BLACK, Color.WHITE),
-        )
-
-        fun activityBadgeBg(): Color = JBColor.namedColor(
-            "Kilo.History.activityBadgeBackground",
-            JBUI.CurrentTheme.Link.Foreground.ENABLED,
-        )
-
-        fun activityBadgeFg(): Color = JBColor.namedColor(
-            "Kilo.History.activityBadgeForeground",
-            Color.WHITE,
-        )
 
         /** Border color shared across contained panels. */
         fun contentBorder(): Color = JBColor.namedColor("Component.borderColor", JBColor.border())
@@ -129,6 +159,8 @@ object UiStyle {
         fun infoOverlayForeground(): Color = JBUI.CurrentTheme.NotificationInfo.foregroundColor()
 
         fun infoOverlayBorder(): Color = JBUI.CurrentTheme.NotificationInfo.borderColor()
+
+        fun actionHoverBackground(): Color = JBUI.CurrentTheme.ActionButton.hoverBackground()
 
         fun errorOverlayBackground(): Color = JBUI.CurrentTheme.NotificationError.backgroundColor()
 
@@ -196,6 +228,36 @@ object UiStyle {
     object Components {
         fun transparent(vararg components: JComponent) {
             components.forEach { it.isOpaque = false }
+        }
+
+        fun actionForeground(enabled: Boolean): Color = if (enabled) {
+            UIManager.getColor("Button.foreground") ?: UIUtil.getLabelForeground()
+        } else {
+            UIManager.getColor("Button.disabledText") ?: UIUtil.getContextHelpForeground()
+        }
+
+        fun actionBackground(): Color = UIManager.getColor("Button.background") ?: UIUtil.getPanelBackground()
+
+        fun actionBorder() = JBUI.Borders.compound(
+            JBUI.Borders.customLine(UIUtil.getBoundsColor()),
+            JBUI.Borders.empty(Gap.sm(), Gap.pad()),
+        )
+
+        fun actionLabel(component: JComponent, enabled: Boolean = component.isEnabled) {
+            component.foreground = actionForeground(enabled)
+            component.background = actionBackground()
+            component.border = actionBorder()
+            component.isOpaque = true
+        }
+
+        fun actionButton(button: AbstractButton) {
+            button.foreground = actionForeground(button.isEnabled)
+            button.background = actionBackground()
+            button.border = actionBorder()
+            button.isOpaque = true
+            button.isBorderPainted = true
+            button.isContentAreaFilled = false
+            button.isFocusPainted = false
         }
     }
 }

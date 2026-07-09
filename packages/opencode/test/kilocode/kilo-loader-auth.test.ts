@@ -4,10 +4,10 @@
 import { expect } from "bun:test"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { ModelsDev } from "../../src/provider/models"
-import * as CoreModels from "@opencode-ai/core/models"
+import * as CoreModels from "@opencode-ai/core/models-dev"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
-import { kiloCustomLoaders } from "../../src/kilocode/provider/provider"
+import { kiloCustomLoaders, patchKiloProviderPrivacy } from "../../src/kilocode/provider/provider"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
 import { Provider } from "../../src/provider/provider"
@@ -162,6 +162,21 @@ it.effect("enables a paid catalog when config apiKey is present", () =>
     const result = yield* load({ config: { provider: { kilo: { options: { apiKey: "test-key" } } } } })
     expect(result.autoload).toBe(true)
     expect(result.options).toEqual({})
+  }),
+)
+
+it.effect("denies provider data collection when prompt-training models are hidden", () =>
+  Effect.gen(function* () {
+    const result = yield* load({ config: { hide_prompt_training_models: true } })
+    expect(result.options).toEqual({ apiKey: "anonymous", dataCollection: "deny" })
+  }),
+)
+
+it.effect("keeps data collection denied after configured options are applied", () =>
+  Effect.sync(() => {
+    const provider = { options: { dataCollection: "allow", baseURL: "https://api.kilo.ai" } }
+    patchKiloProviderPrivacy(provider, { hide_prompt_training_models: true })
+    expect(provider.options).toEqual({ dataCollection: "deny", baseURL: "https://api.kilo.ai" })
   }),
 )
 

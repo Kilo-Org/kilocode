@@ -13,9 +13,17 @@ export const dict = {
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
 
-  // Provider dialog translations
-  "dialog.provider.group.recommended": "Recommended",
-  "dialog.provider.kilo.note": "Access 500+ AI models",
+  // Provider settings translations
+  "settings.providers.group.recommended": "Recommended",
+  "settings.providers.note.kilo": "Access 500+ AI models",
+  "settings.providers.note.opencode": "Curated models including Claude, GPT, Gemini and more",
+  "settings.providers.note.anthropic": "Direct access to Claude models, including Pro and Max",
+  "settings.providers.note.deepseek": "DeepSeek models for reasoning and coding tasks",
+  "settings.providers.note.copilot": "Claude models for coding assistance",
+  "settings.providers.note.openai": "GPT and Codex models with API key or ChatGPT login",
+  "settings.providers.note.google": "Gemini models for fast, structured responses",
+  "settings.providers.note.openrouter": "Access all supported models from one provider",
+  "settings.providers.note.vercel": "Unified access to AI models with smart routing",
 
   // Reasoning block label
   "ui.permission.run": "Run",
@@ -33,9 +41,26 @@ export const dict = {
   "marketplace.card.showMore": "Show more",
   "marketplace.card.showLess": "Show less",
   "marketplace.install.title": "Install {{name}}",
-  "marketplace.install.scope": "Scope",
+  "marketplace.install.scope": "Where should this be available?",
   "marketplace.install.scope.project": "Project",
   "marketplace.install.scope.global": "Global",
+  "marketplace.install.scope.project.description":
+    "Only this project. The installed files can be committed and shared with your team.",
+  "marketplace.install.scope.global.description": "All projects on this machine. Stored in your user configuration.",
+  "marketplace.install.destination": "Installation destination",
+  "marketplace.install.about.mcp":
+    "An MCP server gives Kilo additional tools for working with external services or local programs.",
+  "marketplace.install.about.agent": "An agent adds a reusable role with its own instructions and permissions.",
+  "marketplace.install.about.skill": "A skill adds task-specific instructions and resources that Kilo can load when needed.",
+  "marketplace.install.mcp.warning":
+    "MCP servers can run local commands or connect to external services. Kilo will ask for permission before using their tools unless your permissions allow them automatically.",
+  "marketplace.install.project.warning":
+    "Project files may be committed to version control. Do not store secrets here unless the configuration references an environment variable.",
+  "marketplace.install.learnMore": "Learn how Marketplace installs work",
+  "marketplace.install.learnMcp": "Learn more about MCP",
+  "marketplace.install.installedAt": "Installed to {{path}}",
+  "marketplace.intro": "Install reusable agents, skills, and MCP tools for one project or every project.",
+  "marketplace.intro.learnMore": "About Marketplace",
   "marketplace.install.prerequisites": "Prerequisites",
   "marketplace.install.installing": "Installing...",
   "marketplace.install.cancel": "Cancel",
@@ -53,7 +78,9 @@ export const dict = {
   "marketplace.search": "Search...",
   "marketplace.filter.all": "All Items",
   "marketplace.filter.notInstalled": "Not Installed",
+  "marketplace.filter.relevant": "Relevant to my workspace",
   "marketplace.empty": "No items found",
+  "marketplace.empty.relevant": "No relevant marketplace items found for this workspace.",
   "marketplace.badge.mcpServer": "MCP Server",
   "marketplace.badge.mode": "Mode",
   "marketplace.card.by": "by {{author}}",
@@ -88,6 +115,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implement in a fresh session with a clean context",
   "plan.followup.answer.continue": "Continue here",
   "plan.followup.answer.continue.description": "Implement the plan in this session",
+  "plan.followup.answer.keepRefining": "Keep refining",
+  "plan.followup.answer.keepRefining.description": "Keep planning without implementing yet",
 
   // Slow-repo snapshot prompt. The English strings here are the canonical
   // labels sent by the backend and must stay in sync with

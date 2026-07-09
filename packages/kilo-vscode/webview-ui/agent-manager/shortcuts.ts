@@ -16,6 +16,7 @@ export function buildShortcutCategories(
     {
       title: t("agentManager.shortcuts.category.quickSwitch"),
       shortcuts: [
+        { label: t("agentManager.sidebarSearch.label"), binding: bindings.search ?? "" },
         {
           label: t("agentManager.shortcuts.jumpToItem"),
           binding: (() => {
@@ -35,6 +36,7 @@ export function buildShortcutCategories(
         { label: t("agentManager.shortcuts.advancedWorktree"), binding: bindings.advancedWorktree ?? "" },
         { label: t("agentManager.shortcuts.deleteWorktree"), binding: bindings.closeWorktree ?? "" },
         { label: t("agentManager.shortcuts.openWorktree"), binding: bindings.openWorktree ?? "" },
+        { label: t("agentManager.shortcuts.openPR"), binding: bindings.openPR ?? "" },
       ],
     },
     {

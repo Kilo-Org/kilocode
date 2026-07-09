@@ -27,10 +27,19 @@ export interface KilocodeProfile {
   email: string
   name?: string
   organizations?: Organization[]
+  selectedOrganizationId?: string
+  hasPersonalAccount?: boolean
 }
 
 export interface KilocodeBalance {
   balance: number
+}
+
+export interface KiloPassState {
+  currentPeriodBaseCreditsUsd: number
+  currentPeriodUsageUsd: number
+  currentPeriodBonusCreditsUsd: number
+  nextBillingAt?: string | null
 }
 
 export interface PollOptions<T> {
@@ -94,6 +103,11 @@ export interface KiloProviderOptions {
    * Provider name for identification
    */
   name?: string
+
+  /**
+   * Data collection preference for upstream provider routing
+   */
+  dataCollection?: "allow" | "deny"
 
   /**
    * Custom fetch function

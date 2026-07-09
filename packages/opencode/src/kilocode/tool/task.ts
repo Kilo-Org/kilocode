@@ -20,7 +20,10 @@ const ModelState = z
     model: z
       .record(
         z.string(),
-        z.object({ providerID: z.custom<ProviderID>(Schema.is(ProviderID)), modelID: z.custom<ModelID>(Schema.is(ModelID)) }),
+        z.object({
+          providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
+          modelID: z.custom<ModelID>(Schema.is(ModelID)),
+        }),
       )
       .optional(),
     variant: z.record(z.string(), z.string().optional()).optional(),
@@ -39,12 +42,18 @@ export namespace KiloTask {
   }
 
   /**
-   * Build inherited permission rules from the calling agent.
+   * Build inherited permission ceilings from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions
-   * so restrictions survive multi-hop chains (plan → general → explore).
+   * so denials survive multi-hop chains (plan → general → explore) without
+   * overriding the selected subagent's own allowlist with parent ask/allow rules.
+   *
+   * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
+   * Kilo intentionally differs: parent denials remain hard ceilings for Plan Mode
+   * and MCP restrictions, while parent ask/allow rules must not replace the
+   * selected subagent's policy. Preserve this distinction during upstream merges.
    *
    * The caller must resolve `caller` (Agent.Info) and `session` (Session.Info)
-   * before calling — this function is pure/synchronous.
+   * before calling. This function is pure/synchronous.
    */
   export function inherited(input: {
     caller: Agent.Info
@@ -55,7 +64,8 @@ export namespace KiloTask {
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
     return rules.filter(
-      (r: Permission.Rule) => r.permission === "edit" || r.permission === "bash" || isMcp(r.permission),
+      (r: Permission.Rule) =>
+        r.action === "deny" && (r.permission === "edit" || r.permission === "bash" || isMcp(r.permission)),
     )
   }
 
@@ -64,12 +74,13 @@ export namespace KiloTask {
     return [
       { permission: "task", pattern: "*", action: "deny" },
       { permission: "question", pattern: "*", action: "deny" },
+      { permission: "interactive_terminal", pattern: "*", action: "deny" },
       ...rules,
     ]
   }
 
-  export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
-    const result: Permission.Ruleset = []
+  export function merge(...rulesets: Permission.Ruleset[]): Permission.Rule[] {
+    const result: Permission.Rule[] = []
     const seen = new Set<string>()
     for (const rule of rulesets.flat()) {
       const key = `${rule.permission}\u0000${rule.pattern}\u0000${rule.action}`
@@ -83,6 +94,10 @@ export namespace KiloTask {
   type Model = { providerID: ProviderID; modelID: ModelID }
   type Saved = Model & { variant?: string }
   type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
+
+  function key(model: Model) {
+    return `${model.providerID}/${model.modelID}`
+  }
 
   function parse(value: string | null | undefined): Model | undefined {
     if (!value) return undefined
@@ -117,13 +132,14 @@ export namespace KiloTask {
   export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (input: {
     name: string
     agent: Pick<Agent.Info, "model" | "variant">
-    config: Pick<Config.Info, "subagent_model" | "subagent_variant">
+    config: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
     parent: Model
     variant?: string
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
     const cfg = parse(input.config.subagent_model)
+    const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
     const choices: Array<Choice | undefined> = [
       state
         ? {
@@ -138,7 +154,13 @@ export namespace KiloTask {
 
     for (const choice of choices) {
       if (!choice) continue
-      if (choice.direct) return { model: choice.model, variant: choice.variant }
+      if (choice.direct) {
+        const value = override(choice.model)
+        if (!value) return { model: choice.model, variant: choice.variant }
+        const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID)
+        const variant = full.variants?.[value] ? value : choice.variant
+        return { model: choice.model, variant }
+      }
       const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID).pipe(
         Effect.catchTag("ProviderModelNotFoundError", (err) =>
           Effect.sync(() => {
@@ -152,13 +174,21 @@ export namespace KiloTask {
         ),
       )
       if (!full) continue
-      const variant = choice.variant && full.variants?.[choice.variant] ? choice.variant : undefined
+      const fallback = choice.variant && full.variants?.[choice.variant] ? choice.variant : undefined
+      const value = override(choice.model)
+      const variant = value && full.variants?.[value] ? value : fallback
       return {
         model: choice.sticky && variant ? { ...choice.model, variant } : choice.model,
         variant,
       }
     }
 
-    return { model: input.parent, variant: input.variant }
+    const value = override(input.parent)
+    if (!value) return { model: input.parent, variant: input.variant }
+    const full = yield* input.provider
+      .getModel(input.parent.providerID, input.parent.modelID)
+      .pipe(Effect.catchTag("ProviderModelNotFoundError", () => Effect.succeed(undefined)))
+    const variant = full?.variants?.[value] ? value : input.variant
+    return { model: input.parent, variant }
   })
 }

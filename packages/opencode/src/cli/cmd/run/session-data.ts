@@ -25,8 +25,10 @@
 //   event arrives, the queue entry is removed and the footer falls back
 //   to the next pending request or to the prompt view.
 import type { Part, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
+import type { RunInteractiveTerminalSnapshot } from "@/kilocode/cli/cmd/run/types" // kilocode_change
 import type { Event } from "./event"
 import * as Locale from "@/util/locale"
+import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output" // kilocode_change
 import { toolView } from "./tool"
 import type { FooterOutput, FooterPatch, FooterView, StreamCommit } from "./types"
 
@@ -62,15 +64,23 @@ type SessionCommit = StreamCommit
 // - text:   part ID → full accumulated text so far
 // - sent:   part ID → byte offset of last flushed text (for incremental output)
 // - end:    part IDs whose time.end has arrived (part is finished)
+// - shell:  shell call ID → chosen transcript source for direct shell calls
 // - echo:   message ID → bash outputs to strip from the next assistant chunk
+type ShellCall = {
+  source: "shell" | "tool"
+  command?: string
+}
+
 export type SessionData = {
   includeUserText: boolean
   announced: boolean
   ids: Set<string>
   tools: Set<string>
   call: Map<string, Dict>
+  shell: Map<string, ShellCall>
   permissions: PermissionRequest[]
   questions: QuestionRequest[]
+  terminal?: RunInteractiveTerminalSnapshot // kilocode_change
   role: Map<string, MessageRole>
   msg: Map<string, string>
   part: Map<string, PartKind>
@@ -105,6 +115,7 @@ export function createSessionData(
     ids: new Set(),
     tools: new Set(),
     call: new Map(),
+    shell: new Map(),
     permissions: [],
     questions: [],
     role: new Map(),
@@ -206,7 +217,17 @@ function out(data: SessionData, commits: SessionCommit[], footer?: FooterOutput)
   }
 }
 
-export function pickBlockerView(input: { permission?: PermissionRequest; question?: QuestionRequest }): FooterView {
+// kilocode_change start
+export function pickBlockerView(input: {
+  permission?: PermissionRequest
+  question?: QuestionRequest
+  terminal?: RunInteractiveTerminalSnapshot
+}): FooterView {
+  if (input.terminal) {
+    return { type: "interactive_terminal", terminal: input.terminal }
+  }
+// kilocode_change end
+
   if (input.permission) {
     return { type: "permission", request: input.permission }
   }
@@ -219,6 +240,12 @@ export function pickBlockerView(input: { permission?: PermissionRequest; questio
 }
 
 export function blockerStatus(view: FooterView) {
+  // kilocode_change start
+  if (view.type === "interactive_terminal") {
+    return "interactive terminal"
+  }
+  // kilocode_change end
+
   if (view.type === "permission") {
     return "awaiting permission"
   }
@@ -232,6 +259,7 @@ export function blockerStatus(view: FooterView) {
 
 function pickSessionView(data: SessionData): FooterView {
   return pickBlockerView({
+    terminal: data.terminal, // kilocode_change
     permission: data.permissions[0],
     question: data.questions[0],
   })
@@ -622,6 +650,87 @@ function toolCommit(
   }
 }
 
+function shellPartID(callID: string): string {
+  return `shell:${callID}`
+}
+
+function claimShell(data: SessionData, callID: string, source: ShellCall["source"], command?: string): ShellCall {
+  const current = data.shell.get(callID)
+  if (current) {
+    if (command && !current.command) {
+      current.command = command
+    }
+
+    return current
+  }
+
+  const next = {
+    source,
+    ...(command ? { command } : {}),
+  } satisfies ShellCall
+  data.shell.set(callID, next)
+  return next
+}
+
+function bashCommand(part: ToolPart): string | undefined {
+  if (part.tool !== "bash") {
+    return undefined
+  }
+
+  const input = part.state.input
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return undefined
+  }
+
+  const command = Reflect.get(input, "command")
+  return typeof command === "string" ? command : undefined
+}
+
+function shellCommit(
+  input: {
+    callID: string
+    command: string
+  },
+  next: Pick<SessionCommit, "text" | "phase" | "toolState">,
+): SessionCommit {
+  return {
+    kind: "tool",
+    source: "tool",
+    partID: shellPartID(input.callID),
+    tool: "bash",
+    shell: input,
+    ...next,
+  }
+}
+
+function startShell(callID: string, command: string): SessionCommit {
+  return shellCommit(
+    {
+      callID,
+      command,
+    },
+    {
+      text: "running shell",
+      phase: "start",
+      toolState: "running",
+    },
+  )
+}
+
+function doneShell(callID: string, command: string, output: string): SessionCommit {
+  return shellCommit(
+    {
+      callID,
+      command,
+    },
+    {
+      text: output,
+      phase: "progress",
+      toolState: "completed",
+    },
+  )
+}
+
 function startTool(part: ToolPart): SessionCommit {
   return toolCommit(part, {
     text: toolStatus(part),
@@ -681,6 +790,53 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
   const commits: SessionCommit[] = []
   const data = input.data
   const event = input.event
+
+  if (event.type === "session.next.shell.started") {
+    if (event.properties.sessionID !== input.sessionID) {
+      return out(data, commits)
+    }
+
+    const shell = claimShell(data, event.properties.callID, "shell", event.properties.command)
+    if (shell.source !== "shell") {
+      return out(data, commits)
+    }
+
+    const partID = shellPartID(event.properties.callID)
+    if (data.ids.has(partID) || data.tools.has(partID)) {
+      return out(data, commits, patch({ status: "running shell" }))
+    }
+
+    data.tools.add(partID)
+    commits.push(startShell(event.properties.callID, shell.command ?? event.properties.command))
+    return out(data, commits, patch({ status: "running shell" }))
+  }
+
+  if (event.type === "session.next.shell.ended") {
+    if (event.properties.sessionID !== input.sessionID) {
+      return out(data, commits)
+    }
+
+    const shell = claimShell(data, event.properties.callID, "shell")
+    if (shell.source !== "shell") {
+      return out(data, commits)
+    }
+
+    const partID = shellPartID(event.properties.callID)
+    const seen = data.tools.has(partID)
+    const command = shell.command ?? ""
+    data.tools.delete(partID)
+    if (data.ids.has(partID)) {
+      return out(data, commits)
+    }
+
+    if (!seen && command) {
+      commits.push(startShell(event.properties.callID, command))
+    }
+
+    data.ids.add(partID)
+    commits.push(doneShell(event.properties.callID, command, event.properties.output))
+    return out(data, commits)
+  }
 
   if (event.type === "message.updated") {
     if (event.properties.sessionID !== input.sessionID) {
@@ -783,6 +939,11 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
 
     if (part.type === "tool") {
       const view = syncPermission(data, part) ?? syncQuestion(data, part)
+      if (part.tool === "bash" && part.callID) {
+        if (claimShell(data, part.callID, "tool", bashCommand(part)).source === "shell") {
+          return out(data, commits, view)
+        }
+      }
 
       if (part.state.status === "running") {
         if (data.ids.has(part.id)) {
@@ -907,6 +1068,44 @@ export function reduceSessionData(input: SessionDataInput): SessionDataOutput {
     drop(data, part.id)
     return out(data, commits)
   }
+
+  // kilocode_change start - direct interactive mode terminal footer
+  if (event.type === "interactive_terminal.updated") {
+    if (event.properties.info.sessionID !== input.sessionID) {
+      return out(data, commits)
+    }
+
+    const current = data.terminal
+    data.terminal = {
+      info: event.properties.info,
+      output: current?.info.id === event.properties.info.id ? current.output : "",
+      cursor: current?.info.id === event.properties.info.id ? current.cursor : 0,
+    }
+    return queueOut(data, commits)
+  }
+
+  if (event.type === "interactive_terminal.data") {
+    if (event.properties.sessionID !== input.sessionID || data.terminal?.info.id !== event.properties.terminalID) {
+      return out(data, commits)
+    }
+
+    data.terminal = {
+      ...data.terminal,
+      output: appendTerminalOutput(data.terminal.output, event.properties.data),
+      cursor: event.properties.cursor,
+    }
+    return queueOut(data, commits)
+  }
+
+  if (event.type === "interactive_terminal.deleted") {
+    if (event.properties.sessionID !== input.sessionID || data.terminal?.info.id !== event.properties.terminalID) {
+      return out(data, commits)
+    }
+
+    data.terminal = undefined
+    return queueOut(data, commits)
+  }
+  // kilocode_change end
 
   if (event.type === "permission.asked") {
     if (event.properties.sessionID !== input.sessionID) {

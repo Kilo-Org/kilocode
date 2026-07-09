@@ -24,6 +24,7 @@ export interface TextPart extends BasePart {
   text: string
   synthetic?: boolean
   time?: { start: number; end?: number }
+  metadata?: Record<string, unknown>
 }
 
 export interface FilePartSource {
@@ -64,6 +65,10 @@ export interface StepStartPart extends BasePart {
 export interface StepFinishPart extends BasePart {
   type: "step-finish"
   reason?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
   cost?: number
   tokens?: {
     input: number

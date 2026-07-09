@@ -52,6 +52,15 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "تم تجاوز حد الاستخدام المجاني",
   "ui.sessionTurn.error.addCredits": "إضافة رصيد",
 
+  "dialog.usageExceeded.freeTier.title": "تم الوصول إلى الحد المجاني",
+  "dialog.usageExceeded.freeTier.description":
+    "اشترك في Kilo Go للحصول على وصول موثوق إلى أفضل النماذج مفتوحة المصدر، ابتداءً من $5/شهر.",
+  "dialog.usageExceeded.freeTier.actionLabel": "اشترك",
+  "dialog.usageExceeded.accountRateLimit.title": "تم الوصول إلى حد Go",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "تم الوصول إلى حد الاستخدام. لمتابعة استخدام هذا النموذج الآن، قم بتفعيل الاستخدام من رصيدك المتاح",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "فتح الإعدادات",
+
   "ui.sessionTurn.status.delegating": "تفويض العمل",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -112,6 +121,7 @@ export const dict = {
 
   "ui.tool.read": "قراءة",
   "ui.tool.loaded": "تم التحميل",
+  "ui.tool.swePruned": "SWE-Pruner · تم الاحتفاظ بـ {{kept}} من {{total}} سطرًا", // kilocode_change
   "ui.tool.list": "قائمة",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -162,7 +172,9 @@ export const dict = {
   "ui.patch.action.patched": "مصحح",
 
   "ui.question.subtitle.answered": "{{count}} أجيب",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(لا توجد إجابة)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(لم يتم الرد)",
   "ui.question.multiHint": "حدد كل ما ينطبق",
   "ui.question.singleHint": "حدد إجابة واحدة",

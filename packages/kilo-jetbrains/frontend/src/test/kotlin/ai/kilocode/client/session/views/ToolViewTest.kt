@@ -8,8 +8,10 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
@@ -257,6 +259,12 @@ class ToolViewTest : BasePlatformTestCase() {
         assertSmallEditorFont(view.stateFont(), style)
     }
 
+    fun `test tool header title subtitle gap uses standard medium gap`() {
+        val view = track(ToolView(tool("p1", "bash", ToolExecState.COMPLETED).also { it.output = "done" }))
+
+        assertEquals(UiStyle.Gap.md(), centerGap(view))
+    }
+
     fun `test applyStyle updates tool fonts in place`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
         val style = SessionEditorStyle.create(family = "Courier New", size = 25)
@@ -379,6 +387,13 @@ class ToolViewTest : BasePlatformTestCase() {
     private fun assertSmallEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.smallEditorFont.name, font.name)
         assertTrue(font.size < style.editorSize)
+    }
+
+    private fun centerGap(view: ToolView): Int {
+        val row = view.components.filterIsInstance<JPanel>().single()
+        val header = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+        val center = (header.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER) as JPanel
+        return (center.layout as BorderLayout).hgap
     }
 
     private fun paint(border: Border): Color {

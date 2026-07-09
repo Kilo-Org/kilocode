@@ -9,6 +9,12 @@ Triggers let external events and schedules drive your KiloClaw agent automatical
 
 All triggers are managed from the **Settings** page in the KiloClaw section of the sidebar.
 
+Webhook triggers and scheduled triggers use the same trigger concepts across
+KiloClaw and Cloud Agent, but target different agents. Use KiloClaw triggers when
+an HTTP event or schedule should deliver a chat message to a KiloClaw instance.
+Use Cloud Agent triggers when the automation should start a Cloud Agent session
+against a repository.
+
 ## Trigger Types
 
 | Type | Description |
@@ -28,6 +34,14 @@ Each trigger type has its own set of template variables. See the [Webhooks](/doc
 {% callout type="warning" title="Triggers send prompts directly to your agent" %}
 When a trigger fires, the rendered message is sent directly to your KiloClaw agent as a prompt. If your instance is configured with a permission model that allows all actions, the agent will execute commands automatically without your explicit approval. This means triggers can cause your agent to take actions without you being aware. Review your instance's [permission settings](/docs/kiloclaw/control-ui/exec-approvals) and prompt templates carefully before enabling triggers.
 {% /callout %}
+
+## Request History
+
+Trigger activity appears in request history so you can inspect recent webhook and
+scheduled invocations. History entries show the source (webhook or scheduled),
+status such as captured, in progress, success, or failed, request metadata,
+payload details when available, and links or sharing actions for the resulting
+session.
 
 ## Related
 

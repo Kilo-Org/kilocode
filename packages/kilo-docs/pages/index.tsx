@@ -187,7 +187,6 @@ const categories = [
     ),
     links: [
       { title: "Deploy", href: "/deploy-secure" },
-      { title: "Managed Indexing", href: "/deploy-secure" },
       { title: "Security Reviews", href: "/deploy-secure" },
     ],
   },

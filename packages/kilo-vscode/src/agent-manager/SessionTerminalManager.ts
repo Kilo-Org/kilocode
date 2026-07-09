@@ -203,8 +203,10 @@ export class SessionTerminalManager {
       return result
     }
 
+    const disposable = this.tryRegisterCommand(id, handler)
+    if (!disposable) return
     this.commandHandlers.set(id, handler)
-    this.commandDisposables.set(id, this.host.registerCommand(id, handler))
+    this.commandDisposables.set(id, disposable)
   }
 
   private async runOriginalCommand(id: string, args: unknown[]): Promise<unknown> {
@@ -218,9 +220,20 @@ export class SessionTerminalManager {
       return await this.host.executeCommand(id, ...args)
     } finally {
       const handler = this.commandHandlers.get(id)
-      if (!handler) return
-      const replacement = this.host.registerCommand(id, handler)
-      this.commandDisposables.set(id, replacement)
+      if (handler) {
+        const replacement = this.tryRegisterCommand(id, handler)
+        if (replacement) this.commandDisposables.set(id, replacement)
+      }
+    }
+  }
+
+  private tryRegisterCommand(id: string, handler: (...args: unknown[]) => Promise<unknown>): Disposable | undefined {
+    try {
+      return this.host.registerCommand(id, handler)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      this.log(`panel command registration skipped for ${id}: ${msg}`)
+      return undefined
     }
   }
 

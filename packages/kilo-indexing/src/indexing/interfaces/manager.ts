@@ -31,7 +31,7 @@ export interface ICodeIndexManager {
     totalItems: number
     currentItemUnit: string
   }
-  dispose(): void
+  dispose(): Promise<void>
 }
 
 export type IndexingState = "Standby" | "Indexing" | "Indexed" | "Error"

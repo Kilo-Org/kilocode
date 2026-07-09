@@ -531,7 +531,6 @@ export interface TabAutocompleteOptions {
   experimental_includeClipboard: boolean | number
   experimental_includeRecentlyVisitedRanges: boolean | number
   experimental_includeRecentlyEditedRanges: boolean | number
-  experimental_includeDiff: boolean | number
   experimental_enableStaticContextualization: boolean
 }
 

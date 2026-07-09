@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test"
 import { Provider } from "../../../src/provider/provider"
-import { formatTable, formatMarkdown, handle, isTextModel } from "../../../src/kilocode/cli/cmd/roll-call"
+import { formatTable, formatMarkdown, handle, isTextModel, outputLimit } from "../../../src/kilocode/cli/cmd/roll-call"
 
 const base = {
   input: { text: false, audio: false, image: false, video: false, pdf: false },
@@ -97,6 +97,17 @@ describe("isTextModel", () => {
 
   test("rejects embedding model", () => {
     expect(isTextModel(caps({ input: { text: true } }))).toBe(false)
+  })
+})
+
+describe("outputLimit", () => {
+  test("honors the configured runtime output cap", () => {
+    const model = {
+      ...caps({ input: { text: true }, output: { text: true } }),
+      limit: { context: 100_000, input: 90_000, output: 8_000 },
+    } as Provider.Model
+
+    expect(outputLimit(model, 512)).toBe(512)
   })
 })
 

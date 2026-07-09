@@ -26,17 +26,17 @@ describe("terminal", () => {
     expect(terminal({ reason: "completed", messages: [message("stop")], todos: [] })).toBeUndefined()
   })
 
-  it("warns when a completed turn leaves to-dos unfinished", () => {
+  it("hides completed turns with unfinished to-dos", () => {
     expect(
       terminal({ reason: "completed", messages: [message("stop")], todos: [todo("completed"), todo("pending")] }),
-    ).toEqual({ kind: "incomplete", tone: "warning", finish: "stop", remaining: 1 })
+    ).toBeUndefined()
   })
 
   it("treats cancelled to-dos as terminal rather than remaining work", () => {
     expect(terminal({ reason: "completed", messages: [message("stop")], todos: [todo("cancelled")] })).toBeUndefined()
   })
 
-  it("surfaces response limit and unknown model finishes before generic incomplete status", () => {
+  it("surfaces response limit and unknown model finishes with unfinished to-dos", () => {
     expect(terminal({ reason: "completed", messages: [message("length")], todos: [todo("pending")] })?.kind).toBe(
       "limit",
     )

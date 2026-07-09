@@ -2,9 +2,10 @@
 // off `git diff` variants and need the same name-status + numstat stitching.
 
 import * as fs from "fs/promises"
-import * as path from "path"
 import type { GitOps } from "../../agent-manager/GitOps"
 import { generatedLike } from "../../agent-manager/local-diff"
+import { imageMime, readImageFile } from "../shared/image"
+import { resolveInside } from "../shared/path"
 import type { DiffFile } from "../types"
 
 export { MAX_DETAIL_BYTES } from "../../agent-manager/local-diff"
@@ -51,6 +52,19 @@ export function parseNumstat(stdout: string): Map<string, { additions: number; d
   return map
 }
 
+export function parseRawOids(stdout: string): Map<string, { before: string; after: string }> {
+  const map = new Map<string, { before: string; after: string }>()
+  for (const line of stdout.split("\n")) {
+    const tab = line.indexOf("\t")
+    if (!line.startsWith(":") || tab < 0) continue
+    const meta = line.slice(1, tab).split(" ")
+    const file = line.slice(tab + 1)
+    if (!file || !meta[2] || !meta[3]) continue
+    map.set(file, { before: meta[2], after: meta[3] })
+  }
+  return map
+}
+
 function statusFromCode(code: string): Status {
   if (code.startsWith("A")) return "added"
   if (code.startsWith("D")) return "deleted"
@@ -62,6 +76,7 @@ function statusFromCode(code: string): Status {
  * are left empty — the controller fetches detail lazily through `fetchFile`.
  */
 export function summarize(entry: FileEntry): DiffFile {
+  const image = imageMime(entry.file) !== undefined
   return {
     file: entry.file,
     before: "",
@@ -72,13 +87,15 @@ export function summarize(entry: FileEntry): DiffFile {
     tracked: entry.tracked,
     generatedLike: generatedLike(entry.file),
     // Binary metadata is complete because no deferred text body exists.
-    summarized: !entry.binary,
+    // Images are the exception: their encoded sides load lazily on expansion.
+    summarized: image || !entry.binary,
     // Synthetic stamp keyed on the stats we actually polled: any change to
     // the file's diff produces new additions/deletions, which invalidates
     // the webview-side cached detail via mergeWorktreeDiffs. Callers can
     // supply a custom stamp (see `FileEntry.stamp`) when additions/deletions
     // aren't a reliable change signal — notably untracked files.
     stamp: entry.stamp ?? `${entry.status}:${entry.additions}:${entry.deletions}`,
+    kind: image ? "image" : undefined,
   }
 }
 
@@ -93,6 +110,11 @@ export const INDEX_REF = ""
 export async function showBlob(git: GitOps, dir: string, ref: string, file: string): Promise<string> {
   const result = await git.execGit(["show", `${ref}:${file}`], dir)
   return result.code === 0 ? result.stdout : ""
+}
+
+export async function showBlobBytes(git: GitOps, dir: string, ref: string, file: string): Promise<Buffer | undefined> {
+  const result = await git.execGitBuffer(["show", `${ref}:${file}`], dir)
+  return result.code === 0 ? result.stdout : undefined
 }
 
 /**
@@ -116,12 +138,33 @@ export async function readDisk(dir: string, file: string): Promise<string> {
   return fs.readFile(full, "utf-8").catch(() => "")
 }
 
+export async function readDiskBytes(dir: string, file: string): Promise<Buffer | undefined> {
+  const full = resolveInside(dir, file)
+  if (!full) return undefined
+  const stat = await fs.lstat(full).catch(() => undefined)
+  if (!stat?.isFile()) return undefined
+  return readImageFile(full)
+}
+
 // Used to size-cap detail reads without materializing the blob. Mirrors
 // local-diff.ts's `blobSize` helper.
 export async function blobSize(git: GitOps, dir: string, ref: string, file: string): Promise<number> {
   const result = await git.execGit(["cat-file", "-s", `${ref}:${file}`], dir)
   if (result.code !== 0) return 0
   return parseInt(result.stdout.trim(), 10) || 0
+}
+
+export async function blobOid(git: GitOps, dir: string, ref: string, file: string): Promise<string> {
+  const result = await git.execGit(["rev-parse", "--verify", `${ref}:${file}`], dir)
+  return result.code === 0 ? result.stdout.trim() : "missing"
+}
+
+export async function diskStamp(dir: string, file: string): Promise<string> {
+  const full = resolveInside(dir, file)
+  if (!full) return "missing"
+  const stat = await fs.lstat(full).catch(() => undefined)
+  if (!stat) return "missing"
+  return `${stat.size}:${stat.mtimeMs}`
 }
 
 /**
@@ -134,14 +177,4 @@ export async function fileSize(dir: string, file: string): Promise<number> {
   if (!full) return 0
   const stat = await fs.lstat(full).catch(() => undefined)
   return stat?.size ?? 0
-}
-
-// Rejects absolute paths and any `..` traversal that would escape `dir`.
-// Returns the resolved path when safe, `undefined` otherwise.
-export function resolveInside(dir: string, file: string): string | undefined {
-  if (path.isAbsolute(file)) return undefined
-  const full = path.resolve(dir, file)
-  const base = path.resolve(dir)
-  if (full !== base && !full.startsWith(base + path.sep)) return undefined
-  return full
 }

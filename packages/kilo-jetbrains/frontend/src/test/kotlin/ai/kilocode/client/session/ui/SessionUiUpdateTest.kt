@@ -2,14 +2,29 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.ui.attachment.AttachmentCard
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.AttachmentView
+import ai.kilocode.client.session.views.PromptAttachmentView
+import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.TextView
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.views.tool.ShellToolView
+import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
+import java.awt.Container
+import java.awt.event.MouseEvent
+import javax.swing.JButton
+import javax.swing.ScrollPaneConstants
 
 /**
  * Integration test: mutate [SessionModel] directly on the EDT and verify
@@ -28,7 +43,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent, openFile = {})
+        panel = SessionMessageListPanel(model, parent, openFile = { _, _ -> })
     }
 
     override fun tearDown() {
@@ -77,14 +92,19 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     // ------ tool lifecycle ------
 
-    fun `test tool state transitions are reflected in ToolView`() {
+    fun `test tool state transitions are reflected in tool view`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", toolPart("t1", "a1", "bash", "pending"))
         model.updateContent("a1", toolPart("t1", "a1", "bash", "running"))
         model.updateContent("a1", toolPart("t1", "a1", "bash", "completed"))
 
-        val tv = panel.findMessage("a1")!!.part("t1") as ai.kilocode.client.session.views.tool.ToolView
-        assertFalse(tv.labelText().contains("Running"))
+        val view = panel.findMessage("a1")!!.part("t1")
+        val label = when (view) {
+            is ShellToolView -> view.labelText()
+            is ToolView -> view.labelText()
+            else -> error("unexpected tool view ${view?.javaClass?.name}")
+        }
+        assertFalse(label.contains("Running"))
     }
 
     fun `test read tool renders as ReadToolView`() {
@@ -140,6 +160,24 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
     }
 
+    fun `test user compaction marker renders without prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto("cp1", "ses", "u1", "compaction"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.Default, mv.sessionViewKind)
+        assertEquals(listOf("cp1"), mv.partIds())
+        assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
+    }
+
+    fun `test user text message keeps prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.UserPrompt, mv.sessionViewKind)
+    }
+
     // ------ generic fallback ------
 
     fun `test unknown part type falls back to GenericView`() {
@@ -152,6 +190,317 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertTrue(gv is ai.kilocode.client.session.views.base.GenericView)
         assertTrue((gv as ai.kilocode.client.session.views.base.GenericView).labelText().contains("snapshot"))
         assertNull(gv.border)
+    }
+
+    fun `test assistant file part renders as attachment view`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent(
+            "a1",
+            PartDto(
+                id = "f1",
+                sessionID = "ses",
+                messageID = "a1",
+                type = "file",
+                mime = "image/png",
+                url = "file:///tmp/a.png",
+                filename = "a.png",
+            ),
+        )
+
+        val view = panel.findMessage("a1")!!.part("f1")
+        assertTrue(view is AttachmentView)
+        assertEquals("AttachmentView#f1:a.png", view!!.dumpLabel())
+        assertNotNull(find(view, AttachmentCard::class.java))
+        assertFalse(buttons(view).any { it.accessibleContext.accessibleName == KiloBundle.message("prompt.attachment.remove", "a.png") })
+    }
+
+    fun `test user file part renders as prompt attachment strip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent(
+            "u1",
+            PartDto(
+                id = "f1",
+                sessionID = "ses",
+                messageID = "u1",
+                type = "file",
+                mime = "image/png",
+                url = "file:///tmp/a.png",
+                filename = "a.png",
+            ),
+        )
+
+        val view = panel.findMessage("u1")!!.part("f1")
+        assertTrue(view is PromptAttachmentView)
+        assertEquals("PromptAttachmentView#attachments:u1[f1]", view!!.dumpLabel())
+        assertNotNull(find(view, AttachmentCard::class.java))
+        assertFalse(buttons(view).any { it.accessibleContext.accessibleName == KiloBundle.message("prompt.attachment.remove", "a.png") })
+    }
+
+    fun `test user text and attachments share one prompt container`() {
+        val opened = mutableListOf<String>()
+        val item = SessionMessageListPanel(model, parent, openFile = { _, _ -> }, openAttachment = { _, it -> opened.add(it.url) })
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "look at this"))
+        model.updateContent(
+            "u1",
+            PartDto(
+                id = "f1",
+                sessionID = "ses",
+                messageID = "u1",
+                type = "file",
+                mime = "image/png",
+                url = "data:image/png;base64,aGVsbG8=",
+                filename = "a.png",
+            ),
+        )
+        model.updateContent(
+            "u1",
+            PartDto(
+                id = "f2",
+                sessionID = "ses",
+                messageID = "u1",
+                type = "file",
+                mime = "text/plain",
+                url = "data:text/plain;base64,aGVsbG8=",
+                filename = "note.txt",
+            ),
+        )
+
+        val msg = item.findMessage("u1")!!
+        val attachment = msg.part("f1")!!
+        val other = msg.part("f2")!!
+
+        assertSame(msg, attachment.parent)
+        assertSame(attachment, other)
+        assertEquals(listOf("p1", "f1", "f2"), msg.partIds())
+        assertEquals(1, msg.components.filterIsInstance<PromptAttachmentView>().size)
+        assertEquals(2, findAll(attachment, AttachmentCard::class.java).size)
+
+        val cards = findAll(attachment, AttachmentCard::class.java)
+        for (card in cards) {
+            card.dispatchEvent(MouseEvent(card, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
+        }
+
+        assertEquals(listOf("data:image/png;base64,aGVsbG8=", "data:text/plain;base64,aGVsbG8="), opened)
+    }
+
+    fun `test user file mention hides synthetic read payload and text attachment card`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "read @src/a.kt"))
+        model.updateContent("u1", PartDto(
+            id = "p2",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "text",
+            text = "<path>/tmp/a.kt</path>\n<content>raw</content>",
+            synthetic = true,
+        ))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "file:///tmp/a.kt",
+            filename = "a.kt",
+            source = source("src/a.kt"),
+        ))
+
+        val msg = panel.findMessage("u1")!!
+
+        assertEquals(listOf("p1"), msg.partIds())
+        assertNull(msg.part("p2"))
+        assertNull(msg.part("f1"))
+        assertEquals("read [@src/a.kt](src/a.kt)", (msg.part("p1") as TextView).markdown())
+        assertEquals(0, msg.components.filterIsInstance<PromptAttachmentView>().size)
+    }
+
+    fun `test user git changes mention hides synthetic data attachment card`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "review @git-changes"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "data:text/plain;charset=utf-8,diff%20content",
+            filename = "git-changes.txt",
+            source = PartSourceDto(
+                type = "file",
+                text = PartSourceTextDto("@git-changes", 7.0, 19.0),
+                path = "git-changes",
+            ),
+        ))
+
+        val msg = panel.findMessage("u1")!!
+
+        assertEquals(listOf("p1"), msg.partIds())
+        assertNull(msg.part("f1"))
+        assertEquals("review [@git-changes](git-changes)", (msg.part("p1") as TextView).markdown())
+        assertEquals(0, msg.components.filterIsInstance<PromptAttachmentView>().size)
+    }
+
+    fun `test source less text attachment still renders in prompt strip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "text/plain",
+            url = "data:text/plain;base64,aGVsbG8=",
+            filename = "note.txt",
+        ))
+
+        val view = panel.findMessage("u1")!!.part("f1")
+
+        assertTrue(view is PromptAttachmentView)
+        assertNotNull(find(view!!, AttachmentCard::class.java))
+    }
+
+    fun `test source backed image attachment still renders in prompt strip`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto(
+            id = "f1",
+            sessionID = "ses",
+            messageID = "u1",
+            type = "file",
+            mime = "image/png",
+            url = "file:///tmp/a.png",
+            filename = "a.png",
+            source = source("src/a.png"),
+        ))
+
+        val view = panel.findMessage("u1")!!.part("f1")
+
+        assertTrue(view is PromptAttachmentView)
+        assertNotNull(find(view!!, AttachmentCard::class.java))
+    }
+
+    fun `test empty sanitized user text does not create prompt panel`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "read these screenshots"))
+        model.updateContent("u1", part("p2", "u1", "text", text = "   "))
+        model.updateContent(
+            "u1",
+            PartDto(
+                id = "f1",
+                sessionID = "ses",
+                messageID = "u1",
+                type = "file",
+                mime = "image/png",
+                url = "data:image/png;base64,aGVsbG8=",
+                filename = "a.png",
+            ),
+        )
+
+        val msg = panel.findMessage("u1")!!
+
+        assertNull(msg.part("p2"))
+        assertEquals(listOf("p1", "f1"), msg.partIds())
+        assertTrue(msg.part("p1") is TextView)
+        assertEquals(1, msg.components.filterIsInstance<PromptAttachmentView>().size)
+    }
+
+    fun `test prompt text panel is removed when content becomes empty`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "visible"))
+
+        assertNotNull(panel.findMessage("u1")!!.part("p1"))
+
+        model.updateContent("u1", part("p1", "u1", "text", text = ""))
+
+        val msg = panel.findMessage("u1")!!
+        assertNull(msg.part("p1"))
+        assertTrue(msg.partIds().isEmpty())
+        assertEquals(0, msg.components.filterIsInstance<TextView>().size)
+    }
+
+    fun `test user attachment strip scrolls horizontally only`() {
+        model.upsertMessage(msg("u1", "user"))
+        for (i in 1..8) {
+            model.updateContent(
+                "u1",
+                PartDto(
+                    id = "f$i",
+                    sessionID = "ses",
+                    messageID = "u1",
+                    type = "file",
+                    mime = "image/png",
+                    url = "file:///tmp/$i.png",
+                    filename = "$i.png",
+                ),
+            )
+        }
+
+        val view = panel.findMessage("u1")!!.part("f1") as PromptAttachmentView
+        val height = view.preferredSize.height
+        val pane = view.scrollPane()
+
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED, pane.horizontalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, pane.verticalScrollBarPolicy)
+        assertEquals(0, view.insets.top)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), view.insets.bottom)
+        assertEquals(
+            JBUI.scale(SessionUiStyle.View.Attachment.CARD_HEIGHT) +
+                pane.horizontalScrollBar.preferredSize.height +
+                JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+            height,
+        )
+
+        model.updateContent(
+            "u1",
+            PartDto(
+                id = "f9",
+                sessionID = "ses",
+                messageID = "u1",
+                type = "file",
+                mime = "image/png",
+                url = "file:///tmp/9.png",
+                filename = "9.png",
+            ),
+        )
+
+        assertEquals(height, view.preferredSize.height)
+        assertEquals((1..9).map { "f$it" }, view.ids())
+    }
+
+    fun `test user read tool payload is hidden but assistant read tool renders`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("u1", toolPart("ut1", "u1", "read", "completed"))
+        model.updateContent("a1", toolPart("at1", "a1", "read", "completed"))
+
+        val user = panel.findMessage("u1")!!
+        val assistant = panel.findMessage("a1")!!
+
+        assertTrue(user.partIds().isEmpty())
+        assertNull(user.part("ut1"))
+        assertTrue(assistant.part("at1") is ReadToolView)
+    }
+
+    fun `test transcript attachment click delegates to attachment opener`() {
+        val opened = mutableListOf<Pair<String, String>>()
+        val item = SessionMessageListPanel(model, parent, openFile = { _, _ -> }, openAttachment = { msg, it -> opened.add(msg to it.url) })
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent(
+            "u1",
+            PartDto(
+                id = "f1",
+                sessionID = "ses",
+                messageID = "u1",
+                type = "file",
+                mime = "text/plain",
+                url = "data:text/plain;base64,aGVsbG8=",
+                filename = "note.txt",
+            ),
+        )
+
+        val card = find(item.findMessage("u1")!!.part("f1")!!, AttachmentCard::class.java)!!
+        card.dispatchEvent(MouseEvent(card, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, 1, 1, 1, false))
+
+        assertEquals(listOf("u1" to "data:text/plain;base64,aGVsbG8="), opened)
     }
 
     // ------ silent part types ------
@@ -225,4 +574,41 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
     private fun toolPart(id: String, mid: String, tool: String, state: String) = PartDto(
         id = id, sessionID = "ses", messageID = mid, type = "tool", tool = tool, state = state,
     )
+
+    private fun source(path: String) = PartSourceDto(
+        type = "file",
+        path = path,
+        text = PartSourceTextDto("@$path", 5.0, (6 + path.length).toDouble()),
+    )
+
+    private fun <T : Any> find(root: java.awt.Component, type: Class<T>): T? {
+        if (type.isInstance(root)) return type.cast(root)
+        if (root is Container) {
+            for (child in root.components) {
+                val found = find(child, type)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    private fun <T : Any> findAll(root: java.awt.Component, type: Class<T>): List<T> {
+        val out = mutableListOf<T>()
+        fun visit(node: java.awt.Component) {
+            if (type.isInstance(node)) out.add(type.cast(node))
+            if (node is Container) node.components.forEach(::visit)
+        }
+        visit(root)
+        return out
+    }
+
+    private fun buttons(root: java.awt.Component): List<JButton> {
+        val out = mutableListOf<JButton>()
+        fun visit(node: java.awt.Component) {
+            if (node is JButton) out.add(node)
+            if (node is Container) node.components.forEach(::visit)
+        }
+        visit(root)
+        return out
+    }
 }

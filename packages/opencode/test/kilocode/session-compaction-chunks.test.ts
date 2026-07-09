@@ -1,20 +1,23 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import * as Stream from "effect/Stream"
+import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Snapshot } from "../../src/snapshot"
 import { KiloCompactionChunks } from "../../src/kilocode/session/compaction-chunks"
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
+import { Reference } from "../../src/reference/reference"
 import { SessionCompaction } from "../../src/session/compaction"
 import * as SessionProcessorModule from "../../src/session/processor"
 import type { SessionProcessor } from "../../src/session/processor"
@@ -110,12 +113,10 @@ async function assistant(sessionID: SessionID, parentID: MessageID, root: string
 }
 
 function llm() {
-  const queue: Array<
-    Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)
-  > = []
+  const queue: Array<Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)> = []
 
   return {
-    push(stream: Stream.Stream<LLM.Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<LLM.Event, unknown>)) {
+    push(stream: Stream.Stream<Event, unknown> | ((input: LLM.StreamInput) => Stream.Stream<Event, unknown>)) {
       queue.push(stream)
     },
     layer: Layer.succeed(
@@ -134,105 +135,18 @@ function llm() {
 function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   return (input: LLM.StreamInput) => {
     capture?.(input)
+    const usage = { inputTokens: 1, outputTokens: 1, totalTokens: 2 }
     return Stream.make(
-      { type: "start" } as LLM.Event,
-      { type: "text-start", id: "txt-0" } as LLM.Event,
-      { type: "text-delta", id: "txt-0", delta: text, text } as LLM.Event,
-      { type: "text-end", id: "txt-0" } as LLM.Event,
-      {
-        type: "finish-step",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        response: { id: "res", modelId: "test-model", timestamp: new Date() },
-        providerMetadata: undefined,
-        usage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
-      {
-        type: "finish",
-        finishReason: "stop",
-        rawFinishReason: "stop",
-        totalUsage: {
-          inputTokens: 1,
-          outputTokens: 1,
-          totalTokens: 2,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-          outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-        },
-      } as LLM.Event,
+      LLMEvent.textStart({ id: "txt-0" }),
+      LLMEvent.textDelta({ id: "txt-0", text }),
+      LLMEvent.textEnd({ id: "txt-0" }),
+      LLMEvent.stepFinish({ index: 0, reason: "stop", usage }),
+      LLMEvent.finish({ reason: "stop", usage }),
     )
   }
 }
 
-function overflow() {
-  return Stream.make(
-    { type: "start" } as LLM.Event,
-    {
-      type: "finish-step",
-      finishReason: "stop",
-      rawFinishReason: "stop",
-      response: { id: "res", modelId: "test-model", timestamp: new Date() },
-      providerMetadata: undefined,
-      usage: {
-        inputTokens: 20_000,
-        outputTokens: 1,
-        totalTokens: 20_001,
-        inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-        outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-      },
-    } as LLM.Event,
-    {
-      type: "finish",
-      finishReason: "stop",
-      rawFinishReason: "stop",
-      totalUsage: {
-        inputTokens: 20_000,
-        outputTokens: 1,
-        totalTokens: 20_001,
-        inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
-        outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
-      },
-    } as LLM.Event,
-  )
-}
-
-function runtime(layer: Layer.Layer<LLM.Service>, context = 7_000) {
-  const bus = Bus.layer
-  const status = SessionStatus.layer.pipe(Layer.provide(bus))
-  const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(SyncEvent.defaultLayer),
-  )
-  const model = ProviderTest.model({ providerID, id: modelID, limit: { context, output: 1_000 } })
-  return ManagedRuntime.make(
-    Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
-      Layer.provide(ProviderTest.fake({ model }).layer),
-      Layer.provide(SessionNs.defaultLayer),
-      Layer.provide(Snapshot.defaultLayer),
-      Layer.provide(layer),
-      Layer.provide(Permission.defaultLayer),
-      Layer.provide(Agent.defaultLayer),
-      Layer.provide(Plugin.defaultLayer),
-      Layer.provide(SyncEvent.defaultLayer),
-      Layer.provide(RuntimeFlags.layer()),
-      Layer.provide(status),
-      Layer.provide(bus),
-      Layer.provide(
-        Layer.mock(Config.Service)({
-          get: () => Effect.succeed({ ...{}, compaction: { reserved: 1_000 } }),
-        }),
-      ),
-    ),
-  )
-}
-
-function fakeRuntime() {
+function fakeRuntime(outputTokenMax?: number) {
   const calls: string[] = []
   const outputs: number[] = []
   const bus = Bus.layer
@@ -247,6 +161,7 @@ function fakeRuntime() {
               return input.assistantMessage
             },
             updateToolCall: Effect.fn("TestSessionProcessor.updateToolCall")(() => Effect.succeed(undefined)),
+            metadata: Effect.fn("TestSessionProcessor.metadata")(() => Effect.void),
             completeToolCall: Effect.fn("TestSessionProcessor.completeToolCall")(() => Effect.void),
             process: Effect.fn("TestSessionProcessor.process")((stream: LLM.StreamInput) =>
               Effect.gen(function* () {
@@ -286,7 +201,9 @@ function fakeRuntime() {
         Layer.provide(Agent.defaultLayer),
         Layer.provide(Plugin.defaultLayer),
         Layer.provide(SyncEvent.defaultLayer),
-        Layer.provide(RuntimeFlags.layer()),
+        Layer.provide(EventV2Bridge.defaultLayer),
+        Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
+        Layer.provide(Reference.defaultLayer),
         Layer.provide(bus),
         Layer.provide(
           Layer.mock(Config.Service)({
@@ -317,7 +234,9 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
       Layer.provide(Agent.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(SyncEvent.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
       Layer.provide(RuntimeFlags.layer()),
+      Layer.provide(Reference.defaultLayer),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(
@@ -365,9 +284,18 @@ describe("KiloCompactionChunks", () => {
     )
   })
 
+  test("uses runtime output cap for fallback selection and chunk budget", () => {
+    const model = ProviderTest.model({ providerID, id: modelID, limit: { context: 10_000, output: 8_000 } })
+    const cfg = {} as Config.Info
+    const outputTokenMax = 512
+
+    expect(KiloCompactionChunks.needed({ cfg, model, tokens: 5_000, outputTokenMax })).toBe(false)
+    expect(KiloCompactionChunks.budget({ cfg, model, outputTokenMax })).toBe(5_692)
+  })
+
   test("falls back to chunk workers after the first compaction overflows", async () => {
     await using tmp = await tmpdir()
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -421,7 +349,7 @@ describe("KiloCompactionChunks", () => {
 
   test("uses chunk fallback before sending oversized normal compaction", async () => {
     await using tmp = await tmpdir()
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -467,7 +395,7 @@ describe("KiloCompactionChunks", () => {
 
   test("uses a worker even when fallback selection produces one oversized chunk", async () => {
     await using tmp = await tmpdir()
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -519,7 +447,7 @@ describe("KiloCompactionChunks", () => {
 
   test("serializes oversized fallback chunks before summarizing", async () => {
     await using tmp = await tmpdir()
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
@@ -561,15 +489,15 @@ describe("KiloCompactionChunks", () => {
     })
   })
 
-  test("caps worker output budget below oversized model output limit", async () => {
-    const { rt, calls, outputs } = fakeRuntime()
+  test("caps worker output budget below the configured runtime limit", async () => {
+    const { rt, calls, outputs } = fakeRuntime(512)
     await using tmp = await tmpdir()
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
-        const first = await user(session.id, "first " + "a".repeat(1_000))
-        await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(1_000))
+        const first = await user(session.id, "first " + "a".repeat(80_000))
+        await assistant(session.id, first.id, tmp.path, "reply " + "b".repeat(80_000))
         await Effect.runPromise(
           KiloSessionCompaction.create({
             session: store,
@@ -597,7 +525,7 @@ describe("KiloCompactionChunks", () => {
 
           expect(result).toBe("continue")
           expect(calls.length).toBeGreaterThan(0)
-          expect(outputs.every((value) => value <= 2_048)).toBe(true)
+          expect(outputs.at(-1)).toBe(512)
         } finally {
           await rt.dispose()
         }
@@ -612,7 +540,7 @@ describe("KiloCompactionChunks", () => {
     stub.push(reply("replay summary", (input) => calls.push(JSON.stringify(input.messages))))
 
     await using tmp = await tmpdir()
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})

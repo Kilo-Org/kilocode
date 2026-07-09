@@ -1,4 +1,5 @@
 import { afterEach, describe, expect } from "bun:test"
+import { realpath } from "node:fs/promises" // kilocode_change
 import { Deferred, Effect, Fiber, Layer } from "effect"
 import { eq } from "drizzle-orm"
 import { GlobalBus, type GlobalEvent } from "@/bus/global"
@@ -31,7 +32,7 @@ function request(path: string, directory: string, init: RequestInit = {}) {
 }
 
 function createSession(input?: Session.CreateInput) {
-  return Session.Service.use((svc) => svc.create(input))
+  return Session.use.create(input)
 }
 
 function json<T>(response: Response) {
@@ -271,7 +272,8 @@ describe("experimental HttpApi", () => {
           Effect.gen(function* () {
             const listed = yield* request(ExperimentalPaths.worktree, tmp.directory)
             expect(listed.status).toBe(200)
-            expect(yield* json(listed)).toContain(info.directory)
+            const directory = yield* Effect.promise(() => realpath(info.directory)) // kilocode_change
+            expect(yield* json(listed)).toContainEqual({ directory, managed: true }) // kilocode_change
 
             const reset = yield* request(ExperimentalPaths.worktreeReset, tmp.directory, {
               method: "POST",

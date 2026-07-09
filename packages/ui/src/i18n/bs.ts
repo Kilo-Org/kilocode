@@ -56,6 +56,15 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Besplatna upotreba premašena",
   "ui.sessionTurn.error.addCredits": "Dodaj kredite",
 
+  "dialog.usageExceeded.freeTier.title": "Dostignut besplatan limit",
+  "dialog.usageExceeded.freeTier.description":
+    "Pretplatite se na Kilo Go za pouzdan pristup najboljim open-source modelima, počevši od $5/mjesec.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Pretplati se",
+  "dialog.usageExceeded.accountRateLimit.title": "Dostignut Go limit",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Dostignut je limit korištenja. Da nastavite koristiti ovaj model sada, omogućite korištenje iz vašeg dostupnog stanja",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Otvori postavke",
+
   "ui.sessionTurn.status.delegating": "Delegiranje posla",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -116,6 +125,7 @@ export const dict = {
 
   "ui.tool.read": "Čitanje",
   "ui.tool.loaded": "Učitano",
+  "ui.tool.swePruned": "SWE-Pruner · zadržano {{kept}} od {{total}} redova", // kilocode_change
   "ui.tool.list": "Listanje",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -166,7 +176,9 @@ export const dict = {
   "ui.patch.action.patched": "Primijenjeno",
 
   "ui.question.subtitle.answered": "{{count}} odgovoreno",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(nema odgovora)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(nije odgovoreno)",
   "ui.question.multiHint": "Odaberi sve što važi",
   "ui.question.singleHint": "Odaberi jedan odgovor",

@@ -89,6 +89,7 @@ type Opts = {
   renderer?: HostPluginApi["renderer"]
   attention?: AttentionOpts
   event?: HostPluginApi["event"]
+  mode?: HostPluginApi["mode"]
   count?: Count
   keymap?: HostPluginApi["keymap"]
   tuiConfig?: Partial<HostPluginApi["tuiConfig"]>
@@ -196,7 +197,7 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
       soundboard: {
         registerPack: (pack) => opts.attention?.soundboard?.registerPack?.(pack) ?? (() => {}),
         activate: (id, options) => opts.attention?.soundboard?.activate?.(id, options) ?? false,
-        current: () => opts.attention?.soundboard?.current?.() ?? "opencode.default",
+        current: () => opts.attention?.soundboard?.current?.() ?? "kilo.default", // kilocode_change
         list: () => opts.attention?.soundboard?.list?.() ?? [],
       },
     },
@@ -237,6 +238,10 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
       },
     },
     keymap,
+    mode: opts.mode ?? {
+      current: () => "base",
+      push: () => () => {},
+    },
     route: {
       register: () => {
         if (count) count.route_add += 1

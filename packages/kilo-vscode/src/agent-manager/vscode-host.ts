@@ -15,6 +15,7 @@ import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
+import type { RemoteStatusService } from "../services/RemoteStatusService"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -24,6 +25,7 @@ export class VscodeHost implements Host {
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
+    private readonly remoteService: RemoteStatusService,
   ) {}
 
   setDiffVirtualProvider(provider: DiffVirtualProvider): void {
@@ -98,6 +100,7 @@ export class VscodeHost implements Host {
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)
     }
+    provider.setRemoteService(this.remoteService)
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: opts.onBeforeMessage,
     })
@@ -116,6 +119,8 @@ export class VscodeHost implements Host {
       registerSession: (s) => provider.registerSession(s),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
+      showMemory: (id) => provider.showMemory(id),
+      toggleMemory: (id) => provider.toggleMemory(id),
       dispose: () => provider.dispose(),
     }
 
@@ -162,6 +167,14 @@ export class VscodeHost implements Host {
 
   workspacePath(): string | undefined {
     return getWorkspaceRoot()
+  }
+
+  autoBranchNaming(): { enabled: boolean; prefix: string } {
+    const cfg = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
+    return {
+      enabled: cfg.get("autoBranchNaming", true),
+      prefix: cfg.get("branchPrefix", ""),
+    }
   }
 
   showError(msg: string): void {

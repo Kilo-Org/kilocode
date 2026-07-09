@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/dropdown-menu"
+export * from "@opencode-ai/ui/dropdown-menu"

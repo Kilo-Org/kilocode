@@ -24,7 +24,7 @@ Do NOT suggest a review when:
 - The coding session is fixing another local or remote code review
 - A local code review suggestion has already been made in the current session
 
-Choosing the right review command for the action prompt:
-- Use `/local-review-uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)
-- Use `/local-review` as the action prompt for committed branch-level changes
-- Prefer `/local-review-uncommitted` when the work you just did has not been committed yet
+Choosing the right review prompt for the action prompt:
+- Use `/review uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)
+- Use `/review branch` as the action prompt for committed branch-level changes
+- Prefer `/review uncommitted` when the work you just did has not been committed yet

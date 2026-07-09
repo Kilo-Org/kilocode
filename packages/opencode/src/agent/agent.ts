@@ -1,4 +1,5 @@
 import { Config } from "@/config/config"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
@@ -25,10 +26,16 @@ import { type DeepMutable } from "@opencode-ai/core/schema"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Reference } from "@/reference/reference" // kilocode_change
+import { ConfigReference } from "@/config/reference" // kilocode_change
+import * as AgentRequirements from "@/kilocode/agent-requirements" // kilocode_change
+import { MCP } from "@/mcp" // kilocode_change
+
+export type RequirementBlockedError = InstanceType<typeof AgentRequirements.BlockedError> // kilocode_change
 
 export const Info = Schema.Struct({
   name: Schema.String,
   displayName: Schema.optional(Schema.String), // kilocode_change - human-readable name for org modes
+  source: Schema.optional(Schema.String), // kilocode_change - origin marker (organization | global | project)
   description: Schema.optional(Schema.String),
   deprecated: Schema.optional(Schema.Boolean), // kilocode_change
   mode: Schema.Literals(["subagent", "primary", "all"]),
@@ -47,6 +54,7 @@ export const Info = Schema.Struct({
   variant: Schema.optional(Schema.String),
   prompt: Schema.optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Unknown),
+  requirements: Schema.optional(AgentRequirements.Requirements), // kilocode_change
   steps: Schema.optional(Schema.Finite),
 }).annotate({ identifier: "Agent" })
 export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>
@@ -62,6 +70,8 @@ export interface Interface {
   readonly list: () => Effect.Effect<Info[]>
   readonly defaultInfo: () => Effect.Effect<Info>
   readonly defaultAgent: () => Effect.Effect<string>
+  readonly requirementStatus: (agent: string) => Effect.Effect<AgentRequirements.Result> // kilocode_change
+  readonly guardRequirements: (agent: Info) => Effect.Effect<void, RequirementBlockedError> // kilocode_change
   readonly generate: (input: {
     description: string
     model?: { providerID: ProviderID; modelID: ModelID }
@@ -71,13 +81,15 @@ export interface Interface {
       whenToUse: string
       systemPrompt: string
     },
-    Provider.ModelNotFoundError
+    Provider.DefaultModelError
   >
 }
 
-type State = Omit<Interface, "generate"> & { version: string } // kilocode_change
+type State = Omit<Interface, "generate" | "requirementStatus" | "guardRequirements"> & { version: string } // kilocode_change
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Agent") {}
+
+export const use = serviceUse(Service)
 
 export const layer = Layer.effect(
   Service,
@@ -86,6 +98,7 @@ export const layer = Layer.effect(
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
     const skill = yield* Skill.Service
+    const mcp = yield* MCP.Service // kilocode_change
     const provider = yield* Provider.Service
     const flags = yield* RuntimeFlags.Service
 
@@ -117,6 +130,7 @@ export const layer = Layer.effect(
           },
           suggest: "deny", // kilocode_change
           question: "deny",
+          interactive_terminal: "deny", // kilocode_change - human-driven tools are primary-agent only
           plan_enter: "deny",
           plan_exit: "deny",
           repo_clone: "deny",
@@ -146,6 +160,7 @@ export const layer = Layer.effect(
               defaults,
               Permission.fromConfig({
                 question: "allow",
+                interactive_terminal: "allow", // kilocode_change
                 suggest: "allow", // kilocode_change
                 plan_enter: "allow",
               }),
@@ -322,6 +337,11 @@ export const layer = Layer.effect(
           item.hidden = value.hidden ?? item.hidden
           item.name = value.name ?? item.name
           item.steps = value.steps ?? item.steps
+          // kilocode_change start - carry metadata as typed fields, never as provider options
+          item.displayName = value.displayName ?? item.displayName
+          item.source = value.source ?? item.source
+          item.requirements = value.requirements ?? item.requirements
+          // kilocode_change end
           item.options = mergeDeep(item.options, value.options ?? {})
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
           KiloAgent.processConfigItem(item) // kilocode_change - populate displayName from options
@@ -365,7 +385,7 @@ export const layer = Layer.effect(
 
         if (flags.experimentalScout) {
           const resolvedReferences = Reference.resolveAll({
-            references: cfg.reference ?? {},
+            references: ConfigReference.normalize(cfg.reference ?? {}), // kilocode_change
             directory: ctx.directory,
             worktree: ctx.worktree,
           })
@@ -412,6 +432,8 @@ export const layer = Layer.effect(
             Permission.fromConfig({ external_directory: { [Truncate.GLOB]: "allow" } }),
           )
         }
+
+        KiloAgent.hardenSystemAgents(agents) // kilocode_change - keep system utility agents deny-only after config merges
 
         const get = Effect.fnUntraced(function* (agent: string) {
           return agents[KiloAgent.resolveKey(agent)] // kilocode_change - treat "build" as "code"
@@ -474,6 +496,32 @@ export const layer = Layer.effect(
     })
     // kilocode_change end
 
+    // kilocode_change start - agent requirement status and guard hooks
+    const requirementStatus = Effect.fn("Agent.requirementStatus")(function* (name: string) {
+      const ctx = yield* InstanceState.context
+      return yield* AgentRequirements.status({
+        name,
+        directory: ctx.directory,
+        config,
+        skills: skill,
+        mcp,
+        agents: { get: (agent) => current((s) => s.get(agent)) },
+      })
+    })
+
+    const guardRequirements = Effect.fn("Agent.guardRequirements")(function* (agent: Info) {
+      const ctx = yield* InstanceState.context
+      yield* AgentRequirements.guard({
+        agent,
+        directory: ctx.directory,
+        config,
+        skills: skill,
+        mcp,
+        agents: { get: (name) => current((s) => s.get(name)) },
+      })
+    })
+    // kilocode_change end
+
     return Service.of({
       get: Effect.fn("Agent.get")(function* (agent: string) {
         return yield* current((s) => s.get(agent)) // kilocode_change
@@ -487,6 +535,8 @@ export const layer = Layer.effect(
       defaultAgent: Effect.fn("Agent.defaultAgent")(function* () {
         return yield* current((s) => s.defaultAgent()) // kilocode_change
       }),
+      requirementStatus, // kilocode_change
+      guardRequirements, // kilocode_change
       generate: Effect.fn("Agent.generate")(function* (input: {
         description: string
         model?: { providerID: ProviderID; modelID: ModelID }
@@ -559,6 +609,7 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Auth.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(Skill.defaultLayer),
+  Layer.provide(MCP.defaultLayer), // kilocode_change
   Layer.provide(RuntimeFlags.defaultLayer),
 )
 

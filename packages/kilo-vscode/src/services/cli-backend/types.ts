@@ -31,6 +31,8 @@ export interface KilocodeProfile {
   email: string
   name?: string
   organizations?: KilocodeOrganization[]
+  selectedOrganizationId?: string
+  hasPersonalAccount?: boolean
 }
 
 export interface KilocodeBalance {

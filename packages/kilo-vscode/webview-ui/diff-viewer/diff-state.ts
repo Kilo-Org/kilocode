@@ -10,7 +10,8 @@ export function sameDiffMeta(left: WorktreeFileDiff, right: WorktreeFileDiff) {
     left.tracked === right.tracked &&
     left.generatedLike === right.generatedLike &&
     left.summarized === right.summarized &&
-    left.stamp === right.stamp
+    left.stamp === right.stamp &&
+    left.kind === right.kind
   )
 }
 
@@ -79,6 +80,7 @@ export function mergeWorktreeDiffs(prev: WorktreeFileDiff[], next: WorktreeFileD
       existing.before === diff.before &&
       existing.after === diff.after &&
       existing.patch === diff.patch &&
+      existing.image === diff.image &&
       sameDiffMeta(existing, diff)
     )
       return existing
@@ -91,12 +93,14 @@ export function mergeWorktreeDiffs(prev: WorktreeFileDiff[], next: WorktreeFileD
         before: existing.before,
         after: existing.after,
         patch: existing.patch,
+        image: existing.image,
         summarized: false,
       }
       if (
         existing.before === merged.before &&
         existing.after === merged.after &&
         existing.patch === merged.patch &&
+        existing.image === merged.image &&
         sameDiffMeta(existing, merged)
       )
         return existing

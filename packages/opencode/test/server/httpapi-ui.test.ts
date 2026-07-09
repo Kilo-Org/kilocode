@@ -67,13 +67,14 @@ function app(input?: { password?: string; username?: string }) {
   ).handler
   return {
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise((): Promise<Response> =>
-        Promise.resolve(
-          handler(
-            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-            HttpApiApp.context,
+      return Effect.promise(
+        (): Promise<Response> =>
+          Promise.resolve(
+            handler(
+              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+              HttpApiApp.context,
+            ),
           ),
-        ),
       )
     },
   }
@@ -114,13 +115,14 @@ function uiApp(input?: {
   ).handler
   return {
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise((): Promise<Response> =>
-        Promise.resolve(
-          handler(
-            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-            HttpApiApp.context,
+      return Effect.promise(
+        (): Promise<Response> =>
+          Promise.resolve(
+            handler(
+              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+              HttpApiApp.context,
+            ),
           ),
-        ),
       )
     },
   }
@@ -156,13 +158,14 @@ function routeOrderingApp() {
   return {
     proxiedUrl: () => proxiedUrl,
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise((): Promise<Response> =>
-        Promise.resolve(
-          handler(
-            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-            HttpApiApp.context,
+      return Effect.promise(
+        (): Promise<Response> =>
+          Promise.resolve(
+            handler(
+              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+              HttpApiApp.context,
+            ),
           ),
-        ),
       )
     },
   }
@@ -323,6 +326,20 @@ describe("HttpApi UI fallback", () => {
       expect(yield* Effect.promise(() => response.json())).toEqual({ error: "Not Found" })
       expect(proxied).toBe(false)
       // kilocode_change end
+    }),
+  )
+
+  it.live("accepts basic auth passwords containing colons for the web UI", () =>
+    Effect.gen(function* () {
+      const response = yield* uiApp({
+        password: "sec:ret",
+        username: "opencode",
+        disableEmbeddedWebUi: true,
+      }).request("/", {
+        headers: { authorization: `Basic ${btoa("opencode:sec:ret")}` },
+      })
+
+      expect(response.status).toBe(404) // kilocode_change - auth succeeds, but Kilo does not proxy a fallback UI
     }),
   )
 

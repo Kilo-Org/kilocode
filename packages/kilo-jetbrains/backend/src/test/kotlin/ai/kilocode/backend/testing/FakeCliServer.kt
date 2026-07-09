@@ -1,6 +1,7 @@
 package ai.kilocode.backend.testing
 
 import ai.kilocode.backend.cli.CliServer
+import ai.kilocode.backend.cli.CliDownload
 
 /**
  * Fake [CliServer] that delegates to a [MockCliServer] instead of
@@ -13,21 +14,29 @@ import ai.kilocode.backend.cli.CliServer
 class FakeCliServer(private val mock: MockCliServer) : CliServer {
 
     override var forceExtract = false
+    var stopCount = 0
+        private set
+    var disposeCount = 0
+        private set
 
     override fun process(): Process? = null
 
-    override suspend fun init(): CliServer.State =
-        CliServer.State.Ready(mock.start(), mock.password)
+    override suspend fun init(onProgress: (CliDownload) -> Unit, onResolved: () -> Unit): CliServer.State {
+        onResolved()
+        return CliServer.State.Ready(mock.start(), mock.password)
+    }
 
     override fun exited(proc: Process) {}
 
     /** Shutdown the server socket but keep the mock alive for restart. */
     override fun stop() {
+        stopCount++
         mock.shutdown()
     }
 
     /** Final cleanup. */
     override fun dispose() {
+        disposeCount++
         mock.close()
     }
 }

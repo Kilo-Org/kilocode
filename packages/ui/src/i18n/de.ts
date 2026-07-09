@@ -57,6 +57,15 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Kostenloses Nutzungslimit überschritten",
   "ui.sessionTurn.error.addCredits": "Guthaben aufladen",
 
+  "dialog.usageExceeded.freeTier.title": "Kostenloses Limit erreicht",
+  "dialog.usageExceeded.freeTier.description":
+    "Abonniere Kilo Go für zuverlässigen Zugriff auf die besten Open-Source-Modelle, ab $5/Monat.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Abonnieren",
+  "dialog.usageExceeded.accountRateLimit.title": "Go-Limit erreicht",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Nutzungslimit erreicht. Um dieses Modell jetzt weiter zu nutzen, aktiviere die Nutzung über dein verfügbares Guthaben",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Einstellungen öffnen",
+
   "ui.sessionTurn.status.delegating": "Arbeit delegieren",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -117,6 +126,7 @@ export const dict = {
 
   "ui.tool.read": "Lesen",
   "ui.tool.loaded": "Geladen",
+  "ui.tool.swePruned": "SWE-Pruner · {{kept}} von {{total}} Zeilen behalten", // kilocode_change
   "ui.tool.list": "Auflisten",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -167,7 +177,9 @@ export const dict = {
   "ui.patch.action.patched": "Gepatched",
 
   "ui.question.subtitle.answered": "{{count}} beantwortet",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(keine Antwort)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(nicht beantwortet)",
   "ui.question.multiHint": "Alle zutreffenden auswählen",
   "ui.question.singleHint": "Eine Antwort auswählen",

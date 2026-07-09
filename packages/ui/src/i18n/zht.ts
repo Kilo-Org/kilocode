@@ -56,6 +56,14 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "免費使用額度已用完",
   "ui.sessionTurn.error.addCredits": "新增點數",
 
+  "dialog.usageExceeded.freeTier.title": "已達免費額度上限",
+  "dialog.usageExceeded.freeTier.description": "訂閱 Kilo Go，可靠地使用最佳開源模型，每月 $5 起。",
+  "dialog.usageExceeded.freeTier.actionLabel": "訂閱",
+  "dialog.usageExceeded.accountRateLimit.title": "已達 Go 額度上限",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "已達使用額度上限。若要現在繼續使用此模型，請從可用餘額中啟用使用",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "開啟設定",
+
   "ui.sessionTurn.status.delegating": "正在委派工作",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -116,6 +124,7 @@ export const dict = {
 
   "ui.tool.read": "讀取",
   "ui.tool.loaded": "已載入",
+  "ui.tool.swePruned": "SWE-Pruner · 保留 {{total}} 行中的 {{kept}} 行", // kilocode_change
   "ui.tool.list": "清單",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -166,7 +175,9 @@ export const dict = {
   "ui.patch.action.patched": "已套用修補",
 
   "ui.question.subtitle.answered": "{{count}} 已回答",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(無答案)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(未回答)",
   "ui.question.multiHint": "可多選",
   "ui.question.singleHint": "選擇一個答案",

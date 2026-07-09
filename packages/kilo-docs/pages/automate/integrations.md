@@ -5,7 +5,7 @@ description: "Overview of Kilo Code integrations"
 
 # Kilo Code Integrations
 
-Kilo Integrations lets you connect your GitHub or GitLab account (soon Bitbucket) to enable advanced features inside Kilo Code. Once connected, Kilo can access your repositories securely, enabling features like **Code Reviews**, **Cloud Agents**, and **Kilo Deploy**.
+Kilo Integrations lets you connect GitHub or GitLab for repository workflows and DoltHub for Dolt-versioned data. Once connected, Kilo can access authorized resources securely, enabling features like **Code Reviews**, **Cloud Agents**, **Kilo Deploy**, and data workflows through **Kilo Connect**.
 
 ## Supported Platforms
 
@@ -13,12 +13,14 @@ Kilo Integrations lets you connect your GitHub or GitLab account (soon Bitbucket
 |---|---|---|
 | GitHub | GitHub App | [GitHub Setup](#connecting-github) |
 | GitLab | OAuth or PAT | [GitLab Setup](#connecting-gitlab) |
+| DoltHub | OAuth | [DoltHub Setup](#connecting-dolthub) |
 
 ## What You Can Do With Integrations
 
-- **Connect GitHub or GitLab to Kilo Code** in a few clicks
+- **Connect GitHub, GitLab, or DoltHub to Kilo Code** in a few clicks
 - **Enable advanced features** like Cloud Agents, Code Reviews, and Kilo Deploy
-- **Authorize repository access** so Kilo can analyze and work with your code
+- **Authorize GitHub or GitLab repository access** so Kilo can analyze and work with your code
+- **Query Dolt-versioned data** and authorize DoltHub access for Gas Town Wasteland
 
 ## Prerequisites
 
@@ -27,6 +29,7 @@ Before connecting:
 - You must have a **GitHub** or **GitLab** account.
 - For GitHub: You need permission to install GitHub Apps for the repositories you want Kilo to access.
 - For GitLab: You need **Maintainer** role (or higher) on the projects you want to connect.
+- For DoltHub: You need a DoltHub account to authorize the OAuth connection.
 - (Optional) If you're connecting an organization, you must be an admin or have app installation permissions.
 
 ---
@@ -109,9 +112,30 @@ For self-hosted GitLab instances using OAuth, you need to register an OAuth appl
 
 ---
 
+## Connecting DoltHub
+
+Use the DoltHub integration page to connect your DoltHub account. Kilo uses this OAuth connection for [Kilo Connect](/docs/code-with-ai/platforms/kilo-connect) and as the default auth method for [Gas Town Wasteland](/docs/code-with-ai/gastown/wasteland).
+
+1. Go to the **Integrations** page:
+   - **Personal**: [app.kilo.ai/integrations/dolthub](https://app.kilo.ai/integrations/dolthub)
+   - **Organization**: Your organization → Integrations → DoltHub
+2. Click **Connect DoltHub**.
+3. Approve Kilo on DoltHub.
+4. Return to Kilo and confirm DoltHub shows a **Connected** status.
+
+{% image src="/docs/img/integrations/dolthub/connect.png" alt="DoltHub integration page before OAuth connection" width="900" caption="DoltHub integration page in Kilo" /%}
+
+{% image src="/docs/img/integrations/dolthub/authorize.png" alt="DoltHub OAuth authorization screen for Kilo" width="700" caption="DoltHub OAuth authorization screen" /%}
+
+{% image src="/docs/img/integrations/dolthub/connected.png" alt="Connected DoltHub integration page showing api_read_write permission" width="900" caption="Connected DoltHub integration" /%}
+
+To remove the connection, click **Disconnect** from the DoltHub integration page.
+
+---
+
 ## What Happens After Connecting
 
-Once your Git provider is connected, the following features are enabled in Kilo:
+Once your integrations are connected, the following features are enabled in Kilo:
 
 ### Cloud Agents
 
@@ -130,6 +154,12 @@ Once your Git provider is connected, the following features are enabled in Kilo:
 - Deploy Next.js 14 & 15 apps directly from Kilo
 - Trigger rebuilds automatically on push
 - Manage deployment logs and history
+
+### DoltHub data access
+
+- Query Dolt-versioned databases from your workspace
+- Use DoltHub alongside GitHub or GitLab when a workflow also needs repository access
+- Authorize Gas Town Wasteland to fork commons databases, push claims and evidence, and manage DoltHub PRs. Wasteland also supports an advanced API token option when OAuth is not available.
 
 ### Upcoming:
 
@@ -156,6 +186,14 @@ From the **Integrations** page:
 - Your tokens are cleared, but webhook configuration is preserved so reconnecting restores your setup
 
 > Disconnecting from Kilo does not revoke OAuth tokens on GitLab's side. You can manually revoke them from **GitLab → User Settings → Applications → Authorized Applications**.
+
+### DoltHub
+
+From the **Integrations** page, open DoltHub to:
+
+- View the connected status
+- View granted permissions
+- Disconnect DoltHub from Kilo
 
 ---
 

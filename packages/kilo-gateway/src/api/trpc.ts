@@ -123,7 +123,7 @@ const envelope = z.object({
   error: z.unknown().optional(),
 })
 
-export type KiloPassState = z.infer<typeof KiloPassStateSchema>
+export type KiloPassUsageState = z.infer<typeof KiloPassStateSchema>
 export type AutoTopUpState = z.infer<typeof AutoTopUpStateSchema>
 export type CodingPlanSubscription = z.infer<typeof CodingPlanSubscriptionSchema>
 export type ByokEntry = z.infer<typeof ByokEntrySchema>

@@ -55,6 +55,15 @@ export const dict: Record<Keys, string> = {
   "ui.sessionTurn.error.freeUsageExceeded": "Gratis bruk overskredet",
   "ui.sessionTurn.error.addCredits": "Legg til kreditt",
 
+  "dialog.usageExceeded.freeTier.title": "Gratis grense nådd",
+  "dialog.usageExceeded.freeTier.description":
+    "Abonner på Kilo Go for pålitelig tilgang til de beste åpen kildekode-modellene, fra $5/måned.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Abonner",
+  "dialog.usageExceeded.accountRateLimit.title": "Go-grense nådd",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Bruksgrense nådd. For å fortsette å bruke denne modellen nå, aktiver bruk fra din tilgjengelige saldo",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Åpne innstillinger",
+
   "ui.sessionTurn.status.delegating": "Delegerer arbeid",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -115,6 +124,7 @@ export const dict: Record<Keys, string> = {
 
   "ui.tool.read": "Les",
   "ui.tool.loaded": "Lastet",
+  "ui.tool.swePruned": "SWE-Pruner · {{kept}} av {{total}} linjer beholdt", // kilocode_change
   "ui.tool.list": "Liste",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -165,7 +175,9 @@ export const dict: Record<Keys, string> = {
   "ui.patch.action.patched": "Oppdatert",
 
   "ui.question.subtitle.answered": "{{count}} besvart",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(ingen svar)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(ikke besvart)",
   "ui.question.multiHint": "Velg alle som gjelder",
   "ui.question.singleHint": "Velg ett svar",

@@ -6,15 +6,16 @@ import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.platform.project.projectIdOrNull
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -27,20 +28,28 @@ import kotlinx.coroutines.withContext
  * completes.
  */
 class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
-
-    companion object {
-        private val LOG = KiloLog.create(KiloToolWindowFactory::class.java)
-    }
-
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+        project.service<KiloToolWindowSetupService>().create(toolWindow)
+    }
+}
+
+private val LOG = KiloLog.create(KiloToolWindowFactory::class.java)
+
+@Service(Service.Level.PROJECT)
+internal class KiloToolWindowSetupService(
+    private val project: Project,
+    private val cs: CoroutineScope,
+) {
+    fun create(toolWindow: ToolWindow) {
         val start = System.currentTimeMillis()
         try {
             val workspaces = service<KiloWorkspaceService>()
-            val cs = CoroutineScope(SupervisorJob())
             val hint = project.basePath ?: ""
+            // Experimental IntelliJ ProjectId API keeps multi-window and split-mode routing exact.
+            val pid = project.projectIdOrNull()
 
             cs.launch {
-                val dir = workspaces.resolveProjectDirectory(hint)
+                val dir = workspaces.resolveProjectDirectory(pid, hint)
                 val workspace = workspaces.workspace(dir)
                 withContext(Dispatchers.Main) {
                     setup(project, toolWindow, workspace)

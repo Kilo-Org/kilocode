@@ -1,4 +1,3 @@
-import type { Ignore } from "ignore"
 import path from "path"
 
 import { getDefaultModelId } from "./model-registry"
@@ -28,6 +27,7 @@ import {
   REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
 } from "./constants"
 import { Log } from "../util/log"
+import type { IgnoreMatcher } from "./shared/load-ignore"
 
 const log = Log.create({ service: "indexing-factory" })
 
@@ -85,8 +85,7 @@ export class CodeIndexServiceFactory {
       return new CodeIndexOllamaEmbedder(config.ollamaOptions.baseUrl, config.modelId, config.modelDimension)
     }
     if (provider === "openai-compatible") {
-      if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey)
-        throw new Error("OpenAI-compatible base URL and API key are required.")
+      if (!config.openAiCompatibleOptions?.baseUrl) throw new Error("OpenAI-compatible base URL is required.")
       return new OpenAICompatibleEmbedder(
         config.openAiCompatibleOptions.baseUrl,
         config.openAiCompatibleOptions.apiKey,
@@ -170,7 +169,7 @@ export class CodeIndexServiceFactory {
     }
   }
 
-  public createVectorStore(): IVectorStore {
+  public createVectorStore(workspacePath = this.workspacePath): IVectorStore {
     const config = this.configManager.getConfig()
     const profile = resolveEmbeddingProfile(config.embedderProvider, config.modelId, config.modelDimension)
 
@@ -192,7 +191,7 @@ export class CodeIndexServiceFactory {
         vectorSize: profile.dimension,
         dbDir,
       })
-      return new LanceDBVectorStore(this.workspacePath, profile.dimension, dbDir, profile)
+      return new LanceDBVectorStore(workspacePath, profile.dimension, dbDir, profile)
     }
 
     if (!config.qdrantUrl) throw new Error("Qdrant URL is required.")
@@ -202,14 +201,14 @@ export class CodeIndexServiceFactory {
       model: profile.modelId,
       vectorSize: profile.dimension,
     })
-    return new QdrantVectorStore(this.workspacePath, config.qdrantUrl, profile.dimension, config.qdrantApiKey, profile)
+    return new QdrantVectorStore(workspacePath, config.qdrantUrl, profile.dimension, config.qdrantApiKey, profile)
   }
 
   public createDirectoryScanner(
     embedder: IEmbedder,
     vectorStore: IVectorStore,
     parser: ICodeParser,
-    ignoreInstance: Ignore,
+    ignoreInstance: IgnoreMatcher,
   ): DirectoryScanner {
     const config = this.configManager.getConfig()
     const meta = this.getTelemetryMeta()
@@ -230,7 +229,7 @@ export class CodeIndexServiceFactory {
     embedder: IEmbedder,
     vectorStore: IVectorStore,
     cacheManager: CacheManager,
-    ignoreInstance: Ignore,
+    ignoreInstance: IgnoreMatcher,
   ): IFileWatcher {
     const config = this.configManager.getConfig()
     const meta = this.getTelemetryMeta()
@@ -249,7 +248,7 @@ export class CodeIndexServiceFactory {
 
   public createServices(
     cacheManager: CacheManager,
-    ignoreInstance: Ignore,
+    ignoreInstance: IgnoreMatcher,
   ): {
     embedder: IEmbedder
     vectorStore: IVectorStore

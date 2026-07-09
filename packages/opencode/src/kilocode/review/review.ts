@@ -1,6 +1,6 @@
 import { $ } from "bun"
 import * as Log from "@opencode-ai/core/util/log"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 
 const log = Log.create({ service: "review" })
 
@@ -9,7 +9,7 @@ export namespace Review {
    * Detect base branch (main, master, dev, or develop)
    * Priority: main > master > dev > develop
    * Falls back to 'main' if none found
-   * Keep this in sync with the default base list in local-review.txt.
+   * Keep this in sync with the default base list in review.txt.
    */
   export async function getBaseBranch(): Promise<string> {
     const candidates = ["main", "master", "dev", "develop"]

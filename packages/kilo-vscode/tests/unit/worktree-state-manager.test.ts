@@ -60,6 +60,67 @@ describe("WorktreeStateManager", () => {
     it("returns empty array when removing nonexistent worktree", () => {
       expect(manager.removeWorktree("nonexistent")).toHaveLength(0)
     })
+
+    it("tracks one automatic rename without changing branch ownership", () => {
+      const wt = manager.addWorktree({
+        branch: "quiet-river",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: true,
+      })
+      manager.addSession("session-1", wt.id)
+      manager.armAutoName(wt.id, "session-1")
+
+      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBe("session-1")
+      expect(manager.renameOwnedBranch(wt.id, "quiet-river", "fix-token-refresh")).toBe(true)
+      expect(manager.getWorktree(wt.id)).toMatchObject({
+        branch: "fix-token-refresh",
+        branchOwned: true,
+        autoNameSessionId: undefined,
+        originalBranch: undefined,
+      })
+    })
+
+    it("treats an observed branch change as manual and cancels automatic naming", () => {
+      const wt = manager.addWorktree({
+        branch: "quiet-river",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: true,
+      })
+      manager.armAutoName(wt.id, "session-1")
+
+      expect(manager.updateWorktreeBranch(wt.id, "my-manual-name")).toBe(true)
+      expect(manager.getWorktree(wt.id)).toMatchObject({
+        branch: "my-manual-name",
+        originalBranch: "quiet-river",
+        autoNameSessionId: undefined,
+      })
+    })
+
+    it("cancels automatic naming when a worktree gains another session", () => {
+      const wt = manager.addWorktree({
+        branch: "quiet-river",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: true,
+      })
+      manager.addSession("session-1", wt.id)
+      manager.armAutoName(wt.id, "session-1")
+      manager.addSession("session-2", wt.id)
+      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBeUndefined()
+    })
+
+    it("never arms imported branches for automatic naming", () => {
+      const wt = manager.addWorktree({
+        branch: "existing-feature",
+        path: "/tmp/wt",
+        parentBranch: "main",
+        branchOwned: false,
+      })
+      manager.armAutoName(wt.id, "session-1")
+      expect(manager.getWorktree(wt.id)?.autoNameSessionId).toBeUndefined()
+    })
   })
 
   describe("session CRUD", () => {
@@ -392,7 +453,18 @@ describe("WorktreeStateManager", () => {
   })
 
   describe("sessionsCollapsed", () => {
-    it("defaults to false", () => {
+    it("defaults to true when state is missing", async () => {
+      await manager.load()
+
+      expect(manager.getSessionsCollapsed()).toBe(true)
+    })
+
+    it("preserves the expanded default from legacy state", async () => {
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      fs.writeFileSync(file, JSON.stringify({ worktrees: {}, sessions: {} }))
+
+      await manager.load()
+
       expect(manager.getSessionsCollapsed()).toBe(false)
     })
 
@@ -414,14 +486,18 @@ describe("WorktreeStateManager", () => {
       expect(loaded.getSessionsCollapsed()).toBe(true)
     })
 
-    it("does not persist when false", async () => {
+    it("persists and loads expanded state", async () => {
       manager.setSessionsCollapsed(false)
       await manager.flush()
       await manager.save()
 
       const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
       const data = JSON.parse(content)
-      expect(data.sessionsCollapsed).toBeUndefined()
+      expect(data.sessionsCollapsed).toBe(false)
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getSessionsCollapsed()).toBe(false)
     })
   })
 

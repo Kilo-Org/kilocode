@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/collapsible"
+export * from "@opencode-ai/ui/collapsible"

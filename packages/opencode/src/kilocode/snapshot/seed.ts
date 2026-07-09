@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import path from "path"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import * as Log from "@opencode-ai/core/util/log"
+import { KiloSnapshotMaterialize } from "./materialize"
 
 export namespace KiloSnapshotSeed {
   const log = Log.create({ service: "snapshot.seed" })
@@ -26,11 +27,14 @@ export namespace KiloSnapshotSeed {
     readonly fs: AppFileSystem.Interface
   }
 
+  export interface Source {
+    readonly gitdir: string
+    readonly staging: string
+    readonly hash: string
+  }
+
   export interface Output {
-    readonly seeded: boolean
-    readonly paths: number
-    readonly dropped: number
-    readonly reason?: string
+    readonly source?: Source
   }
 
   const list = (text: string) => text.split("\0").filter(Boolean)
@@ -42,20 +46,36 @@ export namespace KiloSnapshotSeed {
   export const seed = Effect.fnUntraced(function* (input: Input) {
     const started = Date.now()
     const alt = path.join(input.gitdir, "objects", "info", "alternates")
+    const pending = `${alt}.seed`
+    const temp = path.join(input.gitdir, "seed.index")
     const changed = { value: false }
+    const pinned = { gitdir: "", ref: "", hash: "" }
     const reset = Effect.fnUntraced(function* (reason: string, warn = false) {
+      const retained = { value: false }
+      if (pinned.hash) {
+        const removed = yield* input.git(["--git-dir", pinned.gitdir, "update-ref", "-d", pinned.ref, pinned.hash])
+        retained.value = removed.code !== 0
+      }
       if (changed.value) {
         const cleared = yield* input.git(snap(input, ["read-tree", "--empty"]), { cwd: input.dir })
         if (cleared.code !== 0) {
           yield* input.fs.remove(path.join(input.gitdir, "index")).pipe(Effect.catch(() => Effect.void))
         }
         yield* input.fs.remove(path.join(input.gitdir, "index.lock")).pipe(Effect.catch(() => Effect.void))
-        yield* input.fs.remove(alt).pipe(Effect.catch(() => Effect.void))
+        yield* input.fs.remove(temp).pipe(Effect.catch(() => Effect.void))
+        yield* input.fs.remove(`${temp}.lock`).pipe(Effect.catch(() => Effect.void))
+        yield* input.fs.remove(pending).pipe(Effect.catch(() => Effect.void))
+        if (!retained.value) {
+          yield* input.fs.remove(alt).pipe(Effect.catch(() => Effect.void))
+          yield* input.fs
+            .remove(path.join(input.gitdir, "seed-objects"), { recursive: true })
+            .pipe(Effect.catch(() => Effect.void))
+        }
       }
       const fields = { reason, duration: Date.now() - started }
       if (warn) log.warn("snapshot seed failed; using cold initialization", fields)
       if (!warn) log.info("snapshot seed skipped", fields)
-      return { seeded: false, paths: 0, dropped: 0, reason } satisfies Output
+      return {} satisfies Output
     })
 
     const attempt = Effect.gen(function* () {
@@ -92,32 +112,52 @@ export namespace KiloSnapshotSeed {
 
       const objects = path.join(common, "objects")
       if (!(yield* input.fs.exists(objects))) return yield* reset("source-objects")
-      // Borrow committed objects to keep the first turn fast. Durable materialization can happen off this critical path.
+      const staging = path.join(input.gitdir, "seed-objects")
+      yield* input.fs.ensureDir(staging)
+      // Borrow committed objects while writing dirty content into snapshot-owned staging.
       yield* input.fs.ensureDir(path.dirname(alt))
       changed.value = true
-      yield* input.fs.writeFileString(alt, `${objects}\n`)
+      yield* input.fs.writeFileString(pending, `${objects}\n${staging}\n`)
+      yield* input.fs.rename(pending, alt)
 
-      const tree = yield* input.git(["write-tree"], {
-        cwd: input.dir,
-        env: {
-          GIT_DIR: source,
-          GIT_WORK_TREE: input.worktree,
-          GIT_INDEX_FILE: index,
-          GIT_OBJECT_DIRECTORY: path.join(input.gitdir, "objects"),
-          GIT_ALTERNATE_OBJECT_DIRECTORIES: objects,
-        },
-      })
-      if (tree.code !== 0 || !tree.text.trim()) return yield* reset("write-tree", true)
+      // Normalize a private index copy so write-tree cannot mutate the user's index
+      // and the snapshot does not retain source-local index extensions.
+      yield* input.fs.copyFile(index, temp)
+      const env = {
+        GIT_DIR: source,
+        GIT_WORK_TREE: input.worktree,
+        GIT_INDEX_FILE: temp,
+      }
+      const normalized = yield* input.git(
+        ["update-index", "--no-split-index", "--no-fsmonitor", "--no-untracked-cache"],
+        { cwd: input.dir, env },
+      )
+      if (normalized.code !== 0) return yield* reset("normalize-index", true)
 
-      const read = yield* input.git(snap(input, ["read-tree", tree.text.trim()]), { cwd: input.dir })
+      const tree = yield* input.git(["write-tree"], { cwd: input.dir, env })
+      const hash = tree.text.trim()
+      if (tree.code !== 0 || !hash) return yield* reset("write-tree", true)
+
+      const ref = KiloSnapshotMaterialize.ref(input.gitdir)
+      const pin = yield* input.git(["--git-dir", common, "update-ref", ref, hash])
+      if (pin.code !== 0) return yield* reset("source-pin", true)
+      pinned.gitdir = common
+      pinned.ref = ref
+      pinned.hash = hash
+      const materialize = { gitdir: common, staging, hash }
+
+      // Discard source stat data and entry flags so reconciliation observes the
+      // filesystem under snapshot filter and line-ending semantics.
+      const read = yield* input.git(snap(input, ["read-tree", hash]), { cwd: input.dir })
       if (read.code !== 0) return yield* reset("read-tree", true)
+      yield* input.fs.remove(temp).pipe(Effect.catch(() => Effect.void))
 
       const tracked = yield* input.git(snap(input, ["ls-files", "-z", "--", "."]), { cwd: input.dir })
       if (tracked.code !== 0) return yield* reset("list", true)
       const files = list(tracked.text)
       if (!files.length) {
         log.info("snapshot seed complete", { paths: 0, dropped: 0, duration: Date.now() - started })
-        return { seeded: true, paths: 0, dropped: 0 } satisfies Output
+        return { source: materialize } satisfies Output
       }
 
       const ignored = yield* input.git(["-C", input.worktree, "check-ignore", "--no-index", "--stdin", "-z"], {
@@ -157,10 +197,11 @@ export namespace KiloSnapshotSeed {
         large: large.length,
         duration: Date.now() - started,
       })
-      return { seeded: true, paths: files.length, dropped: dropped.length } satisfies Output
+      return { source: materialize } satisfies Output
     })
 
     return yield* attempt.pipe(
+      Effect.onInterrupt(() => reset("interrupted", true).pipe(Effect.asVoid)),
       Effect.catch((err) => {
         log.warn("snapshot seed failed", { err })
         return reset("error", true)

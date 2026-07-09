@@ -1,5 +1,58 @@
 import { describe, expect, test } from "bun:test"
+import { KiloRun } from "../../../../src/kilocode/cli/cmd/run"
 import { buildRunMessage } from "../../../../src/kilocode/cli/cmd/run-message"
+
+describe("KiloRun", () => {
+  test("prefers a configured command over an endpoint-backed built-in", async () => {
+    const sdk = {
+      command: {
+        list: async () => ({ data: [{ name: "compact" }] }),
+      },
+    }
+
+    expect(await KiloRun.resolveBuiltin(sdk as never, "compact", "/tmp/project")).toBeUndefined()
+  })
+
+  test("resolves an endpoint-backed built-in when no configured command matches", async () => {
+    const sdk = {
+      command: {
+        list: async () => ({ data: [{ name: "other" }] }),
+      },
+    }
+
+    expect(await KiloRun.resolveBuiltin(sdk as never, "compact", "/tmp/project")).toBe("compact")
+  })
+
+  test("uses the resumed session model for compaction", async () => {
+    const calls: unknown[] = []
+    const sdk = {
+      session: {
+        summarize: async (input: unknown) => {
+          calls.push(input)
+          return { data: true }
+        },
+      },
+    }
+
+    await KiloRun.runBuiltin(
+      sdk as never,
+      "ses_test",
+      "compact",
+      undefined,
+      { providerID: "session-provider", id: "session-model" },
+      "/tmp/project",
+    )
+
+    expect(calls).toEqual([
+      {
+        sessionID: "ses_test",
+        directory: "/tmp/project",
+        providerID: "session-provider",
+        modelID: "session-model",
+      },
+    ])
+  })
+})
 
 describe("buildRunMessage", () => {
   test("preserves shell-bound multi-word positionals via wrap-quote (PR #4979)", () => {

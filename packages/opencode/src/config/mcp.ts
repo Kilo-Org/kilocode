@@ -1,6 +1,7 @@
 import { Schema, SchemaGetter } from "effect" // kilocode_change
-import { zod } from "@opencode-ai/core/effect-zod"
-import { PositiveInt, withStatics } from "@opencode-ai/core/schema"
+import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
+import { PositiveInt } from "@opencode-ai/core/schema"
+import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 
 const LocalCanonical = Schema.Struct({
   // kilocode_change
@@ -61,6 +62,10 @@ export const OAuth = Schema.Struct({
     description: "OAuth client secret (if required by the authorization server)",
   }),
   scope: Schema.optional(Schema.String).annotate({ description: "OAuth scopes to request during authorization" }),
+  callbackPort: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))).annotate({
+    description:
+      "Port for the local OAuth callback server (default: 19876). Shorthand for redirectUri when only the port needs changing. Ignored if redirectUri is set.",
+  }),
   redirectUri: Schema.optional(Schema.String).annotate({
     description: "OAuth redirect URI (default: http://127.0.0.1:19876/mcp/oauth/callback).",
   }),

@@ -5,6 +5,7 @@ import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-j
 import { useClaw } from "../context/claw"
 import { useKiloClawLanguage } from "../context/language"
 import type { ConversationListItem } from "../lib/types"
+import { isEnterKeyCommitNotIme } from "../../src/utils/ime-enter"
 
 type Group = { label: string; items: ConversationListItem[] }
 
@@ -132,7 +133,7 @@ function ConversationItem(props: { conversation: ConversationListItem }) {
   }
 
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (isEnterKeyCommitNotIme(e)) {
       e.preventDefault()
       commitRename()
     } else if (e.key === "Escape") {

@@ -1,5 +1,6 @@
 // kilocode_change - new file
-import { describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, test } from "bun:test"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Bus } from "../../../src/bus"
@@ -7,7 +8,7 @@ import * as Config from "../../../src/config/config"
 import { AllowEverythingPermission } from "../../../src/kilocode/permission/allow-everything"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { Server } from "../../../src/server/server"
 import { Session } from "../../../src/session/session"
 import { provideTmpdirInstance, tmpdir } from "../../fixture/fixture"
@@ -22,6 +23,30 @@ const env = Layer.mergeAll(
   CrossSpawnSpawner.defaultLayer,
 )
 const it = testEffect(env)
+const original = {
+  password: Flag.KILO_SERVER_PASSWORD,
+  username: Flag.KILO_SERVER_USERNAME,
+  envPassword: process.env.KILO_SERVER_PASSWORD,
+  envUsername: process.env.KILO_SERVER_USERNAME,
+}
+
+afterEach(() => {
+  Flag.KILO_SERVER_PASSWORD = original.password
+  Flag.KILO_SERVER_USERNAME = original.username
+  if (original.envPassword === undefined) delete process.env.KILO_SERVER_PASSWORD
+  else process.env.KILO_SERVER_PASSWORD = original.envPassword
+  if (original.envUsername === undefined) delete process.env.KILO_SERVER_USERNAME
+  else process.env.KILO_SERVER_USERNAME = original.envUsername
+})
+
+const auth = () => `Basic ${Buffer.from("kilo:secret").toString("base64")}`
+
+const requireAuth = () => {
+  Flag.KILO_SERVER_PASSWORD = "secret"
+  Flag.KILO_SERVER_USERNAME = undefined
+  process.env.KILO_SERVER_PASSWORD = "secret"
+  delete process.env.KILO_SERVER_USERNAME
+}
 
 const ask = (input: Permission.AskInput) =>
   Effect.gen(function* () {
@@ -47,20 +72,28 @@ const wait = () =>
 
 describe("AllowEverythingPermission", () => {
   test("handles disable requests through the HTTP endpoint", async () => {
+    requireAuth()
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const enable = await Server.Default().app.request("/permission/allow-everything", {
+        const blocked = await Server.Default().app.request("/permission/allow-everything", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path },
+          body: JSON.stringify({ enable: true }),
+        })
+        expect(blocked.status).toBe(401)
+
+        const enable = await Server.Default().app.request("/permission/allow-everything", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path, authorization: auth() },
           body: JSON.stringify({ enable: true }),
         })
         expect(enable.status).toBe(200)
 
         const disable = await Server.Default().app.request("/permission/allow-everything", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path },
+          headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path, authorization: auth() },
           body: JSON.stringify({ enable: false }),
         })
         expect(disable.status).toBe(200)

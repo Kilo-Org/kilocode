@@ -7,14 +7,14 @@ import {
   type AutoTopUpState,
   type ByokEntry,
   type CodingPlanSubscription,
-  type KiloPassState,
+  type KiloPassUsageState,
 } from "@kilocode/kilo-gateway"
 import type { KiloBilling, UsageSnapshot } from "./schema"
 import { decode } from "@/kilocode/provider/minimax/native"
 import { normalize } from "@/kilocode/provider/minimax/usage"
 
 export interface CloudState {
-  pass: Result<KiloPassState>
+  pass: Result<KiloPassUsageState>
   topup: Result<AutoTopUpState>
   plans: Result<CodingPlanSubscription[]>
   byok: Result<ByokEntry[]>

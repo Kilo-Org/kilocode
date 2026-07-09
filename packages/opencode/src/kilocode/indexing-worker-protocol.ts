@@ -10,13 +10,20 @@ export type InitInput = {
   directory: string
   root: string
   config: IndexingConfigInput
+  baselineDirectory?: string
   lancedbPath?: string
 }
 
 export type Request =
-  | { type: "request"; id: number; method: "init"; input: InitInput }
-  | { type: "request"; id: number; method: "search"; input: { query: string; directoryPrefix?: string } }
-  | { type: "request"; id: number; method: "dispose"; input: undefined }
+  | { type: "request"; id: number; key: string; method: "init"; input: InitInput }
+  | {
+      type: "request"
+      id: number
+      key: string
+      method: "search"
+      input: { query: string; directoryPrefix?: string }
+    }
+  | { type: "request"; id: number; key: string; method: "dispose"; input: undefined }
 
 export type Result =
   | { type: "result"; id: number; method: "init"; ok: true; value: IndexingStatus }
@@ -30,9 +37,9 @@ export type Log = {
 }
 
 export type Event =
-  | { type: "event"; event: "status"; data: IndexingStatus }
-  | { type: "event"; event: "telemetry"; data: IndexingTelemetryEvent }
-  | { type: "event"; event: "warning"; data: IndexingWarning }
-  | { type: "event"; event: "log"; data: Log }
+  | { type: "event"; key?: string; event: "status"; data: IndexingStatus }
+  | { type: "event"; key?: string; event: "telemetry"; data: IndexingTelemetryEvent }
+  | { type: "event"; key?: string; event: "warning"; data: IndexingWarning }
+  | { type: "event"; key?: string; event: "log"; data: Log }
 
 export type Message = Result | Event

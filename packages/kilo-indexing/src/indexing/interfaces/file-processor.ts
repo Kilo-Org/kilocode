@@ -1,6 +1,7 @@
 import type { PointStruct } from "./vector-store"
 import type { Disposable, Emitter } from "../runtime"
 import type { IndexingTelemetryMode } from "./telemetry"
+import type { WorktreeOverlay } from "../worktree-overlay"
 
 export interface ICodeParser {
   parseFile(
@@ -36,6 +37,8 @@ export interface IFileWatcher extends Disposable {
   initialize(): Promise<void>
   updateBatchSegmentThreshold(newThreshold: number): void
   setCollecting(collecting: boolean): void
+  setOverlay?(overlay?: WorktreeOverlay): void
+  shutdown?(): Promise<void>
 
   readonly onDidStartBatchProcessing: Emitter<string[]>
   readonly onBatchProgressUpdate: Emitter<{

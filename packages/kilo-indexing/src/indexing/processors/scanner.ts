@@ -1,4 +1,3 @@
-import type { Ignore } from "ignore"
 import { stat, readFile } from "fs/promises"
 import path from "path"
 import { glob } from "glob"
@@ -28,6 +27,7 @@ import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IndexingTelemetryMeta, IndexingTelemetryMode, IndexingTelemetryReporter } from "../interfaces/telemetry"
+import type { IgnoreMatcher } from "../shared/load-ignore"
 
 const log = Log.create({ service: "indexing-scanner" })
 
@@ -41,7 +41,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     private readonly vectorStore: IVectorStore,
     private readonly codeParser: ICodeParser,
     private readonly cacheManager: CacheManager,
-    private readonly ignoreInstance: Ignore,
+    private readonly ignoreInstance: IgnoreMatcher,
     batchSegmentThreshold?: number,
     maxBatchRetries?: number,
     private readonly onTelemetry?: IndexingTelemetryReporter,
@@ -295,6 +295,10 @@ export class DirectoryScanner implements IDirectoryScanner {
           onFileParsed?.()
           processedCount++
 
+          if (!isNewFile && this.vectorStore) {
+            await this.vectorStore.deletePointsByMultipleFilePaths([filePath])
+          }
+
           // Process embeddings if configured
           if (this.embedder && this.vectorStore && blocks.length > 0) {
             // Add to batch accumulators
@@ -303,7 +307,7 @@ export class DirectoryScanner implements IDirectoryScanner {
             const info = {
               filePath,
               fileHash: currentFileHash,
-              isNew: isNewFile,
+              isNew: true,
             }
             for (const block of blocks) {
               if (this._cancelled) break
@@ -608,6 +612,7 @@ export class DirectoryScanner implements IDirectoryScanner {
             vector,
             payload: {
               filePath: generateRelativeFilePath(normalizedAbsolutePath, scanWorkspace),
+              fileHash: block.fileHash,
               codeChunk: block.content,
               startLine: block.start_line,
               endLine: block.end_line,

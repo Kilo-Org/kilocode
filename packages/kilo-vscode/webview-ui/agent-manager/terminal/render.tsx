@@ -22,6 +22,7 @@ export interface TerminalTabRenderDeps {
   onSelect: (id: string) => void
   onMiddleClick: (id: string, e: MouseEvent) => void
   onClose: (id: string) => void
+  onCloseOthers: (id: string) => void
 }
 
 /** Render the terminal entry inside the agent-manager tab bar `<For>`. */
@@ -43,6 +44,7 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
         e.stopPropagation()
         deps.onClose(deps.id)
       }}
+      onCloseOthers={() => deps.onCloseOthers(deps.id)}
     />
   )
 }

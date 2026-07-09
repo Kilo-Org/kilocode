@@ -1,7 +1,7 @@
 import type { TuiPluginApi } from "@kilocode/plugin/tui"
 import { createMemo, For, type Accessor } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "@tui/context/theme"
-import { Flag } from "@opencode-ai/core/flag/flag"
+import { KILO_TIPS } from "@/kilocode/cli/cmd/tui/feature-plugins/home/tips" // kilocode_change
 import { useCommandShortcut } from "../../keymap"
 
 const themeCount = Object.keys(DEFAULT_THEMES).length
@@ -29,8 +29,6 @@ type Shortcuts = {
   messagesToggleConceal: TipShortcut
   modelCycleRecent: TipShortcut
   modelList: TipShortcut
-  sessionCycleRecent: TipShortcut
-  sessionCycleRecentReverse: TipShortcut
   sessionExport: TipShortcut
   sessionInterrupt: TipShortcut
   sessionList: TipShortcut
@@ -41,7 +39,6 @@ type Shortcuts = {
   sessionQuickSwitch9: TipShortcut
   sessionSidebarToggle: TipShortcut
   sessionTimeline: TipShortcut
-  sessionToggleRecent: TipShortcut
   statusView: TipShortcut
   terminalSuspend: TipShortcut
   themeList: TipShortcut
@@ -73,6 +70,7 @@ function parse(tip: string): TipPart[] {
 }
 
 const NO_MODELS_TIP = "Run {highlight}/connect{/highlight} to add an AI provider and start coding"
+const NO_MODELS_PARTS = parse(NO_MODELS_TIP)
 
 function shortcutText(value: string) {
   return `{highlight}${value}{/highlight}`
@@ -121,8 +119,6 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     messagesToggleConceal: configShortcut(props.api, "session.toggle.conceal"),
     modelCycleRecent: useCommandShortcut("model.cycle_recent"),
     modelList: useCommandShortcut("model.list"),
-    sessionCycleRecent: useCommandShortcut("session.cycle_recent"),
-    sessionCycleRecentReverse: useCommandShortcut("session.cycle_recent_reverse"),
     sessionExport: configShortcut(props.api, "session.export"),
     sessionInterrupt: configShortcut(props.api, "session.interrupt"),
     sessionList: useCommandShortcut("session.list"),
@@ -133,20 +129,26 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     sessionQuickSwitch9: useCommandShortcut("session.quick_switch.9"),
     sessionSidebarToggle: configShortcut(props.api, "session.sidebar.toggle"),
     sessionTimeline: configShortcut(props.api, "session.timeline"),
-    sessionToggleRecent: configShortcut(props.api, "session.toggle.recent"),
     statusView: useCommandShortcut("opencode.status"),
     terminalSuspend: useCommandShortcut("terminal.suspend"),
     themeList: useCommandShortcut("theme.switch"),
   }
   const tip = createMemo(() => {
     if (props.connected === false) return NO_MODELS_TIP
-    const tips = TIPS.flatMap((item) => {
+    // kilocode_change start
+    const tips = KILO_TIPS.flatMap((item) => {
       const value = typeof item === "string" ? item : item(shortcuts)
       return value ? [value] : []
     })
+    // kilocode_change end
     return tips[Math.floor(tipOffset * tips.length)] ?? NO_MODELS_TIP
-  })
-  const parts = createMemo(() => parse(tip()))
+  }, NO_MODELS_TIP)
+  // Solid can expose a memo's initial value while a pure computation is pending.
+  const parts = createMemo(() => {
+    const value = tip()
+    if (typeof value === "string") return parse(value)
+    return NO_MODELS_PARTS
+  }, NO_MODELS_PARTS)
 
   return (
     <box flexDirection="row" maxWidth="100%">
@@ -163,12 +165,13 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
 }
 
 const TIPS: Tip[] = [
+  /* kilocode_change hide the entire list for if it is accidentally used
   "Type {highlight}@{/highlight} followed by a filename to fuzzy search and attach files",
   "Start a message with {highlight}!{/highlight} to run shell commands directly (e.g., {highlight}!ls -la{/highlight})",
   (shortcuts) => press(shortcuts.agentCycle(), "to cycle between Build and Plan agents"),
   "Use {highlight}/undo{/highlight} to revert the last message and file changes",
   "Use {highlight}/redo{/highlight} to restore previously undone messages and file changes",
-  "Run {highlight}/share{/highlight} to create a public link to your conversation", // kilocode_change
+  "Run {highlight}/share{/highlight} to create a public link to your conversation at opencode.ai",
   "Drag and drop images or PDFs into the terminal to add them as context",
   (shortcuts) => press(shortcuts.inputPaste(), "to paste images from your clipboard into the prompt"),
   (shortcuts) => `Use ${commandText("/editor", shortcuts.editorOpen())} to compose messages in your external editor`,
@@ -176,23 +179,12 @@ const TIPS: Tip[] = [
   (shortcuts) => `Use ${commandText("/models", shortcuts.modelList())} to see and switch between available AI models`,
   (shortcuts) => `Use ${commandText("/themes", shortcuts.themeList())} to switch between ${themeCount} built-in themes`,
   (shortcuts) => `Use ${commandText("/new", shortcuts.sessionNew())} to start a fresh conversation session`,
-  (shortcuts) => `Use ${commandText("/sessions", shortcuts.sessionList())} to list and continue previous conversations`,
-  ...(Flag.KILO_EXPERIMENTAL_SESSION_SWITCHING
-    ? ([
-        (shortcuts) =>
-          press(shortcuts.sessionPinToggle(), "in the session list to pin a session so it stays at the top"),
-        (shortcuts) =>
-          shortcuts.sessionQuickSwitch1() && shortcuts.sessionQuickSwitch9()
-            ? `Pinned and recent sessions are bound to ${shortcutText(shortcuts.sessionQuickSwitch1())} through ${shortcutText(shortcuts.sessionQuickSwitch9())} for one-press switching`
-            : undefined,
-        (shortcuts) =>
-          shortcuts.sessionCycleRecent() && shortcuts.sessionCycleRecentReverse()
-            ? `Press ${shortcutText(shortcuts.sessionCycleRecent())} / ${shortcutText(shortcuts.sessionCycleRecentReverse())} to cycle through recently visited sessions`
-            : undefined,
-        (shortcuts) =>
-          press(shortcuts.sessionToggleRecent(), "in the session list to show or hide a session in the Recent group"),
-      ] satisfies Tip[])
-    : []),
+  (shortcuts) => `Use ${commandText("/sessions", shortcuts.sessionList())} to list, pin, and continue sessions`,
+  (shortcuts) => press(shortcuts.sessionPinToggle(), "in the session list to pin a session so it stays at the top"),
+  (shortcuts) =>
+    shortcuts.sessionQuickSwitch1() && shortcuts.sessionQuickSwitch9()
+      ? `Pinned sessions are assigned quick slots; use ${shortcutText(shortcuts.sessionQuickSwitch1())} through ${shortcutText(shortcuts.sessionQuickSwitch9())} to switch`
+      : undefined,
   "Run {highlight}/compact{/highlight} to summarize long sessions near context limits",
   (shortcuts) => `Use ${commandText("/export", shortcuts.sessionExport())} to save the conversation as Markdown`,
   (shortcuts) => press(shortcuts.messagesCopy(), "to copy the assistant's last message to clipboard"),
@@ -222,17 +214,17 @@ const TIPS: Tip[] = [
     if (!items.length) return undefined
     return `Use ${items.map(shortcutText).join(" / ")} to move between parent and child sessions`
   },
-  "Create {highlight}kilo.json{/highlight} for server settings and {highlight}tui.json{/highlight} for TUI settings", // kilocode_change
-  "Place TUI settings in {highlight}~/.config/kilo/tui.json{/highlight} for global config", // kilocode_change
+  "Create {highlight}opencode.json{/highlight} for server settings and {highlight}tui.json{/highlight} for TUI settings",
+  "Place TUI settings in {highlight}~/.config/opencode/tui.json{/highlight} for global config",
   "Add {highlight}$schema{/highlight} to your config for autocomplete in your editor",
   "Configure {highlight}model{/highlight} in config to set your default model",
   "Override any keybind in {highlight}tui.json{/highlight} via the {highlight}keybinds{/highlight} section",
   "Set any keybind to {highlight}none{/highlight} to disable it completely",
   "Configure local or remote MCP servers in the {highlight}mcp{/highlight} config section",
-  "Add {highlight}.md{/highlight} files to {highlight}.opencode/commands/{/highlight} to define reusable custom prompts",
+  "Add {highlight}.md{/highlight} files to {highlight}.kilo/commands/{/highlight} to define reusable custom prompts", // kilocode_change
   "Use {highlight}$ARGUMENTS{/highlight}, {highlight}$1{/highlight}, {highlight}$2{/highlight} in custom commands for dynamic input",
   "Use backticks in commands to inject shell output (e.g., {highlight}`git status`{/highlight})",
-  "Add {highlight}.md{/highlight} files to {highlight}.opencode/agents/{/highlight} for specialized AI personas",
+  "Add {highlight}.md{/highlight} files to {highlight}.kilo/agents/{/highlight} for specialized AI personas", // kilocode_change
   "Configure per-agent permissions for {highlight}edit{/highlight}, {highlight}bash{/highlight}, and {highlight}webfetch{/highlight} tools",
   'Use patterns like {highlight}"git *": "allow"{/highlight} for granular bash permissions',
   'Set {highlight}"rm -rf *": "deny"{/highlight} to block destructive commands',
@@ -241,26 +233,26 @@ const TIPS: Tip[] = [
   'Set {highlight}"formatter": false{/highlight} in config to disable formatters enabled by another config layer',
   "Define custom formatter commands with file extensions in config",
   'Set {highlight}"lsp": true{/highlight} in config to enable built-in LSP servers for code analysis',
-  "Create {highlight}.ts{/highlight} files in {highlight}.opencode/tools/{/highlight} to define new LLM tools",
+  "Create {highlight}.ts{/highlight} files in {highlight}.kilo/tools/{/highlight} to define new LLM tools", // kilocode_change
   "Tool definitions can invoke scripts written in Python, Go, etc",
-  "Add {highlight}.ts{/highlight} files to {highlight}.opencode/plugins/{/highlight} for event hooks",
+  "Add {highlight}.ts{/highlight} files to {highlight}.kilo/plugins/{/highlight} for event hooks", // kilocode_change
   "Use plugins to send OS notifications when sessions complete",
-  "Create a plugin to prevent Kilo from reading sensitive files", // kilocode_change
-  "Use {highlight}kilo run{/highlight} for non-interactive scripting", // kilocode_change
-  "Use {highlight}kilo --continue{/highlight} to resume the last session", // kilocode_change
-  "Use {highlight}kilo run -f file.ts{/highlight} to attach files via CLI", // kilocode_change
+  "Create a plugin to prevent OpenCode from reading sensitive files",
+  "Use {highlight}opencode run{/highlight} for non-interactive scripting",
+  "Use {highlight}opencode --continue{/highlight} to resume the last session",
+  "Use {highlight}opencode run -f file.ts{/highlight} to attach files via CLI",
   "Use {highlight}--format json{/highlight} for machine-readable output in scripts",
-  "Run {highlight}kilo serve{/highlight} for headless API access to Kilo", // kilocode_change
-  "Use {highlight}kilo run --attach{/highlight} to connect to a running server", // kilocode_change
-  "Run {highlight}kilo upgrade{/highlight} to update to the latest version", // kilocode_change
-  "Run {highlight}kilo auth list{/highlight} to see all configured providers", // kilocode_change
-  "Run {highlight}kilo agent create{/highlight} for guided agent creation", // kilocode_change
+  "Run {highlight}opencode serve{/highlight} for headless API access to OpenCode",
+  "Use {highlight}opencode run --attach{/highlight} to connect to a running server",
+  "Run {highlight}opencode upgrade{/highlight} to update to the latest version",
+  "Run {highlight}opencode auth list{/highlight} to see all configured providers",
+  "Run {highlight}opencode agent create{/highlight} for guided agent creation",
   "Use {highlight}/opencode{/highlight} in GitHub issues/PRs to trigger AI actions",
-  "Run {highlight}kilo github install{/highlight} to set up the GitHub workflow", // kilocode_change
+  "Run {highlight}opencode github install{/highlight} to set up the GitHub workflow",
   "Comment {highlight}/opencode fix this{/highlight} on issues to auto-create PRs",
   "Comment {highlight}/oc{/highlight} on PR code lines for targeted code reviews",
   'Use {highlight}"theme": "system"{/highlight} to match your terminal\'s colors',
-  "Create JSON theme files in {highlight}.opencode/themes/{/highlight} directory",
+  "Create JSON theme files in {highlight}.kilo/themes/{/highlight} directory", // kilocode_change
   "Themes support dark/light variants for both modes",
   "Use numeric xterm color codes 0-255 in custom theme JSON",
   "Use {highlight}{env:VAR_NAME}{/highlight} syntax to reference environment variables in config",
@@ -276,7 +268,7 @@ const TIPS: Tip[] = [
   "Run {highlight}/unshare{/highlight} to remove a session from public access",
   "Permission {highlight}doom_loop{/highlight} prevents infinite tool call loops",
   "Permission {highlight}external_directory{/highlight} protects files outside project",
-  "Run {highlight}kilo debug config{/highlight} to troubleshoot configuration", // kilocode_change
+  "Run {highlight}opencode debug config{/highlight} to troubleshoot configuration",
   "Use {highlight}--print-logs{/highlight} flag to see detailed logs in stderr",
   (shortcuts) => `Use ${commandText("/timeline", shortcuts.sessionTimeline())} to jump to specific messages`,
   (shortcuts) => press(shortcuts.messagesToggleConceal(), "to toggle code block visibility in messages"),
@@ -286,8 +278,8 @@ const TIPS: Tip[] = [
     shortcuts.commandList()
       ? `Toggle username display in chat via the command palette (${shortcutText(shortcuts.commandList())})`
       : "Toggle username display in chat via the command palette",
-  "Run {highlight}docker run -it --rm ghcr.io/kilo-org/kilocode{/highlight} for containerized use", // kilocode_change
-  "Use {highlight}/connect{/highlight} with Kilo Gateway for curated, tested models", // kilocode_change
+  "Run {highlight}docker run -it --rm ghcr.io/anomalyco/opencode{/highlight} for containerized use",
+  "Use {highlight}/connect{/highlight} with OpenCode Zen for curated, tested models",
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
   (shortcuts) => `Use ${commandText("/help", shortcuts.helpShow())} to show the help dialog`,
@@ -297,4 +289,5 @@ const TIPS: Tip[] = [
     : ([
         (shortcuts) => press(shortcuts.terminalSuspend(), "to suspend the terminal and return to your shell"),
       ] satisfies Tip[])),
+  kilocode_change hide the entire list for if it is accidentally used */
 ]

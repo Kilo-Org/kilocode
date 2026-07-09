@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import {
   applyIndexingStatusMessage,
   formatIndexingLabel,
+  indexingButtonVisible,
   indexingTone,
 } from "../../webview-ui/src/context/indexing-utils"
 import { mapSSEEventToWebviewMessage } from "../../src/kilo-provider-utils"
@@ -18,6 +19,41 @@ function makeStatus(overrides: Partial<IndexingStatus> = {}): IndexingStatus {
     ...overrides,
   }
 }
+
+describe("indexing button visibility", () => {
+  it("hides the button when the indexing feature is unavailable", () => {
+    expect(indexingButtonVisible(false, true, { indexing: { enabled: true } }, { indexing: { enabled: true } })).toBe(
+      false,
+    )
+  })
+
+  it("shows the button while indexing is off by default", () => {
+    expect(indexingButtonVisible(true, true, {}, {})).toBe(true)
+  })
+
+  it("hides the button when indexing is off and the preference is disabled", () => {
+    expect(indexingButtonVisible(true, false, {}, {})).toBe(false)
+  })
+
+  it("shows the button when project indexing is enabled", () => {
+    expect(indexingButtonVisible(true, false, { indexing: { enabled: true } }, {})).toBe(true)
+    expect(indexingButtonVisible(true, false, { indexing: { enabled: true } }, { indexing: { enabled: false } })).toBe(
+      true,
+    )
+  })
+
+  it("stays hidden when global and project indexing are off", () => {
+    expect(indexingButtonVisible(true, false, { indexing: { enabled: false } }, { indexing: { enabled: false } })).toBe(
+      false,
+    )
+  })
+
+  it("shows the button whenever global indexing is enabled", () => {
+    expect(indexingButtonVisible(true, false, { indexing: { enabled: false } }, { indexing: { enabled: true } })).toBe(
+      true,
+    )
+  })
+})
 
 describe("indexing formatting", () => {
   it("formats in-progress status like the TUI", () => {

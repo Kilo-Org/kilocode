@@ -1,8 +1,10 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -50,18 +52,19 @@ class SessionMessageListPanel(
     private val question: QuestionView? = null,
     private val permission: PermissionView? = null,
     private val login: LoginRequiredView? = null,
-    private val openFile: (String) -> Unit,
+    private val openFile: SessionFileOpener,
     private val openUrl: (String) -> Unit = {},
     private val selection: SessionSelection? = null,
+    private val openAttachment: (String, FileAttachment) -> Unit = { _, item -> ai.kilocode.client.session.views.AttachmentView.openDefault(item, openFile, openUrl) },
     private val repo: String? = null,
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
-        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
+        SessionUiStyle.SessionLayout.InnerInsets.top,
+        SessionUiStyle.SessionLayout.InnerInsets.left,
+        SessionUiStyle.SessionLayout.InnerInsets.bottom,
+        SessionUiStyle.SessionLayout.InnerInsets.right + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
     ),
 ), Disposable, SessionEditorStyleTarget {
 
@@ -72,13 +75,15 @@ class SessionMessageListPanel(
     private var hiddenTool: ToolCallRef? = null
     private var hovered: PartView? = null
 
+    var onHover: ((PartView, Boolean) -> Unit)? = null
+
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
     init {
         isOpaque = true
-        background = SessionUiStyle.Transcript.bgColor()
         Disposer.register(parent, this)
+        applyStyle(style)
 
         model.addListener(parent) { event ->
             when (event) {
@@ -88,25 +93,34 @@ class SessionMessageListPanel(
 
                 is SessionModelEvent.ContentAdded -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    msgToTurn[event.messageId]?.syncCopyToolbars()
                     refresh()
                 }
 
                 is SessionModelEvent.ContentUpdated -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    msgToTurn[event.messageId]?.syncCopyToolbars()
                     refresh()
                 }
 
                 is SessionModelEvent.ContentRemoved -> {
                     msgToView[event.messageId]?.removePart(event.contentId)
+                    msgToTurn[event.messageId]?.syncCopyToolbars()
                     refresh()
                 }
 
                 is SessionModelEvent.ContentDelta -> {
                     if (event.created) return@addListener
                     val handled = msgToView[event.messageId]?.appendDelta(event.contentId, event.delta) == true
-                    if (handled) return@addListener
+                    if (handled) {
+                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                        return@addListener
+                    }
                     val content = model.content(event.messageId, event.contentId)
-                    if (content != null) msgToView[event.messageId]?.upsertPart(content)
+                    if (content != null) {
+                        msgToView[event.messageId]?.upsertPart(content)
+                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                    }
                 }
 
                 is SessionModelEvent.HistoryLoaded -> rebuild()
@@ -182,13 +196,14 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
             val mv = tv.addMessage(msg)
             register(msgId, tv, mv)
         }
+        tv.syncCopyToolbars()
         add(tv)
         anchorFooter()
         refresh()
@@ -214,6 +229,7 @@ class SessionMessageListPanel(
             val mv = tv.addMessage(msg)
             register(id, tv, mv)
         }
+        tv.syncCopyToolbars()
 
         refresh()
     }
@@ -239,13 +255,14 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, resize, repo, ::hover)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
                 val mv = tv.addMessage(msg)
                 register(msgId, tv, mv)
             }
+            tv.syncCopyToolbars()
             add(tv)
         }
 
@@ -351,20 +368,24 @@ class SessionMessageListPanel(
             if (prev === view) return
             hovered = view
             prev?.setHovered(false)
+            onHover?.invoke(view, true)
             return
         }
-        if (hovered === view) hovered = null
+        if (hovered !== view) return
+        hovered = null
+        onHover?.invoke(view, false)
     }
 
     private fun clearHover() {
         val view = hovered ?: return
         hovered = null
         view.setHovered(false)
+        onHover?.invoke(view, false)
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = SessionUiStyle.Transcript.bgColor()
+        background = style.editorBackground
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)
@@ -382,6 +403,7 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
+        onHover = null
         removeAll()
     }
 }

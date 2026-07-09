@@ -1,7 +1,8 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rm, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
+import { createHash } from "crypto"
 import { v5 as uuidv5 } from "uuid"
 import { CacheManager } from "../../../../src/indexing/cache-manager"
 import { QDRANT_CODE_BLOCK_NAMESPACE } from "../../../../src/indexing/constants"
@@ -14,6 +15,7 @@ import type {
 } from "../../../../src/indexing/interfaces"
 import { FileWatcher } from "../../../../src/indexing/processors/file-watcher"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
+import { WorktreeOverlay } from "../../../../src/indexing/worktree-overlay"
 
 function createEmbedder(): IEmbedder {
   return {
@@ -32,6 +34,8 @@ function createEmbedder(): IEmbedder {
 }
 
 class RetryStore implements IVectorStore {
+  public readonly points: PointStruct[] = []
+
   constructor(private readonly fail: number) {}
 
   private calls = 0
@@ -40,11 +44,12 @@ class RetryStore implements IVectorStore {
     return false
   }
 
-  async upsertPoints(_points: PointStruct[]): Promise<void> {
+  async upsertPoints(points: PointStruct[]): Promise<void> {
     this.calls += 1
     if (this.calls <= this.fail) {
       throw new Error("watcher upsert failure for /tmp/watcher/path.ts")
     }
+    this.points.push(...points)
   }
 
   async search(
@@ -214,6 +219,86 @@ describe("FileWatcher", () => {
     expect(error?.error).toContain("[REDACTED_PATH]")
   })
 
+  test("updates worktree shadows when a baseline file changes and reverts", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    const cacheDir = path.join(root, ".cache")
+    const file = path.join(root, "file.ts")
+    const baseline = "export const baseline = '" + "x".repeat(100) + "'\n"
+    const changed = "export const changed = '" + "y".repeat(100) + "'\n"
+    const baselineHash = createHash("sha256").update(baseline).digest("hex")
+
+    await mkdir(cacheDir, { recursive: true })
+    await writeFile(file, changed)
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.seedHashes({ [file]: baselineHash })
+    const overlay = new WorktreeOverlay(root, path.join(root, "baseline"), new Map([["file.ts", baselineHash]]))
+    const store = new RetryStore(0)
+    const watcher = new FileWatcher(root, cache, createEmbedder(), store)
+    watcher.setOverlay(overlay)
+    const data = watcher as unknown as {
+      processBatch(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void>
+    }
+
+    overlay.block(file)
+    await data.processBatch(new Map([[file, { path: file, type: "change" }]]))
+
+    expect(overlay.shadows.has("file.ts")).toBe(true)
+    expect(overlay.blocked.has("file.ts")).toBe(false)
+    expect(cache.getHash(file)).toBe(createHash("sha256").update(changed).digest("hex"))
+
+    await writeFile(file, baseline)
+    overlay.block(file)
+    await data.processBatch(new Map([[file, { path: file, type: "change" }]]))
+
+    expect(overlay.shadows.has("file.ts")).toBe(false)
+    expect(overlay.blocked.has("file.ts")).toBe(false)
+    expect(cache.getHash(file)).toBe(baselineHash)
+    expect(store.points.length).toBeGreaterThan(0)
+    const count = store.points.length
+
+    await writeFile(file, changed)
+    overlay.block(file)
+    await data.processBatch(new Map([[file, { path: file, type: "change" }]]))
+    await writeFile(file, baseline)
+    overlay.block(file)
+    await data.processBatch(new Map([[file, { path: file, type: "change" }]]))
+
+    expect(store.points).toHaveLength(count * 2)
+  })
+
+  test("reports unexpected drain failures for recovery", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    const cacheDir = path.join(root, ".cache")
+    const file = path.join(root, "file.ts")
+    await mkdir(cacheDir, { recursive: true })
+    await writeFile(file, "export const value = '" + "x".repeat(100) + "'\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.flush = async () => {
+      throw new Error("cache flush failed")
+    }
+    const watcher = new FileWatcher(root, cache, createEmbedder(), new RetryStore(0))
+    const summary = new Promise<{ batchError?: Error }>((resolve) => {
+      watcher.onDidFinishBatchProcessing.on(resolve)
+    })
+    const data = watcher as unknown as {
+      handleFileEvent(filePath: string, type: "create" | "change" | "delete"): void
+    }
+
+    watcher.setCollecting(true)
+    data.handleFileEvent(file, "create")
+    const result = await Promise.race([
+      summary,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("watcher did not report failure")), 2000)),
+    ])
+
+    expect(result.batchError?.message).toBe("cache flush failed")
+    await watcher.shutdown()
+  })
+
   test("processFile skips files matched by .kilocodeignore during incremental updates", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
     const cacheDir = path.join(root, ".cache")
@@ -231,5 +316,30 @@ describe("FileWatcher", () => {
 
     expect(result.status).toBe("skipped")
     expect(result.reason).toBe("File is ignored by .gitignore or .kilocodeignore")
+  })
+
+  test("processFile skips files matched by nested .gitignore during incremental updates", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    try {
+      const cacheDir = path.join(root, ".cache")
+      const dir = path.join(root, "pkg")
+      const file = path.join(dir, "secret.ts")
+
+      await mkdir(cacheDir, { recursive: true })
+      await mkdir(dir, { recursive: true })
+      await writeFile(path.join(dir, ".gitignore"), "secret.ts\n")
+      await writeFile(file, "export const secret = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const watcher = new FileWatcher(root, cache, createEmbedder(), undefined, await loadIgnore(root))
+      const result = await watcher.processFile(file)
+
+      expect(result.status).toBe("skipped")
+      expect(result.reason).toBe("File is ignored by .gitignore or .kilocodeignore")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })

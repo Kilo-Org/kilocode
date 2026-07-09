@@ -13,16 +13,93 @@ import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProvid
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
 import { TaskHeader } from "../components/chat/TaskHeader"
+import { TaskUsage } from "../components/chat/TaskUsage"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
+import { MemoryContext, type MemoryContextValue } from "../context/memory"
+import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
-import type { Message, Part, QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
+import type {
+  AgentRequirementResult,
+  Message,
+  Part,
+  QuestionRequest,
+  ReviewComment,
+  SessionModelUsage,
+  SuggestionRequest,
+  TodoItem,
+} from "../types/messages"
+import { formatReviewCommentsMarkdown } from "../utils/review-comment-markdown"
+import { reviewMetadata } from "../../../src/shared/review-comments"
 
 const SESSION_ID = "story-session-chat-001"
+
+const missingToolsRequirements: AgentRequirementResult = {
+  agent: "code-review",
+  directory: "/project",
+  enabled: true,
+  state: "blocked",
+  skills: [
+    { name: "review-checklist", status: "ready" },
+    { name: "security-audit", status: "missing" },
+  ],
+  mcps: [
+    { name: "github", status: "missing" },
+    { name: "filesystem", status: "ready" },
+  ],
+  vscode_extensions: [],
+}
+
+const missingExtensionRequirements: AgentRequirementResult = {
+  agent: "release-review",
+  directory: "/project",
+  enabled: true,
+  state: "blocked",
+  skills: [],
+  mcps: [],
+  vscode_extensions: [
+    {
+      name: "GitHub Pull Requests",
+      id: "github.vscode-pull-request-github",
+      status: "missing",
+    },
+  ],
+}
+
+const malformedRequirements: AgentRequirementResult = {
+  agent: "malformed-agent",
+  directory: "/project",
+  enabled: true,
+  state: "error",
+  skills: [],
+  mcps: [],
+  vscode_extensions: [],
+  error: {
+    code: "malformed_declaration",
+    message: "Invalid requirements declaration.",
+  },
+}
+
+const readyRequirements: AgentRequirementResult = {
+  agent: "ready-agent",
+  directory: "/project",
+  enabled: true,
+  state: "ready",
+  skills: [{ name: "review-checklist", status: "ready" }],
+  mcps: [{ name: "filesystem", status: "ready" }],
+  vscode_extensions: [
+    {
+      name: "GitHub Pull Requests",
+      id: "github.vscode-pull-request-github",
+      status: "ready",
+    },
+  ],
+}
 
 // ---------------------------------------------------------------------------
 // Question fixtures
@@ -76,7 +153,7 @@ const reviewSuggestion: SuggestionRequest = {
   id: "s-review-001",
   sessionID: SESSION_ID,
   text: "Start a code review of uncommitted changes?",
-  actions: [{ label: "Start review", description: "Run a local review now", prompt: "/local-review-uncommitted" }],
+  actions: [{ label: "Start review", description: "Run a local review now", prompt: "/review uncommitted" }],
   tool: { messageID: "asst-msg-002", callID: "call-suggest-001" },
 }
 
@@ -150,6 +227,71 @@ export const ChatViewWithMessages: Story = {
   },
 }
 
+export const ChatViewRequirementsChecking: Story = {
+  name: "ChatView — agent requirements checking",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirementsChecking agentRequirementsBlocked>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsMissingTools: Story = {
+  name: "ChatView — missing skills and MCPs",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingToolsRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsMissingExtension: Story = {
+  name: "ChatView — missing VS Code extension",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={missingExtensionRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsMalformed: Story = {
+  name: "ChatView — malformed agent requirements",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={malformedRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
+export const ChatViewRequirementsReady: Story = {
+  name: "ChatView — requirements ready (no card)",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="idle" noPadding agentRequirements={readyRequirements}>
+      <ServerContext.Provider value={mockServer as any}>
+        <div style={{ height: "600px", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </ServerContext.Provider>
+    </StoryProviders>
+  ),
+}
+
 export const ChatViewAgentManagerCompleted: Story = {
   name: "ChatView — completed Agent Manager session actions",
   render: () => {
@@ -169,6 +311,58 @@ export const ChatViewAgentManagerCompleted: Story = {
             </WorktreeModeProvider>
           </SessionContext.Provider>
         </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const UserMessageReviewComments: Story = {
+  name: "User message — interactive review comments",
+  render: () => {
+    const comments: ReviewComment[] = [
+      {
+        id: "review-1",
+        file: "src/components/chat/KiloBackendChatManager.kt",
+        side: "additions",
+        line: 114,
+        comment: "Keep this state synchronized when the active session changes.",
+        selectedText: "private val activeSession = MutableStateFlow<String?>(null)",
+      },
+      {
+        id: "review-2",
+        file: "resources/messages/KiloBundle_bs.properties",
+        side: "deletions",
+        line: 235,
+        comment: "Translate the modified setting description.",
+        selectedText: "settings.models.smallModel.description=The lightweight model used for quick tasks.",
+      },
+    ]
+    const prefix = formatReviewCommentsMarkdown(comments)
+    const text = `${prefix}\n\nPlease address these review comments.`
+    const review = { version: 1 as const, comments }
+    const message: Message = {
+      id: "review-user-message",
+      sessionID: SESSION_ID,
+      role: "user",
+      createdAt: new Date(0).toISOString(),
+      time: { created: 0 },
+    }
+    const parts: Part[] = [
+      {
+        id: "review-user-part",
+        sessionID: SESSION_ID,
+        messageID: message.id,
+        type: "text",
+        text,
+        metadata: reviewMetadata(review),
+      },
+    ]
+
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle">
+        <div style={{ "max-height": "400px", padding: "12px" }}>
+          <VscodeUserMessage message={message} parts={parts} />
+        </div>
       </StoryProviders>
     )
   },
@@ -341,6 +535,13 @@ const spacingParts = {
   ],
   [toolAssistantID]: [
     {
+      id: "part-text-spacing-001",
+      sessionID: SESSION_ID,
+      messageID: toolAssistantID,
+      type: "text",
+      text: "The conversation stays in one centered reading lane so longer explanations remain easy to scan. Tool output, prose, and the composer share the same left and right edges in a wide editor tab.",
+    },
+    {
       id: "part-bash-spacing-001",
       sessionID: SESSION_ID,
       messageID: toolAssistantID,
@@ -380,6 +581,41 @@ const spacingData = {
   ...defaultMockData,
   message: { [SESSION_ID]: spacingMessages },
   part: spacingParts,
+}
+const readableMessages = [spacingMessages[0], spacingMessages[3]]
+const readableData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: readableMessages },
+  part: spacingParts,
+}
+
+function renderReadableChat(status: "idle" | "busy" = "idle") {
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID, status, closeReason: status === "idle" ? "completed" : undefined }),
+    messages: () => readableMessages,
+    visibleMessages: () => readableMessages,
+    userMessages: () => readableMessages.filter((message) => message?.role === "user"),
+    getParts: (id: string) => spacingParts[id as keyof typeof spacingParts] ?? [],
+  }
+  return (
+    <StoryProviders data={readableData} sessionID={SESSION_ID} status={status} noPadding>
+      <SessionContext.Provider value={session as any}>
+        <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const ChatViewReadable1280: Story = {
+  name: "ChatView - readable editor tab",
+  render: renderReadableChat,
+}
+
+export const ChatViewReadable420: Story = {
+  name: "ChatView - readable busy sidebar",
+  render: () => renderReadableChat("busy"),
 }
 
 export const MessageListToolToQueuedUserSpacing: Story = {
@@ -751,6 +987,130 @@ export const TaskHeaderWithTodosAllDone: Story = {
       </StoryProviders>
     )
   },
+}
+
+const mockMemory: MemoryContextValue = {
+  status: () => ({}) as any,
+  show: () => undefined,
+  loading: () => false,
+  pending: () => false,
+  error: () => undefined,
+  enabled: () => true,
+  sessionTokens: () => 533,
+  totalTokens: () => 12_400,
+  refresh: () => {},
+  showMemory: () => {},
+  enable: () => {},
+  disable: () => {},
+  auto: () => {},
+  rebuild: () => {},
+  remember: () => {},
+  forget: () => {},
+}
+
+export const TaskHeaderWithMemory: Story = {
+  name: "TaskHeader — with memory enabled",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages: () => [{ id: "msg-001" }] as any[],
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "Integrate project memory",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <MemoryContext.Provider value={mockMemory}>
+            <div style={{ width: "380px" }}>
+              <TaskHeader />
+            </div>
+          </MemoryContext.Provider>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+const usageTokens = { input: 25_900_000, output: 52_000, reasoning: 4_100, cache: { read: 10_500_000, write: 80_000 } }
+const usageData = {
+  sessionIDs: [SESSION_ID, "story-subagent-001"],
+  totals: {
+    steps: 4,
+    cost: 0.097214,
+    tokens: { input: 25_908_400, output: 52_710, reasoning: 4_220, cache: { read: 10_514_000, write: 80_900 } },
+  },
+  models: [
+    { providerID: "kilo", modelID: "qwen/qwen3.7-plus-20260602", steps: 3, cost: 0.067214, tokens: usageTokens },
+    {
+      providerID: "minimax",
+      modelID: "minimax-m3",
+      steps: 1,
+      cost: 0.03,
+      tokens: { input: 8_400, output: 710, reasoning: 120, cache: { read: 14_000, write: 900 } },
+    },
+  ],
+} satisfies SessionModelUsage
+const usageProviders = {
+  kilo: {
+    id: "kilo",
+    name: "Kilo Gateway",
+    models: {
+      "qwen/qwen3.7-plus": { id: "qwen/qwen3.7-plus", name: "Qwen: Qwen3.7 Plus (20% off)" },
+    },
+  },
+  minimax: {
+    id: "minimax",
+    name: "MiniMax",
+    models: { "minimax-m3": { id: "minimax-m3", name: "MiniMax M3" } },
+  },
+}
+const usageProvider = {
+  providers: () => usageProviders,
+  connected: () => ["kilo", "minimax"],
+  defaults: () => ({}),
+  defaultSelection: () => ({ providerID: "kilo", modelID: "qwen/qwen3.7-plus" }),
+  models: () => [],
+  findModel: () => undefined,
+  authMethods: () => ({}),
+  authStates: () => ({}),
+  isModelValid: () => true,
+}
+
+const usageStory = (open: boolean) => () => (
+  <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+    <ProviderContext.Provider value={usageProvider as any}>
+      <div style={{ "max-height": "560px", overflow: "auto" }}>
+        <TaskUsage
+          defaultOpen={open}
+          usage={usageData}
+          tokens={{
+            input: usageData.totals.tokens.input,
+            output: usageData.totals.tokens.output,
+            cached: usageData.totals.tokens.cache.read,
+          }}
+        />
+      </div>
+    </ProviderContext.Provider>
+  </StoryProviders>
+)
+
+export const TaskUsageCollapsed: Story = {
+  name: "Task usage — collapsed",
+  render: usageStory(false),
+}
+
+export const TaskUsageExpanded: Story = {
+  name: "Task usage — provider and model breakdown",
+  render: usageStory(true),
+}
+
+export const TaskUsageExpanded200: Story = {
+  name: "Task usage — provider and model breakdown, narrow",
+  render: usageStory(true),
 }
 
 // ---------------------------------------------------------------------------

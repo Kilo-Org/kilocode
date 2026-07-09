@@ -1,7 +1,8 @@
-import { Component, createSignal, createEffect, on, Show } from "solid-js"
+import { Component, createSignal, createEffect, createMemo, on, Show } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -23,22 +24,26 @@ import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import IndexingTab from "./IndexingTab"
+import SandboxingTab from "./SandboxingTab"
+import * as Sandboxing from "./sandboxing"
 import { useServer } from "../../context/server"
+import type { MigrationSource } from "../../types/messages"
 
 export interface SettingsProps {
   tab?: string
   onTabChange?: (tab: string) => void
-  onMigrateClick?: () => void // legacy-migration
+  onMigrationClick?: (source: MigrationSource) => void // legacy-migration
 }
 
 const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
+  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
+  const sandboxing = createMemo(() => Sandboxing.visible(features()))
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -106,6 +111,11 @@ const Settings: Component<SettingsProps> = (props) => {
     onTabChange("providers")
   })
 
+  createEffect(() => {
+    if (loading() || sandboxing() || active() !== "sandboxing") return
+    onTabChange("experimental")
+  })
+
   const onTabChange = (tab: string) => {
     setActive(tab)
     props.onTabChange?.(tab)
@@ -134,6 +144,12 @@ const Settings: Component<SettingsProps> = (props) => {
         <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>
           {language.t("settings.openGlobalConfig")}
         </Button>
+        <Tooltip value={language.t("common.reloadDescription")} placement="bottom">
+          <Button variant="secondary" size="small" onClick={() => vscode.postMessage({ type: "reload" })}>
+            <Icon name="reload" size="small" />
+            {language.t("common.reload")}
+          </Button>
+        </Tooltip>
       </div>
 
       {/* Settings tabs */}
@@ -145,66 +161,72 @@ const Settings: Component<SettingsProps> = (props) => {
         style={{ flex: 1, overflow: "hidden" }}
       >
         <Tabs.List>
-          <Tabs.Trigger value="models">
+          <Tabs.Trigger value="models" aria-label={language.t("settings.models.title")}>
             <Icon name="models" />
             <span class="label">{language.t("settings.models.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="providers">
+          <Tabs.Trigger value="providers" aria-label={language.t("settings.providers.title")}>
             <Icon name="providers" />
             <span class="label">{language.t("settings.providers.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="agentBehaviour">
+          <Tabs.Trigger value="agentBehaviour" aria-label={language.t("settings.agentBehaviour.title")}>
             <Icon name="brain" />
             <span class="label">{language.t("settings.agentBehaviour.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="autoApprove">
+          <Tabs.Trigger value="autoApprove" aria-label={language.t("settings.autoApprove.title")}>
             <Icon name="checklist" />
             <span class="label">{language.t("settings.autoApprove.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="browser">
+          <Tabs.Trigger value="browser" aria-label={language.t("settings.browser.title")}>
             <Icon name="window-cursor" />
             <span class="label">{language.t("settings.browser.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="checkpoints">
+          <Tabs.Trigger value="checkpoints" aria-label={language.t("settings.checkpoints.title")}>
             <Icon name="branch" />
             <span class="label">{language.t("settings.checkpoints.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="display">
+          <Tabs.Trigger value="display" aria-label={language.t("settings.display.title")}>
             <Icon name="eye" />
             <span class="label">{language.t("settings.display.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="autocomplete">
+          <Tabs.Trigger value="autocomplete" aria-label={language.t("settings.autocomplete.title")}>
             <Icon name="code-lines" />
             <span class="label">{language.t("settings.autocomplete.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="notifications">
+          <Tabs.Trigger value="notifications" aria-label={language.t("settings.notifications.title")}>
             <Icon name="circle-check" />
             <span class="label">{language.t("settings.notifications.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="context">
+          <Tabs.Trigger value="context" aria-label={language.t("settings.context.title")}>
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
 
-          <Tabs.Trigger value="commitMessage">
+          <Tabs.Trigger value="commitMessage" aria-label={language.t("settings.commitMessage.title")}>
             <Icon name="edit" />
             <span class="label">{language.t("settings.commitMessage.title")}</span>
           </Tabs.Trigger>
           <Show when={features().indexing}>
-            <Tabs.Trigger value="indexing">
+            <Tabs.Trigger value="indexing" aria-label={language.t("settings.indexing.title")}>
               <Icon name="server" />
               <span class="label">{language.t("settings.indexing.title")}</span>
             </Tabs.Trigger>
           </Show>
-          <Tabs.Trigger value="experimental">
+          <Tabs.Trigger value="experimental" aria-label={language.t("settings.experimental.title")}>
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="language">
+          <Show when={sandboxing()}>
+            <Tabs.Trigger value="sandboxing" aria-label={language.t("settings.sandboxing.title")}>
+              <Icon name="shield" />
+              <span class="label">{language.t("settings.sandboxing.title")}</span>
+            </Tabs.Trigger>
+          </Show>
+          <Tabs.Trigger value="language" aria-label={language.t("settings.language.title")}>
             <Icon name="speech-bubble" />
             <span class="label">{language.t("settings.language.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="aboutKiloCode">
+          <Tabs.Trigger value="aboutKiloCode" aria-label={language.t("settings.aboutKiloCode.title")}>
             <Icon name="help" />
             <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
           </Tabs.Trigger>
@@ -265,6 +287,12 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />
         </Tabs.Content>
+        <Show when={sandboxing()}>
+          <Tabs.Content value="sandboxing">
+            <h3>{language.t("settings.sandboxing.title")}</h3>
+            <SandboxingTab />
+          </Tabs.Content>
+        </Show>
         <Tabs.Content value="language">
           <h3>{language.t("settings.language.title")}</h3>
           <LanguageTab />
@@ -275,7 +303,7 @@ const Settings: Component<SettingsProps> = (props) => {
             port={server.serverInfo()?.port ?? null}
             connectionState={server.connectionState()}
             extensionVersion={server.extensionVersion()}
-            onMigrateClick={props.onMigrateClick}
+            onMigrationClick={props.onMigrationClick}
           />
         </Tabs.Content>
       </Tabs>

@@ -29,15 +29,18 @@ class KiloBackendSessionManagerTest {
     private val mock = MockCliServer()
     private val log = TestLog()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val apps = mutableListOf<KiloBackendAppService>()
 
     @AfterTest
     fun tearDown() {
+        apps.forEach { it.dispose() }
+        apps.clear()
         scope.cancel()
         mock.close()
     }
 
     private fun setup(): KiloBackendAppService {
-        return KiloBackendAppService.create(scope, FakeCliServer(mock), log)
+        return KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
     }
 
     private suspend fun ready(app: KiloBackendAppService) {

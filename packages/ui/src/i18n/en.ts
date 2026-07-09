@@ -53,6 +53,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.freeUsageExceeded": "Free usage exceeded",
   "ui.sessionTurn.error.addCredits": "Add credits",
 
+  "dialog.usageExceeded.freeTier.title": "Free limit reached",
+  "dialog.usageExceeded.freeTier.description":
+    "Subscribe to Kilo Go for reliable access to the best open-source models, starting at $5/month.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Subscribe",
+  "dialog.usageExceeded.accountRateLimit.title": "Go limit reached",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Usage limit reached. To continue using this model now, enable usage from your available balance",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Open settings",
+
   "ui.sessionTurn.status.delegating": "Delegating work",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -118,6 +127,7 @@ export const dict: Record<string, string> = {
 
   "ui.tool.read": "Read",
   "ui.tool.loaded": "Loaded",
+  "ui.tool.swePruned": "SWE-Pruner · kept {{kept}} of {{total}} lines", // kilocode_change
   "ui.tool.list": "List",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -175,7 +185,9 @@ export const dict: Record<string, string> = {
   "ui.patch.action.patched": "Patched",
 
   "ui.question.subtitle.answered": "{{count}} answered",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(no answer)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(not answered)",
   "ui.question.multiHint": "Select all answers that apply",
   "ui.question.singleHint": "Select one answer",

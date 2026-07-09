@@ -65,6 +65,7 @@ function connection() {
     onProfileChanged: () => () => undefined,
     onMigrationComplete: () => () => undefined,
     onFavoritesChanged: () => () => undefined,
+    onModelSelectorExpandedChanged: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),

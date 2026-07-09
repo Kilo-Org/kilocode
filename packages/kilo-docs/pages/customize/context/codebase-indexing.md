@@ -64,7 +64,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 |---|---|---|
 | **OpenAI** | API key | Default model: `text-embedding-3-small`. `text-embedding-3-large` for higher accuracy. |
 | **Ollama** | Local base URL | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | Base URL + API key | For self-hosted or third-party OpenAI-compatible endpoints. |
+| **OpenAI-Compatible** | Base URL + optional API key | For self-hosted or third-party OpenAI-compatible endpoints, including unauthenticated local servers. |
 | **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
 | **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
 | **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
@@ -143,7 +143,7 @@ You can also edit the `indexing` section directly. This is the full shape of the
 |---|---|---|---|
 | **OpenAI** | `openai` | `{ apiKey }` | Default: `text-embedding-3-small`. |
 | **Ollama** | `ollama` | `{ baseUrl }` | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey }` | For self-hosted or third-party endpoints. |
+| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey? }` | For self-hosted or third-party endpoints, including unauthenticated local servers. |
 | **Gemini** | `gemini` | `{ apiKey }` | Supports `gemini-embedding-001`. |
 | **Mistral** | `mistral` | `{ apiKey }` | Use a [La Plateforme](https://console.mistral.ai/api-keys/) key — the Codestral-specific keys from the [autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) don't work for embeddings. |
 | **Vercel AI Gateway** | `vercel-ai-gateway` | `{ apiKey }` | Routes through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
@@ -163,44 +163,6 @@ For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **Lance
 ### Status indicator
 
 When indexing is enabled, the CLI shows an indexing status badge at the bottom of the TUI in the form `IDX <state>` (for example `IDX In Progress 40% 120/300`, `IDX Complete`, `IDX Standby`, or `IDX Error <message>`).
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-The legacy extension uses its own Codebase Indexing settings panel.
-
-### Open Codebase Indexing Settings
-
-1. In the chat header, click the database icon (indexing status).
-2. The Codebase Indexing settings panel opens.
-3. If you don't see the icon, open Kilo Code settings ({% codicon name="gear" /%}) and search for **Codebase Indexing**.
-
-{% image src="/docs/img/codebase-indexing/codebase-indexing.png" alt="Codebase Indexing Settings" width="800" caption="Codebase Indexing Settings (legacy)" /%}
-
-### Configure Settings
-
-1. Enable **"Enable Codebase Indexing"** using the toggle switch.
-2. Configure your embedding provider:
-   - **OpenAI**: Enter API key and select model
-   - **Gemini**: Enter Google AI API key and select embedding model
-   - **Ollama**: Enter base URL and select model
-3. Set Qdrant URL and optional API key.
-4. Configure **Max Search Results** (default: 20, range: 1-100).
-5. Click **Save** to start initial indexing.
-
-### Embedding providers
-
-The legacy extension supports a smaller set of providers:
-
-| Provider | How to use | Notes |
-|---|---|---|
-| **OpenAI** | API key | Default: `text-embedding-3-small`. |
-| **Gemini** | Google AI API key | Supports Gemini embedding models including `gemini-embedding-001`. |
-| **Ollama (local)** | Local base URL | No API costs. |
-
-### Vector store
-
-The legacy extension only supports **Qdrant**. See [Setting Up Qdrant](#setting-up-qdrant).
 
 {% /tab %}
 {% /tabs %}

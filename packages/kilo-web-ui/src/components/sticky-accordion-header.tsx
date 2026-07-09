@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/sticky-accordion-header"
+export * from "@opencode-ai/ui/sticky-accordion-header"

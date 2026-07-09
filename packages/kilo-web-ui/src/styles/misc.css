@@ -25,6 +25,13 @@
   animation: kw-skeleton 1.4s ease-in-out infinite;
 }
 
+[data-slot="session-review-large-diff-title"][data-state="loading"] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
 @keyframes kw-skeleton {
   0% {
     background-position: 100% 0;

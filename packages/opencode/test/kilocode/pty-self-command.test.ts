@@ -12,9 +12,11 @@ describe("pty self-command", () => {
 
     const cmd = KiloPtySelfCommand.command(proc)
     expect(cmd).toStrictEqual({ command: "/tmp/kilo", args: [] })
-    expect(
-      KiloPtySelfCommand.resolve({ command: "kilo", cwd: "/tmp/project" }, cmd),
-    ).toStrictEqual({ command: "/tmp/kilo", args: [], cwd: "/tmp/project" })
+    expect(KiloPtySelfCommand.resolve({ command: "kilo", cwd: "/tmp/project" }, cmd)).toStrictEqual({
+      command: "/tmp/kilo",
+      args: [],
+      cwd: "/tmp/project",
+    })
     expect(
       KiloPtySelfCommand.command({
         ...proc,
@@ -41,9 +43,7 @@ describe("pty self-command", () => {
       args: ["--conditions=browser", "/tmp/kilo/src/index.ts"],
       cwd: "/tmp/kilo",
     })
-    expect(
-      KiloPtySelfCommand.resolve({ command: "kilo", cwd: "/tmp/project" }, cmd),
-    ).toStrictEqual({
+    expect(KiloPtySelfCommand.resolve({ command: "kilo", cwd: "/tmp/project" }, cmd)).toStrictEqual({
       command: "/tmp/bun",
       args: ["--conditions=browser", "/tmp/kilo/src/index.ts", "/tmp/project"],
       cwd: "/tmp/kilo",

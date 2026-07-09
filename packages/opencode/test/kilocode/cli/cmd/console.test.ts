@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { explicitNetworkOptions } from "../../../../src/cli/network"
+import { getNetworkIPs, serverUrls } from "../../../../src/kilocode/cli/server-urls"
 import { Daemon } from "../../../../src/kilocode/daemon/daemon"
 
 function opts(input: Partial<Daemon.Network> = {}): Daemon.Options {
@@ -21,7 +22,7 @@ function state(input: Partial<Daemon.Network> = {}) {
     port: options.port,
     url: `http://${options.hostname}:${options.port}`,
     username: "kilo",
-    password: "kilo",
+    password: "secret",
     token: "token",
     version: "test",
     startedAt: new Date(0).toISOString(),
@@ -29,6 +30,41 @@ function state(input: Partial<Daemon.Network> = {}) {
     options,
   })
 }
+
+describe("server URL display", () => {
+  test("advertises a network URL only for wildcard binds", () => {
+    expect(serverUrls("127.0.0.1", 4096)).toStrictEqual({
+      local: "http://127.0.0.1:4096",
+      network: undefined,
+      bind: "http://127.0.0.1:4096",
+    })
+    expect(serverUrls("192.168.1.50", 4096)).toStrictEqual({
+      local: "http://192.168.1.50:4096",
+      network: undefined,
+      bind: "http://192.168.1.50:4096",
+    })
+
+    const ip = getNetworkIPs()[0]
+    expect(serverUrls("0.0.0.0", 4096)).toStrictEqual({
+      local: "http://localhost:4096",
+      network: ip ? `http://${ip}:4096` : undefined,
+      bind: "http://0.0.0.0:4096",
+    })
+  })
+
+  test("formats IPv6 bind URLs without advertising IPv4 interfaces", () => {
+    expect(serverUrls("::1", 4096)).toStrictEqual({
+      local: "http://[::1]:4096",
+      network: undefined,
+      bind: "http://[::1]:4096",
+    })
+    expect(serverUrls("::", 4096)).toStrictEqual({
+      local: "http://[::1]:4096",
+      network: undefined,
+      bind: "http://[::]:4096",
+    })
+  })
+})
 
 describe("console daemon startup", () => {
   test("detects every explicit network option form", () => {
@@ -61,6 +97,10 @@ describe("console daemon startup", () => {
 
   test("treats an explicit auto port as compatible", () => {
     expect(Daemon.matches(state(), opts({ port: 0 }), ["port"])).toBe(true)
+  })
+
+  test("rejects legacy fixed-password daemon state", () => {
+    expect(Daemon.matches({ ...state(), password: "kilo" }, opts(), [])).toBe(false)
   })
 
   test("supports daemon state written before network options were persisted", () => {

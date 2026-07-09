@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/motion-spring"
+export * from "@opencode-ai/ui/motion-spring"

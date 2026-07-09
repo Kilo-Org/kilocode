@@ -15,8 +15,8 @@ const STORIES = [
   { id: "profile--balance-and-credits", name: "Profile / balance and credits" },
   { id: "profile--empty-usage", name: "Profile / empty usage" },
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
-  { id: "marketplace--skills-tab-empty", name: "Marketplace / skills empty state" },
-  { id: "marketplace--agents-tab-empty", name: "Marketplace / agents empty state" },
+  { id: "marketplace--empty-list", name: "Marketplace / empty state" },
+  { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
 ]
 
 function url(id: string) {
@@ -52,6 +52,66 @@ test.describe("webview accessibility ratchet", () => {
     })
   }
 
+  test("Agent Manager keeps virtualized transcript fragments laid out", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const visibility = await page.locator("#storybook-root").evaluate((root) => {
+      const layout = document.createElement("div")
+      layout.className = "am-layout"
+      root.append(layout)
+      const names = ["assistant-message", "tool-trigger", "file", "code", "diff"]
+      const values = names.map((name) => {
+        const node = document.createElement("div")
+        node.dataset.component = name
+        layout.append(node)
+        return getComputedStyle(node).contentVisibility
+      })
+      layout.remove()
+      return values
+    })
+
+    expect(visibility).toEqual(["visible", "visible", "visible", "visible", "visible"])
+  })
+
+  test("Agent Manager avoids generated separator text in updating tool rows", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const content = await page.locator("#storybook-root").evaluate((root) => {
+      const layout = document.createElement("div")
+      layout.className = "am-layout"
+      const wrapper = document.createElement("div")
+      wrapper.dataset.component = "tool-part-wrapper"
+      wrapper.dataset.partType = "tool"
+      const collapsible = document.createElement("div")
+      collapsible.className = "tool-collapsible"
+      collapsible.dataset.component = "collapsible"
+      const title = document.createElement("span")
+      title.dataset.slot = "basic-tool-tool-title"
+      const subtitle = document.createElement("span")
+      subtitle.dataset.slot = "basic-tool-tool-subtitle"
+      collapsible.append(title, subtitle)
+      wrapper.append(collapsible)
+      layout.append(wrapper)
+      root.append(layout)
+      const value = getComputedStyle(subtitle, "::before").content
+      layout.remove()
+      return value
+    })
+
+    expect(content).toBe("none")
+  })
+
+  test("sidebar keeps transcript announcements while Agent Manager bounds them", async ({ page }) => {
+    await open(page, "chat--chat-view-with-messages")
+    await expect(page.locator(".message-list")).toHaveAttribute("role", "log")
+    await expect(page.locator(".message-list")).toHaveAttribute("aria-live", "polite")
+
+    await open(page, "chat--chat-view-agent-manager-completed")
+    await expect(page.locator(".message-list")).not.toHaveAttribute("role")
+    await expect(page.locator(".message-list")).not.toHaveAttribute("aria-live")
+    await expect(page.locator('.sr-only[role="status"]')).toHaveAttribute("aria-live", "polite")
+  })
+
   test("Profile login exposes a keyboard-operable named control", async ({ page }) => {
     await open(page, "profile--not-logged-in")
 
@@ -64,5 +124,62 @@ test.describe("webview accessibility ratchet", () => {
     })
     await page.keyboard.press("Enter")
     await expect(login).toHaveAttribute("data-keyboard-activated", "true")
+  })
+
+  test("Agent Manager sidebar search filters and selects with the keyboard", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const trigger = page.getByRole("button", { name: "Search worktrees and sessions" })
+    const input = page.getByPlaceholder("Search worktrees and sessions", { exact: true })
+    const prompt = page.getByRole("textbox", { name: "Story prompt" })
+    await expect(input).toBeFocused()
+    await expect(page.locator('[data-slot="list-header"]')).toHaveText(["SESSIONS", "LOCAL & WORKTREES"])
+
+    await input.fill("Render")
+    await expect(page.locator('[data-slot="sidebar-search-result"]').first()).toContainText(
+      "Render images in diff viewer",
+    )
+    await input.fill("rndr img")
+    await expect(page.locator('[data-slot="sidebar-search-result"]').first()).toContainText(
+      "Render images in diff viewer",
+    )
+
+    await input.fill("main")
+    await expect(page.locator('[data-slot="sidebar-search-result"]').first()).toContainText("local")
+    await page.keyboard.press("Enter")
+    await expect(page.locator('[data-slot="sidebar-search-selection"]')).toHaveText("local")
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await input.fill("Build grouped")
+    await expect(page.getByText("Build grouped worktree search", { exact: true })).toBeVisible()
+
+    await page.keyboard.press("Enter")
+    await expect(page.locator('[data-slot="sidebar-search-selection"]')).toHaveText("session:session-build")
+    await expect(input).toBeHidden()
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await input.fill("local indexing")
+    await expect(page.getByText("Investigate local indexing", { exact: true })).toBeVisible()
+    await page.keyboard.press("Enter")
+    await expect(page.locator('[data-slot="sidebar-search-selection"]')).toHaveText("session:session-local")
+
+    await trigger.click()
+    await input.fill("does not exist")
+    await expect(page.locator('[data-slot="list-empty-state"]')).toBeVisible()
+    await page.keyboard.press("Escape")
+    await expect(prompt).toBeFocused()
+
+    await trigger.click()
+    await expect(input).toBeFocused()
+    await page.locator(".am-section-label").click()
+    await expect(prompt).toBeFocused()
+
+    await trigger.hover()
+    await expect(
+      page.getByText("Searches the local workspace, local sessions, worktrees, and their sessions", { exact: true }),
+    ).toBeVisible()
+    await expect(page.getByText("⌘F", { exact: true })).toBeVisible()
   })
 })
