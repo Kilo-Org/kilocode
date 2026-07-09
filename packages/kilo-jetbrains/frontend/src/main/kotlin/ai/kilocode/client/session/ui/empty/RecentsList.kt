@@ -190,7 +190,7 @@ internal class RecentsList(
 
         private fun setBadge(kind: SessionActivityKind?) {
             badge.isVisible = kind != null
-            badge.icon = kind?.let { FilledBadgeIcon(it.label(), it.bg(), it.fg()) }
+            badge.icon = kind?.let { FilledBadgeIcon(it.label(), it.style()) }
         }
     }
 }

@@ -5,6 +5,44 @@ import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/type
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+function textarea(
+  value: string,
+  cursor: number,
+  dir: "ltr" | "rtl",
+  selection?: { end: number; direction: SelectionDirection },
+) {
+  const state = { start: cursor, end: selection?.end ?? cursor, direction: selection?.direction ?? "none" }
+  return {
+    value,
+    get selectionStart() {
+      return state.start
+    },
+    get selectionEnd() {
+      return state.end
+    },
+    get selectionDirection() {
+      return state.direction
+    },
+    matches: (selector: string) => selector === `:dir(${dir})`,
+    setSelectionRange: (start: number, end = start, direction: SelectionDirection = "none") => {
+      state.start = start
+      state.end = end
+      state.direction = direction
+    },
+  } as unknown as HTMLTextAreaElement
+}
+
+function key(key: "ArrowLeft" | "ArrowRight") {
+  const state = { prevented: 0 }
+  return {
+    state,
+    event: {
+      key,
+      preventDefault: () => state.prevented++,
+    } as unknown as KeyboardEvent,
+  }
+}
+
 describe("useFileMention", () => {
   it("keeps previous file results visible while the next search is pending", async () => {
     const posted: WebviewMessage[] = []
@@ -183,6 +221,177 @@ describe("useFileMention", () => {
     mention.onInput("@gi", 3)
 
     expect(mention.mentionResults()).toEqual([{ type: "file", value: "src/git.ts" }])
+
+    dispose.fn?.()
+  })
+
+  it("snaps a native forward caret move over a mention", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "See @src/main.ts now"
+    mention.addPaths(["src/main.ts"], "/repo")
+
+    const right = key("ArrowRight")
+    const input = textarea(text, "See ".length, "ltr")
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+    expect(right.state.prevented).toBe(0)
+
+    const positionAfterArrowRight = "See @".length
+    input.setSelectionRange(positionAfterArrowRight, positionAfterArrowRight)
+    await wait(0)
+    expect(input.selectionStart).toBe("See @src/main.ts".length)
+
+    const left = key("ArrowLeft")
+    expect(mention.handleArrowKey(left.event, input)).toBe(false)
+    expect(left.state.prevented).toBe(0)
+
+    const positionAfterArrowLeft = "See @src/main.t".length
+    input.setSelectionRange(positionAfterArrowLeft, positionAfterArrowLeft)
+    await wait(0)
+    expect(input.selectionStart).toBe("See ".length)
+
+    dispose.fn?.()
+  })
+
+  it("snaps a native right-to-left caret move over a mention", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "فایل @src/main.ts را ببین"
+    mention.addPaths(["src/main.ts"], "/repo")
+
+    const left = key("ArrowLeft")
+    const input = textarea(text, "فایل ".length, "rtl")
+    expect(mention.handleArrowKey(left.event, input)).toBe(false)
+    expect(left.state.prevented).toBe(0)
+
+    const positionAfterArrowLeft = "فایل @".length
+    input.setSelectionRange(positionAfterArrowLeft, positionAfterArrowLeft)
+    await wait(0)
+    expect(input.selectionStart).toBe("فایل @src/main.ts".length)
+
+    const right = key("ArrowRight")
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+    expect(right.state.prevented).toBe(0)
+
+    const positionAfterArrowRight = "فایل @src/main.t".length
+    input.setSelectionRange(positionAfterArrowRight, positionAfterArrowRight)
+    await wait(0)
+    expect(input.selectionStart).toBe("فایل ".length)
+
+    dispose.fn?.()
+  })
+
+  it("resolves a pending arrow snap before the next native arrow move", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "See @src/main.ts now"
+    mention.addPaths(["src/main.ts"], "/repo")
+
+    const right = key("ArrowRight")
+    const input = textarea(text, "See ".length, "ltr")
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+
+    const pos = "See @".length
+    input.setSelectionRange(pos, pos)
+    expect(mention.handleArrowKey(right.event, input)).toBe(false)
+
+    const end = "See @src/main.ts".length
+    expect(input.selectionStart).toBe(end)
+
+    input.setSelectionRange(end + 1, end + 1)
+    await wait(0)
+    expect(input.selectionStart).toBe(end + 1)
+
+    dispose.fn?.()
+  })
+
+  it("shrinks a left-to-right shift selection across a mention", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const path = "README.md"
+    const text = `A @${path} B`
+    const start = text.indexOf("@")
+    const end = start + path.length + 1
+    mention.addPaths([path], "/repo")
+
+    const input = textarea(text, end - 1, "ltr", { end: text.length, direction: "backward" })
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(start)
+    expect(input.selectionEnd).toBe(text.length)
+
+    input.setSelectionRange(start + 1, text.length, "backward")
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(end)
+    expect(input.selectionEnd).toBe(text.length)
+    expect(input.selectionDirection).toBe("backward")
+
+    dispose.fn?.()
+  })
+
+  it("shrinks a right-to-left shift selection across a mention", async () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const path = "README.md"
+    const text = `ی @${path} س`
+    const start = text.indexOf("@")
+    const end = start + path.length + 1
+    mention.addPaths([path], "/repo")
+
+    const input = textarea(text, end - 1, "rtl", { end: text.length, direction: "backward" })
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(start)
+    expect(input.selectionEnd).toBe(text.length)
+
+    input.setSelectionRange(start + 1, text.length, "backward")
+    mention.snapSelection(input)
+    expect(input.selectionStart).toBe(end)
+    expect(input.selectionEnd).toBe(text.length)
+    expect(input.selectionDirection).toBe("backward")
 
     dispose.fn?.()
   })

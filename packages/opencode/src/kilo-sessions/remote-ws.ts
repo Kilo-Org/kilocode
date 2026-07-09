@@ -1,4 +1,5 @@
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
 export namespace RemoteWS {
   export type SessionInfo = RemoteProtocol.SessionInfo
@@ -27,6 +28,7 @@ export namespace RemoteWS {
   export type Connection = {
     readonly connectionId: string
     send(msg: RemoteProtocol.Outbound): void
+    heartbeat(): Promise<void>
     close(): void
     readonly connected: boolean
   }
@@ -43,13 +45,38 @@ export namespace RemoteWS {
     let beat: Timer | undefined
     let closed = false
     const buffer: string[] = []
+    let beating: Promise<void> | undefined
+    let queued = false
+
+    function heartbeat(): Promise<void> {
+      queued = true
+      if (beating) return beating
+
+      const current = Promise.resolve(
+        withContext(async () => {
+          while (queued) {
+            if (closed) return
+            queued = false
+            const sessions = await options.getSessions()
+            if (closed) return
+            send({ type: "heartbeat", protocolVersion: InstallationVersion, ...sessions })
+          }
+        }),
+      ).finally(() => {
+        beating = undefined
+        if (!queued || closed) return
+        void heartbeat().catch((err) => {
+          options.log.error("remote-ws heartbeat failed", { error: String(err) })
+        })
+      })
+      beating = current
+      return current
+    }
 
     function startHeartbeat() {
       stopHeartbeat()
       beat = setInterval(() => {
-        void withContext(async () => {
-          send({ type: "heartbeat", ...(await options.getSessions()) })
-        }).catch((err) => {
+        void heartbeat().catch((err) => {
           options.log.error("remote-ws heartbeat failed", { error: String(err) })
         })
       }, interval)
@@ -94,20 +121,26 @@ export namespace RemoteWS {
       }
       const endpoint = `${options.url}/api/user/cli?token=${encodeURIComponent(token)}&connectionId=${connectionId}`
       options.log.info("remote-ws connecting", { connectionId, endpoint: endpoint.replace(/token=[^&]+/, "token=***") })
-      ws = new WebSocket(endpoint)
+      const socket = new WebSocket(endpoint)
+      ws = socket
 
-      ws.onopen = () => {
+      socket.onopen = () => {
+        if (ws !== socket || closed) {
+          socket.close()
+          return
+        }
         options.log.info("remote-ws connected", { buffered: buffer.length })
         void withContext(() => options.onOpen?.())
         backoff = 1000
-        for (const msg of buffer) ws!.send(msg)
+        for (const msg of buffer) socket.send(msg)
         buffer.length = 0
         activity = Date.now()
         startHeartbeat()
         startWatchdog()
       }
 
-      ws.onmessage = (event) => {
+      socket.onmessage = (event) => {
+        if (ws !== socket || closed) return
         activity = Date.now()
         const raw = String(event.data)
         let json: unknown
@@ -127,7 +160,8 @@ export namespace RemoteWS {
         options.onMessage?.(parsed.data)
       }
 
-      ws.onclose = (event) => {
+      socket.onclose = (event) => {
+        if (ws !== socket) return
         options.log.info("remote-ws closed", { code: event.code, reason: event.reason })
         ws = undefined
         stopHeartbeat()
@@ -145,7 +179,8 @@ export namespace RemoteWS {
         schedule()
       }
 
-      ws.onerror = (event) => {
+      socket.onerror = (event) => {
+        if (ws !== socket || closed) return
         options.log.error("remote-ws error", { error: event })
       }
     }
@@ -168,17 +203,21 @@ export namespace RemoteWS {
 
     function close() {
       closed = true
+      queued = false
       stopHeartbeat()
       stopWatchdog()
       if (timer) clearTimeout(timer)
       if (ws) ws.close()
     }
 
-    open()
+    void open()
 
     return {
-      connectionId,
+      get connectionId() {
+        return connectionId
+      },
       send,
+      heartbeat,
       close,
       get connected() {
         return ws?.readyState === WebSocket.OPEN

@@ -11,10 +11,12 @@ import { Config } from "../../src/config/config"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git"
 import { Npm } from "@opencode-ai/core/npm"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { HttpClient } from "effect/unstable/http"
 import { tmpdir } from "../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
@@ -36,7 +38,12 @@ const noopNpm = Layer.mock(Npm.Service)({
   which: () => Effect.succeed(Option.none()),
 })
 
+const unexpectedHttp = HttpClient.make((request) =>
+  Effect.die(`unexpected http request: ${request.method} ${request.url}`),
+)
+
 const layer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),
@@ -44,6 +51,7 @@ const layer = Config.layer.pipe(
   Layer.provide(emptyAccount),
   Layer.provideMerge(infra),
   Layer.provide(noopNpm),
+  Layer.provide(Layer.succeed(HttpClient.HttpClient, unexpectedHttp)),
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
@@ -56,7 +64,7 @@ async function writeConfig(dir: string, config: unknown) {
 
 test("project config update creates .kilo/kilo.jsonc and reloads it", async () => {
   await using tmp = await tmpdir()
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       await save({ model: "updated/model" } as any)
@@ -72,7 +80,7 @@ test("project config update creates .kilo/kilo.jsonc and reloads it", async () =
 
 test("project config update skips empty delete-only writes when no config exists", async () => {
   await using tmp = await tmpdir()
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       await save({ provider: { missing: null } } as any)
@@ -86,7 +94,7 @@ test("project config update prefers existing root kilo.json", async () => {
   await using tmp = await tmpdir()
   await writeConfig(tmp.path, { username: "alice" })
 
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
       await save({ model: "updated/model" } as any)
@@ -105,7 +113,7 @@ test("project config update patches ancestor .kilo/kilo.json from nested directo
   await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
   await writeConfig(path.join(tmp.path, ".kilo"), { username: "alice" })
 
-  await WithInstance.provide({
+  await provideTestInstance({
     directory: child,
     fn: async () => {
       await save({ model: "updated/model" } as any)

@@ -3,9 +3,11 @@
 package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
@@ -14,7 +16,10 @@ import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.log.KiloLog
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -23,6 +28,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.io.OSAgnosticPathUtil
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
@@ -35,6 +41,7 @@ import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Font
+import java.awt.Point
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Icon
@@ -56,7 +63,7 @@ class ToolParts(
     val state: JBLabel,
     val center: JPanel,
     val controls: JComponent,
-    private val open: ((String) -> Unit)? = null,
+    private val open: SessionFileOpener? = null,
     val extra: JBLabel? = null,
     val targets: List<JBLabel> = emptyList(),
     private val mode: ToolBodyMode = ToolBodyMode.EDITOR,
@@ -84,9 +91,9 @@ class ToolParts(
     fun bodyCreated() = body != null
 
     @RequiresEdt
-    fun openLink() {
+    fun openLink(anchor: RelativePoint? = null) {
         val value = href ?: return
-        open?.invoke(value)
+        open?.invoke(value, anchor)
     }
 
     @RequiresEdt
@@ -163,10 +170,14 @@ class ToolBody private constructor(
     fun register(selection: SessionSelection, parent: Disposable) {
         val field = ed
         if (field != null) {
+            (field as? ToolField)?.selection = selection
             selection.register(field, parent)
             return
         }
-        area?.let { selection.register(it, parent) }
+        area?.let {
+            (it as? ToolArea)?.selection = selection
+            selection.register(it, parent)
+        }
     }
 
     @RequiresEdt
@@ -209,10 +220,10 @@ class ToolBody private constructor(
             val disposable = Disposer.newDisposable("Tool body")
             val body = runCatching {
                 val field = ToolField(preview(tool), SessionEditorStyle.current()).also { ed ->
-                    ed.setDisposedWith(disposable)
                     Disposer.register(disposable) {
                         ed.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
                     }
+                    ed.setDisposedWith(disposable)
                 }
                 ToolBody(null, field, pane(field, true), disposable)
             }.getOrElse { err ->
@@ -232,7 +243,7 @@ class ToolBody private constructor(
             return body
         }
 
-        private fun area(tool: Tool, wrap: Boolean) = JBTextArea().apply {
+        private fun area(tool: Tool, wrap: Boolean) = ToolArea().apply {
             isEditable = false
             caret.isVisible = false
             caret.isSelectionVisible = true
@@ -271,13 +282,29 @@ class ToolBody private constructor(
     }
 }
 
+private class ToolArea : JBTextArea(), UiDataProvider, SessionCopyTarget {
+    var selection: SessionSelection? = null
+    override val copyAnchor: JComponent get() = this
+
+    override fun copyText() = text
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        selection?.provideCopy(sink) { copyText() }
+    }
+}
+
 private class ToolField(value: String, private var style: SessionEditorStyle) : EditorTextField(
     EditorFactory.getInstance().createDocument(value.trimEnd('\n')),
     ProjectManager.getInstance().defaultProject,
     PlainTextFileType.INSTANCE,
     true,
     false,
-) {
+), SessionCopyTarget {
+    var selection: SessionSelection? = null
+    override val copyAnchor: JComponent get() = this
+
+    override fun copyText() = text
+
     init {
         setFontInheritedFromLAF(false)
         font = style.editorFont
@@ -295,6 +322,11 @@ private class ToolField(value: String, private var style: SessionEditorStyle) : 
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
         }
     }
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        super.uiDataSnapshot(sink)
+        selection?.provideCopy(sink) { copyText() }
+    }
 }
 
 private const val SUB_CARD = "sub"
@@ -303,14 +335,14 @@ private const val LINK_CARD = "link"
 @RequiresEdt
 internal fun toolParts(
     tool: Tool,
-    openFile: ((String) -> Unit)? = null,
+    openFile: SessionFileOpener? = null,
     mode: ToolBodyMode = ToolBodyMode.TEXT,
 ): ToolParts {
     lateinit var parts: ToolParts
     val glyph = JBLabel()
-    val title = JBLabel()
-    val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val link = JBLabel().apply {
+    val title = clip(JBLabel())
+    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val link = clip(JBLabel()).apply {
         isVisible = false
         isFocusable = false
         foreground = UiStyle.Colors.fg()
@@ -318,17 +350,21 @@ internal fun toolParts(
         setRequestFocusEnabled(false)
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                parts.openLink()
+                parts.openLink(RelativePoint(this@apply, Point(width / 2, 0)))
             }
         })
     }
     val slot = JPanel(CardLayout()).apply {
         isOpaque = false
+        minimumSize = JBUI.size(0, minimumSize.height)
         add(sub, SUB_CARD)
         add(link, LINK_CARD)
     }
-    val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply { isOpaque = false }
+    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
+        isOpaque = false
+        minimumSize = JBUI.size(0, minimumSize.height)
+    }
     val controls = Stack.horizontal()
     val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
@@ -347,24 +383,24 @@ internal fun toolParts(
 @RequiresEdt
 internal fun searchParts(count: Int): ToolParts {
     val glyph = JBLabel()
-    val title = JBLabel()
-    val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val title = clip(JBLabel())
+    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
     val targets = List(count) {
-        JBLabel().apply {
+        clip(JBLabel()).apply {
             foreground = UiStyle.Colors.fg()
-            minimumSize = JBUI.size(0, minimumSize.height)
         }
     }
-    val link = JBLabel().apply { isVisible = false }
+    val link = clip(JBLabel()).apply { isVisible = false }
     val slot = JPanel(CardLayout()).apply {
         isOpaque = false
+        minimumSize = JBUI.size(0, minimumSize.height)
         add(sub, SUB_CARD)
         add(link, LINK_CARD)
     }
-    val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
     val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
     val target = stack.align(HAlign.TRACK, VAlign.CENTER)
-    val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         minimumSize = JBUI.size(0, minimumSize.height)
         add(title, BorderLayout.WEST)
@@ -411,7 +447,7 @@ internal fun subtitle(tool: Tool) = when (tool.name) {
 
 @RequiresEdt
 internal fun setText(label: JBLabel, text: String): Boolean {
-    val value = if (text.isBlank()) "" else XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(text))
+    val value = html(text)
     if (label.text == value) return false
     label.text = value
     return true
@@ -419,19 +455,36 @@ internal fun setText(label: JBLabel, text: String): Boolean {
 
 @RequiresEdt
 internal fun setTargetText(label: JBLabel, text: String): Boolean {
-    if (label.text == text) return false
-    label.text = text
+    val value = single(text)
+    if (label.text == value) return false
+    label.text = value
     return true
 }
 
 @RequiresEdt
 internal fun setLinkText(parts: ToolParts, text: String): Boolean {
-    val value = if (text.isBlank()) "" else XmlStringUtil.wrapInHtml("<u>${XmlStringUtil.escapeString(text)}</u>")
-    if (parts.label == text && parts.link.text == value) return false
-    parts.label = text
+    val label = single(text)
+    val value = if (label.isBlank()) "" else XmlStringUtil.wrapInHtml("<nobr><u>${XmlStringUtil.escapeString(label)}</u></nobr>")
+    if (parts.label == label && parts.link.text == value) return false
+    parts.label = label
     parts.link.text = value
     return true
 }
+
+private fun clip(label: JBLabel): JBLabel = label.apply {
+    minimumSize = JBUI.size(0, minimumSize.height)
+}
+
+private fun html(text: String): String {
+    val value = single(text)
+    if (value.isBlank()) return ""
+    return XmlStringUtil.wrapInHtml("<nobr>${XmlStringUtil.escapeString(value)}</nobr>")
+}
+
+private fun single(text: String): String = text.lineSequence()
+    .map { it.trim() }
+    .filter { it.isNotEmpty() }
+    .joinToString(" ")
 
 @RequiresEdt
 internal fun show(parts: ToolParts, link: Boolean): Boolean {
@@ -539,18 +592,10 @@ internal data class Target(
 internal fun target(tool: Tool): Target? {
     val out = output(tool)
     if (out.isBlank()) return null
-    val path = tag(out, "path") ?: return null
-    val type = tag(out, "type") ?: return null
+    val path = KiloCliParser.tag(out, "path") ?: return null
+    val type = KiloCliParser.tag(out, "type") ?: return null
     return Target(path, type.lowercase())
 }
-
-private fun tag(text: String, name: String): String? =
-    Regex("<$name>\\s*([\\s\\S]*?)\\s*</$name>")
-        .find(text)
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.trim()
-        ?.takeIf { it.isNotBlank() }
 
 private fun shellTitle(tool: Tool): String =
     tool.input["description"]?.takeIf { it.isNotBlank() }

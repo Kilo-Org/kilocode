@@ -44,6 +44,8 @@ export namespace FileIgnore {
     "**/*.log",
     "**/coverage/**",
     "**/.nyc_output/**",
+    "**/.kilo/worktrees/**",
+    "**/.kilocode/worktrees/**",
   ]
 
   export const PATTERNS = [...files, ...folders]

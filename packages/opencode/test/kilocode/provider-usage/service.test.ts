@@ -189,27 +189,6 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
       const procedure = new URL(String(input)).pathname.split("/").at(-1) ?? ""
       calls.push(procedure)
       const values: Record<string, unknown> = {
-        "kiloPass.getState": {
-          subscription: {
-            subscriptionId: "pass",
-            tier: "tier_49",
-            cadence: "monthly",
-            status: "active",
-            cancelAtPeriodEnd: false,
-            currentStreakMonths: 2,
-            nextYearlyIssueAt: null,
-            startedAt: "2026-06-01T00:00:00.000Z",
-            resumesAt: null,
-            nextBonusCreditsUsd: 5,
-            nextBillingAt: "2026-07-01T00:00:00.000Z",
-            currentPeriodBaseCreditsUsd: 49,
-            currentPeriodUsageUsd: 12,
-            currentPeriodHostingCostUsd: 2,
-            currentPeriodBonusCreditsUsd: 5,
-            isBonusUnlocked: true,
-            refillAt: "2026-07-01T00:00:00.000Z",
-          },
-        },
         "user.getAutoTopUpPaymentMethod": {
           enabled: true,
           amountCents: 5000,
@@ -274,14 +253,13 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
     global.fetch = original
 
     expect(calls).toEqual([
-      "kiloPass.getState",
       "user.getAutoTopUpPaymentMethod",
       "codingPlans.listSubscriptions",
       "byok.list",
       "codingPlans.getUsage",
     ])
-    expect(result.items.map((item) => item.id)).toEqual(["kilo-pass", "kilo-managed-minimax:plan"])
-    expect(result.items[1]).toMatchObject({ routingState: "missing", fetchState: "ready" })
+    expect(result.items.map((item) => item.id)).toEqual(["kilo-managed-minimax:plan"])
+    expect(result.items[0]).toMatchObject({ routingState: "missing", fetchState: "ready" })
     expect(result.kiloBilling?.autoTopUp).toMatchObject({ paymentBrand: "visa", paymentLast4: "4242" })
     expect(JSON.stringify(result)).not.toContain("pm_private")
     expect(JSON.stringify(result)).not.toContain("kilo-private-token")

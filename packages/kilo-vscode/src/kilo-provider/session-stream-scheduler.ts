@@ -157,6 +157,11 @@ export class SessionStreamScheduler {
     if (sessionID) this.flush(sessionID)
   }
 
+  /** Currently focused (active-lane) session ID, if any. */
+  get focused(): string | undefined {
+    return this.active
+  }
+
   setVisible(sessionID: string, visible: boolean): void {
     const changed = visible ? !this.visible.has(sessionID) : this.visible.has(sessionID)
     if (!changed) return

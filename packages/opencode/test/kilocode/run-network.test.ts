@@ -94,9 +94,11 @@ function args() {
 
 const timer = globalThis.setTimeout
 const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
+const text = Bun.stdin.text
 
 afterEach(() => {
   globalThis.setTimeout = timer
+  Bun.stdin.text = text
   if (tty) {
     Object.defineProperty(process.stdin, "isTTY", tty)
     return
@@ -113,19 +115,19 @@ function instant() {
   }) as unknown as typeof setTimeout
 }
 
-async function run(sdk: Record<string, unknown>) {
+async function run(sdk: Record<string, unknown>, overrides: Record<string, unknown> = {}, terminal = true) {
   mock.module("@kilocode/sdk/v2", () => ({
     createKiloClient: () => sdk,
   }))
 
   Object.defineProperty(process.stdin, "isTTY", {
     configurable: true,
-    value: true,
+    value: terminal,
   })
 
   const key = JSON.stringify({ time: Date.now(), rand: Math.random() })
   const { RunCommand } = await import(`../../src/cli/cmd/run?${key}`)
-  return RunCommand.handler(args() as never)
+  return RunCommand.handler({ ...args(), ...overrides } as never)
 }
 
 describe("cli run network retries", () => {
@@ -226,5 +228,99 @@ describe("cli run network retries", () => {
 
     expect(calls).toStrictEqual(["req_1", "req_2", "req_3", "req_4"])
     expect(state.reject).toBeUndefined()
+  })
+
+  test("built-in compaction uses the session model without reading stdin", async () => {
+    const q = feed<Event>()
+    const calls: unknown[] = []
+    Bun.stdin.text = async () => {
+      throw new Error("stdin should not be read")
+    }
+
+    const sdk = {
+      command: {
+        list: async () => ({ data: [] }),
+      },
+      config: {
+        get: async () => ({ data: { share: "manual" } }),
+      },
+      event: {
+        subscribe: async () => ({ stream: q.stream() }),
+      },
+      session: {
+        get: async (input: { sessionID: string }) => ({
+          data: {
+            id: input.sessionID,
+            directory: "/tmp/project",
+            model: { providerID: "session-provider", id: "session-model" },
+          },
+        }),
+        summarize: async (input: unknown) => {
+          calls.push(input)
+          q.push(idle())
+          q.end()
+          return { data: true }
+        },
+      },
+    }
+
+    await run(sdk, { command: "compact", message: [] }, false)
+
+    expect(calls).toEqual([
+      {
+        sessionID: "ses_test",
+        directory: "/tmp/project",
+        providerID: "session-provider",
+        modelID: "session-model",
+      },
+    ])
+  })
+
+  test("custom compact commands retain piped arguments without a session", async () => {
+    const q = feed<Event>()
+    const calls: unknown[] = []
+    Bun.stdin.text = async () => "from stdin"
+
+    const sdk = {
+      command: {
+        list: async () => ({ data: [{ name: "compact" }] }),
+      },
+      config: {
+        get: async () => ({ data: { share: "manual" } }),
+      },
+      event: {
+        subscribe: async () => ({ stream: q.stream() }),
+      },
+      session: {
+        create: async () => ({
+          data: { id: "ses_created", directory: "/tmp/project" },
+        }),
+        command: async (input: unknown) => {
+          calls.push(input)
+          q.push({
+            type: "session.status",
+            properties: { sessionID: "ses_created", status: { type: "idle" } },
+          })
+          q.end()
+          return { data: undefined }
+        },
+        summarize: async () => {
+          throw new Error("custom command should not summarize")
+        },
+      },
+    }
+
+    await run(sdk, { command: "compact", continue: false, session: undefined, message: ["argument"] }, false)
+
+    expect(calls).toEqual([
+      {
+        sessionID: "ses_created",
+        agent: undefined,
+        model: undefined,
+        command: "compact",
+        arguments: "argument\nfrom stdin",
+        variant: undefined,
+      },
+    ])
   })
 })

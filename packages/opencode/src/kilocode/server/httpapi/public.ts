@@ -51,7 +51,10 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
 
   const json = (path: string) => spec.paths?.[path]?.get?.responses?.["200"]?.content?.["application/json"]
   const profile = json("/kilo/profile")?.schema?.properties
+  const pass = profile?.kiloPass?.properties
+  if (pass?.nextBillingAt) pass.nextBillingAt = nullable(pass.nextBillingAt)
   if (profile?.balance) profile.balance = nullable(profile.balance)
+  if (profile?.kiloPass) profile.kiloPass = nullable(profile.kiloPass)
   if (profile?.currentOrgId) profile.currentOrgId = nullable(profile.currentOrgId)
 
   const sessions = json("/kilo/cloud-sessions")?.schema?.properties
@@ -75,6 +78,11 @@ export function matchLegacyKiloOpenApi(input: Record<string, unknown>) {
 
   const pty = spec.components?.schemas?.Pty?.properties
   if (pty?.sessionID) pty.sessionID = nullable(pty.sessionID)
+
+  const out = spec.paths?.["/session/{sessionID}/branch-name"]?.post?.responses?.["200"]?.content?.[
+    "application/json"
+  ]?.schema?.properties
+  if (out?.branch) out.branch = nullable(out.branch)
 
   const update = spec.paths?.["/pty/{ptyID}"]?.put?.requestBody?.content?.["application/json"]?.schema
   const name = update?.$ref?.replace("#/components/schemas/", "")

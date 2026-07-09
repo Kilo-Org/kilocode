@@ -6,8 +6,16 @@ export async function extractZip(zipPath: string, destDir: string) {
     const winZipPath = path.resolve(zipPath)
     const winDestDir = path.resolve(destDir)
     // $global:ProgressPreference suppresses PowerShell's blue progress bar popup
-    const cmd = `$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -Path '${winZipPath}' -DestinationPath '${winDestDir}' -Force`
-    await Process.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd])
+    // kilocode_change start - keep paths out of the PowerShell program
+    const cmd =
+      "$global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -LiteralPath $env:OPENCODE_ARCHIVE_PATH -DestinationPath $env:OPENCODE_ARCHIVE_DESTINATION -Force"
+    await Process.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd], {
+      env: {
+        OPENCODE_ARCHIVE_PATH: winZipPath,
+        OPENCODE_ARCHIVE_DESTINATION: winDestDir,
+      },
+    })
+    // kilocode_change end
     return
   }
 

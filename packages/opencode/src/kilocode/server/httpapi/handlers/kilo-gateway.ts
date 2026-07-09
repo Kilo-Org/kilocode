@@ -2,10 +2,12 @@ import {
   GatewayError,
   fetchCloudSession,
   fetchCloudSessionForImport,
+  fetchKiloImageModels,
   getCloudSessions,
   getOrganizationId,
   getToken,
   importSessionToDb,
+  normalizeClawStatus,
 } from "@kilocode/kilo-gateway"
 import {
   HEADER_FEATURE,
@@ -16,6 +18,7 @@ import {
   clearModesCache,
   fetchBalance,
   fetchKilocodeNotifications,
+  fetchKiloPassState,
   fetchOrganizationModes,
   fetchProfile,
 } from "@kilocode/kilo-gateway"
@@ -28,11 +31,13 @@ import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
 import { Identifier } from "@/id/id"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
@@ -66,11 +71,23 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const currentOrgId = info.accountId ?? null
-      const [profile, balance] = yield* Effect.tryPromise({
-        try: () => Promise.all([fetchProfile(info.access), fetchBalance(info.access, currentOrgId ?? undefined)]),
+      const [profile, balance, kiloPass] = yield* Effect.tryPromise({
+        try: () =>
+          Promise.all([
+            fetchProfile(info.access),
+            fetchBalance(info.access, currentOrgId ?? undefined),
+            fetchKiloPassState(info.access),
+          ]),
         catch: () => new HttpApiError.BadRequest({}),
       })
-      return { profile, balance, currentOrgId }
+      return { profile, balance, kiloPass, currentOrgId }
+    })
+
+    const authStatus = Effect.fn("KiloGatewayHttpApi.authStatus")(function* () {
+      const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+      const type = getToken(info) && (info?.type === "api" || info?.type === "oauth") ? info.type : undefined
+      if (!type) return { authenticated: false }
+      return { authenticated: true, type }
     })
 
     const proxyAuth = Effect.fn("KiloGatewayHttpApi.proxyAuth")(function* () {
@@ -299,16 +316,25 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const notifications = Effect.fn("KiloGatewayHttpApi.notifications")(function* () {
+      // Locally-detected notice about leftover opencode config; appended so it reuses each client's dismissal path.
+      const notice = KilocodeConfig.opencodeConfigNotification({
+        directory: Instance.directory,
+        worktree: Instance.worktree,
+        scanProject: !Flag.KILO_DISABLE_PROJECT_CONFIG,
+      })
+      const append = <T>(list: T[]) => (notice ? [...list, notice] : list)
+
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       const token = getToken(info)
-      if (!token) return []
+      if (!token) return append([])
 
-      return yield* Effect.promise(() =>
+      const cloud = yield* Effect.promise(() =>
         fetchKilocodeNotifications({
           kilocodeToken: token,
           kilocodeOrganizationId: getOrganizationId(info),
         }),
       )
+      return append(cloud)
     })
 
     const organization = Effect.fn("KiloGatewayHttpApi.organization")(function* (ctx) {
@@ -347,7 +373,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
         try: async () => {
           const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
           if (!response.ok) throw new GatewayError(await response.text(), response.status)
-          return Schema.decodeUnknownPromise(ClawStatus)(await response.json())
+          return Schema.decodeUnknownPromise(ClawStatus)(normalizeClawStatus(await response.json()))
         },
         catch: (err) => err,
       }).pipe(
@@ -471,7 +497,10 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
                   MessageTable,
                   PartTable,
                   SessionToRow: Session.toRow,
-                  Bus,
+                  Bus: {
+                    publish: (_event, payload) =>
+                      Bus.publish(Instance.current, Session.Event.Created, payload as never),
+                  },
                   SessionCreatedEvent: Session.Event.Created,
                   Identifier,
                 }),
@@ -499,12 +528,37 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       })
     })
 
+    const imageModels = Effect.fn("KiloGatewayHttpApi.imageModels")(function* () {
+      const info = yield* proxyAuth()
+      if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+
+      const result = yield* Effect.tryPromise({
+        try: () =>
+          fetchKiloImageModels({
+            kilocodeToken: info.token,
+            kilocodeOrganizationId: info.organizationId,
+          }),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+
+      if (result.error) {
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
+      }
+
+      return result.models
+    })
+
     return handlers
       .handle("profile", profile)
+      .handle("authStatus", authStatus)
       .handle("modes", modes)
       .handle("fim", fim)
       .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
+      .handle("imageModels", imageModels)
       .handle("notifications", notifications)
       .handle("organization", organization)
       .handle("clawStatus", clawStatus)

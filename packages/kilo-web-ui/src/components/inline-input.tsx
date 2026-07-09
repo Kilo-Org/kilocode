@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/inline-input"
+export * from "@opencode-ai/ui/inline-input"

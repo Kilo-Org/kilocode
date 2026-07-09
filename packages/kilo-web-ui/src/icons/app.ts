@@ -1,1 +1,1 @@
-export * from "@kilocode/kilo-ui/icons/app"
+export * from "@opencode-ai/ui/icons/app"

@@ -33,6 +33,8 @@ exclude = [
   '^https?://api\.voyageai\.com/v1/embeddings/?$',
   '^https?://inference\.do-ai\.run/v1/?$',
   '^https?://generativelanguage\.googleapis\.com/v1beta/openai/?$',
+  # OpenRouter chat-completions is a POST-only endpoint; GET probes return 404
+  '^https?://openrouter\.ai/api/v1/chat/completions/?$',
   '^https?://search\.parallel\.ai/mcp/?$',
   # xAI API and OAuth endpoints require request parameters or reject plain link checks.
   '^https?://api\.x\.ai/v1/?$',
@@ -50,6 +52,8 @@ exclude = [
   '^https?://api\.apertis\.ai/v1/?$',
   # Redirects to authenticated Google Cloud console
   '^https?://console\.cloud\.google\.com',
+  # Linear intermittently returns 503 to CI link checks.
+  '^https?://linear\.app/?$',
   # Consistently times out in CI
   '^https?://opncd\.ai',
   '^https?://zod\.dev/v4/changelog',

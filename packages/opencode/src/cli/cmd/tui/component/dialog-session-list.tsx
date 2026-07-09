@@ -14,7 +14,6 @@ import { createDebouncedSignal } from "../util/signal"
 import { useToast } from "../ui/toast"
 import { openWorkspaceSelect, type WorkspaceSelection, warpWorkspaceSession } from "./dialog-workspace-create"
 import { Spinner } from "./spinner"
-import path from "path" // kilocode_change
 import { errorMessage } from "@/util/error"
 import { DialogSessionDeleteFailed } from "./dialog-session-delete-failed"
 import { WorkspaceLabel } from "./workspace-label"
@@ -31,21 +30,25 @@ export function DialogSessionList() {
   const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
   const [search, setSearch] = createDebouncedSignal("", 150)
-  const [global, setGlobal] = createSignal(true) // kilocode_change - show all worktrees by default
+  const [global, setGlobal] = createSignal(false) // kilocode_change - show current worktree by default
   const deleteHint = useCommandShortcut("session.delete")
+  const quickSwitch1 = useCommandShortcut("session.quick_switch.1")
+  const quickSwitch9 = useCommandShortcut("session.quick_switch.9")
 
   // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
   // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
   // upstream `session_directory_filter_enabled` KV toggle (via sync.session.query()) while
-  // keeping worktree grouping. Currently the toggle has no effect here.
+  // keeping worktree grouping.
   const [searchResults, searchActions] = createResource(
-    () => search(),
-    async (query) => {
+    () => ({ query: search(), global: global(), directory: project.instance.directory() }), // kilocode_change
+    async (input) => {
       const result = await sdk.client.experimental.session.list(
         {
-          search: query || undefined,
+          search: input.query || undefined,
           roots: true,
           worktrees: true,
+          current: input.global ? undefined : "true",
+          directory: input.global ? undefined : input.directory || undefined,
           limit: 30,
         },
         { throwOnError: true },
@@ -57,15 +60,7 @@ export function DialogSessionList() {
 
   const currentSessionID = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
 
-  // kilocode_change start - client-side worktree filtering when global is off
-  const sessions = createMemo(() => {
-    const all = searchResults() ?? []
-    if (global()) return all
-    const root = project.instance.path().worktree
-    if (!root || root === "/") return all
-    return all.filter((s) => s.directory === root || s.directory.startsWith(root + path.sep))
-  })
-  // kilocode_change end
+  const sessions = createMemo(() => searchResults() ?? []) // kilocode_change - endpoint applies worktree scope
 
   function recover(session: NonNullable<ReturnType<typeof sessions>[number]>) {
     const workspace = project.workspace.get(session.workspaceID!)
@@ -74,13 +69,22 @@ export function DialogSessionList() {
       const workspaceID = await (async () => {
         if (selection.type === "none") return null
         if (selection.type === "existing") return selection.workspaceID
-        const result = await sdk.client.experimental.workspace
-          .create({ type: selection.workspaceType, branch: null })
-          .catch(() => undefined)
+        let result
+        try {
+          result = await sdk.client.experimental.workspace.create({ type: selection.workspaceType, branch: null })
+        } catch (err) {
+          toast.show({
+            title: "Failed to create workspace",
+            message: errorMessage(err),
+            variant: "error",
+          })
+          return
+        }
         const workspace = result?.data
         if (!workspace) {
           toast.show({
-            message: `Failed to create workspace: ${errorMessage(result?.error ?? "no response")}`,
+            title: "Failed to create workspace",
+            message: errorMessage(result?.error ?? "no response"),
             variant: "error",
           })
           return
@@ -152,12 +156,18 @@ export function DialogSessionList() {
       .map((x) => x.id)
   }
 
-  const [browseOrder] = createSignal<string[]>(orderByRecency(sync.data.session))
-
-  const RECENT_LIMIT = 5
+  const quickSwitchHint = createMemo(() => {
+    const first = quickSwitch1()
+    const last = quickSwitch9()
+    if (!first || !last) return undefined
+    return quickSwitchRange(first, last)
+  })
+  const quickSwitchFooterHints = createMemo(() => {
+    const hint = quickSwitchHint()
+    return hint && local.session.slots().length > 0 ? [{ title: "switch", label: hint }] : []
+  })
 
   const options = createMemo(() => {
-    const enabled = Flag.KILO_EXPERIMENTAL_SESSION_SWITCHING
     const today = new Date().toDateString()
     const all = global() // kilocode_change
     const sessionMap = new Map(
@@ -166,20 +176,11 @@ export function DialogSessionList() {
         .map((x) => [x.id, x]),
     )
 
-    const searchResult = searchResults()
-    const displayOrder = searchResult ? orderByRecency(searchResult) : browseOrder()
+    const displayOrder = orderByRecency(sessions()) // kilocode_change - respect current scope
 
-    const dismissed = enabled ? new Set(local.session.dismissedRecent()) : new Set<string>()
-    const pinned = enabled ? local.session.pinned().filter((id) => sessionMap.has(id)) : []
+    const pinned = local.session.pinned().filter((id) => sessionMap.has(id))
     const pinnedSet = new Set(pinned)
-    const slotByID = enabled
-      ? new Map<string, number>(local.session.slots().map((id, i) => [id, i + 1]))
-      : new Map<string, number>()
-
-    const recent = enabled
-      ? displayOrder.filter((id) => !pinnedSet.has(id) && !dismissed.has(id)).slice(0, RECENT_LIMIT)
-      : []
-    const recentSet = new Set(recent)
+    const slotByID = new Map<string, number>(local.session.slots().map((id, i) => [id, i + 1]))
 
     function buildOption(id: string, category: string) {
       const x = sessionMap.get(id)
@@ -224,7 +225,7 @@ export function DialogSessionList() {
     }
 
     const remaining = displayOrder
-      .filter((id) => !pinnedSet.has(id) && !recentSet.has(id))
+      .filter((id) => !pinnedSet.has(id))
       .map((id) => {
         const x = sessionMap.get(id)
         if (!x) return undefined
@@ -233,11 +234,7 @@ export function DialogSessionList() {
       })
       .filter((x) => x !== undefined)
 
-    return [
-      ...pinned.map((id) => buildOption(id, "Pinned")).filter((x) => x !== undefined),
-      ...recent.map((id) => buildOption(id, "Recent")).filter((x) => x !== undefined),
-      ...remaining,
-    ]
+    return [...pinned.map((id) => buildOption(id, "Pinned")).filter((x) => x !== undefined), ...remaining]
   })
 
   onMount(() => {
@@ -262,32 +259,13 @@ export function DialogSessionList() {
         dialog.clear()
       }}
       actions={[
-        ...(Flag.KILO_EXPERIMENTAL_SESSION_SWITCHING
-          ? [
-              {
-                command: "session.pin.toggle",
-                title: "pin/unpin",
-                onTrigger: (option: { value: string }) => {
-                  local.session.togglePin(option.value)
-                },
-              },
-              {
-                command: "session.toggle.recent",
-                title: "toggle recent",
-                onTrigger: (option: { value: string }) => {
-                  if (local.session.isPinned(option.value)) {
-                    toast.show({
-                      variant: "info",
-                      message: "Unpin the session first to toggle it in Recent",
-                      duration: 3000,
-                    })
-                    return
-                  }
-                  local.session.toggleRecent(option.value)
-                },
-              },
-            ]
-          : []),
+        {
+          command: "session.pin.toggle",
+          title: "pin/unpin",
+          onTrigger: (option: { value: string }) => {
+            local.session.togglePin(option.value)
+          },
+        },
         {
           command: "session.delete",
           title: "delete",
@@ -338,7 +316,7 @@ export function DialogSessionList() {
         },
         {
           command: "session.rename",
-          title: "rename", // kilocode_change
+          title: "rename",
           // kilocode_change start
           onTrigger: async (option) => {
             const item = sessions().find((x) => x.id === option.value)
@@ -356,6 +334,7 @@ export function DialogSessionList() {
         {
           command: "session.scope.toggle",
           title: global() ? "current" : "all",
+          requiresSelection: false,
           onTrigger: async () => {
             setToDelete(undefined)
             setGlobal((v) => !v)
@@ -366,6 +345,13 @@ export function DialogSessionList() {
       // kilocode_change start - preserve Ctrl+A worktree scope toggle with the upstream keymap engine
       bindings={[{ key: "ctrl+a", cmd: "session.scope.toggle" }]}
       // kilocode_change end
+      footerHints={quickSwitchFooterHints()}
     />
   )
+}
+
+function quickSwitchRange(first: string, last: string) {
+  const prefix = first.slice(0, -1)
+  if (first.endsWith("1") && last === `${prefix}9`) return `${prefix}1-9`
+  return `${first} through ${last}`
 }

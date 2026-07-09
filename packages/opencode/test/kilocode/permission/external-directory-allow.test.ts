@@ -10,7 +10,7 @@ import { Config } from "../../../src/config/config"
 import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
-import { WithInstance } from "../../../src/project/with-instance"
+import { provideTestInstance } from "../../fixture/fixture"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Shell } from "../../../src/shell/shell"
 import { Truncate } from "../../../src/tool/truncate"
@@ -220,7 +220,7 @@ describe("external_directory allow config protection", () => {
           expect(requests[0]).toMatchObject({
             id: PermissionID.make("permission_bash_external_write"),
             permission: "external_directory",
-            metadata: { disableAlways: true },
+            metadata: { disableAlways: true, configProtected: true },
           })
 
           yield* reply({ requestID: PermissionID.make("permission_bash_external_write"), reply: "reject" })
@@ -239,7 +239,7 @@ describe("bash external_directory access metadata", () => {
   test("emits read access metadata for cat external files", async () => {
     await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const bash = await init()
@@ -267,7 +267,7 @@ describe("bash external_directory access metadata", () => {
       withShell(item, async () => {
         await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
         await using tmp = await tmpdir({ git: true })
-        await WithInstance.provide({
+        await provideTestInstance({
           directory: tmp.path,
           fn: async () => {
             const bash = await init()
@@ -294,7 +294,7 @@ describe("bash external_directory access metadata", () => {
   test("does not emit read access metadata for mutating external file commands", async () => {
     await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const bash = await init()
@@ -325,7 +325,7 @@ describe("bash external_directory access metadata", () => {
   test("does not emit read access metadata for mixed read and write external commands", async () => {
     await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
     await using tmp = await tmpdir({ git: true })
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const bash = await init()

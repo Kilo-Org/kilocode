@@ -1,16 +1,16 @@
 ---
-title: "Setup & Authentication"
+title: "Authentication"
 description: "Configure Kilo Code and connect to your AI providers"
 ---
 
-# Setup & Authentication
+# Authentication
 
 When you install Kilo Code, you'll be prompted to sign in or create a free account. This automatically configures everything you need to get started.
 
 ## Quick Start with Kilo Account
 
 {% tabs %}
-{% tab label="VSCode" %}
+{% tab label="VS Code" %}
 
 The extension prompts you to sign in when you first open Kilo Code in VS Code. Click **Sign In** and complete the browser-based flow. Sign-in applies across extension surfaces, including the sidebar and Agent Manager.
 
@@ -32,21 +32,10 @@ kilo auth list
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Click **"Try Kilo Code for Free"** in the extension
-2. Sign in with your Google account
-3. Allow VS Code to open the authorization URL
-
-{% image src="/docs/img/signupflow.gif" alt="Sign up and registration flow with Kilo Code" /%}
-
-That's it! You're ready to [start your first task](/docs/getting-started/quickstart).
-
-{% /tab %}
 {% /tabs %}
 
 {% callout type="tip" title="Add Credits" %}
-[Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/features/kilo-pass).
+[Add credits to your account](https://app.kilo.ai/profile), or sign up for [Kilo Pass](https://kilo.ai/pricing/kilo-pass).
 {% /callout %}
 
 ## Kilo Gateway API Key
@@ -104,7 +93,7 @@ Already have a ChatGPT subscription? You can use it with Kilo Code through the [
 ### Configuring Your Provider
 
 {% tabs %}
-{% tab label="VSCode" %}
+{% tab label="VS Code" %}
 
 1. Open Kilo Code in VS Code
 2. Click the gear icon ({% codicon name="gear" /%}) in the extension UI to open **Settings**
@@ -132,15 +121,6 @@ To set a default model:
   "model": "anthropic/claude-sonnet-4-20250514",
 }
 ```
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-1. Click the {% kilo-code-icon /%} icon in the VS Code sidebar
-2. Select your API provider from the dropdown
-3. Paste your API key
-4. Choose your model
-5. Click **"Let's go!"**
 
 {% /tab %}
 {% /tabs %}

@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.3.44",
+  "version": "7.4.4",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -196,6 +196,16 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.showMemory",
+        "title": "Show Project Memory",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.toggleMemory",
+        "title": "Toggle Project Memory",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"
@@ -233,6 +243,11 @@
       {
         "command": "kilo-code.new.agentManager.nextTab",
         "title": "Agent Manager: Next Tab",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.search",
+        "title": "Agent Manager: Search Worktrees and Sessions",
         "category": "Kilo Code"
       },
       {
@@ -282,6 +297,11 @@
       {
         "command": "kilo-code.new.agentManager.openWorktree",
         "title": "Agent Manager: Open Worktree",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openPR",
+        "title": "Agent Manager: Open Pull Request",
         "category": "Kilo Code"
       },
       {
@@ -411,6 +431,11 @@
       {
         "command": "kilo-code.new.takeHeapSnapshot",
         "title": "Take Heap Snapshot",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.reload",
+        "title": "Reload Config and Skills",
         "category": "Kilo Code"
       }
     ],
@@ -630,6 +655,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
+        "command": "kilo-code.new.agentManager.search",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !terminalFocus"
+      },
+      {
         "command": "kilo-code.new.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
@@ -681,6 +712,12 @@
         "command": "kilo-code.new.agentManager.openWorktree",
         "key": "ctrl+shift+o",
         "mac": "cmd+shift+o",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.openPR",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -843,6 +880,57 @@
             "Italiano"
           ]
         },
+        "kilo-code.new.languageCommitMessage": {
+          "type": "string",
+          "default": "sync",
+          "description": "Language used for AI-generated commit messages. Choose 'sync' to follow the Kilo Code UI language, or select a specific language.",
+          "enum": [
+            "sync",
+            "en",
+            "zh",
+            "zht",
+            "ko",
+            "de",
+            "es",
+            "fr",
+            "da",
+            "ja",
+            "pl",
+            "ru",
+            "ar",
+            "no",
+            "br",
+            "th",
+            "bs",
+            "tr",
+            "nl",
+            "uk",
+            "it"
+          ],
+          "enumDescriptions": [
+            "跟随界面语言 (Sync with UI language)",
+            "English",
+            "简体中文",
+            "繁體中文",
+            "한국어",
+            "Deutsch",
+            "Español",
+            "Français",
+            "Dansk",
+            "日本語",
+            "Polski",
+            "Русский",
+            "العربية",
+            "Norsk",
+            "Português (Brasil)",
+            "ภาษาไทย",
+            "Bosanski",
+            "Türkçe",
+            "Nederlands",
+            "Українська",
+            "Italiano"
+          ]
+        },
         "kilo-code.new.model.providerID": {
           "type": "string",
           "default": "kilo",
@@ -902,9 +990,23 @@
           "default": false,
           "description": "Enable chat textarea autocomplete"
         },
-        "kilo-code.new.speechToText.model": {
+        "kilo-code.new.agentManager.autoBranchNaming": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Automatically name new Agent Manager branches when the conversation describes a clear task. Explicitly named and published branches are never renamed."
+        },
+        "kilo-code.new.agentManager.branchPrefix": {
           "type": "string",
-          "description": "Model to use for experimental speech-to-text voice input. Requires Kilo Gateway."
+          "default": "",
+          "scope": "application",
+          "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
+        },
+        "kilo-code.new.indexing.showButtonWhenDisabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Show the codebase indexing button below the prompt while indexing is disabled."
         },
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
@@ -920,6 +1022,12 @@
           "type": "boolean",
           "default": false,
           "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically."
+        },
+        "kilo-code.new.maxCost": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; set to 0 to disable."
         },
         "kilo-code.new.fontSize": {
           "type": "number",
@@ -943,47 +1051,64 @@
           "default": false,
           "description": "Run browser automation in headless mode (no visible window). When disabled, you can watch the agent interact with the browser."
         },
-        "kilo-code.new.notifications.agent": {
+        "kilo-code.new.attention.enabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Show notification when agent completes a task"
+          "default": false,
+          "description": "Play sounds when sessions complete, error, or need input"
         },
-        "kilo-code.new.notifications.permissions": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show notification on permission requests"
-        },
-        "kilo-code.new.notifications.errors": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show notification on errors"
-        },
-        "kilo-code.new.sounds.agent": {
+        "kilo-code.new.attention.sound": {
           "type": "string",
           "default": "default",
           "enum": [
             "default",
-            "none"
+            "system",
+            "alert-01",
+            "alert-02",
+            "alert-03",
+            "alert-04",
+            "alert-05",
+            "alert-06",
+            "alert-07",
+            "alert-08",
+            "alert-09",
+            "alert-10",
+            "bip-bop-01",
+            "bip-bop-02",
+            "bip-bop-03",
+            "bip-bop-04",
+            "bip-bop-05",
+            "bip-bop-06",
+            "bip-bop-07",
+            "bip-bop-08",
+            "bip-bop-09",
+            "bip-bop-10",
+            "staplebops-01",
+            "staplebops-02",
+            "staplebops-03",
+            "staplebops-04",
+            "staplebops-05",
+            "staplebops-06",
+            "staplebops-07",
+            "nope-01",
+            "nope-02",
+            "nope-03",
+            "nope-04",
+            "nope-05",
+            "nope-06",
+            "nope-07",
+            "nope-08",
+            "nope-09",
+            "nope-10",
+            "nope-11",
+            "nope-12",
+            "yup-01",
+            "yup-02",
+            "yup-03",
+            "yup-04",
+            "yup-05",
+            "yup-06"
           ],
-          "description": "Sound to play when agent completes"
-        },
-        "kilo-code.new.sounds.permissions": {
-          "type": "string",
-          "default": "default",
-          "enum": [
-            "default",
-            "none"
-          ],
-          "description": "Sound to play on permission requests"
-        },
-        "kilo-code.new.sounds.errors": {
-          "type": "string",
-          "default": "default",
-          "enum": [
-            "default",
-            "none"
-          ],
-          "description": "Sound to play on errors"
+          "description": "Use different sounds for completion, input, and errors, or choose one sound for every event"
         },
         "kilo-code.new.showTaskTimeline": {
           "type": "boolean",
@@ -1037,7 +1162,7 @@
     "check-kilocode-change": "! grep -rIn 'kilocode_change' . ../kilo-ui/ --exclude='package.json' --exclude='*.md' --exclude-dir='node_modules' --exclude-dir='dist' | grep -v '`kilocode_change`'",
     "lint": "eslint src webview-ui",
     "test": "vscode-test",
-    "test:unit": "bun test tests/unit/",
+    "test:unit": "bun test tests/unit/ --dots",
     "rebuild-sdk": "bun run --cwd ../sdk/js build",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build -o storybook-static",
@@ -1065,6 +1190,7 @@
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "happy-dom": "20.8.9",
     "knip": "5.85.0",
     "prettier": "3.6.2",
     "qrcode": "^1.5.4",
@@ -1073,7 +1199,7 @@
     "ts-morph": "27.0.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
-    "vite": "7.3.2",
+    "vite": "7.3.5",
     "vite-plugin-solid": "2.11.10"
   },
   "dependencies": {
@@ -1082,8 +1208,11 @@
     "@kilocode/kilo-gateway": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",
+    "@kilocode/kilo-memory": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
+    "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
+    "@opencode-ai/core": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@thisbeyond/solid-dnd": "0.7.5",
@@ -1093,7 +1222,6 @@
     "@xterm/addon-web-links": "0.12.0",
     "@xterm/xterm": "6.0.0",
     "diff": "8.0.4",
-    "dotenv": "^16.4.7",
     "fastest-levenshtein": "^1.0.16",
     "friendly-words": "1.3.1",
     "ignore": "^7.0.3",

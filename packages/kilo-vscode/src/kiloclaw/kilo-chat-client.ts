@@ -89,10 +89,6 @@ export class KiloChatClient {
     })
   }
 
-  getConversation(conversationId: string): Promise<ConversationDetail> {
-    return this.request(`/v1/conversations/${conversationId}`)
-  }
-
   createConversation(req: {
     sandboxId: string
     title?: string

@@ -8,6 +8,16 @@ import {
   validateProviderID,
   withCustomProviderDeletions,
 } from "../../src/shared/custom-provider"
+import { isCustomProviderPackage } from "../../src/shared/provider-model"
+
+describe("isCustomProviderPackage", () => {
+  it("recognizes supported custom provider packages", () => {
+    expect(isCustomProviderPackage("@ai-sdk/openai-compatible")).toBe(true)
+    expect(isCustomProviderPackage("@ai-sdk/openai")).toBe(true)
+    expect(isCustomProviderPackage("@ai-sdk/anthropic")).toBe(true)
+    expect(isCustomProviderPackage("malicious-package")).toBe(false)
+  })
+})
 
 describe("validateProviderID", () => {
   it("accepts valid provider ids", () => {
@@ -64,9 +74,9 @@ describe("resolveCustomProviderKey", () => {
 })
 
 describe("sanitizeCustomProviderConfig", () => {
-  it("normalizes config and forces the approved package", () => {
+  it("normalizes config and preserves an approved package", () => {
     const result = sanitizeCustomProviderConfig({
-      npm: "malicious-package",
+      npm: "@ai-sdk/anthropic",
       name: " My Provider ",
       env: [" MY_PROVIDER_KEY "],
       options: {
@@ -83,7 +93,7 @@ describe("sanitizeCustomProviderConfig", () => {
 
     expect(result).toEqual({
       value: {
-        npm: "@ai-sdk/openai-compatible",
+        npm: "@ai-sdk/anthropic",
         name: "My Provider",
         env: ["MY_PROVIDER_KEY"],
         options: {
@@ -100,7 +110,18 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
-  it("accepts models with chat_template_args variant", () => {
+  it("rejects unapproved packages", () => {
+    const result = sanitizeCustomProviderConfig({
+      npm: "malicious-package",
+      name: "Bad Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: { "model-1": { name: "Model One" } },
+    })
+
+    expect("error" in result ? result.error : "").toContain("Invalid enum value")
+  })
+
+  it("accepts supported thinking variant options", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Thinking Provider",
       options: { baseURL: "https://example.com/v1" },
@@ -108,7 +129,12 @@ describe("sanitizeCustomProviderConfig", () => {
         "model-1": {
           name: "Model One",
           variants: {
-            thinking: { chat_template_args: { enable_thinking: true } },
+            thinking: {
+              thinking: { type: "adaptive" },
+              reasoning_split: true,
+              effort: "max",
+              chat_template_args: { enable_thinking: true },
+            },
           },
         },
       },
@@ -123,7 +149,45 @@ describe("sanitizeCustomProviderConfig", () => {
           "model-1": {
             name: "Model One",
             variants: {
-              thinking: { chat_template_args: { enable_thinking: true } },
+              thinking: {
+                thinking: { type: "adaptive" },
+                reasoning_split: true,
+                effort: "max",
+                chat_template_args: { enable_thinking: true },
+              },
+            },
+          },
+        },
+      },
+    })
+  })
+
+  it("preserves core custom model modalities", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Media Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          modalities: {
+            input: ["text", "audio", "image", "video", "pdf"],
+            output: ["text", "audio"],
+          },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Media Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: {
+          "model-1": {
+            name: "Model One",
+            modalities: {
+              input: ["text", "audio", "image", "video", "pdf"],
+              output: ["text", "audio"],
             },
           },
         },
@@ -166,11 +230,12 @@ describe("withCustomProviderDeletions", () => {
     expect(models.gone).toBeNull()
   })
 
-  it("emits null for variants removed from a surviving model", () => {
+  it("emits null for reasoning and variants removed from a surviving model", () => {
     const existing = {
       models: {
         keep: {
           name: "Keep",
+          reasoning: true,
           variants: { high: { reasoningEffort: "high" }, low: { reasoningEffort: "low" } },
         },
       },
@@ -182,9 +247,39 @@ describe("withCustomProviderDeletions", () => {
       },
     } as typeof baseNext
     const result = withCustomProviderDeletions(existing, next)
+    const model = (result.models as Record<string, { reasoning?: boolean | null; variants?: Record<string, unknown> }>)
+      .keep
+    expect(model.reasoning).toBeNull()
+    expect(model.variants?.high).toEqual({ reasoningEffort: "high" })
+    expect(model.variants?.low).toBeNull()
+  })
+
+  it("emits null when reasoning is disabled on a surviving model", () => {
+    const existing = { models: { keep: { name: "Keep", reasoning: true } } }
+    const result = withCustomProviderDeletions(existing, baseNext)
+    expect(result.models.keep).toEqual({ name: "Keep", reasoning: null })
+  })
+
+  it("emits null for options removed from a surviving variant", () => {
+    const existing = {
+      models: {
+        keep: {
+          name: "Keep",
+          variants: {
+            thinking: { thinking: { type: "adaptive" }, reasoning_split: true, reasoningEffort: "high" },
+          },
+        },
+      },
+    }
+    const next = {
+      ...baseNext,
+      models: {
+        keep: { name: "Keep", variants: { thinking: { reasoningEffort: "high" } } },
+      },
+    } as typeof baseNext
+    const result = withCustomProviderDeletions(existing, next)
     const model = (result.models as Record<string, { variants: Record<string, unknown> }>).keep
-    expect(model.variants.high).toEqual({ reasoningEffort: "high" })
-    expect(model.variants.low).toBeNull()
+    expect(model.variants.thinking).toEqual({ reasoningEffort: "high", thinking: null, reasoning_split: null })
   })
 
   it("does not touch variants on a model that is being deleted", () => {

@@ -4,7 +4,7 @@ export type Rule = {
   action: "allow" | "deny" | "ask"
 }
 
-export type Ruleset = Rule[]
+export type Ruleset = ReadonlyArray<Rule>
 
 export namespace PermissionRule {
   export function broad(rule: Rule) {

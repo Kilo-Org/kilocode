@@ -95,6 +95,20 @@ describe("kilocode directory reads", () => {
     }),
   )
 
+  it.live("clamps a zero entry limit and advances pagination", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      yield* put(path.join(dir, "folder", "a.txt"), "alpha")
+      yield* put(path.join(dir, "folder", "b.txt"), "beta")
+
+      const result = yield* exec(dir, { filePath: path.join(dir, "folder"), limit: 0 }, baseCtx)
+
+      expect(result.output).toContain("a.txt")
+      expect(result.output).not.toContain("b.txt")
+      expect(result.output).toContain("beyond entry 2")
+    }),
+  )
+
   if (process.platform !== "win32") {
     it.live("skips symlinked top-level files", () =>
       Effect.gen(function* () {

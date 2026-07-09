@@ -2,7 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
-import { Instance } from "../project/instance"
+import { Instance } from "../kilocode/instance" // kilocode_change
 import { Bus } from "../bus"
 import { TuiEvent } from "../cli/cmd/tui/event"
 import DESCRIPTION from "./warpgrep.txt"
@@ -61,7 +61,9 @@ export const CodebaseSearchTool = Tool.define(
               "Codebase search unavailable: free period ended. Set MORPH_API_KEY to continue. Get your key at https://www.morphllm.com/"
             if (isAuthOrRateLimit) {
               yield* Effect.promise(() =>
-                Bus.publish(TuiEvent.ToastShow, {
+                // kilocode_change start
+                Bus.publish(Instance.current, TuiEvent.ToastShow, {
+                  // kilocode_change end
                   title: "Codebase Search Unavailable",
                   message: "Free period has ended. Set MORPH_API_KEY to continue. Get your key at morphllm.com",
                   variant: "error",

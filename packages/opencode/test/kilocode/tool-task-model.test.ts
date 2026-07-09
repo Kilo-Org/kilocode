@@ -11,7 +11,7 @@ import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/kilocode/instance"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
@@ -53,6 +53,7 @@ const cfg = {
 }
 
 const inherited = "thorough"
+const overrideVariant = "full"
 const savedVariant = "fast"
 const cfgVariant = "balanced"
 const sub = {
@@ -88,9 +89,10 @@ function custom(id: string, model: string, variants: string[] = []) {
 
 const catalog = {
   provider: {
-    "saved-provider": custom("saved-provider", "saved-model", [savedVariant]),
-    "config-provider": custom("config-provider", "config-model", [cfgVariant]),
-    "sub-provider": custom("sub-provider", "sub-model", [subVariant]),
+    "parent-provider": custom("parent-provider", "parent-model", [inherited, overrideVariant]),
+    "saved-provider": custom("saved-provider", "saved-model", [savedVariant, overrideVariant]),
+    "config-provider": custom("config-provider", "config-model", [cfgVariant, overrideVariant]),
+    "sub-provider": custom("sub-provider", "sub-model", [subVariant, overrideVariant]),
   },
 }
 
@@ -151,7 +153,6 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void;
     cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     prompt,
-    loop: (input) => prompt({ sessionID: input.sessionID, parts: [] }),
   }
 }
 
@@ -197,7 +198,7 @@ function run(input: {
   state?: unknown
   client?: string
   variant?: string
-  config?: Pick<Config.Info, "subagent_model" | "subagent_variant">
+  config?: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
 }) {
   return provideTmpdirInstance(
     () =>
@@ -360,6 +361,95 @@ describe("tool.task model resolution", () => {
           expect(result.variant).toEqual(cfgVariant)
           expect(result.model).toEqual(cfg)
           expect(result.metadataVariant).toEqual(cfgVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("model-specific override replaces an inherited parent variant", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: { subagent_variant_overrides: { "parent-provider/parent-model": overrideVariant } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual(overrideVariant)
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toEqual(overrideVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("model-specific override applies to a custom subagent model and variant", () =>
+    run({
+      agent: "pinned",
+      variant: inherited,
+      config: { subagent_variant_overrides: { "config-provider/config-model": overrideVariant } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(cfg)
+          expect(result.variant).toEqual(overrideVariant)
+          expect(result.model).toEqual(cfg)
+          expect(result.metadataVariant).toEqual(overrideVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("model-specific override follows a saved custom subagent model", () =>
+    run({
+      agent: "worker",
+      state: { model: { worker: saved }, variant: { "saved-provider/saved-model": savedVariant } },
+      config: { subagent_variant_overrides: { "saved-provider/saved-model": overrideVariant } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(saved)
+          expect(result.variant).toEqual(overrideVariant)
+          expect(result.model).toMatchObject({ ...saved, variant: overrideVariant })
+          expect(result.metadataVariant).toEqual(overrideVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("stale model-specific override preserves the resolved variant", () =>
+    run({
+      agent: "pinned",
+      variant: inherited,
+      config: { subagent_variant_overrides: { "config-provider/config-model": "gone" } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(cfg)
+          expect(result.variant).toEqual(cfgVariant)
+          expect(result.model).toEqual(cfg)
+          expect(result.metadataVariant).toEqual(cfgVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("unavailable configured subagent model falls back to the parent model override", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      config: {
+        subagent_model: "missing-provider/missing-model",
+        subagent_variant: subVariant,
+        subagent_variant_overrides: { "parent-provider/parent-model": overrideVariant },
+      },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual(overrideVariant)
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toEqual(overrideVariant)
         }),
       ),
     ),

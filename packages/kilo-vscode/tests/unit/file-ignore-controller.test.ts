@@ -40,7 +40,6 @@ describe("FileIgnoreController", () => {
       expect(controller.validateAccess("secret/keys.txt")).toBe(false)
       expect(controller.validateAccess(path.join(workspace, "a.snap"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, "src", "main.ts"))).toBe(true)
-      expect(controller.getInstructions()).toContain(".kilocodeignore")
     })
 
     it("does NOT block .env files unless explicitly listed", async () => {
@@ -81,7 +80,6 @@ describe("FileIgnoreController", () => {
       expect(controller.validateAccess(path.join(workspace, "node_modules", "foo.js"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, "build", "output.js"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, "src", "main.ts"))).toBe(true)
-      expect(controller.getInstructions()).toContain(".gitignore")
     })
 
     it("blocks .env files via hardcoded sensitive patterns", async () => {
@@ -166,13 +164,6 @@ describe("FileIgnoreController", () => {
 
       expect(controller.validateAccess("/some/file.ts")).toBe(false)
       expect(controller.validateAccess("relative/file.ts")).toBe(false)
-    })
-
-    it("filterPaths returns empty array", async () => {
-      const controller = new FileIgnoreController("")
-      await controller.initialize()
-
-      expect(controller.filterPaths(["/some/file.ts", "other.ts"])).toEqual([])
     })
   })
 })

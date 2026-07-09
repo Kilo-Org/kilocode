@@ -16,6 +16,16 @@ export function sanitizeBranchName(name: string, maxLength = 50): string {
     .replace(/-+/g, "-")
 }
 
+export function semanticBranchName(title: string, prefix = "", maxLength = 50): string {
+  const parts = prefix
+    .split("/")
+    .map((part) => sanitizeBranchName(part))
+    .filter(Boolean)
+  const head = parts.length > 0 ? `${parts.join("/")}/` : ""
+  const slug = sanitizeBranchName(title, Math.max(0, maxLength - head.length))
+  return slug ? `${head}${slug}` : ""
+}
+
 /**
  * Generate a natural two-word branch name (e.g. "ambitious-keyboard") using
  * the friendly-words package.  Checks `existingBranches` to avoid collisions,

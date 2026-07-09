@@ -5,7 +5,7 @@ import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 
-export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
+export const OAUTH_DUMMY_KEY = "kilo-oauth-dummy-key" // kilocode_change
 
 const file = path.join(Global.Path.data, "auth.json")
 

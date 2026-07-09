@@ -9,7 +9,7 @@ import { TsCheck } from "./ts-check"
 import * as Log from "@opencode-ai/core/util/log"
 import { withTimeout } from "../util/timeout"
 import path from "path"
-import { Instance } from "../project/instance"
+import { Instance } from "./instance"
 
 export namespace TsClient {
   const log = Log.create({ service: "ts-client" })
@@ -30,7 +30,7 @@ export namespace TsClient {
             diagnostics.set(file, diags)
           }
           for (const file of result.keys()) {
-            Bus.publish(LSPClient.Event.Diagnostics, {
+            Bus.publish(Instance.current, LSPClient.Event.Diagnostics, {
               path: file,
               serverID: client.serverID,
             })

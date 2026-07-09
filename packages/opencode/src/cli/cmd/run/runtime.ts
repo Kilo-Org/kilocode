@@ -51,6 +51,8 @@ type RunRuntimeInput = {
   files: RunInput["files"]
   initialInput?: string
   thinking: boolean
+  replay?: boolean
+  replayLimit?: number
   demo?: RunInput["demo"]
 }
 
@@ -67,6 +69,8 @@ type RunLocalInput = {
   files: RunInput["files"]
   initialInput?: string
   thinking: boolean
+  replay?: boolean
+  replayLimit?: number
   demo?: RunInput["demo"]
 }
 
@@ -272,6 +276,23 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
 
           await ctx.sdk.question.reject(next)
         },
+        // kilocode_change start - human-driven terminal in direct interactive mode
+        onTerminalWrite: async (next) => {
+          await ctx.sdk.interactiveTerminal.write({
+            terminalID: next.terminalID,
+            interactiveTerminalWriteInput: { data: next.data },
+          })
+        },
+        onTerminalResize: async (next) => {
+          await ctx.sdk.interactiveTerminal.resize({
+            terminalID: next.terminalID,
+            interactiveTerminalResizeInput: { cols: next.cols, rows: next.rows },
+          })
+        },
+        onTerminalClose: async (terminalID) => {
+          await ctx.sdk.interactiveTerminal.close({ terminalID })
+        },
+        // kilocode_change end
         onCycleVariant: () => {
           if (!state.model || state.variants.length === 0) {
             return {
@@ -490,6 +511,8 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
             directory: ctx.directory,
             sessionID: state.sessionID,
             thinking: input.thinking,
+            replay: input.replay,
+            replayLimit: input.replayLimit,
             limits: () => state.limits,
             footer,
             trace: log,
@@ -722,6 +745,8 @@ export async function runInteractiveLocalMode(input: RunLocalInput): Promise<voi
         files: input.files,
         initialInput: input.initialInput,
         thinking: input.thinking,
+        replay: input.replay,
+        replayLimit: input.replayLimit,
         demo: input.demo,
         resolveSession: () => {
           if (session) {
@@ -774,6 +799,8 @@ export async function runInteractiveMode(input: RunInput & { createSession?: Cre
         files: input.files,
         initialInput: input.initialInput,
         thinking: input.thinking,
+        replay: input.replay,
+        replayLimit: input.replayLimit,
         demo: input.demo,
         boot: async () => ({
           sdk: input.sdk,

@@ -67,9 +67,12 @@ abstract class AbstractSessionPartView(
         if (!expandable || !arrow.isVisible) return
         val changed = toggleLocal()
         if (!changed) return
+        userToggled()
         syncArrow()
         refresh()
     }
+
+    protected open fun userToggled() {}
 
     open fun expand(): Boolean {
         if (!expandable) return false
@@ -88,6 +91,15 @@ abstract class AbstractSessionPartView(
     protected fun hasBody(): Boolean = body != null
 
     protected fun bodyComponent(): JComponent = body()
+
+    /** Detaches and forgets the cached body so the next expansion builds a fresh one. */
+    protected fun discardBody(): Boolean {
+        val item = body ?: return false
+        val attached = item.parent === this
+        if (attached) remove(item)
+        body = null
+        return attached
+    }
 
     private fun toggleLocal(): Boolean {
         val fn = resize ?: return toggleBody()
@@ -157,7 +169,7 @@ abstract class AbstractSessionPartView(
     }
 
     private fun syncArrow(): Boolean {
-        val icon = if (isExpanded()) SessionViewIcons.chevronDown else SessionViewIcons.chevronRight
+        val icon = if (isExpanded()) SessionViewIcons.chevronExpanded else SessionViewIcons.chevronCollapsed
         if (arrow.icon === icon) return false
         arrow.icon = icon
         return true

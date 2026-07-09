@@ -25,6 +25,7 @@ function capture() {
 function createServer() {
   const messages: string[] = []
   const clients: ServerWebSocket<unknown>[] = []
+  const urls: URL[] = []
   const pending: {
     connect: ((ws: ServerWebSocket<unknown>) => void)[]
     message: ((msg: string) => void)[]
@@ -33,6 +34,7 @@ function createServer() {
   const server = Bun.serve({
     port: 0,
     fetch(req, server) {
+      urls.push(new URL(req.url))
       const upgraded = server.upgrade(req)
       if (!upgraded) return new Response("Not found", { status: 404 })
       return undefined
@@ -60,6 +62,7 @@ function createServer() {
     url: `ws://localhost:${server.port}`,
     messages,
     clients,
+    urls,
     stop: () => server.stop(true),
     waitForConnect: () =>
       new Promise<ServerWebSocket<unknown>>((resolve) => {
@@ -69,6 +72,14 @@ function createServer() {
       new Promise<string>((resolve) => {
         pending.message.push(resolve)
       }),
+  }
+}
+
+async function until(predicate: () => boolean, timeout = 5000) {
+  const start = Date.now()
+  while (!predicate()) {
+    if (Date.now() - start > timeout) throw new Error("condition never became true")
+    await Bun.sleep(20)
   }
 }
 
@@ -107,6 +118,48 @@ describe("RemoteWS", () => {
     const parsed = JSON.parse(raw)
     expect(parsed.type).toBe("heartbeat")
     expect(parsed.sessions).toEqual([{ id: "s1", status: "active", title: "Test" }])
+  })
+
+  test("serializes concurrent heartbeat snapshots", async () => {
+    server = createServer()
+    const connecting = server.waitForConnect()
+    const firstMessage = server.waitForMessage()
+    const secondMessage = server.waitForMessage()
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let calls = 0
+    let active = 0
+    let max = 0
+
+    conn = RemoteWS.connect({
+      url: server.url,
+      getToken: async () => "tok",
+      getSessions: async () => {
+        const call = ++calls
+        active += 1
+        max = Math.max(max, active)
+        if (call === 1) await gate
+        active -= 1
+        return { sessions: [{ id: `s${call}`, status: "active" as const, title: `Session ${call}` }] }
+      },
+      log: nolog(),
+      heartbeat: 60_000,
+    })
+
+    await connecting
+    await settled()
+    const first = conn.heartbeat()
+    const second = conn.heartbeat()
+    await Bun.sleep(10)
+    expect(calls).toBe(1)
+
+    release()
+    await Promise.all([first, second])
+    expect(max).toBe(1)
+    expect(JSON.parse(await firstMessage).sessions[0].id).toBe("s1")
+    expect(JSON.parse(await secondMessage).sessions[0].id).toBe("s2")
   })
 
   test("buffers when disconnected, flushes on reconnect", async () => {
@@ -167,6 +220,106 @@ describe("RemoteWS", () => {
     expect(ws2).toBeDefined()
     await settled()
     expect(conn.connected).toBe(true)
+  })
+
+  test("keeps a stable connection identity across reconnects", async () => {
+    server = createServer()
+
+    conn = RemoteWS.connect({
+      url: server.url,
+      getToken: async () => "tok",
+      getSessions: async () => ({ sessions: [] }),
+      log: nolog(),
+      heartbeat: 60_000,
+    })
+
+    const first = await server.waitForConnect()
+    await settled()
+    const initial = server.urls[0]?.searchParams.get("connectionId")
+    expect(initial).toBe(conn.connectionId)
+
+    const reconnecting = server.waitForConnect()
+    first.close()
+    await reconnecting
+    await settled()
+
+    const replacement = server.urls[1]?.searchParams.get("connectionId")
+    expect(replacement).toBe(initial)
+    expect(replacement).toBe(conn.connectionId)
+  })
+
+  test("ignores callbacks from a stale WebSocket generation", async () => {
+    const OriginalWebSocket = globalThis.WebSocket
+    const sockets: FakeWebSocket[] = []
+    const received: unknown[] = []
+
+    class FakeWebSocket {
+      static readonly OPEN = 1
+      readonly sent: string[] = []
+      readyState = 0
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onclose: ((event: { code: number; reason: string }) => void) | null = null
+      onerror: ((event: unknown) => void) | null = null
+
+      constructor(readonly url: string) {
+        sockets.push(this)
+      }
+
+      send(message: string) {
+        this.sent.push(message)
+      }
+
+      close() {
+        this.readyState = 3
+      }
+
+      open() {
+        this.readyState = FakeWebSocket.OPEN
+        this.onopen?.()
+      }
+
+      disconnect(code = 1000, reason = "closed") {
+        this.readyState = 3
+        this.onclose?.({ code, reason })
+      }
+    }
+
+    Object.defineProperty(globalThis, "WebSocket", { value: FakeWebSocket, configurable: true, writable: true })
+    try {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        onMessage: (message) => received.push(message),
+      })
+
+      await settled()
+      const first = sockets[0]
+      expect(first).toBeDefined()
+      first?.open()
+      first?.disconnect()
+
+      await until(() => sockets.length >= 2)
+      const second = sockets[1]
+      expect(second).toBeDefined()
+      second?.open()
+
+      first?.onmessage?.({ data: JSON.stringify({ type: "subscribe", sessionId: "stale" }) })
+      first?.onclose?.({ code: 1000, reason: "late close" })
+      conn.send({ type: "event", sessionId: "active", event: "test", data: {} })
+
+      expect(received).toEqual([])
+      expect(conn.connected).toBe(true)
+      expect(second?.sent).toEqual([JSON.stringify({ type: "event", sessionId: "active", event: "test", data: {} })])
+
+      conn.close()
+      conn = undefined
+    } finally {
+      Object.defineProperty(globalThis, "WebSocket", { value: OriginalWebSocket, configurable: true, writable: true })
+    }
   })
 
   test("stops reconnecting on 4401", async () => {

@@ -5,7 +5,6 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Permission } from "@/permission"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -15,9 +14,9 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
 import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
-import { rm } from "fs/promises" // kilocode_change
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
-import CUSTOMIZE_OPENCODE_SKILL_BODY from "./prompt/customize-opencode.md" with { type: "text" }
+import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
+import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
 
 const log = Log.create({ service: "skill" })
@@ -29,15 +28,6 @@ export const BUILTIN_LOCATION = "builtin"
 const EXTERNAL_SKILL_PATTERN = "skills/**/SKILL.md"
 const KILO_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
 const SKILL_PATTERN = "**/SKILL.md"
-
-// Built-in skill that ships with opencode. The model's intuition for what an
-// opencode.json should look like is often wrong, and opencode hard-fails on
-// invalid config, so users hit cryptic startup errors. Loading this skill
-// when the model is asked to touch opencode's own config files gives it the
-// actual schemas instead of guesses.
-const CUSTOMIZE_OPENCODE_SKILL_NAME = "customize-opencode"
-const CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION =
-  "Use ONLY when the user is editing or creating opencode's own configuration: opencode.json, opencode.jsonc, files under .opencode/, or files under ~/.config/opencode/. Also use when creating or fixing opencode agents, subagents, skills, plugins, MCP servers, or permission rules. Do not use for the user's own application code, or for any project that is not configuring opencode itself."
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -63,17 +53,26 @@ function isSkillFrontmatter(data: unknown): data is { name: string; description?
   )
 }
 
-export const InvalidError = NamedError.create("SkillInvalidError", {
+export class InvalidError extends Schema.TaggedErrorClass<InvalidError>()("SkillInvalidError", {
   path: Schema.String,
   message: Schema.optional(Schema.String),
   issues: Schema.optional(Schema.Array(Issue)),
-})
+}) {}
 
-export const NameMismatchError = NamedError.create("SkillNameMismatchError", {
+export class NameMismatchError extends Schema.TaggedErrorClass<NameMismatchError>()("SkillNameMismatchError", {
   path: Schema.String,
   expected: Schema.String,
   actual: Schema.String,
-})
+}) {}
+
+export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Skill.NotFoundError", {
+  name: Schema.String,
+  available: Schema.Array(Schema.String),
+}) {
+  override get message() {
+    return `Skill "${this.name}" not found. Available skills: ${this.available.join(", ") || "none"}`
+  }
+}
 
 type State = {
   skills: Record<string, Info>
@@ -92,6 +91,7 @@ type ScanState = {
 
 export interface Interface {
   readonly get: (name: string) => Effect.Effect<Info | undefined>
+  readonly require: (name: string) => Effect.Effect<Info, NotFoundError>
   readonly all: () => Effect.Effect<Info[]>
   readonly dirs: () => Effect.Effect<string[]>
   readonly available: (agent?: Agent.Info) => Effect.Effect<Info[]>
@@ -171,6 +171,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   discovery: Discovery.Interface,
   fsys: AppFileSystem.Interface,
   global: Global.Interface,
+  disableExternalSkills: boolean,
   disableClaudeCodeSkills: boolean,
   directory: string,
   worktree: string,
@@ -178,7 +179,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   const state: ScanState = { matches: new Set(), dirs: new Set() }
 
   const externalDirs: string[] = []
-  if (!Flag.KILO_DISABLE_EXTERNAL_SKILLS) {
+  if (!disableExternalSkills) {
     if (!disableClaudeCodeSkills) externalDirs.push(CLAUDE_EXTERNAL_DIR)
     externalDirs.push(AGENTS_EXTERNAL_DIR)
 
@@ -188,9 +189,12 @@ const discoverSkills = Effect.fnUntraced(function* (
       yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global" })
     }
 
-    const upDirs = yield* fsys
+    // kilocode_change start
+    const local = yield* fsys
       .up({ targets: externalDirs, start: directory, stop: worktree })
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+    const upDirs = [...(yield* primaryPaths(directory, worktree, externalDirs)), ...local]
+    // kilocode_change end
 
     for (const root of upDirs) {
       yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "project" })
@@ -239,10 +243,7 @@ const loadSkills = Effect.fnUntraced(function* (state: State, discovered: Discov
   }
   // kilocode_change end
 
-  yield* Effect.forEach(discovered.matches, (match) => add(state, match, bus), {
-    concurrency: "unbounded",
-    discard: true,
-  })
+  for (const match of discovered.matches) yield* add(state, match, bus) // kilocode_change
 
   log.info("init", { count: Object.keys(state.skills).length })
 })
@@ -258,6 +259,7 @@ export const layer = Layer.effect(
     const fsys = yield* AppFileSystem.Service
     const global = yield* Global.Service
     const flags = yield* RuntimeFlags.Service
+    const git = yield* Git.Service // kilocode_change
     const discovered = yield* InstanceState.make(
       Effect.fn("Skill.discovery")(function* (ctx) {
         return yield* discoverSkills(
@@ -265,23 +267,16 @@ export const layer = Layer.effect(
           discovery,
           fsys,
           global,
+          flags.disableExternalSkills,
           flags.disableClaudeCodeSkills,
           ctx.directory,
-          ctx.project.worktree,
-        ) // kilocode_change
+          ctx.worktree, // kilocode_change
+        ).pipe(Effect.provideService(Git.Service, git)) // kilocode_change
       }),
     )
     const state = yield* InstanceState.make(
       Effect.fn("Skill.state")(function* () {
         const s: State = { skills: {}, dirs: new Set() }
-        // Register the built-in skill BEFORE disk discovery so a user-disk
-        // skill with the same name can override it.
-        s.skills[CUSTOMIZE_OPENCODE_SKILL_NAME] = {
-          name: CUSTOMIZE_OPENCODE_SKILL_NAME,
-          description: CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION,
-          location: "<built-in>",
-          content: CUSTOMIZE_OPENCODE_SKILL_BODY,
-        }
         yield* loadSkills(s, yield* InstanceState.get(discovered), bus)
         return s
       }),
@@ -290,6 +285,13 @@ export const layer = Layer.effect(
     const get = Effect.fn("Skill.get")(function* (name: string) {
       const s = yield* InstanceState.get(state)
       return s.skills[name]
+    })
+
+    const require = Effect.fn("Skill.require")(function* (name: string) {
+      const s = yield* InstanceState.get(state)
+      const info = s.skills[name]
+      if (info) return info
+      return yield* new NotFoundError({ name, available: Object.keys(s.skills).toSorted() })
     })
 
     const all = Effect.fn("Skill.all")(function* () {
@@ -308,11 +310,12 @@ export const layer = Layer.effect(
       return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny")
     })
 
-    return Service.of({ get, all, dirs, available })
+    return Service.of({ get, require, all, dirs, available })
   }),
 )
 
 export const defaultLayer = layer.pipe(
+  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(Discovery.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(Bus.layer),
@@ -347,16 +350,5 @@ export function fmt(list: Info[], opts: { verbose: boolean }) {
       .map((skill) => `- **${skill.name}**: ${skill.description}`),
   ].join("\n")
 }
-
-// kilocode_change start - skill removal
-export async function remove(location: string) {
-  if (location === BUILTIN_LOCATION) {
-    throw new Error("cannot remove built-in skill")
-  }
-  const resolved = path.resolve(location)
-  const dir = path.dirname(resolved)
-  await rm(dir, { recursive: true, force: true })
-}
-// kilocode_change end
 
 export * as Skill from "."

@@ -1,4 +1,5 @@
-import type { ModelEntry, VariantEntry } from "./CustomProviderModelCard"
+import type { CustomProviderPackage } from "../../../../src/shared/provider-model"
+import type { Modalities, ModelEntry, VariantEntry } from "./CustomProviderModelCard"
 
 type Translator = (key: string, params?: Record<string, string>) => string
 
@@ -10,6 +11,7 @@ export type HeaderRow = {
 export type FormState = {
   providerID: string
   name: string
+  npm: CustomProviderPackage
   baseURL: string
   apiKey: string
   models: ModelEntry[]
@@ -42,7 +44,7 @@ type ValidateResult = {
     name: string
     key: string | undefined
     config: {
-      npm: string
+      npm: CustomProviderPackage
       name: string
       env?: string[]
       options: { baseURL: string; headers?: Record<string, string> }
@@ -52,7 +54,6 @@ type ValidateResult = {
 }
 
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
-const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
 
 function checkVariant(v: VariantEntry, seen: Set<string>, t: Translator) {
   const n = v.name.trim()
@@ -64,10 +65,11 @@ function checkVariant(v: VariantEntry, seen: Set<string>, t: Translator) {
 
 function checkModel(m: ModelEntry, seenModels: Set<string>, t: Translator) {
   const id = m.id.trim()
+  const key = id.toLowerCase()
   let idErr: string | undefined
   if (!id) idErr = t("provider.custom.error.required")
-  else if (seenModels.has(id)) idErr = t("provider.custom.error.duplicate")
-  else seenModels.add(id)
+  else if (seenModels.has(key)) idErr = t("provider.custom.error.duplicate")
+  else seenModels.add(key)
 
   const nameErr = !m.name.trim() ? t("provider.custom.error.required") : undefined
   const seen = new Set<string>()
@@ -106,15 +108,41 @@ function serializeVariant(v: VariantEntry): [string, Record<string, unknown>] {
   const cfg: Record<string, unknown> = {}
   if (v.enableThinking !== undefined) cfg.enable_thinking = v.enableThinking
   if (v.thinking !== undefined) cfg.thinking = { type: v.thinking }
+  if (v.splitReasoning !== undefined) cfg.reasoning_split = v.splitReasoning
   if (v.reasoningEffort !== undefined) cfg.reasoningEffort = v.reasoningEffort
+  if (v.outputEffort !== undefined) cfg.effort = v.outputEffort
   if (v.chatTemplateArgs !== undefined) cfg.chat_template_args = { enable_thinking: v.chatTemplateArgs }
   return [v.name.trim(), cfg]
+}
+
+function modalities(m: ModelEntry): Modalities | undefined {
+  const input = new Set(m.modalities.input ?? [])
+  const existing = input.size > 0 || (m.modalities.output?.length ?? 0) > 0
+  if (!existing && !m.supportsImages) return
+
+  const image = input.has("image")
+  const changed = image !== m.supportsImages
+  if (m.supportsImages && !image) {
+    input.add("text")
+    input.add("image")
+  }
+  if (!m.supportsImages) input.delete("image")
+
+  const include = input.size > 0 || (m.modalities.input !== undefined && !changed)
+  if (!include && !m.modalities.output?.length) return
+
+  return {
+    ...(include ? { input: [...input] } : {}),
+    ...(m.modalities.output?.length ? { output: m.modalities.output } : {}),
+  }
 }
 
 function serializeModel(m: ModelEntry): [string, Record<string, unknown>] {
   const ventries = m.reasoning ? m.variants.filter((v) => v.name.trim()).map(serializeVariant) : []
   const entry: Record<string, unknown> = { name: m.name.trim() }
+  const modes = modalities(m)
   if (m.reasoning) entry.reasoning = true
+  if (modes) entry.modalities = modes
   if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)
   return [m.id.trim(), entry]
 }
@@ -189,7 +217,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
       name,
       key,
       config: {
-        npm: OPENAI_COMPATIBLE,
+        npm: input.form.npm,
         name,
         ...resolveEnv(rawEnv, savedEnv),
         options,

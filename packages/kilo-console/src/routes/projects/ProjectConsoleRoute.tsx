@@ -1,14 +1,14 @@
 import { A, useLocation, useParams } from "@solidjs/router"
-import { createEffect, createMemo, createResource, createSignal, For, on, onCleanup, Show } from "solid-js"
+import { createEffect, createMemo, createResource, createSignal, For, on, onCleanup, onMount, Show } from "solid-js"
 import { Badge } from "@kilocode/kilo-web-ui/badge"
 import { Button } from "@kilocode/kilo-web-ui/button"
 import { Card } from "@kilocode/kilo-web-ui/card"
 import { Icon } from "@kilocode/kilo-web-ui/icon"
 import { ResizeHandle } from "@kilocode/kilo-web-ui/resize-handle"
 import { Spinner } from "@kilocode/kilo-web-ui/spinner"
-import { File } from "@opencode-ai/ui/file"
-import { FileComponentProvider } from "@opencode-ai/ui/context/file"
-import { SessionReview, type SessionReviewDiffStyle } from "@opencode-ai/ui/session-review"
+import { File } from "@kilocode/kilo-web-ui/file"
+import { FileComponentProvider } from "@kilocode/kilo-web-ui/context/file"
+import { SessionReview, type SessionReviewDiffStyle } from "@kilocode/kilo-web-ui/session-review"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { LoadingScreen } from "../../components/LoadingScreen"
 import { PromptDialog } from "../../components/PromptDialog"
@@ -58,6 +58,7 @@ type Context = {
   dir: string
   label: string
   kind: "local" | "worktree"
+  managed: boolean
 }
 
 type Editor = { kind: "create"; value: string } | { kind: "rename"; item: Context; value: string }
@@ -135,6 +136,7 @@ function refreshEvent(event: ProjectConsoleEvent) {
   if (type.startsWith("permission.")) return true
   if (type.startsWith("question.")) return true
   if (type.startsWith("message.")) return true
+  if (type === "global.config.updated") return true
   return false
 }
 
@@ -154,7 +156,7 @@ export function ProjectConsoleRoute() {
   const [openFiles, setOpenFiles] = createSignal<string[]>([])
   const [details, setDetails] = createSignal<Record<string, ProjectDiffItem>>({})
   const [infoWidth, setInfoWidth] = createSignal(DEFAULT_CONTEXT_SIDEBAR_WIDTH)
-  const [viewport, setViewport] = createSignal(window.innerWidth)
+  const [layout, setLayout] = createSignal(window.innerWidth)
   const [diffStyle, setDiffStyle] = createSignal<SessionReviewDiffStyle>(DEFAULT_CONSOLE_DIFF_STYLE)
   const [saving, setSaving] = createSignal<string | undefined>()
   const [failure, setFailure] = createSignal<string | undefined>()
@@ -164,7 +166,12 @@ export function ProjectConsoleRoute() {
   const [editor, setEditor] = createSignal<Editor | undefined>()
   const [pending, setPending] = createSignal<Pending | undefined>()
   const events = { timer: undefined as number | undefined }
-  const resize = { timer: undefined as number | undefined, pending: false }
+  const resize = {
+    timer: undefined as number | undefined,
+    pending: false,
+    expected: undefined as number | undefined,
+  }
+  let shell: HTMLElement | undefined
   const detailPending = new Set<string>()
   const project = () => params.project ?? ""
   const query = createMemo<ProjectConsoleQuery | undefined>(() => {
@@ -179,8 +186,14 @@ export function ProjectConsoleRoute() {
     const data = snap()
     if (!data) return []
     return [
-      { id: "local", dir: data.project.worktree, label: "Local", kind: "local" },
-      ...data.worktrees.map((dir) => ({ id: dir, dir, label: title(dir), kind: "worktree" as const })),
+      { id: "local", dir: data.project.worktree, label: "Local", kind: "local", managed: false },
+      ...data.worktrees.map((item) => ({
+        id: item.directory,
+        dir: item.directory,
+        label: title(item.directory),
+        kind: "worktree" as const,
+        managed: item.managed,
+      })),
     ]
   })
   const terminals = createMemo(() => {
@@ -377,16 +390,21 @@ export function ProjectConsoleRoute() {
     const width = normalizeContextSidebarWidth(value)
     setInfoWidth(width)
     resize.pending = true
+    resize.expected = width
     if (resize.timer) window.clearTimeout(resize.timer)
     resize.timer = window.setTimeout(() => {
       resize.timer = undefined
       const base = query()
       if (!base) {
         resize.pending = false
+        resize.expected = undefined
         return
       }
       void patchConfig({ url: base.url, dir: "", scope: "global" }, { console: { context_sidebar_width: width } })
-        .catch((err) => console.warn(`Console sidebar width: ${errMsg(err)}`))
+        .catch((err) => {
+          resize.expected = undefined
+          console.warn(`Console sidebar width: ${errMsg(err)}`)
+        })
         .finally(() => {
           resize.pending = false
         })
@@ -394,7 +412,7 @@ export function ProjectConsoleRoute() {
   }
 
   function maxInfoWidth() {
-    return Math.max(MIN_CONTEXT_SIDEBAR_WIDTH, Math.min(MAX_CONTEXT_SIDEBAR_WIDTH, viewport() - 604))
+    return Math.max(MIN_CONTEXT_SIDEBAR_WIDTH, Math.min(MAX_CONTEXT_SIDEBAR_WIDTH, layout() - 604))
   }
 
   function run(label: string, job: () => Promise<unknown>) {
@@ -499,8 +517,12 @@ export function ProjectConsoleRoute() {
     setEditor({ kind: "rename", item, value: displayLabel(item) })
   }
 
+  function canManage(item: Context | undefined) {
+    return item?.kind === "worktree" && item.managed
+  }
+
   function removeWorktree(item: Context) {
-    if (!projectInput() || item.kind === "local") return
+    if (!projectInput() || !canManage(item)) return
     setPending({ kind: "delete", item })
   }
 
@@ -512,7 +534,7 @@ export function ProjectConsoleRoute() {
 
   function resetSelected() {
     const item = current()
-    if (!projectInput() || !item || item.kind === "local") return
+    if (!projectInput() || !canManage(item)) return
     setPending({ kind: "reset", item })
   }
 
@@ -570,7 +592,10 @@ export function ProjectConsoleRoute() {
   createEffect(() => {
     const data = snap()
     if (!data) return
-    if (!resize.pending) setInfoWidth(normalizeContextSidebarWidth(data.config.console?.context_sidebar_width))
+    const width = normalizeContextSidebarWidth(data.config.console?.context_sidebar_width)
+    if (resize.expected === width) resize.expected = undefined
+    // Config events can refetch stale data before the overlay write is visible.
+    if (!resize.pending && resize.expected === undefined) setInfoWidth(width)
     setDiffStyle(normalizeConsoleDiffStyle(data.config.console?.diff_style))
   })
 
@@ -653,23 +678,32 @@ export function ProjectConsoleRoute() {
     const base = query()
     const data = snap()
     if (!base || !data) return
-    const dirs = new Set([data.project.worktree, ...data.worktrees])
+    const dirs = new Set([data.project.worktree, ...data.worktrees.map((item) => item.directory)])
     const stop = subscribeProjectEvents({ url: base.url, dir: data.project.worktree }, (event) => {
       if (event.directory !== "global" && !dirs.has(event.directory)) return
       const id = eventSession(event)
       if (id && messageEvent(event)) markUnread(id)
+      // Terminal fitting emits pty.updated for every width change. Ignore those refreshes while
+      // dragging so the controlled review accordion keeps its expanded files mounted.
+      if (resize.pending && eventType(event) === "pty.updated") return
       if (refreshEvent(event)) scheduleRefetch()
     })
     onCleanup(stop)
   })
 
-  const updateViewport = () => setViewport(window.innerWidth)
-  window.addEventListener("resize", updateViewport)
+  onMount(() => {
+    const node = shell
+    if (!node) return
+    const update = () => setLayout(node.clientWidth)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(node)
+    onCleanup(() => observer.disconnect())
+  })
 
   onCleanup(() => {
     if (events.timer) window.clearTimeout(events.timer)
     if (resize.timer) window.clearTimeout(resize.timer)
-    window.removeEventListener("resize", updateViewport)
   })
 
   createEffect(() => {
@@ -686,7 +720,13 @@ export function ProjectConsoleRoute() {
   })
 
   return (
-    <section class="project-console" style={`--project-info-width: ${visibleInfoWidth()}px`}>
+    <section
+      ref={(node) => {
+        shell = node
+      }}
+      class="project-console"
+      style={`--project-info-width: ${visibleInfoWidth()}px; --project-info-max: ${maxInfoWidth()}px`}
+    >
       <aside class="project-console-sidebar" aria-label="Project console sections">
         <div class="project-console-title">
           <span class="project-console-heading">
@@ -765,19 +805,21 @@ export function ProjectConsoleRoute() {
                           >
                             <Icon name="edit" size="small" />
                           </button>
-                          <button
-                            type="button"
-                            class="project-inline-action danger"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              removeWorktree(item)
-                            }}
-                            disabled={!!saving()}
-                            title={`Delete ${displayLabel(item)}`}
-                            aria-label={`Delete ${displayLabel(item)}`}
-                          >
-                            <Icon name="trash" size="small" />
-                          </button>
+                          <Show when={item.managed}>
+                            <button
+                              type="button"
+                              class="project-inline-action danger"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                removeWorktree(item)
+                              }}
+                              disabled={!!saving()}
+                              title={`Delete ${displayLabel(item)}`}
+                              aria-label={`Delete ${displayLabel(item)}`}
+                            >
+                              <Icon name="trash" size="small" />
+                            </button>
+                          </Show>
                         </Show>
                       </div>
                     </div>
@@ -913,7 +955,7 @@ export function ProjectConsoleRoute() {
           <code class="project-info-path" title={current()?.dir}>
             {current()?.dir ?? snap()?.project.worktree ?? project()}
           </code>
-          <Show when={current()?.kind === "worktree"}>
+          <Show when={canManage(current())}>
             <div class="project-info-actions">
               <Button variant="secondary" size="small" onClick={resetSelected} disabled={!!saving()}>
                 Reset

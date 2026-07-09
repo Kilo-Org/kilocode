@@ -18,7 +18,7 @@ import { Database } from "@/storage/db"
 import { eq } from "drizzle-orm"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { resetDatabase } from "../fixture/db"
-import { testEffect } from "../lib/effect"
+import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
 
 const env = Layer.mergeAll(
   Session.defaultLayer,
@@ -128,7 +128,7 @@ describe("ShareNext", () => {
       Effect.gen(function* () {
         yield* seed("https://control.example.com", "org-1")
 
-        const req = yield* ShareNext.Service.use((svc) => svc.request()).pipe(Effect.provide(live(none)))
+        const req = yield* ShareNext.use.request().pipe(Effect.provide(live(none)))
 
         expect(req.api.create).toBe("/api/shares")
         expect(req.api.sync("shr_123")).toBe("/api/shares/shr_123/sync")
@@ -147,7 +147,7 @@ describe("ShareNext", () => {
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const session = yield* Session.Service.use((svc) => svc.create({ title: "test" }))
+          const session = yield* Session.use.create({ title: "test" })
           const seen: HttpClientRequest.HttpClientRequest[] = []
           const client = HttpClient.make((req) => {
             seen.push(req)
@@ -163,9 +163,7 @@ describe("ShareNext", () => {
             return Effect.succeed(json(req, { ok: true }))
           })
 
-          const result = yield* ShareNext.Service.use((svc) => svc.create(session.id)).pipe(
-            Effect.provide(live(client)),
-          )
+          const result = yield* ShareNext.use.create(session.id).pipe(Effect.provide(live(client)))
 
           expect(result.id).toBe("shr_abc")
           expect(result.url).toBe("https://legacy-share.example.com/share/abc")
@@ -188,7 +186,7 @@ describe("ShareNext", () => {
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const session = yield* Session.Service.use((svc) => svc.create({ title: "test" }))
+          const session = yield* Session.use.create({ title: "test" })
           const seen: HttpClientRequest.HttpClientRequest[] = []
           const client = HttpClient.make((req) => {
             seen.push(req)
@@ -205,8 +203,8 @@ describe("ShareNext", () => {
           })
 
           yield* Effect.gen(function* () {
-            yield* ShareNext.Service.use((svc) => svc.create(session.id))
-            yield* ShareNext.Service.use((svc) => svc.remove(session.id))
+            yield* ShareNext.use.create(session.id)
+            yield* ShareNext.use.remove(session.id)
           }).pipe(Effect.provide(live(client)))
 
           expect(share(session.id)).toBeUndefined()
@@ -222,7 +220,7 @@ describe("ShareNext", () => {
   it.live("create fails on a non-ok response and does not persist a share", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
-        const session = yield* Session.Service.use((svc) => svc.create({ title: "test" }))
+        const session = yield* Session.use.create({ title: "test" })
         const client = HttpClient.make((req) => Effect.succeed(json(req, { error: "bad" }, 500)))
 
         const exit = yield* ShareNext.Service.use((svc) => Effect.exit(svc.create(session.id))).pipe(
@@ -253,7 +251,6 @@ describe("ShareNext", () => {
 
           const info = yield* session.create({ title: "first" })
           yield* share.init()
-          yield* Effect.sleep(50)
           yield* Effect.sync(() =>
             Database.use((db) =>
               db
@@ -267,6 +264,30 @@ describe("ShareNext", () => {
                 .run(),
             ),
           )
+          // kilocode_change start
+          yield* pollWithTimeout(
+            Effect.gen(function* () {
+              if (seen.length > 0) return true as const
+              yield* bus.publish(Session.Event.Diff, {
+                sessionID: info.id,
+                diff: [
+                  {
+                    file: "warmup.ts",
+                    patch: "",
+                    additions: 0,
+                    deletions: 0,
+                    status: "modified",
+                  },
+                ],
+              })
+              return undefined
+            }),
+            "share diff subscriber did not flush warmup sync",
+          )
+          yield* Effect.sync(() => {
+            seen.length = 0
+          })
+          // kilocode_change end
 
           yield* bus.publish(Session.Event.Diff, {
             sessionID: info.id,
@@ -292,14 +313,19 @@ describe("ShareNext", () => {
                 deletions: 0,
                 status: "modified",
               },
-            ],
+            ], // kilocode_change
           })
-          yield* Effect.sleep(1_250)
+          const sync = yield* pollWithTimeout(
+            Effect.sync(() => seen[0]),
+            "share sync was not sent",
+            "3 seconds",
+          ) // kilocode_change
 
           expect(seen).toHaveLength(1)
-          expect(seen[0].url).toBe("https://legacy-share.example.com/api/share/shr_abc/sync")
+          expect(sync.url).toBe("https://legacy-share.example.com/api/share/shr_abc/sync") // kilocode_change
 
-          const body = JSON.parse(seen[0].body) as {
+          const body = JSON.parse(sync.body) as {
+            // kilocode_change
             secret: string
             data: Array<{
               type: string

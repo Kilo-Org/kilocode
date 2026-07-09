@@ -4,12 +4,17 @@ import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import javax.swing.Icon
+import javax.swing.JComponent
+import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -57,16 +62,37 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertEquals("one\ntwo\nthree\nfour", view.markdown())
     }
 
-    fun `test live reasoning stays expanded when marked done`() {
+    fun `test live reasoning auto-collapses and releases body when marked done`() {
         val view = ReasoningView(reasoning("p1", done = false, text = "one\ntwo\nthree\nfour"))
 
         assertTrue(view.isExpanded())
+        assertTrue(view.bodyCreated())
 
         view.update(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
+
+        assertFalse(view.isExpanded())
+        assertFalse(view.bodyVisible())
+        assertFalse(view.bodyCreated())
+
+        view.toggle()
 
         assertTrue(view.isExpanded())
         assertTrue(view.bodyVisible())
         assertTrue(view.bodyCreated())
+        assertEquals("one\ntwo\nthree\nfour", view.markdown())
+    }
+
+    fun `test auto-collapse releases streaming reasoning editors`() {
+        val base = EditorFactory.getInstance().allEditors.size
+
+        repeat(20) { i ->
+            val view = ReasoningView(reasoning("p$i", done = false, text = "```kotlin\nval x = $i\n```"))
+            popupEditors(view.md.component).forEach { it.getEditor(true) }
+            view.update(reasoning("p$i", done = true, text = "```kotlin\nval x = $i\n```"))
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
     fun `test manually expanded finished reasoning stays open on update`() {
@@ -87,6 +113,39 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertTrue(view.isExpanded())
         view.toggle()
         assertFalse(view.isExpanded())
+    }
+
+    fun `test manual collapse during stream stays collapsed when marked done`() {
+        val view = ReasoningView(reasoning("p1", done = false, text = "one\ntwo"))
+
+        view.toggle()
+        view.update(reasoning("p1", done = true, text = "one\ntwo\nthree"))
+
+        assertFalse(view.isExpanded())
+        assertFalse(view.bodyVisible())
+        assertEquals("one\ntwo\nthree", view.markdown())
+    }
+
+    fun `test manual expand during stream stays open when marked done`() {
+        val view = ReasoningView(reasoning("p1", done = false, text = "one\ntwo"))
+
+        view.toggle()
+        view.toggle()
+        view.update(reasoning("p1", done = true, text = "one\ntwo\nthree"))
+
+        assertTrue(view.isExpanded())
+        assertTrue(view.bodyVisible())
+        assertEquals("one\ntwo\nthree", view.markdown())
+    }
+
+    fun `test unpinned appended reasoning auto-collapses when marked done`() {
+        val view = ReasoningView(reasoning("p1", done = false, text = "one"))
+
+        view.appendDelta("\ntwo")
+        view.update(reasoning("p1", done = true, text = "one\ntwo"))
+
+        assertFalse(view.isExpanded())
+        assertFalse(view.bodyVisible())
     }
 
     fun `test collapsed reasoning stays collapsed on update`() {
@@ -177,6 +236,14 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertTrue(font.size < style.editorSize)
     }
 
+    fun `test reasoning header uses brain icon`() {
+        val view = ReasoningView(reasoning("p1", done = true, text = "one"))
+        val icons = icons(view)
+
+        assertTrue(icons.contains(SessionViewIcons.brain))
+        assertFalse(icons.contains(SessionViewIcons.eye))
+    }
+
     fun `test applyStyle updates reasoning in place`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
         val component = view.md.component
@@ -190,13 +257,58 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertTrue(view.headerFont().size < style.editorSize)
     }
 
-    fun `test expanded reasoning body is capped to five rows`() {
+    fun `test expanded reasoning body is capped to configured rows`() {
         val view = ReasoningView(reasoning("p1", done = false, text = (1..20).joinToString("\n") { "line $it" }))
         val taller = ReasoningView(reasoning("p2", done = false, text = (1..200).joinToString("\n") { "line $it" }))
 
-        assertEquals(5, view.bodyMaxRows())
+        assertEquals(SessionUiStyle.View.Reasoning.BODY_LINES, view.bodyMaxRows())
         assertTrue(view.preferredSize.height > 0)
         assertEquals(view.preferredSize.height, taller.preferredSize.height)
+    }
+
+    fun `test reasoning header popup is available only when collapsed with content`() {
+        val expanded = ReasoningView(reasoning("p1", done = false, text = "one"))
+        val blank = ReasoningView(reasoning("p2", done = true, text = ""))
+        val collapsed = ReasoningView(reasoning("p3", done = true, text = "one\ntwo"))
+
+        assertNull(expanded.headerPopup())
+        assertNull(blank.headerPopup())
+        assertNotNull(collapsed.headerPopup())
+
+        collapsed.toggle()
+
+        assertNull(collapsed.headerPopup())
+    }
+
+    fun `test reasoning header popup body is capped to popup size`() {
+        val text = (1..400).joinToString(" ") { "reasoning" }
+        val view = ReasoningView(reasoning("p1", done = true, text = text))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            val scroll = popupScrollPanes(body.component).first()
+            val panel = scroll.viewport.view as JPanel
+
+            assertEquals(1, panel.components.filterIsInstance<JComponent>().size)
+            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(350))
+            assertEquals(JBUI.scale(450), body.component.preferredSize.height)
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test reasoning header popup editors are disposed after churn`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = ReasoningView(reasoning("p1", done = true, text = "```kotlin\nprintln(1)\n```"))
+
+        repeat(20) {
+            val body = view.headerPopup()!!.build()
+            popupEditors(body.component).forEach { it.getEditor(true) }
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
     fun `test appended reasoning scrolls nested body to bottom`() {
@@ -284,5 +396,36 @@ class ReasoningViewTest : BasePlatformTestCase() {
             }
         }
         error("scroll not found")
+    }
+
+    private fun icons(component: Component): List<Icon> {
+        val found = mutableListOf<Icon>()
+        collect(component, found)
+        return found
+    }
+
+    private fun popupEditors(root: JComponent): List<com.intellij.ui.EditorTextField> {
+        val found = mutableListOf<com.intellij.ui.EditorTextField>()
+        fun visit(component: JComponent) {
+            if (component is com.intellij.ui.EditorTextField) found.add(component)
+            component.components.filterIsInstance<JComponent>().forEach(::visit)
+        }
+        visit(root)
+        return found
+    }
+
+    private fun popupScrollPanes(root: JComponent): List<JBScrollPane> {
+        val found = mutableListOf<JBScrollPane>()
+        fun visit(component: JComponent) {
+            if (component is JBScrollPane) found.add(component)
+            component.components.filterIsInstance<JComponent>().forEach(::visit)
+        }
+        visit(root)
+        return found
+    }
+
+    private fun collect(component: Component, found: MutableList<Icon>) {
+        if (component is JLabel) component.icon?.let(found::add)
+        if (component is Container) component.components.forEach { collect(it, found) }
     }
 }

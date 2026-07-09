@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import { Effect } from "effect"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
@@ -10,7 +11,7 @@ import { WorkspaceContext } from "../../src/control-plane/workspace-context"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { indexingWarningKey } from "../../src/kilocode/indexing-warning"
 import { IndexingWorker } from "../../src/kilocode/indexing-worker-client"
-import { WithInstance } from "../../src/project/with-instance"
+import { provideTestInstance, withTestInstance } from "../fixture/fixture"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
@@ -94,7 +95,7 @@ function inline(directory: string, root: string, hooks: IndexingWorker.Hooks): I
     async dispose() {
       progress.dispose()
       telemetry.dispose()
-      manager.dispose()
+      await manager.dispose()
     },
   }
 }
@@ -258,7 +259,7 @@ describe("indexing startup degradation", () => {
       await WorkspaceContext.provide({
         workspaceID: workspace,
         fn: () =>
-          WithInstance.provide({
+          withTestInstance({
             directory: tmp.path,
             fn: () => KiloIndexing.current(),
           }),
@@ -294,7 +295,7 @@ describe("indexing startup degradation", () => {
       await WorkspaceContext.provide({
         workspaceID: second,
         fn: () =>
-          WithInstance.provide({
+          withTestInstance({
             directory: tmp.path,
             fn: () => KiloIndexing.warnings(),
           }),
@@ -357,7 +358,7 @@ describe("indexing startup degradation", () => {
     GlobalBus.on("event", on)
 
     try {
-      await WithInstance.provide({
+      await withTestInstance({
         directory: tmp.path,
         fn: async () => expect(await wait(() => KiloIndexing.current(), "Complete")).toEqual(complete),
       })
@@ -424,8 +425,9 @@ describe("indexing startup degradation", () => {
     GlobalBus.on("event", on)
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           await called(init)
           expect((await KiloIndexing.current()).state).toBe("In Progress")
@@ -452,8 +454,9 @@ describe("indexing startup degradation", () => {
     process.env["KILO_CONFIG_DIR"] = tmp.path
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           const status = await wait(() => KiloIndexing.current(), "Error")
 
@@ -478,15 +481,20 @@ describe("indexing startup degradation", () => {
     const init = spyOn(CodeIndexManager.prototype, "initialize").mockImplementation(() => gate.promise)
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           await called(init)
 
           expect(init).toHaveBeenCalled()
           expect(KiloIndexing.ready()).toBe(false)
           expect(await KiloIndexing.available()).toBe(false)
-          expect(await KiloIndexing.search("boot failure")).toEqual([])
+          const search = KiloIndexing.search("boot failure")
+          const pending = await Promise.race([search.then(() => false), Promise.resolve(true)])
+          expect(pending).toBe(true)
+          gate.resolve({ requiresRestart: false })
+          expect(await search).toEqual([])
         },
       })
     } finally {
@@ -500,7 +508,7 @@ describe("indexing startup degradation", () => {
     process.env["KILO_CONFIG_DIR"] = tmp.path
     const init = spyOn(CodeIndexManager.prototype, "initialize")
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const status = await wait(() => KiloIndexing.current(), "Disabled")
@@ -527,7 +535,7 @@ describe("indexing startup degradation", () => {
     await using tmp = await tmpdir({ git: true, config: inactive })
     process.env["KILO_CONFIG_DIR"] = tmp.path
 
-    await WithInstance.provide({
+    await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
         const status = await wait(() => KiloIndexing.current(), "Disabled")
@@ -567,8 +575,9 @@ describe("indexing startup degradation", () => {
     process.env.KILO_ORG_ID = "org_123"
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           await called(init)
           expect(init.mock.calls[0]?.[0]).toMatchObject({
@@ -611,8 +620,9 @@ describe("indexing startup degradation", () => {
     process.env.KILO_API_KEY = "kilo-token"
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           await called(init)
           expect(init.mock.calls[0]?.[0]).toMatchObject({
@@ -665,8 +675,9 @@ describe("indexing startup degradation", () => {
     process.env.KILO_API_KEY = "kilo-token"
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           await called(init)
           expect(init.mock.calls[0]?.[0]).toMatchObject({
@@ -693,8 +704,9 @@ describe("indexing startup degradation", () => {
     process.env.KILO_API_KEY = "kilo-token"
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           await called(init)
           expect(init.mock.calls[0]?.[0]).toMatchObject({
@@ -721,8 +733,9 @@ describe("indexing startup degradation", () => {
     process.env.KILO_API_KEY = "kilo-token"
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           await called(init)
           expect(init.mock.calls[0]?.[0]).toMatchObject({
@@ -745,8 +758,9 @@ describe("indexing startup degradation", () => {
     const init = spyOn(CodeIndexManager.prototype, "initialize")
 
     try {
-      await WithInstance.provide({
+      await provideTestInstance({
         directory: tmp.path,
+        init: Effect.promise(() => KiloIndexing.init()),
         fn: async () => {
           const status = await KiloIndexing.current()
 

@@ -1,3 +1,37 @@
+export type SandboxDefaultState = {
+  desired: boolean
+  enabled: boolean
+  available: boolean
+  reason?: string
+  revision: number
+}
+
+export type SandboxState = {
+  sessionID: string
+  enabled: boolean
+  available: boolean
+  reason?: string
+  version: number
+  directory: string
+  revision: number
+}
+
+export function applySandboxState(current: SandboxState | undefined, next: SandboxState) {
+  if (!current) return next
+  const same = current.sessionID === next.sessionID && current.directory === next.directory
+  if (same && current.version > next.version) return current
+  if (same && current.version === next.version && current.revision > next.revision) return current
+  if (!same && current.revision > next.revision) return current
+  return next
+}
+
+export function applySandboxStates(current: Record<string, SandboxState>, next: SandboxState) {
+  const previous = current[next.sessionID]
+  const state = applySandboxState(previous, next)
+  if (state === previous) return current
+  return { ...current, [next.sessionID]: state }
+}
+
 export function fileName(path: string): string {
   const normalized = path.replaceAll("\\", "/").replace(/\/+$/, "")
   return normalized.split("/").pop() ?? normalized
@@ -87,8 +121,8 @@ export function isPromptBlocked(permissions: number): boolean {
  * Returns false (idle-like) when the session is busy only because
  * a suggestion or question tool call is pending.
  */
-export function isPromptBusy(status: string, suggesting: boolean, questioning: boolean): boolean {
-  return status !== "idle" && !suggesting && !questioning
+export function isPromptBusy(status: string, suggesting: boolean, questioning: boolean, submitting: boolean): boolean {
+  return submitting || (status !== "idle" && !suggesting && !questioning)
 }
 
 /**

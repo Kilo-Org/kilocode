@@ -51,6 +51,15 @@ export const dict = {
   "ui.sessionTurn.error.freeUsageExceeded": "Лимит бесплатного использования превышен",
   "ui.sessionTurn.error.addCredits": "Добавить кредиты",
 
+  "dialog.usageExceeded.freeTier.title": "Достигнут бесплатный лимит",
+  "dialog.usageExceeded.freeTier.description":
+    "Подпишитесь на Kilo Go для надёжного доступа к лучшим моделям с открытым исходным кодом, от $5/месяц.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Подписаться",
+  "dialog.usageExceeded.accountRateLimit.title": "Достигнут лимит Go",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Достигнут лимит использования. Чтобы продолжить использовать эту модель сейчас, включите использование из доступного баланса",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Открыть настройки",
+
   "ui.sessionTurn.status.delegating": "Делегирование работы",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -111,6 +120,7 @@ export const dict = {
 
   "ui.tool.read": "Чтение",
   "ui.tool.loaded": "Загружено",
+  "ui.tool.swePruned": "SWE-Pruner · сохранено {{kept}} из {{total}} строк", // kilocode_change
   "ui.tool.list": "Список",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -161,7 +171,9 @@ export const dict = {
   "ui.patch.action.patched": "Изменено",
 
   "ui.question.subtitle.answered": "{{count}} отвечено",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(нет ответа)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(не отвечено)",
   "ui.question.multiHint": "Выберите все подходящие",
   "ui.question.singleHint": "Выберите один ответ",

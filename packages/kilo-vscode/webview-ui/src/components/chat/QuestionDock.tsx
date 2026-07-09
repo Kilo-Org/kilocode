@@ -19,6 +19,7 @@ import {
   toggleAnswer,
   tr,
 } from "./question-dock-utils"
+import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
@@ -151,6 +152,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     }
 
     syncAgent(answers, kinds)
+
+    // Cost alerts use a single affirmative option and should respond on click.
+    // Normal questions keep the explicit Submit flow.
+    if (single() && props.request.autoSubmit) {
+      reply(answers)
+      return
+    }
 
     const outcome = pickOutcome({ single: single(), multi: multi(), custom })
     if (outcome.kind === "advance") {
@@ -285,10 +293,14 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
         close()
         return
       }
+      if (props.request.dismissResponse === "continue") {
+        session.closeQuestion(props.request.id)
+        return
+      }
       reject()
       return
     }
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (isEnterKeyCommitNotIme(e) && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       e.stopPropagation()
       if (store.sending) return
@@ -318,6 +330,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       ref={root}
       data-component="question-dock"
       data-collapsed={store.collapsed ? "true" : "false"}
+      data-tone={props.request.tone}
       onClick={(e: MouseEvent) => e.stopPropagation()}
       onKeyDown={onRoot}
     >
@@ -490,7 +503,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
           {/* Footer row — inside the same box */}
           <div data-slot="question-dock-footer">
             <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
-              {language.t("ui.common.dismiss")}
+              {props.request.rejectLabel ?? language.t("ui.common.dismiss")}
             </Button>
             <Show when={!store.editing}>
               <div data-slot="question-footer-actions">

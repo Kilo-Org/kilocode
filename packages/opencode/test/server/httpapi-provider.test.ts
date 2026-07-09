@@ -122,7 +122,7 @@ function writeProviderAuthPlugin(dir: string) {
     yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
-      path.join(dir, ".opencode", "plugin", "provider-oauth-parity.ts"),
+      path.join(dir, ".kilo", "plugin", "provider-oauth-parity.ts"), // kilocode_change
       [
         "export default {",
         '  id: "test.provider-oauth-parity",',
@@ -157,7 +157,7 @@ function writeProviderAuthValidationPlugin(dir: string) {
     yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
-      path.join(dir, ".opencode", "plugin", "provider-oauth-validation.ts"),
+      path.join(dir, ".kilo", "plugin", "provider-oauth-validation.ts"), // kilocode_change
       [
         "export default {",
         '  id: "test.provider-oauth-validation",',
@@ -199,7 +199,7 @@ function writeFunctionOptionsPlugin(dir: string) {
     yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
-      path.join(dir, ".opencode", "plugin", "provider-function-options.ts"),
+      path.join(dir, ".kilo", "plugin", "provider-function-options.ts"), // kilocode_change
       [
         "export default {",
         '  id: "test.provider-function-options",',
@@ -231,7 +231,7 @@ function writeProviderModelsMutationPlugin(dir: string) {
     yield* Effect.promise(() => preparePluginDependencies(dir)) // kilocode_change
 
     yield* fs.writeWithDirs(
-      path.join(dir, ".opencode", "plugin", "provider-models-mutation.ts"),
+      path.join(dir, ".kilo", "plugin", "provider-models-mutation.ts"), // kilocode_change
       [
         "export default {",
         '  id: "test.provider-models-mutation",',
@@ -274,6 +274,26 @@ function setEnvScoped(key: string, value: string) {
 }
 
 describe("provider HttpApi", () => {
+  it.instance.skip(
+    "returns public v2 provider not found errors",
+    Effect.gen(function* () {
+      const instance = yield* TestInstance
+      const response = yield* Effect.promise(() =>
+        Promise.resolve(
+          app().request("/api/provider/missing", { headers: { "x-kilo-directory": instance.directory } }),
+        ),
+      )
+
+      expect(response.status).toBe(404)
+      expect(yield* Effect.promise(() => response.json())).toEqual({
+        _tag: "ProviderNotFoundError",
+        providerID: "missing",
+        message: "Provider not found: missing",
+      })
+    }),
+    projectOptions,
+  )
+
   it.instance(
     "serves OAuth authorize response shapes",
     Effect.gen(function* () {

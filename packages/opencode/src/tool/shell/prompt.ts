@@ -86,7 +86,7 @@ function chainGuidance(name: string) {
 }
 
 // kilocode_change start
-function bashCommandSection(chain: string, limits: Limits) {
+function bashCommandSection(chain: string, limits: Limits, defaultTimeoutMs: number) {
   return `Before executing the command, please follow these steps:
 
 1. Directory Verification:
@@ -105,7 +105,7 @@ function bashCommandSection(chain: string, limits: Limits) {
 
 Usage notes:
   - The command argument is required.
-  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after 120000ms (2 minutes).
+  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after ${defaultTimeoutMs}ms.
   - It is very helpful if you write a clear, concise description of what this command does in 5-10 words.
   - If the output exceeds ${limits.maxLines} lines or ${limits.maxBytes} bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use \`head\`, \`tail\`, or other truncation commands to limit output; the full output will already be captured to a file for more precise searching.
 
@@ -131,7 +131,13 @@ Usage notes:
 }
 // kilocode_change end
 
-function powershellCommandSection(name: string, chain: string, pathSep: string, limits: Limits) {
+function powershellCommandSection(
+  name: string,
+  chain: string,
+  pathSep: string,
+  limits: Limits,
+  defaultTimeoutMs: number,
+) {
   return `${powershellNotes(name)}
 
 Before executing the command, please follow these steps:
@@ -152,7 +158,7 @@ Before executing the command, please follow these steps:
 
 Usage notes:
   - The command argument is required.
-  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after 120000ms (2 minutes).
+  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after ${defaultTimeoutMs}ms.
   - It is very helpful if you write a clear, concise description of what this command does in 5-10 words.
   - If the output exceeds ${limits.maxLines} lines or ${limits.maxBytes} bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use \`Select-Object -First\`, \`Select-Object -Last\`, or other truncation commands to limit output; the full output will already be captured to a file for more precise searching.
 
@@ -177,7 +183,7 @@ Usage notes:
     </bad-example>`
 }
 
-function cmdCommandSection(chain: string, limits: Limits) {
+function cmdCommandSection(chain: string, limits: Limits, defaultTimeoutMs: number) {
   return `# cmd.exe shell notes
 - Use double quotes for paths with spaces.
 - Use %VAR% for environment variables.
@@ -202,7 +208,7 @@ Before executing the command, please follow these steps:
 
 Usage notes:
   - The command argument is required.
-  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after 120000ms (2 minutes).
+  - You can specify an optional timeout in milliseconds. If not specified, commands will time out after ${defaultTimeoutMs}ms.
   - It is very helpful if you write a clear, concise description of what this command does in 5-10 words.
   - If the output exceeds ${limits.maxLines} lines or ${limits.maxBytes} bytes, it will be truncated and the full output will be written to a file. You can use Read with offset/limit to read specific sections or Grep to search the full content. Do NOT use \`more\` or other pagination commands to limit output; the full output will already be captured to a file for more precise searching.
 
@@ -227,7 +233,7 @@ Usage notes:
     </bad-example>`
 }
 
-function profile(name: string, platform: NodeJS.Platform, limits: Limits) {
+function profile(name: string, platform: NodeJS.Platform, limits: Limits, defaultTimeoutMs: number) {
   const isPowerShell = PS.has(name)
   const chain = chainGuidance(name)
   if (CMD.has(name)) {
@@ -235,7 +241,7 @@ function profile(name: string, platform: NodeJS.Platform, limits: Limits) {
       intro: `Executes a given ${shellDisplayName(name)} command with optional timeout, ensuring proper handling and security measures.`,
       workdirSection:
         "All commands run in the current working directory by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID changing directories inside the command - use `workdir` instead.",
-      commandSection: cmdCommandSection(chain, limits),
+      commandSection: cmdCommandSection(chain, limits, defaultTimeoutMs),
       gitCommands: "git commands",
       gitCommandRestriction: "git commands",
       createPrInstruction: "Create PR using a temporary body file so cmd.exe quoting stays simple.",
@@ -248,7 +254,13 @@ function profile(name: string, platform: NodeJS.Platform, limits: Limits) {
       intro: `Executes a given ${shellDisplayName(name)} command with optional timeout, ensuring proper handling and security measures.`,
       workdirSection:
         "All commands run in the current working directory by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID changing directories inside the command - use `workdir` instead.",
-      commandSection: powershellCommandSection(name, chain, platform === "win32" ? "\\" : "/", limits),
+      commandSection: powershellCommandSection(
+        name,
+        chain,
+        platform === "win32" ? "\\" : "/",
+        limits,
+        defaultTimeoutMs,
+      ),
       gitCommands: "git commands",
       gitCommandRestriction: "git commands",
       createPrInstruction: "Create PR using gh pr create with a PowerShell here-string to pass the body correctly.",
@@ -266,7 +278,7 @@ function profile(name: string, platform: NodeJS.Platform, limits: Limits) {
     // kilocode_change end
     workdirSection:
       "All commands run in the current working directory by default. Use the `workdir` parameter if you need to run a command in a different directory. AVOID using `cd <directory> && <command>` patterns - use `workdir` instead.",
-    commandSection: bashCommandSection(chain, limits),
+    commandSection: bashCommandSection(chain, limits, defaultTimeoutMs),
     gitCommands: "bash commands",
     gitCommandRestriction: "git bash commands",
     createPrInstruction:
@@ -278,8 +290,8 @@ function profile(name: string, platform: NodeJS.Platform, limits: Limits) {
   }
 }
 
-export function render(name: string, platform: NodeJS.Platform, limits: Limits) {
-  const selected = profile(name, platform, limits)
+export function render(name: string, platform: NodeJS.Platform, limits: Limits, defaultTimeoutMs: number) {
+  const selected = profile(name, platform, limits, defaultTimeoutMs)
   return {
     description: renderPrompt(DESCRIPTION, {
       intro: selected.intro,

@@ -1,4 +1,5 @@
 import type { Argv } from "yargs"
+import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { InstallationBuildKind, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Telemetry } from "@kilocode/kilo-telemetry"
@@ -8,6 +9,7 @@ import { Config } from "@/config/config"
 import { Auth } from "@/auth"
 import { InstanceRuntime } from "@/project/instance-runtime"
 import { SessionExport } from "@/kilocode/session-export"
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { createHelpCommand } from "@/kilocode/help-command"
 import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
 import { RollCallCommand } from "@/kilocode/cli/cmd/roll-call"
@@ -16,6 +18,8 @@ import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
+
+const log = Log.create({ service: "kilocode.cli" })
 
 // All Kilo-specific CLI customization lives here so the shared upstream entrypoint
 // (src/index.ts) only needs a handful of thin call-sites behind kilocode_change markers.
@@ -37,6 +41,11 @@ export namespace KiloCli {
     // sidesteps the self-referential type error the old inline registration hit in index.ts.
     cli.command(createHelpCommand(() => cli))
     return cli
+  }
+
+  export async function runner() {
+    if (!process.argv.includes("__background-process-runner")) return false
+    return (await import("@/kilocode/background-process/runner")).BackgroundProcessRunner.maybe()
   }
 
   // Runs from the upstream `.middleware`, before any command handler. Env tagging is additive so
@@ -73,8 +82,19 @@ export namespace KiloCli {
   export async function shutdown(): Promise<void> {
     const code = typeof process.exitCode === "number" ? process.exitCode : undefined
     Telemetry.trackCliExit(code)
-    await SessionExport.shutdown()
-    await Telemetry.shutdown()
-    await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
+    try {
+      await SessionExport.shutdown()
+      // Bound telemetry shutdown so an unreachable endpoint (offline, firewall,
+      // DNS adblock resolving the host to 0.0.0.0) cannot block process exit on
+      // short-lived commands like `kilo --help` / `kilo --version` (#9788).
+      try {
+        await Telemetry.shutdown(2000)
+      } catch (err) {
+        log.warn("telemetry shutdown failed", { err })
+      }
+    } finally {
+      await KiloShutdown.run()
+      await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
+    }
   }
 }

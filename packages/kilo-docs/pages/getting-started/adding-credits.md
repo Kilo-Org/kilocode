@@ -7,7 +7,7 @@ description: "How to add credits to your Kilo Code account"
 
 Once you've used any initial free Kilo Credits, you can easily add more:
 
-- Subscribe to the [Kilo Pass](https://kilo.ai/features/kilo-pass), the most cost effective way to add credits.
+- Subscribe to the [Kilo Pass](https://kilo.ai/pricing/kilo-pass), the most cost effective way to add credits.
 - Purchase additional credits as a one-time transaction.
 - Enable [automatic top-up](https://kilo.ai/features/auto-top-ups), which purchases additional credits when your balance runs low. Auto top-up is available for both individual and organization accounts.
 

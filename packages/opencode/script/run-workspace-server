@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 
-// This script runs a separate OpenCode server to be used as a remote
+// This script runs a separate Kilo server to be used as a remote // kilocode_change
 // workspace, simulating a remote environment but all local to make
 // debugger easier
 //
 // *Important*: make sure you add the debug workspace plugin first.
-// In `.opencode/opencode.jsonc` in the root of this project add:
+// In `.kilo/kilo.jsonc` in the root of this project add: // kilocode_change
 //
 // "plugin": ["../packages/opencode/src/control-plane/dev/debug-workspace-plugin.ts"]
 //

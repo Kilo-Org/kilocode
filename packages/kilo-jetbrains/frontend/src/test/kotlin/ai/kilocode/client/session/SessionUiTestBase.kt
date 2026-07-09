@@ -12,6 +12,7 @@ import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -29,8 +30,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.Container
@@ -42,6 +41,7 @@ import javax.swing.JScrollBar
 
 @Suppress("UnstableApiUsage")
 abstract class SessionUiTestBase : BasePlatformTestCase() {
+    private lateinit var coroutines: TestCoroutines
     protected lateinit var scope: CoroutineScope
     protected lateinit var sessions: KiloSessionService
     protected lateinit var app: KiloAppService
@@ -53,7 +53,8 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
+        scope = coroutines.scope
 
         rpc = FakeSessionRpcApi()
         appRpc = FakeAppRpcApi().also {
@@ -75,7 +76,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             Disposer.dispose(ui)
-            scope.cancel()
+            coroutines.close { UIUtil.dispatchAllInvocationEvents() }
         } finally {
             super.tearDown()
         }
@@ -116,11 +117,8 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         (scrollView() as? Container)?.doLayout()
     }
 
-    protected fun settle() = runBlocking {
-        repeat(5) {
-            delay(100)
-            UIUtil.dispatchAllInvocationEvents()
-        }
+    protected fun settle() {
+        coroutines.drain { UIUtil.dispatchAllInvocationEvents() }
     }
 
     protected fun settleShort(ms: Long) = runBlocking {
@@ -141,7 +139,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
             emit(ChatEventDto.MessageUpdated("ses_test", message(id)), flush = false)
             emit(ChatEventDto.PartUpdated("ses_test", part("part_$i", id, "text", text(i))), flush = false)
         }
-        settleShort(100)
+        settle()
         forceFlush()
         drainScroll()
     }
@@ -149,7 +147,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected fun emit(event: ChatEventDto, flush: Boolean = true) {
         runBlocking { rpc.events.emit(event) }
         if (flush) {
-            settleShort(20)
+            settle()
             forceFlush()
         }
     }

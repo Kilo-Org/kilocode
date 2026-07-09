@@ -58,6 +58,7 @@ import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
 import { escapeHtml } from "../util/escape-html"
+import { buildHighlightedTextSegments, type HighlightSegment } from "./message-highlight"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -348,7 +349,7 @@ function renderable(part: PartType, showReasoningSummaries = true) {
 function toolDefaultOpen(tool: string, shell = false, edit = false) {
   if (tool === "bash") return shell
   if (tool === "edit" || tool === "write") return edit
-  if (tool === "apply_patch") return false
+  if (tool === "apply_patch") return edit
 }
 
 function partDefaultOpen(part: PartType, shell = false, edit = false) {
@@ -731,6 +732,9 @@ export function UserMessageDisplay(props: {
   interrupted?: boolean
   animate?: boolean
   queued?: boolean
+  text?: string
+  copyText?: string
+  header?: JSX.Element
   onFork?: () => void
   onRevert?: () => void
 }) {
@@ -743,7 +747,7 @@ export function UserMessageDisplay(props: {
     () => props.parts?.find((p) => p.type === "text" && !(p as TextPart).synthetic) as TextPart | undefined,
   )
 
-  const text = createMemo(() => textPart()?.text || "")
+  const text = createMemo(() => props.text ?? textPart()?.text ?? "")
 
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
 
@@ -767,7 +771,7 @@ export function UserMessageDisplay(props: {
     const providerID = props.message.model?.providerID
     const modelID = props.message.model?.modelID
     if (!providerID || !modelID) return ""
-    const match = data.store.provider?.all?.find((p) => p.id === providerID)
+    const match = data.store.provider?.all?.get(providerID)
     return match?.models?.[modelID]?.name ?? modelID
   })
 
@@ -797,7 +801,7 @@ export function UserMessageDisplay(props: {
   }
 
   const handleCopy = async () => {
-    const content = text()
+    const content = props.copyText ?? text()
     if (!content) return
     await navigator.clipboard.writeText(content)
     setCopied(true)
@@ -840,12 +844,15 @@ export function UserMessageDisplay(props: {
             </For>
           </div>
         </Show>
-        <Show when={text()}>
+        <Show when={text() || props.header}>
           <>
             <div data-slot="user-message-body">
-              <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-                <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
-              </div>
+              {props.header}
+              <Show when={text()}>
+                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                  <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
+                </div>
+              </Show>
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
@@ -928,56 +935,9 @@ export function UserMessageDisplay(props: {
   )
 }
 
-type HighlightSegment = { text: string; type?: "file" | "agent" }
-
-/** Match @path mentions: `@` followed by a path-like token (contains `/` or `.`). */
-const MENTION_RE = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
-
-function detectMentions(text: string): { start: number; end: number; type: "file" }[] {
-  const result: { start: number; end: number; type: "file" }[] = []
-  MENTION_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = MENTION_RE.exec(text))) {
-    result.push({ start: m.index, end: m.index + m[0].length, type: "file" })
-  }
-  return result
-}
-
 function HighlightedText(props: { text: string; references: FilePart[]; agents: AgentPart[] }) {
   const segments = createMemo(() => {
-    const text = props.text
-
-    const offset: { start: number; end: number; type: "file" | "agent" }[] = [
-      ...props.references
-        .filter((r) => r.source?.text?.start !== undefined && r.source?.text?.end !== undefined)
-        .map((r) => ({ start: r.source!.text!.start, end: r.source!.text!.end, type: "file" as const })),
-      ...props.agents
-        .filter((a) => a.source?.start !== undefined && a.source?.end !== undefined)
-        .map((a) => ({ start: a.source!.start, end: a.source!.end, type: "agent" as const })),
-    ]
-
-    // Fall back to regex detection when no source offsets are available
-    const allRefs = offset.length > 0 ? offset.sort((a, b) => a.start - b.start) : detectMentions(text)
-
-    const result: HighlightSegment[] = []
-    let lastIndex = 0
-
-    for (const ref of allRefs) {
-      if (ref.start < lastIndex) continue
-
-      if (ref.start > lastIndex) {
-        result.push({ text: text.slice(lastIndex, ref.start) })
-      }
-
-      result.push({ text: text.slice(ref.start, ref.end), type: ref.type })
-      lastIndex = ref.end
-    }
-
-    if (lastIndex < text.length) {
-      result.push({ text: text.slice(lastIndex) })
-    }
-
-    return result
+    return buildHighlightedTextSegments(props.text, props.references, props.agents)
   })
 
   const data = useData()
@@ -1035,6 +995,7 @@ export interface ToolProps {
   callID?: string
   output?: string
   status?: string
+  attachments?: FilePart[]
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
@@ -1198,6 +1159,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   const i18n = useI18n()
   const part = props.part as ToolPart
   const hideQuestion = createMemo(() => part.tool === "question" && busy(part.state.status))
+  const isDismissedQuestionError = createMemo(() => {
+    if (part.tool !== "question") return false
+    if (part.state.status !== "error" || !part.state.error) return false
+    const errStr = typeof part.state.error === "string" ? part.state.error : ""
+    return errStr.includes("dismissed this question")
+  })
 
   const emptyInput: Record<string, any> = {}
   const emptyMetadata: Record<string, any> = {}
@@ -1216,13 +1183,24 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
-              if (part.tool === "question" && cleaned.includes("dismissed this question")) {
+              if (isDismissedQuestionError()) {
                 return (
-                  <div style="width: 100%; display: flex; justify-content: flex-end;">
-                    <span class="text-13-regular text-text-weak cursor-default">
-                      {i18n.t("ui.messagePart.questions.dismissed")}
-                    </span>
-                  </div>
+                  <Dynamic
+                    component={render()}
+                    input={input()}
+                    tool={part.tool}
+                    partID={part.id}
+                    callID={part.callID}
+                    metadata={meta()}
+                    partMetadata={top()}
+                    // @ts-expect-error
+                    output={part.state.output}
+                    status={part.state.status}
+                    hideDetails={props.hideDetails}
+                    defaultOpen={props.defaultOpen}
+                    animate
+                    reveal={props.animate}
+                  />
                 )
               }
               const hint =
@@ -1283,6 +1261,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               // @ts-expect-error
               output={part.state.output}
               status={part.state.status}
+              // @ts-expect-error
+              attachments={part.state.attachments}
               hideDetails={props.hideDetails}
               defaultOpen={props.defaultOpen}
               animate
@@ -1585,8 +1565,10 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-              <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+            <div data-slot="reasoning-details">
+              <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
+                <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+              </div>
             </div>
           </Collapsible.Content>
         </Collapsible>
@@ -1663,6 +1645,14 @@ function ToolText(props: { text: string; delay?: number; animate?: boolean }) {
       {props.text}
     </span>
   )
+}
+
+function swePruned(metadata: Record<string, unknown>) {
+  const value = metadata["swePruner"]
+  if (typeof value !== "object" || value === null) return undefined
+  const info = value as { kept?: unknown; total?: unknown }
+  if (typeof info.kept !== "number" || typeof info.total !== "number") return undefined
+  return { kept: info.kept, total: info.total }
 }
 
 function ToolLoadedFile(props: { text: string; animate?: boolean; onClick?: () => void }) {
@@ -1784,6 +1774,7 @@ ToolRegistry.register({
   render(props) {
     const data = useData()
     const i18n = useI18n()
+    const dialog = useDialog()
     const args: string[] = []
     if (props.input.offset) args.push("offset=" + props.input.offset)
     if (props.input.limit) args.push("limit=" + props.input.limit)
@@ -1792,7 +1783,10 @@ ToolRegistry.register({
       if (!value || !Array.isArray(value)) return []
       return value.filter((p): p is string => typeof p === "string")
     })
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
+    const images = createMemo(() => (props.attachments ?? []).filter((f) => f.mime.startsWith("image/") && f.url))
+    const preview = (url: string, alt?: string) => dialog.show(() => <ImagePreview src={url} alt={alt} />)
     return (
       <>
         <BasicTool
@@ -1821,6 +1815,26 @@ ToolRegistry.register({
             />
           )}
         </For>
+        <Show when={images().length > 0}>
+          <div data-slot="tool-read-images">
+            <For each={images()}>
+              {(file) => (
+                <div data-slot="tool-read-image" onClick={() => preview(file.url, file.filename)}>
+                  <img
+                    data-slot="tool-read-image-img"
+                    src={file.url}
+                    alt={file.filename ?? i18n.t("ui.message.attachment.alt")}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
+        </Show>
       </>
     )
   },
@@ -1846,7 +1860,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -1877,7 +1891,7 @@ ToolRegistry.register({
       >
         <Show when={props.output}>
           {(output) => (
-            <div data-component="tool-output" data-scrollable>
+            <div data-component="tool-output" data-variant="preview" data-scrollable>
               <Markdown text={output()} />
             </div>
           )}
@@ -1894,29 +1908,35 @@ ToolRegistry.register({
     const args: string[] = []
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = createMemo(() => busy(props.status))
     return (
-      <BasicTool
-        {...props}
-        icon="magnifying-glass-menu"
-        trigger={
-          <ToolTriggerRow
-            title={i18n.t("ui.tool.grep")}
-            pending={pending()}
-            subtitle={getDirectory(props.input.path)}
-            args={args}
-            animate={props.reveal}
-          />
-        }
-      >
-        <Show when={props.output}>
-          {(output) => (
-            <div data-component="tool-output" data-scrollable>
-              <Markdown text={output()} />
-            </div>
-          )}
+      <>
+        <BasicTool
+          {...props}
+          icon="magnifying-glass-menu"
+          trigger={
+            <ToolTriggerRow
+              title={i18n.t("ui.tool.grep")}
+              pending={pending()}
+              subtitle={getDirectory(props.input.path)}
+              args={args}
+              animate={props.reveal}
+            />
+          }
+        >
+          <Show when={props.output}>
+            {(output) => (
+              <div data-component="tool-output" data-variant="preview" data-scrollable>
+                <Markdown text={output()} />
+              </div>
+            )}
+          </Show>
+        </BasicTool>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>
-      </BasicTool>
+      </>
     )
   },
 })
@@ -2156,34 +2176,36 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
   return (
     <div data-component="bash-output">
       <Show when={props.cmd}>
-        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.command")}</div>
-        <div data-slot="bash-section">
-          <div data-slot="bash-section-code" ref={cmdRef} />
-          <div data-slot="bash-section-actions">
-            <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+        <div data-slot="bash-terminal" data-kind="command">
+          <div data-slot="bash-section" data-kind="command">
+            <span data-slot="bash-prompt" aria-hidden="true">
+              $
+            </span>
+            <div data-slot="bash-section-code" data-scrollable ref={cmdRef} />
+            <div data-slot="bash-section-actions">
+              <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+            </div>
           </div>
         </div>
       </Show>
-      <Show when={props.cmd && props.output}>
-        <div data-slot="bash-divider" />
-      </Show>
       <Show when={props.output}>
-        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.output")}</div>
-        <div data-slot="bash-section">
-          <div data-slot="bash-section-code" data-scrollable ref={outRef} />
-          <div data-slot="bash-section-actions">
-            <Show when={data.openContent || (props.outputPath && data.openFile)}>
-              <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
-                <IconButton
-                  icon="square-arrow-top-right"
-                  size="small"
-                  variant="ghost"
-                  onClick={openInEditor}
-                  aria-label={i18n.t("ui.messagePart.openInEditor")}
-                />
-              </Tooltip>
-            </Show>
-            <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+        <div data-slot="bash-terminal" data-kind="output">
+          <div data-slot="bash-section" data-kind="output">
+            <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+            <div data-slot="bash-section-actions">
+              <Show when={data.openContent || (props.outputPath && data.openFile)}>
+                <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
+                  <IconButton
+                    icon="square-arrow-top-right"
+                    size="small"
+                    variant="ghost"
+                    onClick={openInEditor}
+                    aria-label={i18n.t("ui.messagePart.openInEditor")}
+                  />
+                </Tooltip>
+              </Show>
+              <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+            </div>
           </div>
         </div>
       </Show>
@@ -2195,6 +2217,7 @@ ToolRegistry.register({
   name: "bash",
   render(props) {
     const i18n = useI18n()
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
@@ -2220,29 +2243,33 @@ ToolRegistry.register({
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
 
     return (
-      <BasicTool
-        {...props}
-        icon="console"
-        animated
-        hasDetails
-        defaultOpen={props.defaultOpen ?? true}
-        onOpenChange={setOpen}
-        allowPendingToggle
-        trigger={
-          <div data-slot="basic-tool-tool-info-structured">
-            <div data-slot="basic-tool-tool-info-main">
-              <span data-slot="basic-tool-tool-title">
-                <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
-              </span>
-              <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
+      <>
+        <BasicTool
+          {...props}
+          icon="console"
+          hasDetails
+          defaultOpen={props.defaultOpen ?? true}
+          onOpenChange={setOpen}
+          allowPendingToggle
+          trigger={
+            <div data-slot="basic-tool-tool-info-structured">
+              <div data-slot="basic-tool-tool-info-main">
+                <span data-slot="basic-tool-tool-title">
+                  <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
+                </span>
+                <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
+              </div>
             </div>
-          </div>
-        }
-      >
-        <Show when={mounted()}>
-          <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+          }
+        >
+          <Show when={mounted()}>
+            <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+          </Show>
+        </BasicTool>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>
-      </BasicTool>
+      </>
     )
   },
 })
@@ -2823,12 +2850,15 @@ ToolRegistry.register({
     const i18n = useI18n()
     const questions = createMemo(() => (props.input.questions ?? []) as QuestionInfo[])
     const answers = createMemo(() => (props.metadata.answers ?? []) as QuestionAnswer[])
+    const dismissed = createMemo(() => props.metadata.dismissed === true || props.status === "error")
     const completed = createMemo(() => answers().length > 0)
     const pending = createMemo(() => busy(props.status))
+    const hasContent = createMemo(() => completed() || dismissed())
 
     const subtitle = createMemo(() => {
       const count = questions().length
       if (count === 0) return ""
+      if (dismissed()) return i18n.t("ui.question.subtitle.dismissed", { count })
       if (completed()) return i18n.t("ui.question.subtitle.answered", { count })
       return `${count} ${i18n.t(count > 1 ? "ui.common.question.other" : "ui.common.question.one")}`
     })
@@ -2847,15 +2877,19 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={completed()}>
-          <div data-component="question-answers">
+        <Show when={hasContent()}>
+          <div data-component="question-answers" data-dismissed={dismissed() ? "" : undefined}>
             <For each={questions()}>
               {(q, i) => {
                 const answer = () => answers()[i()] ?? []
+                const answerText = () => {
+                  if (dismissed()) return i18n.t("ui.question.answer.dismissed")
+                  return answer().join(", ") || i18n.t("ui.question.answer.none")
+                }
                 return (
                   <div data-slot="question-answer-item">
                     <div data-slot="question-text">{q.question}</div>
-                    <div data-slot="answer-text">{answer().join(", ") || i18n.t("ui.question.answer.none")}</div>
+                    <div data-slot="answer-text">{answerText()}</div>
                   </div>
                 )
               }}

@@ -29,11 +29,19 @@ export {
   fetchProfileWithBalance,
   fetchDefaultModel,
   getKiloProfile,
+  defaultOrganizationId,
   getKiloBalance,
   getKiloDefaultModel,
   promptOrganizationSelection,
 } from "./api/profile.js"
-export { fetchKiloModels, type KiloModelsResult } from "./api/models.js"
+export { fetchKiloPassState } from "./api/kilo-pass.js"
+export {
+  fetchKiloModels,
+  type KiloModelsResult,
+  fetchKiloImageModels,
+  type KiloImageModel,
+  type KiloImageModelsResult,
+} from "./api/models.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,
@@ -64,14 +72,12 @@ export {
   MiniMaxNativeUsageSchema,
   getAutoTopUpState,
   getCodingPlanUsage,
-  getKiloPassState,
   listByokEntries,
   listCodingPlanSubscriptions,
   type AutoTopUpState,
   type ByokEntry,
   type CodingPlanSubscription,
   type CodingPlanUsage,
-  type KiloPassState,
   type MiniMaxNativeUsage,
 } from "./api/trpc.js"
 export { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "./cloud-sessions.js"
@@ -90,6 +96,7 @@ export {
   getNotifications,
   getProfile,
   getToken,
+  normalizeClawStatus,
   setOrganization,
 } from "./server/handlers.js"
 
@@ -109,6 +116,7 @@ export type {
   Organization,
   KilocodeProfile,
   KilocodeBalance,
+  KiloPassState,
   PollOptions,
   PollResult,
   // Provider types

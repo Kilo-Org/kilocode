@@ -414,9 +414,11 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(xml.contains("id=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("id=\"Kilo.Session.Delete\""))
         assertTrue(xml.contains("id=\"Kilo.History.ContextMenu\""))
+        assertTrue(xml.contains("id=\"Kilo.Session.ContextMenu\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Open\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Rename\""))
         assertTrue(xml.contains("ref=\"Kilo.Session.Delete\""))
+        assertTrue(xml.contains("ref=\"${'$'}Copy\""))
     }
 
     // ------ Helpers ------

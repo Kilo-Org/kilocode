@@ -1,9 +1,7 @@
-import { IDE, RangeInFileWithContents } from "../index"
-import { AutocompleteLanguageInfo } from "./constants/AutocompleteLanguageInfo"
+import { RangeInFileWithContents } from "../index"
 
 export enum AutocompleteSnippetType {
   Code = "code",
-  Diff = "diff",
   Clipboard = "clipboard",
   Static = "static",
 }
@@ -18,10 +16,6 @@ export interface AutocompleteCodeSnippet extends BaseAutocompleteSnippet {
   type: AutocompleteSnippetType.Code
 }
 
-export interface AutocompleteDiffSnippet extends BaseAutocompleteSnippet {
-  type: AutocompleteSnippetType.Diff
-}
-
 export interface AutocompleteClipboardSnippet extends BaseAutocompleteSnippet {
   type: AutocompleteSnippetType.Clipboard
   copiedAt: string
@@ -32,20 +26,8 @@ export interface AutocompleteStaticSnippet extends BaseAutocompleteSnippet {
   filepath: string
 }
 
-export type AutocompleteSnippet =
-  | AutocompleteCodeSnippet
-  | AutocompleteDiffSnippet
-  | AutocompleteClipboardSnippet
-  | AutocompleteStaticSnippet
+export type AutocompleteSnippet = AutocompleteCodeSnippet | AutocompleteClipboardSnippet | AutocompleteStaticSnippet
 
 export type RankedSnippet = RangeInFileWithContents & {
   score?: number
 }
-
-export type GetLspDefinitionsFunction = (
-  filepath: string,
-  contents: string,
-  cursorIndex: number,
-  ide: IDE,
-  lang: AutocompleteLanguageInfo,
-) => Promise<AutocompleteCodeSnippet[]>

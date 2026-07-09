@@ -9,6 +9,8 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartSourceDto
+import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -133,6 +135,109 @@ class SessionModelTest : BasePlatformTestCase() {
         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
     }
 
+    fun `test updateContent ignores new empty text content`() {
+        model.addMessage(msg("m1", "user"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "   "))
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test updateContent removes existing text when it becomes empty`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = ""))
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertEquals("ContentRemoved m1/p1", events.single().toString())
+    }
+
+    fun `test updateContent skips user synthetic text`() {
+        model.addMessage(msg("m1", "user"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "raw content", synthetic = true))
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test updateContent removes existing user text when marked synthetic`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertEquals("ContentRemoved m1/p1", events.single().toString())
+    }
+
+    fun `test assistant synthetic text remains visible`() {
+        model.addMessage(msg("m1", "assistant"))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible", synthetic = true))
+
+        assertEquals("visible", (model.message("m1")!!.parts["p1"] as Text).content.toString())
+        assertEquals("ContentAdded m1/p1", events.single().toString())
+    }
+
+    fun `test updateContent non synthetic text unhides previous synthetic user text`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+        events.clear()
+
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible now"))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible now
+        """)
+        assertEquals("ContentAdded m1/p1", events.single().toString())
+    }
+
+    fun `test removeMessage clears hiddenText so a later non-synthetic part renders`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+
+        model.removeMessage("m1")
+        events.clear()
+
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible now"))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible now
+        """)
+        assertEquals("ContentAdded m1/p1", events.last().toString())
+    }
+
+    fun `test clear resets hiddenText so a later non-synthetic part renders`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+
+        model.clear()
+        events.clear()
+
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "visible now"))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible now
+        """)
+        assertEquals("ContentAdded m1/p1", events.last().toString())
+    }
+
     fun `test updateContent reasoning creates Reasoning content`() {
         model.addMessage(msg("m1", "assistant"))
 
@@ -151,6 +256,31 @@ class SessionModelTest : BasePlatformTestCase() {
 
         val p = model.message("m1")!!.parts["p1"] as Reasoning
         assertTrue(p.done)
+    }
+
+    fun `test updateContent file creates attachment content and updates metadata`() {
+        model.addMessage(msg("m1", "user"))
+        events.clear()
+
+        model.updateContent("m1", filePart("f1", "m1", "image/png", "file:///tmp/a.png", "a.png"))
+
+        val file = model.message("m1")!!.parts["f1"] as FileAttachment
+        assertEquals("image/png", file.mime)
+        assertEquals("file:///tmp/a.png", file.url)
+        assertEquals("a.png", file.filename)
+        assertEquals("ContentAdded m1/f1", events.single().toString())
+
+        model.updateContent("m1", filePart("f1", "m1", "application/pdf", "file:///tmp/b.pdf", "b.pdf"))
+
+        assertSame(file, model.message("m1")!!.parts["f1"])
+        assertEquals("application/pdf", file.mime)
+        assertEquals("file:///tmp/b.pdf", file.url)
+        assertEquals("b.pdf", file.filename)
+        assertTrue(events.any { it.toString() == "ContentUpdated m1/f1" })
+        assertModel("""
+            user#m1
+            file#f1 application/pdf b.pdf
+        """)
     }
 
     fun `test updateContent tool creates Tool content and tracks state`() {
@@ -226,6 +356,62 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals(ToolKind.GENERIC, p.kind)
         assertEquals(ToolExecState.COMPLETED, p.state)
         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
+    }
+
+    fun `test updateContent task rekeys child tracking when session id changes`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child_old"))
+        model.upsertChildTool("child_old", childPart("read_old"))
+        assertEquals("read_old", task("m1", "task").childTools.single().id)
+
+        model.updateContent("m1", taskPart("task", "m1", "child_new"))
+        assertTrue(task("m1", "task").childTools.isEmpty())
+
+        model.upsertChildTool("child_old", childPart("read_stale"))
+        assertTrue(task("m1", "task").childTools.isEmpty())
+
+        model.upsertChildTool("child_new", childPart("read_new"))
+        assertEquals("read_new", task("m1", "task").childTools.single().id)
+    }
+
+    fun `test stale child history cannot resurrect removed child tool`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child"))
+
+        model.removeChildTool("child", "read_old")
+        model.upsertChildTool("child", childPart("read_old"), replace = false)
+
+        assertTrue(task("m1", "task").childTools.isEmpty())
+
+        model.upsertChildTool("child", childPart("read_old"))
+
+        assertEquals("read_old", task("m1", "task").childTools.single().id)
+    }
+
+    fun `test removeContent untracks child tools`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child"))
+        model.upsertChildTool("child", childPart("read_old"))
+        model.removeContent("m1", "task")
+        events.clear()
+
+        model.upsertChildTool("child", childPart("read_new"))
+
+        assertNull(model.content("m1", "task"))
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test removeMessage untracks child tools`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child"))
+        model.upsertChildTool("child", childPart("read_old"))
+        model.removeMessage("m1")
+        events.clear()
+
+        model.upsertChildTool("child", childPart("read_new"))
+
+        assertNull(model.message("m1"))
+        assertTrue(events.isEmpty())
     }
 
     fun `test updateContent tool updates rich fields`() {
@@ -339,6 +525,17 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals(2, events.size)
         assertTrue(events[0] is SessionModelEvent.ContentAdded)
         assertTrue(events[1] is SessionModelEvent.ContentDelta)
+    }
+
+    fun `test appendDelta ignores hidden synthetic user text part`() {
+        model.addMessage(msg("m1", "user"))
+        model.updateContent("m1", part("p1", "m1", "text", text = "hidden", synthetic = true))
+        events.clear()
+
+        model.appendDelta("m1", "p1", "still hidden")
+
+        assertNull(model.message("m1")!!.parts["p1"])
+        assertTrue(events.isEmpty())
     }
 
     fun `test appendDelta on tool content is noop`() {
@@ -531,6 +728,32 @@ class SessionModelTest : BasePlatformTestCase() {
         val entry = model.message("m1")!!
         assertEquals(listOf("p1", "p3"), entry.parts.keys.toList())
         assertTrue(entry.parts["p3"] is StepFinish)
+    }
+
+    fun `test loadHistory skips user synthetic text`() {
+        model.loadHistory(listOf(MessageWithPartsDto(
+            msg("m1", "user"),
+            listOf(
+                part("p1", "m1", "text", text = "visible"),
+                part("p2", "m1", "text", text = "hidden", synthetic = true),
+            ),
+        )))
+
+        assertModel("""
+            user#m1
+            text#p1:
+              visible
+        """)
+    }
+
+    fun `test file attachment preserves source metadata`() {
+        val source = PartSourceDto("file", PartSourceTextDto("@src/a.kt", 0.0, 9.0), path = "src/a.kt")
+        model.addMessage(msg("m1", "user"))
+
+        model.updateContent("m1", filePart("f1", "m1", "text/plain", "file:///tmp/a.kt", "a.kt", source))
+
+        val file = model.message("m1")!!.parts["f1"] as FileAttachment
+        assertEquals(source, file.source)
     }
 
     fun `test updateContent drops patch parts`() {
@@ -848,12 +1071,22 @@ class SessionModelTest : BasePlatformTestCase() {
         tokens: TokensDto? = null,
         todos: List<TodoDto> = emptyList(),
         todoView: TodoViewDto? = null,
+        mime: String? = null,
+        url: String? = null,
+        filename: String? = null,
+        synthetic: Boolean? = null,
+        source: PartSourceDto? = null,
     ) = PartDto(
         id = id,
         sessionID = "ses",
         messageID = mid,
         type = type,
         text = text,
+        mime = mime,
+        url = url,
+        filename = filename,
+        synthetic = synthetic,
+        source = source,
         tool = tool,
         state = state,
         title = title,
@@ -868,6 +1101,34 @@ class SessionModelTest : BasePlatformTestCase() {
         cost = cost,
         tokens = tokens,
     )
+
+    private fun filePart(id: String, mid: String, mime: String, url: String, filename: String, source: PartSourceDto? = null) = part(
+        id = id,
+        mid = mid,
+        type = "file",
+        mime = mime,
+        url = url,
+        filename = filename,
+        source = source,
+    )
+
+    private fun taskPart(id: String, mid: String, child: String) = part(
+        id = id,
+        mid = mid,
+        type = "tool",
+        tool = "task",
+        metadata = mapOf("sessionId" to child),
+    )
+
+    private fun childPart(id: String) = part(
+        id = id,
+        mid = "child_msg",
+        type = "tool",
+        tool = "read",
+        input = mapOf("filePath" to "src/Main.kt"),
+    )
+
+    private fun task(mid: String, id: String) = model.content(mid, id) as Tool
 
     private fun question(id: String) = Question(
         id = id,

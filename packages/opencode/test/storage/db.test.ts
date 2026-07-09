@@ -13,7 +13,7 @@ describe("Database.getChannelPath", () => {
       const flags = yield* RuntimeFlags.Service
       const expected = ["latest", "beta", "prod"].includes(InstallationChannel)
         ? path.join(Global.Path.data, "kilo.db")
-        : path.join(Global.Path.data, `opencode-${InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`)
+        : path.join(Global.Path.data, `kilo-${InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`) // kilocode_change
 
       expect(Database.getChannelPath(flags)).toBe(expected)
     }).pipe(Effect.provide(RuntimeFlags.layer())),
@@ -25,5 +25,14 @@ describe("Database.getChannelPath", () => {
 
       expect(Database.getChannelPath(flags)).toBe(path.join(Global.Path.data, "kilo.db"))
     }).pipe(Effect.provide(RuntimeFlags.layer({ disableChannelDb: true }))),
+  )
+
+  it.effect("accepts RuntimeFlags with skipMigrations for database callers", () =>
+    Effect.gen(function* () {
+      const flags = yield* RuntimeFlags.Service
+
+      expect(flags.skipMigrations).toBe(true)
+      expect(Database.getChannelPath(flags)).toBe(Database.getChannelPath({ disableChannelDb: flags.disableChannelDb }))
+    }).pipe(Effect.provide(RuntimeFlags.layer({ skipMigrations: true }))),
   )
 })

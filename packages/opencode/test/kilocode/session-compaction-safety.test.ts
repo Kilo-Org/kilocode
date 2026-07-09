@@ -8,8 +8,14 @@ import { KiloSessionMessageOrder } from "../../src/kilocode/session/message-orde
 import { MessageV2 } from "../../src/session/message-v2"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import type { Provider } from "../../src/provider/provider"
 
 const sessionID = SessionID.make("ses_safety")
+const model = {
+  id: ModelID.make("test"),
+  providerID: ProviderID.make("test"),
+  api: { id: "test", npm: "@ai-sdk/openai" },
+} as Provider.Model
 
 function userInfo(id: string): MessageV2.User {
   return {
@@ -579,5 +585,27 @@ describe("KiloSessionPrompt.maybeStripHistoricalMedia", () => {
     expect((histPart as MessageV2.TextPart).text).toBe("[Attached image/png: hist.png]")
     // last user untouched
     expect(result[3].parts[0].type).toBe("text")
+  })
+})
+
+describe("MessageV2 tool output truncation", () => {
+  test("does not split a surrogate pair during compaction", async () => {
+    const part = toolPart("msg_a", "completed")
+    if (part.state.status !== "completed") throw new Error("expected completed tool part")
+    part.state.output = "x".repeat(1999) + "📁" + "tail"
+
+    const result = await MessageV2.toModelMessages(
+      [user("msg_u", [textPart("msg_u", "read")]), assistant("msg_a", "msg_u", [part])],
+      model,
+      { toolOutputMaxChars: 2000 },
+    )
+    const message = result[2]
+    if (message.role !== "tool") throw new Error("expected tool message")
+    const item = message.content[0]
+    if (item.type !== "tool-result" || item.output.type !== "text") throw new Error("expected text tool result")
+
+    const isolated = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+    expect(isolated.test(item.output.value)).toBe(false)
+    expect(item.output.value).toContain("omitted 6 chars")
   })
 })

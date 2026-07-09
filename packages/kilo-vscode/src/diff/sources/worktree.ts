@@ -156,5 +156,7 @@ function toDiffFile(entry: WorktreeDiffEntry): DiffFile {
     generatedLike: entry.generatedLike,
     summarized: entry.summarized,
     stamp: entry.stamp,
+    kind: entry.kind,
+    image: entry.image,
   }
 }

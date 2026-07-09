@@ -32,6 +32,5 @@ export function terminal(input: Input): TerminalState | undefined {
   if (finish === "unknown") return { kind: "unknown", tone: "warning", finish, remaining }
   if (finish === "content-filter") return { kind: "filtered", tone: "warning", finish, remaining }
   if (finish === "other") return { kind: "unexpected", tone: "warning", finish, remaining }
-  if (remaining > 0) return { kind: "incomplete", tone: "warning", finish, remaining }
   return undefined
 }

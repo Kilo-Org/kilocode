@@ -73,7 +73,7 @@ Linking coding → review → deploy actions significantly boosts your Depth sco
 
 If acceptance rates are low, the issue is often context. The AI is making suggestions without understanding your codebase.
 
-**Action:** Enable [Managed Indexing](/docs/deploy-secure/managed-indexing) to give the model vector-backed search across your repository.
+**Action:** Enable [Codebase Indexing](/docs/customize/context/codebase-indexing) to give the model vector-backed search across your repository.
 
 Better context leads to:
 
@@ -171,7 +171,7 @@ Other ways to spread usage:
 
 1. Identify your most active users and learn what they're doing
 2. Introduce Code Reviews to spread usage
-3. Enable Managed Indexing for better context
+3. Enable Codebase Indexing for better context
 4. Set a monthly score goal (e.g., "reach 55 by next month")
 
 ### If You're at 51–75 (Growing Adoption)

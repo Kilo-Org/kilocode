@@ -53,6 +53,17 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.freeUsageExceeded": "Gratis gebruik overschreden",
   "ui.sessionTurn.error.addCredits": "Credits toevoegen",
 
+  // kilocode_change start - complete upstream usage-exceeded translations
+  "dialog.usageExceeded.freeTier.title": "Gratis limiet bereikt",
+  "dialog.usageExceeded.freeTier.description":
+    "Abonneer je op Kilo Go voor betrouwbare toegang tot de beste open-sourcemodellen, vanaf $5 per maand.",
+  "dialog.usageExceeded.freeTier.actionLabel": "Abonneren",
+  "dialog.usageExceeded.accountRateLimit.title": "Go-limiet bereikt",
+  "dialog.usageExceeded.accountRateLimit.description":
+    "Gebruikslimiet bereikt. Schakel gebruik vanuit je beschikbare saldo in om dit model nu te blijven gebruiken",
+  "dialog.usageExceeded.accountRateLimit.actionLabel": "Instellingen openen",
+  // kilocode_change end
+
   "ui.sessionTurn.status.delegating": "Werk delegeren",
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
@@ -123,6 +134,7 @@ export const dict: Record<string, string> = {
 
   "ui.tool.read": "Lezen",
   "ui.tool.loaded": "Geladen",
+  "ui.tool.swePruned": "SWE-Pruner · {{kept}} van {{total}} regels behouden", // kilocode_change
   "ui.tool.list": "Lijst",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -178,7 +190,9 @@ export const dict: Record<string, string> = {
   "ui.patch.action.patched": "Gepatcht",
 
   "ui.question.subtitle.answered": "{{count}} beantwoord",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(geen antwoord)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(niet beantwoord)",
   "ui.question.multiHint": "Selecteer alle antwoorden die van toepassing zijn",
   "ui.question.singleHint": "Selecteer één antwoord",

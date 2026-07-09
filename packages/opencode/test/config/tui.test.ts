@@ -87,7 +87,7 @@ it.instance("keeps server and tui plugin merge semantics aligned", () =>
     Effect.gen(function* () {
       const fs = yield* AppFileSystem.Service
       const test = yield* TestInstance
-      const local = path.join(test.directory, ".opencode")
+      const local = path.join(test.directory, ".kilo") // kilocode_change
       yield* fs.makeDirectory(local, { recursive: true })
 
       yield* fs.writeJson(path.join(Global.Path.config, "kilo.json"), {
@@ -103,7 +103,7 @@ it.instance("keeps server and tui plugin merge semantics aligned", () =>
         plugin: [["shared-plugin@2.0.0", { source: "local" }], "local-only@1.0.0"],
       })
 
-      const server = yield* Config.Service.use((svc) => svc.get())
+      const server = yield* Config.use.get()
       const tui = yield* getTuiConfig(test.directory)
       const serverPlugins = (server.plugin ?? []).map((item) => ConfigPlugin.pluginSpecifier(item))
       const tuiPlugins = (tui.plugin ?? []).map((item) => ConfigPlugin.pluginSpecifier(item))
@@ -129,7 +129,7 @@ it.instance("loads tui config with the same precedence order as server config pa
       yield* fs.writeJson(path.join(Global.Path.config, "tui.json"), { theme: "global" })
       yield* fs.writeJson(path.join(test.directory, "tui.json"), { theme: "project" })
       yield* fs.writeWithDirs(
-        path.join(test.directory, ".opencode", "tui.json"),
+        path.join(test.directory, ".kilo", "tui.json"), // kilocode_change
         JSON.stringify({ theme: "local", diff_style: "stacked" }, null, 2),
       )
 
@@ -151,7 +151,7 @@ it.instance("resolves attention config defaults and overrides", () =>
         notifications: true,
         sound: true,
         volume: 0.4,
-        sound_pack: "opencode.default",
+        sound_pack: "kilo.default", // kilocode_change
         sounds: {},
       })
 
@@ -480,6 +480,7 @@ it.instance("resolves keybind lookup from canonical keybinds", () =>
           which_key_toggle: "alt+k",
           editor_open: "ctrl+e",
           "prompt.autocomplete.next": "ctrl+j",
+          "dialog.prompt.submit": "ctrl+s",
           "dialog.mcp.toggle": "ctrl+t",
           model_favorite_toggle: "ctrl+f",
           "dialog.plugins.install": "shift+i",
@@ -501,6 +502,7 @@ it.instance("resolves keybind lookup from canonical keybinds", () =>
       )
       expect(config.keybinds.get("prompt.editor")?.[0]?.key).toBe("ctrl+e")
       expect(config.keybinds.get("prompt.autocomplete.next")?.[0]?.key).toBe("ctrl+j")
+      expect(config.keybinds.get("dialog.prompt.submit")?.[0]?.key).toBe("ctrl+s")
       expect(config.keybinds.get("dialog.mcp.toggle")?.[0]?.key).toBe("ctrl+t")
       expect(config.keybinds.get("model.dialog.favorite")?.[0]?.key).toBe("ctrl+f")
       expect(config.keybinds.get("dialog.plugins.install")?.[0]?.key).toBe("shift+i")
@@ -676,7 +678,8 @@ it.instance("does not derive tui path from KILO_CONFIG", () =>
   ),
 )
 
-it.instance("applies env and file substitutions in tui.json", () =>
+// kilocode_change start - trusted global config substitutes; untrusted project config does not
+it.instance("applies env and file substitutions in global tui.json", () =>
   withCleanState(
     withEnv(
       "TUI_THEME_TEST",
@@ -684,8 +687,9 @@ it.instance("applies env and file substitutions in tui.json", () =>
       Effect.gen(function* () {
         const fs = yield* AppFileSystem.Service
         const test = yield* TestInstance
-        yield* fs.writeFileString(path.join(test.directory, "keybind.txt"), "ctrl+q")
-        yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+        // Global config is trusted, so {env:}/{file:} references resolve.
+        yield* fs.writeFileString(path.join(Global.Path.config, "keybind.txt"), "ctrl+q")
+        yield* fs.writeJson(path.join(Global.Path.config, "tui.json"), {
           theme: "{env:TUI_THEME_TEST}",
           keybinds: { app_exit: "{file:keybind.txt}" },
         })
@@ -698,14 +702,71 @@ it.instance("applies env and file substitutions in tui.json", () =>
   ),
 )
 
+it.instance("does not substitute env references in untrusted project tui.json", () =>
+  withCleanState(
+    withEnv(
+      "TUI_THEME_TEST",
+      "env-theme",
+      Effect.gen(function* () {
+        const fs = yield* AppFileSystem.Service
+        const test = yield* TestInstance
+        yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+          theme: "{env:TUI_THEME_TEST}",
+        })
+
+        // {env:} in project config is rejected, so the file is skipped and the theme is not applied.
+        const config = yield* getTuiConfig(test.directory)
+        expect(config.theme).not.toBe("env-theme")
+      }),
+    ),
+  ),
+)
+
+it.instance("applies in-project file references in project tui.json", () =>
+  withCleanState(
+    Effect.gen(function* () {
+      const fs = yield* AppFileSystem.Service
+      const test = yield* TestInstance
+      // {file:} that stays inside the project root is allowed even in untrusted project config.
+      yield* fs.writeFileString(path.join(test.directory, "keybind.txt"), "ctrl+q")
+      yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+        keybinds: { app_exit: "{file:keybind.txt}" },
+      })
+
+      const config = yield* getTuiConfig(test.directory)
+      expect(config.keybinds.get("app.exit")?.[0]?.key).toBe("ctrl+q")
+    }),
+  ),
+)
+
+it.instance("rejects project tui.json file references that escape the project root", () =>
+  withCleanState(
+    Effect.gen(function* () {
+      const fs = yield* AppFileSystem.Service
+      const test = yield* TestInstance
+      const outside = path.join(path.dirname(test.directory), "keybind.txt")
+      yield* fs.writeFileString(outside, "ctrl+q")
+      yield* fs.writeJson(path.join(test.directory, "tui.json"), {
+        keybinds: { app_exit: "{file:../keybind.txt}" },
+      })
+
+      const config = yield* getTuiConfig(test.directory)
+      expect(config.keybinds.get("app.exit")?.[0]?.key).not.toBe("ctrl+q")
+    }),
+  ),
+)
+// kilocode_change end
+
 it.instance("applies file substitutions when first identical token is in a commented line", () =>
   withCleanState(
     Effect.gen(function* () {
       const fs = yield* AppFileSystem.Service
       const test = yield* TestInstance
-      yield* fs.writeFileString(path.join(test.directory, "theme.txt"), "resolved-theme")
+      // kilocode_change start - global config is trusted, so the second (uncommented) reference resolves
+      yield* fs.writeFileString(path.join(Global.Path.config, "theme.txt"), "resolved-theme")
       yield* fs.writeFileString(
-        path.join(test.directory, "tui.jsonc"),
+        path.join(Global.Path.config, "tui.jsonc"),
+        // kilocode_change end
         `{
   // "theme": "{file:theme.txt}",
   "theme": "{file:theme.txt}"
@@ -852,7 +913,7 @@ it.instance("silently skips malformed tui.json - load failures degrade to {}", (
       const fs = yield* AppFileSystem.Service
       const test = yield* TestInstance
       yield* fs.writeFileString(path.join(test.directory, "tui.json"), '{ "theme": "broken",')
-      yield* fs.writeWithDirs(path.join(test.directory, ".opencode", "tui.json"), JSON.stringify({ theme: "fallback" }))
+      yield* fs.writeWithDirs(path.join(test.directory, ".kilo", "tui.json"), JSON.stringify({ theme: "fallback" })) // kilocode_change
 
       const config = yield* getTuiConfig(test.directory)
       expect(config.theme).toBe("fallback")
@@ -866,7 +927,7 @@ it.instance("silently skips non-ENOENT read failures (e.g. tui.json is a directo
       const fs = yield* AppFileSystem.Service
       const test = yield* TestInstance
       yield* fs.makeDirectory(path.join(test.directory, "tui.json"), { recursive: true })
-      yield* fs.writeWithDirs(path.join(test.directory, ".opencode", "tui.json"), JSON.stringify({ theme: "fallback" }))
+      yield* fs.writeWithDirs(path.join(test.directory, ".kilo", "tui.json"), JSON.stringify({ theme: "fallback" })) // kilocode_change
 
       const config = yield* getTuiConfig(test.directory)
       expect(config.theme).toBe("fallback")

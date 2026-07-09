@@ -9,7 +9,7 @@ import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
-import { sanitizeResponsesBody } from "./responses.js"
+import { transformRequestBody } from "./responses.js"
 
 export function buildRequestHeaders(defaultHeaders: Record<string, string>, requestHeaders?: HeadersInit): Headers {
   const headers = new Headers(defaultHeaders)
@@ -55,7 +55,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const originalFetch = options.fetch ?? fetch
   const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
     const headers = buildRequestHeaders(customHeaders, init?.headers)
-    const body = sanitizeResponsesBody(input, init?.body)
+    const body = transformRequestBody(input, init?.body, options.dataCollection)
 
     // Add authorization if API key exists
     if (apiKey) {

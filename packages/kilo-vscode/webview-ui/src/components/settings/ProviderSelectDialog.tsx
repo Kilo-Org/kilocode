@@ -23,6 +23,7 @@ import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 type ProviderItem = {
   id: string
   name: string
+  provider?: Provider
 }
 
 const ProviderSelectDialog = () => {
@@ -49,6 +50,7 @@ const ProviderSelectDialog = () => {
       ...available.map((item) => ({
         id: item.id,
         name: item.name,
+        provider: item,
       })),
     ]
   })
@@ -79,20 +81,20 @@ const ProviderSelectDialog = () => {
         items={items()}
         filterKeys={["id", "name"]}
         groupBy={(item) =>
-          item.id !== CUSTOM_PROVIDER_ID && isPopularProvider(item.id)
-            ? language.t("dialog.provider.group.recommended")
+          item.id !== CUSTOM_PROVIDER_ID && isPopularProvider(item.provider ?? item.id)
+            ? language.t("settings.providers.group.recommended")
             : language.t("dialog.provider.group.other")
         }
         sortBy={(a, b) => {
           if (a.id === CUSTOM_PROVIDER_ID) return -1
           if (b.id === CUSTOM_PROVIDER_ID) return 1
 
-          const rank = popularProviderIndex(a.id) - popularProviderIndex(b.id)
+          const rank = popularProviderIndex(a.provider ?? a.id) - popularProviderIndex(b.provider ?? b.id)
           if (rank !== 0) return rank
           return a.name.localeCompare(b.name)
         }}
         sortGroupsBy={(a, b) => {
-          const recommended = language.t("dialog.provider.group.recommended")
+          const recommended = language.t("settings.providers.group.recommended")
           if (a.category === recommended && b.category !== recommended) return -1
           if (b.category === recommended && a.category !== recommended) return 1
           return 0
@@ -104,7 +106,12 @@ const ProviderSelectDialog = () => {
       >
         {(item) => (
           <div style={{ display: "flex", gap: "10px", "align-items": "center", width: "100%", "min-width": 0 }}>
-            <ProviderIcon id={providerIcon(item.id)} width={18} height={18} data-slot="list-item-extra-icon" />
+            <ProviderIcon
+              id={providerIcon(item.provider ?? item.id)}
+              width={18}
+              height={18}
+              data-slot="list-item-extra-icon"
+            />
             <div
               style={{
                 display: "flex",

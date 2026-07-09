@@ -25,6 +25,7 @@ const loggedInProfile: ProfileData = {
     ],
   },
   balance: { balance: 42.5 },
+  kiloPass: null,
   currentOrgId: null,
 }
 
@@ -33,7 +34,13 @@ const personalProfile: ProfileData = {
     email: "solo@example.com",
     name: "Solo Dev",
   },
-  balance: { balance: 7.25 },
+  balance: { balance: 267.59 },
+  kiloPass: {
+    currentPeriodBaseCreditsUsd: 199,
+    currentPeriodUsageUsd: 73.27,
+    currentPeriodBonusCreditsUsd: 99.5,
+    nextBillingAt: "2026-07-01T00:00:00.000Z",
+  },
   currentOrgId: null,
 }
 
@@ -42,39 +49,6 @@ const idleAuth: DeviceAuthState = { status: "idle" }
 const usage: ProviderUsageData = {
   generatedAt: "2026-06-19T12:00:00.000Z",
   items: [
-    {
-      id: "kilo-pass",
-      providerID: "kilo",
-      sourceKind: "kilo_pass",
-      providerLabel: "Kilo",
-      planLabel: "Kilo Pass $49",
-      sourceLabel: "via Kilo",
-      fetchState: "ready",
-      planState: "active",
-      routingState: "not_applicable",
-      availabilityState: "available",
-      fetchedAt: "2026-06-19T12:00:00.000Z",
-      confidence: "high",
-      source: "cloud",
-      managementUrl: "https://app.kilo.ai/subscriptions/kilo-pass",
-      windows: [
-        {
-          id: "current-period",
-          label: "Current period",
-          resource: "Kilo Credits",
-          kind: "quota",
-          unit: "USD",
-          orientation: "amount",
-          used: 12,
-          remaining: 42,
-          limit: 54,
-          resetAt: "2026-07-01T00:00:00.000Z",
-          state: "active",
-        },
-      ],
-      balances: [],
-      credits: [{ id: "bonus", label: "Bonus credits", balance: "5", unit: "USD" }],
-    },
     {
       id: "kilo-managed-minimax:plan",
       providerID: "minimax",
@@ -126,7 +100,7 @@ const directUsage: ProviderUsageData = {
   generatedAt: usage.generatedAt,
   items: [
     {
-      ...usage.items[1],
+      ...usage.items[0],
       id: "minimax-direct-global",
       providerID: "minimax-coding-plan",
       sourceKind: "direct",
@@ -205,7 +179,7 @@ export const StaleAndUnavailable: Story = {
                 error: { code: "timeout", message: "The latest usage could not be loaded.", retryable: true },
               },
               {
-                ...usage.items[1],
+                ...usage.items[0],
                 id: "managed-unavailable",
                 fetchState: "unavailable",
                 availabilityState: "unavailable",

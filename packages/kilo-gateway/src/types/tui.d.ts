@@ -3,10 +3,6 @@
  * These modules are provided at runtime by the OpenCode TUI system
  */
 
-declare module "@tui/context/command-palette" {
-  export function useCommandPalette(): any
-}
-
 declare module "@tui/context/sync" {
   export function useSync(): any
 }

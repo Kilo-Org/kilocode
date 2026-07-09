@@ -21,6 +21,10 @@ The mobile app lets you:
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
 
+## Kilo Pass and Billing
+
+For Kilo Pass pricing, billing, and account management details, use the [Kilo Pass pricing page](https://kilo.ai/pricing/kilo-pass).
+
 {% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing KiloClaw and active agent sessions" caption="Start coding tasks, open KiloClaw, and resume active sessions from the mobile home screen." /%}
 

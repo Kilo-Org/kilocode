@@ -4,7 +4,6 @@ import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde
 import { AutocompleteInput } from "../types"
 import { HelperVars } from "../continuedev/core/autocomplete/util/HelperVars"
 import { getAllSnippetsWithoutRace } from "../continuedev/core/autocomplete/snippets/getAllSnippets"
-import { getDefinitionsFromLsp } from "../continuedev/core/vscode-test-harness/src/autocomplete/lsp"
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../continuedev/core/util/parameters"
 import { getSnippets } from "../continuedev/core/autocomplete/templating/filtering"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
@@ -97,7 +96,6 @@ export async function getProcessedSnippets(
   const snippetPayload = await getAllSnippetsWithoutRace({
     helper,
     ide,
-    getDefinitionsFromLsp,
     contextRetrievalService: contextService,
   })
 

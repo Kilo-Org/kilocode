@@ -4,6 +4,7 @@ import { Schema } from "effect"
 import { isRecord } from "@/util/record"
 import { Filesystem } from "@/util/filesystem"
 import { TuiAttentionSoundNames, type TuiAttentionSoundName } from "@kilocode/plugin/tui"
+import { KiloTitleIcon } from "@/kilocode/cli/cmd/tui/title-icon" // kilocode_change
 
 export type TuiAttentionSoundPaths = Partial<Record<TuiAttentionSoundName, string>>
 
@@ -61,6 +62,15 @@ export const Attention = Schema.Struct({
   sounds: Schema.optional(TuiAttentionSounds),
 }).annotate({ description: "Attention notification and sound settings" })
 
+const PromptSize = Schema.Int.check(Schema.isGreaterThan(0))
+
+export const Prompt = Schema.Struct({
+  max_height: Schema.optional(PromptSize).annotate({ description: "Prompt textarea max height" }),
+  max_width: Schema.optional(Schema.Union([PromptSize, Schema.Literal("auto")])).annotate({
+    description: "Home prompt max width: a positive integer for a fixed cap, or 'auto' to scale with terminal width",
+  }),
+}).annotate({ description: "Prompt size settings" })
+
 export const TuiInfo = Schema.Struct({
   $schema: Schema.optional(Schema.String),
   theme: Schema.optional(Schema.String),
@@ -69,10 +79,17 @@ export const TuiInfo = Schema.Struct({
   plugin_enabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   leader_timeout: Schema.optional(KeymapLeaderTimeout),
   attention: Schema.optional(Attention),
+  title_icon: Schema.optional(KiloTitleIcon.Value), // kilocode_change
+  prompt: Schema.optional(Prompt),
   scroll_speed: Schema.optional(ScrollSpeed).annotate({
     description: "TUI scroll speed",
   }),
   scroll_acceleration: Schema.optional(ScrollAcceleration),
   diff_style: Schema.optional(DiffStyle),
   mouse: Schema.optional(Schema.Boolean).annotate({ description: "Enable or disable mouse capture (default: true)" }),
+  // kilocode_change start - vim modal editing toggle
+  vim: Schema.optional(Schema.Boolean).annotate({
+    description: "Enable vim modal editing in the prompt input (default: false)",
+  }),
+  // kilocode_change end
 })

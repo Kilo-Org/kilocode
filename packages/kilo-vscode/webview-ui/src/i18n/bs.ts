@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Poveži Anaconda Desktop",
+  "provider.anaconda.title.manage": "Upravljaj Anaconda Desktopom",
+  "provider.anaconda.status.checking": "Provjeravanje Anaconda Desktopa...",
+  "provider.anaconda.status.opening": "Otvaranje Anaconda Desktopa...",
+  "provider.anaconda.status.syncing": "Osvježavanje modela provajdera...",
+  "provider.anaconda.status.ready": "Spremno za povezivanje",
+  "provider.anaconda.status.waiting": "Čekanje na Desktop",
+  "provider.anaconda.status.attention": "Potrebna pažnja",
+  "provider.anaconda.status.unavailable": "Nedostupno",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop nije podržan na {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Instalirajte Anaconda Desktop na ovom računaru, zatim se vratite ovdje. Kilo ne pokreće instalacijski program umjesto vas.",
+  "provider.anaconda.state.notRunning":
+    "Otvorite Anaconda Desktop, dovršite postavljanje i prijavite se, zatim odaberite Provjeri ponovo.",
+  "provider.anaconda.state.invalidConfig":
+    "Postavljanje Anaconda Desktopa nije dovršeno. Otvorite Desktop, dovršite postavljanje i ponovo ga pokrenite ako je potrebno.",
+  "provider.anaconda.state.signedOut": "Otvorite Anaconda Desktop i prijavite se prije povezivanja Kila.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo nije mogao pristupiti Anaconda Desktopu. Otvorite Desktop, ponovo se prijavite i ponovo ga pokrenite ako je potrebno.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop još ne odgovara. Otvorite ga i sačekajte da se aplikacija u potpunosti pokrene.",
+  "provider.anaconda.state.noModel":
+    "U Anaconda Desktopu preuzmite model za generisanje teksta. Odaberite onaj s pozivanjem alata kad je moguće, zatim pokrenite njegov server.",
+  "provider.anaconda.state.noServer_one":
+    "Dostupan je 1 preuzeti model za generisanje teksta. U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
+  "provider.anaconda.state.noServer_other":
+    "Preuzeti modeli za generisanje teksta dostupni su (ukupno: {{count}}). U Anaconda Desktopu pokrenite server modela. Modeli s podrškom za pozivanje alata se snažno preporučuju.",
+  "provider.anaconda.state.unhealthy":
+    "Aktivni server za zaključivanje još nije ispravan. Provjerite ga u Anaconda Desktopu i ponovo pokrenite server ako je potrebno.",
+  "provider.anaconda.state.ready":
+    "Kilo je pronašao ispravan lokalni server za generisanje teksta i može uvesti njegove trenutne postavke veze.",
+  "provider.anaconda.server": "Aktivni server za zaključivanje",
+  "provider.anaconda.context": "Kontekstni prozor",
+  "provider.anaconda.contextValue": "{{count}} tokena",
+  "provider.anaconda.tools": "Pozivanje alata",
+  "provider.anaconda.tools.supported": "Podržano",
+  "provider.anaconda.tools.unsupported": "Nije omogućeno",
+  "provider.anaconda.tools.unknown": "Nepoznato",
+  "provider.anaconda.warning.title": "Podrška za alate je ograničena",
+  "provider.anaconda.warning.description":
+    "Ovaj server ne potvrđuje pozivanje alata. Radnje agenta za kodiranje mogu biti neuspješne ili nedostupne. Nastavite samo ako prihvatate ova ograničenja.",
+  "provider.anaconda.action.download": "Preuzmi Anaconda Desktop",
+  "provider.anaconda.action.open": "Otvori Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Provjeri ponovo",
+  "provider.anaconda.action.continue": "Ipak nastavi",
+  "provider.anaconda.action.manage": "Upravljaj / Osvježi",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop osvježen",
+  "provider.anaconda.toast.refreshed.description": "Aktivni lokalni server i modeli su ažurirani u Kilu.",
+  "settings.providers.note.anacondaDesktop": "Pokrenite model koji lokalno poslužuje Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokalno",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Predloženo",
   "command.category.view": "Prikaz",
   "command.category.project": "Projekat",
@@ -94,6 +148,30 @@ export const dict = {
   "command.session.unshare.description": "Zaustavi dijeljenje ove sesije",
   "command.session.export": "Izvezi transkript sesije",
 
+  "agentRequirements.skill.installed": "Instalirano",
+  "agentRequirements.skill.checkFailed": "Provjera vještine nije uspjela",
+  "agentRequirements.skill.missing": "Nije instalirano",
+  "agentRequirements.mcp.connected": "Povezano",
+  "agentRequirements.mcp.checkFailed": "Provjera MCP-a nije uspjela",
+  "agentRequirements.mcp.missing": "Nije povezano",
+  "agentRequirements.extension.installed": "Instalirano",
+  "agentRequirements.extension.checkFailed": "Provjera VS Code ekstenzije nije uspjela",
+  "agentRequirements.extension.missing": "Nije instalirano",
+  "agentRequirements.extension.description": "Instalirajte nedostajuće ekstenzije u VS Code.",
+  "agentRequirements.group.skills": "Vještine",
+  "agentRequirements.group.mcps": "MCP-ovi",
+  "agentRequirements.group.extensions": "VS Code ekstenzije",
+  "agentRequirements.blocked.title": "Preduslovi za agenta {{agent}}",
+  "agentRequirements.blocked.description": "Ovom agentu su potrebni sljedeći alati prije pokretanja.",
+  "agentRequirements.prompt.blocked": "Prvo dovršite potrebne provjere da biste koristili ovog agenta",
+  "agentRequirements.action.openMarketplace": "Otvori Marketplace",
+  "agentRequirements.error.unknownAgent": "Odabrani agent nije pronađen.",
+  "agentRequirements.error.malformedDeclaration": "Ovaj agent ima neispravnu deklaraciju zahtjeva.",
+  "agentRequirements.error.discoveryFailed": "Kilo nije mogao provjeriti dostupne vještine.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo nije mogao provjeriti status MCP servera.",
+  "agentRequirements.error.scopeMismatch": "Ova provjera zahtjeva agenta više nije aktivna.",
+  "agentRequirements.error.requestFailed": "Kilo nije mogao provjeriti zahtjeve agenta.",
+
   "palette.search.placeholder": "Pretraži datoteke, komande i sesije",
   "palette.empty": "Nema rezultata",
   "palette.group.commands": "Komande",
@@ -101,17 +179,8 @@ export const dict = {
 
   "dialog.provider.search.placeholder": "Pretraži provajdere",
   "dialog.provider.empty": "Nema pronađenih provajdera",
-  "dialog.provider.group.popular": "Popularno",
   "dialog.provider.group.other": "Ostalo",
   "dialog.provider.tag.recommended": "Preporučeno",
-  "dialog.provider.opencode.note": "Kurirani modeli uključujući Claude, GPT, Gemini i druge",
-  "dialog.provider.anthropic.note": "Direktan pristup Claude modelima, uključujući Pro i Max",
-  "dialog.provider.deepseek.note": "DeepSeek modeli za zadatke zaključivanja i kodiranja",
-  "dialog.provider.copilot.note": "Claude modeli za pomoć pri kodiranju",
-  "dialog.provider.openai.note": "GPT modeli za brze, sposobne opšte AI zadatke",
-  "dialog.provider.google.note": "Gemini modeli za brze, strukturirane odgovore",
-  "dialog.provider.openrouter.note": "Pristup svim podržanim modelima preko jednog provajdera",
-  "dialog.provider.vercel.note": "Jedinstven pristup AI modelima uz pametno rutiranje",
 
   "dialog.model.select.title": "Odaberi model",
   "dialog.model.search.placeholder": "Pretraži modele",
@@ -184,6 +253,7 @@ export const dict = {
   "model.tag.free": "Besplatno",
   "model.tag.dataCollected": "Podaci se mogu koristiti za obuku",
   "model.tag.latest": "Najnovije",
+  "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
   "model.group.collapse": "Sakrij {{group}}",
@@ -211,6 +281,7 @@ export const dict = {
   "model.preview.label.average": "Procj. prosječni trošak",
   "model.preview.label.context": "Kontekst",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Izbori modela",
   "model.preview.label.completion": "Završetak",
   "model.preview.label.costAttempt": "Trošak / pokušaj",
   "model.preview.value.notSupported": "Nije podržano",
@@ -296,8 +367,27 @@ export const dict = {
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
+  "prompt.action.sandbox.enable": "Omogući sandbox",
+  "prompt.action.sandbox.disable": "Onemogući sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox je omogućen. Shell komande agenta su ograničene na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox je onemogućen. Kliknite da ograničite pisanje shell komandi agenta na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.status.enabled": "Sandbox omogućen",
+  "prompt.action.sandbox.status.disabled": "Sandbox onemogućen",
+  "prompt.action.sandbox.filesystem": "Datotečni sistem",
+  "prompt.action.sandbox.network": "Mreža",
+  "prompt.action.sandbox.filesystem.restricted": "Ograničen",
+  "prompt.action.sandbox.network.blocked": "Blokirana",
+  "prompt.action.sandbox.network.allowed": "Dozvoljena",
+  "prompt.action.sandbox.unrestricted": "Bez ograničenja",
+  "prompt.action.sandbox.description.enabled": "Pisanje je ograničeno na direktorije projekta i Kilo.",
+  "prompt.action.sandbox.description.disabled": "Kliknite da ograničite pisanje u datotečni sistem i pristup mreži.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Kliknite da ograničite pisanje u datotečni sistem. Pristup mreži ostaje dozvoljen prema vašim sandbox postavkama.",
 
   "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
+  "speechToText.tooltip.starting": "Pokretanje mikrofona... Sačekajte prije nego što progovorite.",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
   "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
   "speechToText.tooltip.error": "Glasovni unos nije uspio. Kliknite da očistite.",
@@ -530,6 +620,8 @@ export const dict = {
   "notification.permission.titleSubagent": "Potrebna dozvola (podagent)",
   "notification.permission.description": "{{sessionTitle}} u {{projectName}} traži dozvolu",
   "ui.permission.manageAutoApprove": "Upravljanje pravilima automatskog odobravanja",
+  "ui.permission.doomLoop.prompt": "Otkrivena je moguća petlja za alat {{tool}}. Nastaviti izvršavanje?",
+  "ui.permission.doomLoop.rule": "Nastavi pozive alata {{tool}}",
   "ui.permission.rule.addToAllowed": "Dodaj na listu dozvoljenih",
   "ui.permission.rule.removeFromAllowed": "Ukloni sa liste dozvoljenih",
   "ui.permission.rule.addToDenied": "Dodaj na listu odbijenih",
@@ -803,6 +895,9 @@ export const dict = {
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimenzija vektora",
   "settings.indexing.enable.description": "Uključite ili isključite semantičko indeksiranje baze koda.",
+  "settings.indexing.showButton.title": "Prikaži dugme kada je indeksiranje isključeno",
+  "settings.indexing.showButton.description":
+    "Prikaži dugme za indeksiranje ispod polja za unos dok je indeksiranje isključeno. Ako je dugme skriveno, otvorite Postavke > Indeksiranje da biste omogućili indeksiranje.",
   "settings.indexing.enable.title": "Omogući indeksiranje",
   "settings.indexing.globalEnable.title": "Omogući globalno",
   "settings.indexing.globalEnable.description": "Omogući indeksiranje za svaki radni prostor.",
@@ -871,16 +966,19 @@ export const dict = {
   "settings.providers.tag.customProvider": "Prilagođeni provajder",
   "settings.providers.connected.environmentDescription": "Povezano iz vaših varijabli okruženja",
   "settings.providers.action.signInChatGPT": "Prijavi se putem ChatGPT",
-  "settings.providers.custom.description": "Dodaj OpenAI-kompatibilan provajder putem osnovnog URL-a.",
+  "settings.providers.custom.description": "Dodaj prilagođeni provajder putem osnovnog URL-a.",
   "settings.providers.subagentModel.title": "Model podagenta",
   "settings.providers.subagentModel.description":
     "Zadani model i napor zaključivanja za podagente task-tool-a. Ostavite nepodešeno da naslijedi model pozivnog agenta.",
+  "settings.models.hidePromptTraining.title": "Sakrij modele koji treniraju na promptovima",
+  "settings.models.hidePromptTraining.description":
+    "Sakrij Kilo Gateway modele čiji pružaoci mogu koristiti vaše promptove za treniranje.",
   "settings.providers.modeModels": "Model po režimu",
-  "settings.providers.custom.note": "Dodajte provajdera kompatibilnog s OpenAI putem osnovnog URL-a.",
+  "settings.providers.custom.note": "Dodajte prilagođenog provajdera putem osnovnog URL-a.",
   "settings.providers.modeModels.description":
     "Zamijenite podrazumijevani model za određene režime. Ako nije postavljeno, koristi se globalni podrazumijevani model.",
   "provider.custom.title": "Prilagođeni provajder",
-  "provider.custom.description.prefix": "Konfiguriši OpenAI-kompatibilan provajder. Pogledaj ",
+  "provider.custom.description.prefix": "Konfiguriši prilagođeni provajder. Pogledaj ",
   "provider.custom.description.link": "dokumentaciju za konfiguraciju provajdera",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "ID provajdera",
@@ -888,6 +986,7 @@ export const dict = {
   "provider.custom.field.providerID.description": "Mala slova, brojevi, crtice ili donje crte",
   "provider.custom.field.name.label": "Naziv za prikaz",
   "provider.custom.field.name.placeholder": "Moj AI provajder",
+  "provider.custom.field.package.label": "Provider API",
   "provider.custom.field.baseURL.label": "Osnovni URL",
   "provider.custom.field.baseURL.placeholder": "https://api.myprovider.com/v1",
   "provider.custom.field.apiKey.label": "API ključ",
@@ -900,6 +999,7 @@ export const dict = {
   "provider.custom.models.name.label": "Naziv",
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.reasoning.label": "Zaključivanje",
+  "provider.custom.models.modalities.image": "Slika",
   "provider.custom.models.variants.label": "Varijante",
   "provider.custom.models.variants.add": "Dodaj varijantu",
   "provider.custom.models.variants.remove": "Ukloni varijantu",
@@ -914,6 +1014,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.thinking.adaptive": "adaptive",
+  "provider.custom.models.variants.splitReasoning.label": "Split reasoning (required for e.g. MiniMax)",
+  "provider.custom.models.variants.splitReasoning.placeholder": "reasoning_split",
+  "provider.custom.models.variants.splitReasoning.true": "true",
+  "provider.custom.models.variants.splitReasoning.false": "false",
   "provider.custom.models.variants.chatTemplateArgs.label":
     "Omogući razmišljanje preko argumenata chat predloška (npr. Hugging Face)",
   "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
@@ -927,6 +1032,13 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
   "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.label": "Output effort (e.g. Anthropic)",
+  "provider.custom.models.variants.outputEffort.placeholder": "effort",
+  "provider.custom.models.variants.outputEffort.low": "low",
+  "provider.custom.models.variants.outputEffort.medium": "medium",
+  "provider.custom.models.variants.outputEffort.high": "high",
+  "provider.custom.models.variants.outputEffort.xhigh": "xhigh",
+  "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch": "Preuzmi modele",
@@ -1135,6 +1247,8 @@ export const dict = {
 
   "common.retry": "Pokušaj ponovo",
   "common.refresh": "Osvježi",
+  "common.reload": "Učitaj ponovo",
+  "common.reloadDescription": "Učitaj ponovo konfiguraciju, vještine, agente i naredbe s diska",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Niste prijavljeni",
@@ -1181,6 +1295,10 @@ export const dict = {
   "profile.usage.status.notInPlan": "Nije u planu",
   "profile.usage.status.exhausted": "Iscrpljeno",
   "profile.action.dashboard": "Kontrolna ploča",
+  "profile.action.topUp": "Dopuni",
+  "profile.pass.subscribe": "Nabavite Kilo Pass da dodate kredite i zaradite bonuse",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Obnavlja se",
   "profile.action.logout": "Odjava",
 
   "settings.section.configuration": "Konfiguracija",
@@ -1218,6 +1336,11 @@ export const dict = {
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",
+  "session.costAlert.header": "Upozorenje o trošku sesije",
+  "session.costAlert.continue": "Nastavi",
+  "session.costAlert.question":
+    "Ova sesija je upravo prešla prag upozorenja po sesiji od {{limit}} i košta {{cost}}. Nastaviti?",
+  "session.costAlert.stop": "Zaustavi",
 
   "ui.sessionTurn.cancel": "Otkaži",
   "ui.sessionTurn.status.thinking": "Razmišljam...",
@@ -1262,6 +1385,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Ovo resetuje samo postavke specifične za VS Code ekstenziju na njihove zadane vrijednosti. Postavke koje se dijele s CLI-jem, kao što su načini rada i pravila automatskog odobravanja, pohranjene su u CLI konfiguraciji i neće biti resetovane.",
   "settings.aboutKiloCode.resetSettings.button": "Resetuj sve postavke",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Prijenos postavki",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Izvezite ili uvezite postavke za prijenos između VS Code instanci.",
@@ -1318,6 +1442,10 @@ export const dict = {
   "settings.notifications.errors.title": "Greške",
   "settings.notifications.errors.description": "Prikaži obavijest pri greškama",
   "settings.notifications.sounds": "Zvukovi",
+  "settings.notifications.enable.title": "Omogući zvučne obavijesti",
+  "settings.notifications.enable.description":
+    "Reproduciraj zvukove kada se sesije završe, naiđu na grešku ili trebaju vaš unos",
+  "settings.notifications.testSound": "Testiraj",
   "settings.notifications.agentSound.title": "Zvuk završetka agenta",
   "settings.notifications.agentSound.description": "Zvuk pri završetku agenta",
   "settings.notifications.permSound.title": "Zvuk zahtjeva za dozvolu",
@@ -1325,6 +1453,9 @@ export const dict = {
   "settings.notifications.errorSound.title": "Zvuk greške",
   "settings.notifications.errorSound.description": "Zvuk pri greškama",
   "settings.notifications.sound.default": "Zadano",
+  "settings.notifications.sound.system": "Sistem",
+  "settings.notifications.sound.description":
+    "Zadana opcija koristi različite zvukove za završetak, unos i greške. Ostale opcije koriste jedan zvuk za sve događaje.",
   "settings.notifications.sound.none": "Ništa",
   "settings.experimental.share.title": "Način dijeljenja",
   "settings.experimental.share.description": "Ponašanje dijeljenja sesije",
@@ -1339,16 +1470,38 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
+  "settings.experimental.imageGeneration.title": "Generisanje slika",
+  "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.experimental.imageGenerationModel.title": "Model slike",
+  "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
+  "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
+
   "settings.experimental.speechToText.title": "Govor u tekst",
   "settings.experimental.speechToText.description":
     "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",
-  "settings.experimental.speechToText.disabledDescription":
+  "settings.models.speechToText.disabledDescription":
     "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text. Speech to Text je trenutno podržan samo uz Kilo Gateway.",
-  "settings.experimental.speechToTextModel.title": "Model govora u tekst",
-  "settings.experimental.speechToTextModel.description":
-    "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
+  "settings.models.speechToTextModel.title": "Model govora u tekst",
+  "settings.models.speechToTextModel.description": "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
+  "settings.experimental.nativeNotebookTools.title": "Izvorni alati za bilježnice",
+  "settings.experimental.nativeNotebookTools.description":
+    "Omogući eksperimentalne alate za čitanje, uređivanje i izvršavanje VS Code bilježnica",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
+  "settings.sandboxing.title": "Rad u izoliranom okruženju",
+  "settings.sandboxing.network.title": "Ograniči pristup mreži",
+  "settings.sandboxing.network.description":
+    "Blokiraj odlazni mrežni pristup za naredbe koje potiču od modela i HTTP alate. Lokalni MCP serveri i hookovi dodataka izvršavaju se izvan ovog ograničenja. Saobraćaj za inferenciju pružatelja i modela ostaje dostupan.",
+
+  "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
+  "settings.sandboxing.writablePaths.description":
+    "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Omogući SWE-Pruner: orezivanje velikih izlaza alata za čitanje i pretragu te shell alata koje uzima zadatak u obzir, vođeno fokusnim pitanjem koje pruža agent",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
+  "settings.experimental.swePrunerModel.description":
+    "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1481,9 +1634,15 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
+    "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
 
   "settings.autoApprove.description":
     "Definišite kako je dozvoljeno pokretanje alata. Većina alata je podrazumijevano na Dozvoli. doom_loop i external_directory su podrazumijevano na Pitaj.",
+  "settings.autoApprove.maxCost.title": "Upozorenje o trošku sesije",
+  "settings.autoApprove.maxCost.description":
+    "Upozori prije nastavka sesije nakon što potrošnja premaši ovaj iznos u USD. Koristite cijele dolare; ostavite prazno za isključivanje.",
   "settings.autoApprove.level.allow": "Dozvoli",
   "settings.autoApprove.level.ask": "Pitaj",
   "settings.autoApprove.level.deny": "Odbij",
@@ -1524,6 +1683,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",
   "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
+  "settings.context.compaction.title": "Kompresija",
   "settings.context.compactionLimit.title": "Limit automatske kompresije",
   "settings.context.compactionLimit.description":
     "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
@@ -1531,6 +1691,42 @@ export const dict = {
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",
   "settings.context.watcherPatterns.description": "Glob uzorci za datoteke koje promatrač treba ignorirati",
+
+  "settings.context.memory.title": "Memorija",
+  "settings.context.memory.project.title": "Memorija projekta",
+  "settings.context.memory.autoSave.title": "Automatsko spremanje memorije projekta",
+  "settings.context.memory.autoSave.description":
+    "Automatski sprema trajne činjenice projekta iz završenih koraka kada je memorija uključena.",
+  "settings.context.memory.index.title": "Indeks memorije",
+  "settings.context.memory.status.notLoaded": "Nije učitana",
+  "settings.context.memory.status.disabled": "Onemogućena",
+  "settings.context.memory.status.enabledTokensOps":
+    "Omogućena - ~{{session}} tokena početnog konteksta u ovoj sesiji - ~{{tokens}} tokena spremljenog indeksa - zadnja op. {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Omogućite memoriju za kreiranje datoteka memorije projekta.",
+  "settings.context.memory.inspect": "Pregledaj",
+  "settings.context.memory.rebuild": "Ponovo izgradi indeks memorije",
+  "chat.memory.on": "Memorija uključena",
+  "chat.memory.label": "Memorija · {{tokens}} tokena",
+  "chat.memory.status.loading": "Učitavanje statusa memorije",
+  "chat.memory.session.tokens": "Početni kontekst ove sesije: {{tokens}} tokena",
+  "chat.memory.total.tokens": "Spremljeni indeks: {{tokens}} tokena",
+  "chat.memory.project.enabled": "Memorija projekta omogućena",
+  "chat.memory.project.disabled": "Memorija projekta onemogućena",
+  "chat.memory.command.failed": "Komanda memorije nije uspjela",
+  "chat.memory.savedOperations": "Zadnja operacija memorije: {{count}} op.",
+  "chat.memory.inspect": "Pregledaj memoriju",
+  "chat.memory.remember": "Zapamti",
+  "chat.memory.forget": "Zaboravi",
+  "chat.memory.rebuild": "Ponovo izgradi indeks",
+  "chat.memory.disable": "Onemogući memoriju",
+  "chat.memory.badge.injected": "Memorija ubačena",
+  "chat.memory.badge.recalled": "Memorija opozvana",
+  "chat.memory.badge.startupCtx": "početni ctx",
+  "chat.memory.badge.items": "{{count}} stavki",
+  "chat.memory.badge.tokens": "{{tokens}} tokena",
+  "chat.memory.badge.recalledDetail": "Memorija opozvana: {{count}} stavki - {{tokens}} tokena",
+  "chat.memory.badge.files": "Datoteke memorije: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Koristi prilagođeni prompt",
@@ -1542,12 +1738,12 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "npr. Generiši commit messages na španskom jeziku prateći conventional commits format. Vrati SAMO commit message.",
 
+  "settings.commitMessage.language.sync": "Sinkronizacija sa jezikom korisničkog sučelja",
+  "settings.commitMessage.language.title": "Jezik",
+  "settings.commitMessage.language.description": "Izaberite koji jezik koristiti za poruke koje generiše AI:",
+
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
-  "settings.display.layout.title": "Raspored",
-  "settings.display.layout.description": "Način rasporeda za sučelje chata",
-  "settings.display.layout.auto": "Automatski",
-  "settings.display.layout.stretch": "Rastegni",
   "settings.display.fontSize.title": "Veličina fonta",
   "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
   "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
@@ -1557,6 +1753,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.codeEdit.title": "Blokovi izmjena koda",
+  "settings.display.codeEdit.description":
+    "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
+  "settings.display.codeEdit.expanded": "Prošireni",
+  "settings.display.codeEdit.collapsed": "Sažeti",
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",
@@ -1582,6 +1783,8 @@ export const dict = {
   "settings.aboutKiloCode.legacyMigration.title": "Migracija sa prethodne verzije",
   "settings.aboutKiloCode.legacyMigration.description":
     "Migrirajte postavke iz prethodne instalacije Kilo Code, uključujući API ključeve provajdera i podrazumijevani model.",
+  "settings.aboutKiloCode.rooImport.description": "Uvezite historiju razgovora iz instalacije Roo Code.",
+  "settings.aboutKiloCode.rooImport.button": "Uvezi sesije iz Roo Code",
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Šta je novo u Kilo Code",

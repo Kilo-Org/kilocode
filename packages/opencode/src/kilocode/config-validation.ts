@@ -9,7 +9,7 @@ import { Config } from "@/config/config"
 import { ConfigAgent } from "@/config/agent"
 import { ConfigCommand } from "@/config/command"
 import { JsonError } from "@/config/error"
-import { Instance } from "@/project/instance"
+import { Instance } from "@/kilocode/instance"
 import { Filesystem } from "@/util/filesystem"
 
 export namespace ConfigValidation {

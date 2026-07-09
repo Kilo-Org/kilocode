@@ -48,7 +48,7 @@ export type UsageCredit = typeof UsageCredit.Type
 export const UsageSnapshot = Schema.Struct({
   id: Schema.String,
   providerID: Schema.String,
-  sourceKind: Schema.Literals(["kilo_pass", "kilo_managed", "direct", "codex"]),
+  sourceKind: Schema.Literals(["kilo_managed", "direct", "codex"]),
   providerLabel: Schema.String,
   planLabel: Schema.String,
   sourceLabel: Schema.String,

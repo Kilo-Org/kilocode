@@ -6,6 +6,11 @@ import { fileURLToPath } from "url"
 
 console.log("=== publishing ===\n")
 
+// kilocode_change start - keep JetBrains CLI pin reviewable outside CLI release commits
+const jetbrainsPkg = fileURLToPath(new URL("../packages/kilo-jetbrains/package.json", import.meta.url))
+const jetbrainsPin = await Bun.file(jetbrainsPkg).text()
+// kilocode_change end
+
 // kilocode_change start - consume changesets on the publish runner so changelog
 // changes are included in the release commit. Previously this ran in the
 // version job on a separate runner whose workspace was discarded.
@@ -42,6 +47,13 @@ const pkgjsons = await Array.fromAsync(
 ).then((arr) => arr.filter((x) => !x.includes("node_modules") && !x.includes("dist")))
 
 for (const file of pkgjsons) {
+  // kilocode_change start - create a follow-up PR for JetBrains CLI pin bumps
+  if (file === jetbrainsPkg) {
+    console.log("preserved JetBrains CLI pin:", file)
+    await Bun.file(file).write(jetbrainsPin)
+    continue
+  }
+  // kilocode_change end
   let pkg = await Bun.file(file).text()
   pkg = pkg.replaceAll(/"version": "[^"]+"/g, `"version": "${Script.version}"`)
   console.log("updated:", file)
@@ -88,27 +100,14 @@ if (Script.release) {
   }
   // kilocode_change end
 
-  // kilocode_change start
-  // kilocode_change end
-
-  // kilocode_change start - mark prerelease GitHub releases accordingly
-  // and populate release notes from the changelog updated by changeset above.
-  // Use an absolute path for the CHANGELOG because the imported SDK build
-  // script chdirs into packages/sdk/js, so a relative path would miss the file
-  // and fall through to the "No notable changes" default.
-  const kind = Script.preview ? "pre-release" : "release"
-  const flags = Script.preview ? ["--draft=false", "--prerelease"] : ["--draft=false"]
-  flags.push("--title", `v${Script.version} (${kind})`)
-  const changelogPath = fileURLToPath(new URL("../packages/kilo-vscode/CHANGELOG.md", import.meta.url))
-  const changelog = await Bun.file(changelogPath)
-    .text()
-    .catch(() => "")
-  const body = extractLatestSection(changelog) || "No notable changes"
-  const tmp = process.env.RUNNER_TEMP ?? "/tmp"
-  const notes = `${tmp}/release-notes.txt`
-  await Bun.write(notes, body)
-  flags.push("--notes-file", notes)
-  await $`gh release edit v${Script.version} ${flags} --repo ${process.env.GH_REPO}`
+  // kilocode_change start - publish channel-aware GitHub release notes
+  const { publishNotes } = await import("./kilocode/release-notes")
+  await publishNotes({
+    version: Script.version,
+    prerelease: Script.preview,
+    repo: process.env.GH_REPO,
+    temp: process.env.RUNNER_TEMP,
+  })
   // kilocode_change end
 }
 
@@ -136,16 +135,33 @@ await import(`../packages/kilo-vscode/script/publish.ts`)
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 
-// kilocode_change start - extract latest changelog section for release notes
-function extractLatestSection(changelog: string): string {
-  if (!changelog) return ""
-  const lines = changelog.split("\n")
-  const start = lines.findIndex((line) => /^## /.test(line))
-  if (start < 0) return ""
-  const end = lines.findIndex((line, i) => i > start && /^## /.test(line))
-  return lines
-    .slice(start + 1, end < 0 ? undefined : end)
-    .join("\n")
-    .trim()
+// kilocode_change start - non-blocking JetBrains CLI pin bump PR after stable CLI release
+await createJetbrainsPinPr()
+// kilocode_change end
+
+// kilocode_change start
+async function createJetbrainsPinPr() {
+  console.log("\n=== jetbrains cli pin bump pr ===\n")
+  if (!Script.release) {
+    console.log("Skipping JetBrains CLI pin bump PR: not a release build")
+    return
+  }
+  if (Script.preview) {
+    console.log(`Skipping JetBrains CLI pin bump PR for pre-release v${Script.version}`)
+    return
+  }
+  const result = await $`bun .kilo/skills/release-jetbrains/script/set-pin.ts --version ${Script.version} --pr`.nothrow()
+  const out = result.stdout.toString().trim()
+  const err = result.stderr.toString().trim()
+  if (result.exitCode === 0) {
+    if (out) console.log(out)
+    const url = out.match(/https:\/\/github\.com\/\S+\/pull\/\d+/)?.[0]
+    if (url) console.log(`::notice title=JetBrains CLI pin bump PR::${url}`)
+    return
+  }
+  console.warn("JetBrains CLI pin bump PR creation failed; release will continue.")
+  if (out) console.warn(out)
+  if (err) console.warn(err)
+  console.warn("::warning title=JetBrains CLI pin bump PR failed::Release completed, but the JetBrains CLI pin bump PR was not created. Check the logs above and create it manually if needed.")
 }
 // kilocode_change end

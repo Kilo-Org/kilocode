@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-gateway",
-  "version": "7.3.44",
+  "version": "7.4.4",
   "type": "module",
   "license": "MIT",
   "description": "Unified Kilo Gateway package for OpenCode - authentication, provider, and API integration",
@@ -29,11 +29,10 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "build": "tsc",
-    "test:ci": "mkdir -p .artifacts/unit && bun test test --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
+    "test:ci": "mkdir -p .artifacts/unit && bun test test --dots --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "dependencies": {
     "@kilocode/plugin": "workspace:*",
-    "@kilocode/sdk": "workspace:*",
     "@ai-sdk/alibaba": "1.0.17",
     "@ai-sdk/anthropic": "3.0.71",
     "@ai-sdk/openai": "3.0.53",

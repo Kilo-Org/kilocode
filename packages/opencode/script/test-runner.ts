@@ -7,6 +7,7 @@
 import os from "os"
 import path from "path"
 import fs from "fs/promises"
+import { TestProfile } from "./kilocode/test-profile"
 
 const root = path.resolve(import.meta.dir, "..")
 const argv = process.argv.slice(2)
@@ -29,7 +30,9 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --timeout <ms>       Per-test timeout passed to bun test (default: 60000)",
       "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
       "  --retries <N>        Extra attempts for failing files (default: 1)",
+      "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
       "  --bail               Stop on first failure",
+      "  --dots               Show compact dot progress",
       "  --verbose            Show full output for every file",
       "  -h, --help           Show this help",
       "",
@@ -50,9 +53,19 @@ function opt(name: string, fallback: number) {
   return i >= 0 && i + 1 < argv.length ? Number(argv[i + 1]) || fallback : fallback
 }
 
+function text(name: string) {
+  const i = argv.indexOf(`--${name}`)
+  if (i < 0) return
+  const value = argv[i + 1]
+  if (value && !value.startsWith("-")) return value
+  console.error(`Missing value for --${name}`)
+  process.exit(2)
+}
+
 const ci = argv.includes("--ci")
 const bail = argv.includes("--bail")
 const verbose = argv.includes("--verbose")
+const dots = !verbose && (ci || argv.includes("--dots"))
 // Cap concurrency at 4 even on bigger runners: the bottleneck is shared
 // resources (ports, global filesystem like ~/.local/share/kilo), not CPU.
 // Eight parallel processes was triggering port/FS races, not going faster.
@@ -60,8 +73,15 @@ const concurrency = opt("concurrency", Math.min(4, os.cpus().length))
 const timeout = opt("timeout", 60000)
 const deadline = opt("file-timeout", 300000)
 const retries = opt("retries", 1)
+const flag = text("profile")
+const env = process.env.KILO_TEST_PROFILE?.trim() || undefined
+if (flag && env && flag !== env) {
+  console.error(`Conflicting test profiles: --profile=${flag}, KILO_TEST_PROFILE=${env}`)
+  process.exit(2)
+}
+const profile = flag ?? env
 
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries"])
+const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile"])
 const patterns = argv.filter((arg, i) => {
   if (arg.startsWith("-")) return false
   if (i > 0 && valued.has(argv[i - 1])) return false
@@ -84,7 +104,9 @@ const bold = (s: string) => (tty ? `\x1b[1m${s}\x1b[0m` : s)
 // ---------------------------------------------------------------------------
 
 const glob = new Bun.Glob("**/*.test.{ts,tsx}")
-const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") }))).sort()
+const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") })))
+  .map((file) => file.replaceAll("\\", "/"))
+  .sort()
 
 export const skipped = new Set([
   // Upstream browser OAuth integration tests bind the fixed callback port and
@@ -92,9 +114,28 @@ export const skipped = new Set([
   "mcp/oauth-browser.test.ts",
 ])
 
+const selected = (() => {
+  if (!profile) return all
+  const result = TestProfile.resolve(profile, all)
+  if (!result.ok) {
+    console.error(result.error)
+    process.exit(2)
+  }
+  const blocked = result.files.filter((file) => skipped.has(file))
+  if (blocked.length > 0) {
+    console.error(`Test profile "${profile}" contains skipped files:\n${blocked.map((file) => `- ${file}`).join("\n")}`)
+    process.exit(2)
+  }
+  console.log(`Using test profile "${profile}": ${result.description} (${result.files.length} files)`)
+  return result.files
+})()
 const matched =
-  patterns.length > 0 ? all.filter((f) => patterns.some((p) => f.includes(p) || path.join("test", f).includes(p))) : all
-const files = patterns.length > 0 ? matched : matched.filter((f) => !skipped.has(f)) // kilocode_change
+  patterns.length > 0
+    ? selected.filter((file) =>
+        patterns.some((pattern) => file.includes(pattern) || path.join("test", file).includes(pattern)),
+      )
+    : selected
+const files = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
 
 if (files.length === 0) {
   console.log("No test files found")
@@ -125,6 +166,14 @@ if (ci) await fs.mkdir(xmldir, { recursive: true })
 
 const counter = { done: 0 }
 const pad = String(files.length).length
+const progress = { width: 80 }
+const marks = {
+  pass: ".",
+  retry: "R",
+  fail: "F",
+  timeout: "T",
+} as const
+const legend = `Legend: ${marks.pass}=pass ${marks.retry}=pass-after-retry ${marks.fail}=fail ${marks.timeout}=timeout`
 
 // ---------------------------------------------------------------------------
 // Run a single test file
@@ -177,8 +226,21 @@ async function run(file: string): Promise<Result> {
 // Report a single result
 // ---------------------------------------------------------------------------
 
+function mark(result: Result) {
+  if (result.timedout) return marks.timeout
+  if (!result.passed) return marks.fail
+  if (result.attempts > 1) return marks.retry
+  return marks.pass
+}
+
 function report(result: Result) {
   counter.done++
+  if (dots) {
+    process.stdout.write(mark(result))
+    if (counter.done % progress.width === 0) process.stdout.write("\n")
+    return
+  }
+
   const idx = String(counter.done).padStart(pad)
   const secs = (result.duration / 1000).toFixed(1)
   const tries = result.attempts > 1 ? dim(` [attempt ${result.attempts}/${retries + 1}]`) : ""
@@ -211,7 +273,9 @@ function report(result: Result) {
 // Parallel execution
 // ---------------------------------------------------------------------------
 
-console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}\n`)
+console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
+if (dots) console.log(dim(legend))
+console.log()
 
 const start = performance.now()
 const results: Result[] = []
@@ -238,6 +302,8 @@ const workers = Array.from({ length: Math.min(concurrency, files.length) }, asyn
 })
 
 await Promise.all(workers)
+
+if (dots && counter.done % progress.width !== 0) console.log()
 
 const elapsed = (performance.now() - start) / 1000
 

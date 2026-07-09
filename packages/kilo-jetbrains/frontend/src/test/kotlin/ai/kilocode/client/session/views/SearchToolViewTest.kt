@@ -9,8 +9,10 @@ import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
 import javax.swing.ScrollPaneConstants
@@ -90,6 +92,15 @@ class SearchToolViewTest : BasePlatformTestCase() {
         assertEquals("pattern=<unsafe>", view.targetComponents().first().text)
     }
 
+    fun `test target labels normalize newlines for one line clipping`() {
+        val view = SearchToolView(tool().also {
+            it.input = mapOf("path" to "/repo/src\nnested", "pattern" to "class\nSearchToolView", "include" to "*.kt")
+        })
+
+        assertEquals(listOf("/repo/src nested", "pattern=class SearchToolView", "include=*.kt"), view.targetTexts())
+        assertFalse(view.targetComponents().any { it.text.contains("\n") })
+    }
+
     fun `test target labels use regular font`() {
         val view = SearchToolView(tool().also {
             it.input = mapOf("pattern" to "TODO", "include" to "*.kt")
@@ -98,6 +109,14 @@ class SearchToolViewTest : BasePlatformTestCase() {
 
         assertEquals(style.regularFont, view.targetFont(0))
         assertEquals(style.regularFont, view.targetFont(1))
+    }
+
+    fun `test search header title target gap uses standard medium gap`() {
+        val view = SearchToolView(tool().also {
+            it.input = mapOf("pattern" to "TODO", "include" to "*.kt")
+        })
+
+        assertEquals(UiStyle.Gap.md(), (view.centerComponent().layout as BorderLayout).hgap)
     }
 
     fun `test completed search starts collapsed and expands output`() {
@@ -167,7 +186,7 @@ class SearchToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test view factory routes grep to search tool view`() {
-        assertTrue(ViewFactory.create(tool(), openFile = {}) is SearchToolView)
+        assertTrue(ViewFactory.create(tool(), openFile = { _, _ -> }) is SearchToolView)
     }
 
     fun `test should replace when search renderer changes`() {

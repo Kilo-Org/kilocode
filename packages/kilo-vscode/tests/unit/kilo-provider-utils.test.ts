@@ -24,6 +24,7 @@ import type {
   SyncEventMessageUpdated,
   EventSessionStatus,
   EventSessionTurnClose,
+  EventSandboxStatusChanged,
   EventPermissionAsked,
   EventPermissionReplied,
   EventTodoUpdated,
@@ -157,6 +158,12 @@ describe("sessionToWebview", () => {
     const result = sessionToWebview(makeSession())
     expect(() => new Date(result.createdAt)).not.toThrow()
     expect(new Date(result.createdAt).getTime()).toBe(1700000000000)
+  })
+
+  it("clears optional state omitted from a full session snapshot", () => {
+    const result = sessionToWebview(makeSession())
+    expect(result.revert).toBeNull()
+    expect(result.summary).toBeNull()
   })
 })
 
@@ -442,6 +449,23 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("maps sandbox status changes to effective button state", () => {
+    const event: EventSandboxStatusChanged = {
+      type: "sandbox.status.changed",
+      properties: { sessionID: "sess-1", directory: "/tmp", enabled: true, available: true, version: 3 },
+    }
+
+    expect(mapSSEEventToWebviewMessage(event, "sess-1")).toEqual({
+      type: "sandboxStatus",
+      sessionID: "sess-1",
+      directory: "/tmp",
+      enabled: true,
+      available: true,
+      reason: undefined,
+      version: 3,
+    })
+  })
+
   it("maps session.turn.close to its terminal reason", () => {
     const event: EventSessionTurnClose = {
       id: "evt-turn",
@@ -597,8 +621,8 @@ describe("mapSSEEventToWebviewMessage", () => {
       properties: {
         id: "sug-1",
         sessionID: "sess-1",
-        text: "Review changes?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        text: "Run tests?",
+        actions: [{ label: "Run tests", prompt: "Run the test suite" }],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
@@ -612,7 +636,7 @@ describe("mapSSEEventToWebviewMessage", () => {
         sessionID: "sess-1",
         requestID: "sug-1",
         index: 0,
-        action: { label: "Start", prompt: "/local-review-uncommitted" },
+        action: { label: "Run tests", prompt: "Run the test suite" },
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")

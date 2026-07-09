@@ -73,7 +73,7 @@ describe("project.initGit endpoint", () => {
       })
       // Reload behavior: bus emits exactly one server.instance.disposed for the directory.
       expect(disposedEvents(events.seen, tmp.directory)).toBe(1)
-      expect(yield* fs.exists(path.join(tmp.directory, ".git", "opencode"))).toBe(false)
+      expect(yield* fs.exists(path.join(tmp.directory, ".git", "kilo"))).toBe(false) // kilocode_change
 
       const current = yield* request(tmp.directory, "/project/current")
       expect(current.status).toBe(200)
@@ -83,7 +83,7 @@ describe("project.initGit endpoint", () => {
         worktree: tmp.directory,
       })
 
-      const ctx = yield* InstanceStore.Service.use((store) => store.reload({ directory: tmp.directory }))
+      const ctx = yield* InstanceStore.use.reload({ directory: tmp.directory })
       const tracked = yield* Snapshot.Service.use((snapshot) => snapshot.track()).pipe(
         Effect.provideService(InstanceRef, ctx),
       )

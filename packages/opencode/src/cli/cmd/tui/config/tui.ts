@@ -112,11 +112,20 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       return config
     })
 
-  const load = (text: string, configFilepath: string): Effect.Effect<Info> =>
+  // kilocode_change start - trusted gates {env:}; fileScope confines untrusted {file:} reads
+  const load = (
+    text: string,
+    configFilepath: string,
+    trusted: boolean,
+    fileScope?: ConfigVariable.FileScope,
+  ): Effect.Effect<Info> =>
+    // kilocode_change end
     Effect.gen(function* () {
+      // kilocode_change start - only trusted tui config resolves {env:}; untrusted {file:} confined to fileScope
       const expanded = yield* Effect.promise(() =>
-        ConfigVariable.substitute({ text, type: "path", path: configFilepath, missing: "empty" }),
+        ConfigVariable.substitute({ text, type: "path", path: configFilepath, missing: "empty", trusted, fileScope }),
       )
+      // kilocode_change end
       const data = ConfigParse.jsonc(expanded, configFilepath)
       if (!isRecord(data)) return {} as Info
       // Flatten a nested "tui" key so users who wrote `{ "tui": { ... } }` inside tui.json
@@ -149,7 +158,9 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       ),
     )
 
-  const loadFile = (filepath: string): Effect.Effect<Info> =>
+  // kilocode_change start - trusted + fileScope threaded to load
+  const loadFile = (filepath: string, trusted: boolean, fileScope?: ConfigVariable.FileScope): Effect.Effect<Info> =>
+    // kilocode_change end
     Effect.gen(function* () {
       // Silent-swallow non-NotFound read errors (perms, EISDIR, IO) → log + skip.
       // Matches how parse/schema/plugin failures in load() are handled — every
@@ -169,12 +180,14 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       )
       if (!text) return {} as Info
       log.info("loading tui config", { path: filepath })
-      return yield* load(text, filepath)
+      return yield* load(text, filepath, trusted, fileScope) // kilocode_change
     })
 
-  const mergeFile = (acc: Acc, file: string) =>
+  // kilocode_change start - trusted + fileScope threaded to loadFile
+  const mergeFile = (acc: Acc, file: string, trusted: boolean, fileScope?: ConfigVariable.FileScope) =>
+    // kilocode_change end
     Effect.gen(function* () {
-      const data = yield* loadFile(file)
+      const data = yield* loadFile(file, trusted, fileScope) // kilocode_change
       if (Object.keys(data).length) {
         appliedOrder += 1
         log.info("applying tui config", { path: file, order: appliedOrder })
@@ -191,8 +204,10 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       acc.plugin_origins = plugins
     })
 
-  // Every config dir we may read from: global config dir, any `.opencode`
+  // kilocode_change start - discover canonical and legacy Kilo config directories
+  // Every config dir we may read from: global config, .kilo and legacy .kilocode
   // folders between cwd and home, and KILO_CONFIG_DIR.
+  // kilocode_change end
   const directories = yield* ConfigPaths.directories(ctx.directory)
   yield* Effect.promise(() => migrateTuiConfig({ directories, cwd: ctx.directory }))
 
@@ -205,36 +220,38 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
   // 1. Global tui config (lowest precedence).
   for (const file of ConfigPaths.fileInDirectory(Global.Path.config, "tui")) {
-    yield* mergeFile(acc, file)
+    yield* mergeFile(acc, file, true) // kilocode_change - global config is trusted
   }
 
   // 2. Explicit KILO_TUI_CONFIG override, if set.
   if (Flag.KILO_TUI_CONFIG) {
     const configFile = Flag.KILO_TUI_CONFIG
-    yield* mergeFile(acc, configFile)
+    yield* mergeFile(acc, configFile, true) // kilocode_change - explicit env-provided path is trusted
     log.debug("loaded custom tui config", { path: configFile })
   }
 
   // 3. Project tui files, applied root-first so the closest file wins.
   for (const file of projectFiles) {
-    yield* mergeFile(acc, file)
+    yield* mergeFile(acc, file, false, { root: ctx.directory, source: file }) // kilocode_change - untrusted, {file:} confined to project
   }
 
-  // 4. `.opencode` directories (and KILO_CONFIG_DIR) discovered while
-  // walking up the tree. Also returned below so callers can install plugin
-  // dependencies from each location.
-  // kilocode_change start - also load tui.json from .kilo/.kilocode
+  // kilocode_change start - load tui.json from supported Kilo config directories
+  // 4. `.kilo` and legacy `.kilocode` directories (and KILO_CONFIG_DIR)
+  // discovered while walking up the tree. Also returned below so callers can
+  // install plugin dependencies from each location.
   const dirs = unique(directories).filter(
-    (dir) =>
-      dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR,
+    (dir) => dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir === Flag.KILO_CONFIG_DIR,
   )
   // kilocode_change end
 
   for (const dir of dirs) {
-    // if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue // kilocode_change
+    // kilocode_change start - trust global (home/KILO_CONFIG_DIR) dirs like config.ts; in-repo .kilo/.kilocode stay untrusted
+    const trusted = pluginScope(dir, ctx) === "global"
+    const fileScope = trusted ? undefined : { root: ctx.directory, source: dir }
     for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
-      yield* mergeFile(acc, file)
+      yield* mergeFile(acc, file, trusted, fileScope)
     }
+    // kilocode_change end
   }
 
   const keybinds = { ...acc.result.keybinds }
@@ -253,7 +270,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       notifications: acc.result.attention?.notifications ?? true,
       sound: acc.result.attention?.sound ?? true,
       volume: acc.result.attention?.volume ?? 0.4,
-      sound_pack: acc.result.attention?.sound_pack ?? "opencode.default",
+      sound_pack: acc.result.attention?.sound_pack ?? "kilo.default", // kilocode_change
       sounds: acc.result.attention?.sounds ?? {},
     },
     keybinds: createBindingLookup(TuiKeybind.toBindingConfig(parsedKeybinds), {

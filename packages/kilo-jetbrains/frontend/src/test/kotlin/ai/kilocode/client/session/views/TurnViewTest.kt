@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.Text
@@ -11,6 +12,7 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
+import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.RepaintManager
@@ -20,7 +22,7 @@ import javax.swing.RepaintManager
  */
 @Suppress("UnstableApiUsage")
 class TurnViewTest : BasePlatformTestCase() {
-    private val openFile: (String) -> Unit = {}
+    private val openFile: SessionFileOpener = { _, _ -> }
 
     // ------ TurnView ------
 
@@ -110,6 +112,16 @@ class TurnViewTest : BasePlatformTestCase() {
         assertFalse(mv.isOpaque)
     }
 
+    fun `test user message uses standard outline color`() {
+        val mv = MessageView(msg("u1", "user"), openFile)
+        mv.setSize(120, 48)
+        val image = BufferedImage(120, 48, BufferedImage.TYPE_INT_ARGB)
+
+        mv.paint(image.createGraphics())
+
+        assertEquals(SessionUiStyle.View.Outline.color().rgb, image.getRGB(60, 0))
+    }
+
     fun `test assistant message remains borderless`() {
         val mv = MessageView(msg("a1", "assistant"), openFile)
         val ins = mv.border.getBorderInsets(mv)
@@ -140,14 +152,14 @@ class TurnViewTest : BasePlatformTestCase() {
         assertFalse((mv.part("p1") as TextView).contentOpaque())
     }
 
-    fun `test assistant text view remains opaque`() {
+    fun `test assistant text view is transparent`() {
         val mv = MessageView(msg("a1", "assistant"), openFile)
         val text = ai.kilocode.client.session.model.Text("p1")
         text.content.append("hello")
 
         mv.upsertPart(text)
 
-        assertTrue((mv.part("p1") as TextView).contentOpaque())
+        assertFalse((mv.part("p1") as TextView).contentOpaque())
     }
 
     fun `test upsertPart updates existing part rather than adding duplicate`() {

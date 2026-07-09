@@ -2,11 +2,11 @@ import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
+import { PermissionNotFoundError } from "../errors"
 import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
 import { WorkspaceRoutingMiddleware, WorkspaceRoutingQuery } from "../middleware/workspace-routing"
 import { described } from "./metadata"
-import { ApiNotFoundError } from "../errors" // kilocode_change
 
 const root = "/permission"
 const ReplyPayload = Schema.Struct({
@@ -46,7 +46,7 @@ export const PermissionApi = HttpApi.make("permission")
           query: WorkspaceRoutingQuery,
           payload: ReplyPayload,
           success: described(Schema.Boolean, "Permission processed successfully"),
-          error: [HttpApiError.BadRequest, ApiNotFoundError], // kilocode_change
+          error: [HttpApiError.BadRequest, PermissionNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.reply",
@@ -60,7 +60,7 @@ export const PermissionApi = HttpApi.make("permission")
           query: WorkspaceRoutingQuery,
           payload: SaveAlwaysRulesBody,
           success: described(Schema.Boolean, "Always-rules saved"),
-          error: [ApiNotFoundError],
+          error: [PermissionNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.saveAlwaysRules",
@@ -72,7 +72,7 @@ export const PermissionApi = HttpApi.make("permission")
           query: WorkspaceRoutingQuery,
           payload: AllowEverythingBody,
           success: described(Schema.Boolean, "Success"),
-          error: [HttpApiError.BadRequest, HttpApiError.NotFound],
+          error: [HttpApiError.BadRequest, PermissionNotFoundError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "permission.allowEverything",

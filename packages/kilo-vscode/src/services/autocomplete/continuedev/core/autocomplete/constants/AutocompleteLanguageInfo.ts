@@ -1,6 +1,15 @@
 import { getUriFileExtension } from "../../util/uri"
 import { BracketMatchingService } from "../filtering/BracketMatchingService"
-import { CharacterFilter, LineFilter } from "../filtering/streamTransforms/lineStream"
+
+type LineStream = AsyncGenerator<string>
+type LineFilter = (args: { lines: LineStream; fullStop: () => void }) => LineStream
+type CharacterFilter = (args: {
+  chars: AsyncGenerator<string>
+  prefix: string
+  suffix: string
+  filepath: string
+  multiline: boolean
+}) => AsyncGenerator<string>
 
 export interface AutocompleteLanguageInfo {
   /**
@@ -356,6 +365,42 @@ export const LANGUAGES: { [extension: string]: AutocompleteLanguageInfo } = {
   md: Markdown,
   lua: Lua,
   luau: Lua,
+}
+
+const IDS: Record<string, AutocompleteLanguageInfo> = {
+  typescript: Typescript,
+  typescriptreact: Typescript,
+  javascript: JavaScript,
+  javascriptreact: JavaScript,
+  json: Json,
+  jsonc: Json,
+  python: Python,
+  java: Java,
+  cpp: Cpp,
+  c: C,
+  csharp: CSharp,
+  scala: Scala,
+  go: Go,
+  rust: Rust,
+  haskell: Haskell,
+  php: PHP,
+  ruby: Ruby,
+  swift: Swift,
+  kotlin: Kotlin,
+  clojure: Clojure,
+  julia: Julia,
+  fsharp: FSharp,
+  r: R,
+  dart: Dart,
+  solidity: Solidity,
+  yaml: YAML,
+  markdown: Markdown,
+  lua: Lua,
+  luau: Lua,
+}
+
+export function languageForId(id: string): AutocompleteLanguageInfo | undefined {
+  return IDS[id]
 }
 
 export function languageForFilepath(fileUri: string): AutocompleteLanguageInfo {
