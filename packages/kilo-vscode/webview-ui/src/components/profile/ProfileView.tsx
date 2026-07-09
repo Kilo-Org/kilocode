@@ -129,6 +129,16 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     vscode.postMessage({ type: "cancelLogin" })
   }
 
+  const usage = () => (
+    <ProviderUsageCards
+      data={props.providerUsage}
+      loading={props.providerUsageLoading ?? !props.providerUsage}
+      error={props.providerUsageError}
+      onRefresh={() => props.onRefreshProviderUsage?.()}
+      onOpen={openExternal}
+    />
+  )
+
   return (
     <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0, overflow: "hidden" }}>
       <div
@@ -246,6 +256,8 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                   />
                 </Card>
               </Show>
+
+              {usage()}
 
               {/* Balance */}
               <Show when={data().balance}>
@@ -417,13 +429,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
           )}
         </Show>
 
-        <ProviderUsageCards
-          data={props.providerUsage}
-          loading={props.providerUsageLoading ?? !props.providerUsage}
-          error={props.providerUsageError}
-          onRefresh={() => props.onRefreshProviderUsage?.()}
-          onOpen={openExternal}
-        />
+        <Show when={!props.profileData}>{usage()}</Show>
       </div>
     </div>
   )
