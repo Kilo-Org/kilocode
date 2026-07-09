@@ -21,6 +21,11 @@ export interface ProviderUsageCardsProps {
   onGetKiloPass: () => void
 }
 
+export interface PersonalTopUpsCardProps {
+  data: ProviderUsageData | undefined
+  onOpen: (url: string) => void
+}
+
 type Language = ReturnType<typeof useLanguage>
 
 const source = (item: ProviderUsageSnapshot, language: Language) => {
@@ -299,6 +304,15 @@ const BillingCard: Component<{
   </Card>
 )
 
+export const PersonalTopUpsCard: Component<PersonalTopUpsCardProps> = (props) => {
+  const language = useLanguage()
+  return (
+    <Show when={props.data?.kiloBilling}>
+      {(billing) => <BillingCard billing={billing()} onOpen={props.onOpen} language={language} />}
+    </Show>
+  )
+}
+
 export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) => {
   const language = useLanguage()
   return (
@@ -347,7 +361,7 @@ export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) =>
               <Show
                 when={data().items.length > 0}
                 fallback={
-                  <Show when={!props.showKiloPass && !data().kiloBilling}>
+                  <Show when={!props.showKiloPass}>
                     <Card>
                       <CardDescription>{language.t("profile.usage.empty")}</CardDescription>
                     </Card>
@@ -357,9 +371,6 @@ export const ProviderUsageCards: Component<ProviderUsageCardsProps> = (props) =>
                 <For each={order(data().items)}>
                   {(item) => <UsageCard item={item} onOpen={props.onOpen} language={language} />}
                 </For>
-              </Show>
-              <Show when={data().kiloBilling}>
-                {(billing) => <BillingCard billing={billing()} onOpen={props.onOpen} language={language} />}
               </Show>
             </>
           )}
