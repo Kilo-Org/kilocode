@@ -5,41 +5,6 @@ import { KILO_API_BASE } from "./constants.js"
 const timeout = 5_000
 const limit = 512 * 1024
 
-const status = z.enum([
-  "active",
-  "canceled",
-  "incomplete",
-  "incomplete_expired",
-  "past_due",
-  "paused",
-  "trialing",
-  "unpaid",
-])
-
-const KiloPassStateSchema = z.object({
-  subscription: z
-    .object({
-      subscriptionId: z.string(),
-      tier: z.enum(["tier_19", "tier_49", "tier_199"]),
-      cadence: z.enum(["monthly", "yearly"]),
-      status,
-      cancelAtPeriodEnd: z.boolean(),
-      currentStreakMonths: z.number(),
-      nextYearlyIssueAt: z.string().nullable(),
-      startedAt: z.string().nullable(),
-      resumesAt: z.string().nullable(),
-      nextBonusCreditsUsd: z.number().nullable(),
-      nextBillingAt: z.string().nullable(),
-      currentPeriodBaseCreditsUsd: z.number(),
-      currentPeriodUsageUsd: z.number(),
-      currentPeriodHostingCostUsd: z.number(),
-      currentPeriodBonusCreditsUsd: z.number().nullable(),
-      isBonusUnlocked: z.boolean(),
-      refillAt: z.string().nullable(),
-    })
-    .nullable(),
-})
-
 const AutoTopUpStateSchema = z.object({
   enabled: z.boolean(),
   amountCents: z.number().int().nonnegative(),
@@ -123,7 +88,6 @@ const envelope = z.object({
   error: z.unknown().optional(),
 })
 
-export type KiloPassUsageState = z.infer<typeof KiloPassStateSchema>
 export type AutoTopUpState = z.infer<typeof AutoTopUpStateSchema>
 export type CodingPlanSubscription = z.infer<typeof CodingPlanSubscriptionSchema>
 export type ByokEntry = z.infer<typeof ByokEntrySchema>
@@ -213,10 +177,6 @@ async function query<T>(procedure: string, token: string, schema: z.ZodType<T>, 
   const result = schema.safeParse(value)
   if (!result.success) throw new CloudTrpcError("schema", response.status)
   return result.data
-}
-
-export function getKiloPassState(token: string) {
-  return query("kiloPass.getState", token, KiloPassStateSchema)
 }
 
 export function getAutoTopUpState(token: string) {

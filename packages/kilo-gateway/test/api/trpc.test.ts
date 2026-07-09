@@ -3,7 +3,6 @@ import {
   CloudTrpcError,
   getAutoTopUpState,
   getCodingPlanUsage,
-  getKiloPassState,
   listByokEntries,
   listCodingPlanSubscriptions,
 } from "../../src/api/trpc"
@@ -103,27 +102,6 @@ describe("Cloud tRPC client", () => {
 
   test("validates every supported procedure projection", async () => {
     const payloads: Record<string, unknown> = {
-      "kiloPass.getState": {
-        subscription: {
-          subscriptionId: "pass",
-          tier: "tier_49",
-          cadence: "monthly",
-          status: "active",
-          cancelAtPeriodEnd: false,
-          currentStreakMonths: 2,
-          nextYearlyIssueAt: null,
-          startedAt: "2026-06-01T00:00:00.000Z",
-          resumesAt: null,
-          nextBonusCreditsUsd: 5,
-          nextBillingAt: "2026-07-01T00:00:00.000Z",
-          currentPeriodBaseCreditsUsd: 49,
-          currentPeriodUsageUsd: 12,
-          currentPeriodHostingCostUsd: 2,
-          currentPeriodBonusCreditsUsd: 5,
-          isBonusUnlocked: true,
-          refillAt: "2026-07-01T00:00:00.000Z",
-        },
-      },
       "codingPlans.getUsage": {
         subscriptionId: "plan",
         providerId: "minimax",
@@ -147,11 +125,9 @@ describe("Cloud tRPC client", () => {
       return Promise.resolve(result(payloads[procedure]))
     }) as unknown as typeof fetch
 
-    const pass = await getKiloPassState("token")
-    expect(pass.subscription?.currentPeriodUsageUsd).toBe(12)
     const usage = await getCodingPlanUsage("token", "plan")
     expect(usage.native.base_resp).toEqual({ status_code: 0 })
-    const call = (global.fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls[1]
+    const call = (global.fetch as unknown as { mock: { calls: Array<[string]> } }).mock.calls[0]
     expect(JSON.parse(new URL(call[0]).searchParams.get("input") ?? "null")).toEqual({ subscriptionId: "plan" })
   })
 
@@ -162,7 +138,7 @@ describe("Cloud tRPC client", () => {
       ),
     ) as unknown as typeof fetch
 
-    const error = await getKiloPassState("secret-token").catch((value) => value)
+    const error = await getAutoTopUpState("secret-token").catch((value) => value)
     expect(error).toBeInstanceOf(CloudTrpcError)
     expect(error).toMatchObject({ kind: "procedure", message: "Kilo Cloud data is temporarily unavailable." })
     expect(JSON.stringify(error)).not.toContain("raw private error")
@@ -171,11 +147,11 @@ describe("Cloud tRPC client", () => {
 
   test("maps malformed envelopes and schema failures safely", async () => {
     global.fetch = mock(() => Promise.resolve(new Response("not-json"))) as unknown as typeof fetch
-    await expect(getKiloPassState("token")).rejects.toMatchObject({ kind: "protocol" })
+    await expect(getAutoTopUpState("token")).rejects.toMatchObject({ kind: "protocol" })
 
     global.fetch = mock(() =>
-      Promise.resolve(result({ subscription: { status: "unknown" } })),
+      Promise.resolve(result({ enabled: "unknown" })),
     ) as unknown as typeof fetch
-    await expect(getKiloPassState("token")).rejects.toMatchObject({ kind: "schema" })
+    await expect(getAutoTopUpState("token")).rejects.toMatchObject({ kind: "schema" })
   })
 })

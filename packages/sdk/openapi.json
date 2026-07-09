@@ -28436,7 +28436,7 @@
           },
           "sourceKind": {
             "type": "string",
-            "enum": ["kilo_pass", "kilo_managed", "direct", "codex"]
+            "enum": ["kilo_managed", "direct", "codex"]
           },
           "providerLabel": {
             "type": "string"

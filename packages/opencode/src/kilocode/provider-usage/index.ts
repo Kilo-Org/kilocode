@@ -32,23 +32,14 @@ export interface ProviderUsageAdapter {
   run(ctx: AdapterContext): Promise<AdapterResult>
 }
 
-const pass: ProviderUsageAdapter = {
-  id: "kilo-pass",
+const billing: ProviderUsageAdapter = {
+  id: "kilo-billing",
   providerIDs: ["kilo"],
-  cachePrefixes: ["kilo-pass"],
+  cachePrefixes: [],
   async run(ctx) {
     if (!ctx.cloud) return { items: [] }
     const state = await ctx.cloud()
-    if (!state.pass.ok) return { items: ctx.preserve("kilo-pass"), kiloBilling: Cloud.billing(state) }
-    const detected = Cloud.pass(state)
-    ctx.prune(
-      "kilo-pass",
-      detected.map((item) => item.id),
-    )
-    return {
-      items: await Promise.all(detected.map((item) => ctx.source(item.id, async () => item))),
-      kiloBilling: Cloud.billing(state),
-    }
+    return { items: [], kiloBilling: Cloud.billing(state) }
   },
 }
 
@@ -88,7 +79,7 @@ const minimax: ProviderUsageAdapter = {
   },
 }
 
-export const registry: readonly ProviderUsageAdapter[] = [pass, managed, minimax]
+export const registry: readonly ProviderUsageAdapter[] = [billing, managed, minimax]
 
 export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("ProviderUsageServiceError", {
   message: Schema.String,

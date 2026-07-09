@@ -2692,7 +2692,7 @@ export type ProviderUsageError = {
 export type ProviderUsageSnapshot = {
   id: string
   providerID: string
-  sourceKind: "kilo_pass" | "kilo_managed" | "direct" | "codex"
+  sourceKind: "kilo_managed" | "direct" | "codex"
   providerLabel: string
   planLabel: string
   sourceLabel: string
