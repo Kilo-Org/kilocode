@@ -43,13 +43,13 @@ Then configure the built-in TrustedRouter provider in your `kilo.json` file:
     "trustedrouter": {
       "env": ["TRUSTEDROUTER_API_KEY"],
       "models": {
-        "trustedrouter/auto": {
+        "auto": {
           "name": "TrustedRouter Auto"
         },
-        "trustedrouter/zdr": {
+        "zdr": {
           "name": "TrustedRouter ZDR"
         },
-        "trustedrouter/e2e": {
+        "e2e": {
           "name": "TrustedRouter E2E"
         }
       }

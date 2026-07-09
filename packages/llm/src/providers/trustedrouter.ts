@@ -1,9 +1,9 @@
 import { Effect, Schema } from "effect"
-import { Route, type RouteModelInput } from "../route/client"
+import { Route, type RouteDefaultsInput } from "../route/client"
 import { Endpoint } from "../route/endpoint"
 import { Framing } from "../route/framing"
-import { Provider } from "../provider"
 import { Protocol } from "../route/protocol"
+import { AuthOptions, type ProviderAuthOption } from "../route/auth-options"
 import { ProviderID, type ModelID, type ProviderOptions } from "../schema"
 import * as OpenAICompatibleProfiles from "./openai-compatible-profile"
 import * as OpenAIChat from "../protocols/openai-chat"
@@ -24,11 +24,11 @@ export type TrustedRouterProviderOptionsInput = ProviderOptions & {
   readonly trustedrouter?: TrustedRouterOptions
 }
 
-export type ModelOptions = Omit<RouteModelInput, "id" | "baseURL" | "providerOptions"> & {
-  readonly baseURL?: string
-  readonly providerOptions?: TrustedRouterProviderOptionsInput
-}
-type ModelInput = ModelOptions & Pick<RouteModelInput, "id">
+export type ModelOptions = Omit<RouteDefaultsInput, "providerOptions"> &
+  ProviderAuthOption<"optional"> & {
+    readonly baseURL?: string
+    readonly providerOptions?: TrustedRouterProviderOptionsInput
+  }
 
 const TrustedRouterBody = Schema.StructWithRest(Schema.Struct(OpenAIChat.bodyFields), [
   Schema.Record(Schema.String, Schema.Any),
@@ -68,21 +68,38 @@ const bodyOptions = (input: unknown) => {
 
 export const route = Route.make({
   id: ADAPTER,
+  provider: profile.provider,
   protocol,
-  endpoint: Endpoint.path("/chat/completions"),
+  endpoint: Endpoint.path("/chat/completions", { baseURL: profile.baseURL }),
   framing: Framing.sse,
 })
 
 export const routes = [route]
 
-const modelRef = Route.model<ModelInput>(route, {
-  provider: profile.provider,
-  baseURL: profile.baseURL,
-})
+const configuredRoute = (input: ModelOptions) => {
+  const { apiKey: _, auth: _auth, baseURL, ...rest } = input
+  return route.with({
+    ...rest,
+    endpoint: { baseURL: baseURL ?? profile.baseURL },
+    auth: AuthOptions.bearer(input, "TRUSTEDROUTER_API_KEY"),
+  })
+}
 
-export const model = (id: string | ModelID, options: ModelOptions = {}) => modelRef({ ...options, id })
+// Kilo's parseModel("trustedrouter/auto") yields the bare model id "auto",
+// but the TrustedRouter API expects the fully-qualified "trustedrouter/auto".
+// Re-qualify bare aliases (auto, zdr, e2e, cheap, ...) here; ids that already
+// carry a namespace ("anthropic/claude-opus-4.8", "trustedrouter/synth"
+// arriving as "synth" gets the same treatment) pass through untouched.
+const qualifiedModelID = (modelID: string) => (modelID.includes("/") ? modelID : `${ADAPTER}/${modelID}`)
 
-export const provider = Provider.make({
-  id,
-  model,
-})
+export const configure = (input: ModelOptions = {}) => {
+  const route = configuredRoute(input)
+  return {
+    id,
+    model: (modelID: string | ModelID) => route.model({ id: qualifiedModelID(modelID) }),
+    configure,
+  }
+}
+
+export const provider = configure()
+export const model = provider.model
