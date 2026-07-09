@@ -282,7 +282,3 @@ export namespace KiloSessionPrompt {
     return true
   }
 }
-
-function iife<T>(fn: () => T | Promise<T>): Promise<T> {
-  return Promise.resolve(fn())
-}

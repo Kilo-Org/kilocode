@@ -366,6 +366,8 @@ describe("session.prompt regression", () => {
           expect(toolPart).toBeDefined()
           if (toolPart && toolPart.type === "tool" && toolPart.state.status === "completed") {
             expect(toolPart.state.input.subagent_type).toBe("frontend")
+            expect(toolPart.state.input.prompt).toBe("No tools. Say exactly: FRONTEND_OK")
+            expect(toolPart.state.input.prompt).not.toContain("<environment_details>")
           }
 
           const msgs = await Session.messages({ sessionID: session.id })
