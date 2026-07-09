@@ -49,7 +49,9 @@ import {
   type TranscriptHold,
   type TranscriptRow,
 } from "../../context/transcript-rows"
-import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
+import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
+import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
+import type { Part, QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
@@ -135,6 +137,217 @@ export const MessageList: Component<MessageListProps> = (props) => {
       prev,
     )
   })
+
+  const search = useTranscriptSearch()
+
+  function rowText(row: TranscriptRow): string {
+    if (row.type === "error") return row.error.name
+    if (row.type === "diff") return ""
+    const chunks: string[] = []
+    for (const part of row.parts) {
+      switch (part.type) {
+        case "text":
+          if (!part.synthetic) chunks.push(part.text)
+          break
+        case "reasoning":
+          chunks.push(part.text)
+          break
+        case "tool":
+          chunks.push(...toolText(part))
+          break
+        case "file":
+          if (part.filename) chunks.push(part.filename)
+          break
+      }
+    }
+    return chunks.join("\n")
+  }
+
+  // Extracts only the text kilo-ui's tool renderers actually put on screen —
+  // matched field-by-field rather than reading `state.title` generically.
+  // The bash/shell renderer never shows `state.title` (its header is a
+  // static "Shell" label); the visible command/description come from
+  // `state.input` instead, and its output is shown as plain scrollable
+  // text. Other tools' `state.output` is typically internal data (file
+  // contents, JSON) that isn't rendered inline, so including it — or bash's
+  // unused `title` — produces search matches with no corresponding
+  // highlight, which is what made navigation appear to skip past matches.
+  function toolText(part: Part & { type: "tool" }): string[] {
+    const state = part.state
+    if (state.status === "running") return state.title ? [state.title] : []
+    if (state.status === "error") return state.error ? [state.error] : []
+    if (state.status !== "completed") return []
+    if (part.tool !== "bash") return state.title ? [state.title] : []
+    const input = state.input as { command?: string; description?: string } | undefined
+    const metadata = state.metadata as { command?: string; description?: string } | undefined
+    const command = input?.command ?? metadata?.command
+    const description = input?.description ?? metadata?.description
+    const chunks: string[] = []
+    if (command) chunks.push(command)
+    if (description) chunks.push(description)
+    if (state.output) chunks.push(state.output)
+    return chunks
+  }
+
+  function buildPattern(query: string, matchCase: boolean, wholeWord: boolean, regex: boolean): RegExp | undefined {
+    if (!query) return undefined
+    try {
+      let pattern = query
+      if (!regex) {
+        pattern = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      }
+      if (wholeWord) {
+        pattern = `\\b(?:${pattern})\\b`
+      }
+      return new RegExp(pattern, matchCase ? "g" : "gi")
+    } catch {
+      return undefined
+    }
+  }
+
+  const matches = createMemo(() => {
+    const q = search.query()
+    if (!search.active() || !q) return []
+    const pattern = buildPattern(q, search.matchCase(), search.wholeWord(), search.regex())
+    if (!pattern) return []
+    const list = rows()
+    const result: SearchMatch[] = []
+    for (const row of list) {
+      const text = rowText(row)
+      pattern.lastIndex = 0
+      let occurrence = 0
+      let hit = pattern.exec(text)
+      while (hit) {
+        if (hit[0].length === 0) {
+          pattern.lastIndex += 1
+          hit = pattern.exec(text)
+          continue
+        }
+        result.push({ key: row.key, messageId: row.message.id, occurrence })
+        occurrence += 1
+        hit = pattern.exec(text)
+      }
+    }
+    return result
+  })
+
+  createEffect(
+    on(matches, (m) => {
+      search.setCount(m.length)
+      if (m.length === 0) {
+        search.setIndex(0)
+        return
+      }
+      const idx = search.index()
+      if (idx >= m.length) search.setIndex(m.length - 1)
+    }),
+  )
+
+  createEffect(
+    on(
+      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex()],
+      () => search.setIndex(0),
+    ),
+  )
+
+  const activeKey = createMemo(() => {
+    const m = matches()
+    const idx = search.index()
+    return m[idx]?.key
+  })
+
+  const activeMatch = createMemo(() => matches()[search.index()])
+
+  // Highlights every rendered occurrence of the query (not just matching
+  // rows) via the CSS Custom Highlight API, and returns the precise Range of
+  // the current occurrence so navigation can judge whether it needs to
+  // scroll at all (several occurrences can share one message).
+  let highlightFrame: number | undefined
+  let pendingCenter = false
+  const paintHighlights = () => {
+    const el = scrollEl()
+    if (!el || !search.active()) {
+      clearTranscriptHighlights()
+      return
+    }
+    const pattern = buildPattern(search.query(), search.matchCase(), search.wholeWord(), search.regex())
+    const active = activeMatch()
+    const range = applyTranscriptHighlights(el, pattern, active && { key: active.key, occurrence: active.occurrence })
+    if (!pendingCenter) return
+    pendingCenter = false
+    if (!range) return
+    // Only nudge the scroll position when the match isn't already
+    // comfortably placed — re-centering on every single step (even when
+    // the match is already visible) reads as constant, distracting jumping
+    // when several occurrences share one message.
+    const rect = range.getClientRects()[0]
+    if (!rect) return
+    const box = el.getBoundingClientRect()
+    const fullyVisible = rect.top >= box.top && rect.bottom <= box.bottom
+    // Comfort band covers the middle 70% of the viewport (15% margin top
+    // and bottom) — wide enough that most steps between nearby matches
+    // don't scroll at all, while still recentering before a match gets
+    // uncomfortably close to the edge.
+    const comfortMargin = box.height * 0.35
+    const centered = Math.abs(rect.top + rect.height / 2 - (box.top + box.height / 2)) <= comfortMargin
+    if (fullyVisible && centered) return
+    const container = range.startContainer
+    const target = container instanceof Element ? container : container?.parentElement
+    target?.scrollIntoView({ block: "center", inline: "nearest" })
+  }
+
+  // Two frames of margin so the virtualizer has settled the DOM for the new
+  // scroll position before we scan it for the precise occurrence to center.
+  const scheduleHighlight = () => {
+    if (highlightFrame !== undefined) return
+    highlightFrame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        highlightFrame = undefined
+        paintHighlights()
+      })
+    })
+  }
+
+  createEffect(
+    on(
+      () => [search.query(), search.matchCase(), search.wholeWord(), search.regex(), search.active(), activeMatch()],
+      scheduleHighlight,
+    ),
+  )
+
+  createEffect(
+    on(
+      () => search.jump(),
+      () => {
+        const m = matches()
+        const idx = search.index()
+        if (!m.length || idx < 0 || idx >= m.length) return
+        const match = m[idx]
+        if (!match) return
+        autoScroll.pause()
+        pendingCenter = true
+        const el = scrollEl()
+        const mounted = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(match.key)}"]`)
+        // Only force the coarse row-level scroll when the row isn't in the
+        // DOM at all (virtualized out). If it's already mounted, defer
+        // entirely to the precise per-occurrence check in paintHighlights,
+        // which only scrolls when the exact match actually needs it.
+        if (!mounted) {
+          const index = keys().indexOf(match.key)
+          if (index >= 0) {
+            virtualizer()?.scrollToIndex(index, { align: "center" })
+          }
+        }
+        scheduleHighlight()
+      },
+    ),
+  )
+
+  onCleanup(() => {
+    if (highlightFrame !== undefined) cancelAnimationFrame(highlightFrame)
+    clearTranscriptHighlights()
+  })
+
   const [held, setHeld] = createSignal<TranscriptHold>()
   createEffect(() => {
     const id = activeUserID()
@@ -227,6 +440,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const handleScroll = () => {
     autoScroll.handleScroll()
     maybeLoadOlder()
+    if (search.active()) scheduleHighlight()
   }
 
   let resize: ResizeObserver | undefined
@@ -371,19 +585,32 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     itemSize={260}
                   >
                     {(row, index) => (
-                      <TranscriptRowView row={row} index={index()} onForkMessage={props.onForkMessage} />
+                      <TranscriptRowView
+                        row={row}
+                        index={index()}
+                        onForkMessage={props.onForkMessage}
+                        activeSearch={activeKey() === row.key}
+                      />
                     )}
                   </Virtualizer>
                 </Show>
                 <For each={tail()}>
-                  {(key) => <TranscriptRowView row={lookup().get(key)!} onForkMessage={props.onForkMessage} />}
+                  {(key) => (
+                    <TranscriptRowView
+                      row={lookup().get(key)!}
+                      onForkMessage={props.onForkMessage}
+                      activeSearch={activeKey() === key}
+                    />
+                  )}
                 </For>
               </div>
             </Show>
             <Show when={revert()}>
               <RevertBanner />
             </Show>
-            <For each={partition().queued}>{(row) => <TranscriptRowView row={row} />}</For>
+            <For each={partition().queued}>
+              {(row) => <TranscriptRowView row={row} activeSearch={activeKey() === row.key} />}
+            </For>
             <WorkingIndicator />
             <TurnOutcome />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>

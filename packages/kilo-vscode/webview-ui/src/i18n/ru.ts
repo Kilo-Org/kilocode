@@ -1869,4 +1869,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Загрузка веток…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "План готов:",
+  "chat.search.placeholder": "Поиск в чате…",
+  "chat.search.toggle": "Поиск в чате",
+  "chat.search.matchCase": "Учитывать регистр",
+  "chat.search.matchWholeWord": "Слово целиком",
+  "chat.search.useRegex": "Использовать регулярное выражение",
+  "chat.search.previousMatch": "Предыдущее совпадение",
+  "chat.search.nextMatch": "Следующее совпадение",
+  "chat.search.close": "Закрыть поиск",
 }

@@ -1913,4 +1913,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Chargement des branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Le plan est prêt :",
+  "chat.search.placeholder": "Rechercher dans la conversation…",
+  "chat.search.toggle": "Rechercher dans la conversation",
+  "chat.search.matchCase": "Respecter la casse",
+  "chat.search.matchWholeWord": "Mot entier",
+  "chat.search.useRegex": "Utiliser une expression régulière",
+  "chat.search.previousMatch": "Résultat précédent",
+  "chat.search.nextMatch": "Résultat suivant",
+  "chat.search.close": "Fermer la recherche",
 }

@@ -1903,4 +1903,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Branches werden geladen…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan ist bereit:",
+  "chat.search.placeholder": "Chat durchsuchen…",
+  "chat.search.toggle": "Chat durchsuchen",
+  "chat.search.matchCase": "Groß-/Kleinschreibung beachten",
+  "chat.search.matchWholeWord": "Ganzes Wort suchen",
+  "chat.search.useRegex": "Regulären Ausdruck verwenden",
+  "chat.search.previousMatch": "Vorheriger Treffer",
+  "chat.search.nextMatch": "Nächster Treffer",
+  "chat.search.close": "Suche schließen",
 } satisfies Partial<Record<Keys, string>>

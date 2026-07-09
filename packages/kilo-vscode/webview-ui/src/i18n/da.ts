@@ -1865,4 +1865,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
+  "chat.search.placeholder": "Søg i chat…",
+  "chat.search.toggle": "Søg i chat",
+  "chat.search.matchCase": "Forskel på store/små bogstaver",
+  "chat.search.matchWholeWord": "Match helt ord",
+  "chat.search.useRegex": "Brug regulært udtryk",
+  "chat.search.previousMatch": "Forrige match",
+  "chat.search.nextMatch": "Næste match",
+  "chat.search.close": "Luk søgning",
 }

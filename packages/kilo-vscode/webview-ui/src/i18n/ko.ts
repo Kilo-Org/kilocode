@@ -1840,4 +1840,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "브랜치 로딩 중…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "계획이 준비되었습니다:",
+  "chat.search.placeholder": "채팅 검색…",
+  "chat.search.toggle": "채팅 검색",
+  "chat.search.matchCase": "대/소문자 구분",
+  "chat.search.matchWholeWord": "단어 단위로 검색",
+  "chat.search.useRegex": "정규식 사용",
+  "chat.search.previousMatch": "이전 검색 결과",
+  "chat.search.nextMatch": "다음 검색 결과",
+  "chat.search.close": "검색 닫기",
 }

@@ -1881,4 +1881,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Carregando branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plano pronto:",
+  "chat.search.placeholder": "Pesquisar na conversa…",
+  "chat.search.toggle": "Pesquisar na conversa",
+  "chat.search.matchCase": "Diferenciar maiúsculas de minúsculas",
+  "chat.search.matchWholeWord": "Coincidir palavra inteira",
+  "chat.search.useRegex": "Usar expressão regular",
+  "chat.search.previousMatch": "Correspondência anterior",
+  "chat.search.nextMatch": "Próxima correspondência",
+  "chat.search.close": "Fechar pesquisa",
 }

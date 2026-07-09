@@ -1887,4 +1887,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan hazır:",
+  "chat.search.placeholder": "Sohbette ara…",
+  "chat.search.toggle": "Sohbette ara",
+  "chat.search.matchCase": "Büyük/küçük harf eşleştir",
+  "chat.search.matchWholeWord": "Tam sözcük eşleştir",
+  "chat.search.useRegex": "Normal ifade kullan",
+  "chat.search.previousMatch": "Önceki eşleşme",
+  "chat.search.nextMatch": "Sonraki eşleşme",
+  "chat.search.close": "Aramayı kapat",
 }

@@ -1873,4 +1873,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan je spreman:",
+  "chat.search.placeholder": "Pretraži chat…",
+  "chat.search.toggle": "Pretraži chat",
+  "chat.search.matchCase": "Podudaranje velikih/malih slova",
+  "chat.search.matchWholeWord": "Podudaranje cijele riječi",
+  "chat.search.useRegex": "Koristi regularni izraz",
+  "chat.search.previousMatch": "Prethodno podudaranje",
+  "chat.search.nextMatch": "Sljedeće podudaranje",
+  "chat.search.close": "Zatvori pretragu",
 }

@@ -1884,4 +1884,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "План готовий:",
+  "chat.search.placeholder": "Пошук у чаті…",
+  "chat.search.toggle": "Пошук у чаті",
+  "chat.search.matchCase": "Враховувати регістр",
+  "chat.search.matchWholeWord": "Слово цілком",
+  "chat.search.useRegex": "Використовувати регулярний вираз",
+  "chat.search.previousMatch": "Попередній збіг",
+  "chat.search.nextMatch": "Наступний збіг",
+  "chat.search.close": "Закрити пошук",
 }

@@ -1798,4 +1798,12 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Nessun parlato rilevato.",
   "speechToText.error.encoding": "Impossibile codificare la registrazione.",
   "speechToText.toast.transcribed": "Trascrizione inserita",
+  "chat.search.placeholder": "Cerca nella chat…",
+  "chat.search.toggle": "Cerca nella chat",
+  "chat.search.matchCase": "Maiuscole/minuscole",
+  "chat.search.matchWholeWord": "Parola intera",
+  "chat.search.useRegex": "Usa espressione regolare",
+  "chat.search.previousMatch": "Risultato precedente",
+  "chat.search.nextMatch": "Risultato successivo",
+  "chat.search.close": "Chiudi ricerca",
 } as const

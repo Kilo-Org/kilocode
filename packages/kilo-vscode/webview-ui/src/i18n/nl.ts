@@ -1900,4 +1900,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan is klaar:",
+  "chat.search.placeholder": "Chat doorzoeken…",
+  "chat.search.toggle": "Chat doorzoeken",
+  "chat.search.matchCase": "Hoofdlettergevoelig",
+  "chat.search.matchWholeWord": "Heel woord",
+  "chat.search.useRegex": "Reguliere expressie gebruiken",
+  "chat.search.previousMatch": "Vorige overeenkomst",
+  "chat.search.nextMatch": "Volgende overeenkomst",
+  "chat.search.close": "Zoeken sluiten",
 }

@@ -1838,4 +1838,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "แผนพร้อมแล้ว:",
+  "chat.search.placeholder": "ค้นหาในแชท…",
+  "chat.search.toggle": "ค้นหาในแชท",
+  "chat.search.matchCase": "ตรงตามตัวพิมพ์ใหญ่-เล็ก",
+  "chat.search.matchWholeWord": "ตรงทั้งคำ",
+  "chat.search.useRegex": "ใช้นิพจน์ทั่วไป",
+  "chat.search.previousMatch": "รายการที่ตรงกันก่อนหน้า",
+  "chat.search.nextMatch": "รายการที่ตรงกันถัดไป",
+  "chat.search.close": "ปิดการค้นหา",
 }

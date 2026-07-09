@@ -1787,4 +1787,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "正在加载分支…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "计划已准备就绪：",
+  "chat.search.placeholder": "搜索聊天…",
+  "chat.search.toggle": "搜索聊天",
+  "chat.search.matchCase": "区分大小写",
+  "chat.search.matchWholeWord": "全字匹配",
+  "chat.search.useRegex": "使用正则表达式",
+  "chat.search.previousMatch": "上一个匹配项",
+  "chat.search.nextMatch": "下一个匹配项",
+  "chat.search.close": "关闭搜索",
 } satisfies Partial<Record<Keys, string>>

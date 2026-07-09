@@ -1858,4 +1858,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
+  "chat.search.placeholder": "Søk i chat…",
+  "chat.search.toggle": "Søk i chat",
+  "chat.search.matchCase": "Skill mellom store og små bokstaver",
+  "chat.search.matchWholeWord": "Treff hele ord",
+  "chat.search.useRegex": "Bruk regulært uttrykk",
+  "chat.search.previousMatch": "Forrige treff",
+  "chat.search.nextMatch": "Neste treff",
+  "chat.search.close": "Lukk søk",
 } satisfies Partial<Record<Keys, string>>

@@ -1889,4 +1889,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Cargando ramas…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "El plan está listo:",
+  "chat.search.placeholder": "Buscar en el chat…",
+  "chat.search.toggle": "Buscar en el chat",
+  "chat.search.matchCase": "Coincidir mayúsculas y minúsculas",
+  "chat.search.matchWholeWord": "Solo palabras completas",
+  "chat.search.useRegex": "Usar expresión regular",
+  "chat.search.previousMatch": "Coincidencia anterior",
+  "chat.search.nextMatch": "Coincidencia siguiente",
+  "chat.search.close": "Cerrar búsqueda",
 }

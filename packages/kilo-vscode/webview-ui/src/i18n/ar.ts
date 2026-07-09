@@ -1832,4 +1832,12 @@ export const dict = {
   "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "الخطة جاهزة:",
+  "chat.search.placeholder": "البحث في المحادثة…",
+  "chat.search.toggle": "البحث في المحادثة",
+  "chat.search.matchCase": "مطابقة حالة الأحرف",
+  "chat.search.matchWholeWord": "مطابقة الكلمة بأكملها",
+  "chat.search.useRegex": "استخدام تعبير عادي",
+  "chat.search.previousMatch": "المطابقة السابقة",
+  "chat.search.nextMatch": "المطابقة التالية",
+  "chat.search.close": "إغلاق البحث",
 }

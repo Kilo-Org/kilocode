@@ -1860,4 +1860,12 @@ export const dict = {
   "diffViewer.baseBranch.none": "—",
 
   "plan.exit.ready": "Plan is ready:",
+  "chat.search.placeholder": "Search chat…",
+  "chat.search.toggle": "Search chat",
+  "chat.search.matchCase": "Match Case",
+  "chat.search.matchWholeWord": "Match Whole Word",
+  "chat.search.useRegex": "Use Regular Expression",
+  "chat.search.previousMatch": "Previous match",
+  "chat.search.nextMatch": "Next match",
+  "chat.search.close": "Close search",
 }
