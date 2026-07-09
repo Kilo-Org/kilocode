@@ -49,7 +49,7 @@ async function main() {
   let dry = false
   for (let i = 0; i < local.length; i++) {
     const a = local[i]
-    if (a === "--cloud") cloud = local[++i]
+    if (a === "--cloud") cloud = local[++i] ?? die("--cloud requires a value")
     else if (a === "--no-ingest") noIngest = true
     else if (a === "--print") dry = true
     else if (!a.startsWith("--")) project = a
