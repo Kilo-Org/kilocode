@@ -136,6 +136,21 @@ export const LoggedInPersonal: Story = {
   ),
 }
 
+export const ScrollableUsage: Story = {
+  name: "ProfileView — scrollable usage",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "420px", height: "480px" }}>
+        <ProfileView profileData={personalProfile} providerUsage={usage} deviceAuth={idleAuth} onLogin={noop} />
+      </div>
+    </StoryProviders>
+  ),
+  play: (context: { canvasElement: HTMLElement }) => {
+    const pane = context.canvasElement.querySelector<HTMLElement>("[data-profile-scroll]")
+    if (pane) pane.scrollTop = pane.scrollHeight
+  },
+}
+
 export const NotLoggedIn: Story = {
   name: "ProfileView — not logged in",
   render: () => (

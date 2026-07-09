@@ -130,7 +130,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   }
 
   return (
-    <div style={{ display: "flex", "flex-direction": "column", height: "100%" }}>
+    <div style={{ display: "flex", "flex-direction": "column", height: "100%", "min-height": 0, overflow: "hidden" }}>
       <div
         style={{
           padding: "12px 16px",
@@ -145,7 +145,18 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
         </h2>
       </div>
       <div
-        style={{ padding: "16px", "max-width": "480px", margin: "0 auto", width: "100%", "box-sizing": "border-box" }}
+        data-profile-scroll
+        style={{
+          flex: 1,
+          "min-height": 0,
+          "overflow-y": "auto",
+          "overflow-x": "hidden",
+          padding: "16px",
+          "max-width": "480px",
+          margin: "0 auto",
+          width: "100%",
+          "box-sizing": "border-box",
+        }}
       >
         <Show
           when={props.profileData}
