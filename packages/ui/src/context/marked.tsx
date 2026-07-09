@@ -292,9 +292,9 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             if (file) {
               const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
               const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-              return `<code class="file-link" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
+              return `<code class="file-link" dir="auto" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
             }
-            return `<code>${escaped}</code>`
+            return `<code dir="auto">${escaped}</code>`
           },
           code({ text, lang }) {
             const escaped = text
@@ -309,7 +309,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
             const data = safe.toLowerCase() === "mermaid" ? "mermaid" : safe
             const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
-            return `<pre><code${attr}>${escaped}</code></pre>`
+            return `<pre dir="auto"><code${attr}>${escaped}</code></pre>`
           },
           // kilocode_change end
         },

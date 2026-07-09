@@ -8,7 +8,6 @@ import { ComponentProps, createEffect, createResource, createSignal, onCleanup, 
 import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
-import { markBidi } from "../kilocode/markdown-bidi" // kilocode_change
 import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid" // kilocode_change
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight" // kilocode_change
 import { createIncrementalMarkdown, type MarkdownBlock } from "../kilocode/markdown-incremental-dom" // kilocode_change
@@ -189,7 +188,6 @@ function decorate(root: HTMLDivElement, labels: CopyLabels) {
     ensureCodeWrapper(block, labels)
   }
   markCodeLinks(root)
-  markBidi(root) // kilocode_change
 }
 
 function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
@@ -546,6 +544,7 @@ export function Markdown(
   return (
     <div
       data-component="markdown"
+      dir={"auto" /* kilocode_change */}
       classList={{
         ...local.classList,
         [local.class ?? ""]: !!local.class,

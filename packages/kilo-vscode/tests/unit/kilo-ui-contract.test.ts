@@ -16,8 +16,6 @@
 import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
-import { Window } from "happy-dom"
-import { markBidi } from "../../../ui/src/kilocode/markdown-bidi"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
@@ -158,42 +156,6 @@ describe("Assistant Markdown streaming contract (source)", () => {
   it("passes active text streams through Markdown's streaming mode", () => {
     expect(block).not.toBe("")
     expect(block).toContain("streaming={streaming()}")
-  })
-})
-
-describe("Markdown bidirectional rendering contract", () => {
-  it("adds dir to direction-owning markdown blocks without nesting it inside containers", () => {
-    const win = new Window()
-    const root = win.document.createElement("div")
-    root.innerHTML = `
-      <h1>عنوان ۱</h1>
-      <h2>عنوان ۲</h2>
-      <h3>عنوان ۳</h3>
-      <h4>عنوان ۴</h4>
-      <h5>عنوان ۵</h5>
-      <h6>عنوان ۶</h6>
-      <p>متن فارسی با <code>inline</code></p>
-      <blockquote><p>نقل قول فارسی</p></blockquote>
-      <ul><li>مورد اول<ul><li>مورد دوم</li></ul></li></ul>
-      <table><thead><tr><th>ستون</th></tr></thead><tbody><tr><td>کیلو</td></tr></tbody></table>
-      <pre><code data-lang="ts">const value = "کیلو"</code></pre>
-    `
-
-    markBidi(root)
-
-    for (const tag of ["h1", "h2", "h3", "h4", "h5", "h6"]) {
-      expect(root.querySelector(tag)?.getAttribute("dir")).toBe("auto")
-    }
-    expect(root.querySelector("p")?.getAttribute("dir")).toBe("auto")
-    expect(root.querySelector("blockquote")?.getAttribute("dir")).toBe("auto")
-    expect(root.querySelector("ul")?.getAttribute("dir")).toBe("auto")
-    expect(root.querySelector("table")?.getAttribute("dir")).toBe("auto")
-    expect(root.querySelector("pre")?.getAttribute("dir")).toBe("auto")
-    expect(root.querySelector(":not(pre) > code")?.getAttribute("dir")).toBe("auto")
-
-    expect(root.querySelector("blockquote p")?.hasAttribute("dir")).toBe(false)
-    expect(root.querySelector("li")?.hasAttribute("dir")).toBe(false)
-    expect(root.querySelector("td")?.hasAttribute("dir")).toBe(false)
   })
 })
 
