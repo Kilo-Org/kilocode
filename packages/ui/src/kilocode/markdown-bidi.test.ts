@@ -50,7 +50,7 @@ describe("Markdown bidirectional rendering contract", () => {
       stderr: "pipe",
     })
 
-    expect(proc.exitCode).toBe(0)
+    expect(proc.exitCode, proc.stderr.toString()).toBe(0)
     const html = proc.stdout.toString()
     expect(html).toContain('data-component="markdown"')
     expect(html).toContain('dir="auto"')
