@@ -13,6 +13,7 @@ import type {
 import { MaxCostNudge, type MaxCostChoice } from "@opencode-ai/core/kilocode/cost/max-cost-nudge"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import { previewSound } from "./services/attention"
+import { registerSoundWebview } from "./services/attention/webview-sound"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
@@ -420,6 +421,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
+  private sound: ReturnType<typeof registerSoundWebview> | null = null
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
   private readonly marketplaceRemove = createMarketplaceRemover()
 
@@ -717,6 +719,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.isWebviewReady = false
     this.webview = webviewView.webview
+    this.registerSound(webviewView.webview)
 
     webviewView.webview.options = {
       enableScripts: true,
@@ -749,6 +752,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // WebviewPanel can be restored/reloaded; ensure we don't treat it as ready prematurely.
     this.isWebviewReady = false
     this.webview = panel.webview
+    this.registerSound(panel.webview)
 
     panel.webview.options = {
       enableScripts: true,
@@ -880,6 +884,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): void {
     this.isWebviewReady = false
     this.webview = webview
+    this.registerSound(webview)
     if (!this.autoApproveBridge) this.onBeforeMessage = options?.onBeforeMessage ?? null
     this.setupWebviewMessageHandler(webview)
     this.initializeConnection()
@@ -948,6 +953,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
+          this.markSoundReady()
           this.visibleTaskStreams.clear()
           this.flushPendingKiloModel()
           await this.syncWebviewState("webviewReady")
@@ -4314,6 +4320,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  private registerSound(webview: vscode.Webview): void {
+    this.sound?.dispose()
+    this.sound = registerSoundWebview(
+      (message) => webview.postMessage(message),
+      (id) => webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "audio-wav", `${id}.wav`)).toString(),
+    )
+  }
+
+  private markSoundReady(): void {
+    this.sound?.ready()
+  }
+
   // legacy-migration start -------------------------------------------------------
   // Migration handlers extracted to kilo-provider/handlers/migration.ts
 
@@ -4394,6 +4412,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.indexingConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
+    this.sound?.dispose()
+    this.sound = null
     this.visibleTaskStreams.clear()
     this.streams.dispose()
     this.isWebviewReady = false
