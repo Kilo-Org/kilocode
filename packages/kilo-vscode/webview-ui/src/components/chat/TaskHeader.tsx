@@ -21,7 +21,7 @@ import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
-import { formatSummaryCost, hasModelUsage, tokenSummary } from "../../context/model-usage"
+import { formatSummaryCost, hasModelUsage, summaryCost, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
@@ -43,7 +43,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
   const cost = createMemo(() => {
-    const total = session.modelUsage()?.totals.cost
+    const total = summaryCost(session.currentSessionID(), session.modelUsage(), session.costBreakdown)
     if (!total) return undefined
     return formatSummaryCost(total, language.locale())
   })

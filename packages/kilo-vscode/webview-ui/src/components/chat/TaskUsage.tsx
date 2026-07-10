@@ -18,6 +18,15 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
   const language = useLanguage()
   const provider = useProvider()
   const groups = createMemo(() => groupModelUsage(props.usage?.models ?? [], provider.providers()))
+  const money = createMemo(
+    () =>
+      new Intl.NumberFormat(language.locale(), {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6,
+      }),
+  )
   const number = formatCompactCount
   const count = (value: number) => value.toLocaleString(language.locale())
   const rate = (model: SessionModelUsage["models"][number]) => {
@@ -79,8 +88,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
                           {modelUsageName(model, provider.providers())}
                         </div>
                         <div class="task-header-usage-meta">
-                          {model.steps} {model.steps === 1 ? "step" : "steps"} ·{" "}
-                          {formatCost(model.cost, language.locale())}
+                          {model.steps} {model.steps === 1 ? "step" : "steps"} · {formatCost(model.cost, money())}
                         </div>
                         <div class="task-header-usage-meta">
                           In {count(model.tokens.input)} · Out {count(model.tokens.output)} · Reason{" "}

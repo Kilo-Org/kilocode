@@ -4,15 +4,10 @@ const DATE_SUFFIX = /(?:-(?:20\d{6}|20\d{2}-\d{2}-\d{2}))(?:-v\d+(?::\d+)?)?$/i
 
 export type TokenSummary = { input: number; output: number; cached: number }
 
-export function formatCost(input: number, locale: string) {
+export function formatCost(input: number, formatter: Intl.NumberFormat) {
   const value = Math.max(0, Number.isFinite(input) ? input : 0)
   if (value > 0 && value < 0.000001) return "<$0.000001"
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(value)
+  return formatter.format(value)
 }
 
 export function formatSummaryCost(input: number, locale: string) {
@@ -23,6 +18,15 @@ export function formatSummaryCost(input: number, locale: string) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value)
+}
+
+export function summaryCost(
+  sessionID: string | undefined,
+  usage: SessionModelUsage | undefined,
+  fallback: () => Array<{ cost: number }>,
+) {
+  if (sessionID?.startsWith("cloud:")) return fallback().reduce((sum, item) => sum + item.cost, 0)
+  return usage?.totals.cost
 }
 
 export function isSameSessionTree(
