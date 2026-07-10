@@ -350,6 +350,13 @@
   flex-shrink: 0;
 }
 
+[data-slot="transcript-search-empty"] {
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 [data-slot="transcript-search-nav"] {
   display: flex;
   align-items: center;

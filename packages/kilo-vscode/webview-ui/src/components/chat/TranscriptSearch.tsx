@@ -117,7 +117,7 @@ export const TranscriptSearch: Component = () => {
           <span data-slot="transcript-search-error">{language.t("chat.search.invalidRegex")}</span>
         </Show>
         <Show when={!search.invalid() && search.query().length > 0 && search.count() === 0}>
-          <span data-slot="transcript-search-error">{language.t("chat.search.noResults")}</span>
+          <span data-slot="transcript-search-empty">{language.t("chat.search.noResults")}</span>
         </Show>
         <Show when={!search.invalid() && search.count() > 0}>
           <span data-slot="transcript-search-counter">
