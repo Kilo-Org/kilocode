@@ -15,7 +15,7 @@ export function adapterState() {
     reasoning: 0,
     currentTextID: undefined as string | undefined,
     currentReasoningID: undefined as string | undefined,
-    pendingText: {} as Record<string, string>, // kilocode_change
+    pendingText: new Map<string, string | null>(), // kilocode_change
     toolNames: {} as Record<string, string>,
   }
 }
@@ -86,7 +86,13 @@ export function toLLMEvents(
 
     case "finish":
       return Effect.sync(() => {
+        // kilocode_change start
+        const text = state.currentTextID
+          ? ReasoningToken.filter(state.pendingText, state.currentTextID, "", true)
+          : ""
         const events = [
+          ...(text && state.currentTextID ? [LLMEvent.textDelta({ id: state.currentTextID, text })] : []),
+          // kilocode_change end
           LLMEvent.finish({
             reason: finishReason(event.finishReason),
             usage: usage(event.totalUsage),
@@ -99,6 +105,7 @@ export function toLLMEvents(
         return events
       })
 
+    // kilocode_change start
     case "text-start":
       return Effect.sync(() => {
         state.currentTextID = currentTextID(state, event.id)
@@ -113,7 +120,7 @@ export function toLLMEvents(
     case "text-delta":
       return Effect.sync(() => {
         const id = currentTextID(state, event.id)
-        const text = ReasoningToken.filter(state.pendingText, id, event.text) // kilocode_change
+        const text = ReasoningToken.filter(state.pendingText, id, event.text)
         if (!text) return []
         return [
           LLMEvent.textDelta({
@@ -127,7 +134,7 @@ export function toLLMEvents(
     case "text-end":
       return Effect.sync(() => {
         const id = currentTextID(state, event.id)
-        const text = ReasoningToken.filter(state.pendingText, id, "", true) // kilocode_change
+        const text = ReasoningToken.filter(state.pendingText, id, "", true)
         state.currentTextID = undefined
         return [
           ...(text
@@ -145,6 +152,7 @@ export function toLLMEvents(
           }),
         ]
       })
+      // kilocode_change end
 
     case "reasoning-start":
       return Effect.sync(() => {
@@ -256,6 +264,15 @@ export function toLLMEvents(
       return Effect.fail(event.error)
 
     case "abort":
+      // kilocode_change start
+      return Effect.sync(() => {
+        if (!state.currentTextID) return []
+        const id = state.currentTextID
+        const text = ReasoningToken.filter(state.pendingText, id, "", true)
+        return text ? [LLMEvent.textDelta({ id, text })] : []
+      })
+      // kilocode_change end
+
     case "source":
     case "file":
     case "raw":

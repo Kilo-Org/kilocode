@@ -4,18 +4,29 @@ const markers = [
   "</think>",
   ...bars.flatMap((bar) => gaps.map((gap) => `<${bar}end${gap}of${gap}thinking${bar}>`)),
 ]
-const pattern = new RegExp(markers.map((marker) => marker.replace(/[|]/g, "\\|")).join("|"), "gi")
+export type State = Map<string, string | null>
 
-export function filter(state: Record<string, string>, id: string, text: string, done = false) {
-  const value = ((state[id] ?? "") + text).replace(pattern, "")
-  delete state[id]
-  if (done) return value
+export function filter(state: State, id: string, text: string, done = false) {
+  const pending = state.get(id)
+  if (pending === null) return text
 
-  const index = value.lastIndexOf("<")
-  if (index < 0) return value
+  const value = (pending ?? "") + text
+  if (done) {
+    state.delete(id)
+    return value
+  }
 
-  const tail = value.slice(index).toLowerCase()
-  if (!markers.some((marker) => marker.toLowerCase().startsWith(tail))) return value
-  state[id] = value.slice(index)
-  return value.slice(0, index)
+  const lower = value.toLowerCase()
+  const marker = markers.find((item) => lower.startsWith(item.toLowerCase()))
+  if (marker) {
+    state.set(id, null)
+    return value.slice(marker.length)
+  }
+  if (markers.some((item) => item.toLowerCase().startsWith(lower))) {
+    state.set(id, value)
+    return ""
+  }
+
+  state.set(id, null)
+  return value
 }
