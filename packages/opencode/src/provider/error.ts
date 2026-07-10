@@ -1,6 +1,7 @@
 import { APICallError } from "ai"
 import { STATUS_CODES } from "http"
 import { iife } from "@/util/iife"
+import { responseFailed } from "@/kilocode/provider/error" // kilocode_change
 import type { ProviderID } from "./schema"
 
 export class HeaderTimeoutError extends Error {
@@ -142,6 +143,15 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
   if (!body) return
 
   const responseBody = JSON.stringify(body)
+  const failed = responseFailed(body) // kilocode_change
+  if (failed) {
+    return {
+      type: "api_error",
+      message: failed.message,
+      isRetryable: failed.code === "server_error" || failed.code === "server_is_overloaded",
+      responseBody,
+    }
+  }
   if (body.type !== "error") return
 
   switch (body?.error?.code) {
