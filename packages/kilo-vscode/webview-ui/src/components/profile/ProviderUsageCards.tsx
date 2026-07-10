@@ -29,8 +29,7 @@ export interface PersonalTopUpsCardProps {
 type Language = ReturnType<typeof useLanguage>
 
 const source = (item: ProviderUsageSnapshot, language: Language) => {
-  if (item.sourceKind === "kilo_managed") return language.t("profile.usage.source.viaKilo")
-  if (item.sourceKind === "codex") return language.t("profile.usage.source.chatgpt")
+  if (item.sourceKind === "kilo_managed") return "Kilo Gateway"
   return language.t("profile.usage.source.direct")
 }
 
@@ -212,7 +211,7 @@ const KiloPassCard: Component<{
           <CardTitle icon={false}>Kilo</CardTitle>
           <CardDescription>Kilo Pass</CardDescription>
         </div>
-        <Tag>{props.language.t("profile.usage.source.viaKilo")}</Tag>
+        <Tag>Kilo Gateway</Tag>
       </div>
       <Show
         when={props.pass}
