@@ -1873,4 +1873,5 @@ export const dict = {
   "chat.search.previousMatch": "Forrige match",
   "chat.search.nextMatch": "Næste match",
   "chat.search.close": "Luk søgning",
+  "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
 }

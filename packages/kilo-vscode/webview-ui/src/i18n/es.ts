@@ -1897,4 +1897,5 @@ export const dict = {
   "chat.search.previousMatch": "Coincidencia anterior",
   "chat.search.nextMatch": "Coincidencia siguiente",
   "chat.search.close": "Cerrar búsqueda",
+  "chat.search.invalidRegex": "Expresión regular no válida",
 }

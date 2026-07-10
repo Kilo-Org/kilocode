@@ -1801,4 +1801,5 @@ export const dict = {
   "chat.search.previousMatch": "上一個相符項",
   "chat.search.nextMatch": "下一個相符項",
   "chat.search.close": "關閉搜尋",
+  "chat.search.invalidRegex": "規則運算式無效",
 } satisfies Partial<Record<Keys, string>>

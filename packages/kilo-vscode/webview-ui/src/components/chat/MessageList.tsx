@@ -46,11 +46,13 @@ import {
   partitionRows,
   retainTurn,
   transcriptRows,
+  type TranscriptErrorRow,
   type TranscriptHold,
   type TranscriptRow,
 } from "../../context/transcript-rows"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
+import { unwrapError } from "../../utils/errorUtils"
 import type { Part, QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 interface MessageListProps {
@@ -141,7 +143,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const search = useTranscriptSearch()
 
   function rowText(row: TranscriptRow): string {
-    if (row.type === "error") return row.error.name
+    if (row.type === "error") return errorText(row.error)
     if (row.type === "diff") return ""
     const chunks: string[] = []
     for (const part of row.parts) {
@@ -161,6 +163,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
       }
     }
     return chunks.join("\n")
+  }
+
+  // Matches what ErrorDisplay.tsx actually shows in its default card body —
+  // the unwrapped `error.data.message`, not the internal `error.name` code,
+  // which is never rendered as visible text.
+  function errorText(error: TranscriptErrorRow["error"]): string {
+    const msg = error.data?.message
+    if (typeof msg !== "string") return ""
+    return unwrapError(msg)
   }
 
   // Extracts only the text kilo-ui's tool renderers actually put on screen —
@@ -183,8 +194,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const command = input?.command ?? metadata?.command
     const description = input?.description ?? metadata?.description
     const chunks: string[] = []
-    if (command) chunks.push(command)
+    // DOM order: description renders as the header subtitle (above the
+    // command box), command renders below it, output last — keep this in
+    // sync with shell-rolling-results.tsx so occurrence numbering lines up
+    // with what's actually highlighted on screen.
     if (description) chunks.push(description)
+    if (command) chunks.push(command)
     if (state.output) chunks.push(state.output)
     return chunks
   }
@@ -205,27 +220,39 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
   }
 
-  const matches = createMemo(() => {
+  const pattern = createMemo(() => {
     const q = search.query()
-    if (!search.active() || !q) return []
-    const pattern = buildPattern(q, search.matchCase(), search.wholeWord(), search.regex())
-    if (!pattern) return []
+    if (!search.active() || !q) return undefined
+    return buildPattern(q, search.matchCase(), search.wholeWord(), search.regex())
+  })
+
+  // An invalid regex (e.g. an unbalanced group) compiles to `undefined` from
+  // buildPattern, which otherwise looks identical to "no matches" — surface
+  // it explicitly so the widget can show a real error instead.
+  createEffect(() => {
+    const q = search.query()
+    search.setInvalid(search.active() && !!q && search.regex() && !pattern())
+  })
+
+  const matches = createMemo(() => {
+    const p = pattern()
+    if (!p) return []
     const list = rows()
     const result: SearchMatch[] = []
     for (const row of list) {
       const text = rowText(row)
-      pattern.lastIndex = 0
+      p.lastIndex = 0
       let occurrence = 0
-      let hit = pattern.exec(text)
+      let hit = p.exec(text)
       while (hit) {
         if (hit[0].length === 0) {
-          pattern.lastIndex += 1
-          hit = pattern.exec(text)
+          p.lastIndex += 1
+          hit = p.exec(text)
           continue
         }
         result.push({ key: row.key, messageId: row.message.id, occurrence })
         occurrence += 1
-        hit = pattern.exec(text)
+        hit = p.exec(text)
       }
     }
     return result
@@ -250,6 +277,27 @@ export const MessageList: Component<MessageListProps> = (props) => {
     ),
   )
 
+  // Closing/switching to a different session leaves stale query/matches
+  // bound to a transcript that's no longer displayed if left untouched —
+  // reset the whole widget whenever the current session changes. `defer:
+  // true` skips the initial run so mounting doesn't immediately "reset" a
+  // session that was never open in this search widget.
+  createEffect(
+    on(
+      () => session.currentSessionID(),
+      () => {
+        search.setActive(false)
+        search.setQuery("")
+        search.setMatchCase(false)
+        search.setWholeWord(false)
+        search.setRegex(false)
+        search.setIndex(0)
+        search.setCount(0)
+      },
+      { defer: true },
+    ),
+  )
+
   const activeKey = createMemo(() => {
     const m = matches()
     const idx = search.index()
@@ -263,6 +311,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // the current occurrence so navigation can judge whether it needs to
   // scroll at all (several occurrences can share one message).
   let highlightFrame: number | undefined
+  let highlightFrameInner: number | undefined
   let pendingCenter = false
   const paintHighlights = () => {
     const el = scrollEl()
@@ -270,9 +319,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
       clearTranscriptHighlights()
       return
     }
-    const pattern = buildPattern(search.query(), search.matchCase(), search.wholeWord(), search.regex())
     const active = activeMatch()
-    const range = applyTranscriptHighlights(el, pattern, active && { key: active.key, occurrence: active.occurrence })
+    const range = applyTranscriptHighlights(el, pattern(), active && { key: active.key, occurrence: active.occurrence })
     if (!pendingCenter) return
     pendingCenter = false
     if (!range) return
@@ -298,11 +346,16 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Two frames of margin so the virtualizer has settled the DOM for the new
   // scroll position before we scan it for the precise occurrence to center.
+  // Both frame ids are tracked so cleanup can cancel whichever leg of the
+  // chain hasn't fired yet — cancelling only the outer id left the inner,
+  // already-scheduled frame free to fire (and touch reactive state) after
+  // the component had already unmounted.
   const scheduleHighlight = () => {
     if (highlightFrame !== undefined) return
     highlightFrame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+      highlightFrameInner = requestAnimationFrame(() => {
         highlightFrame = undefined
+        highlightFrameInner = undefined
         paintHighlights()
       })
     })
@@ -345,6 +398,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   onCleanup(() => {
     if (highlightFrame !== undefined) cancelAnimationFrame(highlightFrame)
+    if (highlightFrameInner !== undefined) cancelAnimationFrame(highlightFrameInner)
     clearTranscriptHighlights()
   })
 

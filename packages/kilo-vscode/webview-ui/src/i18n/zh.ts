@@ -1795,4 +1795,5 @@ export const dict = {
   "chat.search.previousMatch": "上一个匹配项",
   "chat.search.nextMatch": "下一个匹配项",
   "chat.search.close": "关闭搜索",
+  "chat.search.invalidRegex": "正则表达式无效",
 } satisfies Partial<Record<Keys, string>>

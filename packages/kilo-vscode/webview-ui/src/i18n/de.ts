@@ -1911,4 +1911,5 @@ export const dict = {
   "chat.search.previousMatch": "Vorheriger Treffer",
   "chat.search.nextMatch": "Nächster Treffer",
   "chat.search.close": "Suche schließen",
+  "chat.search.invalidRegex": "Ungültiger regulärer Ausdruck",
 } satisfies Partial<Record<Keys, string>>

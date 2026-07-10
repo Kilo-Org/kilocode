@@ -1908,4 +1908,5 @@ export const dict = {
   "chat.search.previousMatch": "Vorige overeenkomst",
   "chat.search.nextMatch": "Volgende overeenkomst",
   "chat.search.close": "Zoeken sluiten",
+  "chat.search.invalidRegex": "Ongeldige reguliere expressie",
 }

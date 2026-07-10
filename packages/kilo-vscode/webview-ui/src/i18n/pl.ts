@@ -1879,4 +1879,5 @@ export const dict = {
   "chat.search.previousMatch": "Poprzednie dopasowanie",
   "chat.search.nextMatch": "Następne dopasowanie",
   "chat.search.close": "Zamknij wyszukiwanie",
+  "chat.search.invalidRegex": "Nieprawidłowe wyrażenie regularne",
 }

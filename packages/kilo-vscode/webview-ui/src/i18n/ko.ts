@@ -1848,4 +1848,5 @@ export const dict = {
   "chat.search.previousMatch": "이전 검색 결과",
   "chat.search.nextMatch": "다음 검색 결과",
   "chat.search.close": "검색 닫기",
+  "chat.search.invalidRegex": "정규식이 잘못되었습니다",
 }

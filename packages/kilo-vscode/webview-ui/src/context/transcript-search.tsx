@@ -1,4 +1,4 @@
-import { createContext, useContext, createSignal, type Accessor, type Component } from "solid-js"
+import { createContext, useContext, createSignal, type Accessor, type ParentComponent } from "solid-js"
 
 export interface SearchMatch {
   key: string
@@ -27,11 +27,16 @@ interface TranscriptSearchContextValue {
    * off this instead of `index` so navigation always jumps to the match. */
   jump: Accessor<number>
   requestJump: () => void
+  /** True when "Use Regular Expression" is on and the current query fails to
+   * compile — lets the widget show an explicit error instead of looking
+   * indistinguishable from a plain "no matches". */
+  invalid: Accessor<boolean>
+  setInvalid: (value: boolean) => void
 }
 
 const TranscriptSearchContext = createContext<TranscriptSearchContextValue>()
 
-export const TranscriptSearchProvider: Component<{ children: any }> = (props) => {
+export const TranscriptSearchProvider: ParentComponent = (props) => {
   const [query, setQuery] = createSignal("")
   const [matchCase, setMatchCase] = createSignal(false)
   const [wholeWord, setWholeWord] = createSignal(false)
@@ -40,6 +45,7 @@ export const TranscriptSearchProvider: Component<{ children: any }> = (props) =>
   const [index, setIndex] = createSignal(0)
   const [count, setCount] = createSignal(0)
   const [jump, setJump] = createSignal(0)
+  const [invalid, setInvalid] = createSignal(false)
 
   return (
     <TranscriptSearchContext.Provider
@@ -60,6 +66,8 @@ export const TranscriptSearchProvider: Component<{ children: any }> = (props) =>
         setCount,
         jump,
         requestJump: () => setJump((n) => n + 1),
+        invalid,
+        setInvalid,
       }}
     >
       {props.children}

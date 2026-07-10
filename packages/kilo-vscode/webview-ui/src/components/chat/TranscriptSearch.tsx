@@ -63,19 +63,19 @@ export const TranscriptSearch: Component = () => {
 
   return (
     <Show when={search.active()}>
-      <div data-component="transcript-search">
+      <div data-component="transcript-search" onKeyDown={onKeyDown}>
         <div data-slot="transcript-search-box">
           <input
             ref={inputRef}
             type="text"
             data-slot="transcript-search-input"
             placeholder={language.t("chat.search.placeholder")}
+            aria-label={language.t("chat.search.toggle")}
             value={search.query()}
             onInput={(e) => {
               search.setQuery(e.currentTarget.value)
               search.setIndex(0)
             }}
-            onKeyDown={onKeyDown}
           />
           <div data-slot="transcript-search-inline-options">
             <Tooltip value={language.t("chat.search.matchCase")} placement="bottom">
@@ -113,7 +113,10 @@ export const TranscriptSearch: Component = () => {
             </Tooltip>
           </div>
         </div>
-        <Show when={search.count() > 0}>
+        <Show when={search.invalid()}>
+          <span data-slot="transcript-search-error">{language.t("chat.search.invalidRegex")}</span>
+        </Show>
+        <Show when={!search.invalid() && search.count() > 0}>
           <span data-slot="transcript-search-counter">
             {search.index() + 1} / {search.count()}
           </span>

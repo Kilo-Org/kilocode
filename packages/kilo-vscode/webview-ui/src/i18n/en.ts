@@ -1868,4 +1868,5 @@ export const dict = {
   "chat.search.previousMatch": "Previous match",
   "chat.search.nextMatch": "Next match",
   "chat.search.close": "Close search",
+  "chat.search.invalidRegex": "Invalid regular expression",
 }
