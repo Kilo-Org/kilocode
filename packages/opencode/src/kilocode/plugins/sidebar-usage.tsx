@@ -1,5 +1,5 @@
-import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
-import { createMemo, createResource, For, onCleanup, onMount, Show } from "solid-js"
+import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiThemeCurrent } from "@kilocode/plugin/tui"
+import { createMemo, createResource, createSignal, For, onCleanup, onMount, Show, type JSX } from "solid-js"
 import { useLocal } from "@tui/context/local"
 import * as Model from "@tui/util/model"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
@@ -16,6 +16,24 @@ import {
 } from "@/kilocode/plugins/model-usage"
 
 const id = "internal:kilo-sidebar-usage"
+
+function Collapsible(props: { theme: TuiThemeCurrent; title: string; collapsedLabel?: string; children?: JSX.Element }) {
+  const [open, setOpen] = createSignal(true)
+  return (
+    <box>
+      <box onMouseDown={() => setOpen((x) => !x)}>
+        <text fg={props.theme.text}>
+          {open() ? "▼ " : "▶ "}
+          <b>{props.title}</b>
+          <Show when={!open() && props.collapsedLabel}>
+            <span style={{ fg: props.theme.textMuted }}> {props.collapsedLabel}</span>
+          </Show>
+        </text>
+      </box>
+      <Show when={open()}>{props.children}</Show>
+    </box>
+  )
+}
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
   const theme = () => props.api.theme.current
@@ -74,10 +92,15 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
 
   return (
     <box gap={1}>
-      <box>
-        <text fg={theme().text}>
-          <b>Token Usage</b>
-        </text>
+      <Collapsible
+        theme={theme()}
+        title="Token Usage"
+        collapsedLabel={
+          usage()
+            ? `Cost ${formatCost(usage()!.totals.cost)} · In ${formatCount(usage()!.totals.tokens.input)} · Out ${formatCount(usage()!.totals.tokens.output)}`
+            : undefined
+        }
+      >
         <Show
           when={usage()}
           fallback={<text fg={theme().textMuted}>{unavailable() ? "Usage unavailable" : "Loading usage..."}</text>}
@@ -94,24 +117,22 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
             </>
           )}
         </Show>
-      </box>
+      </Collapsible>
       <Show when={bench()}>
         {(value) => (
-          <box>
-            <text fg={theme().text}>
-              <b>Terminal Bench 2.0</b>
-            </text>
+          <Collapsible
+            theme={theme()}
+            title="Terminal Bench 2.0"
+            collapsedLabel={`${fmtScore(value().overallScore)} · ${fmtAttemptCost(value().avgAttemptCostUsd)}`}
+          >
             <Row label="Completion" value={fmtScore(value().overallScore)} />
             <Row label="Cost / attempt" value={fmtAttemptCost(value().avgAttemptCostUsd)} />
-          </box>
+          </Collapsible>
         )}
       </Show>
       <Show when={usage()}>
         {(data) => (
-          <box>
-            <text fg={theme().text}>
-              <b>Models ({data().models.length})</b>
-            </text>
+          <Collapsible theme={theme()} title={`Models (${data().models.length})`}>
             <Show when={data().models.length > 0} fallback={<text fg={theme().textMuted}>No model usage yet</text>}>
               <box gap={1}>
                 <For each={groups()}>
@@ -147,7 +168,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                 </For>
               </box>
             </Show>
-          </box>
+          </Collapsible>
         )}
       </Show>
     </box>
