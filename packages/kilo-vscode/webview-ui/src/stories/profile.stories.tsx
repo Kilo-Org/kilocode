@@ -58,7 +58,7 @@ const usage: ProviderUsageData = {
       sourceLabel: "via Kilo",
       fetchState: "ready",
       planState: "active",
-      routingState: "missing",
+      routingState: "active",
       availabilityState: "available",
       fetchedAt: "2026-06-19T12:00:00.000Z",
       confidence: "high",
