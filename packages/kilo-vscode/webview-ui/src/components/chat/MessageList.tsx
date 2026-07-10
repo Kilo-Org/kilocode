@@ -16,8 +16,10 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useProvider } from "../../context/provider"
 import { WelcomeEmptyState } from "./WelcomeEmptyState"
 import { TranscriptRowView } from "./TranscriptRow"
+import type { ErrorDisplayProps } from "./ErrorDisplay"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
@@ -52,7 +54,13 @@ import {
 } from "../../context/transcript-rows"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
-import { unwrapError } from "../../utils/errorUtils"
+import {
+  isUnauthorizedPaidModelError,
+  isUnauthorizedPromotionLimitError,
+  parseAssistantError,
+  parseProviderAuthError,
+  unwrapError,
+} from "../../utils/errorUtils"
 import type { Part, QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 interface MessageListProps {
@@ -75,6 +83,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+  const provider = useProvider()
 
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
@@ -165,10 +174,35 @@ export const MessageList: Component<MessageListProps> = (props) => {
     return chunks.join("\n")
   }
 
-  // Matches what ErrorDisplay.tsx actually shows in its default card body —
-  // the unwrapped `error.data.message`, not the internal `error.name` code,
-  // which is never rendered as visible text.
+  // Mirrors ErrorDisplay.tsx's exact Switch/Match classification so search
+  // text matches what's actually on screen for every error variant, not
+  // just the default card: the paid-model and promotion-limit prompts
+  // render fixed localized copy (no user data at all), and the provider
+  // auth prompt only renders when canAuth() would be true there too —
+  // otherwise ErrorDisplay itself falls through to the default card.
   function errorText(error: TranscriptErrorRow["error"]): string {
+    const value = error as ErrorDisplayProps["error"]
+    const parsed = parseAssistantError(value)
+    if (isUnauthorizedPaidModelError(parsed)) {
+      return [language.t("error.paidModel.title"), language.t("error.paidModel.description")].join("\n")
+    }
+    if (isUnauthorizedPromotionLimitError(parsed)) {
+      return [language.t("error.promotionLimit.title"), language.t("error.promotionLimit.description")].join("\n")
+    }
+    const auth = parseProviderAuthError(value)
+    const authProvider = auth ? provider.providers()[auth.providerID] : undefined
+    const authMethods = auth ? (provider.authMethods()[auth.providerID] ?? []) : []
+    if (auth && authProvider && authMethods.length > 0) {
+      const oauth = auth.providerID === "openai" && authMethods.some((method) => method.type === "oauth")
+      const name = authProvider.name ?? auth.providerID
+      const title = oauth
+        ? language.t("error.providerAuth.chatgpt.title")
+        : language.t("error.providerAuth.title", { provider: name })
+      const description = oauth
+        ? language.t("error.providerAuth.chatgpt.description")
+        : language.t("error.providerAuth.description", { provider: name })
+      return [title, description].join("\n")
+    }
     const msg = error.data?.message
     if (typeof msg !== "string") return ""
     return unwrapError(msg)
