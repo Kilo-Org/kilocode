@@ -439,10 +439,7 @@ const live: Layer.Layer<
             const state = LLMAISDK.adapterState()
             return Stream.fromAsyncIterable(result.result.fullStream, (e) =>
               e instanceof Error ? e : new Error(String(e)),
-            ).pipe(
-              Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
-              Stream.flatMap((events) => Stream.fromIterable(events)),
-            )
+            ).pipe(Stream.flatMap((event) => LLMAISDK.toLLMStream(state, event))) // kilocode_change
           }),
         ),
       )

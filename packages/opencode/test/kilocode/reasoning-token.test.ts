@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
+import * as Stream from "effect/Stream"
 import * as ReasoningToken from "../../src/kilocode/reasoning-token"
 import * as LLMAISDK from "../../src/session/llm/ai-sdk"
 
@@ -24,6 +25,14 @@ describe("reasoning token filtering", () => {
     expect(ReasoningToken.filter(state, "constructor", "answer")).toBe("answer")
   })
 
+  test("deletes completed state so reused IDs filter markers", () => {
+    const state = new Map()
+    expect(ReasoningToken.filter(state, "text", "answer")).toBe("answer")
+    expect(ReasoningToken.filter(state, "text", "", true)).toBe("")
+    expect(state.has("text")).toBe(false)
+    expect(ReasoningToken.filter(state, "text", "</think>next")).toBe("next")
+  })
+
   test("strips a marker split across streaming deltas", async () => {
     const state = LLMAISDK.adapterState()
     const chunks = [
@@ -43,6 +52,20 @@ describe("reasoning token filtering", () => {
       { type: "text-delta", id: "text", text: "answer" },
       { type: "text-end", id: "text" },
     ])
+  })
+
+  test("flushes an ordinary partial tag before propagating a stream error", async () => {
+    const state = LLMAISDK.adapterState()
+    const error = new Error("stream failed")
+    const events: unknown[] = []
+    await Effect.runPromise(LLMAISDK.toLLMEvents(state, { type: "text-start", id: "text" }))
+    await Effect.runPromise(LLMAISDK.toLLMEvents(state, { type: "text-delta", id: "text", text: "<" }))
+
+    const stream = LLMAISDK.toLLMStream(state, { type: "error", error }).pipe(
+      Stream.runForEach((event) => Effect.sync(() => events.push(event))),
+    )
+    expect(Effect.runPromise(stream)).rejects.toBe(error)
+    expect(events).toMatchObject([{ type: "text-delta", id: "text", text: "<" }])
   })
 
   test.each(["text-end", "abort", "finish"] as const)("flushes an ordinary partial tag on %s", async (type) => {

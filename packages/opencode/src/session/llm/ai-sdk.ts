@@ -1,5 +1,6 @@
 import { FinishReason, LLMEvent, ProviderMetadata, ToolResultValue } from "@opencode-ai/llm"
 import { Effect, Schema } from "effect"
+import * as Stream from "effect/Stream" // kilocode_change
 import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
@@ -287,5 +288,18 @@ export function toLLMEvents(
     }
   }
 }
+
+// kilocode_change start
+export function toLLMStream(state: ReturnType<typeof adapterState>, event: AISDKEvent) {
+  if (event.type !== "error") {
+    return Stream.fromEffect(toLLMEvents(state, event)).pipe(Stream.flatMap((events) => Stream.fromIterable(events)))
+  }
+
+  const id = state.currentTextID
+  const text = id ? ReasoningToken.filter(state.pendingText, id, "", true) : ""
+  const events = text && id ? [LLMEvent.textDelta({ id, text })] : []
+  return Stream.fromIterable(events).pipe(Stream.concat(Stream.fail(event.error)))
+}
+// kilocode_change end
 
 export * as LLMAISDK from "./ai-sdk"
