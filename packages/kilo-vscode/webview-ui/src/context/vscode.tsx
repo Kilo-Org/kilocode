@@ -5,11 +5,9 @@
 
 import { createContext, useContext, onCleanup, ParentComponent, createSignal } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
-import { createPlayer } from "./audio"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
-const play = createPlayer()
 
 export function getVSCodeAPI(): VSCodeAPI {
   if (!vscodeApi) {
@@ -53,8 +51,10 @@ export const VSCodeProvider: ParentComponent = (props) => {
   // Listen for messages from the extension
   const messageListener = (event: MessageEvent) => {
     const message = event.data as ExtensionMessage
-    if (message.type === "playNotificationSound")
-      void play(message.uri).catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
+    if (message.type === "playNotificationSound") {
+      const audio = new Audio(message.uri)
+      void audio.play().catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
+    }
     handlers.forEach((handler) => handler(message))
   }
 
