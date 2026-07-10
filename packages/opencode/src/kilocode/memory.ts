@@ -31,7 +31,7 @@ export namespace Memory {
 
   function line(input: string) {
     return input
-      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]+/g, " ")
+      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\ufeff\u2060]+/g, " ")
       .replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069]+/g, "")
       .trim()
       .replace(/^[-*#>\s]+/g, "")
@@ -71,6 +71,13 @@ export namespace Memory {
       key: key(input.key) || "(empty)",
       content: value(input.content) || "(empty)",
     })
+  }
+
+  export function renderDisplay(input: Info) {
+    return {
+      key: key(input.key) || "(empty)",
+      content: value(input.content) || "(empty)",
+    }
   }
 
   export async function set(input: { key: string; content: string }) {

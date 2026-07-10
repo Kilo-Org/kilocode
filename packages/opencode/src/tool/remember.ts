@@ -46,9 +46,10 @@ async function add(params: { key?: string; content?: string }, ctx: Tool.Context
   })
 
   await Memory.set({ key: params.key, content: params.content })
+  const display = Memory.renderDisplay({ key: params.key, content: params.content, time: { created: 0, updated: 0 } })
   return {
-    title: `Remembered: ${params.key}`,
-    output: params.content,
+    title: `Remembered: ${display.key}`,
+    output: JSON.stringify({ key: display.key, content: display.content }),
     metadata: {},
   }
 }
@@ -65,7 +66,7 @@ async function list(params: { limit?: number }) {
 
   return {
     title: `Persistent memory (${items.length} items)`,
-    output: items.map((item) => `- ${item.key}: ${item.content}`).join("\n"),
+    output: items.map((item) => `- ${JSON.stringify(Memory.renderDisplay(item))}`).join("\n"),
     metadata: {},
   }
 }
