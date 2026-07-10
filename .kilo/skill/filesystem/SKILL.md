@@ -6,7 +6,7 @@ description: Safe file operations in this source build — native edit/write too
 # Filesystem in this source build
 
 ## Critical constraint
-The native `edit`/`write` tools are NOT available in this build. Every file write must go through `bash` (Bun or Node). Do not attempt to call edit/write — plan for bash from the start.
+When `edit`/`write` tools are denied or unavailable, use safe shell/file commands (bash, Bun/Node scripts, heredocs) instead. If they are available, prefer them.
 
 ## Safe edit pattern (preferred)
 Use a short bun/node script: read the file, transform a string, write it back. This avoids fragile inline sed/awk and gives precise control over escaping.
