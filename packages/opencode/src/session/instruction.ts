@@ -7,6 +7,7 @@ import { Instance } from "../project/instance"
 import { Flag } from "@/flag/flag"
 import { Log } from "../util/log"
 import { Glob } from "../util/glob"
+import { Memory } from "../kilocode/memory" // kilocode_change
 import type { MessageV2 } from "./message-v2"
 
 const log = Log.create({ service: "instruction" })
@@ -136,7 +137,14 @@ export namespace InstructionPrompt {
         .then((x) => (x ? "Instructions from: " + url + "\n" + x : "")),
     )
 
-    return Promise.all([...files, ...fetches]).then((result) => result.filter(Boolean))
+    // kilocode_change start
+    const memory = Memory.prompt().catch((err) => {
+      log.error("failed to build persistent memory prompt", { err })
+      return ""
+    })
+    // kilocode_change end
+
+    return Promise.all([...files, ...fetches, memory]).then((result) => result.filter(Boolean))
   }
 
   export function loaded(messages: MessageV2.WithParts[]) {

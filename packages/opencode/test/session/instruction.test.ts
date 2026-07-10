@@ -3,6 +3,7 @@ import path from "path"
 import { InstructionPrompt } from "../../src/session/instruction"
 import { Instance } from "../../src/project/instance"
 import { Global } from "../../src/global"
+import { Memory } from "../../src/kilocode/memory" // kilocode_change
 import { tmpdir } from "../fixture/fixture"
 
 describe("InstructionPrompt.resolve", () => {
@@ -69,6 +70,26 @@ describe("InstructionPrompt.resolve", () => {
     })
   })
 })
+
+// kilocode_change start
+describe("InstructionPrompt.system", () => {
+  test("includes persistent project memory", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        await Memory.set({ key: "build", content: "Run bun test from packages/opencode" })
+        const system = await InstructionPrompt.system()
+        const text = system.join("\n\n")
+        expect(text).toContain("Persistent project memory:")
+        expect(text).toContain("build: Run bun test from packages/opencode")
+        await Memory.remove({ key: "build" })
+      },
+    })
+  })
+})
+// kilocode_change end
 
 describe("InstructionPrompt.systemPaths KILO_CONFIG_DIR", () => {
   let originalConfigDir: string | undefined

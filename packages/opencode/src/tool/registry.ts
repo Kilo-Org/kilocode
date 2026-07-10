@@ -29,6 +29,7 @@ import { LspTool } from "./lsp"
 import { Truncate } from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
 import { RecallTool } from "./recall" // kilocode_change
+import { RememberTool } from "./remember" // kilocode_change
 import { Glob } from "../util/glob"
 import { pathToFileURL } from "url"
 import { Effect, Layer, ServiceMap } from "effect"
@@ -137,6 +138,7 @@ export namespace ToolRegistry {
           ...(cfg.experimental?.codebase_search === true ? [CodebaseSearchTool] : []), // kilocode_change
           SkillTool,
           RecallTool, // kilocode_change
+          RememberTool, // kilocode_change
           ApplyPatchTool,
           ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
           ...(cfg.experimental?.batch_tool === true ? [BatchTool] : []),
