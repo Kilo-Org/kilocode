@@ -16,6 +16,7 @@ object SessionUiStyle {
     /** Geometry for the transcript list and its scroll behavior. */
     object SessionLayout {
         const val GAP = 3
+        const val USER_PROMPT_GAP = 10
         const val TRANSCRIPT_SCROLLBAR_PADDING = 10
         val InnerInsets = Insets(
             UiStyle.Gap.md(),

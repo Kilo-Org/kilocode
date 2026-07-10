@@ -17,6 +17,7 @@ import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.ReasoningPicker
+import ai.kilocode.client.session.ui.RevertBanner
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.prompt.KiloPromptCompletionProvider
@@ -67,6 +68,7 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColorsListener
 import com.intellij.openapi.editor.colors.EditorColorsManager
@@ -76,6 +78,7 @@ import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.util.function.Predicate
 import kotlinx.coroutines.CoroutineScope
@@ -123,6 +126,7 @@ class SessionUi(
     private var opening = ref != null
     private var pending = false
     private var loaded: Boolean? = null
+    private var revertPrompt: String? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -261,6 +265,18 @@ class SessionUi(
         return prompt.defaultFocusedComponent
     }
 
+    internal val promptFocusedComponent: JComponent get() = prompt.defaultFocusedComponent
+
+    @RequiresEdt
+    internal fun focusPrompt() {
+        val target = prompt.defaultFocusedComponent
+        ApplicationManager.getApplication().invokeLater({
+            if (!disposed && !project.isDisposed) {
+                IdeFocusManager.getInstance(project).requestFocusInProject(target, project)
+            }
+        }, ModalityState.defaultModalityState())
+    }
+
     internal fun setModalContent(content: JComponent?, focus: (() -> JComponent)? = null) {
         modalFocus = if (content == null) null else focus
         root.setModalContent(content)
@@ -311,6 +327,7 @@ class SessionUi(
 
         load = LoadingPanel()
         progressBody = load
+        val focus = { manager?.focusPrompt() ?: focusPrompt() }
         question = QuestionView(
             project = project,
             reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
@@ -318,15 +335,18 @@ class SessionUi(
             follow = { scroll.following() },
             scroll = { scroll.followBottom(it) },
             selection = selection,
+            focus = focus,
         )
         permission = PermissionView(
             reply = { id, dto -> controller.replyPermission(id, dto) },
             selection = selection,
+            focus = focus,
         )
         login = LoginRequiredView(
             openProfile = { controller.openProfile() },
             dismiss = { controller.dismissLoginRequired() },
             selection = selection,
+            focus = focus,
         )
         messageBody = SessionMessageListPanel(
             controller.model,
@@ -340,6 +360,8 @@ class SessionUi(
             ::openAttachment,
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
+            revert = ::revert,
+            banner = RevertBanner(controller.model, controller::redo, controller::redoAll, focus),
         ).also {
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
@@ -513,6 +535,8 @@ class SessionUi(
 
                 is SessionModelEvent.SessionUpdated -> onSessionUpdated()
 
+                is SessionModelEvent.RevertChanged -> syncPromptRevert()
+
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
@@ -658,6 +682,32 @@ class SessionUi(
         }
         controller.prompt(text, files)
         scroll.followBottom(follow)
+    }
+
+    @RequiresEdt
+    private fun revert(id: String) {
+        scroll.followBottom(true)
+        controller.revert(id)
+    }
+
+    @RequiresEdt
+    private fun syncPromptRevert() {
+        val saved = revertPrompt
+        if (saved != null && (prompt.text() != saved || prompt.hasAttachments())) {
+            revertPrompt = null
+            return
+        }
+        if (saved == null && prompt.hasDraft()) return
+        val mark = controller.model.revert()
+        if (mark == null) {
+            prompt.clear()
+            revertPrompt = null
+            return
+        }
+        val msg = controller.model.message(mark.messageID) ?: return
+        val text = msg.parts.values.filterIsInstance<ai.kilocode.client.session.model.Text>().firstOrNull()?.content?.toString() ?: return
+        prompt.setText(text)
+        revertPrompt = prompt.text()
     }
 
     private fun slashActions(): List<SlashAction> {

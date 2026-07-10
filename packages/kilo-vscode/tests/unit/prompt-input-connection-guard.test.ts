@@ -81,11 +81,11 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).not.toContain("setSandboxTarget")
   })
 
-  it("keeps persisted sandbox state visible independently of the configured default", () => {
+  it("shows sandbox controls only when the global sandbox setting is enabled", () => {
     expect(src).toContain(
-      'const sandboxVisible = () => features().sandboxControls && !session.currentSessionID()?.startsWith("cloud:")',
+      'globalConfig().sandbox?.enabled === true &&\n    !session.currentSessionID()?.startsWith("cloud:")',
     )
-    expect(src).not.toContain("config().sandbox?.enabled === true")
+    expect(src).toContain("features().sandboxControls &&")
     expect(src).toContain("<Show when={sandboxVisible()}>")
     expect(src).toContain("{ action: toggleSandbox, enabled: () => sandboxVisible() && !sandboxDisabled() }")
     expect(src).toContain('if (!sandboxVisible()) hidden.add("sandbox")')

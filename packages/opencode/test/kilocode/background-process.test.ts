@@ -8,6 +8,7 @@ import { Global } from "@opencode-ai/core/global"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { Effect } from "effect"
 import { spawn } from "child_process"
+import { once } from "node:events"
 import fs from "fs/promises"
 import path from "path"
 import { provideTestInstance, TestInstance, tmpdir } from "../fixture/fixture"
@@ -392,6 +393,13 @@ setInterval(() => console.log("tick"), 100)
         const otherID = SessionID.descending()
         const visible = yield* Effect.promise(() => BackgroundProcess.list({ sessionID: otherID }))
         expect(visible.map((item) => item.id)).toContain(info.id)
+        const files = artifacts(test.directory, info.id)
+        yield* Effect.promise(() =>
+          until(async () => {
+            const log = Bun.file(files.log)
+            return (await log.exists()) && (await log.text()).includes("ready")
+          }, "persistent process output was not flushed before reload"),
+        )
         yield* Effect.promise(() => BackgroundProcess.shutdown())
         const adopted = yield* Effect.promise(() => BackgroundProcess.get(info.id))
         expect(adopted?.pid).toBe(info.pid)
@@ -597,10 +605,14 @@ setInterval(() => {}, 1_000)
         expect(alive(unrelated.pid)).toBe(true)
         expect(yield* Effect.promise(() => Bun.file(target.manifest).exists())).toBe(false)
       } finally {
-        if (unrelated.pid && alive(unrelated.pid)) {
-          if (process.platform === "win32") unrelated.kill("SIGKILL")
-          else process.kill(-unrelated.pid, "SIGKILL")
-        }
+        yield* Effect.promise(async () => {
+          const exited = unrelated.exitCode !== null || unrelated.signalCode !== null ? undefined : once(unrelated, "exit")
+          if (unrelated.pid && alive(unrelated.pid)) {
+            if (process.platform === "win32") unrelated.kill("SIGKILL")
+            else process.kill(-unrelated.pid, "SIGKILL")
+          }
+          await exited
+        })
         yield* Effect.promise(() => BackgroundProcess.stop(info.id))
       }
     }),
