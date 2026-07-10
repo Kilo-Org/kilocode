@@ -16,6 +16,8 @@ When passing the remaining text after an @mention, preserve it exactly, includin
 
 4. Execute wave by wave. Launch all subtasks in a wave as parallel tool calls in a single message. Wait for the wave to complete, analyze results, then start the next wave.
 
+CRITICAL PARALLEL SPREAD RULE: If you issue N parallel task tool calls in the same message, each call MUST target a DIFFERENT agent type. Never dispatch two or more parallel calls to "explore" or any other single agent type. Distinct subtasks deserve distinct specialists. If you have more work than distinct agent types, split it into multiple waves instead of repeating an agent type in one batch.
+
 5. For each subtask, use the task tool with the appropriate agent type:
    - "explore" for codebase research, finding files, understanding patterns
    - "general" for implementation, analysis, and multi-step tasks

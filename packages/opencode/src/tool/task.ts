@@ -11,6 +11,10 @@ import { defer } from "@/util/defer"
 import { Config } from "../config/config"
 import { Permission } from "@/permission"
 
+// kilocode_change start
+const inFlight = new Map<string, Set<string>>()
+// kilocode_change end
+
 const parameters = z.object({
   description: z.string().describe("A short (3-5 words) description of the task"),
   prompt: z.string().describe("The task for the agent to perform"),
@@ -64,6 +68,27 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       // kilocode_change start — reject primary agents; only subagent/all modes allowed
       if (agent.mode === "primary")
         throw new Error(`Agent "${params.subagent_type}" is a primary agent and cannot be used as a subagent`)
+      // kilocode_change end
+
+      // kilocode_change start
+      const sessionKey = ctx.sessionID
+      const seen = inFlight.get(sessionKey) ?? new Set<string>()
+      if (seen.has(params.subagent_type)) {
+        throw new Error(
+          `Routing bug: subagent "${params.subagent_type}" was already dispatched in this session ` +
+            `(${sessionKey}). Parallel batches must use distinct agent types.`,
+        )
+      }
+      seen.add(params.subagent_type)
+      inFlight.set(sessionKey, seen)
+
+      using _inflight = defer(() => {
+        const current = inFlight.get(sessionKey)
+        if (current) {
+          current.delete(params.subagent_type)
+          if (current.size === 0) inFlight.delete(sessionKey)
+        }
+      })
       // kilocode_change end
 
       // kilocode_change start — inherit edit and bash restrictions from the calling agent so

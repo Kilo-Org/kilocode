@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Agent } from "../../src/agent/agent"
 import { Instance } from "../../src/project/instance"
+import { MessageID } from "../../src/session/schema"
+import { Session } from "../../src/session"
+import { SessionPrompt } from "../../src/session/prompt"
 import { TaskTool } from "../../src/tool/task"
 import { tmpdir } from "../fixture/fixture"
 
@@ -43,6 +46,101 @@ describe("tool.task", () => {
         expect(explore).toBeGreaterThan(alpha)
         expect(general).toBeGreaterThan(explore)
         expect(zebra).toBeGreaterThan(general)
+      },
+    })
+  })
+
+  test("throws an error when the same subagent_type is dispatched twice in parallel from the same session", async () => {
+    await using tmp = await tmpdir({
+      config: {
+        agent: {
+          orchestrator: {},
+          alpha: { mode: "subagent" },
+        },
+      },
+    })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        const tool = await TaskTool.init()
+
+        const userMsgId = MessageID.ascending()
+        const asstId = MessageID.ascending()
+
+        await Session.updateMessage({
+          id: userMsgId,
+          role: "user",
+          sessionID: session.id,
+          agent: "orchestrator",
+          model: { providerID: "openai", modelID: "gpt-4" },
+          time: { created: Date.now() },
+        })
+        const asstData = {
+          role: "assistant" as const,
+          parentID: userMsgId,
+          sessionID: session.id,
+          agent: "orchestrator",
+          mode: "orchestrator",
+          path: { cwd: Instance.directory, root: Instance.worktree },
+          time: { created: Date.now() },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: "gpt-4",
+          providerID: "openai",
+        }
+        await Session.updateMessage({ id: asstId, ...asstData })
+
+        let reachedPrompt: () => void
+        const reached = new Promise<void>((r) => {
+          reachedPrompt = r
+        })
+        let releaseFirst: () => void
+        const hang = new Promise<void>((r) => {
+          releaseFirst = r
+        })
+
+        const orig = (SessionPrompt as any).prompt
+        ;(SessionPrompt as any).prompt = async () => {
+          reachedPrompt()
+          await hang
+          return { parts: [{ type: "text", text: "done" }] }
+        }
+
+        try {
+          const p1 = tool.execute({ description: "first", prompt: "first prompt", subagent_type: "alpha" }, {
+            sessionID: session.id,
+            messageID: asstId,
+            agent: "orchestrator",
+            callID: "call-1",
+            abort: new AbortController().signal,
+            async metadata() {},
+            async ask() {},
+          } as any)
+
+          await reached
+
+          const p2 = tool.execute({ description: "second", prompt: "second prompt", subagent_type: "alpha" }, {
+            sessionID: session.id,
+            messageID: asstId,
+            agent: "orchestrator",
+            callID: "call-2",
+            abort: new AbortController().signal,
+            async metadata() {},
+            async ask() {},
+          } as any)
+
+          const err = await p2.catch((e: unknown) => e as Error)
+          expect(err.message).toContain("Routing bug")
+          expect(err.message).toContain("alpha")
+
+          releaseFirst!()
+          await p1
+        } finally {
+          ;(SessionPrompt as any).prompt = orig
+          await Session.remove(session.id)
+        }
       },
     })
   })
