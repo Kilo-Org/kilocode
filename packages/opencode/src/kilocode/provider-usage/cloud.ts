@@ -76,13 +76,16 @@ function route(subscription: CodingPlanSubscription, state: Result<ByokEntry[]>)
 export function plans(state: CloudState) {
   if (!state.plans.ok) return []
   return state.plans.value
-    .filter(
-      (item) =>
+    .filter((item) => {
+      const routing = route(item, state.byok)
+      return (
         item.planId.startsWith("minimax-token-plan-") &&
         item.providerId === "minimax" &&
         (item.status === "active" || item.status === "past_due") &&
-        route(item, state.byok) !== "replaced",
-    )
+        routing !== "missing" &&
+        routing !== "replaced"
+      )
+    })
     .sort((a, b) => a.id.localeCompare(b.id))
 }
 

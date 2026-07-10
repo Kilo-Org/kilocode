@@ -2,6 +2,7 @@ import { expect } from "bun:test"
 import { Deferred, Effect, Fiber, Layer } from "effect"
 import { Auth } from "@/auth"
 import { ProviderUsage } from "@/kilocode/provider-usage"
+import * as Cloud from "@/kilocode/provider-usage/cloud"
 import { Provider } from "@/provider/provider"
 import { ProviderID } from "@/provider/schema"
 import { ProviderTest } from "../../fake/provider"
@@ -27,6 +28,57 @@ function layer(auth: Auth.Info | undefined, providers: Record<string, Provider.I
 }
 
 const it = testEffect(Layer.empty)
+
+const subscription = {
+  id: "plan",
+  planId: "minimax-token-plan-plus",
+  planName: "Token Plan Plus",
+  providerName: "MiniMax",
+  providerId: "minimax",
+  routeLabel: "MiniMax via Kilo Gateway",
+  hasInstalledByokKey: true,
+  status: "active" as const,
+  billingPeriodDays: 30,
+  currentPeriodStart: "2026-06-01T00:00:00.000Z",
+  currentPeriodEnd: "2026-07-01T00:00:00.000Z",
+  creditRenewalAt: "2026-07-01T00:00:00.000Z",
+  cancelAtPeriodEnd: false,
+  paymentGraceExpiresAt: null,
+  canceledAt: null,
+  cancellationReason: null,
+  createdAt: "2026-06-01T00:00:00.000Z",
+  costKiloCredits: 20,
+}
+
+it.effect("only includes managed plans with an installed managed key", () =>
+  Effect.sync(() => {
+    const state = (entry?: { management_source: "coding_plan" | "user"; is_enabled: boolean }) => ({
+      topup: { ok: false as const },
+      plans: { ok: true as const, value: [subscription] },
+      byok: {
+        ok: true as const,
+        value: entry
+          ? [
+              {
+                id: "minimax",
+                provider_id: "minimax",
+                provider_name: "minimax",
+                management_source: entry.management_source,
+                is_enabled: entry.is_enabled,
+                created_at: "2026-06-01T00:00:00.000Z",
+                updated_at: "2026-06-01T00:00:00.000Z",
+                created_by: "user",
+              },
+            ]
+          : [],
+      },
+    })
+
+    expect(Cloud.plans(state())).toEqual([])
+    expect(Cloud.plans(state({ management_source: "user", is_enabled: true }))).toEqual([])
+    expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: false }))).toEqual([subscription])
+  }),
+)
 
 const native = (remaining = 80) =>
   Response.json({
@@ -208,7 +260,7 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
             providerName: "MiniMax",
             providerId: "minimax",
             routeLabel: "MiniMax via Kilo Gateway",
-            hasInstalledByokKey: false,
+            hasInstalledByokKey: true,
             status: "active",
             billingPeriodDays: 30,
             currentPeriodStart: "2026-06-01T00:00:00.000Z",
@@ -222,7 +274,18 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
             costKiloCredits: 20,
           },
         ],
-        "byok.list": [],
+        "byok.list": [
+          {
+            id: "managed-minimax",
+            provider_id: "minimax",
+            provider_name: "minimax",
+            management_source: "coding_plan",
+            is_enabled: true,
+            created_at: "2026-06-01T00:00:00.000Z",
+            updated_at: "2026-06-01T00:00:00.000Z",
+            created_by: "user",
+          },
+        ],
         "codingPlans.getUsage": {
           subscriptionId: "plan",
           providerId: "minimax",
@@ -259,7 +322,7 @@ it.instance("loads each personal Cloud procedure once and isolates managed enric
       "codingPlans.getUsage",
     ])
     expect(result.items.map((item) => item.id)).toEqual(["kilo-managed-minimax:plan"])
-    expect(result.items[0]).toMatchObject({ routingState: "missing", fetchState: "ready" })
+    expect(result.items[0]).toMatchObject({ routingState: "active", fetchState: "ready" })
     expect(result.kiloBilling?.autoTopUp).toMatchObject({ paymentBrand: "visa", paymentLast4: "4242" })
     expect(JSON.stringify(result)).not.toContain("pm_private")
     expect(JSON.stringify(result)).not.toContain("kilo-private-token")
