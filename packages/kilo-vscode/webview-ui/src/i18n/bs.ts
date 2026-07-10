@@ -1883,4 +1883,5 @@ export const dict = {
   "chat.search.close": "Zatvori pretragu",
   "chat.search.invalidRegex": "Nevažeći regularni izraz",
   "chat.search.noResults": "Nema rezultata",
+  "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
 }

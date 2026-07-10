@@ -1850,4 +1850,5 @@ export const dict = {
   "chat.search.close": "검색 닫기",
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
+  "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
 }

@@ -1894,4 +1894,5 @@ export const dict = {
   "chat.search.close": "Закрити пошук",
   "chat.search.invalidRegex": "Недійсний регулярний вираз",
   "chat.search.noResults": "Немає результатів",
+  "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
 }

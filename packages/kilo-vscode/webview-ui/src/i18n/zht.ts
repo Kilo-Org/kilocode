@@ -1803,4 +1803,5 @@ export const dict = {
   "chat.search.close": "關閉搜尋",
   "chat.search.invalidRegex": "規則運算式無效",
   "chat.search.noResults": "無結果",
+  "chat.search.searchingHistory": "正在搜尋較早的訊息…",
 } satisfies Partial<Record<Keys, string>>

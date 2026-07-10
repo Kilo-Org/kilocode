@@ -32,6 +32,12 @@ interface TranscriptSearchContextValue {
    * indistinguishable from a plain "no matches". */
   invalid: Accessor<boolean>
   setInvalid: (value: boolean) => void
+  /** True while MessageList is auto-loading older message pages to search
+   * them too — the session only loads the most recent page by default, so
+   * without this the widget would report "No results"/a final count while
+   * older history hadn't been searched yet. */
+  searchingHistory: Accessor<boolean>
+  setSearchingHistory: (value: boolean) => void
 }
 
 const TranscriptSearchContext = createContext<TranscriptSearchContextValue>()
@@ -46,6 +52,7 @@ export const TranscriptSearchProvider: ParentComponent = (props) => {
   const [count, setCount] = createSignal(0)
   const [jump, setJump] = createSignal(0)
   const [invalid, setInvalid] = createSignal(false)
+  const [searchingHistory, setSearchingHistory] = createSignal(false)
 
   return (
     <TranscriptSearchContext.Provider
@@ -68,6 +75,8 @@ export const TranscriptSearchProvider: ParentComponent = (props) => {
         requestJump: () => setJump((n) => n + 1),
         invalid,
         setInvalid,
+        searchingHistory,
+        setSearchingHistory,
       }}
     >
       {props.children}

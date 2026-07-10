@@ -1875,4 +1875,5 @@ export const dict = {
   "chat.search.close": "Luk søgning",
   "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
   "chat.search.noResults": "Ingen resultater",
+  "chat.search.searchingHistory": "Søger i tidligere beskeder…",
 }

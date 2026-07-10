@@ -61,7 +61,7 @@ import {
   parseProviderAuthError,
   unwrapError,
 } from "../../utils/errorUtils"
-import type { Part, QuestionRequest, SuggestionRequest } from "../../types/messages"
+import type { Part, QuestionRequest, SuggestionRequest, ToolState } from "../../types/messages"
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
@@ -210,19 +210,37 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   // Extracts only the text kilo-ui's tool renderers actually put on screen —
   // matched field-by-field rather than reading `state.title` generically.
-  // The bash/shell renderer never shows `state.title` (its header is a
-  // static "Shell" label); the visible command/description come from
-  // `state.input` instead, and its output is shown as plain scrollable
-  // text. Other tools' `state.output` is typically internal data (file
-  // contents, JSON) that isn't rendered inline, so including it — or bash's
-  // unused `title` — produces search matches with no corresponding
-  // highlight, which is what made navigation appear to skip past matches.
+  // Uses one canonical extraction for both counting/navigation (this
+  // function) and highlighting (transcript-search-highlight.ts scans the
+  // rendered DOM) rather than two independently maintained notions of "the
+  // tool's text" — a hand-picked field list here previously missed content
+  // that's genuinely always on screen (e.g. a todowrite checklist's item
+  // text), so a visible match could be highlighted in the DOM while the
+  // counter still reported "No results" and navigation was disabled.
+  //
+  // read/glob/grep/list are the one confirmed exception: kilo-ui always
+  // collapses them into a context-group summary (context-tool-results.tsx)
+  // that never renders raw input/output text, even expanded — including
+  // that text here would count matches with no corresponding highlight,
+  // the same class of bug this rewrite fixes for every other tool.
+  const CONTEXT_GROUP_TOOLS = new Set(["read", "glob", "grep", "list"])
+
   function toolText(part: Part & { type: "tool" }): string[] {
     const state = part.state
     if (state.status === "running") return state.title ? [state.title] : []
     if (state.status === "error") return state.error ? [state.error] : []
     if (state.status !== "completed") return []
-    if (part.tool !== "bash") return state.title ? [state.title] : []
+    if (CONTEXT_GROUP_TOOLS.has(part.tool)) return state.title ? [state.title] : []
+    if (part.tool === "bash") return bashText(state)
+    const chunks: string[] = []
+    if (state.title) chunks.push(state.title)
+    collectStrings(state.input, chunks)
+    collectStrings(state.metadata, chunks)
+    if (typeof state.output === "string" && state.output) chunks.push(state.output)
+    return chunks
+  }
+
+  function bashText(state: Extract<ToolState, { status: "completed" }>) {
     const input = state.input as { command?: string; description?: string } | undefined
     const metadata = state.metadata as { command?: string; description?: string } | undefined
     const command = input?.command ?? metadata?.command
@@ -238,6 +256,27 @@ export const MessageList: Component<MessageListProps> = (props) => {
     return chunks
   }
 
+  // Recursively collects every string leaf value from a tool's `input`/
+  // `metadata` (JSON-like objects/arrays of unknown shape), so nested
+  // rendered text — a todo item's `content`, a question's `question` text,
+  // a skill's `name` — is included without hand-modeling each tool's shape.
+  function collectStrings(value: unknown, out: string[], depth = 0): void {
+    if (depth > 4 || value === undefined || value === null) return
+    if (typeof value === "string") {
+      if (value) out.push(value)
+      return
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) collectStrings(item, out, depth + 1)
+      return
+    }
+    if (typeof value === "object") {
+      for (const key of Object.keys(value as Record<string, unknown>)) {
+        collectStrings((value as Record<string, unknown>)[key], out, depth + 1)
+      }
+    }
+  }
+
   function buildPattern(query: string, matchCase: boolean, wholeWord: boolean, regex: boolean): RegExp | undefined {
     if (!query) return undefined
     try {
@@ -246,9 +285,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
         pattern = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
       }
       if (wholeWord) {
-        pattern = `\\b(?:${pattern})\\b`
+        // Unicode-aware boundary: plain `\b` only treats ASCII letters/
+        // digits/underscore as "word" characters, so it silently breaks
+        // whole-word matching for Cyrillic, Arabic, CJK, and other non-ASCII
+        // text. `\p{L}`/`\p{M}`/`\p{N}` (letters/marks/numbers) require the
+        // `u` flag, applied below for every pattern, not just this one.
+        pattern = `(?<![\\p{L}\\p{M}\\p{N}_])(?:${pattern})(?![\\p{L}\\p{M}\\p{N}_])`
       }
-      return new RegExp(pattern, matchCase ? "g" : "gi")
+      return new RegExp(pattern, matchCase ? "gu" : "giu")
     } catch {
       return undefined
     }
@@ -266,6 +310,24 @@ export const MessageList: Component<MessageListProps> = (props) => {
   createEffect(() => {
     const q = search.query()
     search.setInvalid(search.active() && !!q && search.regex() && !pattern())
+  })
+
+  // Sessions only load the most recent page (session.tsx's MESSAGE_PAGE_LIMIT)
+  // up front; matches() only ever sees currently-loaded rows(). Without this,
+  // an active search would silently miss everything in older, not-yet-loaded
+  // history — undermining the main "find something in a long session" use
+  // case. While a query is active, keep requesting older pages until there
+  // either aren't any more or the search is no longer active; each
+  // completed load feeds back into hasOlderMessages()/loadingOlderMessages(),
+  // both tracked here, so this effect naturally re-fires and continues the
+  // chain without an explicit loop. searchingHistory (surfaced to the
+  // widget) stays true for that whole stretch, so "No results"/a final
+  // count aren't shown until the whole session has actually been searched.
+  createEffect(() => {
+    const searching = search.active() && !!search.query() && session.hasOlderMessages()
+    search.setSearchingHistory(searching)
+    if (!searching || session.loadingOlderMessages()) return
+    session.loadOlderMessages()
   })
 
   const matches = createMemo(() => {

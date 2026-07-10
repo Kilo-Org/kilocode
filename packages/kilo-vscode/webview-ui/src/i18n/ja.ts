@@ -1868,4 +1868,5 @@ export const dict = {
   "chat.search.close": "検索を閉じる",
   "chat.search.invalidRegex": "正規表現が無効です",
   "chat.search.noResults": "見つかりませんでした",
+  "chat.search.searchingHistory": "以前のメッセージを検索しています…",
 }

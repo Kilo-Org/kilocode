@@ -1879,4 +1879,5 @@ export const dict = {
   "chat.search.close": "Закрыть поиск",
   "chat.search.invalidRegex": "Недопустимое регулярное выражение",
   "chat.search.noResults": "Нет результатов",
+  "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
 }

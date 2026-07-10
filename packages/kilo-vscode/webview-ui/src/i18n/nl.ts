@@ -1910,4 +1910,5 @@ export const dict = {
   "chat.search.close": "Zoeken sluiten",
   "chat.search.invalidRegex": "Ongeldige reguliere expressie",
   "chat.search.noResults": "Geen resultaten",
+  "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
 }

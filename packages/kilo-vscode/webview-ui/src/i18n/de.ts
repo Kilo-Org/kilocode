@@ -1913,4 +1913,5 @@ export const dict = {
   "chat.search.close": "Suche schließen",
   "chat.search.invalidRegex": "Ungültiger regulärer Ausdruck",
   "chat.search.noResults": "Keine Ergebnisse",
+  "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
 } satisfies Partial<Record<Keys, string>>
