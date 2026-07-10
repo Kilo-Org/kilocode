@@ -8,11 +8,9 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 import { edge } from "../sidebar-position"
 import { protect } from "../utils/webview-message"
-import { createPlayer } from "./audio"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
-const play = createPlayer()
 
 export function getVSCodeAPI(): VSCodeAPI {
   if (!vscodeApi) {
@@ -87,8 +85,10 @@ export const VSCodeProvider: ParentComponent = (props) => {
       copy.reject(new Error(message.error ?? "Failed to write to clipboard"))
       return
     }
-    if (message.type === "playNotificationSound")
-      void play(message.uri).catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
+    if (message.type === "playNotificationSound") {
+      const audio = new Audio(message.uri)
+      void audio.play().catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
+    }
     handlers.forEach((handler) => handler(message))
   }
 
