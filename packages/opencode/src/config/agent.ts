@@ -1,6 +1,6 @@
 export * as ConfigAgent from "./agent"
 
-export type { Warning } from "./config"
+export type { Warning } from "./config" // kilocode_change
 
 import path from "path"
 import { Schema, SchemaGetter } from "effect"
@@ -164,7 +164,7 @@ export async function load(dir: string, warnings?: Warning[], trusted?: boolean,
         log.warn("could not publish session error", { message, err: error })
       }
       // kilocode_change end
-      log.error("failed to load agent", { agent: item, err: message })
+      log.error("failed to load agent", { agent: item, err: message }) // kilocode_change
       return undefined
     })
     if (!md) continue
@@ -241,7 +241,7 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
         log.warn("could not publish session error", { message, err: error })
       }
       // kilocode_change end
-      log.error("failed to load mode", { mode: item, err: message })
+      log.error("failed to load mode", { mode: item, err: message }) // kilocode_change
       return undefined
     })
     if (!md) continue

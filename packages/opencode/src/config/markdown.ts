@@ -89,9 +89,11 @@ function formatFrontmatterError(filePath: string, err: unknown): string {
 }
 // kilocode_change end
 
+// kilocode_change start - detect duplicate YAML keys as a real config error
 function isDuplicateKeyError(err: unknown): boolean {
   return err instanceof Error && err.message.includes("duplicated mapping key")
 }
+// kilocode_change end
 
 export async function parse(filePath: string) {
   const template = await Filesystem.readText(filePath)

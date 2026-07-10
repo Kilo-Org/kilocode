@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { expect, test, describe, beforeEach, afterEach } from "bun:test"
 import { mkdtemp, writeFile, rmdir, mkdir } from "fs/promises"
 import { tmpdir } from "os"
