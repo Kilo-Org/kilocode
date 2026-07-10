@@ -3,14 +3,14 @@ import { Effect, Layer } from "effect"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { LSP } from "../../src/lsp/lsp"
 import { Instruction } from "../../src/session/instruction"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ReadTool } from "../../src/tool/read"
 import * as Tool from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
-import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ctx = {
@@ -27,11 +27,12 @@ const ctx = {
 const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     Instruction.defaultLayer,
     LSP.defaultLayer,
     Truncate.defaultLayer,
+    testInstanceStoreLayer,
   ),
 )
 
@@ -46,7 +47,7 @@ const run = Effect.fn("NotebookReadTest.run")(function* (dir: string, args: Tool
 })
 
 const put = Effect.fn("NotebookReadTest.put")(function* (filepath: string, content: string | Uint8Array) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
   yield* fs.writeWithDirs(filepath, content)
 })
 

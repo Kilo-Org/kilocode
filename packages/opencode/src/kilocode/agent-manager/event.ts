@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { BusEvent } from "@/bus/bus-event"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "@/session/schema"
 import { Schema } from "effect"
 
@@ -10,8 +11,8 @@ export const AgentManagerTask = Schema.Struct({
   branchName: Schema.optional(Schema.String).annotate({ description: "Git branch name seed for worktree mode" }),
   model: Schema.optional(
     Schema.Struct({
-      providerID: ProviderID,
-      modelID: ModelID,
+      providerID: ProviderV2.ID,
+      modelID: ModelV2.ID,
     }),
   ),
   variant: Schema.optional(Schema.String),

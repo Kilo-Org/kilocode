@@ -102,6 +102,9 @@ if (Script.release) {
 console.log("\n=== cli ===\n")
 await import(`../packages/opencode/script/publish.ts`)
 
+console.log("\n=== preview cli ===\n")
+await $`bun ./packages/cli/script/publish.ts`
+
 console.log("\n=== sdk ===\n")
 await import(`../packages/sdk/js/script/publish.ts`)
 

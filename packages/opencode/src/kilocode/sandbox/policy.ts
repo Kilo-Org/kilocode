@@ -5,6 +5,7 @@ import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
+import { Instance } from "@/kilocode/instance"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import type { InstanceContext } from "@/project/instance-context"
@@ -214,7 +215,10 @@ function change<E, R>(sessionID: SessionID, guard: Effect.Effect<unknown, E, R>)
           Effect.catch(() => Effect.void),
         )
         const value = { ...status, enabled: next.enabled, version: next.version }
-        yield* (yield* Bus.Service).publish(Changed, { sessionID, ...value })
+        // Publish through the standalone Bus facade (it carries its own runtime) so the
+        // HTTP handlers that call toggle do not need Bus.Service in their layer. Consumers match on the
+        // "sandbox.status.changed" type string over SSE, so the delivery path is unchanged.
+        yield* Effect.promise(() => Bus.publish(Instance.current, Changed, { sessionID, ...value }))
         return value
       }),
     )

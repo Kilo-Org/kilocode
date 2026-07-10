@@ -5,7 +5,8 @@ import fs from "fs/promises"
 import path from "path"
 import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Instance } from "../../src/kilocode/instance"
 import { provideTestInstance } from "../fixture/fixture"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
@@ -50,8 +51,8 @@ const questions = {
 }
 
 const model = {
-  providerID: ProviderID.make("openai"),
-  modelID: ModelID.make("gpt-4"),
+  providerID: ProviderV2.ID.make("openai"),
+  modelID: ModelV2.ID.make("gpt-4"),
 }
 
 async function withInstance(fn: () => Promise<void>) {

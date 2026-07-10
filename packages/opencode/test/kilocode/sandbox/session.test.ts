@@ -1,16 +1,19 @@
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
+import { SessionV2 } from "@opencode-ai/core/session"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { SandboxStore } from "@/kilocode/sandbox/store"
 import { Session } from "@/session/session"
 import { Storage } from "@/storage/storage"
 import { SyncEvent } from "@/sync"
-import { provideInstance, tmpdirScoped } from "../../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const it = testEffect(
@@ -21,10 +24,15 @@ const it = testEffect(
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(RuntimeFlags.layer({ experimentalWorkspaces: false })),
       Layer.provide(BackgroundJob.defaultLayer),
+      Layer.provide(Database.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(SessionV2.defaultLayer),
     ),
     Bus.layer,
     Config.defaultLayer,
+    Database.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
+    testInstanceStoreLayer,
   ),
 )
 

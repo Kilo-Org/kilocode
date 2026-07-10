@@ -1,6 +1,22 @@
 import type { Event, GlobalEvent } from "@kilocode/sdk/v2"
+import * as Log from "@opencode-ai/core/util/log"
 
-type SyncEvent = Extract<GlobalEvent["payload"], { type: "sync" }>
+// kilocode_change start - normalize the runtime SyncEvent wire envelope to the legacy consumer shape
+type NormalizeSync<T> = T extends {
+  type: "sync"
+  syncEvent: infer Event extends { type: string; id: string; seq: number; aggregateID: string; data: unknown }
+}
+  ? {
+      type: "sync"
+      name: Event["type"]
+      id: Event["id"]
+      seq: Event["seq"]
+      aggregateID: Event["aggregateID"]
+      data: Event["data"]
+    }
+  : never
+
+type SyncEvent = NormalizeSync<GlobalEvent["payload"]>
 type WireSyncEvent = {
   type: "sync"
   syncEvent: {
@@ -18,7 +34,6 @@ type EventMetadata = {
   workspace: string | undefined
 }
 
-// kilocode_change start - normalize the runtime SyncEvent wire envelope to the generated SDK shape
 export function normalizeSyncEvent(payload: unknown): SyncEvent | undefined {
   if (!payload || typeof payload !== "object" || !("type" in payload) || payload.type !== "sync") return
   if ("name" in payload) return payload as SyncEvent
@@ -51,10 +66,11 @@ export function useEvent() {
 
   function subscribe(handler: (event: Event, metadata: EventMetadata) => void) {
     return sdk.event.on("event", (event) => {
-      if (event.payload.type === "sync") return
-      if (event.directory === "global" || event.project === project.project()) {
-        handler(event.payload, { workspace: event.workspace })
+      if (event.payload.type === "sync") {
+        return
       }
+
+      handler(event.payload, { workspace: event.workspace })
     })
   }
 

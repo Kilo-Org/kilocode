@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { createKiloClient } from "@kilocode/sdk/v2/client"
 import { provideTestInstance } from "../fixture/fixture"
@@ -8,12 +8,33 @@ import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
-import { Database, eq } from "../../src/storage/db"
-import { EventSequenceTable, EventTable } from "../../src/sync/event.sql"
+import { eq } from "drizzle-orm"
+import { EventSequenceTable, EventTable } from "@opencode-ai/core/event/sql"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { KiloPartLifecycle } from "../../src/kilocode/session/part-lifecycle"
+import { Database as CoreDatabase } from "@opencode-ai/core/database/database"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { ProjectTable } from "@opencode-ai/core/project/sql"
+import { AbsolutePath } from "@opencode-ai/core/schema"
+import { InstanceRef } from "../../src/effect/instance-ref"
+import path from "path"
+import os from "os"
+import fs from "fs/promises"
 
 Log.init({ print: false })
+
+const previous = Flag.KILO_DB
+const dbfile = path.join(os.tmpdir(), `kilo-fork-${process.pid}-${crypto.randomUUID()}.db`)
+
+beforeAll(async () => {
+  await fs.rm(dbfile, { force: true })
+  Flag.KILO_DB = dbfile
+})
+
+afterAll(async () => {
+  Flag.KILO_DB = previous
+  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map((file) => fs.rm(file, { force: true })))
+})
 
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
@@ -30,6 +51,27 @@ const sessions = {
 afterEach(async () => {
   await disposeAllInstances()
 })
+
+async function instance<R>(input: { directory: string; fn: () => R }) {
+  return provideTestInstance({
+    ...input,
+    init: Effect.gen(function* () {
+      const ctx = yield* InstanceRef
+      if (!ctx) return yield* Effect.die(new Error("missing test instance"))
+      const { db } = yield* CoreDatabase.Service
+      yield* db
+        .insert(ProjectTable)
+        .values({
+          id: ProjectV2.ID.make(ctx.project.id),
+          worktree: AbsolutePath.make(ctx.worktree),
+          sandboxes: [],
+        })
+        .onConflictDoNothing()
+        .run()
+        .pipe(Effect.orDie)
+    }).pipe(Effect.provide(CoreDatabase.defaultLayer)),
+  })
+}
 
 function taskPart(input: { messageID: string; sessionID: string; childSessionID: string }): MessageV2.ToolPart {
   return {
@@ -99,7 +141,7 @@ describe("Session.fork cost accounting", () => {
     "forked sessions start with zero cost",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await provideTestInstance({
+      await instance({
         directory: tmp.path,
         fn: async () => {
           const original = await sessions.create({ title: "original" })
@@ -141,7 +183,7 @@ describe("Session.fork task detachment", () => {
     "keeps completed task outcomes without cloning child sessions",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await provideTestInstance({
+      await instance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })
@@ -200,7 +242,7 @@ describe("Session.fork task detachment", () => {
     "turns copied running tasks into terminal historical errors",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await provideTestInstance({
+      await instance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })
@@ -242,7 +284,7 @@ describe("Session.fork task detachment", () => {
     "detaches pending and errored task references",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await provideTestInstance({
+      await instance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })
@@ -311,7 +353,7 @@ describe("Session.fork task detachment", () => {
       Flag.KILO_EXPERIMENTAL_WORKSPACES = true
       try {
         await using tmp = await tmpdir({ git: true })
-        await provideTestInstance({
+        await instance({
           directory: tmp.path,
           fn: async () => {
             const parent = await sessions.create({ title: "parent" })
@@ -325,20 +367,25 @@ describe("Session.fork task detachment", () => {
             } as MessageV2.TextPart)
 
             const forked = await Session.fork({ sessionID: parent.id })
-            const rows = Database.use((db) =>
-              db
-                .select({ seq: EventTable.seq, type: EventTable.type })
-                .from(EventTable)
-                .where(eq(EventTable.aggregate_id, forked.id))
-                .orderBy(EventTable.seq)
-                .all(),
-            )
-            const sequence = Database.use((db) =>
-              db
-                .select({ seq: EventSequenceTable.seq })
-                .from(EventSequenceTable)
-                .where(eq(EventSequenceTable.aggregate_id, forked.id))
-                .get(),
+            const [rows, sequence] = await Effect.runPromise(
+              Effect.gen(function* () {
+                const { db } = yield* CoreDatabase.Service
+                return yield* Effect.all([
+                  db
+                    .select({ seq: EventTable.seq, type: EventTable.type })
+                    .from(EventTable)
+                    .where(eq(EventTable.aggregate_id, forked.id))
+                    .orderBy(EventTable.seq)
+                    .all()
+                    .pipe(Effect.orDie),
+                  db
+                    .select({ seq: EventSequenceTable.seq })
+                    .from(EventSequenceTable)
+                    .where(eq(EventSequenceTable.aggregate_id, forked.id))
+                    .get()
+                    .pipe(Effect.orDie),
+                ])
+              }).pipe(Effect.provide(CoreDatabase.defaultLayer)),
             )
 
             expect(rows).toEqual([
@@ -360,7 +407,7 @@ describe("Session.fork task detachment", () => {
     "does not alter non-task parts",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await provideTestInstance({
+      await instance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })
@@ -387,7 +434,7 @@ describe("Session.fork task detachment", () => {
     "drops transient UI parts while preserving durable synthetic context",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await provideTestInstance({
+      await instance({
         directory: tmp.path,
         fn: async () => {
           const parent = await sessions.create({ title: "parent" })

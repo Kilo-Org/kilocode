@@ -1,11 +1,13 @@
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
+import { GlobalBus } from "@/bus/global" // kilocode_change - unified channel for legacy Bus + EventV2Bridge emissions
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageV2 } from "@/session/message-v2"
 import { Storage } from "@/storage/storage"
 import * as Log from "@opencode-ai/core/util/log"
@@ -15,10 +17,9 @@ import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
-import { Context, Effect, Layer, Schema, Stream } from "effect"
+import { Context, Effect, Layer, Schema } from "effect"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
-import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/kilocode/instance"
 import { Vcs } from "@/project/vcs"
@@ -116,7 +117,7 @@ export namespace KiloSessions {
     })
   }
 
-  async function model(providerID: ProviderID, modelID: ModelID) {
+  async function model(providerID: ProviderV2.ID, modelID: ModelV2.ID) {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(Provider.Service.use((svc) => svc.getModel(providerID, modelID)))
   }
@@ -125,7 +126,7 @@ export namespace KiloSessions {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(
       Provider.Service.use((svc) =>
-        Effect.all(refs.map((ref) => svc.getModel(ProviderID.make(ref.providerID), ModelID.make(ref.modelID)))),
+        Effect.all(refs.map((ref) => svc.getModel(ProviderV2.ID.make(ref.providerID), ModelV2.ID.make(ref.modelID)))),
       ),
     )
   }
@@ -240,37 +241,30 @@ export namespace KiloSessions {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const bus = yield* Bus.Service
       const config = yield* Config.Service
       const sessions = yield* Session.Service
       const state = yield* InstanceState.make(
-        Effect.fn("KiloSessions.state")(function* () {
+        Effect.fn("KiloSessions.state")(function* (ctx) {
           if (ingestDisabled) return
 
+          // kilocode_change - register event callbacks into a type→callback dispatch map, drained by a single
+          // GlobalBus listener installed below. GlobalBus is the unified channel that receives BOTH legacy Bus
+          // emissions (TurnOpen/TurnClose) and EventV2Bridge emissions (upstream moved Session/Message/Question/
+          // Status/Permission events to EventV2, which publishes only to GlobalBus, not the legacy typed Bus).
+          // Both channels emit the same { payload: { id, type, properties } } shape.
+          const handlers = new Map<string, (evt: { properties: any }) => unknown | Promise<unknown>>()
           const watch = <D extends { type: string }>(
             def: D,
             fn: (evt: { properties: any }) => unknown | Promise<unknown>,
-          ) =>
-            bus.subscribe(def as never).pipe(
-              Effect.flatMap((stream) =>
-                stream.pipe(
-                  Stream.runForEach((evt) =>
-                    EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
-                      Effect.catchCause((cause) =>
-                        Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
-                      ),
-                    ),
-                  ),
-                  Effect.forkScoped,
-                ),
-              ),
-            )
+          ) => {
+            handlers.set(def.type, fn)
+          }
 
-          yield* watch(Session.Event.Created, (evt) => {
+          watch(Session.Event.Created, (evt) => {
             const sessionID = evt.properties.info.id
             return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
           })
-          yield* watch(Session.Event.Updated, async (evt) => {
+          watch(Session.Event.Updated, async (evt) => {
             const sessionID = evt.properties.sessionID
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
@@ -279,24 +273,24 @@ export namespace KiloSessions {
               { type: "session", data: transport(session) },
             ])
           })
-          yield* watch(MessageV2.Event.Updated, async (evt) => {
+          watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
             if (evt.properties.info.role !== "user") return
             const mdl = await model(evt.properties.info.model.providerID, evt.properties.info.model.modelID)
             await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [mdl] }])
           })
-          yield* watch(MessageV2.Event.PartUpdated, (evt) =>
+          watch(MessageV2.Event.PartUpdated, (evt) =>
             ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
           )
-          yield* watch(Session.Event.Diff, (evt) =>
+          watch(Session.Event.Diff, (evt) =>
             cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
             ),
           )
-          yield* watch(Session.Event.TurnOpen, (evt) =>
+          watch(Session.Event.TurnOpen, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
           )
-          yield* watch(Session.Event.TurnClose, (evt) =>
+          watch(Session.Event.TurnClose, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
           )
 
@@ -331,12 +325,34 @@ export namespace KiloSessions {
 
             void loop().catch(fail)
           }
-          yield* watch(SessionStatus.Event.Status, sync)
-          yield* watch(Question.Event.Asked, sync)
-          yield* watch(Question.Event.Replied, sync)
-          yield* watch(Question.Event.Rejected, sync)
-          yield* watch(Permission.Event.Asked, sync)
-          yield* watch(Permission.Event.Replied, sync)
+          watch(SessionStatus.Event.Status, sync)
+          watch(Question.Event.Asked, sync)
+          watch(Question.Event.Replied, sync)
+          watch(Question.Event.Rejected, sync)
+          watch(Permission.Event.Asked, sync)
+          watch(Permission.Event.Replied, sync)
+
+          // kilocode_change - one GlobalBus listener drains the dispatch map. This state is cached per-directory
+          // (InstanceState), matching the per-directory legacy Bus PubSub it replaced, so we filter process-wide
+          // GlobalBus events down to this instance's directory. A single listener (vs one per event type) keeps
+          // us well under GlobalBus's max-listeners cap when several worktrees are active.
+          yield* Effect.acquireRelease(
+            Effect.sync(() => {
+              const handler = (event: { directory?: string; payload?: { type?: string; properties?: unknown } }) => {
+                if (event.directory !== ctx.directory) return
+                const type = event.payload?.type
+                if (type === undefined) return
+                const fn = handlers.get(type)
+                if (!fn) return
+                Promise.resolve(fn({ properties: event.payload!.properties })).catch((cause) =>
+                  log.error("subscriber failed", { type, cause }),
+                )
+              }
+              GlobalBus.on("event", handler)
+              return handler
+            }),
+            (handler) => Effect.sync(() => void GlobalBus.off("event", handler)),
+          )
 
           const cfg = yield* config.getGlobal()
           if (remoteEnabled || cfg.remote_control) {
@@ -698,7 +714,7 @@ export namespace KiloSessions {
       }),
     )
     const diffs = await cumulative(sessionId, local)
-    const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
+    const messages = await AppRuntime.runPromise(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const mdls = await models(
       messages.filter((m) => m.info.role === "user").map((m) => (m.info as SDK.UserMessage).model),

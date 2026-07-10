@@ -1,8 +1,6 @@
-import { Bus } from "@/bus"
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
-import { Instance } from "@/kilocode/instance"
 
 interface PendingEntry {
   info: Permission.Request
@@ -10,6 +8,14 @@ interface PendingEntry {
   hardRuleset?: Permission.Ruleset
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
+
+// kilocode_change - permission events moved from the legacy Bus to EventV2 (permission/index.ts publishes via
+// EventV2Bridge). The caller passes its EventV2Bridge-backed reply publisher so drain uses the same channel.
+type PublishReply = (data: {
+  sessionID: Permission.Request["sessionID"]
+  requestID: Permission.Request["id"]
+  reply: Permission.Reply
+}) => Effect.Effect<void>
 
 /**
  * Auto-resolve pending permissions now fully covered by approved or denied rules.
@@ -19,7 +25,7 @@ interface PendingEntry {
 export function drainCovered(
   pending: Map<string, PendingEntry>,
   approved: Permission.Ruleset,
-  _Denied: typeof Permission.DeniedError,
+  publishReply: PublishReply, // kilocode_change - was `_Denied`; now an EventV2Bridge-backed publisher
   exclude?: string,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
@@ -40,18 +46,12 @@ export function drainCovered(
       if (!denied && !allowed) continue
       pending.delete(id)
       if (denied) {
-        void Bus.publish(Instance.current, Permission.Event.Replied, {
-          sessionID: entry.info.sessionID,
-          requestID: entry.info.id,
-          reply: "reject",
-        })
+        // kilocode_change - publish via EventV2Bridge (was Bus.publish)
+        yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "reject" })
         yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
       } else {
-        void Bus.publish(Instance.current, Permission.Event.Replied, {
-          sessionID: entry.info.sessionID,
-          requestID: entry.info.id,
-          reply: "always",
-        })
+        // kilocode_change - publish via EventV2Bridge (was Bus.publish)
+        yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "always" })
         yield* Deferred.succeed(entry.deferred, undefined)
       }
     }

@@ -42,7 +42,7 @@
 
 import { Duration, Effect, Fiber, Option } from "effect"
 import { applyEdits, modify } from "jsonc-parser"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Question } from "@/question"
 import type { MessageID, PartID, SessionID } from "@/session/schema"
 import { PartID as PartIDSchema } from "@/session/schema"
@@ -493,7 +493,7 @@ export namespace KiloSnapshotTrack {
 
   const questionRt = makeRuntime(Question.Service, Question.defaultLayer)
 
-  const fsRt = makeRuntime(AppFileSystem.Service, AppFileSystem.defaultLayer)
+  const fsRt = makeRuntime(FSUtil.Service, FSUtil.defaultLayer)
 
   // Lazy to break a module-load cycle with @/session/index.ts. The single
   // cast on the `makeRuntime(...)` result narrows the fully generic runtime

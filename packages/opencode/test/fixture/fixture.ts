@@ -1,12 +1,16 @@
 import { $ } from "bun"
-import * as Observability from "@opencode-ai/core/effect/observability"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import * as fs from "fs/promises"
 import os from "os"
 import path from "path"
-import { Effect, Context, Layer, ManagedRuntime } from "effect"
+import { Effect, Context, Layer } from "effect"
 import type * as PlatformError from "effect/PlatformError"
 import type * as Scope from "effect/Scope"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database" // kilocode_change
+import { ProjectV2 } from "@opencode-ai/core/project" // kilocode_change
+import { ProjectTable } from "@opencode-ai/core/project/sql" // kilocode_change
+import { AbsolutePath } from "@opencode-ai/core/schema" // kilocode_change
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import type { Config } from "@/config/config"
 import { InstanceRef } from "../../src/effect/instance-ref"
@@ -19,40 +23,34 @@ import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 export const testInstanceStoreLayer = InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap))
-const testInstanceRuntime = ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
-
-const runTestInstanceStore = <A>(fn: (store: InstanceStore.Interface) => Effect.Effect<A>) =>
-  testInstanceRuntime.runPromise(InstanceStore.Service.use(fn))
 
 export async function provideTestInstance<R>(input: {
   directory: string
   init?: Effect.Effect<void>
   fn: (ctx: InstanceContext) => R
 }) {
-  const ctx = await runTestInstanceStore((store) => store.load({ directory: input.directory }))
+  const ctx = await InstanceRuntime.load({ directory: input.directory })
   try {
-    if (input.init) await testInstanceRuntime.runPromise(input.init.pipe(Effect.provideService(InstanceRef, ctx)))
+    if (input.init) await Effect.runPromise(input.init.pipe(Effect.provideService(InstanceRef, ctx)))
     return await instanceContext.provide(ctx, () => input.fn(ctx)) // kilocode_change
   } finally {
     // kilocode_change start
-    await instanceContext.provide(ctx, () =>
-      runTestInstanceStore((store) => store.dispose(ctx).pipe(Effect.provideService(InstanceRef, ctx))),
-    )
+    await instanceContext.provide(ctx, () => InstanceRuntime.disposeInstance(ctx)) // kilocode_change
     // kilocode_change end
   }
 }
 
 export async function withTestInstance<R>(input: { directory: string; fn: (ctx: InstanceContext) => R }) {
-  const ctx = await runTestInstanceStore((store) => store.load({ directory: input.directory }))
+  const ctx = await InstanceRuntime.load({ directory: input.directory })
   return instanceContext.provide(ctx, () => input.fn(ctx)) // kilocode_change
 }
 
 export async function reloadTestInstance(input: { directory: string }) {
-  return runTestInstanceStore((store) => store.reload(input))
+  return InstanceRuntime.reloadInstance(input)
 }
 
 export async function disposeAllInstances() {
-  await Promise.all([InstanceRuntime.disposeAllInstances(), runTestInstanceStore((store) => store.disposeAll())])
+  await InstanceRuntime.disposeAllInstances()
 }
 
 // Strip null bytes from paths (defensive fix for CI environment issues)
@@ -78,7 +76,7 @@ async function stop(dir: string) {
 
 type TmpDirOptions<T> = {
   git?: boolean
-  config?: Partial<Config.Info>
+  config?: Partial<ConfigV1.Info>
   init?: (dir: string) => Promise<T>
   dispose?: (dir: string) => Promise<T>
 }
@@ -120,9 +118,10 @@ export async function tmpdir<T>(options?: TmpDirOptions<T>) {
 }
 
 /** Effectful scoped tmpdir. Cleaned up when the scope closes. Make sure these stay in sync */
-export function tmpdirScoped(options?: {
+export function tmpdirScoped<E = never, R = never>(options?: {
   git?: boolean
-  config?: Partial<Config.Info> | (() => Partial<Config.Info>)
+  config?: Partial<ConfigV1.Info> | (() => Partial<ConfigV1.Info>)
+  init?: (directory: string) => Effect.Effect<void, E, R>
 }) {
   return Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
@@ -159,19 +158,16 @@ export function tmpdirScoped(options?: {
       )
     }
 
+    if (options?.init) yield* options.init(dir)
+
     return dir
   })
 }
 
 export const provideInstance =
   (directory: string) =>
-  <A, E, R>(self: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-    Effect.contextWith((services: Context.Context<R>) =>
-      Effect.promise<A>(async () => {
-        const ctx = await runTestInstanceStore((store) => store.load({ directory }))
-        return Effect.runPromiseWith(services)(self.pipe(Effect.provideService(InstanceRef, ctx)))
-      }),
-    )
+  <A, E, R>(self: Effect.Effect<A, E, R>): Effect.Effect<A, E, R | InstanceStore.Service> =>
+    InstanceStore.Service.use((store) => store.provide({ directory }, self))
 
 export const provideInstanceEffect =
   (directory: string) =>
@@ -185,26 +181,39 @@ export const disposeAllInstancesEffect = InstanceStore.Service.use((store) => st
 
 export function provideTmpdirInstance<A, E, R>(
   self: (path: string) => Effect.Effect<A, E, R>,
-  options?: { git?: boolean; config?: Partial<Config.Info> | (() => Partial<Config.Info>) },
+  options?: { git?: boolean; config?: Partial<ConfigV1.Info> | (() => Partial<ConfigV1.Info>) },
 ) {
   return Effect.gen(function* () {
     const path = yield* tmpdirScoped(options)
-    let provided = false
-
-    yield* Effect.addFinalizer(() =>
-      provided
-        ? Effect.promise(() =>
-            runTestInstanceStore((store) =>
-              store.load({ directory: path }).pipe(Effect.flatMap((ctx) => store.dispose(ctx))),
-            ),
-          ).pipe(Effect.ignore)
-        : Effect.void,
-    )
-
-    provided = true
     return yield* self(path).pipe(provideInstance(path))
-  })
+  }).pipe(Effect.provide(testInstanceStoreLayer))
 }
+
+// kilocode_change start - custom test runtimes need the instance project in their core database
+export const seedProject = Effect.gen(function* () {
+  const ctx = yield* InstanceRef
+  if (!ctx) return yield* Effect.die(new Error("missing test instance"))
+  const { db } = yield* Database.Service
+  yield* db
+    .insert(ProjectTable)
+    .values({
+      id: ProjectV2.ID.make(ctx.project.id),
+      worktree: AbsolutePath.make(ctx.project.worktree),
+      vcs: ctx.project.vcs,
+      sandboxes: ctx.project.sandboxes.map((path) => AbsolutePath.make(path)),
+    })
+    .onConflictDoNothing()
+    .run()
+    .pipe(Effect.orDie)
+})
+
+export function provideTmpdirProject<A, E, R>(
+  self: (path: string) => Effect.Effect<A, E, R>,
+  options?: { git?: boolean; config?: Partial<ConfigV1.Info> | (() => Partial<ConfigV1.Info>) },
+) {
+  return provideTmpdirInstance((path) => seedProject.pipe(Effect.andThen(self(path))), options)
+}
+// kilocode_change end
 
 export class TestInstance extends Context.Service<TestInstance, { readonly directory: string }>()("@test/Instance") {}
 
@@ -215,7 +224,11 @@ export const requireInstance = Effect.gen(function* () {
 })
 
 export const withTmpdirInstance =
-  (options?: { git?: boolean; config?: Partial<Config.Info> | (() => Partial<Config.Info>) }) =>
+  <E2 = never, R2 = never>(options?: {
+    git?: boolean
+    config?: Partial<ConfigV1.Info> | (() => Partial<ConfigV1.Info>)
+    init?: (directory: string) => Effect.Effect<void, E2, R2>
+  }) =>
   <A, E, R>(self: Effect.Effect<A, E, R>) =>
     Effect.gen(function* () {
       const directory = yield* tmpdirScoped(options)
@@ -224,15 +237,15 @@ export const withTmpdirInstance =
 
 export function provideTmpdirServer<A, E, R>(
   self: (input: { dir: string; llm: TestLLMServer["Service"] }) => Effect.Effect<A, E, R>,
-  options?: { git?: boolean; config?: (url: string) => Partial<Config.Info> },
+  options?: { git?: boolean; config?: (url: string) => Partial<ConfigV1.Info> },
 ): Effect.Effect<
   A,
   E | PlatformError.PlatformError,
-  R | TestLLMServer | ChildProcessSpawner.ChildProcessSpawner | Scope.Scope
+  R | Database.Service | TestLLMServer | ChildProcessSpawner.ChildProcessSpawner | Scope.Scope
 > {
   return Effect.gen(function* () {
     const llm = yield* TestLLMServer
-    return yield* provideTmpdirInstance((dir) => self({ dir, llm }), {
+    return yield* provideTmpdirProject((dir) => self({ dir, llm }), {
       git: options?.git,
       config: options?.config?.(llm.url),
     })

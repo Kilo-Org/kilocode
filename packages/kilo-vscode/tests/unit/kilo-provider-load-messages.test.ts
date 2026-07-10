@@ -442,6 +442,7 @@ describe("KiloProvider revert ordering", () => {
   it("unwraps the nested sync payload emitted by the live SSE endpoint", () => {
     const event = unwrapSyncEvent({
       type: "sync",
+      id: "evt_clear",
       syncEvent: {
         type: "session.updated.1",
         id: "evt_clear",

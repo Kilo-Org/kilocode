@@ -1,5 +1,6 @@
 import { afterEach, expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { fileURLToPath } from "url"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect } from "effect"
 import { effectCmd } from "../../src/cli/effect-cmd"
 import { EffectBridge } from "../../src/effect/bridge"
@@ -8,11 +9,19 @@ import { Instance } from "../../src/kilocode/instance"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(AppFileSystem.defaultLayer)
+const it = testEffect(FSUtil.defaultLayer)
 
 afterEach(async () => {
   await disposeAllInstances()
 })
+
+it.live("effect-cmd.ts does not restore legacy instance ALS", () =>
+  Effect.gen(function* () {
+    const fs = yield* FSUtil.Service
+    const source = yield* fs.readFileString(fileURLToPath(new URL("../../src/cli/effect-cmd.ts", import.meta.url)))
+    expect(source).not.toContain("restore(ctx")
+  }),
+)
 
 it.instance(
   "EffectBridge preserves legacy instance context across Promise awaits",

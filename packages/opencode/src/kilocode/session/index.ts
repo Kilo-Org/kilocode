@@ -1,16 +1,18 @@
-import { writer as _writer } from "./fork"
+import { prepareForkedPart as _prepareForkedPart } from "./fork"
 import z from "zod"
 import { Cause, Effect, Schema } from "effect"
+import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
+import { Instance } from "@/kilocode/instance"
 import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
-import type { SQL } from "@/storage/db"
-import { ProjectTable } from "@/project/project.sql"
-import { ProjectID } from "@/project/schema"
+import { and, desc, eq, gte, inArray, isNull, like, lt, or, type SQL } from "drizzle-orm"
+import { Database } from "@opencode-ai/core/database/database"
+import { ProjectTable } from "@opencode-ai/core/project/sql"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { Filesystem } from "@/util/filesystem"
-import { SessionTable } from "@/session/session.sql"
+import { SessionTable } from "@opencode-ai/core/session/sql"
 import * as Log from "@opencode-ai/core/util/log"
 import type { ProviderMetadata, Usage } from "@opencode-ai/llm"
 import type { Provider } from "@/provider/provider"
@@ -47,6 +49,14 @@ export namespace KiloSession {
   }
 
   export type CloseReason = Schema.Schema.Type<typeof CloseReasonSchema>
+
+  // kilocode_change - turn events stay on the legacy Bus (memory/turn.ts subscribes there), but the publish
+  // lives here so the upstream-shaped session/prompt.ts does not take a legacy Bus dependency.
+  export const publishTurnOpen = (input: { sessionID: SessionID }) =>
+    Effect.promise(() => Bus.publish(Instance.current, Event.TurnOpen, input))
+
+  export const publishTurnClose = (input: { sessionID: SessionID; parentID?: SessionID; reason: CloseReason }) =>
+    Effect.promise(() => Bus.publish(Instance.current, Event.TurnClose, input))
 
   // ---------------------------------------------------------------------------
   // Per-session platform override (telemetry attribution)
@@ -119,13 +129,11 @@ export namespace KiloSession {
   // Project family resolution (worktree-aware)
   // ---------------------------------------------------------------------------
 
-  export function family(id: string, directories: string[] = []): string[] {
-    const rows = Database.use((db) =>
-      db
-        .select({ id: ProjectTable.id, worktree: ProjectTable.worktree, sandboxes: ProjectTable.sandboxes })
-        .from(ProjectTable)
-        .all(),
-    )
+  function family(
+    id: string,
+    rows: Array<Pick<typeof ProjectTable.$inferSelect, "id" | "worktree" | "sandboxes">>,
+    directories: string[] = [],
+  ): string[] {
     const current = rows.find((row) => row.id === id)
     const root = current?.worktree ? Filesystem.resolve(current.worktree) : undefined
     // Combine the stored root with Git's current sibling worktrees.
@@ -141,7 +149,7 @@ export namespace KiloSession {
     return [...new Set([id, ...ids])]
   }
 
-  export function filters(input: { projectID: ProjectID; directory?: string }): SQL[] {
+  export function filters(input: { projectID: ProjectV2.ID; directory?: string }): SQL[] {
     const dir = input.directory ? Filesystem.resolve(input.directory) : undefined
     if (!dir) return [eq(SessionTable.project_id, input.projectID)]
     return [
@@ -274,14 +282,26 @@ export namespace KiloSession {
   // These helpers catch that specific error and log a warning instead.
   // ---------------------------------------------------------------------------
 
+  function foreignKey(input: unknown): boolean {
+    if (Cause.isCause(input)) {
+      return input.reasons.some((reason) => {
+        if (Cause.isFailReason(reason)) return foreignKey(reason.error)
+        if (Cause.isDieReason(reason)) return foreignKey(reason.defect)
+        return false
+      })
+    }
+    if (typeof input !== "object" || input === null) return false
+    if ("code" in input && input.code === "SQLITE_CONSTRAINT_FOREIGNKEY") return true
+    return "cause" in input && foreignKey(input.cause)
+  }
+
   export function runSyncSafe<E, R>(
     run: Effect.Effect<void, E, R>,
     context: { type: string; id: string; sessionID: string },
   ) {
     return run.pipe(
       Effect.catchCause((cause) => {
-        const err = Cause.squash(cause)
-        if (typeof err === "object" && err !== null && "code" in err && err.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        if (foreignKey(cause)) {
           return Effect.sync(() =>
             log.warn(`skipping ${context.type} for deleted session`, {
               id: context.id,
@@ -301,7 +321,7 @@ export namespace KiloSession {
   /** Schema for project summary returned by listGlobal. */
   export const ProjectInfo = z
     .object({
-      id: z.custom<ProjectID>(Schema.is(ProjectID)),
+      id: z.custom<ProjectV2.ID>(Schema.is(ProjectV2.ID)),
       name: z.string().optional(),
       worktree: z.string(),
     })
@@ -315,7 +335,7 @@ export namespace KiloSession {
    * The `fromRow` callback converts a DB row into a Session.Info;
    * it is injected to avoid a circular dependency on Session.
    */
-  export function* listGlobal<T extends { time: { updated: number }; project?: ProjectInfo | null }>(input: {
+  export function listGlobal<T extends { time: { updated: number }; project?: ProjectInfo | null }>(input: {
     fromRow: (row: SessionRow) => Omit<T, "project">
     projectID?: string
     directory?: string
@@ -328,64 +348,58 @@ export namespace KiloSession {
     limit?: number
     archived?: boolean
   }) {
-    const conditions: SQL[] = []
-    const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
+    return Effect.gen(function* () {
+      const { db } = yield* Database.Service
+      const conditions: SQL[] = []
+      const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
 
-    if (input.projectID) {
-      const ids = family(input.projectID, dirs)
-      if (ids.length === 1 && ids[0] === input.projectID) {
-        conditions.push(eq(SessionTable.project_id, ProjectID.make(input.projectID)))
-      } else {
-        conditions.push(
-          inArray(
-            SessionTable.project_id,
-            ids.map((id) => ProjectID.make(id)),
-          ),
-        )
-      }
-    }
-
-    if (input.directory) {
-      conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
-    }
-    if (input.roots) {
-      conditions.push(isNull(SessionTable.parent_id))
-    }
-    if (input.start) {
-      conditions.push(gte(SessionTable.time_updated, input.start))
-    }
-    if (input.cursor) {
-      conditions.push(lt(SessionTable.time_updated, input.cursor))
-    }
-    if (input.search) {
-      conditions.push(like(SessionTable.title, `%${input.search}%`))
-    }
-    if (!input.archived) {
-      conditions.push(isNull(SessionTable.time_archived))
-    }
-
-    const limit = input.limit ?? 100
-    const sorted = [...dirs].sort((a, b) => b.length - a.length)
-    const nested = (root: string, dir: string): boolean => {
-      if (dir === root || !Filesystem.contains(root, dir)) return false
-      if (existsSync(path.join(dir, ".git"))) return true
-      const parent = path.dirname(dir)
-      return parent !== dir && nested(root, parent)
-    }
-    const worktree = (dir: string) => {
-      for (const root of sorted) {
-        if (!Filesystem.contains(root, dir) || nested(root, dir)) continue
-        const rel = path.relative(root, dir)
-        const parts = rel.split(path.sep)
-        if ((parts[0] === ".kilo" || parts[0] === ".kilocode") && parts[1] === "worktrees" && parts[2]) {
-          return path.join(root, parts[0], parts[1], parts[2])
+      if (input.projectID) {
+        const projects = yield* db
+          .select({ id: ProjectTable.id, worktree: ProjectTable.worktree, sandboxes: ProjectTable.sandboxes })
+          .from(ProjectTable)
+          .all()
+          .pipe(Effect.orDie)
+        const ids = family(input.projectID, projects, dirs)
+        if (ids.length === 1 && ids[0] === input.projectID) {
+          conditions.push(eq(SessionTable.project_id, ProjectV2.ID.make(input.projectID)))
+        } else {
+          conditions.push(
+            inArray(
+              SessionTable.project_id,
+              ids.map((id) => ProjectV2.ID.make(id)),
+            ),
+          )
         }
-        return root
       }
-    }
-    const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
 
-    const rows = Database.use((db) => {
+      if (input.directory) conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
+      if (input.roots) conditions.push(isNull(SessionTable.parent_id))
+      if (input.start) conditions.push(gte(SessionTable.time_updated, input.start))
+      if (input.cursor) conditions.push(lt(SessionTable.time_updated, input.cursor))
+      if (input.search) conditions.push(like(SessionTable.title, `%${input.search}%`))
+      if (!input.archived) conditions.push(isNull(SessionTable.time_archived))
+
+      const limit = input.limit ?? 100
+      const sorted = [...dirs].sort((a, b) => b.length - a.length)
+      const nested = (root: string, dir: string): boolean => {
+        if (dir === root || !Filesystem.contains(root, dir)) return false
+        if (existsSync(path.join(dir, ".git"))) return true
+        const parent = path.dirname(dir)
+        return parent !== dir && nested(root, parent)
+      }
+      const worktree = (dir: string) => {
+        for (const root of sorted) {
+          if (!Filesystem.contains(root, dir) || nested(root, dir)) continue
+          const rel = path.relative(root, dir)
+          const parts = rel.split(path.sep)
+          if ((parts[0] === ".kilo" || parts[0] === ".kilocode") && parts[1] === "worktrees" && parts[2]) {
+            return path.join(root, parts[0], parts[1], parts[2])
+          }
+          return root
+        }
+      }
+      const current = input.currentDirectory ? worktree(Filesystem.resolve(input.currentDirectory)) : undefined
+
       const query =
         conditions.length > 0
           ? db
@@ -393,48 +407,47 @@ export namespace KiloSession {
               .from(SessionTable)
               .where(and(...conditions))
           : db.select().from(SessionTable)
-      const sorted = query.orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
-      return dirs.length ? sorted.all() : sorted.limit(limit).all()
-    })
+      const ordered = query.orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
+      const rows = yield* (dirs.length ? ordered.all() : ordered.limit(limit).all()).pipe(Effect.orDie)
 
-    const list =
-      dirs.length > 0
-        ? rows.filter((row) => {
-            const dir = Filesystem.resolve(row.directory)
-            const root = worktree(dir)
-            if (!root) return false
-            if (input.currentDirectory) return root === current
-            return true
-          })
-        : rows
+      const list =
+        dirs.length > 0
+          ? rows.filter((row) => {
+              const dir = Filesystem.resolve(row.directory)
+              const root = worktree(dir)
+              if (!root) return false
+              if (input.currentDirectory) return root === current
+              return true
+            })
+          : rows
 
-    const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
-    const projects = new Map<string, ProjectInfo>()
+      const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
+      const projects = new Map<string, ProjectInfo>()
 
-    if (ids.length > 0) {
-      const items = Database.use((db) =>
-        db
+      if (ids.length > 0) {
+        const items = yield* db
           .select({ id: ProjectTable.id, name: ProjectTable.name, worktree: ProjectTable.worktree })
           .from(ProjectTable)
           .where(inArray(ProjectTable.id, ids))
-          .all(),
-      )
-      for (const item of items) {
-        projects.set(item.id, {
-          id: item.id,
-          name: item.name ?? undefined,
-          worktree: item.worktree,
-        })
+          .all()
+          .pipe(Effect.orDie)
+        for (const item of items) {
+          projects.set(item.id, {
+            id: item.id,
+            name: item.name ?? undefined,
+            worktree: item.worktree,
+          })
+        }
       }
-    }
 
-    for (const row of list.slice(0, limit)) {
-      const project = projects.get(row.project_id) ?? null
-      yield { ...input.fromRow(row), project } as T & { project: ProjectInfo | null }
-    }
+      return list.slice(0, limit).map((row) => {
+        const project = projects.get(row.project_id) ?? null
+        return { ...input.fromRow(row), project } as T & { project: ProjectInfo | null }
+      })
+    })
   }
 
-  export const writer = _writer
+  export const prepareForkedPart = _prepareForkedPart
 }
 
 export const kiloSessionFork = fn(

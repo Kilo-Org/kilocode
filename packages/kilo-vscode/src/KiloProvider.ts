@@ -5,7 +5,6 @@ import type {
   Session,
   SessionStatus,
   Event,
-  GlobalEvent,
   TextPartInput,
   FilePartInput,
   Config,
@@ -60,6 +59,7 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
+import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
@@ -207,17 +207,7 @@ const mapAgent = (a: Agent) => ({
 const SESSION_SCOPED_PART_EVENTS = new Set(["message.part.updated", "message.part.delta", "message.part.removed"])
 const isSessionScopedPartEvent = (type: string) => SESSION_SCOPED_PART_EVENTS.has(type)
 
-type SyncPayload = Extract<GlobalEvent["payload"], { type: "sync" }>
-type RawSyncPayload = {
-  type: "sync"
-  syncEvent: {
-    type: SyncPayload["name"]
-    id: string
-    seq: number
-    aggregateID: string
-    data: unknown
-  }
-}
+type RawSyncPayload = Extract<WirePayload, { type: "sync" }>
 type LegacySyncEvent =
   | {
       id: string
@@ -257,13 +247,7 @@ type LegacySyncEvent =
       properties: Extract<SyncPayload, { name: "session.deleted.1" }>["data"]
     }
 
-type FullSessionUpdatedEvent = {
-  id: string
-  type: "session.updated"
-  properties: { sessionID: string; info: Session }
-}
-
-type ProviderEvent = Event | LegacySyncEvent | FullSessionUpdatedEvent
+type ProviderEvent = Event | LegacySyncEvent
 
 function isLegacySyncEvent(event: ProviderEvent): event is LegacySyncEvent {
   if (event.type === "session.updated") return "source" in event && event.source === "sync"
@@ -277,23 +261,9 @@ function isLegacySyncEvent(event: ProviderEvent): event is LegacySyncEvent {
   )
 }
 
-function isFullSessionUpdatedEvent(event: ProviderEvent): event is FullSessionUpdatedEvent {
-  return event.type === "session.updated" && !isLegacySyncEvent(event)
-}
-
-export function unwrapSyncEvent(event: GlobalEvent["payload"] | RawSyncPayload): ProviderEvent | undefined {
+export function unwrapSyncEvent(event: SSEPayload | RawSyncPayload): ProviderEvent | undefined {
   if (event.type !== "sync") return event
-  const payload =
-    "syncEvent" in event
-      ? ({
-          type: "sync",
-          name: event.syncEvent.type,
-          id: event.syncEvent.id,
-          seq: event.syncEvent.seq,
-          aggregateID: event.syncEvent.aggregateID,
-          data: event.syncEvent.data,
-        } as SyncPayload)
-      : event
+  const payload = "syncEvent" in event ? normalize(event) : event
 
   switch (payload.name) {
     case "message.updated.1":
@@ -3824,12 +3794,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Drop session events from other projects before any tracking logic.
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
-    if (
-      !isLegacySyncEvent(event) &&
-      !isFullSessionUpdatedEvent(event) &&
-      isEventFromForeignProject(event, this.projectID)
-    )
-      return
+    if (!isLegacySyncEvent(event) && isEventFromForeignProject(event, this.projectID)) return
     if (
       this.projectID &&
       (event.type === "session.created" || event.type === "session.updated") &&
@@ -3897,7 +3862,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     if (event.type === "session.updated") {
       // Full bus snapshots duplicate sync patches with the same event ID but no sequence metadata.
-      if (isFullSessionUpdatedEvent(event)) return
+      if (!isLegacySyncEvent(event)) return
       const sid = event.properties.sessionID
       const revision = this.revisions.get(sid)
       const versioned = event.seq > 0 || (revision?.seq ?? 0) > 0

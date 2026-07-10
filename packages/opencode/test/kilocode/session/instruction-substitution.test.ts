@@ -4,7 +4,7 @@ import { Effect, FileSystem, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { NodeFileSystem } from "@effect/platform-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { Reference } from "../../../src/reference/reference"
 import { Instruction } from "../../../src/session/instruction"
@@ -30,7 +30,7 @@ const configLayer = TestConfig.layer()
 const layer = (dir: string) =>
   Instruction.layer.pipe(
     Layer.provide(configLayer),
-    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(FSUtil.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(Global.layerWith({ home: dir, config: dir })),
   )

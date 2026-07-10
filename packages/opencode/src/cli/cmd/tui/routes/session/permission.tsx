@@ -27,7 +27,7 @@ import { usePathFormatter } from "../../context/path-format"
 type PermissionStage = "permission" | "always" | "reject"
 
 function filetype(input?: string) {
-  if (!input) return "none"
+  if (typeof input !== "string" || !input) return "none"
   const ext = path.extname(input)
   const language = LANGUAGE_EXTENSIONS[ext]
   if (["typescriptreact", "javascriptreact", "javascript"].includes(language)) return "typescript"
@@ -41,8 +41,14 @@ function EditBody(props: { request: PermissionRequest }) {
   const config = useTuiConfig()
   const dimensions = useTerminalDimensions()
 
-  const filepath = createMemo(() => (props.request.metadata?.filepath as string) ?? "")
-  const diff = createMemo(() => (props.request.metadata?.diff as string) ?? "")
+  const filepath = createMemo(() => {
+    const value = props.request.metadata?.filepath
+    return typeof value === "string" ? value : ""
+  })
+  const diff = createMemo(() => {
+    const value = props.request.metadata?.diff
+    return typeof value === "string" ? value : ""
+  })
 
   const view = createMemo(() => {
     const diffStyle = config.diff_style
@@ -131,7 +137,7 @@ function TextBody(props: { title: string; description?: string; icon?: string })
   )
 }
 
-export function PermissionPrompt(props: { request: PermissionRequest }) {
+export function PermissionPrompt(props: { request: PermissionRequest; directory?: string }) {
   const sdk = useSDK()
   const project = useProject()
   const sync = useSync()
@@ -193,6 +199,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             void sdk.client.permission.reply({
               reply: "always",
               requestID: props.request.id,
+              directory: props.directory,
               workspace: project.workspace.current(),
             })
           }}
@@ -204,6 +211,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             void sdk.client.permission.reply({
               reply: "reject",
               requestID: props.request.id,
+              directory: props.directory,
               message: message || undefined,
               workspace: project.workspace.current(),
             })
@@ -470,6 +478,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                   void sdk.client.permission.reply({
                     reply: "reject",
                     requestID: props.request.id,
+                    directory: props.directory,
                     workspace: project.workspace.current(),
                   })
                   return
@@ -477,6 +486,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 void sdk.client.permission.reply({
                   reply: "once",
                   requestID: props.request.id,
+                  directory: props.directory,
                   workspace: project.workspace.current(),
                 })
               }}

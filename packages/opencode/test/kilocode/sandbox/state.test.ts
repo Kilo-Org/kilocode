@@ -6,6 +6,7 @@ import { Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Database } from "@opencode-ai/core/database/database"
 import { assertNetwork, enabled as sandboxed } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
@@ -16,7 +17,9 @@ import { SessionID } from "@/session/schema"
 import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Bus.layer, Config.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(
+  Layer.mergeAll(Bus.layer, Config.defaultLayer, CrossSpawnSpawner.defaultLayer, Database.defaultLayer),
+)
 const linux = process.platform === "linux" ? test : test.skip
 const posix = process.platform === "win32" ? test.skip : test
 const tool = Network.builtin({ id: "read" })
@@ -32,6 +35,7 @@ test("restores the session snapshot after a backend restart", async () => {
   const script = [
     'import { Effect, Layer } from "effect"',
     'import { Config } from "@/config/config"',
+    'import { Database } from "@opencode-ai/core/database/database"',
     'import { InstanceRef } from "@/effect/instance-ref"',
     'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
     'import { SandboxStore } from "@/kilocode/sandbox/store"',
@@ -40,7 +44,7 @@ test("restores the session snapshot after a backend restart", async () => {
     'const context = { directory, worktree: directory, project: { id: "sandbox-restart", worktree: directory, vcs: "git", time: { created: 0, updated: 0 }, sandboxes: [] } }',
     "const cfg = JSON.parse(process.env.TEST_CONFIG)",
     'const id = SessionID.make("ses_sandbox_restart")',
-    "const status = await SandboxPolicy.status(id).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed(cfg) })), Effect.provideService(InstanceRef, context), Effect.runPromise)",
+    "const status = await SandboxPolicy.status(id).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed(cfg) })), Effect.provide(Database.defaultLayer), Effect.provideService(InstanceRef, context), Effect.runPromise)",
     "const state = await SandboxStore.read(directory, id)",
     "console.log(JSON.stringify({ status, state }))",
   ].join("\n")

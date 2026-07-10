@@ -1,22 +1,25 @@
 import { describe, expect } from "bun:test"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { ModelUsage } from "@/kilocode/session/model-usage"
-import { ProjectTable } from "@/project/project.sql"
-import { ProjectID } from "@/project/schema"
+import { ProjectTable } from "@opencode-ai/core/project/sql"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
-import { SessionTable } from "@/session/session.sql"
+import { SessionTable } from "@opencode-ai/core/session/sql"
 import { MessageID, PartID, SessionID } from "@/session/schema"
-import { ModelID, ProviderID } from "@/provider/schema"
-import { Database, eq } from "@/storage/db"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { AbsolutePath } from "@opencode-ai/core/schema"
+import { Database } from "@opencode-ai/core/database/database"
+import { eq } from "drizzle-orm"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Session.defaultLayer)
+const it = testEffect(Layer.mergeAll(Session.defaultLayer, Database.defaultLayer))
 
 const ref = (providerID: string, modelID: string) => ({
-  providerID: ProviderID.make(providerID),
-  modelID: ModelID.make(modelID),
+  providerID: ProviderV2.ID.make(providerID),
+  modelID: ModelV2.ID.make(modelID),
 })
 
 const seed = Effect.fn("ModelUsageTest.seed")(function* (sessionID: SessionID, model: ReturnType<typeof ref>) {
@@ -111,22 +114,19 @@ describe("session model usage", () => {
         tokens: { input: 9_000, output: 9_000, reasoning: 9_000, cache: { read: 9_000, write: 9_000 } },
       })
 
-      const project = ProjectID.make("legacy-project")
-      Database.use((db) => {
-        db.insert(ProjectTable)
-          .values({
-            id: project,
-            worktree: test.directory,
-            vcs: "git",
-            time_created: Date.now(),
-            time_updated: Date.now(),
-            sandboxes: [],
-          })
-          .run()
-        for (const session of [root, child, sibling]) {
-          db.update(SessionTable).set({ project_id: project }).where(eq(SessionTable.id, session.id)).run()
-        }
+      const project = ProjectV2.ID.make("legacy-project")
+      const { db } = yield* Database.Service
+      yield* db.insert(ProjectTable).values({
+        id: project,
+        worktree: AbsolutePath.make(test.directory),
+        vcs: "git",
+        time_created: Date.now(),
+        time_updated: Date.now(),
+        sandboxes: [],
       })
+      yield* Effect.forEach([root, child, sibling], (session) =>
+        db.update(SessionTable).set({ project_id: project }).where(eq(SessionTable.id, session.id)),
+      )
 
       expect(yield* ModelUsage.get(child.id)).toEqual({
         sessionIDs: [root.id, sibling.id, child.id].sort(),

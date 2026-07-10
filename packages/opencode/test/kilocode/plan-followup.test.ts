@@ -4,11 +4,13 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
-import { Bus } from "../../src/bus"
+import { GlobalBus } from "../../src/bus/global"
 import { TuiEvent } from "../../src/cli/cmd/tui/event"
 import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { EventV2 } from "@opencode-ai/core/event"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/kilocode/instance"
 import { Provider } from "../../src/provider/provider"
@@ -25,6 +27,19 @@ import { provideTestInstance, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
+
+function subscribe<D extends EventV2.Definition>(
+  definition: D,
+  callback: (event: { properties: EventV2.Data<D> }) => void,
+) {
+  const directory = Instance.directory
+  const handler = (event: { directory?: string; payload?: { type?: string; properties?: unknown } }) => {
+    if (event.directory !== directory || event.payload?.type !== definition.type) return
+    callback({ properties: event.payload.properties as EventV2.Data<D> })
+  }
+  GlobalBus.on("event", handler)
+  return () => GlobalBus.off("event", handler)
+}
 
 const runtime = makeRuntime(Question.Service, Question.defaultLayer)
 const question = {
@@ -65,20 +80,20 @@ const store = {
 }
 
 const model = {
-  providerID: ProviderID.make("openai"),
-  modelID: ModelID.make("gpt-4"),
+  providerID: ProviderV2.ID.make("openai"),
+  modelID: ModelV2.ID.make("gpt-4"),
 }
 
 const saved = {
-  providerID: ProviderID.make("openai"),
-  modelID: ModelID.make("gpt-5"),
+  providerID: ProviderV2.ID.make("openai"),
+  modelID: ModelV2.ID.make("gpt-5"),
 }
 
 const savedVar = "high"
 
 const config = {
-  providerID: ProviderID.make("openai"),
-  modelID: ModelID.make("gpt-4.1"),
+  providerID: ProviderV2.ID.make("openai"),
+  modelID: ModelV2.ID.make("gpt-4.1"),
 }
 
 const configVar = "max"
@@ -613,8 +628,8 @@ describe("plan follow-up", () => {
             created: Date.now(),
           },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: {
@@ -670,7 +685,7 @@ describe("plan follow-up", () => {
 
       const before = await sessions()
       const created: SessionID[] = []
-      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+      const unsub = subscribe(TuiEvent.SessionSelect, (event) => {
         created.push(event.properties.sessionID)
       })
 
@@ -746,8 +761,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -885,7 +900,7 @@ describe("plan follow-up", () => {
 
   test("ask - falls back to configured code model when saved CLI code model is unavailable", () =>
     withInstance(async () => {
-      await writeState({ model: { code: { providerID: ProviderID.make("missing"), modelID: ModelID.make("ghost") } } })
+      await writeState({ model: { code: { providerID: ProviderV2.ID.make("missing"), modelID: ModelV2.ID.make("ghost") } } })
       const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
         if (name === "code") {
           return {
@@ -981,8 +996,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1005,7 +1020,7 @@ describe("plan follow-up", () => {
       }
       const seeded = await seed({ text: "1. Add API\n2. Add tests" })
       const created: SessionID[] = []
-      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+      const unsub = subscribe(TuiEvent.SessionSelect, (event) => {
         created.push(event.properties.sessionID)
       })
 
@@ -1052,8 +1067,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1100,7 +1115,7 @@ describe("plan follow-up", () => {
 
       const messages = await store.messages({ sessionID: seeded.sessionID })
       const created: SessionID[] = []
-      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+      const unsub = subscribe(TuiEvent.SessionSelect, (event) => {
         created.push(event.properties.sessionID)
       })
       using _bus = {
@@ -1156,7 +1171,7 @@ describe("plan follow-up", () => {
 
       let createdAt: number | undefined
       let handoverResolvedAt: number | undefined
-      const unsub = Bus.subscribe(Session.Event.Created, (event) => {
+      const unsub = subscribe(Session.Event.Created, (event) => {
         // Ignore the seeded planning session; we only care about the follow-up.
         if (event.properties.info.id === seeded.sessionID) return
         if (createdAt === undefined) createdAt = performance.now()
@@ -1178,8 +1193,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1245,7 +1260,7 @@ describe("plan follow-up", () => {
       const seeded = await seed({ text: "1. Build" })
 
       let followup: SessionID | undefined
-      const unsub = Bus.subscribe(Session.Event.Created, (event) => {
+      const unsub = subscribe(Session.Event.Created, (event) => {
         if (event.properties.info.id === seeded.sessionID) return
         if (!followup) followup = event.properties.info.id
       })
@@ -1261,8 +1276,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },
@@ -1343,11 +1358,11 @@ describe("plan follow-up", () => {
 
       let followup: SessionID | undefined
       const states: Array<{ sessionID: SessionID; type: string }> = []
-      const created = Bus.subscribe(Session.Event.Created, (event) => {
+      const created = subscribe(Session.Event.Created, (event) => {
         if (event.properties.info.id === seeded.sessionID) return
         if (!followup) followup = event.properties.info.id
       })
-      const status = Bus.subscribe(SessionStatus.Event.Status, (event) => {
+      const status = subscribe(SessionStatus.Event.Status, (event) => {
         states.push({ sessionID: event.properties.sessionID, type: event.properties.status.type })
       })
 
@@ -1362,8 +1377,8 @@ describe("plan follow-up", () => {
           sessionID: SessionID.make("ses_test"),
           time: { created: Date.now() },
           parentID: MessageID.make("msg_parent"),
-          modelID: ModelID.make("test"),
-          providerID: ProviderID.make("test"),
+          modelID: ModelV2.ID.make("test"),
+          providerID: ProviderV2.ID.make("test"),
           mode: "code",
           agent: "code",
           path: { cwd: "/tmp", root: "/tmp" },

@@ -141,7 +141,8 @@ jobs:
 
       - name: Run unit tests
         if: matrix.settings.run
-        run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains'
+        timeout-minutes: 20
+        run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains' --log-order=stream --log-prefix=task
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
           KILO_TEST_PROFILE: ${{ runner.os == 'macOS' && github.event_name == 'pull_request' && 'darwin' || '' }} # kilocode_change

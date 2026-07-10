@@ -2,7 +2,7 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
 import type { Config } from "../config/config"
-import type { ConfigCommand } from "../config/command"
+import type { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
 import { Filesystem } from "../util/filesystem"
 import { KilocodeMarkdown } from "./config/markdown"
 import { KilocodePaths } from "./paths"
@@ -25,7 +25,7 @@ export namespace WorkflowsMigrator {
   }
 
   export interface MigrationResult {
-    commands: Record<string, ConfigCommand.Info>
+    commands: Record<string, ConfigCommandV1.Info>
     warnings: string[]
   }
 
@@ -93,7 +93,7 @@ export namespace WorkflowsMigrator {
     return workflows
   }
 
-  export function convertToCommand(workflow: KilocodeWorkflow): ConfigCommand.Info {
+  export function convertToCommand(workflow: KilocodeWorkflow): ConfigCommandV1.Info {
     return {
       template: workflow.content,
       description: extractDescription(workflow.content) ?? `Workflow: ${workflow.name}`,
@@ -106,7 +106,7 @@ export namespace WorkflowsMigrator {
     skipGlobalPaths?: boolean
   }): Promise<MigrationResult> {
     const warnings: string[] = []
-    const commands: Record<string, ConfigCommand.Info> = {}
+    const commands: Record<string, ConfigCommandV1.Info> = {}
 
     const workflows = await discoverWorkflows(options.projectDir, options.skipGlobalPaths)
 

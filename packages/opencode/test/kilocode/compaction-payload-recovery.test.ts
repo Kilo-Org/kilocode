@@ -3,6 +3,7 @@ import { APICallError } from "ai"
 import { Effect, Layer, ManagedRuntime, Scope } from "effect"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
+import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
@@ -14,7 +15,8 @@ import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { provideTestInstance } from "../fixture/fixture"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Snapshot } from "../../src/snapshot"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -32,8 +34,8 @@ import { tmpdir } from "../fixture/fixture"
 const sessionID = SessionID.make("ses_payload_recovery")
 const userID = MessageID.ascending()
 const assistantID = MessageID.ascending()
-const providerID = ProviderID.make("test")
-const modelID = ModelID.make("test-model")
+const providerID = ProviderV2.ID.make("test")
+const modelID = ModelV2.ID.make("test-model")
 
 const ref = {
   providerID,
@@ -180,6 +182,7 @@ function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) 
       Layer.provide(Reference.defaultLayer),
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(Database.defaultLayer),
       Layer.provide(Reference.defaultLayer),
     ),
   )

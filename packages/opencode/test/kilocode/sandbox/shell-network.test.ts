@@ -9,19 +9,22 @@ import { Agent } from "@/agent/agent"
 import { ShellTool } from "@/tool/shell"
 import { Truncate } from "@/tool/truncate"
 import { MessageID, SessionID } from "@/session/schema"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
 import { run as runSandbox, type Profile } from "@kilocode/sandbox"
 import { TestConfig } from "../../fixture/config"
-import { provideInstance, tmpdirScoped } from "../../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 
 const base = Layer.mergeAll(
   CrossSpawnSpawner.defaultLayer,
-  AppFileSystem.defaultLayer,
+  FSUtil.defaultLayer,
   Plugin.defaultLayer,
   Truncate.defaultLayer,
   Agent.defaultLayer,
   RuntimeFlags.defaultLayer,
+  testInstanceStoreLayer,
+  Database.defaultLayer,
 )
 const layer = Layer.mergeAll(base, Config.defaultLayer)
 

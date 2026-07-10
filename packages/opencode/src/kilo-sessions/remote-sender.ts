@@ -8,11 +8,12 @@ import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Permission } from "@/permission"
-import { PermissionID } from "@/permission/schema"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
 import { Provider } from "@/provider/provider"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import z from "zod"
 import { zodObject } from "@opencode-ai/core/effect-zod"
 import { Effect, Option, Schema } from "effect"
@@ -58,13 +59,13 @@ function normalizeModel(model: string | RemoteModelCatalog.ModelRef | undefined)
   if (!model) return undefined
   if (typeof model !== "string") {
     return {
-      providerID: ProviderID.make(model.providerID),
-      modelID: ModelID.make(model.modelID),
+      providerID: ProviderV2.ID.make(model.providerID),
+      modelID: ModelV2.ID.make(model.modelID),
     }
   }
   return {
-    providerID: ProviderID.make("kilo"),
-    modelID: ModelID.make(model.startsWith("kilocode/") ? model.slice("kilocode/".length) : model),
+    providerID: ProviderV2.ID.make("kilo"),
+    modelID: ModelV2.ID.make(model.startsWith("kilocode/") ? model.slice("kilocode/".length) : model),
   }
 }
 
@@ -99,7 +100,7 @@ export namespace RemoteSender {
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
-      readonly providers: () => Promise<Record<ProviderID, Provider.Info>>
+      readonly providers: () => Promise<Record<ProviderV2.ID, Provider.Info>>
       readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
     }
   }
@@ -489,7 +490,7 @@ export namespace RemoteSender {
         }
         const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
         dispatchQuick(msg, dir, async () => {
-          await permission.reply({ ...parsed.data, requestID: PermissionID.make(parsed.data.requestID) })
+          await permission.reply({ ...parsed.data, requestID: PermissionV1.ID.make(parsed.data.requestID) })
         })
         return
       }

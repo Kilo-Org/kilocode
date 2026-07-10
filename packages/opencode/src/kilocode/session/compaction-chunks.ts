@@ -11,6 +11,7 @@ import { MessageID, PartID, type SessionID } from "@/session/schema"
 import type { Session } from "@/session/session"
 import { Token } from "@/util/token"
 import * as Log from "@opencode-ai/core/util/log"
+import { Database } from "@opencode-ai/core/database/database"
 
 type Update = <T extends MessageV2.Part>(part: T) => Effect.Effect<T>
 type UpdateMessage = <T extends MessageV2.Info>(msg: T) => Effect.Effect<T>
@@ -270,7 +271,7 @@ export namespace KiloCompactionChunks {
           messages: [...input.data, { role: "user", content: [{ type: "text", text: input.text }] }],
           model: mdl,
         })
-        const parts = MessageV2.parts(worker.message.id)
+        const parts = yield* MessageV2.parts(worker.message.id)
         return { result, output: text(worker.message, parts) }
       }).pipe(
         Effect.ensuring(
@@ -314,7 +315,9 @@ export namespace KiloCompactionChunks {
     })
   }
 
-  function reduce(input: Input & { summaries: string[]; depth: number }): Effect.Effect<Output> {
+  function reduce(
+    input: Input & { summaries: string[]; depth: number },
+  ): Effect.Effect<Output, never, Database.Service> {
     return Effect.gen(function* () {
       const result = yield* run({ ...input, data: messages({ summaries: input.summaries }), text: input.prompt })
       if (result.result === "continue") return result

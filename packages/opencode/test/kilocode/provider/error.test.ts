@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { MessageV2 } from "@/session/message-v2"
-import { ProviderID } from "@/provider/schema"
-
+import { ProviderV2 } from "@opencode-ai/core/provider"
 describe("provider stream errors", () => {
   test("normalizes empty rate-limit messages", () => {
     const body = {
@@ -14,7 +13,7 @@ describe("provider stream errors", () => {
         param: null,
       },
     }
-    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderID.make("openai") })
+    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderV2.ID.make("openai") })
 
     expect(result).toStrictEqual({
       name: "APIError",
@@ -35,7 +34,7 @@ describe("provider stream errors", () => {
         message: "Try again in 30 seconds.",
       },
     }
-    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderID.make("openai") })
+    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderV2.ID.make("openai") })
 
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
     if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")

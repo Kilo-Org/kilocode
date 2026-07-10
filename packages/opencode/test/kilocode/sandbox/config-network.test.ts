@@ -2,7 +2,8 @@ import { Cause, Effect, Exit, Layer } from "effect"
 import { expect } from "bun:test"
 import { HttpClient } from "effect/unstable/http"
 import { backendSupport } from "@kilocode/sandbox"
-import { ProjectID } from "@/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { Database } from "@opencode-ai/core/database/database"
 import { InstanceRef } from "@/effect/instance-ref"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import * as ToolNetwork from "@/kilocode/sandbox/network"
@@ -15,7 +16,7 @@ const ctx = {
   directory: process.cwd(),
   worktree: process.cwd(),
   project: {
-    id: ProjectID.make("sandbox-config-network"),
+    id: ProjectV2.ID.make("sandbox-config-network"),
     worktree: process.cwd(),
     vcs: "git" as const,
     time: { created: 0, updated: 0 },
@@ -26,6 +27,7 @@ const ctx = {
 function layer(restrict?: boolean) {
   return Layer.mergeAll(
     ToolNetwork.httpLayer,
+    Database.defaultLayer,
     TestConfig.layer({
       get: () =>
         Effect.succeed({

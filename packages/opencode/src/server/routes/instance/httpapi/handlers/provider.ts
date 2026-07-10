@@ -2,7 +2,7 @@ import { ProviderAuth } from "@/provider/auth"
 import { Config } from "@/config/config"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Provider } from "@/provider/provider"
-import { ProviderID } from "@/provider/schema"
+
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { disposeAllInstancesAfterProviderAuthCallback } from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
@@ -14,6 +14,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { ProviderAuthApiError } from "../groups/provider"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
 function mapProviderAuthError<A, R>(self: Effect.Effect<A, ProviderAuth.Error, R>) {
   return self.pipe(
@@ -87,7 +88,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     })
 
     const authorize = Effect.fn("ProviderHttpApi.authorize")(function* (ctx: {
-      params: { providerID: ProviderID }
+      params: { providerID: ProviderV2.ID }
       payload: ProviderAuth.AuthorizeInput
     }) {
       return yield* mapProviderAuthError(
@@ -100,7 +101,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     })
 
     const authorizeRaw = Effect.fn("ProviderHttpApi.authorizeRaw")(function* (ctx: {
-      params: { providerID: ProviderID }
+      params: { providerID: ProviderV2.ID }
       request: HttpServerRequest.HttpServerRequest
     }) {
       const body = yield* Effect.orDie(ctx.request.text)
@@ -115,7 +116,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     })
 
     const callback = Effect.fn("ProviderHttpApi.callback")(function* (ctx: {
-      params: { providerID: ProviderID }
+      params: { providerID: ProviderV2.ID }
       payload: ProviderAuth.CallbackInput
     }) {
       yield* mapProviderAuthError(
