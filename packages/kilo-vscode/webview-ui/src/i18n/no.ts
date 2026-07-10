@@ -1867,4 +1867,5 @@ export const dict = {
   "chat.search.nextMatch": "Neste treff",
   "chat.search.close": "Lukk søk",
   "chat.search.invalidRegex": "Ugyldig regulært uttrykk",
+  "chat.search.noResults": "Ingen resultater",
 } satisfies Partial<Record<Keys, string>>

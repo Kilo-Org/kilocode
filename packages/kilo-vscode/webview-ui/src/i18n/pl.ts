@@ -1880,4 +1880,5 @@ export const dict = {
   "chat.search.nextMatch": "Następne dopasowanie",
   "chat.search.close": "Zamknij wyszukiwanie",
   "chat.search.invalidRegex": "Nieprawidłowe wyrażenie regularne",
+  "chat.search.noResults": "Brak wyników",
 }

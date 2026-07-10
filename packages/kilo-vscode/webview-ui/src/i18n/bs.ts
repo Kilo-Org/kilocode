@@ -1882,4 +1882,5 @@ export const dict = {
   "chat.search.nextMatch": "Sljedeće podudaranje",
   "chat.search.close": "Zatvori pretragu",
   "chat.search.invalidRegex": "Nevažeći regularni izraz",
+  "chat.search.noResults": "Nema rezultata",
 }

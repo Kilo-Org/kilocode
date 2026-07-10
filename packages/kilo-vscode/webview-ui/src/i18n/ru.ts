@@ -1878,4 +1878,5 @@ export const dict = {
   "chat.search.nextMatch": "Следующее совпадение",
   "chat.search.close": "Закрыть поиск",
   "chat.search.invalidRegex": "Недопустимое регулярное выражение",
+  "chat.search.noResults": "Нет результатов",
 }

@@ -1922,4 +1922,5 @@ export const dict = {
   "chat.search.nextMatch": "Résultat suivant",
   "chat.search.close": "Fermer la recherche",
   "chat.search.invalidRegex": "Expression régulière non valide",
+  "chat.search.noResults": "Aucun résultat",
 }

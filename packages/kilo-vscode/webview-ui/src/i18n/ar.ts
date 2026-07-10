@@ -1841,4 +1841,5 @@ export const dict = {
   "chat.search.nextMatch": "المطابقة التالية",
   "chat.search.close": "إغلاق البحث",
   "chat.search.invalidRegex": "تعبير عادي غير صالح",
+  "chat.search.noResults": "لا توجد نتائج",
 }

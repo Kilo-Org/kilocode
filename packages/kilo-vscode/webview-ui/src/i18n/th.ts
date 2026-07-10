@@ -1847,4 +1847,5 @@ export const dict = {
   "chat.search.nextMatch": "รายการที่ตรงกันถัดไป",
   "chat.search.close": "ปิดการค้นหา",
   "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
+  "chat.search.noResults": "ไม่มีผลลัพธ์",
 }

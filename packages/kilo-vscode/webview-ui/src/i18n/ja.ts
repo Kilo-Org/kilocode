@@ -1867,4 +1867,5 @@ export const dict = {
   "chat.search.nextMatch": "次の一致",
   "chat.search.close": "検索を閉じる",
   "chat.search.invalidRegex": "正規表現が無効です",
+  "chat.search.noResults": "見つかりませんでした",
 }
