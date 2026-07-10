@@ -483,6 +483,108 @@ describe("session.prompt regression", () => {
     }
   })
 
+  test("routes a leading @command-check mention deterministically from .kilo/agent/command-check.md", async () => {
+    let calls = 0
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) {
+          return new Response("not found", { status: 404 })
+        }
+        calls++
+        return new Response(chat("CMD_OK"), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "agent", "command-check.md"),
+            [
+              "---",
+              "description: exact read-only command/output runner",
+              "mode: subagent",
+              "model: alibaba/qwen-plus",
+              "permission:",
+              '  "*": deny',
+              "  read: allow",
+              "  glob: allow",
+              "  grep: allow",
+              "  list: allow",
+              "---",
+              "",
+              "Exact read-only command/output runner.",
+            ].join("\n"),
+          )
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: {
+                    apiKey: "test-key",
+                    baseURL: `${server.url.origin}/v1`,
+                  },
+                },
+              },
+              agent: {
+                orchestrator: {
+                  model: "alibaba/qwen-plus",
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const cc = await Agent.get("command-check")
+          expect(cc).toBeDefined()
+          const session = await Session.create({ title: "Deterministic command-check routing" })
+          const result = await SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "orchestrator",
+            parts: [
+              { type: "text", text: "@command-check No tools. Say exactly: CMD_OK" },
+              {
+                type: "agent",
+                name: "command-check",
+                source: { value: "@command-check", start: 0, end: 14 },
+              },
+            ],
+          })
+
+          expect(result.info.role).toBe("assistant")
+
+          const toolPart = result.parts.find((part) => part.type === "tool" && part.tool === "task")
+          expect(toolPart).toBeDefined()
+          if (toolPart && toolPart.type === "tool" && toolPart.state.status === "completed") {
+            expect(toolPart.state.input.subagent_type).toBe("command-check")
+            expect(toolPart.state.input.prompt).toBe("No tools. Say exactly: CMD_OK")
+            expect(toolPart.state.input.prompt).not.toContain("<environment_details>")
+          }
+
+          const msgs = await Session.messages({ sessionID: session.id })
+          expect(msgs.filter((msg) => msg.info.role === "assistant")).toHaveLength(1)
+          expect(calls).toBe(1)
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
+
   test("records aborted errors when prompt is cancelled mid-stream", async () => {
     const ready = defer<void>()
     const server = Bun.serve({

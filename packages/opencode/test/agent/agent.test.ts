@@ -222,6 +222,73 @@ test("reviewer agent from .kilo/agent/reviewer.md loads with correct read-only p
   })
 })
 
+test("command-check agent from .kilo/agent/command-check.md loads with correct read-only command permissions", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+      await Bun.write(
+        path.join(dir, ".kilo", "agent", "command-check.md"),
+        [
+          "---",
+          "description: exact read-only command/output runner",
+          "mode: subagent",
+          "permission:",
+          '  "*": deny',
+          "  read: allow",
+          "  glob: allow",
+          "  grep: allow",
+          "  list: allow",
+          "  edit: deny",
+          "  write: deny",
+          "  todowrite: deny",
+          "  bash:",
+          '    "*": deny',
+          '    "git status *": allow',
+          '    "git diff *": allow',
+          '    "git log *": allow',
+          '    "git show *": allow',
+          '    "git ls-files *": allow',
+          '    "git rev-parse *": allow',
+          '    "cat *": allow',
+          '    "type *": allow',
+          '    "Get-Content *": allow',
+          '    "find *": allow',
+          '    "Get-ChildItem *": allow',
+          '    "rg *": allow',
+          '    "bun test *": allow',
+          "---",
+          "",
+          "Exact read-only command/output runner.",
+        ].join("\n"),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const cc = await Agent.get("command-check")
+      expect(cc).toBeDefined()
+      expect(cc?.mode).toBe("subagent")
+      expect(evalPerm(cc, "read")).toBe("allow")
+      expect(evalPerm(cc, "glob")).toBe("allow")
+      expect(evalPerm(cc, "grep")).toBe("allow")
+      expect(evalPerm(cc, "list")).toBe("allow")
+      expect(evalPerm(cc, "edit")).toBe("deny")
+      expect(evalPerm(cc, "write")).toBe("deny")
+      expect(evalPerm(cc, "todowrite")).toBe("deny")
+      expect(Permission.evaluate("bash", "git diff HEAD", cc!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "cat foo.txt", cc!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "rg needle src", cc!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "bun test test/tool/task.test.ts", cc!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git commit -m x", cc!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "git restore foo", cc!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "rm foo.txt", cc!.permission).action).toBe("deny")
+    },
+  })
+})
+
 test("general agent denies todo tools", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
