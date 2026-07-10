@@ -171,7 +171,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
           chunks.push(stripMarkdownLinkUrls(part.text))
           break
         case "tool":
-          chunks.push(...toolText(part).map(stripMarkdownLinkUrls))
+          // Bash output is rendered via escapeHtml + syntax highlighting
+          // (never through Markdown at all), and the generic/MCP fallback
+          // renderer wraps its output in a fenced code block before ever
+          // reaching Markdown — both show link-like `[x](y)` text literally.
+          // Stripping it here would search text that no longer matches the
+          // literal characters on screen, the same class of mismatch this
+          // rewrite fixes elsewhere.
+          chunks.push(...toolText(part))
           break
         case "file":
           if (part.filename) chunks.push(part.filename)
@@ -345,13 +352,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // up front; matches() only ever sees currently-loaded rows(). Without this,
   // an active search would silently miss everything in older, not-yet-loaded
   // history — undermining the main "find something in a long session" use
-  // case. While a query is active, keep requesting older pages until there
-  // either aren't any more or the search is no longer active; each
-  // completed load feeds back into hasOlderMessages()/loadingOlderMessages(),
-  // both tracked here, so this effect naturally re-fires and continues the
-  // chain without an explicit loop. searchingHistory (surfaced to the
-  // widget) stays true for that whole stretch, so "No results"/a final
-  // count aren't shown until the whole session has actually been searched.
+  // case, and a partial match count while some history remains unsearched
+  // could actively mislead a user into the wrong conclusion. While a query
+  // is active, keep requesting older pages until there aren't any more or
+  // the search is no longer active; each completed load feeds back into
+  // hasOlderMessages()/loadingOlderMessages(), both tracked here, so this
+  // effect naturally re-fires and continues the chain without an explicit
+  // loop. searchingHistory (surfaced to the widget) stays true for that
+  // whole stretch, so "No results"/a final count aren't shown until the
+  // entire session has actually been searched.
+  //
+  // Deliberately uncapped: an earlier revision capped this and offered an
+  // opt-in to search further, but a possibly-incomplete count is worse than
+  // the cost of loading a very long session's full history. Revisit with a
+  // cap (or a lazy/incremental search strategy) in a follow-up if this
+  // proves too slow/expensive in practice on very long sessions.
   createEffect(() => {
     const searching = search.active() && !!search.query() && session.hasOlderMessages()
     search.setSearchingHistory(searching)
