@@ -356,6 +356,181 @@ test("failing-test-triage agent from .kilo/agent/failing-test-triage.md loads wi
   })
 })
 
+// kilocode_change start
+test("repo-architecture-explainer agent loads with correct read-only permissions", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+      await Bun.write(
+        path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
+        [
+          "---",
+          "description: read-only repository architecture explainer",
+          "mode: subagent",
+          "permission:",
+          '  "*": deny',
+          "  read: allow",
+          "  glob: allow",
+          "  grep: allow",
+          "  list: allow",
+          "  edit: deny",
+          "  write: deny",
+          "  todowrite: deny",
+          "  bash:",
+          '    "*": deny',
+          '    "git status *": allow',
+          '    "git diff *": allow',
+          '    "git log *": allow',
+          '    "git show *": allow',
+          '    "git ls-files *": allow',
+          '    "git rev-parse *": allow',
+          '    "cat *": allow',
+          '    "type *": allow',
+          '    "Get-Content *": allow',
+          '    "find *": allow',
+          '    "Get-ChildItem *": allow',
+          '    "rg *": allow',
+          "---",
+          "",
+          "You are a read-only repository architecture explainer.",
+        ].join("\n"),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const rae = await Agent.get("repo-architecture-explainer")
+      expect(rae).toBeDefined()
+      expect(rae?.mode).toBe("subagent")
+      expect(evalPerm(rae, "read")).toBe("allow")
+      expect(evalPerm(rae, "glob")).toBe("allow")
+      expect(evalPerm(rae, "grep")).toBe("allow")
+      expect(evalPerm(rae, "list")).toBe("allow")
+      expect(evalPerm(rae, "edit")).toBe("deny")
+      expect(evalPerm(rae, "write")).toBe("deny")
+      expect(evalPerm(rae, "todowrite")).toBe("deny")
+      expect(Permission.evaluate("bash", "git diff HEAD", rae!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git status", rae!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "cat foo.txt", rae!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "rg needle src", rae!.permission).action).toBe("allow")
+    },
+  })
+})
+
+test("repo-architecture-explainer agent denies mutating commands", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+      await Bun.write(
+        path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
+        [
+          "---",
+          "description: read-only repository architecture explainer",
+          "mode: subagent",
+          "permission:",
+          '  "*": deny',
+          "  read: allow",
+          "  glob: allow",
+          "  grep: allow",
+          "  list: allow",
+          "  edit: deny",
+          "  write: deny",
+          "  todowrite: deny",
+          "  bash:",
+          '    "*": deny',
+          '    "git status *": allow',
+          '    "git diff *": allow',
+          '    "git log *": allow',
+          '    "git show *": allow',
+          '    "git ls-files *": allow',
+          '    "git rev-parse *": allow',
+          '    "cat *": allow',
+          '    "type *": allow',
+          '    "Get-Content *": allow',
+          '    "find *": allow',
+          '    "Get-ChildItem *": allow',
+          '    "rg *": allow',
+          "---",
+          "",
+          "You are a read-only repository architecture explainer.",
+        ].join("\n"),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const rae = await Agent.get("repo-architecture-explainer")
+      expect(rae).toBeDefined()
+      expect(Permission.evaluate("bash", "git commit -m x", rae!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "git push", rae!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "git restore foo", rae!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "git checkout main", rae!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "rm foo.txt", rae!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "npm install", rae!.permission).action).toBe("deny")
+    },
+  })
+})
+
+test("repo-architecture-explainer agent denies bun test", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+      await Bun.write(
+        path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
+        [
+          "---",
+          "description: read-only repository architecture explainer",
+          "mode: subagent",
+          "permission:",
+          '  "*": deny',
+          "  read: allow",
+          "  glob: allow",
+          "  grep: allow",
+          "  list: allow",
+          "  edit: deny",
+          "  write: deny",
+          "  todowrite: deny",
+          "  bash:",
+          '    "*": deny',
+          '    "git status *": allow',
+          '    "git diff *": allow',
+          '    "git log *": allow',
+          '    "git show *": allow',
+          '    "git ls-files *": allow',
+          '    "git rev-parse *": allow',
+          '    "cat *": allow',
+          '    "type *": allow',
+          '    "Get-Content *": allow',
+          '    "find *": allow',
+          '    "Get-ChildItem *": allow',
+          '    "rg *": allow',
+          "---",
+          "",
+          "You are a read-only repository architecture explainer.",
+        ].join("\n"),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const rae = await Agent.get("repo-architecture-explainer")
+      expect(rae).toBeDefined()
+      expect(Permission.evaluate("bash", "bun test", rae!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "bun test test/tool/task.test.ts", rae!.permission).action).toBe("deny")
+    },
+  })
+})
+// kilocode_change end
+
 test("general agent denies todo tools", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({

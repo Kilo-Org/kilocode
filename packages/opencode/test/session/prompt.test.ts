@@ -687,6 +687,110 @@ describe("session.prompt regression", () => {
     }
   })
 
+  // kilocode_change start
+  test("routes a leading @repo-architecture-explainer mention deterministically from .kilo/agent/repo-architecture-explainer.md", async () => {
+    let calls = 0
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) {
+          return new Response("not found", { status: 404 })
+        }
+        calls++
+        return new Response(chat("ARCH_EXPLAIN_OK"), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
+            [
+              "---",
+              "description: read-only repository architecture explainer",
+              "mode: subagent",
+              "model: alibaba/qwen-plus",
+              "permission:",
+              '  "*": deny',
+              "  read: allow",
+              "  glob: allow",
+              "  grep: allow",
+              "  list: allow",
+              "---",
+              "",
+              "Read-only repository architecture explainer.",
+            ].join("\n"),
+          )
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: {
+                    apiKey: "test-key",
+                    baseURL: `${server.url.origin}/v1`,
+                  },
+                },
+              },
+              agent: {
+                orchestrator: {
+                  model: "alibaba/qwen-plus",
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const rae = await Agent.get("repo-architecture-explainer")
+          expect(rae).toBeDefined()
+          const session = await Session.create({ title: "Deterministic repo-architecture-explainer routing" })
+          const result = await SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "orchestrator",
+            parts: [
+              { type: "text", text: "@repo-architecture-explainer No tools. Say exactly: ARCH_EXPLAIN_OK" },
+              {
+                type: "agent",
+                name: "repo-architecture-explainer",
+                source: { value: "@repo-architecture-explainer", start: 0, end: 28 },
+              },
+            ],
+          })
+
+          expect(result.info.role).toBe("assistant")
+
+          const toolPart = result.parts.find((part) => part.type === "tool" && part.tool === "task")
+          expect(toolPart).toBeDefined()
+          if (toolPart && toolPart.type === "tool" && toolPart.state.status === "completed") {
+            expect(toolPart.state.input.subagent_type).toBe("repo-architecture-explainer")
+            expect(toolPart.state.input.prompt).toBe("No tools. Say exactly: ARCH_EXPLAIN_OK")
+            expect(toolPart.state.input.prompt).not.toContain("<environment_details>")
+          }
+
+          const msgs = await Session.messages({ sessionID: session.id })
+          expect(msgs.filter((msg) => msg.info.role === "assistant")).toHaveLength(1)
+          expect(calls).toBe(1)
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
+  // kilocode_change end
+
   test("records aborted errors when prompt is cancelled mid-stream", async () => {
     const ready = defer<void>()
     const server = Bun.serve({
