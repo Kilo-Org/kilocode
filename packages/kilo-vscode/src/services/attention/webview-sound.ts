@@ -27,13 +27,12 @@ export async function playWebviewSound(id: string) {
   const available = [...targets].filter((target) => target.ready).sort((a, b) => b.order - a.order)
 
   for (const target of available) {
-    const message = { type: "playNotificationSound", uri: target.uri(id) }
     const delivered = await Promise.resolve()
-      .then(() => target.post(message))
+      .then(() => target.post({ type: "playNotificationSound", uri: target.uri(id) }))
       .then(
         (value) => value,
         (error) => {
-          console.warn("[Kilo New] notification sound message failed", { error })
+          console.warn("[Kilo New] notification sound delivery failed", { error })
           return false
         },
       )
