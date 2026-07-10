@@ -171,7 +171,18 @@ export const MessageList: Component<MessageListProps> = (props) => {
           break
       }
     }
-    return chunks.join("\n")
+    return stripMarkdownLinkUrls(chunks.join("\n"))
+  }
+
+  // Markdown link/image URLs are part of the raw source text but are never
+  // rendered as visible text (only used as the href/src attribute) — a
+  // common assistant pattern like [marked.tsx](path/to/marked.tsx) makes the
+  // query match twice in raw text but appear only once in the DOM. Strips
+  // that hidden half so counting mirrors what's actually on screen. Images
+  // are removed entirely (their alt text isn't shown unless the image
+  // fails to load); links keep only their visible label.
+  function stripMarkdownLinkUrls(text: string): string {
+    return text.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
   }
 
   // Mirrors ErrorDisplay.tsx's exact Switch/Match classification so search
