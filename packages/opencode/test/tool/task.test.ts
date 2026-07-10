@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Agent } from "../../src/agent/agent"
 import { Instance } from "../../src/project/instance"
 import { MessageID } from "../../src/session/schema"
+import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Session } from "../../src/session"
 import { SessionPrompt } from "../../src/session/prompt"
 import { TaskTool } from "../../src/tool/task"
@@ -74,7 +75,7 @@ describe("tool.task", () => {
           role: "user",
           sessionID: session.id,
           agent: "orchestrator",
-          model: { providerID: "openai", modelID: "gpt-4" },
+          model: { providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-4") },
           time: { created: Date.now() },
         })
         const asstData = {
@@ -87,8 +88,8 @@ describe("tool.task", () => {
           time: { created: Date.now() },
           cost: 0,
           tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: "gpt-4",
-          providerID: "openai",
+          modelID: ModelID.make("gpt-4"),
+          providerID: ProviderID.make("openai"),
         }
         await Session.updateMessage({ id: asstId, ...asstData })
 
@@ -131,7 +132,12 @@ describe("tool.task", () => {
             async ask() {},
           } as any)
 
-          const err = await p2.catch((e: unknown) => e as Error)
+          const err = await p2.then(
+            () => {
+              throw new Error("Expected duplicate dispatch to reject")
+            },
+            (e: unknown) => (e instanceof Error ? e : new Error(String(e))),
+          )
           expect(err.message).toContain("Routing bug")
           expect(err.message).toContain("alpha")
 
