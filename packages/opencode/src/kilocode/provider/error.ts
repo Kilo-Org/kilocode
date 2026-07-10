@@ -10,7 +10,9 @@ export function responseFailed(input: unknown) {
   if (typeof message !== "string" || !message.trim()) return
   const code = input.response.error.code
   return {
-    code: typeof code === "string" ? code : undefined,
+    type: "api_error" as const,
     message,
+    isRetryable: code === "server_error" || code === "server_is_overloaded",
+    responseBody: JSON.stringify(input),
   }
 }
