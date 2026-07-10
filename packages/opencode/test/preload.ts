@@ -7,9 +7,20 @@ import { afterAll } from "bun:test"
 import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 
 // Set XDG env vars FIRST, before any src/ imports
-const dir = path.join(os.tmpdir(), "opencode-test-data-" + process.pid)
-await fs.mkdir(dir, { recursive: true })
+// kilocode_change start - reusable test processes need a unique root for each isolated file global
+const run = process.env.KILO_TEST_ROOT
+const parent = run ?? os.tmpdir()
+if (run) await fs.mkdir(run, { recursive: true })
+const dir = await fs.mkdtemp(path.join(parent, "opencode-test-data-"))
+// kilocode_change end
+// kilocode_change start
 afterAll(async () => {
+  // Parent-launched units release process-global state when the child exits, and
+  // the parent then removes the run root. Disposing between isolated file globals
+  // invalidates resources that Bun may still be draining. Direct `bun test` runs
+  // retain graceful shutdown because they do not set KILO_TEST_ROOT.
+  if (run) return
+  // kilocode_change end
   const { SessionExport } = await import("../src/kilocode/session-export") // kilocode_change
   const { Database } = await import("../src/storage/db")
   await SessionExport.shutdown() // kilocode_change
