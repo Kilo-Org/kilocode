@@ -154,24 +154,31 @@ export const MessageList: Component<MessageListProps> = (props) => {
   function rowText(row: TranscriptRow): string {
     if (row.type === "error") return errorText(row.error)
     if (row.type === "diff") return ""
+    // User message text is rendered by UserMessageDisplay/HighlightedText
+    // (message-part.tsx), which never parses markdown at all — [label](url)
+    // always shows literally, brackets and all, unlike assistant text/
+    // reasoning/tool content which goes through the real Markdown renderer.
+    // Stripping link URLs there would wrongly collapse two genuinely
+    // visible occurrences (the literal label and the literal URL) into one.
+    const markdown = row.type !== "user"
     const chunks: string[] = []
     for (const part of row.parts) {
       switch (part.type) {
         case "text":
-          if (!part.synthetic) chunks.push(part.text)
+          if (!part.synthetic) chunks.push(markdown ? stripMarkdownLinkUrls(part.text) : part.text)
           break
         case "reasoning":
-          chunks.push(part.text)
+          chunks.push(stripMarkdownLinkUrls(part.text))
           break
         case "tool":
-          chunks.push(...toolText(part))
+          chunks.push(...toolText(part).map(stripMarkdownLinkUrls))
           break
         case "file":
           if (part.filename) chunks.push(part.filename)
           break
       }
     }
-    return stripMarkdownLinkUrls(chunks.join("\n"))
+    return chunks.join("\n")
   }
 
   // Markdown link/image URLs are part of the raw source text but are never
@@ -181,7 +188,18 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // that hidden half so counting mirrors what's actually on screen. Images
   // are removed entirely (their alt text isn't shown unless the image
   // fails to load); links keep only their visible label.
+  //
+  // Code fences/spans suppress all inline markdown parsing, so bracket/
+  // paren text a user or assistant writes inside one (e.g. asking the
+  // model to echo `[label](url)` verbatim) renders as literal, fully
+  // visible text — split those segments out first and leave them alone, or
+  // this would wrongly collapse two genuinely visible occurrences into one.
   function stripMarkdownLinkUrls(text: string): string {
+    const segments = text.split(/(```[\s\S]*?```|`[^`\n]*`)/g)
+    return segments.map((segment, i) => (i % 2 === 1 ? segment : stripLinks(segment))).join("")
+  }
+
+  function stripLinks(text: string): string {
     return text.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
   }
 
