@@ -272,8 +272,25 @@ export const MessageList: Component<MessageListProps> = (props) => {
     if (state.title) chunks.push(state.title)
     collectStrings(state.input, chunks)
     collectStrings(state.metadata, chunks)
-    if (typeof state.output === "string" && state.output) chunks.push(state.output)
+    if (typeof state.output === "string" && state.output) chunks.push(mcpOutputText(state.output))
     return chunks
+  }
+
+  // Mirrors McpTool's formattedOutput(): if `output` parses as JSON, the
+  // renderer pretty-prints it inside a fenced ```json block, so it's shown
+  // literally, same as bash. If it isn't valid JSON — the common case for a
+  // tool returning prose or markdown — the renderer feeds the raw string
+  // straight into the real Markdown component, which *does* parse
+  // `[label](url)` into an actual link, hiding the URL half. Strip it there
+  // the same as text/reasoning chunks, or a non-JSON tool result reintroduces
+  // the exact mismatch this rewrite otherwise fixes.
+  function mcpOutputText(output: string): string {
+    try {
+      JSON.parse(output)
+      return output
+    } catch {
+      return stripMarkdownLinkUrls(output)
+    }
   }
 
   function bashText(state: Extract<ToolState, { status: "completed" }>) {
