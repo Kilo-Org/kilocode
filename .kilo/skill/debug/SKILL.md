@@ -34,4 +34,4 @@ description: Reproduce, read stack bottom-up, bisect, confirm before fixing — 
 
 ## Subagents
 
-- Use `failing-test-triage` for test failure diagnosis — it is a read-only agent with `task: allow` and prompt overlays for root-cause analysis.
+- Use `failing-test-triage` for test failure diagnosis when the orchestrator delegates test-root-cause work to it. It is read-only and specialized for root-cause analysis.
