@@ -289,6 +289,73 @@ test("command-check agent from .kilo/agent/command-check.md loads with correct r
   })
 })
 
+test("failing-test-triage agent from .kilo/agent/failing-test-triage.md loads with correct read-only permissions", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+      await Bun.write(
+        path.join(dir, ".kilo", "agent", "failing-test-triage.md"),
+        [
+          "---",
+          "description: read-only test failure diagnosis agent",
+          "mode: subagent",
+          "permission:",
+          '  "*": deny',
+          "  read: allow",
+          "  glob: allow",
+          "  grep: allow",
+          "  list: allow",
+          "  edit: deny",
+          "  write: deny",
+          "  todowrite: deny",
+          "  bash:",
+          '    "*": deny',
+          '    "git status *": allow',
+          '    "git diff *": allow',
+          '    "git log *": allow',
+          '    "git show *": allow',
+          '    "git ls-files *": allow',
+          '    "git rev-parse *": allow',
+          '    "cat *": allow',
+          '    "type *": allow',
+          '    "Get-Content *": allow',
+          '    "find *": allow',
+          '    "Get-ChildItem *": allow',
+          '    "rg *": allow',
+          '    "bun test *": allow',
+          "---",
+          "",
+          "Read-only test failure diagnosis agent.",
+        ].join("\n"),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const triage = await Agent.get("failing-test-triage")
+      expect(triage).toBeDefined()
+      expect(triage?.mode).toBe("subagent")
+      expect(evalPerm(triage, "read")).toBe("allow")
+      expect(evalPerm(triage, "glob")).toBe("allow")
+      expect(evalPerm(triage, "grep")).toBe("allow")
+      expect(evalPerm(triage, "list")).toBe("allow")
+      expect(evalPerm(triage, "edit")).toBe("deny")
+      expect(evalPerm(triage, "write")).toBe("deny")
+      expect(evalPerm(triage, "todowrite")).toBe("deny")
+      expect(Permission.evaluate("bash", "git diff HEAD", triage!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "bun test test/tool/task.test.ts", triage!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "rg needle src", triage!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git commit -m x", triage!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "git restore foo", triage!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "rm foo.txt", triage!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "npm install", triage!.permission).action).toBe("deny")
+    },
+  })
+})
+
 test("general agent denies todo tools", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({

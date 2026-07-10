@@ -585,6 +585,108 @@ describe("session.prompt regression", () => {
     }
   })
 
+  test("routes a leading @failing-test-triage mention deterministically from .kilo/agent/failing-test-triage.md", async () => {
+    let calls = 0
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) {
+          return new Response("not found", { status: 404 })
+        }
+        calls++
+        return new Response(chat("TRIAGE_OK"), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "agent", "failing-test-triage.md"),
+            [
+              "---",
+              "description: read-only test failure diagnosis agent",
+              "mode: subagent",
+              "model: alibaba/qwen-plus",
+              "permission:",
+              '  "*": deny',
+              "  read: allow",
+              "  glob: allow",
+              "  grep: allow",
+              "  list: allow",
+              "---",
+              "",
+              "Read-only test failure diagnosis agent.",
+            ].join("\n"),
+          )
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: {
+                    apiKey: "test-key",
+                    baseURL: `${server.url.origin}/v1`,
+                  },
+                },
+              },
+              agent: {
+                orchestrator: {
+                  model: "alibaba/qwen-plus",
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const triage = await Agent.get("failing-test-triage")
+          expect(triage).toBeDefined()
+          const session = await Session.create({ title: "Deterministic failing-test-triage routing" })
+          const result = await SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "orchestrator",
+            parts: [
+              { type: "text", text: "@failing-test-triage No tools. Say exactly: TRIAGE_OK" },
+              {
+                type: "agent",
+                name: "failing-test-triage",
+                source: { value: "@failing-test-triage", start: 0, end: 20 },
+              },
+            ],
+          })
+
+          expect(result.info.role).toBe("assistant")
+
+          const toolPart = result.parts.find((part) => part.type === "tool" && part.tool === "task")
+          expect(toolPart).toBeDefined()
+          if (toolPart && toolPart.type === "tool" && toolPart.state.status === "completed") {
+            expect(toolPart.state.input.subagent_type).toBe("failing-test-triage")
+            expect(toolPart.state.input.prompt).toBe("No tools. Say exactly: TRIAGE_OK")
+            expect(toolPart.state.input.prompt).not.toContain("<environment_details>")
+          }
+
+          const msgs = await Session.messages({ sessionID: session.id })
+          expect(msgs.filter((msg) => msg.info.role === "assistant")).toHaveLength(1)
+          expect(calls).toBe(1)
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
+
   test("records aborted errors when prompt is cancelled mid-stream", async () => {
     const ready = defer<void>()
     const server = Bun.serve({
