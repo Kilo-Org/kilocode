@@ -9,14 +9,30 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
 let sounds = Promise.resolve()
+const timeout = 10_000
 
 function play(uri: string) {
   const run = () =>
     new Promise<void>((resolve, reject) => {
       const audio = new Audio(uri)
-      audio.addEventListener("ended", () => resolve(), { once: true })
-      audio.addEventListener("error", () => reject(new Error("Notification sound failed to load")), { once: true })
-      audio.play().catch(reject)
+      const ctrl = new AbortController()
+      const finish = (done: () => void) => {
+        clearTimeout(timer)
+        ctrl.abort()
+        done()
+      }
+      const timer = setTimeout(() => {
+        audio.pause()
+        audio.removeAttribute("src")
+        audio.load()
+        finish(() => reject(new Error("Notification sound playback timed out")))
+      }, timeout)
+      audio.addEventListener("ended", () => finish(resolve), { once: true, signal: ctrl.signal })
+      audio.addEventListener("error", () => finish(() => reject(new Error("Notification sound failed to load"))), {
+        once: true,
+        signal: ctrl.signal,
+      })
+      audio.play().catch((error) => finish(() => reject(error)))
     })
   sounds = sounds.then(run, run)
   void sounds.catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
