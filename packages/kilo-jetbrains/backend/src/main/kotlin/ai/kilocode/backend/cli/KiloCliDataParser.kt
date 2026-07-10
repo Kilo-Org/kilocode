@@ -111,7 +111,8 @@ data class IdeLspEntryInfo(
 
 data class IdeLspResultInfo(
     val operation: String,
-    val indexing: Boolean = false,
+    val status: String = "ready",
+    val reason: String? = null,
     val entries: List<IdeLspEntryInfo> = emptyList(),
     val supertypes: List<IdeLspEntryInfo>? = null,
     val subtypes: List<IdeLspEntryInfo>? = null,
@@ -186,7 +187,8 @@ object KiloCliDataParser {
             "\"operation\":${escape(result.operation)}",
             "\"entries\":${buildIdeLspEntriesJson(result.entries)}",
         )
-        if (result.indexing) fields += "\"indexing\":true"
+        if (result.status != "ready") fields += "\"status\":${escape(result.status)}"
+        result.reason?.let { fields += "\"reason\":${escape(it)}" }
         result.supertypes?.let { fields += "\"supertypes\":${buildIdeLspEntriesJson(it)}" }
         result.subtypes?.let { fields += "\"subtypes\":${buildIdeLspEntriesJson(it)}" }
         return "{${fields.joinToString(",")}}"

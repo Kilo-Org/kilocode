@@ -12,4 +12,4 @@ Supported operations:
 
 Positions are 1-based line and character numbers, matching what users see in editors. filePath may be absolute or relative to the workspace.
 
-If the result says the IDE is indexing, retry shortly if the task depends on typed symbol data, or fall back to grep/glob/read for text-based investigation.
+If the result says IntelliJ is indexing or that code intelligence is unavailable (for example the project has not been imported yet and only its directory tree is loaded), do NOT treat an empty or missing result as authoritative. Retry shortly if the task depends on typed symbol data, or fall back to grep/glob/read (and the lsp tool if available) for text-based investigation.

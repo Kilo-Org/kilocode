@@ -117,6 +117,24 @@ class KiloCliDataParserTest {
             )
         }
 
+        @Test
+        fun `ide lsp reply builders - omit status when ready and emit status with reason otherwise`() {
+            assertEquals(
+                """{"result":{"operation":"goToDefinition","entries":[]}}""",
+                KiloCliDataParser.buildIdeLspReplyJson(IdeLspResultInfo(operation = "goToDefinition")),
+            )
+            assertEquals(
+                """{"result":{"operation":"goToDefinition","entries":[],"status":"indexing"}}""",
+                KiloCliDataParser.buildIdeLspReplyJson(IdeLspResultInfo(operation = "goToDefinition", status = "indexing")),
+            )
+            assertEquals(
+                """{"result":{"operation":"findReferences","entries":[],"status":"unavailable","reason":"project not imported"}}""",
+                KiloCliDataParser.buildIdeLspReplyJson(
+                    IdeLspResultInfo(operation = "findReferences", status = "unavailable", reason = "project not imported"),
+                ),
+            )
+        }
+
         // ---- parseChatEvent — GlobalEvent wrapper ----
 
         @Test

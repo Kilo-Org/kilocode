@@ -46,7 +46,10 @@ function section(title: string, entries: readonly Entry[]) {
 }
 
 function render(result: Result) {
-  if (result.indexing) return "The IDE is still indexing. Retry shortly or fall back to grep/glob/read for text search."
+  if (result.status === "indexing")
+    return "IntelliJ is still indexing, so code intelligence is not ready. Do NOT treat this as a definitive result: retry shortly, or use grep/glob/read (and the lsp tool if available) for text-based search instead."
+  if (result.status === "unavailable")
+    return `IntelliJ code intelligence is unavailable${result.reason ? ` (${result.reason})` : ""}. Do NOT treat an empty result as authoritative: fall back to grep/glob/read (and the lsp tool if available) for this workspace.`
   if (result.operation === "typeHierarchy") {
     return [
       section("Supertypes", result.supertypes ?? []),
@@ -62,7 +65,7 @@ function render(result: Result) {
 
 export const IntellijReadTool = Tool.define<
   typeof Params,
-  { operation: string },
+  { operation: string; status: string },
   IdeLsp.Service,
   "intellij_read"
 >(
@@ -92,7 +95,7 @@ export const IntellijReadTool = Tool.define<
           return {
             title: `intellij_read: ${params.operation}`,
             output: render(result),
-            metadata: { operation: params.operation },
+            metadata: { operation: params.operation, status: result.status ?? "ready" },
           }
         }),
     }

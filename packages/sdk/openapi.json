@@ -28526,8 +28526,13 @@
               "typeHierarchy"
             ]
           },
-          "indexing": {
-            "type": "boolean"
+          "status": {
+            "type": "string",
+            "enum": ["ready", "indexing", "unavailable"]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
           },
           "entries": {
             "type": "array",

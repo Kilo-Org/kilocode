@@ -39,9 +39,13 @@ export const Entry = Schema.Struct({
 }).annotate({ identifier: "IdeLspEntry" })
 export type Entry = Schema.Schema.Type<typeof Entry>
 
+export const Status = Schema.Literals(["ready", "indexing", "unavailable"])
+export type Status = Schema.Schema.Type<typeof Status>
+
 export const Result = Schema.Struct({
   operation: Operation,
-  indexing: Schema.optional(Schema.Boolean),
+  status: Schema.optional(Status),
+  reason: Schema.optional(Schema.String.check(Schema.isMaxLength(500))),
   entries: Schema.Array(Entry).check(Schema.isMaxLength(500)),
   supertypes: Schema.optional(Schema.Array(Entry).check(Schema.isMaxLength(500))),
   subtypes: Schema.optional(Schema.Array(Entry).check(Schema.isMaxLength(500))),

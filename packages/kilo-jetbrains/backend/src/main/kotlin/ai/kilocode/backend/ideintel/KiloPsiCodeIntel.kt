@@ -29,20 +29,40 @@ object KiloPsiCodeIntel {
         val base = path(directory) ?: throw CodeIntelFailure("invalid_path", "Invalid workspace path")
         val file = path(request.filePath) ?: throw CodeIntelFailure("invalid_path", "Invalid file path")
         if (!file.startsWith(base)) throw CodeIntelFailure("invalid_path", "File is outside the workspace")
-        val project = project(file) ?: project(base) ?: throw CodeIntelFailure("not_found", "No IntelliJ project is available")
-        if (DumbService.getInstance(project).isDumb) return IdeLspResultInfo(request.operation, indexing = true)
+        val project = project(file) ?: project(base)
+            ?: return unavailable(request.operation, "no IntelliJ project is open for this workspace")
+        if (DumbService.getInstance(project).isDumb) return indexing(request.operation)
         return try {
             readAction { execute(project, base, file, request) }
         } catch (e: IndexNotReadyException) {
-            IdeLspResultInfo(request.operation, indexing = true)
+            indexing(request.operation)
         } catch (e: LinkageError) {
             LOG.warn("IDE code intelligence API unavailable for ${request.operation}", e)
-            IdeLspResultInfo(request.operation)
+            unavailable(request.operation, "code intelligence is not supported for this file's language")
         }
     }
 
-    private fun execute(project: Project, base: Path, file: Path, request: IdeLspRequestInfo): IdeLspResultInfo =
-        when (request.operation) {
+    private fun indexing(op: String) = IdeLspResultInfo(op, status = "indexing")
+
+    private fun unavailable(op: String, reason: String) = IdeLspResultInfo(op, status = "unavailable", reason = reason)
+
+    /** True for operations that resolve a specific file position; workspaceSymbol searches globally. */
+    private fun needsFile(op: String) = op != "workspaceSymbol"
+
+    private fun execute(project: Project, base: Path, file: Path, request: IdeLspRequestInfo): IdeLspResultInfo {
+        // Guard against false negatives: when the file is not part of the imported project model (e.g. the
+        // project is only opened as a directory tree and has not been imported), PSI resolve/search return
+        // empty results that must not be reported as authoritative "no results".
+        if (needsFile(request.operation)) {
+            val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(file.toString())
+                ?: return unavailable(request.operation, "the file is not available in the IDE")
+            if (!ProjectFileIndex.getInstance(project).isInProject(vf))
+                return unavailable(
+                    request.operation,
+                    "the file is not part of the imported project model; the project may not be imported yet",
+                )
+        }
+        return when (request.operation) {
             "goToDefinition" -> IdeLspResultInfo(request.operation, entries = definition(project, file, request))
             "findReferences" -> IdeLspResultInfo(request.operation, entries = references(project, file, request))
             "goToImplementation" -> IdeLspResultInfo(request.operation, entries = implementations(project, file, request))
@@ -51,6 +71,7 @@ object KiloPsiCodeIntel {
             "typeHierarchy" -> hierarchy(project, file, request)
             else -> throw CodeIntelFailure("unsupported", "Unsupported IDE code intelligence operation: ${request.operation}")
         }
+    }
 
     private fun definition(project: Project, file: Path, request: IdeLspRequestInfo): List<IdeLspEntryInfo> {
         val element = element(project, file, request) ?: return emptyList()

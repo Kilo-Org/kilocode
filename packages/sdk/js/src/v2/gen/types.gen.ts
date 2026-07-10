@@ -2688,7 +2688,8 @@ export type IdeLspResult = {
     | "workspaceSymbol"
     | "documentSymbol"
     | "typeHierarchy"
-  indexing?: boolean
+  status?: "ready" | "indexing" | "unavailable"
+  reason?: string
   entries: Array<IdeLspEntry>
   supertypes?: Array<IdeLspEntry>
   subtypes?: Array<IdeLspEntry>
