@@ -3,6 +3,7 @@ import { Effect, Schema } from "effect"
 import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
+import * as ReasoningToken from "@/kilocode/reasoning-token" // kilocode_change
 
 type Result = Awaited<ReturnType<typeof streamText>>
 type AISDKEvent = Result["fullStream"] extends AsyncIterable<infer T> ? T : never
@@ -14,6 +15,7 @@ export function adapterState() {
     reasoning: 0,
     currentTextID: undefined as string | undefined,
     currentReasoningID: undefined as string | undefined,
+    pendingText: {} as Record<string, string>, // kilocode_change
     toolNames: {} as Record<string, string>,
   }
 }
@@ -109,19 +111,34 @@ export function toLLMEvents(
       })
 
     case "text-delta":
-      return Effect.succeed([
-        LLMEvent.textDelta({
-          id: currentTextID(state, event.id),
-          text: event.text,
-          providerMetadata: providerMetadata(event.providerMetadata),
-        }),
-      ])
+      return Effect.sync(() => {
+        const id = currentTextID(state, event.id)
+        const text = ReasoningToken.filter(state.pendingText, id, event.text) // kilocode_change
+        if (!text) return []
+        return [
+          LLMEvent.textDelta({
+            id,
+            text,
+            providerMetadata: providerMetadata(event.providerMetadata),
+          }),
+        ]
+      })
 
     case "text-end":
       return Effect.sync(() => {
         const id = currentTextID(state, event.id)
+        const text = ReasoningToken.filter(state.pendingText, id, "", true) // kilocode_change
         state.currentTextID = undefined
         return [
+          ...(text
+            ? [
+                LLMEvent.textDelta({
+                  id,
+                  text,
+                  providerMetadata: providerMetadata(event.providerMetadata),
+                }),
+              ]
+            : []),
           LLMEvent.textEnd({
             id,
             providerMetadata: providerMetadata(event.providerMetadata),
