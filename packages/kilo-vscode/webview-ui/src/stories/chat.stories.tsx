@@ -950,6 +950,15 @@ export const TaskHeaderWithTodos: Story = {
       getParts: (id: string) => headerParts[id] ?? [],
       contextUsage: () => ({ tokens: 34300, percentage: 17 }),
       costBreakdown: () => [{ label: "Session", cost: 0.64 }],
+      modelUsage: () => ({
+        sessionIDs: [SESSION_ID],
+        totals: {
+          steps: 3,
+          cost: 0.270162,
+          tokens: { input: 48_431, output: 642, reasoning: 93, cache: { read: 11_914, write: 0 } },
+        },
+        models: [],
+      }),
     }
     return (
       <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>

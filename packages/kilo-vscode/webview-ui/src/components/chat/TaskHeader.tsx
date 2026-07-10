@@ -15,13 +15,13 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
 import { useMemory } from "../../context/memory"
-import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
+import { calcTokenUsage } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
-import { hasModelUsage, tokenSummary } from "../../context/model-usage"
+import { formatCost, hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
@@ -42,27 +42,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const busy = createMemo(() => session.status() === "busy")
   const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
-  const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
-
-  const breakdown = () => session.costBreakdown()
-
   const cost = createMemo(() => {
-    const total = breakdown().reduce((sum, e) => sum + e.cost, 0)
-    if (total === 0) return undefined
-    return fmt(total)
-  })
-
-  const costTooltip = createMemo(() => {
-    const items = breakdown()
-    if (items.length <= 1) return <span>{language.t("context.usage.sessionCost")}</span>
-    const collapsed = collapseCostBreakdown(items, (n) =>
-      language.t("context.usage.olderSessions", { count: String(n) }),
-    )
-    return (
-      <div style={{ "text-align": "left", "white-space": "nowrap" }}>
-        <For each={collapsed}>{(e) => <div>{`${e.label}: ${fmt(e.cost)}`}</div>}</For>
-      </div>
-    )
+    const total = session.modelUsage()?.totals.cost
+    if (!total) return undefined
+    return formatCost(total, language.locale())
   })
 
   const context = createMemo(() => {
@@ -200,7 +183,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         <div data-slot="task-header-stats">
           <Show when={cost()}>
             {(c) => (
-              <Tooltip value={costTooltip()} placement="bottom">
+              <Tooltip value={language.t("context.usage.sessionCost")} placement="bottom">
                 <span>{c()}</span>
               </Tooltip>
             )}

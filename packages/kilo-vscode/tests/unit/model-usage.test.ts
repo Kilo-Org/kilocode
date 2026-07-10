@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import type { Provider, SessionModelUsage } from "../../webview-ui/src/types/messages"
 import {
+  formatCost,
   groupModelUsage,
   hasModelUsage,
   isSameSessionTree,
@@ -34,6 +35,12 @@ const providers = {
 } satisfies Record<string, Provider>
 
 describe("model usage", () => {
+  test("formats header and model costs consistently", () => {
+    expect(formatCost(0.270162, "en-US")).toBe("$0.270162")
+    expect(formatCost(0.0000001, "en-US")).toBe("<$0.000001")
+    expect(formatCost(Number.NaN, "en-US")).toBe("$0.00")
+  })
+
   test("groups billing routes and resolves compact catalog names", () => {
     expect(hasModelUsage(usage)).toBeTrue()
     expect(
