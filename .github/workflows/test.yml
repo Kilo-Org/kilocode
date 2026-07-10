@@ -155,6 +155,7 @@ jobs:
 
       - name: Upload unit artifacts
         if: always() && matrix.settings.run
+        continue-on-error: ${{ runner.os == 'Windows' }}
         uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: unit-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.run_attempt }}
