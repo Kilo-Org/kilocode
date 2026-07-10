@@ -10,6 +10,7 @@ import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.RevertProgress
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
@@ -81,8 +82,7 @@ class MessageView(
     private var hidden: ToolCallRef? = null
     private var prompt: PromptView? = null
     private var promptBox: JPanel? = null
-    private var promptToolbar: MessageToolbar? = null
-    private var promptToolbarPlaceholder: JComponent? = null
+    private var wrap: PromptWrap? = null
 
     init {
         isOpaque = false
@@ -297,8 +297,7 @@ class MessageView(
         attachments = null
         prompt = null
         promptBox = null
-        promptToolbar = null
-        promptToolbarPlaceholder = null
+        wrap = null
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
             if (isHidden(content)) continue
@@ -374,6 +373,15 @@ class MessageView(
     fun promptToolbarActive() = promptToolbar?.active() == true
 
     @RequiresEdt
+    fun setReverting(active: Boolean, text: String, onCancel: () -> Unit) {
+        if (role != SessionUiStyle.View.Message.USER_ROLE) return
+        wrap?.setReverting(active, text, onCancel)
+    }
+
+    private val promptToolbar: MessageToolbar?
+        get() = wrap?.bar
+
+    @RequiresEdt
     private fun syncPromptToolbar() {
         promptToolbar?.setActive(prompt?.copyMarkdown(trim = false)?.isNotEmpty() == true)
     }
@@ -398,8 +406,7 @@ class MessageView(
         sources.clear()
         prompt = null
         promptBox = null
-        promptToolbar = null
-        promptToolbarPlaceholder = null
+        wrap = null
         hidden = null
     }
 
@@ -454,28 +461,61 @@ class MessageView(
         if (role != SessionUiStyle.View.Message.USER_ROLE) return view
         if (view !is PromptView) return view
         prompt = view
-        val bar = promptToolbar ?: MessageToolbar(
-            { prompt?.copyMarkdown(trim = false) },
-            revert?.let { fn -> { fn(msg.info.id) } },
-        ).also { promptToolbar = it }
-        val placeholder = promptToolbarPlaceholder ?: bar.placeholder().also { promptToolbarPlaceholder = it }
         val box = JPanel(BorderLayout()).also {
             it.isOpaque = false
             it.add(view, BorderLayout.CENTER)
             promptBox = it
         }
-        bar.setActive(true)
-        return object : JPanel(BorderLayout()), SessionCopyTarget {
-            override val copyAnchor: JComponent get() = placeholder
-            override val copyToolbar: JComponent get() = bar
+        val node = PromptWrap(box)
+        wrap = node
+        node.bar.setActive(true)
+        return node
+    }
 
-            override fun copyText(): String? = prompt?.copyMarkdown(trim = false)
+    private inner class PromptWrap(
+        private val box: JPanel,
+    ) : JPanel(BorderLayout()), SessionCopyTarget {
+        val bar = MessageToolbar(
+            { prompt?.copyMarkdown(trim = false) },
+            revert?.let { fn -> { fn(msg.info.id) } },
+        )
+        private val placeholder = bar.placeholder()
+        private var progress: RevertProgress? = null
+        private var reverting = false
 
-            init {
-                isOpaque = false
-                add(box, BorderLayout.CENTER)
-                add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.SOUTH)
+        override val copyAnchor: JComponent get() = placeholder
+        override val copyToolbar: JComponent? get() = if (reverting) null else bar
+
+        init {
+            isOpaque = false
+            add(box, BorderLayout.CENTER)
+            add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.SOUTH)
+        }
+
+        override fun copyText(): String? = prompt?.copyMarkdown(trim = false)
+
+        @RequiresEdt
+        fun setReverting(active: Boolean, text: String, onCancel: () -> Unit) {
+            if (active) {
+                val node = progress ?: RevertProgress(onCancel).also {
+                    it.applyStyle(style)
+                    progress = it
+                }
+                node.setText(text)
+                if (reverting) return
+                reverting = true
+                remove((layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH))
+                add(node.align(HAlign.LEFT, VAlign.TOP), BorderLayout.SOUTH)
+                revalidate()
+                repaint()
+                return
             }
+            if (!reverting) return
+            reverting = false
+            remove((layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH))
+            add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.SOUTH)
+            revalidate()
+            repaint()
         }
     }
 

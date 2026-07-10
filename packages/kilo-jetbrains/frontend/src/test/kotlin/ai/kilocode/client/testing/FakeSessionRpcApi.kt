@@ -85,6 +85,10 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var enhanced = "Enhanced prompt"
     var enhanceGate: CompletableDeferred<Unit>? = null
     var enhanceThrows: Exception? = null
+    var revertGate: CompletableDeferred<Unit>? = null
+    var unrevertGate: CompletableDeferred<Unit>? = null
+    var revertThrows: Exception? = null
+    var unrevertThrows: Exception? = null
     var commandThrows: Exception? = null
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
     val commands = mutableListOf<CommandCall>()
@@ -220,11 +224,15 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun revert(id: String, directory: String, messageID: String, partID: String?) {
         assertNotEdt("revert")
+        revertGate?.await()
+        revertThrows?.let { throw it }
         reverts.add(RevertCall(id, directory, messageID, partID))
     }
 
     override suspend fun unrevert(id: String, directory: String) {
         assertNotEdt("unrevert")
+        unrevertGate?.await()
+        unrevertThrows?.let { throw it }
         unreverts.add(id to directory)
     }
 
