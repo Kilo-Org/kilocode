@@ -307,7 +307,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
   createEffect(
     on(
       () => [search.query(), search.matchCase(), search.wholeWord(), search.regex()],
-      () => search.setIndex(0),
+      () => {
+        search.setIndex(0)
+        // Jump straight to the first match as the user types/toggles an
+        // option, instead of leaving them to press Enter/an arrow just to
+        // see where the current query actually landed. `requestJump` is a
+        // no-op when there are no matches (guarded in the jump effect).
+        search.requestJump()
+      },
     ),
   )
 
