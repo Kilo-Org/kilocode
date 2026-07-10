@@ -53,6 +53,22 @@ describe("webview notification sounds", () => {
     expect(fallback.messages).toEqual([{ type: "playNotificationSound", uri: "sound://fallback/staplebops-06.wav" }])
   })
 
+  it("falls back when the preferred webview cannot resolve the sound URI", async () => {
+    const fallback = target("fallback")
+    const failed = registerSoundWebview(
+      () => Promise.resolve(true),
+      () => {
+        throw new Error("disposed")
+      },
+    )
+    disposables.push(failed)
+    fallback.registration.ready()
+    failed.ready()
+
+    expect(await playWebviewSound("bip-bop-03")).toBe(true)
+    expect(fallback.messages).toEqual([{ type: "playNotificationSound", uri: "sound://fallback/bip-bop-03.wav" }])
+  })
+
   it("returns false when no ready webview exists", async () => {
     target("pending")
     expect(await playWebviewSound("yup-01")).toBe(false)
