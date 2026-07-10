@@ -68,6 +68,31 @@ export function fallbackSanitization(content: string): string {
   return content.replace(frontmatter, () => processed)
 }
 
+// kilocode_change start - extract line/column from gray-matter YAML errors when possible
+function yamlLocation(err: unknown): { line?: number; column?: number } {
+  if (err instanceof Error && "mark" in err && err.mark && typeof err.mark === "object") {
+    const mark = err.mark as { line?: number; column?: number }
+    return { line: mark.line, column: mark.column }
+  }
+  if (err instanceof Error && "line" in err && typeof err.line === "number") {
+    const col = "column" in err && typeof err.column === "number" ? err.column : undefined
+    return { line: err.line, column: col }
+  }
+  return {}
+}
+
+function formatFrontmatterError(filePath: string, err: unknown): string {
+  const base = err instanceof Error ? err.message : String(err)
+  const { line, column } = yamlLocation(err)
+  const loc = line !== undefined ? ` at line ${line}${column !== undefined ? `, column ${column}` : ""}` : ""
+  return `${filePath}: Failed to parse YAML frontmatter${loc}: ${base}`
+}
+// kilocode_change end
+
+function isDuplicateKeyError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes("duplicated mapping key")
+}
+
 export async function parse(filePath: string) {
   const template = await Filesystem.readText(filePath)
 
@@ -76,18 +101,28 @@ export async function parse(filePath: string) {
     const md = matter(template)
     md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
     return md
-  } catch {
+  } catch (err) {
+    // Duplicate keys are a real configuration error; do not paper over them with the permissive fallback.
+    if (isDuplicateKeyError(err)) {
+      throw new FrontmatterError(
+        {
+          path: filePath,
+          message: formatFrontmatterError(filePath, err),
+        },
+        { cause: err },
+      )
+    }
     try {
       const md = matter(fallbackSanitization(template))
       md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
       return md
-    } catch (err) {
+    } catch (fallbackErr) {
       throw new FrontmatterError(
         {
           path: filePath,
-          message: `${filePath}: Failed to parse YAML frontmatter: ${err instanceof Error ? err.message : String(err)}`,
+          message: formatFrontmatterError(filePath, fallbackErr),
         },
-        { cause: err },
+        { cause: fallbackErr },
       )
     }
   }

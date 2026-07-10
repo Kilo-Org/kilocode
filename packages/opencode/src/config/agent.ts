@@ -1,5 +1,7 @@
 export * as ConfigAgent from "./agent"
 
+export type { Warning } from "./config"
+
 import path from "path"
 import { Schema, SchemaGetter } from "effect"
 import { PositiveInt } from "@opencode-ai/core/schema"
@@ -149,7 +151,8 @@ export async function load(dir: string, warnings?: Warning[], trusted?: boolean,
         ? err.data.message
         : `Failed to parse agent ${item}`
       // kilocode_change start
-      if (warnings) warnings.push({ path: item, message })
+      const detail = ConfigMarkdown.FrontmatterError.isInstance(err) ? err.data.message : undefined
+      if (warnings) warnings.push({ path: item, message, detail })
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
@@ -161,7 +164,7 @@ export async function load(dir: string, warnings?: Warning[], trusted?: boolean,
         log.warn("could not publish session error", { message, err: error })
       }
       // kilocode_change end
-      log.error("failed to load agent", { agent: item, err })
+      log.error("failed to load agent", { agent: item, err: message })
       return undefined
     })
     if (!md) continue
@@ -225,7 +228,8 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
         ? err.data.message
         : `Failed to parse mode ${item}`
       // kilocode_change start
-      if (warnings) warnings.push({ path: item, message })
+      const detail = ConfigMarkdown.FrontmatterError.isInstance(err) ? err.data.message : undefined
+      if (warnings) warnings.push({ path: item, message, detail })
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
@@ -237,7 +241,7 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
         log.warn("could not publish session error", { message, err: error })
       }
       // kilocode_change end
-      log.error("failed to load mode", { mode: item, err })
+      log.error("failed to load mode", { mode: item, err: message })
       return undefined
     })
     if (!md) continue
