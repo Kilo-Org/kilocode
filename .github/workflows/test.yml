@@ -93,7 +93,6 @@ jobs:
       - name: Setup Node
         if: matrix.settings.run
         id: setup-node
-        # kilocode_change
         continue-on-error: ${{ runner.os == 'Windows' }}
         uses: actions/setup-node@v6 # kilocode_change
         with:
@@ -156,9 +155,6 @@ jobs:
 
       - name: Upload unit artifacts
         if: always() && matrix.settings.run
-        # kilocode_change start
-        continue-on-error: ${{ runner.os == 'Windows' }}
-        # kilocode_change end
         uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: unit-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.run_attempt }}
