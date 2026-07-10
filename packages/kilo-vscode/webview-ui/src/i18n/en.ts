@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} messages reverted",
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Wait for agent to finish",
   "command.session.compact": "Compact session",
   "command.session.compact.description": "Summarize the session to reduce context size",
@@ -630,7 +630,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep Search",
   "ui.permission.toolLabel.webSearch": "Web Search",
   "ui.permission.toolLabel.list": "List",
-  "ui.permission.toolLabel.externalDirectory": "Read External Directory",
+  "ui.permission.toolLabel.externalDirectory": "Access External Directory",
   "ui.permission.toolLabel.webFetch": "Web Fetch",
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
@@ -913,6 +913,7 @@ export const dict = {
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Display Name",
   "provider.custom.models.reasoning.label": "Reasoning",
+  "provider.custom.models.modalities.image": "Image",
   "provider.custom.models.variants.label": "Variants",
   "provider.custom.models.variants.add": "Add variant",
   "provider.custom.models.variants.remove": "Remove variant",
@@ -1406,6 +1407,12 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.imageGeneration.title": "Image Generation",
+  "settings.experimental.imageGeneration.description": "Enable AI image generation",
+  "settings.experimental.imageGenerationModel.title": "Image Model",
+  "settings.experimental.imageGenerationModel.description": "Image Generation Model",
+  "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
+
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
@@ -1418,8 +1425,8 @@ export const dict = {
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Run agent shell commands inside an OS-level sandbox that restricts writes to the project and Kilo state directories",
   "settings.sandboxing.title": "Sandboxing",
   "settings.sandboxing.network.title": "Restrict Network Access",
@@ -1428,6 +1435,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
   "settings.sandboxing.writablePaths.description":
     "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Enable SWE-Pruner: task-aware pruning of large read, search, and shell tool outputs, guided by a focus question from the agent",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner Model",
+  "settings.experimental.swePrunerModel.description":
+    "Model used to skim tool outputs; defaults to the configured small model",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -1655,6 +1668,10 @@ export const dict = {
     "System prompt sent to the AI when generating commit messages. This replaces the default prompt entirely.",
   "settings.commitMessage.prompt.placeholder":
     "e.g. Generate commit messages in Spanish following conventional commits format. Return ONLY the commit message.",
+
+  "settings.commitMessage.language.sync": "Sync with UI language",
+  "settings.commitMessage.language.title": "Language",
+  "settings.commitMessage.language.description": "Choose which language to use for AI-generated commit messages:",
 
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",

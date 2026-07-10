@@ -120,6 +120,7 @@ export const dict = {
 
   "ui.tool.read": "読み込み",
   "ui.tool.loaded": "読み込み済み",
+  "ui.tool.swePruned": "SWE-Pruner · {{total}} 行中 {{kept}} 行を保持", // kilocode_change
   "ui.tool.list": "リスト",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -170,7 +171,9 @@ export const dict = {
   "ui.patch.action.patched": "パッチ適用済み",
 
   "ui.question.subtitle.answered": "{{count}}件回答済み",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(回答なし)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(未回答)",
   "ui.question.multiHint": "該当するものをすべて選択",
   "ui.question.singleHint": "1 つ選択",

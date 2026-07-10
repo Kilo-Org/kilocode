@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} mensajes revertidos",
   "revert.banner.redo": "Rehacer",
   "revert.banner.redo.all": "Rehacer todo",
-  "revert.banner.hint": "Envía un nuevo mensaje para hacerlo permanente",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Espera a que el agente termine",
   "command.session.compact": "Compactar sesión",
   "command.session.compact.description": "Resumir la sesión para reducir el tamaño del contexto",
@@ -637,7 +637,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Búsqueda Grep",
   "ui.permission.toolLabel.webSearch": "Búsqueda Web",
   "ui.permission.toolLabel.list": "Listar",
-  "ui.permission.toolLabel.externalDirectory": "Leer directorio externo",
+  "ui.permission.toolLabel.externalDirectory": "Acceder al directorio externo",
   "ui.permission.toolLabel.webFetch": "Obtener Web",
   "ui.permission.toolLabel.task": "Tarea",
   "ui.permission.toolLabel.skill": "Habilidad",
@@ -1002,6 +1002,7 @@ export const dict = {
   "provider.custom.models.name.label": "Nombre",
   "provider.custom.models.name.placeholder": "Nombre para mostrar",
   "provider.custom.models.reasoning.label": "Razonamiento",
+  "provider.custom.models.modalities.image": "Imagen",
   "provider.custom.models.variants.label": "Variantes",
   "provider.custom.models.variants.add": "Añadir variante",
   "provider.custom.models.variants.remove": "Eliminar variante",
@@ -1441,6 +1442,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
   "settings.experimental.codebaseSearch.description":
     "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
+  "settings.experimental.imageGeneration.title": "Generación de imágenes",
+  "settings.experimental.imageGeneration.description": "Habilitar generación de imágenes con IA",
+  "settings.experimental.imageGenerationModel.title": "Modelo de imagen",
+  "settings.experimental.imageGenerationModel.description": "Modelo de generación de imágenes",
+  "settings.experimental.imageGenerationModel.placeholder": "Predeterminado (Auto Router)",
+
   "settings.experimental.speechToText.title": "Voz a texto",
   "settings.experimental.speechToText.description":
     "Habilita la entrada de voz en los campos de prompt usando tu cuenta de Kilo a través de Kilo Gateway.",
@@ -1462,6 +1469,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Activar SWE-Pruner: poda de los resultados extensos de las herramientas de lectura, búsqueda y shell que tiene en cuenta la tarea y está guiada por una pregunta de enfoque proporcionada por el agente",
+  "settings.experimental.swePrunerModel.title": "Modelo de SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Modelo usado para podar las salidas de herramientas; por defecto, el modelo pequeño configurado",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
   "settings.experimental.remote.title": "Control Remote",
@@ -1598,8 +1611,8 @@ export const dict = {
     "No hay comandos personalizados configurados. Añada comandos a opencode.json para verlos aquí.",
   "settings.agentBehaviour.workflows.detail.description": "Descripción",
   "settings.agentBehaviour.workflows.detail.template": "Plantilla",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Ejecutar los comandos de shell del agente dentro de un sandbox a nivel de sistema operativo que restringe las escrituras a los directorios de estado del proyecto y de Kilo",
 
   "settings.autoApprove.description":
@@ -1700,6 +1713,10 @@ export const dict = {
     "prompt del sistema enviado a la IA al generar commit messages. Esto reemplaza el prompt por defecto por completo.",
   "settings.commitMessage.prompt.placeholder":
     "ej. Genera commit messages en español siguiendo el formato conventional commits. Devuelve SOLO el commit message.",
+
+  "settings.commitMessage.language.sync": "Sincronización con el idioma de la interfaz de usuario",
+  "settings.commitMessage.language.title": "Idioma",
+  "settings.commitMessage.language.description": "Elija qué idioma usar para los mensajes de commit generados por IA:",
 
   "settings.display.username.title": "Nombre de usuario",
   "settings.display.username.description": "Nombre de usuario personalizado en conversaciones",

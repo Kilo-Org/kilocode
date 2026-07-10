@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
     "dev:stats": "bun sst shell --stage=production -- bun run --cwd packages/stats/app dev",
+    "dev:local": "bun run packages/opencode/script/dev-local.ts",
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
     "typecheck": "bun turbo typecheck",
@@ -163,6 +164,6 @@
     "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.4.1",
+  "version": "7.4.5",
   "peerDependencies": {}
 }

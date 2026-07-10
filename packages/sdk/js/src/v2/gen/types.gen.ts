@@ -1532,6 +1532,23 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   code_edit_display?: "expanded" | "collapsed"
   hide_prompt_training_models?: boolean
+  /**
+   * Sandbox configuration for agent tools
+   */
+  sandbox?: {
+    /**
+     * Enable sandbox confinement for new sessions (default: false)
+     */
+    enabled?: boolean
+    /**
+     * Control outbound network access from sandboxed tools (default: deny)
+     */
+    network?: "allow" | "deny"
+    /**
+     * Additional filesystem paths that sandboxed tools may write to
+     */
+    writable_paths?: Array<string>
+  }
   model?: string
   small_model?: string
   subagent_model?: string
@@ -1640,6 +1657,8 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
+    image_generation?: boolean
+    image_generation_model?: string
     agent_requirements?: boolean
     native_notebook_tools?: boolean
     speech_to_text_model?: string
@@ -1649,6 +1668,8 @@ export type Config = {
     sandbox?: boolean
     sandbox_restrict_network?: boolean
     sandbox_writable_paths?: Array<string>
+    swe_pruner?: boolean
+    swe_pruner_model?: string
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
   }
@@ -2872,6 +2893,10 @@ export type BackgroundProcessLogs = {
   id: string
   sessionID: string
   output: string
+}
+
+export type CommitMessageNoChangesError = {
+  message: string
 }
 
 export type ConfigOverlayResponse = {
@@ -10893,6 +10918,7 @@ export type CommitMessageGenerateData = {
     path: string
     selectedFiles?: Array<string>
     previousMessage?: string
+    language?: string
   }
   path?: never
   query?: {
@@ -10907,6 +10933,10 @@ export type CommitMessageGenerateErrors = {
    * BadRequest | InvalidRequestError
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * CommitMessageNoChangesError
+   */
+  422: CommitMessageNoChangesError
 }
 
 export type CommitMessageGenerateError = CommitMessageGenerateErrors[keyof CommitMessageGenerateErrors]
@@ -11869,6 +11899,38 @@ export type KiloAudioTranscriptionsResponses = {
 }
 
 export type KiloAudioTranscriptionsResponse = KiloAudioTranscriptionsResponses[keyof KiloAudioTranscriptionsResponses]
+
+export type KiloModelsImagesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/models/images"
+}
+
+export type KiloModelsImagesErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KiloModelsImagesError = KiloModelsImagesErrors[keyof KiloModelsImagesErrors]
+
+export type KiloModelsImagesResponses = {
+  /**
+   * Image-capable model list
+   */
+  200: Array<{
+    id: string
+    name: string
+    description?: string
+  }>
+}
+
+export type KiloModelsImagesResponse = KiloModelsImagesResponses[keyof KiloModelsImagesResponses]
 
 export type KiloNotificationsData = {
   body?: never

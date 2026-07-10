@@ -10,6 +10,8 @@ import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
 import { Agent } from "../../src/agent/agent"
 import { Provider } from "../../src/provider/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
 const providers = {
   test: {
@@ -39,6 +41,14 @@ const providers = {
     name: "Zeta Provider",
     models: {
       "zeta/only": { id: "zeta/only", providerID: "zeta", name: "Gateway Only", variants: { low: {} } },
+      "zeta/shared": { id: "zeta/shared", providerID: "zeta", name: "External Shared", variants: {} },
+    },
+  } as unknown as Provider.Info,
+  alpha: {
+    id: "alpha",
+    name: "Alpha Provider",
+    models: {
+      "alpha/shared": { id: "alpha/shared", providerID: "alpha", name: "External Shared", variants: {} },
     },
   } as unknown as Provider.Info,
 }
@@ -76,13 +86,41 @@ const ctx = {
   callID: "call_agent_manager",
   agent: "build",
   abort: AbortSignal.any([]),
-  messages: [],
+  messages: [] as Tool.Context["messages"],
   metadata: () => Effect.void,
   ask: () => Effect.void,
 }
 
+function message(
+  id: string,
+  provider: string,
+  model: string,
+  variant?: string,
+  created = 1,
+): Tool.Context["messages"][number] {
+  return {
+    info: {
+      id: MessageID.make(id),
+      sessionID: ctx.sessionID,
+      role: "user",
+      time: { created },
+      agent: "build",
+      model: {
+        providerID: ProviderV2.ID.make(provider),
+        modelID: ModelV2.ID.make(model),
+        ...(variant ? { variant } : {}),
+      },
+    },
+    parts: [],
+  }
+}
+
 // Run one local task and return the resolved task published on the Start event.
-function publish(rt: ReturnType<typeof makeRuntime>, task: Record<string, unknown>) {
+function publish(
+  rt: ReturnType<typeof makeRuntime>,
+  task: Record<string, unknown>,
+  messages: Tool.Context["messages"] = ctx.messages,
+) {
   return rt.runPromise(
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
@@ -93,7 +131,7 @@ function publish(rt: ReturnType<typeof makeRuntime>, task: Record<string, unknow
           Queue.offerUnsafe(events, item.properties),
         )
         yield* Effect.addFinalizer(() => Effect.sync(off))
-        yield* tool.execute({ mode: "local", tasks: [task] }, { ...ctx, ask: () => Effect.void })
+        yield* tool.execute({ mode: "local", tasks: [task] }, { ...ctx, messages, ask: () => Effect.void })
         const event = yield* Queue.take(events).pipe(Effect.timeout("2 seconds"))
         return event.tasks[0]
       }),
@@ -123,6 +161,56 @@ describe("agent_manager tool", () => {
         metadata: { mode: "local", count: 1 },
       },
     ])
+  })
+
+  test("inherits the latest invoking model and variant when omitted", async () => {
+    const task = await publish(runtime, { prompt: "Fix" }, [
+      message("msg_current", "kilo", "kilo/shared", "low", 2),
+      message("msg_old", "test", "reasoning/model", "high", 1),
+    ])
+
+    expect(String(task?.model?.providerID)).toBe("kilo")
+    expect(String(task?.model?.modelID)).toBe("kilo/shared")
+    expect(task?.variant).toBe("low")
+  })
+
+  test("leaves prepared sessions on normal defaults", async () => {
+    const task = await publish(runtime, { name: "Prepared" }, [
+      message("msg_current", "test", "reasoning/model", "high"),
+    ])
+
+    expect(task?.model).toBeUndefined()
+    expect(task?.variant).toBeUndefined()
+  })
+
+  test("explicit model and variant override the invoking selection", async () => {
+    const task = await publish(runtime, { prompt: "Fix", model: "test/reasoning/model", variant: "high" }, [
+      message("msg_current", "kilo", "kilo/shared", "low"),
+    ])
+
+    expect(String(task?.model?.providerID)).toBe("test")
+    expect(String(task?.model?.modelID)).toBe("reasoning/model")
+    expect(task?.variant).toBe("high")
+  })
+
+  test("does not inherit a variant when only the model is overridden", async () => {
+    const task = await publish(runtime, { prompt: "Fix", model: "Gateway Only" }, [
+      message("msg_current", "test", "reasoning/model", "high"),
+    ])
+
+    expect(String(task?.model?.providerID)).toBe("kilo")
+    expect(String(task?.model?.modelID)).toBe("kilo/only")
+    expect(task?.variant).toBeUndefined()
+  })
+
+  test("overrides only the inherited variant when model is omitted", async () => {
+    const task = await publish(runtime, { prompt: "Fix", variant: "high" }, [
+      message("msg_current", "test", "reasoning/model", "low"),
+    ])
+
+    expect(String(task?.model?.providerID)).toBe("test")
+    expect(String(task?.model?.modelID)).toBe("reasoning/model")
+    expect(task?.variant).toBe("high")
   })
 
   test("publishes validated model and variant selections", async () => {
@@ -170,6 +258,20 @@ describe("agent_manager tool", () => {
     expect(String(task?.model?.providerID)).toBe("kilo")
     expect(String(task?.model?.modelID)).toBe("kilo/shared")
     await rt.dispose()
+  })
+
+  test("prefers the invoking provider for an explicit model override", async () => {
+    const task = await publish(runtime, { prompt: "Fix", model: "Shared", variant: "low" }, [
+      message("msg_current", "kilo", "kilo/only", "low"),
+    ])
+    expect(String(task?.model?.providerID)).toBe("kilo")
+    expect(String(task?.model?.modelID)).toBe("kilo/shared")
+  })
+
+  test("uses a stable provider tie-breaker for explicit model overrides", async () => {
+    const task = await publish(runtime, { prompt: "Fix", model: "External Shared" })
+    expect(String(task?.model?.providerID)).toBe("alpha")
+    expect(String(task?.model?.modelID)).toBe("alpha/shared")
   })
 
   test("resolves an approximate, reordered model name", async () => {
@@ -242,6 +344,28 @@ describe("agent_manager tool", () => {
 
     expect(calls).toEqual([])
     expect(result.output).toContain("Available variants: low, high")
+    expect(result.metadata.count).toBe(0)
+  })
+
+  test("rejects unavailable variant-only overrides before requesting permission", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { mode: "local", tasks: [{ prompt: "Fix issue", variant: "toString" }] },
+          {
+            ...ctx,
+            messages: [message("msg_current", "test", "reasoning/model", "low")],
+            ask: (input: unknown) => Effect.sync(() => calls.push(input)),
+          },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(calls).toEqual([])
+    expect(result.output).toContain('variant "toString" is not available for Reasoning Model')
     expect(result.metadata.count).toBe(0)
   })
 

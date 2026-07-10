@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -12,6 +13,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 
 class TurnLifecycleTest : SessionControllerTestBase() {
@@ -27,6 +29,110 @@ class TurnLifecycleTest : SessionControllerTestBase() {
             """,
             m,
         )
+    }
+
+    fun `test revert aborts busy session before rollback`() {
+        val (m, _, _) = prompted()
+        emit(ChatEventDto.TurnOpen("ses_test"))
+
+        edt { m.revert("msg1") }
+        flush()
+
+        assertEquals(listOf("ses_test" to "/test"), rpc.aborts)
+        assertEquals(listOf(FakeSessionRpcApi.RevertCall("ses_test", "/test", "msg1", null)), rpc.reverts)
+    }
+
+    fun `test session updated applies rollback marker`() {
+        val (m, _, modelEvents) = prompted()
+
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg1"))))
+
+        assertEquals("msg1", m.model.revert()?.messageID)
+        assertTrue(modelEvents.any { it.toString() == "RevertChanged msg1" })
+    }
+
+    fun `test redo reverts to next user message`() {
+        val (m, _, _) = prompted()
+        seedRevertMessages()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("u1"))))
+        rpc.reverts.clear()
+
+        edt { m.redo() }
+        flush()
+
+        assertEquals(listOf(FakeSessionRpcApi.RevertCall("ses_test", "/test", "u2", null)), rpc.reverts)
+        assertTrue(appRpc.telemetry.any { it.event == "Session Redo" })
+    }
+
+    fun `test redo at final user message unreverts`() {
+        val (m, _, _) = prompted()
+        seedRevertMessages()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("u2"))))
+        rpc.reverts.clear()
+
+        edt { m.redo() }
+        flush()
+
+        assertTrue(rpc.reverts.isEmpty())
+        assertEquals(listOf("ses_test" to "/test"), rpc.unreverts)
+        assertTrue(appRpc.telemetry.any { it.event == "Session Redo" })
+    }
+
+    fun `test redo unreverts stale rollback marker`() {
+        val (m, _, _) = prompted()
+        seedRevertMessages()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("missing"))))
+        rpc.reverts.clear()
+        rpc.unreverts.clear()
+
+        edt { m.redo() }
+        flush()
+
+        assertTrue(rpc.reverts.isEmpty())
+        assertEquals(listOf("ses_test" to "/test"), rpc.unreverts)
+        assertTrue(appRpc.telemetry.any { it.event == "Session Redo" })
+    }
+
+    fun `test redoAll calls unrevert`() {
+        val (m, _, _) = prompted()
+
+        edt { m.redoAll() }
+        flush()
+
+        assertEquals(listOf("ses_test" to "/test"), rpc.unreverts)
+        assertTrue(appRpc.telemetry.any { it.event == "Session Redo All" })
+    }
+
+    fun `test unrevert clears through rpc`() {
+        val (m, _, _) = prompted()
+
+        edt { m.unrevert() }
+        flush()
+
+        assertEquals(listOf("ses_test" to "/test"), rpc.unreverts)
+        assertTrue(appRpc.telemetry.any { it.event == "Session Unrevert" })
+    }
+
+    fun `test rollback round trip hides and restores reverted messages`() {
+        val (m, _, _) = prompted()
+        seedRevertMessages()
+        rpc.reverts.clear()
+
+        edt { m.revert("u1") }
+        flush()
+        assertEquals(listOf(FakeSessionRpcApi.RevertCall("ses_test", "/test", "u1", null)), rpc.reverts)
+
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("u1", snapshot = "snap1"))))
+        assertTrue(m.model.isRevertedMessage("u1"))
+        assertTrue(m.model.isRevertedMessage("u2"))
+
+        edt { m.redoAll() }
+        flush()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = null)))
+
+        assertNull(m.model.revert())
+        assertFalse(m.model.isRevertedMessage("u1"))
+        assertFalse(m.model.isRevertedMessage("u2"))
     }
 
     fun `test TurnClose fires StateChanged to Idle`() {
@@ -409,5 +515,12 @@ class TurnLifecycleTest : SessionControllerTestBase() {
             m,
         )
         assertModelEvents("", modelEvents)
+    }
+
+    private fun seedRevertMessages() {
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("u1", "ses_test", "user")), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("a1", "ses_test", "assistant")), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("u2", "ses_test", "user")), flush = false)
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("a2", "ses_test", "assistant")))
     }
 }

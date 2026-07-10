@@ -44,6 +44,7 @@ import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
+import { SandboxConfig } from "@/kilocode/sandbox/config"
 import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
@@ -473,10 +474,7 @@ export const layer = Layer.effect(
         // kilocode_change start
         const merge = Effect.fnUntraced(function* (source: string, next: Info, kind?: ConfigPlugin.Scope) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
-          // sandbox_writable_paths is security-sensitive — only global config may set it.
-          // A project kilo.json must not widen the sandbox beyond the user's intent.
-          if (scope === "local") delete next.experimental?.sandbox_writable_paths
-          const scoped = KilocodeConfig.scopeIndexing(next, scope)
+          const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
           return yield* mergePluginOrigins(source, scoped.plugin, scope)
         })

@@ -24,6 +24,10 @@ import { EffectBridge } from "@/effect/bridge"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+// kilocode_change start
+import { SwePruner } from "@/kilocode/swe-pruner"
+import { Config } from "@/config/config"
+// kilocode_change end
 
 const log = Log.create({ service: "session.tools" })
 
@@ -49,6 +53,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const registry = yield* ToolRegistry.Service
   const mcp = yield* MCP.Service
   const truncate = yield* Truncate.Service
+  // kilocode_change start - SWE-Pruner (experimental)
+  const config = yield* Config.Service
+  const swe = SwePruner.enabled(yield* config.get())
+  // kilocode_change end
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
     sessionID: input.session.id,
@@ -82,7 +90,11 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     family: input.model.family, // kilocode_change
     agent: input.agent,
   })) {
-    const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
+    // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
+    const pruner = swe && SwePruner.prunable(item.id)
+    const base = ToolJsonSchema.fromTool(item)
+    const schema = ProviderTransform.schema(input.model, pruner ? SwePruner.extend(base) : base)
+    // kilocode_change end
     tools[item.id] = tool({
       description: item.description,
       inputSchema: jsonSchema(schema),
@@ -96,7 +108,11 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
-            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            let result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            // SWE-Pruner (experimental): prune the output when the model provided a focus question.
+            // Runs before tool.execute.after so plugins observe the final output the model will
+            // see; pruning is signalled to them via metadata.swePruner.
+            if (pruner) result = yield* SwePruner.sweep({ tool: item.id, args, result, abort: ctx.abort })
             // kilocode_change end
             const output = {
               ...result,

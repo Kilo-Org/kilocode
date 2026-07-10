@@ -12,6 +12,7 @@ import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
+import { Auth } from "../../src/auth" // kilocode_change
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
@@ -168,6 +169,7 @@ function makeHttp() {
     Layer.provide(Format.defaultLayer),
     Layer.provide(Git.defaultLayer),
     Layer.provide(Command.defaultLayer),
+    Layer.provide(Auth.defaultLayer), // kilocode_change
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),

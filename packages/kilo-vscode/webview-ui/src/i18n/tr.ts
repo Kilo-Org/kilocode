@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} mesaj geri alındı",
   "revert.banner.redo": "Yinele",
   "revert.banner.redo.all": "Tümünü Yinele",
-  "revert.banner.hint": "Bunu kalıcı yapmak için yeni bir mesaj gönderin",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.compact.description": "Bağlam boyutunu azaltmak için oturumu özetle",
@@ -633,7 +633,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep Araması",
   "ui.permission.toolLabel.webSearch": "Web Araması",
   "ui.permission.toolLabel.list": "Listele",
-  "ui.permission.toolLabel.externalDirectory": "Harici Dizin Oku",
+  "ui.permission.toolLabel.externalDirectory": "Harici Dizine Eriş",
   "ui.permission.toolLabel.webFetch": "Web Getir",
   "ui.permission.toolLabel.task": "Görev",
   "ui.permission.toolLabel.skill": "Beceri",
@@ -947,6 +947,7 @@ export const dict = {
   "provider.custom.models.name.label": "Ad",
   "provider.custom.models.name.placeholder": "Görünen Ad",
   "provider.custom.models.reasoning.label": "Akıl Yürütme",
+  "provider.custom.models.modalities.image": "Görüntü",
   "provider.custom.models.variants.label": "Varyantlar",
   "provider.custom.models.variants.add": "Varyant ekle",
   "provider.custom.models.variants.remove": "Varyantı kaldır",
@@ -1418,6 +1419,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
+  "settings.experimental.imageGeneration.title": "Görüntü oluşturma",
+  "settings.experimental.imageGeneration.description": "AI görüntü oluşturmayı etkinleştir",
+  "settings.experimental.imageGenerationModel.title": "Görüntü modeli",
+  "settings.experimental.imageGenerationModel.description": "Görüntü oluşturma modeli",
+  "settings.experimental.imageGenerationModel.placeholder": "Varsayılan (Auto Router)",
+
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":
     "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
@@ -1438,6 +1445,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ek Yazılabilir Yollar",
   "settings.sandboxing.writablePaths.description":
     "Sandığın yazılmasına izin veren ek dosya sistemi yolları (ör. /tmp, /var/log). Sandık etkinken varsayılan yazılabilir yollarla birleştirilir.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner'ı etkinleştir: ajan tarafından sağlanan bir odak sorusunun yönlendirmesiyle okuma, arama ve kabuk araçlarının büyük çıktılarının göreve duyarlı olarak budanması",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner Modeli",
+  "settings.experimental.swePrunerModel.description":
+    "Araç çıktılarını budamak için kullanılan model; varsayılan olarak yapılandırılmış küçük model",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
   "settings.experimental.remote.title": "Remote Kontrolü",
@@ -1449,8 +1462,8 @@ export const dict = {
   "settings.experimental.remote.inactive": "Pasif",
   "settings.experimental.remote.hint": "Geçiş yapmak için sohbette /remote kullanın",
   "settings.experimental.toolToggles": "Araç Açma/Kapatma",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Agent shell komutlarını, proje ve Kilo durum dizinlerine yazmaları kısıtlanan işletim sistemi düzeyinde bir sandbox içinde çalıştırın",
 
   "settings.agentBehaviour.defaultAgent.title": "Varsayılan Ajan",
@@ -1639,6 +1652,11 @@ export const dict = {
     "commit messages oluşturulurken yapay zekaya gönderilen sistem prompt'u. Bu, varsayılan prompt'un tamamen yerini alır.",
   "settings.commitMessage.prompt.placeholder":
     "örn. conventional commits formatını izleyerek İspanyolca commit messages oluştur. SADECE commit message döndür.",
+
+  "settings.commitMessage.language.sync": "Kullanıcı Arayüzü Dili ile Senkronizasyon",
+  "settings.commitMessage.language.title": "Dil",
+  "settings.commitMessage.language.description":
+    "AI tarafından oluşturulan commit mesajları için hangi dili kullanacağınızı seçin:",
 
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",

@@ -31,10 +31,7 @@ function layer(restrict?: boolean) {
     TestConfig.layer({
       get: () =>
         Effect.succeed({
-          experimental: {
-            sandbox: true,
-            sandbox_restrict_network: restrict,
-          },
+          sandbox: { enabled: true, network: restrict === false ? "allow" : "deny" },
         }),
     }),
   )

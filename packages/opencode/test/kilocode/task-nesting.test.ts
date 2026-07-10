@@ -438,7 +438,7 @@ describe("Kilo task nesting", () => {
           expect(count).toBeGreaterThan(0)
           expect(resumed.permission?.filter((rule) => rule.permission === "bash")).toHaveLength(count ?? 0)
         }),
-      { config: { experimental: { sandbox: true } } },
+      { config: { sandbox: { enabled: true } } },
     ),
   )
 

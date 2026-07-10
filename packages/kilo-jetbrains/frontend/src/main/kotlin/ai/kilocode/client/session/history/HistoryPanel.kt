@@ -6,7 +6,9 @@ import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.HoverIcon
-import ai.kilocode.client.ui.iconButton
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import com.intellij.icons.AllIcons
@@ -50,6 +52,7 @@ import javax.swing.JComponent
 import javax.swing.JList
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
+import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.ListDataEvent
@@ -101,7 +104,7 @@ class HistoryPanel(
 
     init {
         Disposer.register(parent, this)
-        border = JBUI.Borders.empty(UiStyle.Gap.lg())
+        border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg(), 0)
         more.addActionListener { controller.loadMoreCloud() }
         bind(localList, controller.local)
         bind(cloudList, controller.cloud)
@@ -185,7 +188,7 @@ class HistoryPanel(
         )
     }
 
-    private fun back(): BorderLayoutPanel {
+    private fun back(): JComponent {
         val label = KiloBundle.message("history.back")
         val btn = HoverIcon().apply {
             icon = AllIcons.Actions.Back
@@ -194,8 +197,7 @@ class HistoryPanel(
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             addActionListener { nav() }
         }
-        return BorderLayoutPanel().apply {
-            add(btn, BorderLayout.WEST)
+        return btn.align(HAlign.LEFT, VAlign.CENTER).apply {
             border = JBUI.Borders.emptyRight(UiStyle.Gap.lg())
         }
     }
@@ -207,11 +209,13 @@ class HistoryPanel(
                 if (list === cloudList) {
                     add(repoOnly, BorderLayout.SOUTH)
                 }
+                border = JBUI.Borders.emptyRight(UiStyle.Gap.lg())
             }
             add(north, BorderLayout.NORTH)
             add(JBScrollPane(list).apply {
                 border = JBUI.Borders.empty()
-                viewportBorder = JBUI.Borders.empty()
+                viewportBorder = JBUI.Borders.emptyRight(UiStyle.Gap.lg())
+                horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             }, BorderLayout.CENTER)
             footer?.let {
                 add(Centerizer(it, Centerizer.TYPE.HORIZONTAL).apply {
@@ -221,7 +225,7 @@ class HistoryPanel(
         }
     }
 
-    private fun localList() = JBList(controller.local).apply {
+    private fun localList() = HistoryList(controller.local).apply {
         selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
         isFocusable = true
         cellRenderer = LocalHistoryRenderer(controller.local, { snapshot.activity }, { snapshot.titles })
@@ -249,7 +253,7 @@ class HistoryPanel(
         ScrollingUtil.installActions(this)
     }
 
-    private fun cloudList() = JBList(controller.cloud).apply {
+    private fun cloudList() = HistoryList(controller.cloud).apply {
         selectionMode = ListSelectionModel.SINGLE_SELECTION
         isFocusable = true
         cellRenderer = CloudHistoryRenderer(controller.cloud) { snapshot.activity }
@@ -546,6 +550,10 @@ class HistoryPanel(
             over = value
             repaint()
         }
+    }
+
+    private class HistoryList<T : HistoryItem>(model: HistoryModel<T>) : JBList<T>(model) {
+        override fun getScrollableTracksViewportWidth() = true
     }
 
     internal fun showingLoading() = !controller.local.loaded && !controller.cloud.loaded && (controller.local.loading || controller.cloud.loading)

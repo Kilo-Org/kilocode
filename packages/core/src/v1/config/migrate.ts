@@ -36,8 +36,8 @@ export function migrate(info: typeof ConfigV1.Info.Type) {
   return {
     $schema: info.$schema,
     shell: info.shell,
-    model: info.model,
-    default_agent: info.default_agent,
+    model: info.model ?? undefined, // kilocode_change - v1 null delete sentinel is not valid in v2
+    default_agent: info.default_agent ?? undefined, // kilocode_change
     autoupdate: info.autoupdate,
     share: info.share ?? (info.autoshare ? "auto" : undefined),
     enterprise: info.enterprise,

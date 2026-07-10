@@ -32,6 +32,8 @@
   <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://app.kilo.ai/usage>
   <!-- packages/opencode/src/kilocode/components/dialog-kilo-profile.tsx -->
+- <https://arxiv.org/abs/2601.16746>
+  <!-- packages/opencode/src/kilocode/swe-pruner.ts -->
 - <https://auth.x.ai>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://auth.x.ai/oauth2/authorize>
@@ -137,6 +139,8 @@
 - <https://kilo.ai/docs/customize/marketplace>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
+- <https://kilo.ai/docs/getting-started/settings>
+  <!-- packages/opencode/src/kilocode/config/config.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
 - <https://kilo.ai/kiloclaw>
@@ -158,6 +162,8 @@
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
+- <https://openrouter.ai/api/v1/chat/completions>
+  <!-- packages/opencode/src/kilocode/tool/generate-image.ts -->
 - <https://openrouter.ai/docs/cookbook/administration/usage-accounting>
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opncd.ai>

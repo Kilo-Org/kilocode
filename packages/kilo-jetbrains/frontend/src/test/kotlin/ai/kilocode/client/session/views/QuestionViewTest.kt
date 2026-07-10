@@ -17,6 +17,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
@@ -24,6 +25,7 @@ import kotlin.math.abs
 import javax.swing.AbstractButton
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
@@ -267,6 +269,30 @@ class QuestionViewTest : BasePlatformTestCase() {
 
         assertEquals("title should use headerFont", style.headerFont, title.font)
         assertEquals("hint should use hintFont", style.hintFont, hint.font)
+    }
+
+    fun `test custom answer editor uses prompt text styling`() {
+        view.show(customSingleQuestion("q_custom_style"))
+
+        findAll<JBRadioButton>(view).first { it.actionCommand == "" }.doClick()
+        val field = findAll<EditorTextField>(view).first()
+        view.addNotify()
+        try {
+            layout(view)
+            UIUtil.dispatchAllInvocationEvents()
+            val editor = field.getEditor(true) ?: error("missing editor")
+            val style = SessionEditorStyle.current()
+
+            assertEquals(style.transcriptFont, field.font)
+            assertEquals(style.transcriptFont.fontName, editor.colorsScheme.editorFontName)
+            assertEquals(style.transcriptFont.size, editor.colorsScheme.editorFontSize)
+            assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
+            assertTrue(editor.settings.isUseSoftWraps)
+            assertFalse(editor.settings.isPaintSoftWraps)
+        } finally {
+            view.hideView()
+            view.removeNotify()
+        }
     }
 
     // ------ multi-question navigation ------

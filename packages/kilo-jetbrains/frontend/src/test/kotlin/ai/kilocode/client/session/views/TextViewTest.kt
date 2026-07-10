@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartSourceDto
@@ -14,6 +15,8 @@ import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.util.ui.JBUI
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.Container
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
@@ -117,9 +120,14 @@ class TextViewTest : BasePlatformTestCase() {
 
         val layout = view.layout as BorderLayout
         assertSame(view.md.component, layout.getLayoutComponent(BorderLayout.CENTER))
-        val bar = layout.getLayoutComponent(BorderLayout.SOUTH) as MessageToolbar
-        val buttons = bar.layout as BorderLayout
-        assertSame(view.copyButton(), buttons.getLayoutComponent(BorderLayout.LINE_START))
+        val bar = view.copyToolbar as MessageToolbar
+        val placeholder = layout.getLayoutComponent(BorderLayout.SOUTH)
+        assertTrue(components(bar).contains(view.copyButton()))
+        assertEquals(view.copyButton().preferredSize.width, bar.preferredSize.width)
+        assertSame(view.copyAnchor, placeholder)
+        assertNull(bar.parent)
+        assertEquals(bar.preferredSize.width, placeholder.preferredSize.width)
+        assertEquals(bar.preferredSize.height + UiStyle.Gap.xs(), placeholder.preferredSize.height)
         assertTrue(view.hasCopyToolbar())
     }
 
@@ -155,14 +163,14 @@ class TextViewTest : BasePlatformTestCase() {
         val view = TextView(Text("p1").also { it.content.append(" first ") })
         view.setCopyToolbar(true)
         val comp = view.md.component
-        val bar = (view.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH)
+        val bar = view.copyToolbar
 
         view.update(Text("p1").also { it.content.append(" second ") })
         view.appendDelta(" third ")
         view.copyButton().doClick()
 
         assertSame(comp, view.md.component)
-        assertSame(bar, (view.layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH))
+        assertSame(bar, view.copyToolbar)
         assertEquals("second  third", clipboard())
     }
 
@@ -441,4 +449,14 @@ class TextViewTest : BasePlatformTestCase() {
     private fun clipboard() = CopyPasteManager.getInstance()
         .contents
         ?.getTransferData(DataFlavor.stringFlavor) as String
+
+    private fun components(root: Component): List<Component> {
+        val out = mutableListOf<Component>()
+        fun visit(node: Component) {
+            out.add(node)
+            if (node is Container) node.components.forEach(::visit)
+        }
+        visit(root)
+        return out
+    }
 }

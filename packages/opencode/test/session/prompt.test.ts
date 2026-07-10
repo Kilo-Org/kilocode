@@ -18,6 +18,7 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "@/background/job"
 import { Command } from "../../src/command"
+import { Auth } from "../../src/auth" // kilocode_change
 import { Config } from "@/config/config"
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "../../src/mcp"
@@ -231,6 +232,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
+    Layer.provide(Auth.defaultLayer), // kilocode_change
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
@@ -1560,7 +1562,7 @@ it.instance(
       expect(inputs).toHaveLength(2)
       expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("second")
     }),
-  3_000,
+  10_000, // kilocode_change - loaded CI runners can exceed 3s for two prompt turns
 )
 
 it.instance(

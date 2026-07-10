@@ -12,10 +12,14 @@ import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.layout.HAlign
+import ai.kilocode.client.ui.layout.VAlign
+import ai.kilocode.client.ui.layout.align
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -25,9 +29,6 @@ import java.awt.Point
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
-import java.awt.Container
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
@@ -53,6 +54,7 @@ class MessageView(
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
+    private val revert: ((String) -> Unit)? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
 ), Disposable, SessionEditorStyleTarget, SessionView {
@@ -80,23 +82,12 @@ class MessageView(
     private var prompt: PromptView? = null
     private var promptBox: JPanel? = null
     private var promptToolbar: MessageToolbar? = null
-    private var promptHover = false
+    private var promptToolbarPlaceholder: JComponent? = null
 
     init {
         isOpaque = false
         if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) background = style.editorScheme.defaultBackground
         border = assistantBorder()
-        if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseEntered(e: MouseEvent) {
-                    setPromptHovered(true)
-                }
-
-                override fun mouseExited(e: MouseEvent) {
-                    setPromptHovered(false)
-                }
-            })
-        }
 
         // Populate content that already exists (e.g. after loadHistory)
         for ((_, content) in msg.parts) {
@@ -307,7 +298,7 @@ class MessageView(
         prompt = null
         promptBox = null
         promptToolbar = null
-        promptHover = false
+        promptToolbarPlaceholder = null
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
             if (isHidden(content)) continue
@@ -380,18 +371,12 @@ class MessageView(
     fun dump(): String = parts.values.joinToString(", ") { it.dumpLabel() }
 
     @RequiresEdt
-    fun setPromptHovered(value: Boolean) {
-        if (role != SessionUiStyle.View.Message.USER_ROLE) return
-        if (promptHover == value) return
-        promptHover = value
-        syncPromptToolbar()
+    fun promptToolbarActive() = promptToolbar?.active() == true
+
+    @RequiresEdt
+    private fun syncPromptToolbar() {
+        promptToolbar?.setActive(prompt?.copyMarkdown(trim = false)?.isNotEmpty() == true)
     }
-
-    @RequiresEdt
-    fun paintsPromptToolbar() = promptToolbar?.paints() == true
-
-    @RequiresEdt
-    fun promptToolbarAlignment() = promptToolbar?.alignment()
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
@@ -414,7 +399,7 @@ class MessageView(
         prompt = null
         promptBox = null
         promptToolbar = null
-        promptHover = false
+        promptToolbarPlaceholder = null
         hidden = null
     }
 
@@ -465,58 +450,32 @@ class MessageView(
     }
 
     @RequiresEdt
-    private fun syncPromptToolbar() {
-        promptToolbar?.paint(promptHover)
-    }
-
-    @RequiresEdt
     private fun wrapPrompt(view: PartView): JComponent {
         if (role != SessionUiStyle.View.Message.USER_ROLE) return view
         if (view !is PromptView) return view
         prompt = view
-        val bar = promptToolbar ?: MessageToolbar(BorderLayout.LINE_END) { prompt?.copyMarkdown(trim = false) }.also { promptToolbar = it }
+        val bar = promptToolbar ?: MessageToolbar(
+            { prompt?.copyMarkdown(trim = false) },
+            revert?.let { fn -> { fn(msg.info.id) } },
+        ).also { promptToolbar = it }
+        val placeholder = promptToolbarPlaceholder ?: bar.placeholder().also { promptToolbarPlaceholder = it }
         val box = JPanel(BorderLayout()).also {
             it.isOpaque = false
             it.add(view, BorderLayout.CENTER)
             promptBox = it
         }
-        bar.paint(false)
-        return JPanel(BorderLayout()).also {
-            it.isOpaque = false
-            it.add(box, BorderLayout.CENTER)
-            it.add(bar, BorderLayout.SOUTH)
-            installPromptHover(it)
-        }
-    }
+        bar.setActive(true)
+        return object : JPanel(BorderLayout()), SessionCopyTarget {
+            override val copyAnchor: JComponent get() = placeholder
+            override val copyToolbar: JComponent get() = bar
 
-    @RequiresEdt
-    private fun installPromptHover(root: JComponent) {
-        val mouse = object : MouseAdapter() {
-            override fun mouseEntered(e: MouseEvent) {
-                setPromptHovered(true)
+            override fun copyText(): String? = prompt?.copyMarkdown(trim = false)
+
+            init {
+                isOpaque = false
+                add(box, BorderLayout.CENTER)
+                add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.SOUTH)
             }
-
-            override fun mouseExited(e: MouseEvent) {
-                val point = runCatching { root.mousePosition }.getOrNull()
-                if (point != null && root.contains(point)) return
-                if (inside(root, e)) return
-                setPromptHovered(false)
-            }
-        }
-        visit(root) { it.addMouseListener(mouse) }
-    }
-
-    @RequiresEdt
-    private fun inside(root: JComponent, e: MouseEvent): Boolean {
-        val point = SwingUtilities.convertPoint(e.component, e.point, root)
-        return root.contains(point)
-    }
-
-    @RequiresEdt
-    private fun visit(root: Container, fn: (JComponent) -> Unit) {
-        if (root is JComponent) fn(root)
-        for (child in root.components) {
-            if (child is Container) visit(child, fn)
         }
     }
 

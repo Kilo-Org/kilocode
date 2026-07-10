@@ -160,8 +160,7 @@ export const TaskTool = Tool.define(
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
       // kilocode_change end
       // kilocode_change start - refresh current parent restrictions when resuming an existing task session
-      const mode: "allow" | "deny" = cfg.experimental?.sandbox_restrict_network === false ? "allow" : "deny"
-      const fallback = { enabled: cfg.experimental?.sandbox ?? false, mode }
+      const fallback = SandboxPolicy.fallback(cfg)
       if (session) {
         yield* SandboxPolicy.inherit(ctx.sessionID, session.id, fallback)
         const permission = KiloTask.merge(

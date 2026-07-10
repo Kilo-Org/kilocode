@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "ย้อนกลับ {{count}} ข้อความแล้ว",
   "revert.banner.redo": "ทำซ้ำ",
   "revert.banner.redo.all": "ทำซ้ำทั้งหมด",
-  "revert.banner.hint": "ส่งข้อความใหม่เพื่อทำให้การเปลี่ยนแปลงนี้ถาวร",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",
@@ -627,7 +627,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "ค้นหา Grep",
   "ui.permission.toolLabel.webSearch": "ค้นหาเว็บ",
   "ui.permission.toolLabel.list": "รายการ",
-  "ui.permission.toolLabel.externalDirectory": "อ่านไดเรกทอรีภายนอก",
+  "ui.permission.toolLabel.externalDirectory": "อนุญาตให้เข้าถึงโฟลเดอร์ภายนอก",
   "ui.permission.toolLabel.webFetch": "ดึงข้อมูลเว็บ",
   "ui.permission.toolLabel.task": "งาน",
   "ui.permission.toolLabel.skill": "ทักษะ",
@@ -982,6 +982,7 @@ export const dict = {
   "provider.custom.models.name.label": "ชื่อ",
   "provider.custom.models.name.placeholder": "ชื่อที่แสดง",
   "provider.custom.models.reasoning.label": "การใช้เหตุผล",
+  "provider.custom.models.modalities.image": "รูปภาพ",
   "provider.custom.models.variants.label": "รูปแบบ",
   "provider.custom.models.variants.add": "เพิ่มรูปแบบ",
   "provider.custom.models.variants.remove": "ลบรูปแบบ",
@@ -1407,6 +1408,12 @@ export const dict = {
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
+  "settings.experimental.imageGeneration.title": "การสร้างภาพ",
+  "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
+  "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
+  "settings.experimental.imageGenerationModel.description": "โมเดลการสร้างภาพ",
+  "settings.experimental.imageGenerationModel.placeholder": "ค่าเริ่มต้น (Auto Router)",
+
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
   "settings.experimental.speechToText.description":
     "เปิดใช้งานการป้อนข้อมูลด้วยเสียงในช่องพรอมต์โดยใช้บัญชี Kilo ของคุณผ่าน Kilo Gateway",
@@ -1427,6 +1434,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "เปิดใช้ SWE-Pruner: ตัดทอนผลลัพธ์ขนาดใหญ่ของเครื่องมืออ่าน ค้นหา และเชลล์โดยคำนึงถึงงานและใช้คำถามโฟกัสที่เอเจนต์ระบุเป็นแนวทาง",
+  "settings.experimental.swePrunerModel.title": "โมเดล SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "โมเดลที่ใช้ตัดทอนผลลัพธ์ของเครื่องมือ ค่าเริ่มต้นคือโมเดลขนาดเล็กที่กำหนดไว้",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1557,8 +1570,8 @@ export const dict = {
     "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
 
   "settings.autoApprove.description":
@@ -1652,6 +1665,10 @@ export const dict = {
     "System prompt ที่ส่งไปยัง AI เมื่อสร้าง commit messages สิ่งนี้จะแทนที่ prompt เริ่มต้นทั้งหมด",
   "settings.commitMessage.prompt.placeholder":
     "เช่น สร้าง commit messages เป็นภาษาสเปนตามรูปแบบ conventional commits คืนค่าเฉพาะ commit message เท่านั้น",
+
+  "settings.commitMessage.language.sync": "ซิงค์กับภาษา UI",
+  "settings.commitMessage.language.title": "ภาษา",
+  "settings.commitMessage.language.description": "เลือกภาษาใดที่จะใช้สําหรับข้อความ commit ที่สร้างโดย AI:",
 
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",

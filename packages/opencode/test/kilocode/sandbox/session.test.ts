@@ -40,7 +40,7 @@ describe("sandbox session cleanup", () => {
   it.live("forks inherit the source session snapshot", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
-      const dir = yield* tmpdirScoped({ git: true, config: { experimental: { sandbox: true } } })
+      const dir = yield* tmpdirScoped({ git: true, config: { sandbox: { enabled: true } } })
       const source = yield* provideInstance(dir)(sessions.create({ title: "sandbox-source" }))
       const status = yield* provideInstance(dir)(SandboxPolicy.status(source.id))
       if (!status.available) return
@@ -57,7 +57,7 @@ describe("sandbox session cleanup", () => {
   it.live("forks into another directory carry the source confinement", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
-      const dir = yield* tmpdirScoped({ git: true, config: { experimental: { sandbox: true } } })
+      const dir = yield* tmpdirScoped({ git: true, config: { sandbox: { enabled: true } } })
       const worktree = yield* tmpdirScoped({ git: true })
       const source = yield* provideInstance(dir)(sessions.create({ title: "sandbox-source" }))
       const status = yield* provideInstance(dir)(SandboxPolicy.status(source.id))
@@ -76,7 +76,7 @@ describe("sandbox session cleanup", () => {
     Effect.gen(function* () {
       const sessions = yield* Session.Service
       // Config default is disabled; the create-time toggle asks for enabled.
-      const dir = yield* tmpdirScoped({ git: true, config: { experimental: { sandbox: false } } })
+      const dir = yield* tmpdirScoped({ git: true, config: { sandbox: { enabled: false } } })
       const session = yield* provideInstance(dir)(
         sessions.create({ title: "sandbox-explicit", metadata: { "kilocode.sandbox": { enabled: true, version: 0 } } }),
       )

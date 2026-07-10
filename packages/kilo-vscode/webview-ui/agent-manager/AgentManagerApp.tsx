@@ -78,6 +78,7 @@ import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
 import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-models"
+import { ImageModelsProvider } from "../src/context/image-models"
 import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
 import { MemoryProvider } from "../src/context/memory"
@@ -3138,21 +3139,23 @@ export const AgentManagerApp: Component = () => {
                           <DisplayProvider>
                             <IndexingProvider>
                               <KiloEmbeddingModelsProvider>
-                                <NotificationsProvider>
-                                  <SessionProvider>
-                                    <AgentRequirementsProvider>
-                                      <MemoryProvider>
-                                        <FeedbackProvider>
-                                          <WorktreeModeProvider>
-                                            <DataBridge>
-                                              <AgentManagerContent />
-                                            </DataBridge>
-                                          </WorktreeModeProvider>
-                                        </FeedbackProvider>
-                                      </MemoryProvider>
-                                    </AgentRequirementsProvider>
-                                  </SessionProvider>
-                                </NotificationsProvider>
+                                <ImageModelsProvider>
+                                  <NotificationsProvider>
+                                    <SessionProvider>
+                                      <AgentRequirementsProvider>
+                                        <MemoryProvider>
+                                          <FeedbackProvider>
+                                            <WorktreeModeProvider>
+                                              <DataBridge>
+                                                <AgentManagerContent />
+                                              </DataBridge>
+                                            </WorktreeModeProvider>
+                                          </FeedbackProvider>
+                                        </MemoryProvider>
+                                      </AgentRequirementsProvider>
+                                    </SessionProvider>
+                                  </NotificationsProvider>
+                                </ImageModelsProvider>
                               </KiloEmbeddingModelsProvider>
                             </IndexingProvider>
                           </DisplayProvider>

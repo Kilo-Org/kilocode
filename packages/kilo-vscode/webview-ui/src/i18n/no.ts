@@ -139,7 +139,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} meldinger angret",
   "revert.banner.redo": "Gjenta",
   "revert.banner.redo.all": "Gjenta alt",
-  "revert.banner.hint": "Send en ny melding for å gjøre dette permanent",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
   "command.session.compact": "Komprimer sesjon",
   "command.session.compact.description": "Oppsummer sesjonen for å redusere kontekststørrelsen",
@@ -636,7 +636,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-søk",
   "ui.permission.toolLabel.webSearch": "Websøk",
   "ui.permission.toolLabel.list": "Liste",
-  "ui.permission.toolLabel.externalDirectory": "Les ekstern mappe",
+  "ui.permission.toolLabel.externalDirectory": "Gi tilgang til ekstern mappe",
   "ui.permission.toolLabel.webFetch": "Webhenting",
   "ui.permission.toolLabel.task": "Oppgave",
   "ui.permission.toolLabel.skill": "Ferdighet",
@@ -957,6 +957,7 @@ export const dict = {
   "provider.custom.models.name.label": "Navn",
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Resonnering",
+  "provider.custom.models.modalities.image": "Bilde",
   "provider.custom.models.variants.label": "Varianter",
   "provider.custom.models.variants.add": "Legg til variant",
   "provider.custom.models.variants.remove": "Fjern variant",
@@ -1387,6 +1388,12 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling av verktøykall",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
+  "settings.experimental.imageGeneration.title": "Bildegenerering",
+  "settings.experimental.imageGeneration.description": "Aktiver AI-bildegenerering",
+  "settings.experimental.imageGenerationModel.title": "Bildemodell",
+  "settings.experimental.imageGenerationModel.description": "Bildegenereringsmodell",
+  "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
+
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
@@ -1407,6 +1414,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Aktiver SWE-Pruner: oppgavebevisst beskjæring av store utdata fra lese-, søke- og shell-verktøy, styrt av et fokusspørsmål fra agenten",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-modell",
+  "settings.experimental.swePrunerModel.description":
+    "Modell som brukes til å beskjære verktøyutdata; som standard den konfigurerte lille modellen",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
   "settings.experimental.remote.title": "Remote-kontroll",
@@ -1575,8 +1588,8 @@ export const dict = {
     "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Kjør shell-kommandoer for agenten i en sandbox på operativsystemnivå som begrenser skriving til prosjekt- og Kilo-tilstandsmapper",
 
   "settings.autoApprove.description":
@@ -1674,6 +1687,10 @@ export const dict = {
     "System prompt sendt til AI-en ved generering av commit messages. Dette erstatter standard prompt fullstendig.",
   "settings.commitMessage.prompt.placeholder":
     "f.eks. Generer commit messages på spansk i henhold til conventional commits-formatet. Returner KUN commit message.",
+
+  "settings.commitMessage.language.sync": "Sync med UI-språk",
+  "settings.commitMessage.language.title": "Språk",
+  "settings.commitMessage.language.description": "Velg hvilket språk du skal bruke for AI-genererte commit-meldinger:",
 
   "settings.display.username.title": "Brukernavn",
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",

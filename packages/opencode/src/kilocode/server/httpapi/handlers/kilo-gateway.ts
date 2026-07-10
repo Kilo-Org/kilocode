@@ -2,6 +2,7 @@ import {
   GatewayError,
   fetchCloudSession,
   fetchCloudSessionForImport,
+  fetchKiloImageModels,
   getCloudSessions,
   getOrganizationId,
   getToken,
@@ -30,6 +31,8 @@ import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -314,16 +317,25 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const notifications = Effect.fn("KiloGatewayHttpApi.notifications")(function* () {
+      // Locally-detected notice about leftover opencode config; appended so it reuses each client's dismissal path.
+      const notice = KilocodeConfig.opencodeConfigNotification({
+        directory: Instance.directory,
+        worktree: Instance.worktree,
+        scanProject: !Flag.KILO_DISABLE_PROJECT_CONFIG,
+      })
+      const append = <T>(list: T[]) => (notice ? [...list, notice] : list)
+
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       const token = getToken(info)
-      if (!token) return []
+      if (!token) return append([])
 
-      return yield* Effect.promise(() =>
+      const cloud = yield* Effect.promise(() =>
         fetchKilocodeNotifications({
           kilocodeToken: token,
           kilocodeOrganizationId: getOrganizationId(info),
         }),
       )
+      return append(cloud)
     })
 
     const organization = Effect.fn("KiloGatewayHttpApi.organization")(function* (ctx) {
@@ -519,6 +531,29 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       })
     })
 
+    const imageModels = Effect.fn("KiloGatewayHttpApi.imageModels")(function* () {
+      const info = yield* proxyAuth()
+      if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+
+      const result = yield* Effect.tryPromise({
+        try: () =>
+          fetchKiloImageModels({
+            kilocodeToken: info.token,
+            kilocodeOrganizationId: info.organizationId,
+          }),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+
+      if (result.error) {
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
+      }
+
+      return result.models
+    })
+
     return handlers
       .handle("profile", profile)
       .handle("authStatus", authStatus)
@@ -526,6 +561,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("fim", fim)
       .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
+      .handle("imageModels", imageModels)
       .handle("notifications", notifications)
       .handle("organization", organization)
       .handle("clawStatus", clawStatus)

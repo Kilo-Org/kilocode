@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "Отменено {{count}} сообщений",
   "revert.banner.redo": "Повторить",
   "revert.banner.redo.all": "Повторить всё",
-  "revert.banner.hint": "Отправьте новое сообщение, чтобы сделать это постоянным",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Дождитесь завершения агента",
   "command.session.compact": "Сжать сессию",
   "command.session.compact.description": "Сократить сессию для уменьшения размера контекста",
@@ -633,7 +633,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-поиск",
   "ui.permission.toolLabel.webSearch": "Веб-поиск",
   "ui.permission.toolLabel.list": "Список",
-  "ui.permission.toolLabel.externalDirectory": "Чтение внешнего каталога",
+  "ui.permission.toolLabel.externalDirectory": "Открыть доступ к внешней папке",
   "ui.permission.toolLabel.webFetch": "Веб-загрузка",
   "ui.permission.toolLabel.task": "Задача",
   "ui.permission.toolLabel.skill": "Навык",
@@ -996,6 +996,7 @@ export const dict = {
   "provider.custom.models.name.label": "Название",
   "provider.custom.models.name.placeholder": "Отображаемое имя",
   "provider.custom.models.reasoning.label": "Рассуждение",
+  "provider.custom.models.modalities.image": "Изображение",
   "provider.custom.models.variants.label": "Варианты",
   "provider.custom.models.variants.add": "Добавить вариант",
   "provider.custom.models.variants.remove": "Удалить вариант",
@@ -1428,6 +1429,12 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
+  "settings.experimental.imageGeneration.title": "Генерация изображений",
+  "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
+  "settings.experimental.imageGenerationModel.title": "Модель изображений",
+  "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
+  "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
+
   "settings.experimental.speechToText.title": "Речь в текст",
   "settings.experimental.speechToText.description":
     "Включите голосовой ввод в полях запросов, используя вашу учетную запись Kilo через Kilo Gateway.",
@@ -1448,6 +1455,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Включить SWE-Pruner: обрезка больших объёмов вывода инструментов чтения, поиска и командной оболочки с учётом задачи и на основе предоставленного агентом фокус-вопроса",
+  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1580,8 +1593,8 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
-  "settings.experimental.sandbox.title": "Песочница",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Песочница",
+  "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":
@@ -1682,6 +1695,10 @@ export const dict = {
     "Системный prompt, отправляемый ИИ при генерации commit messages. Это полностью заменяет prompt по умолчанию.",
   "settings.commitMessage.prompt.placeholder":
     "напр., Сгенерируй commit messages на испанском языке в формате conventional commits. Верни ТОЛЬКО commit message.",
+
+  "settings.commitMessage.language.sync": "Синхронизация с языком пользовательского интерфейса",
+  "settings.commitMessage.language.title": "Язык",
+  "settings.commitMessage.language.description": "Выберите язык для сообщений, генерированных ИИ:",
 
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",

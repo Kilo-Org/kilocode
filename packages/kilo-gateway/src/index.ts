@@ -35,7 +35,13 @@ export {
   promptOrganizationSelection,
 } from "./api/profile.js"
 export { fetchKiloPassState } from "./api/kilo-pass.js"
-export { fetchKiloModels, type KiloModelsResult } from "./api/models.js"
+export {
+  fetchKiloModels,
+  type KiloModelsResult,
+  fetchKiloImageModels,
+  type KiloImageModel,
+  type KiloImageModelsResult,
+} from "./api/models.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,

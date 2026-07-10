@@ -14,15 +14,18 @@ afterEach(() => {
 })
 
 describe("Sandboxing settings visibility", () => {
-  test("requires both sandbox control availability and the sandbox experiment", () => {
-    expect(visible(features, {})).toBe(false)
-    expect(visible({ ...features, sandboxControls: true }, {})).toBe(false)
-    expect(visible(features, { experimental: { sandbox: true } })).toBe(false)
-    expect(visible({ ...features, sandboxControls: true }, { experimental: { sandbox: false } })).toBe(false)
-    expect(visible({ ...features, sandboxControls: true }, { experimental: { sandbox: true } })).toBe(true)
+  test("depends only on sandbox control availability", () => {
+    expect(visible(features)).toBe(false)
+    expect(visible({ ...features, sandboxControls: true })).toBe(true)
   })
 
-  test("enables sandbox controls by default outside Windows", () => {
+  test("edits global sandbox config without promoting project policy", async () => {
+    const src = await Bun.file("webview-ui/src/components/settings/SandboxingTab.tsx").text()
+    expect(src).toContain("const { globalConfig, updateGlobalConfig } = useConfig()")
+    expect(src).not.toContain("const { config, updateConfig } = useConfig()")
+  })
+
+  test("shows sandbox controls outside Windows", () => {
     setPlatform("darwin")
     expect(configFeatures().sandboxControls).toBe(true)
 

@@ -30,6 +30,7 @@ import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { Auth } from "@/auth" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
@@ -132,6 +133,7 @@ export const layer: Layer.Layer<
   | Git.Service // kilocode_change
   | RepositoryCache.Service // kilocode_change
   | Bus.Service // kilocode_change
+  | Auth.Service // kilocode_change - required by generate-image tool
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -464,6 +466,9 @@ export const defaultLayer: Layer.Layer<Service> = Layer.suspend(
         Layer.provide(RuntimeFlags.defaultLayer),
         Layer.provide(SessionStatus.defaultLayer),
         Layer.provide(Truncate.defaultLayer), // kilocode_change - split the pipe to stay within Effect's overload limit
+      )
+      .pipe(
+        Layer.provide(Auth.defaultLayer),
       ),
   // kilocode_change end
 )
