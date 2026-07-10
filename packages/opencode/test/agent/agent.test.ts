@@ -1,4 +1,5 @@
 import { afterEach, test, expect } from "bun:test"
+import fs from "fs/promises"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
@@ -159,6 +160,64 @@ test("explore agent asks for external directories and allows Truncate.GLOB", asy
       expect(explore).toBeDefined()
       expect(Permission.evaluate("external_directory", "/some/other/path", explore!.permission).action).toBe("ask")
       expect(Permission.evaluate("external_directory", Truncate.GLOB, explore!.permission).action).toBe("allow")
+    },
+  })
+})
+
+test("reviewer agent from .kilo/agent/reviewer.md loads with correct read-only permissions", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => {
+      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+      await Bun.write(
+        path.join(dir, ".kilo", "agent", "reviewer.md"),
+        [
+          "---",
+          "description: focused read-only diff sanity reviewer",
+          "mode: subagent",
+          "permission:",
+          '  "*": deny',
+          "  read: allow",
+          "  glob: allow",
+          "  grep: allow",
+          "  list: allow",
+          "  edit: deny",
+          "  write: deny",
+          "  todowrite: deny",
+          "  bash:",
+          '    "*": deny',
+          '    "git diff *": allow',
+          '    "git status *": allow',
+          '    "git log *": allow',
+          '    "git show *": allow',
+          '    "git ls-files *": allow',
+          '    "git blame *": allow',
+          '    "git rev-parse *": allow',
+          "---",
+          "",
+          "Focused read-only diff sanity reviewer.",
+        ].join("\n"),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const reviewer = await Agent.get("reviewer")
+      expect(reviewer).toBeDefined()
+      expect(reviewer?.mode).toBe("subagent")
+      expect(evalPerm(reviewer, "read")).toBe("allow")
+      expect(evalPerm(reviewer, "glob")).toBe("allow")
+      expect(evalPerm(reviewer, "grep")).toBe("allow")
+      expect(evalPerm(reviewer, "list")).toBe("allow")
+      expect(evalPerm(reviewer, "edit")).toBe("deny")
+      expect(evalPerm(reviewer, "write")).toBe("deny")
+      expect(evalPerm(reviewer, "todowrite")).toBe("deny")
+      expect(Permission.evaluate("bash", "git diff HEAD", reviewer!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git status", reviewer!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git log --oneline", reviewer!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git commit -m x", reviewer!.permission).action).toBe("deny")
     },
   })
 })

@@ -3,6 +3,7 @@ import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
 import { NamedError } from "@opencode-ai/util/error"
 import { fileURLToPath } from "url"
+import { Agent } from "../../src/agent/agent"
 import { Instance } from "../../src/project/instance"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Session } from "../../src/session"
@@ -367,6 +368,108 @@ describe("session.prompt regression", () => {
           if (toolPart && toolPart.type === "tool" && toolPart.state.status === "completed") {
             expect(toolPart.state.input.subagent_type).toBe("frontend")
             expect(toolPart.state.input.prompt).toBe("No tools. Say exactly: FRONTEND_OK")
+            expect(toolPart.state.input.prompt).not.toContain("<environment_details>")
+          }
+
+          const msgs = await Session.messages({ sessionID: session.id })
+          expect(msgs.filter((msg) => msg.info.role === "assistant")).toHaveLength(1)
+          expect(calls).toBe(1)
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
+
+  test("routes a leading @reviewer mention deterministically from .kilo/agent/reviewer.md", async () => {
+    let calls = 0
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) {
+          return new Response("not found", { status: 404 })
+        }
+        calls++
+        return new Response(chat("REVIEWER_OK"), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+          await Bun.write(
+            path.join(dir, ".kilo", "agent", "reviewer.md"),
+            [
+              "---",
+              "description: focused read-only diff sanity reviewer",
+              "mode: subagent",
+              "model: alibaba/qwen-plus",
+              "permission:",
+              '  "*": deny',
+              "  read: allow",
+              "  glob: allow",
+              "  grep: allow",
+              "  list: allow",
+              "---",
+              "",
+              "Focused read-only diff sanity reviewer.",
+            ].join("\n"),
+          )
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: {
+                    apiKey: "test-key",
+                    baseURL: `${server.url.origin}/v1`,
+                  },
+                },
+              },
+              agent: {
+                orchestrator: {
+                  model: "alibaba/qwen-plus",
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const reviewer = await Agent.get("reviewer")
+          expect(reviewer).toBeDefined()
+          const session = await Session.create({ title: "Deterministic reviewer routing" })
+          const result = await SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "orchestrator",
+            parts: [
+              { type: "text", text: "@reviewer No tools. Say exactly: REVIEWER_OK" },
+              {
+                type: "agent",
+                name: "reviewer",
+                source: { value: "@reviewer", start: 0, end: 10 },
+              },
+            ],
+          })
+
+          expect(result.info.role).toBe("assistant")
+
+          const toolPart = result.parts.find((part) => part.type === "tool" && part.tool === "task")
+          expect(toolPart).toBeDefined()
+          if (toolPart && toolPart.type === "tool" && toolPart.state.status === "completed") {
+            expect(toolPart.state.input.subagent_type).toBe("reviewer")
+            expect(toolPart.state.input.prompt).toBe("No tools. Say exactly: REVIEWER_OK")
             expect(toolPart.state.input.prompt).not.toContain("<environment_details>")
           }
 
