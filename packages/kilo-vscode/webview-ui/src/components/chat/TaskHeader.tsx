@@ -21,7 +21,7 @@ import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
-import { formatCost, hasModelUsage, tokenSummary } from "../../context/model-usage"
+import { formatSummaryCost, hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
@@ -45,7 +45,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const cost = createMemo(() => {
     const total = session.modelUsage()?.totals.cost
     if (!total) return undefined
-    return formatCost(total, language.locale())
+    return formatSummaryCost(total, language.locale())
   })
 
   const context = createMemo(() => {

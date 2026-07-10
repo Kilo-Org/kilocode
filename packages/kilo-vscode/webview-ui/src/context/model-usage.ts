@@ -15,6 +15,16 @@ export function formatCost(input: number, locale: string) {
   }).format(value)
 }
 
+export function formatSummaryCost(input: number, locale: string) {
+  const value = Math.max(0, Number.isFinite(input) ? input : 0)
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
 export function isSameSessionTree(
   current: string,
   sessionID: string,
