@@ -11,6 +11,7 @@ import { ProviderTransform } from "@/provider/transform"
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
+import PROMPT_SCOUT from "@/kilocode/agent/scout.txt" // kilocode_change
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
@@ -137,6 +138,8 @@ export const layer = Layer.effect(
           interactive_terminal: "deny", // kilocode_change - human-driven tools are primary-agent only
           plan_enter: "deny",
           plan_exit: "deny",
+          repo_clone: "deny", // kilocode_change
+          repo_overview: "deny", // kilocode_change
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
@@ -231,6 +234,38 @@ export const layer = Layer.effect(
             mode: "subagent",
             native: true,
           },
+          // kilocode_change start - retain Kilo's opt-in repository research agent
+          ...(flags.experimentalScout
+            ? {
+                scout: {
+                  name: "scout",
+                  permission: Permission.merge(
+                    defaults,
+                    Permission.fromConfig({
+                      "*": "deny",
+                      grep: "allow",
+                      glob: "allow",
+                      webfetch: "allow",
+                      websearch: "allow",
+                      read: "allow",
+                      repo_clone: "allow",
+                      repo_overview: "allow",
+                      external_directory: {
+                        ...readonlyExternalDirectory,
+                        [path.join(Global.Path.repos, "*")]: "allow",
+                      },
+                    }),
+                    user,
+                  ),
+                  description: `Docs and dependency-source specialist. Use this when you need to inspect external documentation, clone dependency repositories into the managed cache, and research library implementation details without modifying the user's workspace.`,
+                  prompt: PROMPT_SCOUT,
+                  options: {},
+                  mode: "subagent" as const,
+                  native: true,
+                },
+              }
+            : {}),
+          // kilocode_change end
           compaction: {
             name: "compaction",
             mode: "primary",

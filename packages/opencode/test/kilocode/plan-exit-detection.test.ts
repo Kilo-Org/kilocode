@@ -21,17 +21,18 @@ import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
+const session = makeRuntime(Session.Service, Session.defaultLayer)
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
+    session.runPromise((svc) => svc.create(input)),
   get: (id: SessionID) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.get(id)).pipe(Effect.provide(Session.defaultLayer))),
+    session.runPromise((svc) => svc.get(id)),
   messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+    session.runPromise((svc) => svc.messages(input)),
   updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+    session.runPromise((svc) => svc.updateMessage(msg)),
   updatePart: <T extends MessageV2.Part>(part: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+    session.runPromise((svc) => svc.updatePart(part)),
 }
 
 const runtime = makeRuntime(Question.Service, Question.defaultLayer)

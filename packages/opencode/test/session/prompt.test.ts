@@ -2092,10 +2092,24 @@ unixNoLLMServer(
   "cancel interrupts loop queued behind shell",
   () =>
     Effect.gen(function* () {
-      const { prompt, chat } = yield* boot()
+      const { prompt, sessions, chat } = yield* boot()
 
       const sh = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "sleep 30" }).pipe(Effect.forkChild)
       yield* waitForBusy(chat.id)
+      // kilocode_change start - busy is set before shell persistence completes
+      yield* pollWithTimeout(
+        sessions.messages({ sessionID: chat.id }).pipe(
+          Effect.map((messages) =>
+            messages.some((message) =>
+              message.parts.some((part) => part.type === "tool" && part.state.status === "running"),
+            )
+              ? true
+              : undefined,
+          ),
+        ),
+        `session ${chat.id} never persisted its running shell tool`,
+      )
+      // kilocode_change end
 
       const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn before cancelling
@@ -2340,7 +2354,7 @@ noLLMServer.instance(
         source: { type: "file", path: "docs", text: { value: "@docs" } },
       })
       expect(fileURLToPath(files[0].url)).toBe(docs)
-      expect(agents.map((agent) => agent.name)).toEqual(["build"])
+      expect(agents.map((agent) => agent.name)).toEqual(["code"]) // kilocode_change
     }),
   {
     config: {

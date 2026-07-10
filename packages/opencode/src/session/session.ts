@@ -33,7 +33,9 @@ import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
-import { KiloSession, kiloSessionFork } from "@/kilocode/session"
+import { KiloSession } from "@/kilocode/session"
+import { kiloSessionFork } from "@/kilocode/session/fork-command"
+import { KiloSessionEvent } from "@/kilocode/session/event"
 import { SessionExport } from "@/kilocode/session-export"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { carryForkDiff } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
@@ -41,6 +43,7 @@ import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirem
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { NonNegativeInt, optionalOmitUndefined } from "@opencode-ai/core/schema"
+import { AbsolutePath } from "@opencode-ai/core/schema" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -381,8 +384,8 @@ export const Event = {
     },
   }),
   // kilocode_change start
-  TurnOpen: KiloSession.Event.TurnOpen,
-  TurnClose: KiloSession.Event.TurnClose,
+  TurnOpen: KiloSessionEvent.TurnOpen,
+  TurnClose: KiloSessionEvent.TurnClose,
   // kilocode_change end
 }
 
@@ -604,6 +607,22 @@ export const layer: Layer.Layer<
         },
       }
       log.info("created", result)
+
+      // kilocode_change start - legacy sessions must satisfy the upstream project foreign key
+      yield* db
+        .insert(ProjectTable)
+        .values({
+          id: ctx.project.id,
+          worktree: AbsolutePath.make(ctx.project.worktree),
+          vcs: ctx.project.vcs ?? null,
+          time_created: ctx.project.time.created,
+          time_updated: ctx.project.time.updated,
+          sandboxes: ctx.project.sandboxes.map((sandbox) => AbsolutePath.make(sandbox)),
+        })
+        .onConflictDoNothing()
+        .run()
+        .pipe(Effect.orDie)
+      // kilocode_change end
 
       // kilocode_change start - initialize inherited state before session.created subscribers run
       KiloSession.register({ id: result.id, parentID: result.parentID, platform: input.platform })

@@ -3,7 +3,6 @@ import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global" // kilocode_change - unified channel for legacy Bus + EventV2Bridge emissions
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
-import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -706,10 +705,12 @@ export namespace KiloSessions {
     const [session, local] = await AppRuntime.runPromise(
       Effect.gen(function* () {
         const sessions = yield* Session.Service
-        const summary = yield* SessionSummary.Service
+        const storage = yield* Storage.Service
         return yield* Effect.all([
           sessions.get(SessionID.make(sessionId)),
-          summary.diff({ sessionID: SessionID.make(sessionId) }),
+          storage
+            .read<Snapshot.FileDiff[]>(["session_diff", sessionId])
+            .pipe(Effect.orElseSucceed((): Snapshot.FileDiff[] => [])),
         ])
       }),
     )

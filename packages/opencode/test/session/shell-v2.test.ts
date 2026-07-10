@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
+import { Effect } from "effect"
 import * as DateTime from "effect/DateTime"
 import { SessionID } from "../../src/session/schema"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -13,8 +14,9 @@ describe("v2 shell event correlation", () => {
     const sessionID = SessionID.make("session")
     const callID = "call"
     const updater = SessionMessageUpdater.memory(state)
+    const update = (event: SessionEvent.Event) => Effect.runSync(SessionMessageUpdater.update(updater, event))
 
-    SessionMessageUpdater.update(updater, {
+    update({
       id: EventV2.ID.create(),
       type: "session.next.shell.ended",
       data: {
@@ -26,7 +28,7 @@ describe("v2 shell event correlation", () => {
     } satisfies SessionEvent.Event)
     expect(state.messages).toEqual([])
 
-    SessionMessageUpdater.update(updater, {
+    update({
       id: EventV2.ID.create(),
       type: "session.next.shell.started",
       data: {
@@ -38,7 +40,7 @@ describe("v2 shell event correlation", () => {
       },
     } satisfies SessionEvent.Event)
 
-    SessionMessageUpdater.update(updater, {
+    update({
       id: EventV2.ID.create(),
       type: "session.next.shell.ended",
       data: {

@@ -28,6 +28,7 @@ const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   )
 
 const it = testEffect(agentLayer())
+const scout = testEffect(agentLayer({ experimentalScout: true })) // kilocode_change
 
 // Helper to evaluate permission for a tool with wildcard pattern
 function evalPerm(agent: Agent.Info | undefined, permission: string): PermissionV1.Action | undefined {
@@ -57,6 +58,7 @@ it.instance("returns default native agents when no config", () =>
     expect(names).toContain("plan")
     expect(names).toContain("general")
     expect(names).toContain("explore")
+    expect(names).not.toContain("scout") // kilocode_change
     expect(names).toContain("compaction")
     expect(names).toContain("title")
     expect(names).toContain("summary")
@@ -113,7 +115,26 @@ it.instance("explore agent asks for external directories and allows whitelisted 
   }),
 )
 
-it.instance(
+// kilocode_change start - Scout is opt-in and owns repository research permissions
+scout.instance("scout agent allows repo cloning and repo cache reads", () =>
+  Effect.gen(function* () {
+    const agent = yield* load((svc) => svc.get("scout"))
+    expect(agent).toBeDefined()
+    expect(agent?.mode).toBe("subagent")
+    expect(evalPerm(agent, "repo_clone")).toBe("allow")
+    expect(evalPerm(agent, "repo_overview")).toBe("allow")
+    expect(evalPerm(agent, "edit")).toBe("deny")
+    expect(
+      Permission.evaluate(
+        "external_directory",
+        path.join(Global.Path.repos, "github.com", "owner", "repo", "README.md"),
+        agent!.permission,
+      ).action,
+    ).toBe("allow")
+  }),
+)
+
+scout.instance(
   "reference config creates scout-backed subagents",
   () =>
     Effect.gen(function* () {
@@ -140,6 +161,7 @@ it.instance(
     },
   },
 )
+// kilocode_change end
 
 it.instance("general agent denies todo tools", () =>
   Effect.gen(function* () {

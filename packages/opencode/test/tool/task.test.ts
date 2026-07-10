@@ -868,7 +868,7 @@ describe("tool.task", () => {
       )
 
       yield* jobs.wait({ id: result.metadata.sessionId, timeout: 1_000 })
-      const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
+      const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
       expect(parent.info.role === "assistant" ? parent.info.cost : 0).toBeCloseTo(0.2, 6)
     }),
   )
@@ -936,7 +936,7 @@ describe("tool.task", () => {
       first.resolve()
       second.resolve()
       yield* jobs.wait({ id: started.metadata.sessionId, timeout: 1_000 })
-      const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
+      const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
       // Both the initial run and the extended run propagate their 0.2 delta; a missing bracket on the
       // extend path would leave the parent at 0.2.
       expect(parent.info.role === "assistant" ? parent.info.cost : 0).toBeCloseTo(0.4, 6)
@@ -1217,7 +1217,7 @@ describe("tool.task cost propagation", () => {
             ask: () => Effect.void,
           },
         )
-        const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
+        const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         expect(parent.info.role).toBe("assistant")
         if (parent.info.role !== "assistant") return
         expect(parent.info.cost).toBeCloseTo(0.25, 6)
@@ -1270,7 +1270,7 @@ describe("tool.task cost propagation", () => {
             ask: () => Effect.void,
           },
         )
-        const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
+        const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         if (parent.info.role !== "assistant") return
         // Only the delta since the start of this invocation propagates.
         expect(parent.info.cost).toBeCloseTo(0.15, 6)
@@ -1323,7 +1323,7 @@ describe("tool.task cost propagation", () => {
             ask: () => Effect.void,
           },
         )
-        const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
+        const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         if (parent.info.role !== "assistant") return
         // Delta-only: only the 0.05 from this run, not 0.15 including the pre-existing 0.10.
         expect(parent.info.cost).toBeCloseTo(0.05, 6)
@@ -1385,7 +1385,7 @@ describe("tool.task cost propagation", () => {
           )
           .pipe(Effect.exit)
 
-        const parent = yield* MessageV2.get({ sessionID: chat.id, messageID: assistant.id })
+        const parent = (yield* sessions.messages({ sessionID: chat.id })).find((item) => item.info.id === assistant.id)!
         if (parent.info.role !== "assistant") return
         expect(parent.info.cost).toBeCloseTo(0.07, 6)
       }),

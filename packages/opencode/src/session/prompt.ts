@@ -1280,7 +1280,7 @@ export const layer = Layer.effect(
       return { info, parts }
     }, Effect.scoped)
 
-    const prompt: (input: PromptInput) => Effect.Effect<SessionV1.WithParts> = Effect.fn("SessionPrompt.prompt")(
+    const prompt: Interface["prompt"] = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput) {
         const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
         yield* revert.cleanup(session)
@@ -1288,7 +1288,7 @@ export const layer = Layer.effect(
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
         yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
         // kilocode_change end
-        const message = yield* createUserMessage(input).pipe(Effect.orDie) // kilocode_change - preserve the public prompt error contract
+        const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
         const permissions: PermissionV1.Rule[] = []

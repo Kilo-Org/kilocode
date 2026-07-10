@@ -42,24 +42,23 @@ const ref = {
   modelID,
 }
 
-function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {
-  return Effect.runPromise(fx.pipe(Effect.provide(SessionNs.defaultLayer)))
+function service(rt: ReturnType<typeof runtime>) {
+  return {
+    create(input?: SessionNs.CreateInput) {
+      return rt.runPromise(SessionNs.Service.use((svc) => svc.create(input)))
+    },
+    messages(input: Parameters<SessionNs.Interface["messages"]>[0]) {
+      return rt.runPromise(SessionNs.Service.use((svc) => svc.messages(input)))
+    },
+    updateMessage<T extends MessageV2.Info>(msg: T) {
+      return rt.runPromise(SessionNs.Service.use((svc) => svc.updateMessage(msg)))
+    },
+    updatePart<T extends MessageV2.Part>(part: T) {
+      return rt.runPromise(SessionNs.Service.use((svc) => svc.updatePart(part)))
+    },
+  }
 }
-
-const svc = {
-  create(input?: SessionNs.CreateInput) {
-    return run(SessionNs.Service.use((svc) => svc.create(input)))
-  },
-  messages(input: Parameters<SessionNs.Interface["messages"]>[0]) {
-    return run(SessionNs.Service.use((svc) => svc.messages(input)))
-  },
-  updateMessage<T extends MessageV2.Info>(msg: T) {
-    return run(SessionNs.Service.use((svc) => svc.updateMessage(msg)))
-  },
-  updatePart<T extends MessageV2.Part>(part: T) {
-    return run(SessionNs.Service.use((svc) => svc.updatePart(part)))
-  },
-}
+type Store = ReturnType<typeof service>
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -78,7 +77,7 @@ function base(id: MessageID) {
   }
 }
 
-async function user(sessionID: SessionID, text: string) {
+async function user(svc: Store, sessionID: SessionID, text: string) {
   const msg = await svc.updateMessage({
     id: MessageID.ascending(),
     role: "user",
@@ -97,7 +96,7 @@ async function user(sessionID: SessionID, text: string) {
   return msg
 }
 
-async function assistant(sessionID: SessionID, parentID: MessageID, root: string) {
+async function assistant(svc: Store, sessionID: SessionID, parentID: MessageID, root: string) {
   const msg: MessageV2.Assistant = {
     id: MessageID.ascending(),
     role: "assistant",
@@ -168,7 +167,7 @@ function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) 
   return ManagedRuntime.make(
     Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus, status).pipe(
       Layer.provide(ProviderTest.fake({ model }).layer),
-      Layer.provide(SessionNs.defaultLayer),
+      Layer.provideMerge(SessionNs.defaultLayer),
       Layer.provide(Snapshot.defaultLayer),
       Layer.provide(layer),
       Layer.provide(Permission.defaultLayer),
@@ -300,8 +299,10 @@ describe("KiloCompactionPayloadRecovery", () => {
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
+        const rt = runtime(stub.layer, Config.defaultLayer)
+        const svc = service(rt)
         const session = await svc.create({})
-        const old = await user(session.id, "old image turn")
+        const old = await user(svc, session.id, "old image turn")
         await svc.updatePart({
           id: PartID.ascending(),
           messageID: old.id,
@@ -311,7 +312,7 @@ describe("KiloCompactionPayloadRecovery", () => {
           filename: "old.png",
           url: `data:image/png;base64,${"a".repeat(8_000)}`,
         })
-        const oldReply = await assistant(session.id, old.id, tmp.path)
+        const oldReply = await assistant(svc, session.id, old.id, tmp.path)
         await svc.updatePart({
           id: PartID.ascending(),
           messageID: oldReply.id,
@@ -328,9 +329,9 @@ describe("KiloCompactionPayloadRecovery", () => {
             time: { start: Date.now(), end: Date.now() },
           },
         })
-        await user(session.id, "latest turn")
-        const keep = await user(session.id, "preserved tail turn")
-        const keepReply = await assistant(session.id, keep.id, tmp.path)
+        await user(svc, session.id, "latest turn")
+        const keep = await user(svc, session.id, "preserved tail turn")
+        const keepReply = await assistant(svc, session.id, keep.id, tmp.path)
         await svc.updatePart({
           id: PartID.ascending(),
           messageID: keepReply.id,
@@ -360,7 +361,6 @@ describe("KiloCompactionPayloadRecovery", () => {
           }),
         )
 
-        const rt = runtime(stub.layer, Config.defaultLayer)
         try {
           const msgs = await svc.messages({ sessionID: session.id })
           const parent = msgs.at(-1)?.info.id

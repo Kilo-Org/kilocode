@@ -886,15 +886,14 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/azure
       if (id === "o1-mini") return {}
       return Object.fromEntries(
-        openaiReasoningEfforts(id, model.release_date).concat(model.release_date >= OPENAI_XHIGH_EFFORT_RELEASE_DATE ? ["xhigh"] : []) // kilocode_change
-          .map((effort) => [
-            effort,
-            {
-              reasoningEffort: effort,
-              reasoningSummary: "auto",
-              include: INCLUDE_ENCRYPTED_REASONING,
-            },
-          ]),
+        openaiReasoningEfforts(id, model.release_date).map((effort) => [
+          effort,
+          {
+            reasoningEffort: effort,
+            reasoningSummary: "auto",
+            include: INCLUDE_ENCRYPTED_REASONING,
+          },
+        ]),
       )
     case "@ai-sdk/amazon-bedrock/mantle":
     case "@ai-sdk/openai": {
@@ -1231,6 +1230,7 @@ export function options(input: {
       // kilocode_change start - gate textVerbosity to Responses-API providers
       (input.model.api.npm === "@ai-sdk/openai" ||
         input.model.api.npm === "@ai-sdk/azure" ||
+        input.model.api.npm === "@ai-sdk/amazon-bedrock/mantle" ||
         input.model.api.npm === "@ai-sdk/github-copilot" ||
         input.model.api.npm === "@openrouter/ai-sdk-provider" ||
         input.model.api.npm === "@kilocode/kilo-gateway") &&

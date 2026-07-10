@@ -33,6 +33,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await AppRuntime.dispose()
   Flag.KILO_DB = previous
   await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map((file) => fs.rm(file, { force: true })))
 })

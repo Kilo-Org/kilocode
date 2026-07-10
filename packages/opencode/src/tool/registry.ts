@@ -29,6 +29,8 @@ import { Provider } from "@/provider/provider"
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
+import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
+import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log"
@@ -153,6 +155,8 @@ export const layer: Layer.Layer<
     const plan = yield* PlanExitTool
     const webfetch = yield* WebFetchTool
     const websearch = yield* WebSearchTool
+    const clone = yield* RepoCloneTool // kilocode_change
+    const overview = yield* RepoOverviewTool // kilocode_change
     const shell = yield* ShellTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
@@ -271,6 +275,8 @@ export const layer: Layer.Layer<
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
+          clone: Tool.init(clone), // kilocode_change
+          overview: Tool.init(overview), // kilocode_change
           skill: Tool.init(skilltool),
           patch: Tool.init(patchtool),
           question: Tool.init(question),
@@ -304,6 +310,7 @@ export const layer: Layer.Layer<
               tool.fetch,
               tool.todo,
               tool.search,
+              ...(flags.experimentalScout ? [tool.clone, tool.overview] : []), // kilocode_change
               tool.skill,
               tool.patch,
               tool.plan,

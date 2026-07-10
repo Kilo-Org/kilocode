@@ -113,6 +113,23 @@ describe("useEvent", () => {
     }
   })
 
+  // kilocode_change start - the compatibility stream contains events from every loaded project
+  test("ignores events for other projects", async () => {
+    const { app, emit, seen } = await mount()
+
+    try {
+      emit(event(vcs("foreign"), { directory: "/tmp/foreign", project: "proj_foreign" }))
+      emit(event(vcs("current"), { directory: "/tmp/current", project: projectID }))
+
+      await wait(() => seen.some((item) => item.type === "vcs.branch.updated" && item.properties.branch === "current"))
+
+      expect(seen).toEqual([vcs("current")])
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+  // kilocode_change end
+
   test("delivers current project events regardless of active workspace", async () => {
     const { app, emit, project, seen } = await mount()
 

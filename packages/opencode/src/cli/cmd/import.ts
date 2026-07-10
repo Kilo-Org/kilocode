@@ -1,7 +1,6 @@
 import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Session } from "@/session/session"
-import { MessageV2 } from "../../session/message-v2"
 import { CliError, effectCmd } from "../effect-cmd"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionTable, MessageTable, PartTable } from "@opencode-ai/core/session/sql"

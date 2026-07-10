@@ -11,7 +11,7 @@ import { Git } from "../../src/git"
 import { Reference } from "../../src/reference/reference"
 import { RepositoryCache } from "../../src/reference/repository-cache"
 import { disposeAllInstances, provideTmpdirInstance, tmpdirScoped } from "../fixture/fixture"
-import { testEffect } from "../lib/effect"
+import { testEffect, testEffectBare } from "../lib/effect"
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -27,7 +27,7 @@ const referenceLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
 const it = testEffect(
   Layer.mergeAll(FSUtil.defaultLayer, CrossSpawnSpawner.defaultLayer, Git.defaultLayer, referenceLayer()),
 )
-const references = testEffect(
+const references = testEffectBare(
   Layer.mergeAll(
     FSUtil.defaultLayer,
     CrossSpawnSpawner.defaultLayer,

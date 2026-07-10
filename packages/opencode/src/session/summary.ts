@@ -144,28 +144,18 @@ export const layer = Layer.effect(
     })
 
     const diff = Effect.fn("SessionSummary.diff")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
-      // kilocode_change start - storage-backed session-wide diff; kilo-sessions.ts full sync relies on
-      // this returning the whole session's cumulative diff even when messageID is omitted
-      const diffs = yield* storage
-        .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
-        .pipe(Effect.catch(() => Effect.succeed([] as Snapshot.FileDiff[])))
-      const next = diffs.map((item) => {
+      if (!input.messageID) return []
+      const message = (yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)).find(
+        (item) => item.info.id === input.messageID,
+      )
+      if (!message || message.info.role !== "user") return []
+      const diffs = message.info.summary?.diffs ?? []
+      return diffs.map((item) => {
         if (item.file === undefined) return item
         const file = unquoteGitPath(item.file)
-
-        // scrub oversized diffs from stored session_diff
-        const oversized = item.patch !== undefined && Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
-        if (file === item.file && !oversized) return item
-        return {
-          ...item,
-          file,
-          patch: oversized ? "" : item.patch,
-        }
+        if (file === item.file) return item
+        return { ...item, file }
       })
-      const changed = next.some((item, i) => item.file !== diffs[i]?.file)
-      if (changed) yield* storage.write(["session_diff", input.sessionID], next).pipe(Effect.ignore)
-      return next
-      // kilocode_change end
     })
 
     return Service.of({ summarize, diff, computeDiff })

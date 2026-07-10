@@ -3320,7 +3320,7 @@ describe("ProviderTransform.variants", () => {
         },
       })
       const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
+      expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
       expect(result.xhigh).toEqual({
         reasoningEffort: "xhigh",
         reasoningSummary: "auto",
@@ -3501,6 +3501,8 @@ describe("ProviderTransform.variants", () => {
     })
 
     for (const testCase of [
+      { id: "o3-deep-research", efforts: ["medium"] }, // kilocode_change - preserve helper exclusions on Azure
+      { id: "gpt-5-pro", efforts: ["high"] }, // kilocode_change - preserve helper exclusions on Azure
       { id: "gpt-5-1", efforts: ["none", "low", "medium", "high"] },
       { id: "gpt-5-4", efforts: ["none", "low", "medium", "high", "xhigh"] },
       { id: "gpt-5.4", efforts: ["none", "low", "medium", "high", "xhigh"] },

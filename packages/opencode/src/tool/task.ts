@@ -360,6 +360,9 @@ export const TaskTool = Tool.define(
         }
       }
 
+      const foregroundCost = runInBackground
+        ? undefined
+        : yield* KiloCostPropagation.childCost(sessions, nextSession.id) // kilocode_change - snapshot before the foreground job starts
       const info = yield* background.start({
         id: nextSession.id,
         type: id,
@@ -410,7 +413,7 @@ export const TaskTool = Tool.define(
         // kilocode_change start - snapshot child cost so we propagate only the delta on resume (#6321)
         Effect.gen(function* () {
           ctx.abort.addEventListener("abort", onAbort)
-          return yield* KiloCostPropagation.childCost(sessions, nextSession.id)
+          return foregroundCost ?? (yield* KiloCostPropagation.childCost(sessions, nextSession.id))
         }),
         // kilocode_change end
         () =>

@@ -70,6 +70,7 @@ export function useEvent() {
         return
       }
 
+      if (event.directory !== "global" && event.project !== project.project()) return // kilocode_change
       handler(event.payload, { workspace: event.workspace })
     })
   }

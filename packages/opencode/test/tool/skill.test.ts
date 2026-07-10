@@ -42,14 +42,14 @@ describe("tool.skill", () => {
         Bun.write(
           path.join(skill, "SKILL.md"),
           `---
-    name: tool-skill
-    description: Skill for tool tests.
-    ---
+name: tool-skill
+description: Skill for tool tests.
+---
 
-    # Tool Skill
+# Tool Skill
 
-    Use this skill.
-    `,
+Use this skill.
+`,
         ),
       )
       yield* Effect.promise(() => Bun.write(path.join(skill, "scripts", "demo.txt"), "demo"))

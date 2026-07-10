@@ -298,7 +298,15 @@ const ask = Effect.fn("ShellTool.ask")(function* (
       permission: "external_directory",
       patterns: globs,
       always: globs,
-      metadata: scan.access === "read" ? { command, access: "read", ...(description ? { description } : {}) } : {}, // kilocode_change
+      // kilocode_change start - retain read classification alongside upstream permission context
+      metadata: {
+        command,
+        ...(description ? { description } : {}),
+        directories,
+        patterns: globs,
+        ...(scan.access === "read" ? { access: "read" as const } : {}),
+      },
+      // kilocode_change end
     })
   }
 

@@ -142,6 +142,8 @@ export const testEffect = <R, E>(layer: Layer.Layer<R, E>) => {
   const full = Layer.merge(layer, Reference.defaultLayer)
   return make(Layer.provideMerge(full, testEnv), Layer.provideMerge(full, liveEnv))
 }
+export const testEffectBare = <R, E>(layer: Layer.Layer<R, E>) =>
+  make<R, E>(Layer.provideMerge(layer, testEnv), Layer.provideMerge(layer, liveEnv))
 // kilocode_change end
 
 // Variant of `testEffect` that builds the test layer through the shared

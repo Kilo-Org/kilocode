@@ -8,6 +8,7 @@ import { json, mount, wait } from "./sync-fixture"
 const sessionID = "ses_hydration_race"
 const messageID = "msg_hydration_race"
 const partID = "prt_hydration_race"
+let seq = 0
 const session = {
   id: sessionID,
   title: "race",
@@ -31,6 +32,26 @@ const assistant = {
 }
 
 function global(payload: GlobalEvent["payload"]): GlobalEvent {
+  if (
+    payload.type === "message.updated" ||
+    payload.type === "message.part.updated" ||
+    payload.type === "message.removed"
+  ) {
+    return {
+      directory: "/tmp/other",
+      project: "proj_test",
+      payload: {
+        type: "sync",
+        syncEvent: {
+          id: payload.id,
+          type: payload.type + ".1",
+          seq: ++seq,
+          aggregateID: payload.properties.sessionID,
+          data: payload.properties,
+        },
+      },
+    } as GlobalEvent
+  }
   return { directory: "/tmp/other", project: "proj_test", payload }
 }
 

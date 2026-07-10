@@ -2,7 +2,6 @@ import { prepareForkedPart as _prepareForkedPart } from "./fork"
 import z from "zod"
 import { Cause, Effect, Schema } from "effect"
 import { Bus } from "@/bus"
-import { BusEvent } from "@/bus/bus-event"
 import { Instance } from "@/kilocode/instance"
 import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
@@ -16,11 +15,10 @@ import { SessionTable } from "@opencode-ai/core/session/sql"
 import * as Log from "@opencode-ai/core/util/log"
 import type { ProviderMetadata, Usage } from "@opencode-ai/llm"
 import type { Provider } from "@/provider/provider"
-import { zod as toZod } from "@opencode-ai/core/effect-zod"
 import { ENV_FEATURE } from "@kilocode/kilo-gateway"
-import { fn } from "@/kilocode/fn"
 import { existsSync } from "fs"
 import path from "path"
+import { KiloSessionEvent, type KiloSessionCloseReason } from "./event"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -29,26 +27,8 @@ export namespace KiloSession {
   // Events
   // ---------------------------------------------------------------------------
 
-  const CloseReasonSchema = Schema.Literals(["completed", "error", "interrupted"])
-
-  export const Event = {
-    TurnOpen: BusEvent.define(
-      "session.turn.open",
-      Schema.Struct({
-        sessionID: SessionID,
-      }),
-    ),
-    TurnClose: BusEvent.define(
-      "session.turn.close",
-      Schema.Struct({
-        sessionID: SessionID,
-        parentID: Schema.optional(SessionID),
-        reason: CloseReasonSchema,
-      }),
-    ),
-  }
-
-  export type CloseReason = Schema.Schema.Type<typeof CloseReasonSchema>
+  export const Event = KiloSessionEvent
+  export type CloseReason = KiloSessionCloseReason
 
   // kilocode_change - turn events stay on the legacy Bus (memory/turn.ts subscribes there), but the publish
   // lives here so the upstream-shaped session/prompt.ts does not take a legacy Bus dependency.
@@ -450,10 +430,4 @@ export namespace KiloSession {
   export const prepareForkedPart = _prepareForkedPart
 }
 
-export const kiloSessionFork = fn(
-  z.object({ sessionID: toZod(SessionID), messageID: toZod(MessageID).optional() }),
-  async (input) => {
-    const { AppRuntime } = await import("@/effect/app-runtime")
-    return AppRuntime.runPromise(Session.Service.use((sessions) => sessions.fork(input)))
-  },
-)
+export { kiloSessionFork } from "./fork-command"
