@@ -8,38 +8,11 @@ import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messa
 import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 import { edge } from "../sidebar-position"
 import { protect } from "../utils/webview-message"
+import { createPlayer } from "./audio"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
-let sounds = Promise.resolve()
-const timeout = 10_000
-
-function play(uri: string) {
-  const run = () =>
-    new Promise<void>((resolve, reject) => {
-      const audio = new Audio(uri)
-      const ctrl = new AbortController()
-      const finish = (done: () => void) => {
-        clearTimeout(timer)
-        ctrl.abort()
-        done()
-      }
-      const timer = setTimeout(() => {
-        audio.pause()
-        audio.removeAttribute("src")
-        audio.load()
-        finish(() => reject(new Error("Notification sound playback timed out")))
-      }, timeout)
-      audio.addEventListener("ended", () => finish(resolve), { once: true, signal: ctrl.signal })
-      audio.addEventListener("error", () => finish(() => reject(new Error("Notification sound failed to load"))), {
-        once: true,
-        signal: ctrl.signal,
-      })
-      audio.play().catch((error) => finish(() => reject(error)))
-    })
-  sounds = sounds.then(run, run)
-  void sounds.catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
-}
+const play = createPlayer()
 
 export function getVSCodeAPI(): VSCodeAPI {
   if (!vscodeApi) {
@@ -114,7 +87,8 @@ export const VSCodeProvider: ParentComponent = (props) => {
       copy.reject(new Error(message.error ?? "Failed to write to clipboard"))
       return
     }
-    if (message.type === "playNotificationSound") play(message.uri)
+    if (message.type === "playNotificationSound")
+      void play(message.uri).catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
     handlers.forEach((handler) => handler(message))
   }
 
