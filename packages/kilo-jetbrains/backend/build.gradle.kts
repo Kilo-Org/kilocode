@@ -1,4 +1,6 @@
 import normalization.NormalizeOpenApiSpecTask
+import org.gradle.api.GradleException
+import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.WriteProperties
 
 plugins {
@@ -17,6 +19,10 @@ val generatedApi = layout.buildDirectory.dir("generated/openapi/src/main/kotlin"
 val rawSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.raw.json")
 val generatedSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.json")
 val generatedProps = layout.buildDirectory.dir("generated/kilo-props")
+val generatedCli = layout.buildDirectory.dir("generated/kilo-cli-res")
+val pinned = providers.gradleProperty("kilo.cli.pinned").map { it.trim().toBoolean() }.orElse(true)
+val repoCli = pinned.map { !it }
+val repoRootDir = rootProject.layout.projectDirectory.dir("../opencode")
 
 val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirectory.file("package.json")).asText.map { text ->
     Regex("\"version\"\\s*:\\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1)
@@ -26,6 +32,7 @@ val pinnedCliVersion = providers.fileContents(rootProject.layout.projectDirector
 sourceSets {
     main {
         resources.srcDir(generatedProps)
+        if (repoCli.get()) resources.srcDir(generatedCli)
         kotlin.srcDir(generatedApi)
     }
 }
@@ -35,17 +42,50 @@ val writeKiloProperties by tasks.registering(WriteProperties::class) {
     val out = generatedProps.map { it.file("kilo.properties") }
     destinationFile.set(out)
     property("cli.version", pinnedCliVersion)
+    property("cli.pinned", pinned.map { it.toString() })
 }
 
 val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
     description = "Generate CLI OpenAPI spec into the build directory"
     cliVersion.set(pinnedCliVersion)
+    repo.set(repoCli)
+    repoRoot.set(repoRootDir)
     token.set(
         providers.environmentVariable("GH_TOKEN")
             .orElse(providers.environmentVariable("GITHUB_TOKEN"))
     )
     cacheDir.set(layout.buildDirectory.dir("cli-cache"))
     spec.set(rawSpec)
+}
+
+val buildRepoCli by tasks.registering(Exec::class) {
+    description = "Build the local repo CLI for the current platform"
+    workingDir = repoRootDir.asFile
+    commandLine("bun", "run", "script/build.ts", "--single", "--skip-install")
+}
+
+fun platform(): String {
+    val os = System.getProperty("os.name").lowercase()
+    val name = when {
+        os.contains("mac") || os.contains("darwin") -> "darwin"
+        os.contains("linux") -> "linux"
+        os.contains("windows") -> "windows"
+        else -> throw GradleException("Unsupported OS: ${System.getProperty("os.name")}")
+    }
+    val arch = when (System.getProperty("os.arch").lowercase()) {
+        "aarch64", "arm64" -> "arm64"
+        "x86_64", "amd64" -> "x64"
+        else -> throw GradleException("Unsupported architecture: ${System.getProperty("os.arch")}")
+    }
+    return "$name-$arch"
+}
+
+val stageRepoCli by tasks.registering(StageRepoCliTask::class) {
+    description = "Stage the local repo CLI into backend resources"
+    val bin = repoRootDir.dir("dist/@kilocode/cli-${platform()}/bin")
+    this.bin.set(bin)
+    archive.set(generatedCli.map { it.file("kilo-cli.zip") })
+    outputs.upToDateWhen { false }
 }
 
 val normalizeOpenApiSpec by tasks.registering(NormalizeOpenApiSpecTask::class) {
@@ -102,11 +142,13 @@ val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
 
 tasks.named("compileKotlin") {
     dependsOn(fixGeneratedApi, writeKiloProperties)
+    if (repoCli.get()) dependsOn(stageRepoCli)
     inputs.dir(generatedApi)
 }
 
 tasks.named("processResources") {
     dependsOn(writeKiloProperties)
+    if (repoCli.get()) dependsOn(stageRepoCli)
 }
 
 tasks.named("compileTestKotlin") {

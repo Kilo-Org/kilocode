@@ -203,6 +203,7 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=session.updated",
             "title=${event.session.title.length}",
+            "revert=${event.session.revert?.messageID ?: "none"}",
         )
 
         is ChatEventDto.SessionIdle -> join(

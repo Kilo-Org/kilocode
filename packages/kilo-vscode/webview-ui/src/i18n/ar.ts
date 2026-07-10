@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "تم التراجع عن {{count}} رسائل",
   "revert.banner.redo": "إعادة",
   "revert.banner.redo.all": "إعادة الكل",
-  "revert.banner.hint": "أرسل رسالة جديدة لجعل هذا دائمًا",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",
@@ -624,7 +624,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "بحث Grep",
   "ui.permission.toolLabel.webSearch": "بحث ويب",
   "ui.permission.toolLabel.list": "قائمة",
-  "ui.permission.toolLabel.externalDirectory": "قراءة دليل خارجي",
+  "ui.permission.toolLabel.externalDirectory": "السماح بالوصول إلى مجلد خارجي",
   "ui.permission.toolLabel.webFetch": "جلب ويب",
   "ui.permission.toolLabel.task": "مهمة",
   "ui.permission.toolLabel.skill": "مهارة",
@@ -940,6 +940,7 @@ export const dict = {
   "provider.custom.models.name.label": "الاسم",
   "provider.custom.models.name.placeholder": "الاسم المعروض",
   "provider.custom.models.reasoning.label": "الاستدلال",
+  "provider.custom.models.modalities.image": "صورة",
   "provider.custom.models.variants.label": "المتغيرات",
   "provider.custom.models.variants.add": "إضافة متغير",
   "provider.custom.models.variants.remove": "إزالة المتغير",
@@ -1398,6 +1399,12 @@ export const dict = {
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
+  "settings.experimental.imageGeneration.title": "توليد الصور",
+  "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
+  "settings.experimental.imageGenerationModel.title": "نموذج الصور",
+  "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
+  "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
+
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
   "settings.experimental.speechToText.description":
     "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
@@ -1418,6 +1425,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "تفعيل SWE-Pruner: تقليم المخرجات الكبيرة لأدوات القراءة والبحث وshell مع مراعاة المهمة، استنادًا إلى سؤال تركيز يقدّمه الوكيل",
+  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1548,8 +1561,8 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
@@ -1644,6 +1657,10 @@ export const dict = {
     "الـ prompt النظامي المرسل إلى الذكاء الاصطناعي عند إنشاء commit messages. هذا يستبدل الـ prompt الافتراضي بالكامل.",
   "settings.commitMessage.prompt.placeholder":
     "على سبيل المثال: قم بإنشاء commit messages باللغة الإسبانية باتباع تنسيق conventional commits. أرجع الـ commit message فقط.",
+
+  "settings.commitMessage.language.sync": "مزامنة مع لغة واجهة المستخدم",
+  "settings.commitMessage.language.title": "اللغة",
+  "settings.commitMessage.language.description": "اختر اللغة المستخدمة لرسائل الالتزام التي تولدها الذكاء الاصطناعي:",
 
   "settings.display.username.title": "اسم المستخدم",
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",

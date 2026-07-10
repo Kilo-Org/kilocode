@@ -42,12 +42,14 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
@@ -133,6 +135,7 @@ class PromptPanel(
     var onAutoApproveToggle: (Boolean) -> Unit = {}
     var onFileDrag: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
+    private var focused = false
     private val shell = BorderLayoutPanel().apply {
         isOpaque = true
         border = JBUI.Borders.empty(
@@ -167,19 +170,17 @@ class PromptPanel(
         setShowPlaceholderWhenFocused(true)
         setOneLineMode(false)
         addSettingsProvider { ed ->
-            style.applyTranscriptToEditor(ed)
-            ed.setBorder(JBUI.Borders.empty())
-            ed.scrollPane.border = JBUI.Borders.empty()
-            ed.scrollPane.viewportBorder = JBUI.Borders.empty()
-            ed.backgroundColor = style.editorScheme.defaultBackground
-            ed.scrollPane.background = style.editorScheme.defaultBackground
-            ed.scrollPane.viewport.background = style.editorScheme.defaultBackground
+            chrome(ed)
             ed.settings.isUseSoftWraps = true
             ed.settings.isPaintSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
+            ed.settings.setBlockCursor(false)
+            SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
+            ed.setVerticalScrollbarVisible(false)
+            ed.setHorizontalScrollbarVisible(false)
             ed.scrollPane.verticalScrollBarPolicy =
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
             ed.scrollPane.horizontalScrollBarPolicy =
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             installCompletionShortcut(ed)
@@ -198,11 +199,11 @@ class PromptPanel(
             })
             ed.contentComponent.addFocusListener(object : FocusAdapter() {
                 override fun focusGained(e: FocusEvent) {
-                    repaint()
+                    syncFocus(true)
                 }
 
                 override fun focusLost(e: FocusEvent) {
-                    repaint()
+                    syncFocus(false)
                 }
             })
         }
@@ -301,8 +302,27 @@ class PromptPanel(
 
     override fun updateUI() {
         super.updateUI()
+        syncBorder()
+    }
+
+    private fun syncFocus(value: Boolean) {
+        if (focused == value) {
+            repaint()
+            return
+        }
+        focused = value
+        syncBorder()
+        revalidate()
+        repaint()
+    }
+
+    private fun syncBorder() {
         border = JBUI.Borders.compound(
-            JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator()),
+            if (focused) {
+                JBUI.Borders.emptyTop(JBUI.scale(1))
+            } else {
+                JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator())
+            },
             JBUI.Borders.empty(),
         )
     }
@@ -356,6 +376,29 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    private fun chrome(ed: EditorEx) {
+        if (ed.isDisposed) return
+        style.applyTranscriptToEditor(ed)
+        if (ed.isDisposed) return
+        val bg = style.editorBackground
+        ed.setBorder(JBUI.Borders.empty())
+        ed.scrollPane.border = JBUI.Borders.empty()
+        ed.scrollPane.viewportBorder = JBUI.Borders.empty(
+            0,
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
+            0,
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
+        )
+        ed.backgroundColor = bg
+        ed.component.background = bg
+        ed.contentComponent.background = bg
+        ed.scrollPane.background = bg
+        ed.scrollPane.viewport.background = bg
+        ed.scrollPane.revalidate()
+        ed.scrollPane.repaint()
+    }
+
+    @RequiresEdt
     fun setReady(value: Boolean) {
         ready = value
         if (value) completion?.prewarm()
@@ -393,6 +436,19 @@ class PromptPanel(
     fun text(): String = editor.text.trim()
 
     @RequiresEdt
+    fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
+
+    @RequiresEdt
+    fun hasAttachments(): Boolean = attachments.isNotEmpty()
+
+    @RequiresEdt
+    fun setText(value: String) {
+        editor.text = value
+        syncEditorHeight()
+        syncHighlights()
+    }
+
+    @RequiresEdt
     override fun send() {
         submit("action")
     }
@@ -427,8 +483,8 @@ class PromptPanel(
         background = style.editorScheme.defaultBackground
         shell.background = style.editorScheme.defaultBackground
         editor.font = style.transcriptFont
-        editor.getEditor(false)?.let(style::applyTranscriptToEditor)
-        editor.background = style.editorScheme.defaultBackground
+        editor.getEditor(false)?.let(::chrome)
+        editor.background = style.editorBackground
         syncEditorHeight()
         syncAutoApprove()
         syncHighlights()

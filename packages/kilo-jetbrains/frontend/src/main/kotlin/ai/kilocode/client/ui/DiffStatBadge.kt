@@ -1,33 +1,44 @@
 package ai.kilocode.client.ui
 
+import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import java.awt.Color
-import java.awt.FlowLayout
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.GridBagLayout
 import java.awt.RenderingHints
 import javax.swing.JPanel
 
 internal class DiffStatBadge(
     additions: Int,
     deletions: Int,
-) : JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.sm(), 0)) {
-    private val removed = JBLabel("-$deletions").apply {
+) : JPanel(GridBagLayout()) {
+    private val removed = JBLabel().apply {
         foreground = removedColor()
         font = JBFont.small()
     }
-    private val added = JBLabel("+$additions").apply {
+    private val added = JBLabel().apply {
         foreground = addedColor()
         font = JBFont.small()
     }
 
     init {
         isOpaque = false
-        add(removed)
-        add(added)
+        border = JBUI.Borders.empty(0, UiStyle.Gap.sm(), 0, UiStyle.Gap.sm())
+        add(
+            Stack.horizontal(UiStyle.Gap.sm())
+                .next(removed)
+                .next(added),
+        )
+        update(additions, deletions)
+    }
+
+    fun update(additions: Int, deletions: Int) {
+        removed.text = "-$deletions"
+        added.text = "+$additions"
     }
 
     override fun paintComponent(g: Graphics) {

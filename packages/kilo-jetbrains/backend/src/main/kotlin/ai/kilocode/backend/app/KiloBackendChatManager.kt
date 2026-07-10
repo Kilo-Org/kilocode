@@ -257,6 +257,17 @@ class KiloBackendChatManager(
         }
     }
 
+    fun revert(id: String, dir: String, message: String, part: String?) {
+        log.info("${ChatLogSummary.sid(id)} kind=revert ${ChatLogSummary.dir(dir)} message=$message part=${part ?: "none"}")
+        val body = KiloCliDataParser.buildRevertJson(message, part)
+        post("/session/$id/revert?directory=${encode(dir)}", body, "revert", "${ChatLogSummary.sid(id)} kind=revert", strict = true)
+    }
+
+    fun unrevert(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=unrevert ${ChatLogSummary.dir(dir)}")
+        post("/session/$id/unrevert?directory=${encode(dir)}", "{}", "unrevert", "${ChatLogSummary.sid(id)} kind=unrevert", strict = true)
+    }
+
     // ------ messages ------
 
     fun messages(id: String, dir: String): List<MessageWithPartsDto> {
@@ -356,7 +367,7 @@ class KiloBackendChatManager(
 
     // ------ utilities ------
 
-    private fun post(path: String, body: String, op: String, meta: String) {
+    private fun post(path: String, body: String, op: String, meta: String, strict: Boolean = false) {
         val http = requireClient()
         val url = requireBase()
         val request = Request.Builder()
@@ -365,7 +376,11 @@ class KiloBackendChatManager(
             .build()
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                log.warn("$op failed: HTTP ${response.code}")
+                val code = response.code
+                val raw = response.body?.string()
+                log.warn("$op failed: HTTP $code")
+                raw?.let { log.debug { "$meta op=$op error=${ChatLogSummary.body(it)}" } }
+                if (strict) throw RuntimeException("$op failed: HTTP $code")
                 return
             }
             log.debug { "$meta op=$op ok=true code=${response.code}" }

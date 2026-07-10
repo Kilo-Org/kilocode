@@ -11957,6 +11957,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "CommitMessageNoChangesError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitMessageNoChangesError"
+                }
+              }
+            }
           }
         },
         "description": "Generate a commit message using AI based on the current git diff.",
@@ -11978,6 +11988,9 @@
                     }
                   },
                   "previousMessage": {
+                    "type": "string"
+                  },
+                  "language": {
                     "type": "string"
                   }
                 },
@@ -14304,6 +14317,94 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.audio.transcriptions({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilo/models/images": {
+      "get": {
+        "tags": ["kilo"],
+        "operationId": "kilo.models.images",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image-capable model list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "name"],
+                    "additionalProperties": false
+                  },
+                  "description": "Image-capable model list"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_Unauthorized"
+                }
+              }
+            }
+          }
+        },
+        "description": "List image-capable models from the Kilo Gateway OpenRouter passthrough",
+        "summary": "Image generation models",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.models.images({\n  ...\n})"
           }
         ]
       }
@@ -24815,6 +24916,29 @@
           "hide_prompt_training_models": {
             "type": "boolean"
           },
+          "sandbox": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable sandbox confinement for new sessions (default: false)"
+              },
+              "network": {
+                "type": "string",
+                "enum": ["allow", "deny"],
+                "description": "Control outbound network access from sandboxed tools (default: deny)"
+              },
+              "writable_paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Additional filesystem paths that sandboxed tools may write to"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Sandbox configuration for agent tools"
+          },
           "model": {
             "type": "string"
           },
@@ -25138,6 +25262,12 @@
               "codebase_search": {
                 "type": "boolean"
               },
+              "image_generation": {
+                "type": "boolean"
+              },
+              "image_generation_model": {
+                "type": "string"
+              },
               "agent_requirements": {
                 "type": "boolean"
               },
@@ -25159,11 +25289,11 @@
               "continue_loop_on_deny": {
                 "type": "boolean"
               },
-              "sandbox": {
+              "swe_pruner": {
                 "type": "boolean"
               },
-              "sandbox_restrict_network": {
-                "type": "boolean"
+              "swe_pruner_model": {
+                "type": "string"
               },
               "mcp_timeout": {
                 "type": "integer",
@@ -27326,6 +27456,16 @@
           }
         },
         "required": ["id", "sessionID", "output"],
+        "additionalProperties": false
+      },
+      "CommitMessageNoChangesError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
         "additionalProperties": false
       },
       "ConfigOverlayResponse": {

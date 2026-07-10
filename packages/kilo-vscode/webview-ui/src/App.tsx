@@ -39,6 +39,7 @@ import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import { FeedbackProvider } from "./context/feedback"
 import { KiloEmbeddingModelsProvider } from "./context/kilo-embedding-models"
+import { ImageModelsProvider } from "./context/image-models"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
@@ -416,19 +417,21 @@ const App: Component = () => {
                             <WorkStyleProvider>
                               <IndexingProvider>
                                 <KiloEmbeddingModelsProvider>
-                                  <NotificationsProvider>
-                                    <SessionProvider>
-                                      <AgentRequirementsProvider>
-                                        <MemoryProvider>
-                                          <FeedbackProvider>
-                                            <DataBridge>
-                                              <AppContent />
-                                            </DataBridge>
-                                          </FeedbackProvider>
-                                        </MemoryProvider>
-                                      </AgentRequirementsProvider>
-                                    </SessionProvider>
-                                  </NotificationsProvider>
+                                  <ImageModelsProvider>
+                                    <NotificationsProvider>
+                                      <SessionProvider>
+                                        <AgentRequirementsProvider>
+                                          <MemoryProvider>
+                                            <FeedbackProvider>
+                                              <DataBridge>
+                                                <AppContent />
+                                              </DataBridge>
+                                            </FeedbackProvider>
+                                          </MemoryProvider>
+                                        </AgentRequirementsProvider>
+                                      </SessionProvider>
+                                    </NotificationsProvider>
+                                  </ImageModelsProvider>
                                 </KiloEmbeddingModelsProvider>
                               </IndexingProvider>
                             </WorkStyleProvider>

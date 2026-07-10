@@ -161,6 +161,7 @@ import { configFeatures } from "./features"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
+import { fetchImageModels } from "./image-generation/models"
 import { stopSessionProcesses } from "./kilo-provider/background-process"
 import { sandboxDefault, sandboxSessionMetadata } from "./shared/sandbox-session"
 import {
@@ -354,6 +355,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedIndexingStatusMessage: unknown = null
   /** Cached kiloEmbeddingModelsLoaded payload so requestKiloEmbeddingModels is resilient offline. */
   private cachedKiloEmbeddingModelsMessage: unknown = null
+  /** Cached imageModelsLoaded payload so requestImageModels is resilient offline. */
+  private cachedImageModelsMessage: unknown = null
   /** Cached mcpStatusLoaded payload so requestMcpStatus can be served before client is ready */
   private cachedMcpStatusMessage: unknown = null
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
@@ -1227,6 +1230,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.fetchAndSendKiloEmbeddingModels().catch((e) =>
             console.error("[Kilo New] fetchAndSendKiloEmbeddingModels failed:", e),
           )
+          break
+        case "requestImageModels":
+          this.fetchAndSendImageModels().catch((e) => console.error("[Kilo New] fetchAndSendImageModels failed:", e))
           break
         case "updateConfig":
           await this.handleUpdateConfig(
@@ -2438,7 +2444,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting() },
+        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
         features: configFeatures(config),
       }
       this.cachedConfigMessage = message
@@ -2500,6 +2506,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage(message)
   }
 
+  private async fetchAndSendImageModels(): Promise<void> {
+    const dir = this.getWorkspaceDirectory()
+    const result = await fetchImageModels(this.connectionService, dir)
+    if (!result.ok) {
+      if (this.cachedImageModelsMessage) {
+        this.postMessage(this.cachedImageModelsMessage)
+      }
+      return
+    }
+    const message = { type: "imageModelsLoaded" as const, models: result.models }
+    this.cachedImageModelsMessage = message
+    this.postMessage(message)
+  }
+
   /**
    * Seed sessionStatusMap with current session statuses on connect.
    * Without this, the Settings panel (which has no tracked sessions) would see
@@ -2534,7 +2554,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting() },
+        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
         features: configFeatures(config),
       }
       this.postMessage({
@@ -2542,7 +2562,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config,
         globalConfig: global,
         projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting() },
+        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
         features: configFeatures(config),
       })
     } catch (error) {
@@ -2924,7 +2944,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: merged,
         globalConfig: global,
         projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting() },
+        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
         features: configFeatures(merged),
       }
       this.postMessage({
@@ -2932,7 +2952,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         config: merged,
         globalConfig: global,
         projectConfig: overlay?.project,
-        settings: { maxCost: this.maxCostSetting() },
+        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
         features: configFeatures(merged),
       })
       this.requirements.clear()
@@ -2954,7 +2974,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "configUpdated",
         config: optimistic,
         globalConfig: this.cachedGlobalConfig ?? undefined,
-        settings: { maxCost: this.maxCostSetting() },
+        settings: { maxCost: this.maxCostSetting(), languageCommitMessage: this.commitMessageLanguageSetting() },
         features: features ?? configFeatures(optimistic as Config),
       })
       this.requirements.clear()
@@ -3093,6 +3113,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private maxCostSetting(): number {
     return this.setMaxCost(vscode.workspace.getConfiguration("kilo-code.new").get<number>("maxCost", 0))
+  }
+
+  private commitMessageLanguageSetting(): string {
+    return vscode.workspace.getConfiguration("kilo-code.new").get<string>("languageCommitMessage", "sync")
   }
 
   private setMaxCost(value: unknown): number {

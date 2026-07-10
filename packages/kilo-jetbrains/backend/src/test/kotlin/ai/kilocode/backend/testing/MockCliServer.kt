@@ -107,8 +107,14 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastCloudSessionImportPath: String? = null
     @Volatile var lastCloudSessionImportBody: String? = null
     @Volatile var summarizeStatus = 200
+    @Volatile var revertStatus = 200
+    @Volatile var unrevertStatus = 200
     @Volatile var lastSummarizePath: String? = null
     @Volatile var lastSummarizeBody: String? = null
+    @Volatile var lastRevertPath: String? = null
+    @Volatile var lastRevertBody: String? = null
+    @Volatile var lastUnrevertPath: String? = null
+    @Volatile var lastUnrevertBody: String? = null
     @Volatile var promptStatus = 200
     @Volatile var promptResponse = "true"
     @Volatile var lastPromptPath: String? = null
@@ -403,6 +409,16 @@ class MockCliServer : AutoCloseable {
                     lastSummarizePath = path
                     lastSummarizeBody = body
                     respond(output, summarizeStatus, summarizeResponse)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/revert")) && method == "POST" -> {
+                    lastRevertPath = path
+                    lastRevertBody = body
+                    respond(output, revertStatus, sessionCreate)
+                }
+                bare.matches(Regex("/session/ses_[^/]+/unrevert")) && method == "POST" -> {
+                    lastUnrevertPath = path
+                    lastUnrevertBody = body
+                    respond(output, unrevertStatus, sessionCreate)
                 }
                 bare.matches(Regex("/session/ses_[^/]+/prompt_async")) && method == "POST" -> {
                     lastPromptPath = path

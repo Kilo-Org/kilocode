@@ -6,6 +6,7 @@
  */
 
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
+import { fetchKiloImageModels } from "../api/models.js"
 import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
 import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
 import { buildKiloHeaders } from "../headers.js"
@@ -434,6 +435,95 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           headers,
           signal: c.req.raw.signal,
           body: JSON.stringify(body),
+        })
+
+        const text = await response.text()
+        return new Response(text, {
+          status: response.status,
+          headers: {
+            "Content-Type": response.headers.get("Content-Type") ?? "application/json",
+          },
+        })
+      },
+    )
+    .get(
+      "/models/images",
+      describeRoute({
+        summary: "Image generation models",
+        description: "List image-capable models from the Kilo Gateway OpenRouter passthrough",
+        operationId: "kilo.models.images",
+        responses: {
+          200: {
+            description: "Image model list",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.array(z.object({ id: z.string(), name: z.string(), description: z.string().optional() })),
+                ),
+              },
+            },
+          },
+          ...errors(400, 401),
+        },
+      }),
+      async (c: any) => {
+        try {
+          const proxy = await getProxyAuth()
+          if (!proxy.auth || !proxy.token) throw new UnauthorizedError()
+
+          const result = await fetchKiloImageModels({
+            kilocodeToken: proxy.token,
+            kilocodeOrganizationId: proxy.organizationId,
+          })
+          if (result.error) {
+            if (result.error.kind === "unauthorized") throw new UnauthorizedError()
+            throw new Error(`Failed to fetch image models: ${result.error.kind}`)
+          }
+          return c.json(result.models)
+        } catch (err) {
+          if (!(err instanceof UnauthorizedError)) throw err
+          return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+        }
+      },
+    )
+    .post(
+      "/image/generations",
+      describeRoute({
+        summary: "Image generation",
+        description:
+          "Proxy an image generation request (chat-completions with modalities) to the Kilo Gateway OpenRouter passthrough",
+        operationId: "kilo.image.generations",
+        responses: {
+          200: {
+            description: "Image generation response",
+            content: {
+              "application/json": {
+                schema: resolver(z.unknown()),
+              },
+            },
+          },
+          ...errors(400, 401),
+        },
+      }),
+      validator("json", z.object({ body: z.unknown() }).passthrough()),
+      async (c: any) => {
+        const proxy = await getProxyAuth()
+        if (!proxy.auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+        if (!proxy.token) return c.json({ error: "No valid token found" }, 401)
+
+        const payload = c.req.valid("json")
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${proxy.token}`,
+          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: proxy.organizationId }),
+          [HEADER_FEATURE]: "vscode-extension",
+        }
+
+        const response = await fetch(`${KILO_API_BASE}/api/openrouter/chat/completions`, {
+          method: "POST",
+          headers,
+          signal: c.req.raw.signal,
+          body: JSON.stringify(payload.body ?? payload),
         })
 
         const text = await response.text()

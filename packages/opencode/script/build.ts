@@ -292,7 +292,7 @@ for (const item of targets) {
   const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
   await Bun.build({
-    conditions: ["browser"],
+    conditions: ["bun", "node"], // kilocode_change - port anomalyco/opencode#30873; current form from #31566
     tsconfig: "./tsconfig.json",
     plugins: [plugin],
     // kilocode_change start - skip sourcemaps for release builds (each .js.map adds ~50 MB per target → ~600 MB total)

@@ -35,6 +35,7 @@ import { ToolJsonSchema } from "@/tool/json-schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Command } from "@/command" // kilocode_change
+import { Auth } from "@/auth" // kilocode_change
 import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
 import { run as runSandbox, type Profile } from "@kilocode/sandbox" // kilocode_change
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
@@ -76,6 +77,7 @@ const registryLayer = (opts: RegistryLayerOptions = {}) =>
     .pipe(
       Layer.provide(RuntimeFlags.layer(opts.flags ?? {})),
       Layer.provide(Command.defaultLayer), // kilocode_change
+      Layer.provide(Auth.defaultLayer), // kilocode_change
       Layer.provide(MemoryService.layer), // kilocode_change
     )
 

@@ -8,16 +8,17 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import SettingsRow from "./SettingsRow"
 
-const description = "sandbox-network-description"
+const enabledDescription = "sandbox-enabled-description"
+const networkDescription = "sandbox-network-description"
 const writablePathsDescription = "sandbox-writable-paths-description"
 
 const SandboxingTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { globalConfig, updateGlobalConfig } = useConfig()
   const language = useLanguage()
-  const experimental = createMemo(() => config().experimental ?? {})
+  const sandbox = createMemo(() => globalConfig().sandbox ?? {})
   const [newPath, setNewPath] = createSignal("")
 
-  const writablePaths = () => experimental().sandbox_writable_paths ?? []
+  const writablePaths = () => sandbox().writable_paths ?? []
 
   const addPath = () => {
     const value = newPath().trim()
@@ -25,8 +26,8 @@ const SandboxingTab: Component = () => {
     const current = [...writablePaths()]
     if (!current.includes(value)) {
       current.push(value)
-      updateConfig({
-        experimental: { ...experimental(), sandbox_writable_paths: current },
+      updateGlobalConfig({
+        sandbox: { ...sandbox(), writable_paths: current },
       })
     }
     setNewPath("")
@@ -35,27 +36,44 @@ const SandboxingTab: Component = () => {
   const removePath = (index: number) => {
     const current = [...writablePaths()]
     current.splice(index, 1)
-    updateConfig({
-      experimental: { ...experimental(), sandbox_writable_paths: current },
+    updateGlobalConfig({
+      sandbox: { ...sandbox(), writable_paths: current },
     })
   }
 
   return (
     <Card>
       <SettingsRow
-        title={language.t("settings.sandboxing.network.title")}
-        description={language.t("settings.sandboxing.network.description")}
-        descriptionId={description}
+        title={language.t("settings.sandboxing.enabled.title")}
+        description={language.t("settings.sandboxing.enabled.description")}
+        descriptionId={enabledDescription}
       >
         <Switch
-          checked={experimental().sandbox_restrict_network !== false}
-          inputProps={{ "aria-describedby": description }}
+          checked={sandbox().enabled ?? false}
+          inputProps={{ "aria-describedby": enabledDescription }}
           onChange={(checked) =>
-            updateConfig({
-              experimental: {
-                ...experimental(),
-                sandbox_restrict_network: checked,
-              },
+            updateGlobalConfig({
+              sandbox: { ...sandbox(), enabled: checked },
+            })
+          }
+          hideLabel
+        >
+          {language.t("settings.sandboxing.enabled.title")}
+        </Switch>
+      </SettingsRow>
+
+      <SettingsRow
+        title={language.t("settings.sandboxing.network.title")}
+        description={language.t("settings.sandboxing.network.description")}
+        descriptionId={networkDescription}
+      >
+        <Switch
+          checked={sandbox().network !== "allow"}
+          disabled={sandbox().enabled !== true}
+          inputProps={{ "aria-describedby": networkDescription }}
+          onChange={(checked) =>
+            updateGlobalConfig({
+              sandbox: { ...sandbox(), network: checked ? "deny" : "allow" },
             })
           }
           hideLabel
@@ -85,6 +103,7 @@ const SandboxingTab: Component = () => {
               <div style={{ flex: 1 }}>
                 <TextField
                   value={newPath()}
+                  disabled={sandbox().enabled !== true}
                   placeholder="/tmp"
                   onChange={(val) => setNewPath(val)}
                   onKeyDown={(e: KeyboardEvent) => {
@@ -94,7 +113,7 @@ const SandboxingTab: Component = () => {
                   label={language.t("settings.sandboxing.writablePaths.title")}
                 />
               </div>
-              <Button variant="secondary" onClick={addPath}>
+              <Button variant="secondary" disabled={sandbox().enabled !== true} onClick={addPath}>
                 {language.t("common.add")}
               </Button>
             </div>
@@ -118,7 +137,13 @@ const SandboxingTab: Component = () => {
                   >
                     {path}
                   </span>
-                  <IconButton size="small" variant="ghost" icon="close" onClick={() => removePath(index())} />
+                  <IconButton
+                    size="small"
+                    variant="ghost"
+                    icon="close"
+                    disabled={sandbox().enabled !== true}
+                    onClick={() => removePath(index())}
+                  />
                 </div>
               )}
             </For>

@@ -20,12 +20,11 @@ import java.util.logging.LogRecord
 /**
  * Logging interface for the Kilo JetBrains plugin.
  *
- * In normal (non-sandbox) mode, all output goes through IntelliJ's own [com.intellij.openapi.diagnostic.Logger],
- * which writes to the standard IDE log file.
+ * In normal (non-sandbox) mode, output goes through IntelliJ's own [com.intellij.openapi.diagnostic.Logger],
+ * which writes to the standard IDE log file, and to rotated `kilo-dev.log.*` files inside the IDE log directory.
  *
  * In sandbox mode (i.e. when running via `./gradlew runIde`, detected via the `idea.plugin.in.sandbox.mode`
- * system property), output is written only to a `kilo-dev.log` file inside the IDE log directory. RC plugin builds
- * write to both IntelliJ's log and `kilo-dev.log`.
+ * system property), output is written only to `kilo-dev.log.*`.
  *
  * Usage:
  * ```kotlin
@@ -48,10 +47,18 @@ interface KiloLog {
 
     companion object {
         fun create(cls: Class<*>): KiloLog {
-            if (sandbox()) return FileLog(cls)
-            val intellij = IntellijLog(cls)
-            if (!runCatching { KiloPlugin.isRc() }.getOrDefault(false)) return intellij
-            return CompositeLog(intellij, FileLog(cls))
+            return create(cls, sandbox())
+        }
+
+        internal fun create(cls: Class<*>, sandbox: Boolean): KiloLog = logger(
+            sandbox = sandbox,
+            intellij = { IntellijLog(cls) },
+            file = { FileLog(cls) },
+        )
+
+        internal fun logger(sandbox: Boolean, intellij: () -> KiloLog, file: () -> KiloLog): KiloLog {
+            if (sandbox) return file()
+            return CompositeLog(intellij(), file())
         }
 
         fun sandbox(): Boolean = System.getProperty("idea.plugin.in.sandbox.mode", "false").toBoolean()
@@ -97,6 +104,8 @@ internal class FileLog(cls: Class<*>) : KiloLog {
 
     companion object {
         private val level: Level by lazy { resolveLevel() }
+        private const val LIMIT = 5_000_000
+        private const val COUNT = 3
 
         private val root: java.util.logging.Logger by lazy {
             val logger = java.util.logging.Logger.getLogger("ai.kilocode")
@@ -110,8 +119,9 @@ internal class FileLog(cls: Class<*>) : KiloLog {
 
         private val handler: FileHandler by lazy {
             val dir = resolveLogDir()
-            val path = dir.resolve("kilo-dev.log")
-            val h = FileHandler(path.toString(), true)
+            val path = dir.resolve("kilo-dev.log.%g")
+            IntellijLog(FileLog::class.java).info("Kilo diagnostic log directory: $dir")
+            val h = FileHandler(path.toString(), LIMIT, COUNT, true)
             h.formatter = KiloFormatter()
             h
         }

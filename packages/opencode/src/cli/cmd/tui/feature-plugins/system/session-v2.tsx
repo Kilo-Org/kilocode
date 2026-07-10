@@ -1010,22 +1010,40 @@ function Question(props: ToolProps) {
     arrayValue(props.input.questions).flatMap((item) => (isRecord(item) ? [item] : [])),
   )
   const answers = createMemo(() => arrayValue(props.metadata.answers))
+  // kilocode_change start - show dismissed question content; use questions()
+  // presence (not answers) so dismissed/answered/error states all render content.
+  const dismissed = createMemo(
+    () =>
+      props.metadata.dismissed === true ||
+      (props.part.state.status === "error" && String(props.part.state.error?.message ?? "").includes("dismissed")),
+  )
+
+  function format(answer: unknown) {
+    if (dismissed()) return "Dismissed"
+    return formatAnswer(answer)
+  }
+
+  const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
+  // kilocode_change end
+
   return (
     <Switch>
-      <Match when={answers().length > 0}>
-        <BlockTool title="# Questions" part={props.part}>
+      {/* kilocode_change start - gate on dismissed or answers so dismissed/answered render, pending falls through to Asking... */}
+      <Match when={dismissed() || answers().length > 0}>
+        <BlockTool title={title()} part={props.part}>
           <box gap={1}>
             <For each={questions()}>
               {(question, index) => (
                 <box>
                   <text fg={theme.textMuted}>{stringValue(question.question)}</text>
-                  <text fg={theme.text}>{formatAnswer(answers()[index()])}</text>
+                  <text fg={theme.text}>{format(answers()[index()])}</text>
                 </box>
               )}
             </For>
           </box>
         </BlockTool>
       </Match>
+      {/* kilocode_change end */}
       <Match when={true}>
         <InlineTool icon="→" pending="Asking questions..." complete={questions().length} part={props.part}>
           Asked {questions().length} question{questions().length === 1 ? "" : "s"}

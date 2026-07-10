@@ -44,7 +44,7 @@ class SessionLayout(
         var first = true
         for (comp in parent.components) {
             if (!comp.isVisible) continue
-            if (!first) h += gap
+            if (!first) h += gap(comp)
             first = false
             val child = bounds(ins, w, comp)
             // Pre-size to available width so HTML panes reflow before we measure
@@ -63,7 +63,7 @@ class SessionLayout(
         var first = true
         for (comp in parent.components) {
             if (!comp.isVisible) continue
-            if (!first) y += gap
+            if (!first) y += gap(comp)
             first = false
             val child = bounds(ins, w, comp)
             // Fix width first so HTML reflows, then read the resulting height
@@ -75,7 +75,7 @@ class SessionLayout(
     }
 
     private fun bounds(ins: Insets, width: Int, comp: Component): Bounds {
-        val view = comp as? SessionView ?: return Bounds(ins.left, width)
+        val view = view(comp) ?: return Bounds(ins.left, width)
         if (view.sessionViewKind != SessionView.Kind.UserPrompt) return Bounds(ins.left, width)
         val shift = JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_INDENT)
         val next = width - shift
@@ -92,6 +92,13 @@ class SessionLayout(
             base.right + pad.right,
         )
     }
+
+    private fun gap(comp: Component): Int {
+        if (view(comp)?.sessionGapKind == SessionView.Kind.UserPrompt) return JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP)
+        return gap
+    }
+
+    private fun view(comp: Component): SessionView? = comp as? SessionView
 
     private data class Bounds(val left: Int, val width: Int)
 }

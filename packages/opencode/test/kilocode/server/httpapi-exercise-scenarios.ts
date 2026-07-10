@@ -368,6 +368,7 @@ export const kiloScenarios: Scenario[] = [
     }))
     .status(401),
   http.protected.get("/kilo/notifications", "kilo.notifications").json(200, array),
+  http.protected.get("/kilo/models/images", "kilo.models.images").probe({ path: "/path" }).status(401),
   http.protected
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))
@@ -465,6 +466,16 @@ export const kiloScenarios: Scenario[] = [
     .post("/commit-message", "commitMessage.generate")
     .at((ctx) => ({ path: "/commit-message", headers: ctx.headers(), body: {} }))
     .status(400),
+  http.protected
+    .post("/commit-message", "commitMessage.generate")
+    .at((ctx) => ({ path: "/commit-message", headers: ctx.headers(), body: { path: directory(ctx) } }))
+    .json(422, (body) => {
+      object(body)
+      check(
+        body.message === "No changes found to generate a commit message for",
+        "no changes should surface a real 422 message, not a masked 500",
+      )
+    }),
   http.protected
     .post("/session/{sessionID}/branch-name", "branchName.generate")
     .at((ctx) => ({

@@ -40,6 +40,7 @@ import javax.swing.JPanel
  */
 class BaseQuestionView(
     private val selection: SessionSelection? = null,
+    private val focus: (() -> Unit)? = null,
 ) : RoundedContentPanel(
     UiStyle.Gap.pad(),
     UiStyle.Gap.pad(),
@@ -398,7 +399,10 @@ class BaseQuestionView(
                 background = SessionUiStyle.View.Surface.bgColor()
             }
         }
-        btn.addActionListener { actionHandlers[id]?.invoke() }
+        btn.addActionListener {
+            actionHandlers[id]?.invoke()
+            focus?.invoke()
+        }
         return btn
     }
 }

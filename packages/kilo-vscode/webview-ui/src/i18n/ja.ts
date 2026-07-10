@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} 件のメッセージが元に戻されました",
   "revert.banner.redo": "やり直し",
   "revert.banner.redo.all": "すべてやり直し",
-  "revert.banner.hint": "新しいメッセージを送信してこれを永続させてください",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "エージェントの完了を待ってください",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
@@ -629,7 +629,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep検索",
   "ui.permission.toolLabel.webSearch": "Web検索",
   "ui.permission.toolLabel.list": "一覧",
-  "ui.permission.toolLabel.externalDirectory": "外部ディレクトリ読み取り",
+  "ui.permission.toolLabel.externalDirectory": "外部ディレクトリにアクセス",
   "ui.permission.toolLabel.webFetch": "Web取得",
   "ui.permission.toolLabel.task": "タスク",
   "ui.permission.toolLabel.skill": "スキル",
@@ -989,6 +989,7 @@ export const dict = {
   "provider.custom.models.name.label": "名前",
   "provider.custom.models.name.placeholder": "表示名",
   "provider.custom.models.reasoning.label": "推論",
+  "provider.custom.models.modalities.image": "画像",
   "provider.custom.models.variants.label": "バリアント",
   "provider.custom.models.variants.add": "バリアントを追加",
   "provider.custom.models.variants.remove": "バリアントを削除",
@@ -1419,6 +1420,12 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
+  "settings.experimental.imageGeneration.title": "画像生成",
+  "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
+  "settings.experimental.imageGenerationModel.title": "画像モデル",
+  "settings.experimental.imageGenerationModel.description": "画像生成モデル",
+  "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
+
   "settings.experimental.speechToText.title": "音声認識",
   "settings.experimental.speechToText.description":
     "Kilo Gateway経由でKiloアカウントを使用して、プロンプトフィールドでの音声入力を有効にします。",
@@ -1439,6 +1446,12 @@ export const dict = {
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner を有効にする: エージェントが提供するフォーカス質問に基づき、タスクを考慮して、読み取り、検索、シェルツールのサイズの大きい出力をプルーニングします",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
+  "settings.experimental.swePrunerModel.description":
+    "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1572,8 +1585,8 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
-  "settings.experimental.sandbox.title": "サンドボックス",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "サンドボックス",
+  "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
 
   "settings.autoApprove.description":
@@ -1671,6 +1684,10 @@ export const dict = {
     "commit messages を生成する際に AI に送信されるシステム prompt。これはデフォルトの prompt を完全に置き換えます。",
   "settings.commitMessage.prompt.placeholder":
     "例: スペイン語で conventional commits 形式に従って commit messages を生成して。commit message のみを返して。",
+
+  "settings.commitMessage.language.sync": "UI言語と同期",
+  "settings.commitMessage.language.title": "言語",
+  "settings.commitMessage.language.description": "AIが生成するコミットメッセージに使用する言語を選択:",
 
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
