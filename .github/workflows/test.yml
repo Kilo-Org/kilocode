@@ -93,7 +93,7 @@ jobs:
       - name: Setup Node
         if: matrix.settings.run
         id: setup-node
-        continue-on-error: ${{ runner.os == 'Windows' }}
+        continue-on-error: ${{ runner.os == 'Windows' }} # kilocode_change
         uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
