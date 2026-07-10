@@ -9,6 +9,19 @@ import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
+let sounds = Promise.resolve()
+
+function play(uri: string) {
+  const run = () =>
+    new Promise<void>((resolve, reject) => {
+      const audio = new Audio(uri)
+      audio.addEventListener("ended", () => resolve(), { once: true })
+      audio.addEventListener("error", () => reject(new Error("Notification sound failed to load")), { once: true })
+      audio.play().catch(reject)
+    })
+  sounds = sounds.then(run, run)
+  void sounds.catch((error) => console.warn("[Kilo New] notification sound playback failed", { error }))
+}
 
 export function getVSCodeAPI(): VSCodeAPI {
   if (!vscodeApi) {
@@ -64,6 +77,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
       copy.reject(new Error(message.error ?? "Failed to write to clipboard"))
       return
     }
+    if (message.type === "playNotificationSound") play(message.uri)
     handlers.forEach((handler) => handler(message))
   }
 

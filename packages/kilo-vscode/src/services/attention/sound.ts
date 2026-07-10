@@ -1,7 +1,9 @@
 import * as fs from "fs"
 import * as path from "path"
+import * as vscode from "vscode"
 import type { TuiAttentionSoundName } from "@kilocode/plugin/tui"
 import { exec } from "../../util/process"
+import { playWebviewSound } from "./webview-sound"
 
 export const CustomSoundIDs = [
   "alert-01",
@@ -63,6 +65,7 @@ const files: Record<TuiAttentionSoundName, CustomSoundID> = {
   done: "bip-bop-01",
   subagent_done: "yup-01",
 }
+const fallback: CustomSoundID = "bip-bop-01"
 
 const root = path.join(__dirname, "../audio-wav")
 let chain = Promise.resolve(false)
@@ -139,7 +142,17 @@ function fileCommands(file: string): Array<{ cmd: string; args: string[]; env?: 
 }
 
 async function perform(name: TuiAttentionSoundName, selected: AttentionSoundID, dir: string) {
-  if (selected === "system") return run(systemCommands())
+  if (vscode.env.remoteName !== undefined) {
+    const id = selected === "system" ? fallback : selected === "default" ? files[name] : selected
+    const ok = await playWebviewSound(id)
+    if (!ok) console.warn("[Kilo New] notification sound has no ready local webview", { name, selected })
+    return ok
+  }
+  if (selected === "system") {
+    const ok = await run(systemCommands())
+    if (!ok) console.warn("[Kilo New] notification system sound failed", { platform: process.platform })
+    return ok
+  }
   const id = selected === "default" ? files[name] : selected
   const file = path.resolve(dir, `${id}.wav`)
   if (!file.startsWith(`${path.resolve(dir)}${path.sep}`)) return false
@@ -149,6 +162,7 @@ async function perform(name: TuiAttentionSoundName, selected: AttentionSoundID, 
   }
   const ok = await run(fileCommands(file))
   if (ok) console.debug("[Kilo New] notification sound played", { name, selected })
+  else console.warn("[Kilo New] notification sound failed", { name, selected, platform: process.platform })
   return ok
 }
 
