@@ -189,15 +189,79 @@ const UsageCard: Component<{
   </Card>
 )
 
+const KiloPassUsage: Component<{ pass: KiloPassState }> = (props) => {
+  const model = () => {
+    const paid = Math.max(0, props.pass.currentPeriodBaseCreditsUsd)
+    const bonus = Math.max(0, props.pass.currentPeriodBonusCreditsUsd)
+    const used = Math.max(0, props.pass.currentPeriodUsageUsd)
+    const total = paid + bonus
+    const paidWidth = total > 0 ? (paid / total) * 100 : 100
+    const usedWidth = total > 0 ? Math.min(100, (used / total) * 100) : 0
+    return {
+      paid,
+      bonus,
+      used,
+      total,
+      paidWidth,
+      paidFill: Math.min(usedWidth, paidWidth),
+      bonusFill: Math.max(0, usedWidth - paidWidth),
+    }
+  }
+  return (
+    <div class="provider-usage-row kilo-pass-usage">
+      <div class="provider-usage-row-heading">
+        <span>This month&apos;s usage</span>
+        <strong>
+          ${model().used.toFixed(2)} / ${model().total.toFixed(2)}
+        </strong>
+      </div>
+      <div
+        class="kilo-pass-usage-track"
+        role="progressbar"
+        aria-label={`Kilo Pass: $${model().used.toFixed(2)} used of $${model().total.toFixed(2)}`}
+        aria-valuemin={0}
+        aria-valuemax={model().total}
+        aria-valuenow={model().used}
+      >
+        <div class="kilo-pass-usage-paid-background" style={{ width: `${model().paidWidth}%` }} />
+        <div
+          class="kilo-pass-usage-bonus-background"
+          hidden={model().bonus <= 0}
+          style={{ left: `${model().paidWidth}%`, width: `${100 - model().paidWidth}%` }}
+        />
+        <div class="kilo-pass-usage-paid-fill" style={{ width: `${model().paidFill}%` }} />
+        <div
+          class="kilo-pass-usage-bonus-fill"
+          hidden={model().bonusFill <= 0}
+          style={{ left: `${model().paidWidth}%`, width: `${model().bonusFill}%` }}
+        />
+        <div class="kilo-pass-usage-boundary" hidden={model().bonus <= 0} style={{ left: `${model().paidWidth}%` }} />
+      </div>
+      <div class="kilo-pass-usage-amounts">
+        <span style={{ left: `${model().paidWidth}%` }}>${model().paid.toFixed(2)}</span>
+        <span class="kilo-pass-usage-bonus-amount" hidden={model().bonus <= 0}>
+          ${model().bonus.toFixed(2)}
+        </span>
+      </div>
+      <div class="kilo-pass-usage-legend">
+        <span>
+          <i class="kilo-pass-usage-paid-dot" />
+          Paid
+        </span>
+        <span hidden={model().bonus <= 0}>
+          <i class="kilo-pass-usage-bonus-dot" />
+          Free bonus
+        </span>
+      </div>
+    </div>
+  )
+}
+
 const KiloPassCard: Component<{
   pass?: KiloPassState | null
   onGet: () => void
   language: Language
 }> = (props) => {
-  const progress = () => {
-    if (!props.pass) return 0
-    return Math.min(100, (props.pass.currentPeriodUsageUsd / Math.max(1, props.pass.currentPeriodBaseCreditsUsd)) * 100)
-  }
   const renewal = () => {
     const value = props.pass?.nextBillingAt
     if (!value) return undefined
@@ -230,26 +294,7 @@ const KiloPassCard: Component<{
       >
         {(pass) => (
           <div class="provider-usage-resources">
-            <div class="provider-usage-row">
-              <div class="provider-usage-row-heading">
-                <span>Current period</span>
-                <strong>
-                  ${Math.round(pass().currentPeriodUsageUsd)} / ${Math.round(pass().currentPeriodBaseCreditsUsd)}
-                </strong>
-              </div>
-              <Progress
-                value={progress()}
-                minValue={0}
-                maxValue={100}
-                aria-label={`Kilo Pass: ${Math.round(progress())}% used`}
-              />
-            </div>
-            <Show when={pass().currentPeriodBonusCreditsUsd > 0}>
-              <div class="provider-usage-row-heading">
-                <span>{props.language.t("profile.pass.bonus")}</span>
-                <strong>+${pass().currentPeriodBonusCreditsUsd.toFixed(2)}</strong>
-              </div>
-            </Show>
+            <KiloPassUsage pass={pass()} />
             <Show when={renewal()}>
               {(date) => (
                 <div class="provider-usage-row-heading">
