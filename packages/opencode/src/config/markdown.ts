@@ -68,37 +68,46 @@ export function fallbackSanitization(content: string): string {
   return content.replace(frontmatter, () => processed)
 }
 
-// kilocode_change start - extract line/column from gray-matter YAML errors when possible
-function yamlLocation(err: unknown): { line?: number; column?: number } {
-  if (err instanceof Error && "mark" in err && err.mark && typeof err.mark === "object") {
+// kilocode_change start - extract clean details from gray-matter YAML errors when possible
+function yamlError(err: unknown) {
+  if (!(err instanceof Error)) return { reason: String(err) }
+  const reason = "reason" in err && typeof err.reason === "string" ? err.reason : err.message.split("\n", 1)[0]
+  if ("mark" in err && err.mark && typeof err.mark === "object") {
     const mark = err.mark as { line?: number; column?: number }
-    return { line: mark.line, column: mark.column }
+    return {
+      reason,
+      line: mark.line === undefined ? undefined : mark.line + 1,
+      column: mark.column === undefined ? undefined : mark.column + 1,
+    }
   }
-  if (err instanceof Error && "line" in err && typeof err.line === "number") {
-    const col = "column" in err && typeof err.column === "number" ? err.column : undefined
-    return { line: err.line, column: col }
+  if ("line" in err && typeof err.line === "number") {
+    const column = "column" in err && typeof err.column === "number" ? err.column : undefined
+    return { reason, line: err.line, column }
   }
-  return {}
+  return { reason }
 }
 
 function formatFrontmatterError(filePath: string, err: unknown): string {
-  const base = err instanceof Error ? err.message : String(err)
-  const { line, column } = yamlLocation(err)
-  const loc = line !== undefined ? ` at line ${line}${column !== undefined ? `, column ${column}` : ""}` : ""
-  return `${filePath}: Failed to parse YAML frontmatter${loc}: ${base}`
+  const detail = yamlError(err)
+  const loc =
+    detail.line !== undefined
+      ? ` at line ${detail.line}${detail.column !== undefined ? `, column ${detail.column}` : ""}`
+      : ""
+  return `${filePath}: Failed to parse YAML frontmatter${loc}: ${detail.reason}`
 }
-// kilocode_change end
 
-// kilocode_change start - detect duplicate YAML keys as a real config error
 function isDuplicateKeyError(err: unknown): boolean {
-  return err instanceof Error && err.message.includes("duplicated mapping key")
+  if (!(err instanceof Error) || err.name !== "YAMLException") return false
+  const reason = "reason" in err && typeof err.reason === "string" ? err.reason : err.message
+  return /duplicate/i.test(reason) && /key/i.test(reason)
 }
 // kilocode_change end
 
+// kilocode_change start - expose structured errors while substituting content and retrying invalid frontmatter
 export async function parse(filePath: string) {
   const template = await Filesystem.readText(filePath)
 
-  // kilocode_change start - substitute content and retry invalid frontmatter with permissive sanitization
+  // substitute content and retry invalid frontmatter with permissive sanitization
   try {
     const md = matter(template)
     md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
@@ -115,7 +124,8 @@ export async function parse(filePath: string) {
       )
     }
     try {
-      const md = matter(fallbackSanitization(template))
+      // Passing options bypasses gray-matter's cache, which retains the partial file from the failed first parse.
+      const md = matter(fallbackSanitization(template), {})
       md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
       return md
     } catch (fallbackErr) {

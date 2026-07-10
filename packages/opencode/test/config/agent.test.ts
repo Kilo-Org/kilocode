@@ -25,8 +25,7 @@ describe("ConfigAgent: frontmatter warnings", () => {
 name: broken
 model: openai/gpt-4o
 permission:
-  read: allow
-  read: allow
+  read: [allow
 ---
 Prompt content.
 `,
@@ -65,5 +64,7 @@ Prompt content.
     const warning = warnings.find((w) => w.path.includes("dupe.md"))
     expect(warning).toBeDefined()
     expect(warning!.path).toContain("dupe.md")
+    expect(warning!.message.match(/line 5/g)).toHaveLength(1)
+    expect(warning!.message).not.toContain("read: deny")
   })
 })

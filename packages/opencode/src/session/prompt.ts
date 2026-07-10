@@ -14,7 +14,7 @@ import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kiloco
 import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
-import { ConfigAgent } from "@/config/agent" // kilocode_change
+import { configEntryNameFromPath } from "@/config/entry-name" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
 import type { NotFoundError } from "@/storage/storage"
 import { MessageV2 } from "./message-v2"
@@ -43,7 +43,6 @@ import { Command } from "../command"
 import { pathToFileURL, fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { ConfigMarkdown } from "@/config/markdown"
-import { KilocodeConfig } from "@/kilocode/config/config" // kilocode_change
 import { SessionSummary } from "./summary"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { SessionProcessor } from "./processor"
@@ -162,17 +161,19 @@ export const layer = Layer.effect(
     const references = yield* Reference.Service
 
     // kilocode_change start - helper to enrich "Agent not found" with frontmatter parse warnings
-    const AGENT_PATH_PREFIXES = ["/agent/", "/agents/", "/mode/", "/modes/"]
+    const prefixes = ["agent/", "agents/", "mode/", "modes/"]
+    const entry = (file: string) => {
+      const normalized = file.replaceAll("\\", "/")
+      const relative = normalized.match(/(?:^|\/)((?:agents?|modes?)\/.+)$/)?.[1]
+      return relative ? configEntryNameFromPath(relative, prefixes) : undefined
+    }
     const agentNotFoundMessage = Effect.fn("SessionPrompt.agentNotFoundMessage")(function* (name: string) {
       const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
       const hint = available.length ? ` Available agents: ${available.join(", ")}.` : ""
       const list = yield* config.warnings()
-      const reason = list.find(
-        (w) =>
-          AGENT_PATH_PREFIXES.some((p) => w.path.includes(p)) &&
-          path.basename(w.path, path.extname(w.path)) === name,
-      )
-      if (reason) return `Agent "${name}" could not be loaded because its config file has invalid frontmatter: ${reason.message}${hint}`
+      const reason = list.find((warning) => entry(warning.path) === name)
+      if (reason)
+        return `Agent "${name}" could not be loaded because its config file has invalid frontmatter: ${reason.message}${hint}`
       return `Agent not found: "${name}".${hint}`
     })
     // kilocode_change end
