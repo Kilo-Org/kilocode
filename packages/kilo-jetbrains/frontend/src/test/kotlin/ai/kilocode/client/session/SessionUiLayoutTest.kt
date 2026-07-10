@@ -11,10 +11,12 @@ import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionLayoutPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -23,12 +25,15 @@ import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import com.intellij.ui.components.JBScrollPane
+import java.awt.Dimension
 import javax.swing.JLayeredPane
+import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class SessionUiLayoutTest : SessionUiTestBase() {
@@ -70,6 +75,24 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
         assertFalse(root.content.components.contains(connection))
+    }
+
+    fun `test transcript uses larger standard gap before prompts after first item`() {
+        val panel = SessionLayoutPanel(gap = SessionUiStyle.SessionLayout.GAP).apply {
+            setSize(400, 300)
+            add(Row(SessionView.Kind.UserPrompt))
+            add(Row(SessionView.Kind.Default))
+            add(Row(SessionView.Kind.UserPrompt))
+        }
+
+        panel.doLayout()
+
+        assertEquals(0, panel.getComponent(0).y)
+        assertEquals(SessionUiStyle.SessionLayout.GAP, panel.getComponent(1).y - panel.getComponent(0).bounds.maxY.toInt())
+        assertEquals(
+            JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP),
+            panel.getComponent(2).y - panel.getComponent(1).bounds.maxY.toInt(),
+        )
     }
 
     fun `test drop overlay is attached under root overlay layer`() {
@@ -153,6 +176,30 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val prompt = find<PromptPanel>(ui)
 
         assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
+    }
+
+    fun `test revert sync preserves active prompt draft`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        val msg = message("u1")
+        model.upsertMessage(msg)
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+        prompt.setText("unsent draft")
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        assertEquals("unsent draft", prompt.text())
+    }
+
+    fun `test revert sync restores prompt when empty`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        model.upsertMessage(message("u1"))
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        assertEquals("rolled back prompt", prompt.text())
     }
 
     fun `test connection panel overlays above full prompt width`() {
@@ -615,4 +662,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         .components
         .single()
         .let { it as javax.swing.JComponent }
+
+    private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
+        override fun getPreferredSize() = Dimension(100, 10)
+    }
 }

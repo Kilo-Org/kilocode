@@ -173,7 +173,9 @@ export const dict = {
   "ui.patch.action.patched": "แพตช์",
 
   "ui.question.subtitle.answered": "{{count}} ตอบแล้ว",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(ไม่มีคำตอบ)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(ไม่ได้ตอบ)",
   "ui.question.multiHint": "เลือกทั้งหมดที่ใช้",
   "ui.question.singleHint": "เลือกหนึ่งคำตอบ",

@@ -57,6 +57,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -118,6 +119,7 @@ class KiloBackendAppService private constructor(
     private var loader: Job? = null
     private var closed = false
     private val loadLock = Any()
+    private val rev = AtomicLong()
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
@@ -153,16 +155,36 @@ class KiloBackendAppService private constructor(
     }
 
     suspend fun restart() {
+        log.info("restart: requested — waiting for lifecycle mutex")
         mutex.withLock {
-            clear()
-            connection.restart()
+            log.info("restart: acquired lifecycle mutex")
+            try {
+                clear()
+                connection.restart()
+                log.info("restart: complete")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("restart: failed", e)
+                throw e
+            }
         }
     }
 
     suspend fun reinstall() {
+        log.info("reinstall: requested — waiting for lifecycle mutex")
         mutex.withLock {
-            clear()
-            connection.reinstall()
+            log.info("reinstall: acquired lifecycle mutex")
+            try {
+                clear()
+                connection.reinstall()
+                log.info("reinstall: complete")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("reinstall: failed", e)
+                throw e
+            }
         }
     }
 
@@ -338,7 +360,6 @@ class KiloBackendAppService private constructor(
     private fun load() {
         synchronized(loadLock) {
             loader?.cancel()
-            eventWatcher?.cancel()
             loader = cs.launch {
                 val start = System.currentTimeMillis()
                 log.info("Application starting — loading config, profile, notifications")
@@ -655,7 +676,7 @@ class KiloBackendAppService private constructor(
     private fun setAppReady(data: AppData) {
         warnings = data.warnings
         if (data.warnings.isNotEmpty()) warnAppWarnings(data.warnings)
-        _appState.value = KiloAppState.Ready(data)
+        _appState.value = KiloAppState.Ready(data, rev.incrementAndGet())
     }
 
     private fun setAppError(message: String, errors: List<LoadError>) {

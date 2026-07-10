@@ -24916,6 +24916,29 @@
           "hide_prompt_training_models": {
             "type": "boolean"
           },
+          "sandbox": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable sandbox confinement for new sessions (default: false)"
+              },
+              "network": {
+                "type": "string",
+                "enum": ["allow", "deny"],
+                "description": "Control outbound network access from sandboxed tools (default: deny)"
+              },
+              "writable_paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Additional filesystem paths that sandboxed tools may write to"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Sandbox configuration for agent tools"
+          },
           "model": {
             "type": "string"
           },
@@ -25265,18 +25288,6 @@
               },
               "continue_loop_on_deny": {
                 "type": "boolean"
-              },
-              "sandbox": {
-                "type": "boolean"
-              },
-              "sandbox_restrict_network": {
-                "type": "boolean"
-              },
-              "sandbox_writable_paths": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
               },
               "swe_pruner": {
                 "type": "boolean"

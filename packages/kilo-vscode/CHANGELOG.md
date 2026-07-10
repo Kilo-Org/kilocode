@@ -1,5 +1,80 @@
 # kilo-code
 
+## 7.4.4
+
+### Patch Changes
+
+- [#12049](https://github.com/Kilo-Org/kilocode/pull/12049) [`394af39`](https://github.com/Kilo-Org/kilocode/commit/394af39c64b2920fa8c84f14670f213820cef2ec) - Configure sandboxing through first-class sandbox settings, and show its controls in the dedicated Sandboxing page for all supported macOS and Linux users while keeping it disabled by default.
+
+- Updated dependencies [[`394af39`](https://github.com/Kilo-Org/kilocode/commit/394af39c64b2920fa8c84f14670f213820cef2ec)]:
+  - @kilocode/sdk@7.5.0
+  - @kilocode/kilo-ui@7.4.4
+  - @kilocode/plugin@7.4.4
+  - @opencode-ai/ui@7.4.4
+  - @kilocode/kilo-gateway@7.4.4
+  - @kilocode/kilo-indexing@7.4.4
+  - @opencode-ai/core@7.4.4
+
+## 7.4.3
+
+## 7.4.2
+
+### Minor Changes
+
+- [#11826](https://github.com/Kilo-Org/kilocode/pull/11826) [`dfa712d`](https://github.com/Kilo-Org/kilocode/commit/dfa712d98979680479cb10cbe34a23f7be244726) Thanks [@vkeerthivikram](https://github.com/vkeerthivikram)! - Add experimental AI image generation tool. Enable via `experimental.image_generation` in config. Supports text-to-image generation and image editing through the Kilo Gateway or a BYO OpenRouter API key.
+
+- [#12010](https://github.com/Kilo-Org/kilocode/pull/12010) [`2184888`](https://github.com/Kilo-Org/kilocode/commit/21848889cdee0f0e485780bd2fd97be1cc68ef61) - Render images inline in the chat view when the agent reads an image file. Images appear below the read tool card and can be clicked to open a full-size preview.
+
+- [#11954](https://github.com/Kilo-Org/kilocode/pull/11954) [`b0348cb`](https://github.com/Kilo-Org/kilocode/commit/b0348cbc01438f603f767117ca6f2e15370e099e) Thanks [@johnnyeric](https://github.com/johnnyeric)! - Integrate project memory into the VS Code extension: memory status and controls in the Context settings tab, task-header and assistant-message affordances, the `/memory` prompt command, and Show/Toggle Project Memory command-palette entries.
+
+- [#11631](https://github.com/Kilo-Org/kilocode/pull/11631) [`0734e3d`](https://github.com/Kilo-Org/kilocode/commit/0734e3d75a588a3468a608255a65b52a7bd325e0) - Enable autocomplete across supported languages in Jupyter notebooks.
+
+- [#12004](https://github.com/Kilo-Org/kilocode/pull/12004) [`cef3dc7`](https://github.com/Kilo-Org/kilocode/commit/cef3dc7ae8a7ef7f26e36fb690af5014b542b7bb) - Add a reload action that reboots the per-directory instance, picking up config, skills, agents, commands, and MCP prompts changed on disk. Sessions and history are preserved. Surfaces: `/reload` in the CLI palette and editor chat, a reload button in the task header and settings panel, the `Kilo Code: Reload Config and Skills` command, and a `POST /instance/reload` HTTP endpoint. The endpoint returns 409 while a session is actively running.
+
+- [#12025](https://github.com/Kilo-Org/kilocode/pull/12025) [`2d724f1`](https://github.com/Kilo-Org/kilocode/commit/2d724f158b2828eecf9eab60b790e071f8d05d20) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Click or press Enter/Space on a bar in the task timeline to jump the transcript to that message.
+
+### Patch Changes
+
+- [#12007](https://github.com/Kilo-Org/kilocode/pull/12007) [`a5df5bc`](https://github.com/Kilo-Org/kilocode/commit/a5df5bc8e4bfca64c3846955d781ae67edcbb186) - Fix the reasoning-variant and mode dropdowns being clipped inside the New Worktree dialog. The dialog's scroll-container overflow escape now covers all inline selector popovers, not just the model picker, so dropdowns render fully above the prompt input.
+
+- [#12033](https://github.com/Kilo-Org/kilocode/pull/12033) [`9fc1a1d`](https://github.com/Kilo-Org/kilocode/commit/9fc1a1d94c29236ce0d949e9a6b2fefc70afaab8) - Show a clear "No changes found to generate a commit message for" error instead of a generic "Unexpected server error" when there is nothing to commit. The endpoint now returns a typed 422, and the extension surfaces the real message directly.
+
+- [#11825](https://github.com/Kilo-Org/kilocode/pull/11825) [`0b78469`](https://github.com/Kilo-Org/kilocode/commit/0b784691f271fac4ca983468656bac248aa98f3f) Thanks [@jackson-zhou](https://github.com/jackson-zhou)! - Support marking custom provider models as image-capable in VS Code settings.
+
+- [#12002](https://github.com/Kilo-Org/kilocode/pull/12002) [`885a994`](https://github.com/Kilo-Org/kilocode/commit/885a994106741ea7caf59c051812cd7521f4cf2c) - Defer Agent Manager automatic branch naming until the conversation shows a durable task. The first user message no longer renames the branch; naming waits for a second message (up to four) or for the worktree to contain changes, and renames only run while the session is idle. Read-only verification questions (for example "is X fixed?") no longer claim the branch name.
+
+- [#12015](https://github.com/Kilo-Org/kilocode/pull/12015) [`4dc994d`](https://github.com/Kilo-Org/kilocode/commit/4dc994d93bc589798293cc848a64e89fc8cfed60) Thanks [@mjnaderi](https://github.com/mjnaderi)! - Support bidirectional text in the Agent Manager new worktree prompt.
+
+- [#12006](https://github.com/Kilo-Org/kilocode/pull/12006) [`5c41d65`](https://github.com/Kilo-Org/kilocode/commit/5c41d65fe4295537eeeb70fcb020a2dd8fa47648) Thanks [@mjnaderi](https://github.com/mjnaderi)! - Fix multiline bidirectional prompt input rendering and file mention arrow navigation.
+
+- [#12032](https://github.com/Kilo-Org/kilocode/pull/12032) [`e4ae1c7`](https://github.com/Kilo-Org/kilocode/commit/e4ae1c75cec7e2aee3c82ebf2c1a3dd8a06a2031) - Fix settings sidebar truncating localized section labels in non-English languages.
+
+- [#12042](https://github.com/Kilo-Org/kilocode/pull/12042) [`22b9f7f`](https://github.com/Kilo-Org/kilocode/commit/22b9f7fd932043722096919aabb08109901f01de) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Respect nested `.gitignore` and `.kilocodeignore` files during codebase indexing.
+
+- [#11936](https://github.com/Kilo-Org/kilocode/pull/11936) [`3d16f29`](https://github.com/Kilo-Org/kilocode/commit/3d16f29520646461101d4059789b2639e3fcb46a) Thanks [@mjnaderi](https://github.com/mjnaderi)! - Allow Shift+Arrow selections in the prompt input to shrink back across file mentions.
+
+- [#12000](https://github.com/Kilo-Org/kilocode/pull/12000) [`dfce405`](https://github.com/Kilo-Org/kilocode/commit/dfce4059f364da8c294723e582c44885fa6e55e1) - Fix the model usage panel showing just "free" for auto-routed sessions. The routed model id (e.g. `tencent/hy3:free`) is now displayed correctly instead of being collapsed to its `:free` suffix.
+
+- [#12008](https://github.com/Kilo-Org/kilocode/pull/12008) [`e29196c`](https://github.com/Kilo-Org/kilocode/commit/e29196c949897d56efa9923e8655301635c26d66) - Widen the Additional Writable Paths input in the Sandboxing settings so longer filesystem paths are easier to read while typing.
+
+- [#11994](https://github.com/Kilo-Org/kilocode/pull/11994) [`eefd891`](https://github.com/Kilo-Org/kilocode/commit/eefd891c62fb064275a4ec815c320422ca7e70ac) Thanks [@IOLOII](https://github.com/IOLOII)! - Generate commit messages in the user's selected UI language instead of always using English.
+
+- [#12043](https://github.com/Kilo-Org/kilocode/pull/12043) [`8ff2a16`](https://github.com/Kilo-Org/kilocode/commit/8ff2a163affffa52a69fabd04ac4f542113b4488) - Fixed dismissed question tool content not showing in chat history. Dismissed questions now render with a "Dismissed" label and "N dismissed" subtitle instead of being invisible.
+
+- [#12009](https://github.com/Kilo-Org/kilocode/pull/12009) [`130b256`](https://github.com/Kilo-Org/kilocode/commit/130b2568153f18be73744b85249f7ca0ab7d8e4e) - Preserve the selected mode when sending the first message in a new VS Code task so the chosen model is paired with the correct agent instructions.
+
+- [#12001](https://github.com/Kilo-Org/kilocode/pull/12001) [`6ad16cd`](https://github.com/Kilo-Org/kilocode/commit/6ad16cd86924cc5400bf1a02ec1007d9f896559c) - Wait for microphone capture to start before showing voice input as recording.
+
+- Updated dependencies [[`b976b5a`](https://github.com/Kilo-Org/kilocode/commit/b976b5a0137b6fa6c7959d5c8a548478efee1d1e), [`22b9f7f`](https://github.com/Kilo-Org/kilocode/commit/22b9f7fd932043722096919aabb08109901f01de), [`61b9e09`](https://github.com/Kilo-Org/kilocode/commit/61b9e0935cb3314acdabb4d3237b95395bfffb06), [`adcbe0f`](https://github.com/Kilo-Org/kilocode/commit/adcbe0f37321704abdc0994d4e1f78919c9bfa5a)]:
+  - @kilocode/sdk@7.5.0
+  - @kilocode/kilo-memory@7.5.0
+  - @kilocode/kilo-indexing@7.4.2
+  - @kilocode/kilo-gateway@7.4.2
+  - @kilocode/kilo-ui@7.4.2
+  - @kilocode/plugin@7.4.2
+  - @opencode-ai/ui@7.4.2
+  - @opencode-ai/core@7.4.2
+
 ## 7.4.1
 
 ### Patch Changes

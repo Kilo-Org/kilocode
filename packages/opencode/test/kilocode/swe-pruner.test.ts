@@ -1,5 +1,62 @@
 import { describe, expect, test } from "bun:test"
+import type { LanguageModelV3, LanguageModelV3CallOptions } from "@ai-sdk/provider"
+import { Effect } from "effect"
+import { Config } from "../../src/config/config"
 import { SwePruner } from "../../src/kilocode/swe-pruner"
+import { Provider } from "../../src/provider/provider"
+import { ModelID, ProviderID } from "../../src/provider/schema"
+
+const pid = ProviderID.make("test")
+const mid = ModelID.make("swe-pruner-test")
+
+function model(): Provider.Model {
+  return {
+    id: mid,
+    providerID: pid,
+    api: { id: mid, npm: "test-provider", url: "" },
+    limit: { context: 100_000, output: 4_000 },
+    capabilities: {
+      toolcall: true,
+      attachment: false,
+      reasoning: false,
+      temperature: true,
+      input: { text: true, image: false, audio: false, video: false },
+      output: { text: true, image: false, audio: false, video: false },
+    },
+  } as unknown as Provider.Model
+}
+
+function provider(seen: string[], reply = "1-10"): Provider.Interface {
+  const mdl = model()
+  const lang = {
+    specificationVersion: "v3",
+    provider: "test",
+    modelId: mid,
+    supportedUrls: {},
+    doGenerate: async (input: LanguageModelV3CallOptions) => {
+      seen.push(JSON.stringify(input))
+      return {
+        content: [{ type: "text", text: reply }],
+        finishReason: { unified: "stop" },
+        usage: {
+          inputTokens: { total: 12 },
+          outputTokens: { total: 8 },
+          raw: {},
+        },
+        warnings: [],
+        providerMetadata: {},
+        request: {},
+        response: {},
+      }
+    },
+  } as unknown as LanguageModelV3
+  return {
+    defaultModel: () => Effect.succeed({ providerID: pid, modelID: mid }),
+    getSmallModel: () => Effect.succeed(mdl),
+    getModel: () => Effect.succeed(mdl),
+    getLanguage: () => Effect.succeed(lang),
+  } as unknown as Provider.Interface
+}
 
 describe("SwePruner.question", () => {
   test("extracts a non-empty focus question from raw args", () => {
@@ -18,11 +75,19 @@ describe("SwePruner.question", () => {
 })
 
 describe("SwePruner.prunable", () => {
-  test("only read and grep are prunable", () => {
+  test("only read, grep, and bash are prunable", () => {
     expect(SwePruner.prunable("read")).toBe(true)
     expect(SwePruner.prunable("grep")).toBe(true)
-    expect(SwePruner.prunable("bash")).toBe(false)
+    expect(SwePruner.prunable("bash")).toBe(true)
     expect(SwePruner.prunable("edit")).toBe(false)
+  })
+})
+
+describe("SwePruner.enabled", () => {
+  test("requires the experimental feature flag", () => {
+    expect(SwePruner.enabled({ experimental: { swe_pruner: true } })).toBe(true)
+    expect(SwePruner.enabled({ experimental: { swe_pruner: false } })).toBe(false)
+    expect(SwePruner.enabled({})).toBe(false)
   })
 })
 
@@ -135,5 +200,112 @@ describe("SwePruner.kept", () => {
         [10, 10],
       ]),
     ).toBe(6)
+  })
+})
+
+describe("SwePruner.sweep", () => {
+  test("replaces bash output and its metadata preview after successful pruning", async () => {
+    const lines = Array.from({ length: 60 }, (_, index) => `${index + 1}: ${"test output ".repeat(5)}`)
+    const output = lines.join("\n")
+    const focus =
+      "Which tests failed, and what assertion details, error messages, and relevant stack frames were reported for each failure?"
+    const seen: string[] = []
+    const result = await SwePruner.sweep({
+      tool: "bash",
+      args: { context_focus_question: focus },
+      result: {
+        title: "Run tests",
+        output,
+        metadata: { output, exit: 1, description: "Run tests", truncated: false },
+      },
+    }).pipe(
+      Effect.provideService(Provider.Service, provider(seen)),
+      Effect.provideService(Config.Service, { get: () => Effect.succeed({}) } as Config.Interface),
+      Effect.runPromise,
+    )
+
+    expect(seen).toHaveLength(1)
+    expect(result.output).toStartWith("[SWE-Pruner: kept 15 of 60 output lines")
+    expect(result.output).toContain(lines[0])
+    expect(result.output).not.toContain(lines[29])
+    expect(result.metadata["output"]).toBe(result.output)
+    expect(result.metadata["exit"]).toBe(1)
+    expect(result.metadata["swePruner"]).toEqual({
+      question: focus,
+      kept: 15,
+      total: 60,
+    })
+  })
+
+  test("leaves hard-truncated bash output unchanged", async () => {
+    const output = Array.from({ length: 60 }, (_, index) => `${index + 1}: ${"test output ".repeat(5)}`).join("\n")
+    const seen: string[] = []
+    const result = {
+      title: "Run tests",
+      output,
+      metadata: { output: "raw preview", truncated: true, outputPath: "/tmp/full.log" },
+    }
+    const swept = await SwePruner.sweep({
+      tool: "bash",
+      args: { context_focus_question: "Which tests failed and why?" },
+      result,
+    }).pipe(
+      Effect.provideService(Provider.Service, provider(seen)),
+      Effect.provideService(Config.Service, { get: () => Effect.succeed({}) } as Config.Interface),
+      Effect.runPromise,
+    )
+
+    expect(seen).toHaveLength(0)
+    expect(swept).toBe(result)
+  })
+
+  test("leaves bash output unchanged when the skimmer keeps everything", async () => {
+    const output = Array.from({ length: 60 }, (_, index) => `${index + 1}: ${"test output ".repeat(5)}`).join("\n")
+    const seen: string[] = []
+    const result = {
+      title: "Run tests",
+      output,
+      metadata: { output, truncated: false },
+    }
+    const swept = await SwePruner.sweep({
+      tool: "bash",
+      args: { context_focus_question: "Which tests failed and why?" },
+      result,
+    }).pipe(
+      Effect.provideService(Provider.Service, provider(seen, "ALL")),
+      Effect.provideService(Config.Service, { get: () => Effect.succeed({}) } as Config.Interface),
+      Effect.runPromise,
+    )
+
+    expect(seen).toHaveLength(1)
+    expect(swept).toBe(result)
+  })
+
+  test("preserves dynamically loaded instructions outside the pruned output", async () => {
+    const lines = Array.from({ length: 60 }, (_, index) => `${index + 1}: ${"source content ".repeat(4)}`)
+    const body = `<path>/repo/pkg/source.ts</path>\n<type>file</type>\n<content>\n${lines.join("\n")}\n</content>`
+    const rules = Array.from({ length: 10 }, (_, index) => `Keep instruction ${index + 1} intact.`)
+    const tail = `\n\n<system-reminder>\nInstructions from: /repo/pkg/AGENTS.md\n${rules.join("\r\n")}\n</system-reminder>`
+    const seen: string[] = []
+    const result = await SwePruner.sweep({
+      tool: "read",
+      args: { context_focus_question: "Where is the relevant source content?" },
+      result: {
+        title: "source.ts",
+        output: body + tail,
+        metadata: { truncated: false, loaded: ["/repo/pkg/AGENTS.md"] },
+      },
+    }).pipe(
+      Effect.provideService(Provider.Service, provider(seen)),
+      Effect.provideService(Config.Service, { get: () => Effect.succeed({}) } as Config.Interface),
+      Effect.runPromise,
+    )
+
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toContain("source content")
+    expect(seen[0]).not.toContain(rules[0])
+    expect(result.output).toEndWith(tail)
+    expect(result.metadata["loaded"]).toEqual(["/repo/pkg/AGENTS.md"])
+    expect(result.metadata["swePruner"]).toMatchObject({ kept: 29, total: 78 })
   })
 })

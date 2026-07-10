@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} beskeder fortrudt",
   "revert.banner.redo": "Gentag",
   "revert.banner.redo.all": "Gentag alt",
-  "revert.banner.hint": "Send en ny besked for at gøre dette permanent",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",
@@ -631,7 +631,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-søgning",
   "ui.permission.toolLabel.webSearch": "Websøgning",
   "ui.permission.toolLabel.list": "Liste",
-  "ui.permission.toolLabel.externalDirectory": "Læs ekstern mappe",
+  "ui.permission.toolLabel.externalDirectory": "Giv adgang til ekstern mappe",
   "ui.permission.toolLabel.webFetch": "Webhentning",
   "ui.permission.toolLabel.task": "Opgave",
   "ui.permission.toolLabel.skill": "Færdighed",
@@ -1453,7 +1453,7 @@ export const dict = {
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
-    "Aktivér SWE-Pruner: opgavebevidst beskæring af store læse- og søgeoutput, styret af et fokusspørgsmål fra agenten",
+    "Aktivér SWE-Pruner: opgavebevidst beskæring af store output fra læse-, søge- og shellværktøjer, styret af et fokusspørgsmål fra agenten",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
   "settings.experimental.swePrunerModel.description":
     "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
@@ -1588,8 +1588,8 @@ export const dict = {
     "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":

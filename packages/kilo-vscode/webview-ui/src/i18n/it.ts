@@ -130,7 +130,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} messaggi ripristinati",
   "revert.banner.redo": "Ripeti",
   "revert.banner.redo.all": "Ripeti tutto",
-  "revert.banner.hint": "Invia un nuovo messaggio per rendere permanente questa modifica",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Attendi che l'agente finisca",
   "command.session.compact": "Compatta sessione",
   "command.session.compact.description": "Riassumi la sessione per ridurre la dimensione del contesto",
@@ -509,7 +509,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Ricerca grep",
   "ui.permission.toolLabel.webSearch": "Ricerca web",
   "ui.permission.toolLabel.list": "Elenco",
-  "ui.permission.toolLabel.externalDirectory": "Leggi directory esterna",
+  "ui.permission.toolLabel.externalDirectory": "Accedi alla directory esterna",
   "ui.permission.toolLabel.webFetch": "Recupero web",
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
@@ -1244,7 +1244,7 @@ export const dict = {
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
-    "Abilita SWE-Pruner: potatura delle uscite di grandi dimensioni degli strumenti di lettura e ricerca, guidata da una domanda di focus dell'agente",
+    "Abilita SWE-Pruner: potatura degli output di grandi dimensioni degli strumenti di lettura, ricerca e shell, che tiene conto del compito ed è guidata da una domanda di focalizzazione fornita dall'agente",
   "settings.experimental.swePrunerModel.title": "Modello SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Modello usato per potare le uscite degli strumenti; per impostazione predefinita, il modello piccolo configurato",
@@ -1306,8 +1306,8 @@ export const dict = {
     "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",
 
   "settings.agentBehaviour.skillPaths": "Percorsi cartelle skill",

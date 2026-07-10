@@ -59,7 +59,8 @@ import { VirtualDiffList } from "../diff-viewer/VirtualDiffList"
 import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 import { ImageDiffView } from "../diff-viewer/ImageDiffView"
-import { createDiffRows, diffToken } from "../diff-viewer/diff-state"
+import { createDiffRows } from "../diff-viewer/diff-state"
+import { createDiffRequests } from "../diff-viewer/diff-requests"
 
 // --- Data model ---
 
@@ -136,7 +137,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // collapse state while adding and removing files from live summaries.
   let initializedKey: string | undefined
   let known = new Set<string>()
-  const requested = new Map<string, string>()
 
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the accordion matches the tree grouping.
@@ -240,7 +240,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => props.sessionKey,
       () => {
-        requested.clear()
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -251,32 +250,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     ),
   )
 
-  const request = (diff: WorktreeFileDiff) => {
-    if (!props.onRequestDiff || props.loadingFiles?.has(diff.file)) return
-    if (!isDiffExpandable(diff) || diff.summarized !== true) return
-    const value = diffToken(diff)
-    if (requested.get(diff.file) === value) return
-    requested.set(diff.file, value)
-    props.onRequestDiff(diff.file)
-  }
-
-  createEffect(
-    on(
-      () => [open(), props.diffs] as const,
-      ([next]) => {
-        const files = new Set(next)
-        for (const file of requested.keys()) {
-          if (!files.has(file)) requested.delete(file)
-        }
-        for (const file of next) {
-          const diff = props.diffs.find((item) => item.file === file)
-          if (!diff || diff.kind === "image") continue
-          request(diff)
-        }
-      },
-      { defer: true },
-    ),
-  )
+  const request = createDiffRequests({
+    key: () => props.sessionKey,
+    diffs: () => props.diffs,
+    open,
+    loading: () => props.loadingFiles,
+    send: () => props.onRequestDiff,
+  })
 
   // --- CRUD ---
 

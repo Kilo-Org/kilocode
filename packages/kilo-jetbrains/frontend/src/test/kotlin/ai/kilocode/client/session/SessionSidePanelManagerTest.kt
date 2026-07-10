@@ -451,6 +451,21 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertSame(active.defaultFocusedComponent, requests.single())
     }
 
+    fun `test focus prompt requests active prompt even when modal content has focus`() {
+        val requests = mutableListOf<JComponent>()
+        val manager = manager(request = { requests.add(it) })
+
+        manager.newSession()
+        val active = active(manager) as SessionUi
+        val modal = JLabel("modal")
+        active.setModalContent(modal) { modal }
+        requests.clear()
+        manager.focusPrompt()
+
+        assertSame(active.promptFocusedComponent, requests.single())
+        assertNotSame(active.defaultFocusedComponent, requests.single())
+    }
+
     fun `test opening cloud history item shows session ui before import`() {
         lateinit var open: (SessionRef) -> Unit
         rpc.historyGate = kotlinx.coroutines.CompletableDeferred()

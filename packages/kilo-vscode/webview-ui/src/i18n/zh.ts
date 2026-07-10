@@ -137,7 +137,7 @@ export const dict = {
   "revert.banner.count_other": "已还原 {{count}} 条消息",
   "revert.banner.redo": "重做",
   "revert.banner.redo.all": "全部重做",
-  "revert.banner.hint": "发送新消息以使此更改永久生效",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "等待智能体完成",
   "command.session.compact": "精简会话",
   "command.session.compact.description": "总结会话以减少上下文大小",
@@ -617,7 +617,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep搜索",
   "ui.permission.toolLabel.webSearch": "Web搜索",
   "ui.permission.toolLabel.list": "列出",
-  "ui.permission.toolLabel.externalDirectory": "读取外部目录",
+  "ui.permission.toolLabel.externalDirectory": "访问外部目录",
   "ui.permission.toolLabel.webFetch": "Web获取",
   "ui.permission.toolLabel.task": "任务",
   "ui.permission.toolLabel.skill": "技能",
@@ -1410,7 +1410,7 @@ export const dict = {
     "沙盒允许写入的额外文件系统路径（例如 /tmp、/var/log）。沙盒启用后，这些路径会与默认可写路径合并。",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
-    "启用 SWE-Pruner:根据智能体提供的聚焦问题,对大型读取和搜索工具输出进行任务感知裁剪",
+    "启用 SWE-Pruner：根据智能体提供的聚焦问题，对读取、搜索和 shell 工具的大型输出进行任务感知裁剪",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
   "settings.experimental.swePrunerModel.description": "用于裁剪工具输出的模型;默认为已配置的小模型",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
@@ -1533,8 +1533,8 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未配置自定义命令。将命令添加到 opencode.json 即可在此处看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "模板",
-  "settings.experimental.sandbox.title": "沙盒",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "沙盒",
+  "settings.sandboxing.enabled.description":
     "在操作系统级沙盒中运行代理 shell 命令，将写入限制在项目和 Kilo 状态目录内",
 
   "settings.autoApprove.description":

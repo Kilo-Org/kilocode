@@ -53,6 +53,7 @@ class QuestionView(
     private val follow: () -> Boolean = { true },
     private val scroll: (Boolean) -> Unit = {},
     private val selection: SessionSelection? = null,
+    focus: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -71,7 +72,7 @@ class QuestionView(
     private var customEditor: SessionEditorTextField? = null
     private var customFocus: FocusAdapter? = null
 
-    private val card = BaseQuestionView(selection)
+    private val card = BaseQuestionView(selection, focus)
 
     private val summary = JBLabel()
     private val nav = JPanel().apply {

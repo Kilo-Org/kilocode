@@ -11,6 +11,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -54,6 +55,9 @@ class KiloCliDownloaderTest {
                         it.contains("/.tmp/")
                 }
             )
+            assertTrue(log.messages.any { it.contains("Kilo CLI path diagnostics:") && it.contains("cacheRoot=${dir.absolutePath}") })
+            assertTrue(log.messages.any { it.contains("Kilo CLI cache target:") && it.contains("exe=${cli.absolutePath}") })
+            assertTrue(log.messages.any { it.contains("Kilo CLI cache lock path:") && it.contains(File(dir, ".lock").canonicalPath) })
 
             val cachedProgress = mutableListOf<CliDownload>()
             val cached = KiloCliDownloader(
@@ -266,6 +270,29 @@ class KiloCliDownloaderTest {
             assertTrue(log.messages.any { it.contains("GitHub API rate limit hit") && it.contains("remaining=0") })
             assertEquals("/api/v1.2.3", server.takeRequest().path)
             assertEquals(1, server.requestCount)
+        }
+    }
+
+    @Test
+    fun `cache lock times out clearly when already held in this process`() = runBlocking {
+        assertTrue(dir.mkdirs() || dir.isDirectory)
+        val file = File(dir, ".lock")
+        val log = TestLog()
+        RandomAccessFile(file, "rw").channel.use { channel ->
+            channel.lock().use {
+                val ex = assertFailsWith<IllegalStateException> {
+                    KiloCliDownloader(
+                        log = log,
+                        root = dir,
+                        lockTimeoutMs = 50,
+                    ).resolve("1.2.3")
+                }
+
+                assertContains(ex.message.orEmpty(), "Timed out waiting for Kilo CLI cache lock")
+                assertContains(ex.message.orEmpty(), file.canonicalPath)
+                assertTrue(log.messages.any { it.contains("Waiting for Kilo CLI cache lock") && it.contains(file.canonicalPath) })
+                assertTrue(log.messages.any { it.contains("Timed out waiting for Kilo CLI cache lock") && it.contains(file.canonicalPath) })
+            }
         }
     }
 

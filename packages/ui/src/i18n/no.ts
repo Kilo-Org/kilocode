@@ -175,7 +175,9 @@ export const dict: Record<Keys, string> = {
   "ui.patch.action.patched": "Oppdatert",
 
   "ui.question.subtitle.answered": "{{count}} besvart",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(ingen svar)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(ikke besvart)",
   "ui.question.multiHint": "Velg alle som gjelder",
   "ui.question.singleHint": "Velg ett svar",

@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} 件のメッセージが元に戻されました",
   "revert.banner.redo": "やり直し",
   "revert.banner.redo.all": "すべてやり直し",
-  "revert.banner.hint": "新しいメッセージを送信してこれを永続させてください",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "エージェントの完了を待ってください",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
@@ -629,7 +629,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep検索",
   "ui.permission.toolLabel.webSearch": "Web検索",
   "ui.permission.toolLabel.list": "一覧",
-  "ui.permission.toolLabel.externalDirectory": "外部ディレクトリ読み取り",
+  "ui.permission.toolLabel.externalDirectory": "外部ディレクトリにアクセス",
   "ui.permission.toolLabel.webFetch": "Web取得",
   "ui.permission.toolLabel.task": "タスク",
   "ui.permission.toolLabel.skill": "スキル",
@@ -1448,7 +1448,7 @@ export const dict = {
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
-    "SWE-Pruner を有効化: エージェントのフォーカス質問に基づいて、大きな読み取り・検索ツール出力を関連行のみに剪定します",
+    "SWE-Pruner を有効にする: エージェントが提供するフォーカス質問に基づき、タスクを考慮して、読み取り、検索、シェルツールのサイズの大きい出力をプルーニングします",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
   "settings.experimental.swePrunerModel.description":
     "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
@@ -1585,8 +1585,8 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
-  "settings.experimental.sandbox.title": "サンドボックス",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "サンドボックス",
+  "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
 
   "settings.autoApprove.description":

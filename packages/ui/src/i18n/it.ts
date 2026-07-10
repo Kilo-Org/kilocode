@@ -187,7 +187,9 @@ export const dict: Record<string, string> = {
   "ui.patch.action.patched": "Patch applicata",
 
   "ui.question.subtitle.answered": "{{count}} risposte",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(nessuna risposta)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(senza risposta)",
   "ui.question.multiHint": "Seleziona tutte le risposte applicabili",
   "ui.question.singleHint": "Seleziona una risposta",

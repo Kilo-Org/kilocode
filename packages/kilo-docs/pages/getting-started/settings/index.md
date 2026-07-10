@@ -161,6 +161,12 @@ For **session** export and import, use the CLI commands:
 {% /tab %}
 {% /tabs %}
 
+## Sandbox
+
+On macOS and Linux, the VS Code extension includes a dedicated **Sandboxing** settings tab. The sandbox is disabled by default. When enabled, it limits agent filesystem writes and can block outbound network access from model-originated tools. Windows users do not see these settings because Windows sandboxing is not supported.
+
+See [Sandboxing](/docs/getting-started/settings/sandboxing) for setup instructions, the exact filesystem and network boundaries, and platform limitations.
+
 ## Experimental Features
 
 {% tabs %}
@@ -175,7 +181,6 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
-- **Sandbox** - confine agent shell commands and file writes to the project and Kilo state directories, with optional outbound network blocking. See [Sandboxing](/docs/getting-started/settings/sandboxing).
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
 

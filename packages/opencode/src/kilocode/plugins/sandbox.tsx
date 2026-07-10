@@ -39,7 +39,7 @@ function View(props: {
 }) {
   createEffect(
     on(
-      () => props.api.state.config.experimental?.sandbox,
+      () => props.api.state.config.sandbox?.enabled,
       () => void props.load(props.sessionID, true),
     ),
   )

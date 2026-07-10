@@ -172,7 +172,9 @@ export const dict = {
   "ui.patch.action.patched": "패치됨",
 
   "ui.question.subtitle.answered": "{{count}}개 답변됨",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(답변 없음)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(답변되지 않음)",
   "ui.question.multiHint": "해당하는 항목 모두 선택",
   "ui.question.singleHint": "하나의 답변을 선택",

@@ -1577,6 +1577,23 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   code_edit_display?: "expanded" | "collapsed"
   hide_prompt_training_models?: boolean
+  /**
+   * Sandbox configuration for agent tools
+   */
+  sandbox?: {
+    /**
+     * Enable sandbox confinement for new sessions (default: false)
+     */
+    enabled?: boolean
+    /**
+     * Control outbound network access from sandboxed tools (default: deny)
+     */
+    network?: "allow" | "deny"
+    /**
+     * Additional filesystem paths that sandboxed tools may write to
+     */
+    writable_paths?: Array<string>
+  }
   model?: string
   small_model?: string
   subagent_model?: string
@@ -1693,9 +1710,6 @@ export type Config = {
     openTelemetry?: boolean
     primary_tools?: Array<string>
     continue_loop_on_deny?: boolean
-    sandbox?: boolean
-    sandbox_restrict_network?: boolean
-    sandbox_writable_paths?: Array<string>
     swe_pruner?: boolean
     swe_pruner_model?: string
     mcp_timeout?: number
@@ -11093,10 +11107,6 @@ export type KiloModelsImagesErrors = {
    * BadRequest | InvalidRequestError
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
-  /**
-   * Unauthorized
-   */
-  401: EffectHttpApiErrorUnauthorized
 }
 
 export type KiloModelsImagesError = KiloModelsImagesErrors[keyof KiloModelsImagesErrors]

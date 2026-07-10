@@ -48,11 +48,14 @@ export interface ExperimentalConfig {
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
-  sandbox?: boolean
-  sandbox_restrict_network?: boolean
-  sandbox_writable_paths?: string[]
   swe_pruner?: boolean
   swe_pruner_model?: string
+}
+
+export interface SandboxConfig {
+  enabled?: boolean
+  network?: "allow" | "deny"
+  writable_paths?: string[]
 }
 
 export interface CommitMessageConfig {
@@ -151,6 +154,7 @@ export interface Config {
   tools?: Record<string, boolean>
   auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
+  sandbox?: SandboxConfig
   indexing?: IndexingConfig
 }
 

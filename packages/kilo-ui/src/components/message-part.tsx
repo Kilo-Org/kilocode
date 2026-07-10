@@ -1159,6 +1159,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   const i18n = useI18n()
   const part = props.part as ToolPart
   const hideQuestion = createMemo(() => part.tool === "question" && busy(part.state.status))
+  const isDismissedQuestionError = createMemo(() => {
+    if (part.tool !== "question") return false
+    if (part.state.status !== "error" || !part.state.error) return false
+    const errStr = typeof part.state.error === "string" ? part.state.error : ""
+    return errStr.includes("dismissed this question")
+  })
 
   const emptyInput: Record<string, any> = {}
   const emptyMetadata: Record<string, any> = {}
@@ -1177,13 +1183,24 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
               const cleaned = error().replace("Error: ", "")
-              if (part.tool === "question" && cleaned.includes("dismissed this question")) {
+              if (isDismissedQuestionError()) {
                 return (
-                  <div style="width: 100%; display: flex; justify-content: flex-end;">
-                    <span class="text-13-regular text-text-weak cursor-default">
-                      {i18n.t("ui.messagePart.questions.dismissed")}
-                    </span>
-                  </div>
+                  <Dynamic
+                    component={render()}
+                    input={input()}
+                    tool={part.tool}
+                    partID={part.id}
+                    callID={part.callID}
+                    metadata={meta()}
+                    partMetadata={top()}
+                    // @ts-expect-error
+                    output={part.state.output}
+                    status={part.state.status}
+                    hideDetails={props.hideDetails}
+                    defaultOpen={props.defaultOpen}
+                    animate
+                    reveal={props.animate}
+                  />
                 )
               }
               const hint =
@@ -2200,6 +2217,7 @@ ToolRegistry.register({
   name: "bash",
   render(props) {
     const i18n = useI18n()
+    const pruned = createMemo(() => swePruned(props.metadata))
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
@@ -2225,28 +2243,33 @@ ToolRegistry.register({
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
 
     return (
-      <BasicTool
-        {...props}
-        icon="console"
-        hasDetails
-        defaultOpen={props.defaultOpen ?? true}
-        onOpenChange={setOpen}
-        allowPendingToggle
-        trigger={
-          <div data-slot="basic-tool-tool-info-structured">
-            <div data-slot="basic-tool-tool-info-main">
-              <span data-slot="basic-tool-tool-title">
-                <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
-              </span>
-              <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
+      <>
+        <BasicTool
+          {...props}
+          icon="console"
+          hasDetails
+          defaultOpen={props.defaultOpen ?? true}
+          onOpenChange={setOpen}
+          allowPendingToggle
+          trigger={
+            <div data-slot="basic-tool-tool-info-structured">
+              <div data-slot="basic-tool-tool-info-main">
+                <span data-slot="basic-tool-tool-title">
+                  <TextShimmer text={i18n.t("ui.tool.shell")} active={pending()} />
+                </span>
+                <Show when={subtitle()}>{(text) => <ShellText text={text()} animate={reveal()} />}</Show>
+              </div>
             </div>
-          </div>
-        }
-      >
-        <Show when={mounted()}>
-          <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+          }
+        >
+          <Show when={mounted()}>
+            <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+          </Show>
+        </BasicTool>
+        <Show when={pruned()}>
+          {(info) => <ToolLoadedFile text={i18n.t("ui.tool.swePruned", info())} animate={props.reveal} />}
         </Show>
-      </BasicTool>
+      </>
     )
   },
 })
@@ -2827,12 +2850,15 @@ ToolRegistry.register({
     const i18n = useI18n()
     const questions = createMemo(() => (props.input.questions ?? []) as QuestionInfo[])
     const answers = createMemo(() => (props.metadata.answers ?? []) as QuestionAnswer[])
+    const dismissed = createMemo(() => props.metadata.dismissed === true || props.status === "error")
     const completed = createMemo(() => answers().length > 0)
     const pending = createMemo(() => busy(props.status))
+    const hasContent = createMemo(() => completed() || dismissed())
 
     const subtitle = createMemo(() => {
       const count = questions().length
       if (count === 0) return ""
+      if (dismissed()) return i18n.t("ui.question.subtitle.dismissed", { count })
       if (completed()) return i18n.t("ui.question.subtitle.answered", { count })
       return `${count} ${i18n.t(count > 1 ? "ui.common.question.other" : "ui.common.question.one")}`
     })
@@ -2851,15 +2877,19 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={completed()}>
-          <div data-component="question-answers">
+        <Show when={hasContent()}>
+          <div data-component="question-answers" data-dismissed={dismissed() ? "" : undefined}>
             <For each={questions()}>
               {(q, i) => {
                 const answer = () => answers()[i()] ?? []
+                const answerText = () => {
+                  if (dismissed()) return i18n.t("ui.question.answer.dismissed")
+                  return answer().join(", ") || i18n.t("ui.question.answer.none")
+                }
                 return (
                   <div data-slot="question-answer-item">
                     <div data-slot="question-text">{q.question}</div>
-                    <div data-slot="answer-text">{answer().join(", ") || i18n.t("ui.question.answer.none")}</div>
+                    <div data-slot="answer-text">{answerText()}</div>
                   </div>
                 )
               }}

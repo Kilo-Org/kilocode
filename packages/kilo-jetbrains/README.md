@@ -109,7 +109,7 @@ All properties below are passed with `-P` on the Gradle command line or in the r
 | `kilo.dev.worktree.root` | monorepo root | Worktree root used to resolve `.kilo-dev/`. Auto-detected from the Gradle project directory; override only when the auto-detection is wrong. |
 
 The checked-in IDE run configurations pass `--no-configuration-cache` because the IntelliJ Platform Gradle Plugin run-IDE tasks are not configuration-cache compatible in this setup.
-They also pass `--purge-old-log-directories` so stale sandbox logs do not hide the current backend and frontend `kilo-dev.log` files.
+They also pass `--purge-old-log-directories` so stale sandbox logs do not hide the current backend and frontend `kilo-dev.log.*` files.
 
 Example with a fixed split-mode port:
 
@@ -141,7 +141,7 @@ The checked-in `Run IDE (Backend)`, `Run IDE (Frontend)`, and `Run IDE (Split Mo
 
 ### Debug logging properties
 
-The plugin supports a few JVM system properties for local debugging. These are most useful with sandbox runs because the logs are mirrored to `kilo-dev.log` files for frontend and backend.
+The plugin supports a few JVM system properties for local debugging. These are most useful with sandbox runs because the logs are mirrored to `kilo-dev.log.*` files for frontend and backend.
 
 `kilo.dev.log.level`
 
@@ -167,8 +167,8 @@ The plugin supports a few JVM system properties for local debugging. These are m
 Where to find the log files:
 
 - In sandbox runs, Kilo writes separate dev log files for each side under the IDE sandbox log directory reported by `PathManager.getLogDir()`.
-- Frontend log file: `<sandbox log dir>/kilo-frontend/kilo-dev.log`
-- Backend log file: `<sandbox log dir>/kilo-backend/kilo-dev.log`
+- Frontend log file: `<sandbox log dir>/kilo-frontend/kilo-dev.log.0`
+- Backend log file: `<sandbox log dir>/kilo-backend/kilo-dev.log.0`
 - In practice these sit under the current `log_run*` sandbox logs for the active run.
 - If you are unsure of the exact sandbox root, open the IDE log directory from the running sandbox instance and then look for the `kilo-frontend/` and `kilo-backend/` subdirectories.
 

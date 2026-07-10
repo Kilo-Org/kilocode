@@ -89,7 +89,14 @@ runs:
         # e.g. ./patches/ for standard-openapi
         # https://github.com/oven-sh/bun/issues/28147 # kilocode_change
         if [ "$RUNNER_OS" = "Windows" ]; then
-          bun install --frozen-lockfile --linker hoisted ${{ inputs.install-flags }} # kilocode_change
+          # kilocode_change start
+          if ! bun install --frozen-lockfile --linker hoisted ${{ inputs.install-flags }}; then
+            echo "::warning::Bun install failed on Windows; retrying with conservative extraction"
+            sleep 5
+            BUN_FEATURE_FLAG_DISABLE_STREAMING_INSTALL=1 \
+              bun install --frozen-lockfile --linker hoisted --network-concurrency 16 ${{ inputs.install-flags }}
+          fi
+          # kilocode_change end
         else
           bun install --frozen-lockfile ${{ inputs.install-flags }} # kilocode_change
         fi

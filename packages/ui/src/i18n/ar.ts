@@ -172,7 +172,9 @@ export const dict = {
   "ui.patch.action.patched": "مصحح",
 
   "ui.question.subtitle.answered": "{{count}} أجيب",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(لا توجد إجابة)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(لم يتم الرد)",
   "ui.question.multiHint": "حدد كل ما ينطبق",
   "ui.question.singleHint": "حدد إجابة واحدة",

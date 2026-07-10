@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "Отменено {{count}} сообщений",
   "revert.banner.redo": "Повторить",
   "revert.banner.redo.all": "Повторить всё",
-  "revert.banner.hint": "Отправьте новое сообщение, чтобы сделать это постоянным",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Дождитесь завершения агента",
   "command.session.compact": "Сжать сессию",
   "command.session.compact.description": "Сократить сессию для уменьшения размера контекста",
@@ -633,7 +633,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-поиск",
   "ui.permission.toolLabel.webSearch": "Веб-поиск",
   "ui.permission.toolLabel.list": "Список",
-  "ui.permission.toolLabel.externalDirectory": "Чтение внешнего каталога",
+  "ui.permission.toolLabel.externalDirectory": "Открыть доступ к внешней папке",
   "ui.permission.toolLabel.webFetch": "Веб-загрузка",
   "ui.permission.toolLabel.task": "Задача",
   "ui.permission.toolLabel.skill": "Навык",
@@ -1457,7 +1457,7 @@ export const dict = {
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
-    "Включить SWE-Pruner: обрезка больших выводов инструментов чтения и поиска на основе фокус-вопроса агента",
+    "Включить SWE-Pruner: обрезка больших объёмов вывода инструментов чтения, поиска и командной оболочки с учётом задачи и на основе предоставленного агентом фокус-вопроса",
   "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
@@ -1593,8 +1593,8 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
-  "settings.experimental.sandbox.title": "Песочница",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Песочница",
+  "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":

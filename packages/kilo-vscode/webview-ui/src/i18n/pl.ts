@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "Cofnięto {{count}} wiadomości",
   "revert.banner.redo": "Ponów",
   "revert.banner.redo.all": "Ponów wszystko",
-  "revert.banner.hint": "Wyślij nową wiadomość, aby to utrwalić",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Poczekaj aż agent zakończy",
   "command.session.compact": "Kompaktuj sesję",
   "command.session.compact.description": "Podsumuj sesję, aby zmniejszyć rozmiar kontekstu",
@@ -633,7 +633,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Wyszukiwanie Grep",
   "ui.permission.toolLabel.webSearch": "Wyszukiwanie Web",
   "ui.permission.toolLabel.list": "Wylistuj",
-  "ui.permission.toolLabel.externalDirectory": "Czytaj katalog zewnętrzny",
+  "ui.permission.toolLabel.externalDirectory": "Uzyskaj dostęp do katalogu zewnętrznego",
   "ui.permission.toolLabel.webFetch": "Pobieranie Web",
   "ui.permission.toolLabel.task": "Zadanie",
   "ui.permission.toolLabel.skill": "Umiejętność",
@@ -1416,7 +1416,7 @@ export const dict = {
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
-    "Włącz SWE-Pruner: przycinanie dużych wyników narzędzi odczytu i wyszukiwania, kierowane pytaniem przewodnim agenta",
+    "Włącz SWE-Pruner: przycinanie obszernych danych wyjściowych narzędzi odczytu, wyszukiwania i powłoki z uwzględnieniem zadania, kierowane pytaniem przewodnim dostarczonym przez agenta",
   "settings.experimental.swePrunerModel.title": "Model SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "Model używany do przycinania wyników narzędzi; domyślnie skonfigurowany mały model",
@@ -1592,8 +1592,8 @@ export const dict = {
     "Brak skonfigurowanych niestandardowych komend. Dodaj komendy do opencode.json, aby je tu zobaczyć.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Szablon",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Uruchamiaj polecenia shell agenta w sandboxie na poziomie systemu operacyjnego, który ogranicza zapisy do katalogów stanu projektu i Kilo",
 
   "settings.autoApprove.description":

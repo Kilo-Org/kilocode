@@ -142,7 +142,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} Nachrichten zurückgesetzt",
   "revert.banner.redo": "Wiederholen",
   "revert.banner.redo.all": "Alle wiederholen",
-  "revert.banner.hint": "Sende eine neue Nachricht, um dies dauerhaft zu machen",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Warten bis der Agent fertig ist",
   "command.session.compact": "Sitzung komprimieren",
   "command.session.compact.description": "Sitzung zusammenfassen, um die Kontextgröße zu reduzieren",
@@ -643,7 +643,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-Suche",
   "ui.permission.toolLabel.webSearch": "Websuche",
   "ui.permission.toolLabel.list": "Auflisten",
-  "ui.permission.toolLabel.externalDirectory": "Externes Verzeichnis lesen",
+  "ui.permission.toolLabel.externalDirectory": "Zugriff auf externen Ordner erlauben",
   "ui.permission.toolLabel.webFetch": "Web-Abruf",
   "ui.permission.toolLabel.task": "Aufgabe",
   "ui.permission.toolLabel.skill": "Fähigkeit",
@@ -1483,7 +1483,7 @@ export const dict = {
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
   "settings.experimental.swePruner.title": "SWE-Pruner",
   "settings.experimental.swePruner.description":
-    "SWE-Pruner aktivieren: aufgabenbezogenes Kürzen großer Lese- und Suchausgaben, gesteuert durch eine Fokusfrage des Agenten",
+    "SWE-Pruner aktivieren: aufgabenbewusstes Kürzen großer Ausgaben der Lese-, Such- und Shell-Werkzeuge, gesteuert durch eine vom Agenten bereitgestellte Fokusfrage",
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
   "settings.experimental.swePrunerModel.description":
     "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
@@ -1622,8 +1622,8 @@ export const dict = {
     "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
   "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
   "settings.agentBehaviour.workflows.detail.template": "Vorlage",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Shell-Befehle des Agenten in einer Sandbox auf Betriebssystemebene ausführen, die Schreibvorgänge auf die Projekt- und Kilo-Statusverzeichnisse beschränkt",
 
   "settings.autoApprove.description":
