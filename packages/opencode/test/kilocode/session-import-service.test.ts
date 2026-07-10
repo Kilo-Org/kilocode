@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { Database } from "@opencode-ai/core/database/database"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
-import { SessionTable } from "@opencode-ai/core/session/sql"
+import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import { Effect } from "effect"
 import { eq } from "drizzle-orm"
 import { SessionImportService } from "../../src/kilocode/session-import/service"
-import { SessionID } from "../../src/session/schema"
+import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 
@@ -91,14 +91,42 @@ describe("SessionImportService.session", () => {
   test("deletes and recreates the session when force is true", async () => {
     await SessionImportService.session(input())
 
+    // The forced delete must cascade to dependent messages and parts, not just replace the session row.
+    const sessionID = SessionID.make(input().id)
+    const messageID = MessageID.make("msg_forced_cleanup")
+    await db(
+      Effect.gen(function* () {
+        const { db } = yield* Database.Service
+        yield* db
+          .insert(MessageTable)
+          .values({ id: messageID, session_id: sessionID, data: { role: "user" } as never })
+          .run()
+        yield* db
+          .insert(PartTable)
+          .values({
+            id: PartID.make("prt_forced_cleanup"),
+            message_id: messageID,
+            session_id: sessionID,
+            data: { type: "text", text: "seed" } as never,
+          })
+          .run()
+      }),
+    )
+
     const result = await SessionImportService.session(input(true))
-    const row = await db(
+    const [row, messages, parts] = await db(
       Database.Service.use(({ db }) =>
-        db.select().from(SessionTable).where(eq(SessionTable.id, SessionID.make(input().id))).get(),
+        Effect.all([
+          db.select().from(SessionTable).where(eq(SessionTable.id, sessionID)).get(),
+          db.select().from(MessageTable).where(eq(MessageTable.session_id, sessionID)).all(),
+          db.select().from(PartTable).where(eq(PartTable.session_id, sessionID)).all(),
+        ]),
       ),
     )
 
     expect(result).toEqual({ ok: true, id: "ses_migrated_test" })
     expect(row?.title).toBe("Reimported task")
+    expect(messages).toEqual([])
+    expect(parts).toEqual([])
   })
 })

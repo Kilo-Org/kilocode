@@ -4,7 +4,7 @@ import path from "path"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import { Bus } from "../../../src/bus"
 import { Permission } from "../../../src/permission"
-import { EventV2Bridge } from "../../../src/event-v2-bridge" // kilocode_change - Permission publishes via EventV2Bridge
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionID } from "../../../src/session/schema"

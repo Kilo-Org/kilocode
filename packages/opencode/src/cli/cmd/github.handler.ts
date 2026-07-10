@@ -438,7 +438,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
         ? (payload as IssueCommentEvent | IssuesEvent).issue.number
         : (payload as PullRequestEvent | PullRequestReviewCommentEvent).pull_request.number
     const runUrl = `/${owner}/${repo}/actions/runs/${runId}`
-    const shareBaseUrl = isMock ? "https://dev.opencode.ai" : "https://opencode.ai"
+    const shareBaseUrl = isMock ? "https://dev.kilo.ai" : "https://kilo.ai" // kilocode_change
 
     let appToken: string
     let octoRest: Octokit
@@ -699,7 +699,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
 
     function normalizeOidcBaseUrl(): string {
       const value = process.env["OIDC_BASE_URL"]
-      if (!value) return "https://api.opencode.ai"
+      if (!value) return "https://api.kilo.ai" // kilocode_change
       return value.replace(/\/+$/, "")
     }
 

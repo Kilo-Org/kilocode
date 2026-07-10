@@ -896,7 +896,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           autoload: false,
           async getModel() {
             throw new Error(
-              `Snowflake Cortex: missing credentials (${missing}). Set via env var, opencode auth, or provider options.`,
+              `Snowflake Cortex: missing credentials (${missing}). Set via env var, kilo auth, or provider options.`, // kilocode_change
             )
           },
         }

@@ -9,8 +9,7 @@ interface PendingEntry {
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
 
-// kilocode_change - permission events moved from the legacy Bus to EventV2 (permission/index.ts publishes via
-// EventV2Bridge). The caller passes its EventV2Bridge-backed reply publisher so drain uses the same channel.
+// The caller supplies the reply publisher so drain uses the same EventV2Bridge channel as permission/index.ts.
 type PublishReply = (data: {
   sessionID: Permission.Request["sessionID"]
   requestID: Permission.Request["id"]
@@ -25,7 +24,7 @@ type PublishReply = (data: {
 export function drainCovered(
   pending: Map<string, PendingEntry>,
   approved: Permission.Ruleset,
-  publishReply: PublishReply, // kilocode_change - was `_Denied`; now an EventV2Bridge-backed publisher
+  publishReply: PublishReply,
   exclude?: string,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
@@ -46,11 +45,9 @@ export function drainCovered(
       if (!denied && !allowed) continue
       pending.delete(id)
       if (denied) {
-        // kilocode_change - publish via EventV2Bridge (was Bus.publish)
         yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "reject" })
         yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
       } else {
-        // kilocode_change - publish via EventV2Bridge (was Bus.publish)
         yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "always" })
         yield* Deferred.succeed(entry.deferred, undefined)
       }

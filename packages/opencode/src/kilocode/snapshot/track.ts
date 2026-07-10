@@ -491,18 +491,29 @@ export namespace KiloSnapshotTrack {
 
   // ── Default hooks (production wiring) ──────────────────────────────────
 
-  const questionRt = makeRuntime(Question.Service, Question.defaultLayer)
+  // Run session/question work through AppRuntime instead of private makeRuntime facades: those realize
+  // their layers through the shared memoMap and are never disposed, which permanently pins the memoized
+  // Database layer (refcount never reaches zero). AppRuntime.dispose then cannot close the sqlite
+  // connection, and Windows CI fails teardown with EBUSY on the test database files.
+  const questionRt = {
+    runPromise: async <A, E>(fn: (svc: Question.Interface) => Effect.Effect<A, E>, options?: Effect.RunOptions) => {
+      const app = await import("@/effect/app-runtime")
+      return app.AppRuntime.runPromise(Question.Service.use(fn), options)
+    },
+  }
 
   const fsRt = makeRuntime(FSUtil.Service, FSUtil.defaultLayer)
 
-  // Lazy to break a module-load cycle with @/session/index.ts. The single
-  // cast on the `makeRuntime(...)` result narrows the fully generic runtime
-  // to the small `SessionPartAPI` surface defined above.
+  // Lazy to break a module-load cycle with @/session/index.ts. Narrowed to the small
+  // `SessionPartAPI` surface defined above.
   let cachedSessionRt: SessionRuntime | undefined
   async function sessionRuntime(): Promise<SessionRuntime> {
     if (cachedSessionRt) return cachedSessionRt
-    const mod = await import("@/session/session")
-    cachedSessionRt = makeRuntime(mod.Session.Service, mod.Session.defaultLayer) as unknown as SessionRuntime
+    const [mod, app] = await Promise.all([import("@/session/session"), import("@/effect/app-runtime")])
+    cachedSessionRt = {
+      runPromise: (fn, options) =>
+        app.AppRuntime.runPromise(mod.Session.Service.use(fn as never), options) as Promise<never>,
+    } as SessionRuntime
     return cachedSessionRt
   }
 

@@ -43,6 +43,7 @@ import { SessionProcessor } from "../../src/session/processor"
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
+import { KiloSession } from "../../src/kilocode/session" // kilocode_change
 import { Suggestion } from "../../src/kilocode/suggestion" // kilocode_change - accept suggestion in telemetry test
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
@@ -1182,7 +1183,7 @@ unix(
         }
       }
     }),
-  3_000,
+  10_000, // kilocode_change - upstream's 3s deadline flakes under CI shard load (observed 3048ms on macOS)
 )
 
 raceNoLLMServer.instance(
@@ -2111,8 +2112,21 @@ unixNoLLMServer(
       )
       // kilocode_change end
 
+      // kilocode_change start - wait until the loop reaches the queued-run handoff
+      const opened = yield* Deferred.make<void>()
+      yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          Bus.subscribe(KiloSession.Event.TurnOpen, (event) => {
+            if (event.properties.sessionID !== chat.id) return
+            Effect.runFork(Deferred.succeed(opened, undefined))
+          }),
+        ),
+        (off) => Effect.sync(off),
+      )
       const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn before cancelling
+      yield* awaitWithTimeout(Deferred.await(opened), `session ${chat.id} never opened its queued turn`)
+      yield* Effect.yieldNow
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
 

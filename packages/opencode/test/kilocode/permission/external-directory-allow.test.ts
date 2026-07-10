@@ -9,7 +9,7 @@ import { Bus } from "../../../src/bus"
 import { Config } from "../../../src/config/config"
 import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { Permission } from "../../../src/permission"
-import { EventV2Bridge } from "../../../src/event-v2-bridge" // kilocode_change - Permission publishes via EventV2Bridge
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Database } from "@opencode-ai/core/database/database"
 import { provideTestInstance } from "../../fixture/fixture"
