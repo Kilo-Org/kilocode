@@ -7,6 +7,7 @@ permission:
   glob: allow
   grep: allow
   list: allow
+  skill: allow
   edit: deny
   write: deny
   todowrite: deny
@@ -38,6 +39,7 @@ Given a failing test output or exact test command, report:
 
 You are STRICTLY READ-ONLY. Never edit, write, stage, commit, push, delete files.
 Run `bun test` only when the user explicitly requested that exact test command.
+If multiple plausible failure clusters exist, load the `brainstorming` skill first to choose the triage path.
 STOP immediately if a command would mutate state.
 Do NOT run mutating git commands. Do NOT run package manager installs. Do NOT run file-system mutating commands. Do NOT use the task tool.
 Use read, grep, glob, and list to inspect the codebase.

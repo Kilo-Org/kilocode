@@ -7,6 +7,7 @@ permission:
   glob: allow
   grep: allow
   list: allow
+  skill: allow
   edit: deny
   write: deny
   todowrite: deny
@@ -35,8 +36,9 @@ Rules:
 - You are STRICTLY READ-ONLY. Never edit, write, or create files.
 - Use `git diff`, `git log`, `git show`, `git status`, and `git blame` to examine changes.
 - Use `read`, `grep`, `glob`, and `list` to inspect the codebase around the diff.
+- If the request is really about strategy, rollout risk, or competing approaches rather than a plain diff review, load the `brainstorming` skill first.
 - Do NOT run mutating git commands (commit, branch, push, merge, rebase, reset, stash, tag, checkout, switch, restore, cherry-pick, revert, clean, gc, prune, fetch, pull, push, worktree, update-index, update-ref, config, remote add, remote remove).
 - Do NOT run arbitrary shell commands or execute scripts.
-- Never launch the task tool — you cannot delegate work.
+- Never launch the task tool - you cannot delegate work.
 - Keep your review concise (3-5 bullet points maximum).
-- Do not suggest code changes — only identify concerns.
+- Do not suggest code changes - only identify concerns.

@@ -7,9 +7,17 @@ import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
 
 // Helper to evaluate permission for a tool with wildcard pattern
-function evalPerm(agent: Agent.Info | undefined, permission: string): Permission.Action | undefined {
+function evalToolPerm(agent: Agent.Info | undefined, permission: string): Permission.Action | undefined {
   if (!agent) return undefined
   return Permission.evaluate(permission, "*", agent.permission).action
+}
+
+const root = path.resolve(import.meta.dir, "../../../..")
+const custom = path.join(root, ".kilo", "agent")
+
+async function copyAgent(dir: string, name: string) {
+  await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+  await Bun.write(path.join(dir, ".kilo", "agent", name + ".md"), await Bun.file(path.join(custom, name + ".md")).text())
 }
 
 afterEach(async () => {
@@ -47,8 +55,8 @@ test("code agent has correct default properties", async () => {
       expect(code).toBeDefined()
       expect(code?.mode).toBe("primary")
       expect(code?.native).toBe(true)
-      expect(evalPerm(code, "edit")).toBe("allow")
-      expect(evalPerm(code, "bash")).toBe("ask")
+      expect(evalToolPerm(code, "edit")).toBe("allow")
+      expect(evalToolPerm(code, "bash")).toBe("ask")
     },
   })
 })
@@ -65,16 +73,17 @@ test("ask agent has correct default properties", async () => {
       expect(ask?.mode).toBe("primary")
       expect(ask?.native).toBe(true)
       // ask agent should allow read-only tools
-      expect(evalPerm(ask, "read")).toBe("allow")
-      expect(evalPerm(ask, "grep")).toBe("allow")
-      expect(evalPerm(ask, "glob")).toBe("allow")
-      expect(evalPerm(ask, "webfetch")).toBe("allow")
-      expect(evalPerm(ask, "websearch")).toBe("allow")
-      expect(evalPerm(ask, "codesearch")).toBe("allow")
+      expect(evalToolPerm(ask, "read")).toBe("allow")
+      expect(evalToolPerm(ask, "grep")).toBe("allow")
+      expect(evalToolPerm(ask, "glob")).toBe("allow")
+      expect(evalToolPerm(ask, "webfetch")).toBe("allow")
+      expect(evalToolPerm(ask, "websearch")).toBe("allow")
+      expect(evalToolPerm(ask, "codesearch")).toBe("allow")
+      expect(evalToolPerm(ask, "skill")).toBe("allow")
       // ask agent should deny edit and bash
-      expect(evalPerm(ask, "edit")).toBe("deny")
-      expect(evalPerm(ask, "bash")).toBe("deny")
-      expect(evalPerm(ask, "task")).toBe("deny")
+      expect(evalToolPerm(ask, "edit")).toBe("deny")
+      expect(evalToolPerm(ask, "bash")).toBe("deny")
+      expect(evalToolPerm(ask, "task")).toBe("deny")
       // ask agent should gate .env files
       expect(Permission.evaluate("read", ".env", ask!.permission).action).toBe("ask")
       expect(Permission.evaluate("read", "config.env.local", ask!.permission).action).toBe("ask")
@@ -99,11 +108,11 @@ test("ask agent denies edit/write/bash even when user config adds a specific edi
       // user config must not leak edit capability into ask mode — even for the
       // specific path the user allowed, ask mode must still deny it
       expect(Permission.evaluate("edit", "src/output.log", ask!.permission).action).toBe("deny")
-      expect(evalPerm(ask, "bash")).toBe("deny")
-      expect(evalPerm(ask, "task")).toBe("deny")
+      expect(evalToolPerm(ask, "bash")).toBe("deny")
+      expect(evalToolPerm(ask, "task")).toBe("deny")
       // safe tools still work
-      expect(evalPerm(ask, "read")).toBe("allow")
-      expect(evalPerm(ask, "grep")).toBe("allow")
+      expect(evalToolPerm(ask, "read")).toBe("allow")
+      expect(evalToolPerm(ask, "grep")).toBe("allow")
       // disabled() hides tools entirely from LLM — bash is NOT disabled because it has specific allow rules
       const disabled = Permission.disabled(["edit", "write", "bash"], ask!.permission)
       expect(disabled.has("edit")).toBe(true)
@@ -123,7 +132,7 @@ test("plan agent asks before edits except .kilo/plans/* and .opencode/plans/*", 
       const plan = await Agent.get("plan")
       expect(plan).toBeDefined()
       // Wildcard requires permission
-      expect(evalPerm(plan, "edit")).toBe("ask")
+      expect(evalToolPerm(plan, "edit")).toBe("ask")
       // kilocode_change start
       // .kilo/plans/ is the primary allowed path
       expect(Permission.evaluate("edit", ".kilo/plans/foo.md", plan!.permission).action).toBe("allow")
@@ -143,9 +152,10 @@ test("explore agent denies edit and write", async () => {
       const explore = await Agent.get("explore")
       expect(explore).toBeDefined()
       expect(explore?.mode).toBe("subagent")
-      expect(evalPerm(explore, "edit")).toBe("deny")
-      expect(evalPerm(explore, "write")).toBe("deny")
-      expect(evalPerm(explore, "todowrite")).toBe("deny")
+      expect(evalToolPerm(explore, "skill")).toBe("allow")
+      expect(evalToolPerm(explore, "edit")).toBe("deny")
+      expect(evalToolPerm(explore, "write")).toBe("deny")
+      expect(evalToolPerm(explore, "todowrite")).toBe("deny")
     },
   })
 })
@@ -167,38 +177,7 @@ test("explore agent asks for external directories and allows Truncate.GLOB", asy
 test("reviewer agent from .kilo/agent/reviewer.md loads with correct read-only permissions", async () => {
   await using tmp = await tmpdir({
     git: true,
-    init: async (dir) => {
-      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-      await Bun.write(
-        path.join(dir, ".kilo", "agent", "reviewer.md"),
-        [
-          "---",
-          "description: focused read-only diff sanity reviewer",
-          "mode: subagent",
-          "permission:",
-          '  "*": deny',
-          "  read: allow",
-          "  glob: allow",
-          "  grep: allow",
-          "  list: allow",
-          "  edit: deny",
-          "  write: deny",
-          "  todowrite: deny",
-          "  bash:",
-          '    "*": deny',
-          '    "git diff *": allow',
-          '    "git status *": allow',
-          '    "git log *": allow',
-          '    "git show *": allow',
-          '    "git ls-files *": allow',
-          '    "git blame *": allow',
-          '    "git rev-parse *": allow',
-          "---",
-          "",
-          "Focused read-only diff sanity reviewer.",
-        ].join("\n"),
-      )
-    },
+    init: async (dir) => copyAgent(dir, "reviewer"),
   })
 
   await Instance.provide({
@@ -207,13 +186,14 @@ test("reviewer agent from .kilo/agent/reviewer.md loads with correct read-only p
       const reviewer = await Agent.get("reviewer")
       expect(reviewer).toBeDefined()
       expect(reviewer?.mode).toBe("subagent")
-      expect(evalPerm(reviewer, "read")).toBe("allow")
-      expect(evalPerm(reviewer, "glob")).toBe("allow")
-      expect(evalPerm(reviewer, "grep")).toBe("allow")
-      expect(evalPerm(reviewer, "list")).toBe("allow")
-      expect(evalPerm(reviewer, "edit")).toBe("deny")
-      expect(evalPerm(reviewer, "write")).toBe("deny")
-      expect(evalPerm(reviewer, "todowrite")).toBe("deny")
+      expect(evalToolPerm(reviewer, "read")).toBe("allow")
+      expect(evalToolPerm(reviewer, "glob")).toBe("allow")
+      expect(evalToolPerm(reviewer, "grep")).toBe("allow")
+      expect(evalToolPerm(reviewer, "list")).toBe("allow")
+      expect(evalToolPerm(reviewer, "skill")).toBe("allow")
+      expect(evalToolPerm(reviewer, "edit")).toBe("deny")
+      expect(evalToolPerm(reviewer, "write")).toBe("deny")
+      expect(evalToolPerm(reviewer, "todowrite")).toBe("deny")
       expect(Permission.evaluate("bash", "git diff HEAD", reviewer!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "git status", reviewer!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "git log --oneline", reviewer!.permission).action).toBe("allow")
@@ -225,44 +205,7 @@ test("reviewer agent from .kilo/agent/reviewer.md loads with correct read-only p
 test("command-check agent from .kilo/agent/command-check.md loads with correct read-only command permissions", async () => {
   await using tmp = await tmpdir({
     git: true,
-    init: async (dir) => {
-      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-      await Bun.write(
-        path.join(dir, ".kilo", "agent", "command-check.md"),
-        [
-          "---",
-          "description: exact read-only command/output runner",
-          "mode: subagent",
-          "permission:",
-          '  "*": deny',
-          "  read: allow",
-          "  glob: allow",
-          "  grep: allow",
-          "  list: allow",
-          "  edit: deny",
-          "  write: deny",
-          "  todowrite: deny",
-          "  bash:",
-          '    "*": deny',
-          '    "git status *": allow',
-          '    "git diff *": allow',
-          '    "git log *": allow',
-          '    "git show *": allow',
-          '    "git ls-files *": allow',
-          '    "git rev-parse *": allow',
-          '    "cat *": allow',
-          '    "type *": allow',
-          '    "Get-Content *": allow',
-          '    "find *": allow',
-          '    "Get-ChildItem *": allow',
-          '    "rg *": allow',
-          '    "bun test *": allow',
-          "---",
-          "",
-          "Exact read-only command/output runner.",
-        ].join("\n"),
-      )
-    },
+    init: async (dir) => copyAgent(dir, "command-check"),
   })
 
   await Instance.provide({
@@ -271,13 +214,14 @@ test("command-check agent from .kilo/agent/command-check.md loads with correct r
       const cc = await Agent.get("command-check")
       expect(cc).toBeDefined()
       expect(cc?.mode).toBe("subagent")
-      expect(evalPerm(cc, "read")).toBe("allow")
-      expect(evalPerm(cc, "glob")).toBe("allow")
-      expect(evalPerm(cc, "grep")).toBe("allow")
-      expect(evalPerm(cc, "list")).toBe("allow")
-      expect(evalPerm(cc, "edit")).toBe("deny")
-      expect(evalPerm(cc, "write")).toBe("deny")
-      expect(evalPerm(cc, "todowrite")).toBe("deny")
+      expect(evalToolPerm(cc, "read")).toBe("allow")
+      expect(evalToolPerm(cc, "glob")).toBe("allow")
+      expect(evalToolPerm(cc, "grep")).toBe("allow")
+      expect(evalToolPerm(cc, "list")).toBe("allow")
+      expect(evalToolPerm(cc, "skill")).toBe("allow")
+      expect(evalToolPerm(cc, "edit")).toBe("deny")
+      expect(evalToolPerm(cc, "write")).toBe("deny")
+      expect(evalToolPerm(cc, "todowrite")).toBe("deny")
       expect(Permission.evaluate("bash", "git diff HEAD", cc!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "cat foo.txt", cc!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "rg needle src", cc!.permission).action).toBe("allow")
@@ -292,44 +236,7 @@ test("command-check agent from .kilo/agent/command-check.md loads with correct r
 test("failing-test-triage agent from .kilo/agent/failing-test-triage.md loads with correct read-only permissions", async () => {
   await using tmp = await tmpdir({
     git: true,
-    init: async (dir) => {
-      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-      await Bun.write(
-        path.join(dir, ".kilo", "agent", "failing-test-triage.md"),
-        [
-          "---",
-          "description: read-only test failure diagnosis agent",
-          "mode: subagent",
-          "permission:",
-          '  "*": deny',
-          "  read: allow",
-          "  glob: allow",
-          "  grep: allow",
-          "  list: allow",
-          "  edit: deny",
-          "  write: deny",
-          "  todowrite: deny",
-          "  bash:",
-          '    "*": deny',
-          '    "git status *": allow',
-          '    "git diff *": allow',
-          '    "git log *": allow',
-          '    "git show *": allow',
-          '    "git ls-files *": allow',
-          '    "git rev-parse *": allow',
-          '    "cat *": allow',
-          '    "type *": allow',
-          '    "Get-Content *": allow',
-          '    "find *": allow',
-          '    "Get-ChildItem *": allow',
-          '    "rg *": allow',
-          '    "bun test *": allow',
-          "---",
-          "",
-          "Read-only test failure diagnosis agent.",
-        ].join("\n"),
-      )
-    },
+    init: async (dir) => copyAgent(dir, "failing-test-triage"),
   })
 
   await Instance.provide({
@@ -338,13 +245,14 @@ test("failing-test-triage agent from .kilo/agent/failing-test-triage.md loads wi
       const triage = await Agent.get("failing-test-triage")
       expect(triage).toBeDefined()
       expect(triage?.mode).toBe("subagent")
-      expect(evalPerm(triage, "read")).toBe("allow")
-      expect(evalPerm(triage, "glob")).toBe("allow")
-      expect(evalPerm(triage, "grep")).toBe("allow")
-      expect(evalPerm(triage, "list")).toBe("allow")
-      expect(evalPerm(triage, "edit")).toBe("deny")
-      expect(evalPerm(triage, "write")).toBe("deny")
-      expect(evalPerm(triage, "todowrite")).toBe("deny")
+      expect(evalToolPerm(triage, "read")).toBe("allow")
+      expect(evalToolPerm(triage, "glob")).toBe("allow")
+      expect(evalToolPerm(triage, "grep")).toBe("allow")
+      expect(evalToolPerm(triage, "list")).toBe("allow")
+      expect(evalToolPerm(triage, "skill")).toBe("allow")
+      expect(evalToolPerm(triage, "edit")).toBe("deny")
+      expect(evalToolPerm(triage, "write")).toBe("deny")
+      expect(evalToolPerm(triage, "todowrite")).toBe("deny")
       expect(Permission.evaluate("bash", "git diff HEAD", triage!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "bun test test/tool/task.test.ts", triage!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "rg needle src", triage!.permission).action).toBe("allow")
@@ -360,43 +268,7 @@ test("failing-test-triage agent from .kilo/agent/failing-test-triage.md loads wi
 test("repo-architecture-explainer agent loads with correct read-only permissions", async () => {
   await using tmp = await tmpdir({
     git: true,
-    init: async (dir) => {
-      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-      await Bun.write(
-        path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
-        [
-          "---",
-          "description: read-only repository architecture explainer",
-          "mode: subagent",
-          "permission:",
-          '  "*": deny',
-          "  read: allow",
-          "  glob: allow",
-          "  grep: allow",
-          "  list: allow",
-          "  edit: deny",
-          "  write: deny",
-          "  todowrite: deny",
-          "  bash:",
-          '    "*": deny',
-          '    "git status *": allow',
-          '    "git diff *": allow',
-          '    "git log *": allow',
-          '    "git show *": allow',
-          '    "git ls-files *": allow',
-          '    "git rev-parse *": allow',
-          '    "cat *": allow',
-          '    "type *": allow',
-          '    "Get-Content *": allow',
-          '    "find *": allow',
-          '    "Get-ChildItem *": allow',
-          '    "rg *": allow',
-          "---",
-          "",
-          "You are a read-only repository architecture explainer.",
-        ].join("\n"),
-      )
-    },
+    init: async (dir) => copyAgent(dir, "repo-architecture-explainer"),
   })
 
   await Instance.provide({
@@ -405,61 +277,27 @@ test("repo-architecture-explainer agent loads with correct read-only permissions
       const rae = await Agent.get("repo-architecture-explainer")
       expect(rae).toBeDefined()
       expect(rae?.mode).toBe("subagent")
-      expect(evalPerm(rae, "read")).toBe("allow")
-      expect(evalPerm(rae, "glob")).toBe("allow")
-      expect(evalPerm(rae, "grep")).toBe("allow")
-      expect(evalPerm(rae, "list")).toBe("allow")
-      expect(evalPerm(rae, "edit")).toBe("deny")
-      expect(evalPerm(rae, "write")).toBe("deny")
-      expect(evalPerm(rae, "todowrite")).toBe("deny")
+      expect(evalToolPerm(rae, "read")).toBe("allow")
+      expect(evalToolPerm(rae, "glob")).toBe("allow")
+      expect(evalToolPerm(rae, "grep")).toBe("allow")
+      expect(evalToolPerm(rae, "list")).toBe("allow")
+      expect(evalToolPerm(rae, "skill")).toBe("allow")
+      expect(evalToolPerm(rae, "edit")).toBe("deny")
+      expect(evalToolPerm(rae, "write")).toBe("deny")
+      expect(evalToolPerm(rae, "todowrite")).toBe("deny")
       expect(Permission.evaluate("bash", "git diff HEAD", rae!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "git status", rae!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git log --oneline", rae!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "cat foo.txt", rae!.permission).action).toBe("allow")
       expect(Permission.evaluate("bash", "rg needle src", rae!.permission).action).toBe("allow")
     },
   })
 })
 
-test("repo-architecture-explainer agent denies mutating commands", async () => {
+test("repo-architecture-explainer agent denies mutating commands and bun test", async () => {
   await using tmp = await tmpdir({
     git: true,
-    init: async (dir) => {
-      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-      await Bun.write(
-        path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
-        [
-          "---",
-          "description: read-only repository architecture explainer",
-          "mode: subagent",
-          "permission:",
-          '  "*": deny',
-          "  read: allow",
-          "  glob: allow",
-          "  grep: allow",
-          "  list: allow",
-          "  edit: deny",
-          "  write: deny",
-          "  todowrite: deny",
-          "  bash:",
-          '    "*": deny',
-          '    "git status *": allow',
-          '    "git diff *": allow',
-          '    "git log *": allow',
-          '    "git show *": allow',
-          '    "git ls-files *": allow',
-          '    "git rev-parse *": allow',
-          '    "cat *": allow',
-          '    "type *": allow',
-          '    "Get-Content *": allow',
-          '    "find *": allow',
-          '    "Get-ChildItem *": allow',
-          '    "rg *": allow',
-          "---",
-          "",
-          "You are a read-only repository architecture explainer.",
-        ].join("\n"),
-      )
-    },
+    init: async (dir) => copyAgent(dir, "repo-architecture-explainer"),
   })
 
   await Instance.provide({
@@ -471,65 +309,72 @@ test("repo-architecture-explainer agent denies mutating commands", async () => {
       expect(Permission.evaluate("bash", "git push", rae!.permission).action).toBe("deny")
       expect(Permission.evaluate("bash", "git restore foo", rae!.permission).action).toBe("deny")
       expect(Permission.evaluate("bash", "git checkout main", rae!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "bun test", rae!.permission).action).toBe("deny")
       expect(Permission.evaluate("bash", "rm foo.txt", rae!.permission).action).toBe("deny")
       expect(Permission.evaluate("bash", "npm install", rae!.permission).action).toBe("deny")
     },
   })
 })
 
-test("repo-architecture-explainer agent denies bun test", async () => {
+test("git-ops agent from .kilo/agent/git-ops.md loads with safe git permissions", async () => {
   await using tmp = await tmpdir({
     git: true,
-    init: async (dir) => {
-      await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-      await Bun.write(
-        path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
-        [
-          "---",
-          "description: read-only repository architecture explainer",
-          "mode: subagent",
-          "permission:",
-          '  "*": deny',
-          "  read: allow",
-          "  glob: allow",
-          "  grep: allow",
-          "  list: allow",
-          "  edit: deny",
-          "  write: deny",
-          "  todowrite: deny",
-          "  bash:",
-          '    "*": deny',
-          '    "git status *": allow',
-          '    "git diff *": allow',
-          '    "git log *": allow',
-          '    "git show *": allow',
-          '    "git ls-files *": allow',
-          '    "git rev-parse *": allow',
-          '    "cat *": allow',
-          '    "type *": allow',
-          '    "Get-Content *": allow',
-          '    "find *": allow',
-          '    "Get-ChildItem *": allow',
-          '    "rg *": allow',
-          "---",
-          "",
-          "You are a read-only repository architecture explainer.",
-        ].join("\n"),
-      )
-    },
+    init: async (dir) => copyAgent(dir, "git-ops"),
   })
 
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const rae = await Agent.get("repo-architecture-explainer")
-      expect(rae).toBeDefined()
-      expect(Permission.evaluate("bash", "bun test", rae!.permission).action).toBe("deny")
-      expect(Permission.evaluate("bash", "bun test test/tool/task.test.ts", rae!.permission).action).toBe("deny")
+      const git = await Agent.get("git-ops")
+      expect(git).toBeDefined()
+      expect(git?.mode).toBe("subagent")
+      expect(evalToolPerm(git, "read")).toBe("allow")
+      expect(evalToolPerm(git, "glob")).toBe("allow")
+      expect(evalToolPerm(git, "grep")).toBe("allow")
+      expect(evalToolPerm(git, "list")).toBe("allow")
+      expect(evalToolPerm(git, "question")).toBe("allow")
+      expect(evalToolPerm(git, "skill")).toBe("allow")
+      expect(evalToolPerm(git, "edit")).toBe("deny")
+      expect(evalToolPerm(git, "write")).toBe("deny")
+      expect(evalToolPerm(git, "todowrite")).toBe("deny")
+      expect(evalToolPerm(git, "task")).toBe("deny")
+      expect(Permission.evaluate("bash", "git diff", git!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git diff HEAD", git!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git log", git!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git status --short", git!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "git add .", git!.permission).action).toBe("ask")
+      expect(Permission.evaluate("bash", "git commit -m x", git!.permission).action).toBe("ask")
+      expect(Permission.evaluate("bash", "git push origin main", git!.permission).action).toBe("ask")
+      expect(Permission.evaluate("bash", "gh pr create", git!.permission).action).toBe("ask")
+      expect(Permission.evaluate("bash", "rm foo.txt", git!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "bun test", git!.permission).action).toBe("deny")
     },
   })
 })
 // kilocode_change end
+
+test("orchestrator agent from .kilo/agent/orchestrator.md loads with planning-first permissions", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    init: async (dir) => copyAgent(dir, "orchestrator"),
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const orch = await Agent.get("orchestrator")
+      expect(orch).toBeDefined()
+      expect(orch?.mode).toBe("primary")
+      expect(evalToolPerm(orch, "skill")).toBe("allow")
+      expect(evalToolPerm(orch, "task")).toBe("allow")
+      expect(evalToolPerm(orch, "todowrite")).toBe("allow")
+      expect(evalToolPerm(orch, "edit")).toBe("deny")
+      expect(evalToolPerm(orch, "bash")).toBe("ask")
+      expect(orch?.prompt).toContain("brainstorming")
+      expect(orch?.prompt).toContain("shared skill now")
+    },
+  })
+})
 
 test("general agent denies todo tools", async () => {
   await using tmp = await tmpdir()
@@ -540,7 +385,7 @@ test("general agent denies todo tools", async () => {
       expect(general).toBeDefined()
       expect(general?.mode).toBe("subagent")
       expect(general?.hidden).toBeUndefined()
-      expect(evalPerm(general, "todowrite")).toBe("deny")
+      expect(evalToolPerm(general, "todowrite")).toBe("deny")
     },
   })
 })
@@ -553,9 +398,9 @@ test("compaction agent denies all permissions", async () => {
       const compaction = await Agent.get("compaction")
       expect(compaction).toBeDefined()
       expect(compaction?.hidden).toBe(true)
-      expect(evalPerm(compaction, "bash")).toBe("deny")
-      expect(evalPerm(compaction, "edit")).toBe("deny")
-      expect(evalPerm(compaction, "read")).toBe("deny")
+      expect(evalToolPerm(compaction, "bash")).toBe("deny")
+      expect(evalToolPerm(compaction, "edit")).toBe("deny")
+      expect(evalToolPerm(compaction, "read")).toBe("deny")
     },
   })
 })
@@ -666,7 +511,7 @@ test("agent permission config merges with defaults", async () => {
       // Specific pattern is denied
       expect(Permission.evaluate("bash", "rm -rf *", code!.permission).action).toBe("deny")
       // Edit still allowed
-      expect(evalPerm(code, "edit")).toBe("allow")
+      expect(evalToolPerm(code, "edit")).toBe("allow")
       // kilocode_change end
     },
   })
@@ -686,7 +531,7 @@ test("global permission config applies to all agents", async () => {
       // kilocode_change start - renamed from "build" to "code"
       const code = await Agent.get("code")
       expect(code).toBeDefined()
-      expect(evalPerm(code, "bash")).toBe("deny")
+      expect(evalToolPerm(code, "bash")).toBe("deny")
       // kilocode_change end
     },
   })
@@ -891,8 +736,8 @@ test("default permission includes doom_loop and external_directory as ask", asyn
     fn: async () => {
       // kilocode_change start - renamed from "build" to "code"
       const code = await Agent.get("code")
-      expect(evalPerm(code, "doom_loop")).toBe("ask")
-      expect(evalPerm(code, "external_directory")).toBe("ask")
+      expect(evalToolPerm(code, "doom_loop")).toBe("ask")
+      expect(evalToolPerm(code, "external_directory")).toBe("ask")
       // kilocode_change end
     },
   })
@@ -905,7 +750,7 @@ test("webfetch is allowed by default", async () => {
     fn: async () => {
       // kilocode_change start - renamed from "build" to "code"
       const code = await Agent.get("code")
-      expect(evalPerm(code, "webfetch")).toBe("allow")
+      expect(evalToolPerm(code, "webfetch")).toBe("allow")
       // kilocode_change end
     },
   })
@@ -931,8 +776,8 @@ test("legacy tools config converts to permissions", async () => {
     fn: async () => {
       // kilocode_change start - renamed from "build" to "code"
       const code = await Agent.get("code")
-      expect(evalPerm(code, "bash")).toBe("deny")
-      expect(evalPerm(code, "read")).toBe("deny")
+      expect(evalToolPerm(code, "bash")).toBe("deny")
+      expect(evalToolPerm(code, "read")).toBe("deny")
       // kilocode_change end
     },
   })
@@ -957,7 +802,7 @@ test("legacy tools config maps write/edit/patch/multiedit to edit permission", a
     fn: async () => {
       // kilocode_change start - renamed from "build" to "code"
       const code = await Agent.get("code")
-      expect(evalPerm(code, "edit")).toBe("deny")
+      expect(evalToolPerm(code, "edit")).toBe("deny")
       // kilocode_change end
     },
   })

@@ -315,6 +315,7 @@ export function patchAgents(
           codesearch: "allow",
           codebase_search: "allow",
           read: "allow",
+          skill: "allow",
           external_directory: {
             "*": "ask",
             [Truncate.GLOB]: "allow",
@@ -396,6 +397,7 @@ export function patchAgents(
           websearch: "allow",
           codesearch: "allow",
           codebase_search: "allow",
+          skill: "allow",
           external_directory: {
             [Truncate.GLOB]: "allow",
           },
@@ -434,6 +436,7 @@ export function patchAgents(
           glob: "allow",
           list: "allow",
           question: "allow",
+          skill: "allow",
           webfetch: "allow",
           websearch: "allow",
           codesearch: "allow",

@@ -14,6 +14,41 @@ import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
+const root = path.resolve(import.meta.dir, "../../../..")
+const custom = path.join(root, ".kilo", "agent")
+
+async function copyAgent(dir: string, name: string, model?: string) {
+  const file = path.join(custom, name + ".md")
+  const text = await Bun.file(file).text()
+  const next = model
+    ? text.replace(
+        `mode: subagent
+permission:`,
+        `mode: subagent
+model: ${model}
+permission:`,
+      )
+    : text
+  await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
+  await Bun.write(path.join(dir, ".kilo", "agent", name + ".md"), next)
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timeout after ${ms}ms`)), ms)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 function defer<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   const promise = new Promise<T>((done) => {
@@ -709,25 +744,7 @@ describe("session.prompt regression", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-          await Bun.write(
-            path.join(dir, ".kilo", "agent", "repo-architecture-explainer.md"),
-            [
-              "---",
-              "description: read-only repository architecture explainer",
-              "mode: subagent",
-              "model: alibaba/qwen-plus",
-              "permission:",
-              '  "*": deny',
-              "  read: allow",
-              "  glob: allow",
-              "  grep: allow",
-              "  list: allow",
-              "---",
-              "",
-              "Read-only repository architecture explainer.",
-            ].join("\n"),
-          )
+          await copyAgent(dir, "repo-architecture-explainer", "alibaba/qwen-plus")
           await Bun.write(
             path.join(dir, "opencode.json"),
             JSON.stringify({
@@ -757,7 +774,7 @@ describe("session.prompt regression", () => {
           const rae = await Agent.get("repo-architecture-explainer")
           expect(rae).toBeDefined()
           const session = await Session.create({ title: "Deterministic repo-architecture-explainer routing" })
-          const result = await SessionPrompt.prompt({
+          const result = await withTimeout(SessionPrompt.prompt({
             sessionID: session.id,
             agent: "orchestrator",
             parts: [
@@ -768,7 +785,7 @@ describe("session.prompt regression", () => {
                 source: { value: "@repo-architecture-explainer", start: 0, end: 28 },
               },
             ],
-          })
+          }), 10000)
 
           expect(result.info.role).toBe("assistant")
 
