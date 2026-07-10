@@ -1,4 +1,4 @@
-IDE-backed code intelligence tool for structural navigation when running in the JetBrains plugin.
+IntelliJ-backed read-only code intelligence tool for structural navigation when running in the JetBrains plugin.
 
 Use this tool for precise symbol and type-aware operations powered by the already-indexed IntelliJ PSI model. It is best for JVM and other JetBrains-supported languages when you need accurate definitions, references, implementations, symbols, or direct class/type hierarchy.
 

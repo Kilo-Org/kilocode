@@ -5,7 +5,7 @@ import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { GenerateImageTool } from "./generate-image"
-import { IdeCodeIntelTool } from "./ide-lsp"
+import { IntellijReadTool } from "./ide-lsp"
 import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
@@ -73,7 +73,7 @@ export namespace KiloToolRegistry {
           }).pipe(Effect.provideService(Notebook.Service, notebook))
         : {}
       const ide = ideLsp
-        ? yield* Effect.all({ ideCodeIntel: IdeCodeIntelTool }).pipe(Effect.provideService(IdeLsp.Service, ideLsp))
+        ? yield* Effect.all({ intellijRead: IntellijReadTool }).pipe(Effect.provideService(IdeLsp.Service, ideLsp))
         : {}
       return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, ...notebooks, ...ide }
     })
@@ -95,7 +95,7 @@ export namespace KiloToolRegistry {
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
-      ideCodeIntel?: Tool.Info
+      intellijRead?: Tool.Info
     },
     deps: Deps,
     loaders: Loaders = {},
@@ -120,7 +120,7 @@ export namespace KiloToolRegistry {
               notebookExecute: Tool.init(tools.notebookExecute),
             })
           : {}
-      const ide = tools.ideCodeIntel ? { ideCodeIntel: yield* Tool.init(tools.ideCodeIntel) } : {}
+      const ide = tools.intellijRead ? { intellijRead: yield* Tool.init(tools.intellijRead) } : {}
       const semantic = yield* semanticTool(deps, loaders)
       return { ...base, terminal, ...notebooks, ...ide, semantic }
     })
@@ -185,7 +185,7 @@ export namespace KiloToolRegistry {
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
-      ideCodeIntel?: Tool.Def
+      intellijRead?: Tool.Def
     },
     cfg: {
       experimental?: {
@@ -216,8 +216,8 @@ export namespace KiloToolRegistry {
         : []),
       ...(Flag.KILO_CLIENT === "jetbrains" &&
       cfg.experimental?.ide_code_intelligence === true &&
-      tools.ideCodeIntel
-        ? [tools.ideCodeIntel]
+      tools.intellijRead
+        ? [tools.intellijRead]
         : []),
     ]
   }
@@ -270,12 +270,12 @@ export namespace KiloToolRegistry {
     })
   })
 
-  export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def; ideCodeIntel?: Tool.Def }): Tool.Def[] {
-    if (!extra.semantic && !extra.ideCodeIntel) return tools
+  export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def; intellijRead?: Tool.Def }): Tool.Def[] {
+    if (!extra.semantic && !extra.intellijRead) return tools
     return tools.map((tool) => {
       if (tool.id !== "glob" && tool.id !== "grep") return tool
-      const intel = extra.ideCodeIntel
-        ? "- When you need precise symbol navigation, references, implementations, document/workspace symbols, or class/type hierarchy in JetBrains, use the `ide_code_intel` tool"
+      const intel = extra.intellijRead
+        ? "- When you need precise symbol navigation, references, implementations, document/workspace symbols, or class/type hierarchy in JetBrains, use the `intellij_read` tool"
         : undefined
       return { ...tool, description: [tool.description, extra.semantic ? hint : undefined, intel].filter(Boolean).join("\n") }
     })

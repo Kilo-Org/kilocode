@@ -60,13 +60,13 @@ function render(result: Result) {
   return result.entries.map((entry, index) => format(entry, index + 1)).join("\n")
 }
 
-export const IdeCodeIntelTool = Tool.define<
+export const IntellijReadTool = Tool.define<
   typeof Params,
   { operation: string },
   IdeLsp.Service,
-  "ide_code_intel"
+  "intellij_read"
 >(
-  "ide_code_intel",
+  "intellij_read",
   Effect.gen(function* () {
     const ide = yield* IdeLsp.Service
     return {
@@ -90,7 +90,7 @@ export const IdeCodeIntelTool = Tool.define<
           if (result.operation !== params.operation)
             return yield* Effect.die(new Error("IDE code intelligence host returned the wrong result type"))
           return {
-            title: `ide_code_intel: ${params.operation}`,
+            title: `intellij_read: ${params.operation}`,
             output: render(result),
             metadata: { operation: params.operation },
           }
