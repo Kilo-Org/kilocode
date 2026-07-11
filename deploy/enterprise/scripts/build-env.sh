@@ -4,6 +4,8 @@ set -euo pipefail
 
 NODE_VER="${KILO_NODE_VERSION:-20.19.2}"
 NODE_ROOT="${HOME}/.local/node"
+ZIG_VER="${KILO_ZIG_VERSION:-0.14.0}"
+ZIG_ROOT="${HOME}/.local/zig"
 CURL_OPTS=(--connect-timeout 15 --max-time 600 -fsSL)
 
 run() {
@@ -134,12 +136,70 @@ ensure_swap() {
   echo "[build-env] swap enabled: $(free -h | awk '/^Swap:/ {print $2}')"
 }
 
+ensure_zig() {
+  echo "[build-env] checking zig..."
+  export PATH="${ZIG_ROOT}/bin:${NODE_ROOT}/bin:${HOME}/.bun/bin:/usr/bin:/usr/local/bin:${PATH}"
+  hash -r 2>/dev/null || true
+
+  if command -v zig >/dev/null 2>&1; then
+    echo "[build-env] zig $(zig version) ($(command -v zig))"
+    return 0
+  fi
+
+  local arch=""
+  local sha=""
+  case "$(uname -m)" in
+    x86_64|amd64)
+      arch="x86_64"
+      sha="473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982"
+      ;;
+    aarch64|arm64)
+      arch="aarch64"
+      ;;
+    *)
+      echo "[build-env] unsupported arch for zig: $(uname -m)" >&2
+      return 1
+      ;;
+  esac
+
+  local name="zig-linux-${arch}-${ZIG_VER}"
+  local dir="${ZIG_ROOT}/${name}"
+  local url="https://ziglang.org/download/${ZIG_VER}/${name}.tar.xz"
+  local tmp="/tmp/${name}.tar.xz"
+
+  if [[ -x "${dir}/zig" ]]; then
+    export PATH="${dir}:${PATH}"
+    echo "[build-env] zig $( "${dir}/zig" version) (${dir}/zig)"
+    return 0
+  fi
+
+  echo "[build-env] downloading Zig ${ZIG_VER} (${name}.tar.xz)..."
+  mkdir -p "${ZIG_ROOT}"
+  run curl "${CURL_OPTS[@]}" "$url" -o "$tmp"
+  if [[ -n "$sha" ]]; then
+    echo "${sha}  ${tmp}" | sha256sum --check --status
+  fi
+  run tar -xJf "$tmp" -C "${ZIG_ROOT}"
+  rm -f "$tmp"
+  [[ -x "${dir}/zig" ]] || { echo "[build-env] zig install failed" >&2; exit 1; }
+
+  mkdir -p "${ZIG_ROOT}/bin"
+  ln -sf "${dir}/zig" "${ZIG_ROOT}/bin/zig"
+  export PATH="${ZIG_ROOT}/bin:${PATH}"
+  if ! grep -q '\.local/zig/bin' ~/.bashrc 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/zig/bin:$HOME/.local/node/bin:$HOME/.bun/bin:$PATH"' >> ~/.bashrc
+  fi
+  echo "[build-env] zig $(zig version) (${ZIG_ROOT}/bin/zig)"
+}
+
 prepare_build_env() {
-  echo "[build-env] step 1/3: bun"
+  echo "[build-env] step 1/4: bun"
   ensure_bun
-  echo "[build-env] step 2/3: node"
+  echo "[build-env] step 2/4: node"
   ensure_node
-  echo "[build-env] step 3/3: swap"
+  echo "[build-env] step 3/4: zig"
+  ensure_zig
+  echo "[build-env] step 4/4: swap"
   ensure_swap
   echo "[build-env] ready"
 }

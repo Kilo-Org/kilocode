@@ -50,6 +50,10 @@ args+=("${services[@]}")
 echo "[deploy-cloud] docker ${args[*]}"
 docker "${args[@]}"
 
+if [[ "$FULL" -eq 1 ]]; then
+  "$DIR/scripts/sync-apisix-from-env.sh"
+fi
+
 set -a
 # shellcheck disable=SC1091
 source .env

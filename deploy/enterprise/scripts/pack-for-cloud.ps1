@@ -16,12 +16,15 @@ $tar = if ($Output) { $Output } else { Join-Path $root "kilocode-cloud.tgz" }
 $paths = @(
   "package.json",
   "bun.lock",
+  "LICENSE",
   "patches",
   "packages/opencode",
   "packages/core",
   "packages/script",
   "packages/kilo-gateway",
   "packages/kilo-indexing",
+  "packages/kilo-memory",
+  "packages/kilo-sandbox",
   "packages/kilo-telemetry",
   "packages/plugin",
   "packages/plugin-atomic-chat",
@@ -77,7 +80,7 @@ if ($Upload -or $CloudHost) {
   ssh "${User}@${CloudHost}" "mkdir -p $RemoteDir"
   scp $tar "${User}@${CloudHost}:/root/kilocode-cloud.tgz"
   ssh "${User}@${CloudHost}" @"
-mkdir -p $RemoteDir && tar -xzf /root/kilocode-cloud.tgz -C $RemoteDir && rm /root/kilocode-cloud.tgz && ls $RemoteDir/deploy/enterprise/scripts/deploy-cloud.sh
+mkdir -p $RemoteDir && tar -xzf /root/kilocode-cloud.tgz -C $RemoteDir && rm /root/kilocode-cloud.tgz && chmod +x $RemoteDir/deploy/enterprise/scripts/*.sh && ls $RemoteDir/deploy/enterprise/scripts/deploy-cloud.sh
 "@
 }
 
@@ -88,6 +91,7 @@ Write-Host ""
 Write-Host "[pack] On cloud server:" -ForegroundColor Green
 Write-Host @"
   mkdir -p $RemoteDir && tar -xzf /root/kilocode-cloud.tgz -C $RemoteDir
+  chmod +x $RemoteDir/deploy/enterprise/scripts/*.sh
   cd $RemoteDir/deploy/enterprise
   ./scripts/bootstrap-oc9.sh          # first time only
   cd $RemoteDir && bun install --ignore-scripts

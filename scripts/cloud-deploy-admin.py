@@ -54,7 +54,8 @@ def main() -> int:
         print(f"[cloud] uploaded {mb:.1f} MB in {time.time() - t0:.0f}s")
         code, _, _ = run(
             client,
-            f"mkdir -p {ROOT} && tar -xzf {TAR_REMOTE} -C {ROOT} && rm -f {TAR_REMOTE}",
+            f"mkdir -p {ROOT} && tar -xzf {TAR_REMOTE} -C {ROOT} && rm -f {TAR_REMOTE} && "
+            f"chmod +x {ROOT}/deploy/enterprise/scripts/*.sh",
             timeout=300,
         )
         if code != 0:
