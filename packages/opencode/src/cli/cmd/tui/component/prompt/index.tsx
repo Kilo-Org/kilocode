@@ -85,6 +85,23 @@ export function Prompt(props: PromptProps) {
   const dialog = useDialog()
   const toast = useToast()
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
+  // kilocode_change start - allow hidden child prompts to interrupt foreground subagents
+  const child = createMemo(() => {
+    const id = props.sessionID
+    if (!id) return false
+    return props.visible === false && !!sync.session.get(id)?.parentID
+  })
+  const [childInterrupt, setChildInterrupt] = createSignal(false)
+  createEffect(
+    on(status, (next, prev) => {
+      if (!childInterrupt()) return
+      if (prev?.type === "idle") return
+      if (next.type !== "idle") return
+      toast.show({ message: "Subagent stopped; context preserved.", variant: "info" })
+      setChildInterrupt(false)
+    }),
+  )
+  // kilocode_change end
   const history = usePromptHistory()
   const stash = usePromptStash()
   const command = useCommandDialog()
@@ -254,24 +271,31 @@ export function Prompt(props: PromptProps) {
         enabled: status().type !== "idle",
         onSelect: (dialog) => {
           if (autocomplete.visible) return
-          if (!input.focused) return
+          if (!input.focused && !child()) return
           // TODO: this should be its own command
-          if (store.mode === "shell") {
+          if (store.mode === "shell" && input.focused) {
             setStore("mode", "normal")
             return
           }
           if (!props.sessionID) return
 
-          setStore("interrupt", store.interrupt + 1)
+          const count = store.interrupt + 1
+          setStore("interrupt", count)
 
           setTimeout(() => {
             setStore("interrupt", 0)
           }, 5000)
 
-          if (store.interrupt >= 2) {
-            sdk.client.session.abort({
-              sessionID: props.sessionID,
-            })
+          if (count >= 2) {
+            if (child()) setChildInterrupt(true)
+            sdk.client.session
+              .abort({
+                sessionID: props.sessionID,
+              })
+              .catch((error) => {
+                if (child()) setChildInterrupt(false)
+                toast.error(error)
+              })
             setStore("interrupt", 0)
           }
           dialog.clear()

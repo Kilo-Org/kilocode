@@ -14,6 +14,7 @@ export function SubagentFooter() {
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
   const session = createMemo(() => sync.session.get(route.sessionID))
+  const busy = createMemo(() => (sync.data.session_status?.[route.sessionID]?.type ?? "idle") !== "idle")
 
   const subagentInfo = createMemo(() => {
     const s = session()
@@ -93,6 +94,14 @@ export function SubagentFooter() {
             </Show>
           </box>
           <box flexDirection="row" gap={2}>
+            {/* kilocode_change start - visible child-session interrupt hint */}
+            <Show when={busy()}>
+              <text fg={theme.textMuted}>
+                {keybind.print("session_interrupt").toLowerCase()} {keybind.print("session_interrupt").toLowerCase()} stop
+                subagent
+              </text>
+            </Show>
+            {/* kilocode_change end */}
             <box
               onMouseOver={() => setHover("parent")}
               onMouseOut={() => setHover(null)}
