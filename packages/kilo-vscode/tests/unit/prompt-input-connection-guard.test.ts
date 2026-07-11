@@ -21,6 +21,23 @@ describe("PromptInput connection guard", () => {
     expect(send).toBeGreaterThan(guard)
     expect(clear).toBeGreaterThan(send)
   })
+
+  it("records a dispatched prompt before returning for a changed draft scope", () => {
+    // Regression source: fbe5f4cb in PR #11442 made fresh sends set draftSessionID synchronously,
+    // changing draftKey from :new to :pending:<uuid>. The changed key must block UI cleanup,
+    // but it must not skip recording the already-dispatched prompt in keyboard history.
+    const start = src.indexOf("const key = draftKey()")
+    const command = src.indexOf("session.sendCommand(", start)
+    const message = src.indexOf("session.sendMessage(", command)
+    const append = src.indexOf("history.append(draft)", message)
+    const guard = src.indexOf("if (draftKey() !== key) return", message)
+
+    expect(start).toBeGreaterThan(-1)
+    expect(command).toBeGreaterThan(start)
+    expect(message).toBeGreaterThan(command)
+    expect(append).toBeGreaterThan(message)
+    expect(guard).toBeGreaterThan(append)
+  })
 })
 
 describe("PromptInput sandbox toggle", () => {
