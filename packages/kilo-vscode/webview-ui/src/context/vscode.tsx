@@ -5,6 +5,7 @@
 
 import { createContext, useContext, onCleanup, ParentComponent, createSignal } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
+import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -82,7 +83,13 @@ export const VSCodeProvider: ParentComponent = (props) => {
     },
   }
 
-  return <VSCodeContext.Provider value={value}>{props.children}</VSCodeContext.Provider>
+  return (
+    <VSCodeContext.Provider value={value}>
+      <ClipboardProvider write={(text) => api.postMessage({ type: "agentManager.copyToClipboard", text })}>
+        {props.children}
+      </ClipboardProvider>
+    </VSCodeContext.Provider>
+  )
 }
 
 export function useVSCode(): VSCodeContextValue {

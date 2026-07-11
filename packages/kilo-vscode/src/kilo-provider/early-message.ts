@@ -12,9 +12,14 @@ type Ctx = {
   dir: string
   post: (msg: unknown) => void
   exportTranscript: (sessionID: string) => Promise<void>
+  copy: (text: string) => PromiseLike<void>
 }
 
-export async function routeEarlyMessage(message: { type: string }, ctx: Ctx): Promise<boolean> {
+export async function routeEarlyMessage(message: { type: string; text?: unknown }, ctx: Ctx): Promise<boolean> {
+  if (message.type === "agentManager.copyToClipboard") {
+    if (typeof message.text === "string") await ctx.copy(message.text)
+    return true
+  }
   await routeSuggestionWebviewMessage(ctx.question, message)
   if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
   if (message.type === "exportSessionTranscript") {
