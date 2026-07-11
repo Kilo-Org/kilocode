@@ -106,6 +106,7 @@ async function withInstance(fn: () => Promise<void>) {
 async function seed(input: {
   text: string
   variant?: string
+  tokens?: MessageV2.Assistant["tokens"]
   tools?: Array<{ tool: string; input: Record<string, unknown>; output: string }>
 }) {
   const session = await store.create({})
@@ -144,7 +145,7 @@ async function seed(input: {
       root: Instance.worktree,
     },
     cost: 0,
-    tokens: {
+    tokens: input.tokens ?? {
       total: 0,
       input: 0,
       output: 0,
@@ -422,6 +423,49 @@ describe("plan follow-up", () => {
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
+    }))
+
+  test("ask - estimates Code context and recommends a fresh session at the compaction threshold", () =>
+    withInstance(async () => {
+      const configSpy = spyOn(PlanFollowupRuntime, "config").mockResolvedValue({
+        compaction: { threshold_percent: 80 },
+      } as any)
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const seeded = await seed({
+        text: "1. Build",
+        tokens: {
+          total: 110_000,
+          input: 110_000,
+          output: 0,
+          reasoning: 0,
+          cache: { read: 0, write: 0 },
+        },
+      })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      const fresh = q.options.find((o) => o.label === PlanFollowup.ANSWER_NEW_SESSION)
+      const cont = q.options.find((o) => o.label === PlanFollowup.ANSWER_CONTINUE)
+      expect(fresh?.description).toContain("(Recommended)")
+      expect(cont?.description).toContain("using 86% of Code mode context")
+      expect(cont?.descriptionKey).toBeUndefined()
+      expect(configSpy).toHaveBeenCalled()
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+      configSpy.mockRestore()
+      modelSpy.mockRestore()
     }))
 
   test("ask - returns continue and creates code message on Continue here", () =>
