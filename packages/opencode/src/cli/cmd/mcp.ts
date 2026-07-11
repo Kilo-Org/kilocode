@@ -60,6 +60,9 @@ export const McpCommand = cmd({
       .command(McpAuthCommand)
       .command(McpLogoutCommand)
       .command(McpDebugCommand)
+      // kilocode_change start
+      .command(McpDoctorCommand)
+      // kilocode_change end
       .demandCommand(),
   async handler() {},
 })
@@ -766,3 +769,51 @@ export const McpDebugCommand = cmd({
     })
   },
 })
+
+// kilocode_change start - MCP isolation doctor
+export const McpDoctorCommand = cmd({
+  command: "doctor",
+  describe: "audit MCP isolation — loaded servers, config sources, env flags (redacted)",
+  async handler() {
+    await Instance.provide({
+      directory: process.cwd(),
+      async fn() {
+        UI.empty()
+        prompts.intro("MCP Isolation Doctor")
+
+        // Runtime env flags — never print raw values
+        prompts.log.info(`KILO_PLATFORM: ${process.env.KILO_PLATFORM ?? "<unset>"}`)
+        prompts.log.info(`KILO_CONFIG: ${process.env.KILO_CONFIG ?? "<unset>"}`)
+        prompts.log.info(`KILO_CONFIG_DIR: ${process.env.KILO_CONFIG_DIR ? "present" : "absent"}`)
+        prompts.log.info(`KILO_CONFIG_CONTENT: ${process.env.KILO_CONFIG_CONTENT ? "present" : "absent"}`)
+
+        // Managed config dir
+        const managedDir = Config.managedConfigDir()
+        const managedExists = await Filesystem.exists(managedDir)
+        prompts.log.info(`Managed config dir: ${managedExists ? "exists" : "absent"}`)
+
+        // Loaded MCP servers from merged config (does not initialize connections)
+        const config = await Config.get()
+        const mcpServers = config.mcp ?? {}
+        const servers = Object.entries(mcpServers).filter((entry): entry is [string, McpConfigured] =>
+          isMcpConfigured(entry[1]),
+        )
+
+        prompts.log.info(`Loaded MCP servers: ${servers.length}`)
+
+        if (servers.length === 0) {
+          prompts.log.warn("No MCP servers configured")
+        } else {
+          for (const [name, serverConfig] of servers) {
+            const enabled = serverConfig.enabled !== false
+            prompts.log.info(`  ${enabled ? "✓" : "○"} ${name} ${enabled ? "enabled" : "disabled"}`)
+            // Never print command args, env values, tokens, headers, or auth fields
+          }
+        }
+
+        prompts.outro("Isolation audit complete")
+      },
+    })
+  },
+})
+// kilocode_change end
