@@ -672,7 +672,8 @@ export interface OpenWorktreeRequest {
 
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
-  type: "agentManager.copyToClipboard"
+  type: "copyToClipboard"
+  id: string
   text: string
 }
 
