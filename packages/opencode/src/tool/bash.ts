@@ -14,6 +14,8 @@ import { Filesystem } from "@/util/filesystem"
 import { fileURLToPath } from "url"
 import { Flag } from "@/flag/flag.ts"
 import { Shell } from "@/shell/shell"
+import type { ShellRoute } from "../kilocode/shell-route" // kilocode_change
+import { peel, resolve } from "../kilocode/shell-route" // kilocode_change
 
 import { BashArity } from "@/permission/arity"
 import { BashHierarchy } from "@/kilocode/bash-hierarchy" // kilocode_change
@@ -84,63 +86,75 @@ export const BashTool = Tool.define("bash", async () => {
         throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
       }
       const timeout = params.timeout ?? DEFAULT_TIMEOUT
-      const tree = await parser().then((p) => p.parse(params.command))
-      if (!tree) {
-        throw new Error("Failed to parse command")
-      }
+      // kilocode_change start - explicit shell route prefixes
+      const next = peel(params.command)
+      const route: ShellRoute | undefined = next.route
+      const cmd = next.command
+      if (route) log.info("bash tool using route", { route })
+      // kilocode_change end
       const directories = new Set<string>()
       if (!Instance.containsPath(cwd)) directories.add(cwd)
       const patterns = new Set<string>()
       const always = new Set<string>()
       const rules = new Set<string>() // kilocode_change — hierarchy rules for permissions "npm", "npm install", "npm install lodash"
 
-      for (const node of tree.rootNode.descendantsOfType("command")) {
-        if (!node) continue
-
-        // Get full command text including redirects if present
-        let commandText = node.parent?.type === "redirected_statement" ? node.parent.text : node.text
-
-        const command = []
-        for (let i = 0; i < node.childCount; i++) {
-          const child = node.child(i)
-          if (!child) continue
-          if (
-            child.type !== "command_name" &&
-            child.type !== "word" &&
-            child.type !== "string" &&
-            child.type !== "raw_string" &&
-            child.type !== "concatenation"
-          ) {
-            continue
-          }
-          command.push(child.text)
+      // kilocode_change start - only parse bash/default commands with tree-sitter
+      if (route === undefined || route === "bash") {
+        const tree = await parser().then((p) => p.parse(cmd))
+        if (!tree) {
+          throw new Error("Failed to parse command")
         }
+        for (const node of tree.rootNode.descendantsOfType("command")) {
+          if (!node) continue
 
-        // not an exhaustive list, but covers most common cases
-        if (["cd", "rm", "cp", "mv", "mkdir", "touch", "chmod", "chown", "cat"].includes(command[0])) {
-          for (const arg of command.slice(1)) {
-            if (arg.startsWith("-") || (command[0] === "chmod" && arg.startsWith("+"))) continue
-            const resolved = await fs.realpath(path.resolve(cwd, arg)).catch(() => "")
-            log.info("resolved path", { arg, resolved })
-            if (resolved) {
-              const normalized =
-                process.platform === "win32" ? Filesystem.windowsPath(resolved).replace(/\//g, "\\") : resolved
-              if (!Instance.containsPath(normalized)) {
-                const dir = (await Filesystem.isDir(normalized)) ? normalized : path.dirname(normalized)
-                directories.add(dir)
+          // Get full command text including redirects if present
+          let commandText = node.parent?.type === "redirected_statement" ? node.parent.text : node.text
+
+          const command = []
+          for (let i = 0; i < node.childCount; i++) {
+            const child = node.child(i)
+            if (!child) continue
+            if (
+              child.type !== "command_name" &&
+              child.type !== "word" &&
+              child.type !== "string" &&
+              child.type !== "raw_string" &&
+              child.type !== "concatenation"
+            ) {
+              continue
+            }
+            command.push(child.text)
+          }
+
+          // not an exhaustive list, but covers most common cases
+          if (["cd", "rm", "cp", "mv", "mkdir", "touch", "chmod", "chown", "cat"].includes(command[0])) {
+            for (const arg of command.slice(1)) {
+              if (arg.startsWith("-") || (command[0] === "chmod" && arg.startsWith("+"))) continue
+              const resolved = await fs.realpath(path.resolve(cwd, arg)).catch(() => "")
+              log.info("resolved path", { arg, resolved })
+              if (resolved) {
+                const normalized =
+                  process.platform === "win32" ? Filesystem.windowsPath(resolved).replace(/\//g, "\\") : resolved
+                if (!Instance.containsPath(normalized)) {
+                  const dir = (await Filesystem.isDir(normalized)) ? normalized : path.dirname(normalized)
+                  directories.add(dir)
+                }
               }
             }
           }
-        }
 
-        // cd covered by above check
-        if (command.length && command[0] !== "cd") {
-          patterns.add(commandText)
-          always.add(BashArity.prefix(command).join(" ") + " *")
-          BashHierarchy.addAll(rules, command, commandText) // kilocode_change
+          // cd covered by above check
+          if (command.length && command[0] !== "cd") {
+            patterns.add(commandText)
+            always.add(BashArity.prefix(command).join(" ") + " *")
+            BashHierarchy.addAll(rules, command, commandText) // kilocode_change
+          }
         }
+      } else if (cmd) {
+        // kilocode_change - explicit ps/cmd routes require exact command approval, no hierarchy auto-allow
+        patterns.add(cmd)
       }
-
+      // kilocode_change end
       if (directories.size > 0) {
         const globs = Array.from(directories).map((dir) => {
           // Preserve POSIX-looking paths with /s, even on Windows
@@ -160,7 +174,7 @@ export const BashTool = Tool.define("bash", async () => {
           permission: "bash",
           patterns: Array.from(patterns),
           always: Array.from(always),
-          metadata: { command: params.command, rules: Array.from(rules) }, // kilocode_change
+          metadata: { command: cmd, rules: Array.from(rules) }, // kilocode_change
         })
       }
 
@@ -169,17 +183,34 @@ export const BashTool = Tool.define("bash", async () => {
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      const proc = spawn(params.command, {
-        shell,
-        cwd,
-        env: {
-          ...process.env,
-          ...shellEnv.env,
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: process.platform !== "win32",
-        windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
-      })
+      // kilocode_change start - preserve default shell behavior, only override explicit routes
+      const proc = route
+        ? (() => {
+            const cfg = resolve(route)
+            log.info("bash tool resolved route", { route, shell: cfg.bin })
+            return spawn(cfg.bin, [...cfg.args, cmd], {
+              cwd,
+              env: {
+                ...process.env,
+                ...shellEnv.env,
+              },
+              stdio: ["ignore", "pipe", "pipe"],
+              detached: process.platform !== "win32",
+              windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
+            })
+          })()
+        : spawn(params.command, {
+            shell,
+            cwd,
+            env: {
+              ...process.env,
+              ...shellEnv.env,
+            },
+            stdio: ["ignore", "pipe", "pipe"],
+            detached: process.platform !== "win32",
+            windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
+          })
+      // kilocode_change end
 
       let output = ""
 
