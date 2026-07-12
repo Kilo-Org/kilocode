@@ -40,8 +40,11 @@ export namespace KilocodeConfig {
   /** Kilo-specific config file names (highest-to-lowest precedence within kilo). */
   export const KILO_CONFIG_FILES = ["kilo.jsonc", "kilo.json"] as const
 
-  /** All config file names in precedence order (kilo + opencode). */
+  /** All config file names in update-target preference order (Kilo before legacy). */
   export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
+
+  /** All config file names in merge order (legacy first, Kilo last so Kilo wins). */
+  export const CONFIG_LOAD_ORDER = ["opencode.jsonc", "opencode.json", "kilo.jsonc", "kilo.json"] as const
 
   /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const

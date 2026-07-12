@@ -153,7 +153,7 @@ export namespace KilocodeConfigSources {
         editable: scope !== "managed" && scope !== "cloud",
       })
 
-      for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
+      for (const name of KilocodeConfig.CONFIG_LOAD_ORDER) {
         const file = path.join(dir, name)
         result.push(await fileSource({ kind: "config-dir-file", scope, label: `Config directory ${name}`, file }))
       }
@@ -225,7 +225,7 @@ export namespace KilocodeConfigSources {
   async function managedSources(): Promise<Pending[]> {
     const dir = ConfigManaged.managedConfigDir()
     const files = await Promise.all(
-      KilocodeConfig.ALL_CONFIG_FILES.map((name) =>
+      KilocodeConfig.CONFIG_LOAD_ORDER.map((name) =>
         fileSource({
           kind: "managed-file",
           scope: "managed",

@@ -591,6 +591,18 @@ describe("agent config", () => {
 })
 
 describe("project config directory precedence", () => {
+  test("prefers kilo files over legacy opencode files in the same directory", async () => {
+    await using tmp = await tmpdir()
+    const dir = path.join(tmp.path, ".kilo")
+    await writeConfig(dir, { username: "legacy", model: "test/legacy" }, "opencode.jsonc")
+    await writeConfig(dir, { username: "kilo", model: "test/kilo" }, "kilo.jsonc")
+
+    const config = await provideTestInstance({ directory: tmp.path, fn: load })
+
+    expect(config.username).toBe("kilo")
+    expect(config.model).toBe("test/kilo")
+  })
+
   test("prefers .kilo over legacy .kilocode and ignores .opencode", async () => {
     await using tmp = await tmpdir()
     const entries = [
