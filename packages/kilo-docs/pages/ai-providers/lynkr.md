@@ -26,7 +26,7 @@ Kilo Code works with [Lynkr](https://github.com/Fast-Editor/Lynkr), a self-hoste
    - **Provider API** — select **OpenAI Compatible**.
    - **Base URL** — `http://localhost:8081/v1`
    - **API key** — any non-empty value (provider authentication is handled inside Lynkr's own configuration).
-   - **Models** — add the model ID `lynkr-auto` (required). This is a virtual model name: Lynkr's tier routing selects the actual backend model per request.
+   - **Models** — once the Base URL is set, Kilo Code auto-detects Lynkr's models from its `/v1/models` endpoint. If adding manually, use model name **Lynkr Auto** with model ID `lynkr-auto` — a virtual model that Lynkr's tier routing resolves to the actual backend model per request.
 
 ## Tips and Notes
 
