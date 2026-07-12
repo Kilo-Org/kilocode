@@ -46,7 +46,7 @@ describe("tool.remember", () => {
     expect(result.title).toBe("Remembered: build")
     expect(items.map((item) => item.key)).toContain("build")
     expect(ask).toHaveBeenCalledTimes(1)
-    expect(ask.mock.calls[0]?.[0]).toMatchObject({ permission: "remember", metadata: { mode: "add", key: "build" } })
+    expect((ask.mock.calls as any[])[0]?.[0]).toMatchObject({ permission: "remember", metadata: { mode: "add", key: "build" } })
 
     await Instance.provide({
       directory: tmp.path,
@@ -146,7 +146,7 @@ describe("tool.remember", () => {
     expect(forgotten.title).toBe("Forgot: build")
     expect(items).toEqual([])
     expect(ask).toHaveBeenCalledTimes(1)
-    expect(ask.mock.calls[0]?.[0]).toMatchObject({ permission: "remember", metadata: { mode: "forget", key: "build" } })
+    expect((ask.mock.calls as any[])[0]?.[0]).toMatchObject({ permission: "remember", metadata: { mode: "forget", key: "build" } })
   })
 
   test("list does not output raw malicious memory", async () => {

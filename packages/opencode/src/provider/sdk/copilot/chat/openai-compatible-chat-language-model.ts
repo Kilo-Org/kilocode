@@ -25,7 +25,7 @@ import { z } from "zod/v4"
 import { convertToOpenAICompatibleChatMessages } from "./convert-to-openai-compatible-chat-messages"
 import { getResponseMetadata } from "./get-response-metadata"
 import { mapOpenAICompatibleFinishReason } from "./map-openai-compatible-finish-reason"
-import { type OpenAICompatibleChatModelId, openaiCompatibleProviderOptions } from "./openai-compatible-chat-options"
+import { type OpenAICompatibleChatModelId, type OpenAICompatibleProviderOptions, openaiCompatibleProviderOptions } from "./openai-compatible-chat-options"
 import { defaultOpenAICompatibleErrorStructure, type ProviderErrorStructure } from "../openai-compatible-error"
 import type { MetadataExtractor } from "./openai-compatible-metadata-extractor"
 import { prepareTools } from "./openai-compatible-prepare-tools"
@@ -49,6 +49,10 @@ export type OpenAICompatibleChatConfig = {
    */
   supportedUrls?: () => LanguageModelV3["supportedUrls"]
 }
+
+// kilocode_change start
+type _OChatResp = z.infer<typeof OpenAICompatibleChatResponseSchema>;
+// kilocode_change end
 
 export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
   readonly specificationVersion = "v3"
@@ -113,7 +117,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
         providerOptions,
         schema: openaiCompatibleProviderOptions,
       })) ?? {},
-    )
+    ) as OpenAICompatibleProviderOptions
 
     if (topK != null) {
       warnings.push({ type: "unsupported", feature: "topK" })
@@ -196,7 +200,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
 
     const {
       responseHeaders,
-      value: responseBody,
+      value: _responseBody,
       rawValue: rawResponse,
     } = await postJsonToApi({
       url: this.config.url({
@@ -208,8 +212,9 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
       failedResponseHandler: this.failedResponseHandler,
       successfulResponseHandler: createJsonResponseHandler(OpenAICompatibleChatResponseSchema),
       abortSignal: options.abortSignal,
-      fetch: this.config.fetch,
+      fetch: this.config.fetch, // kilocode_change
     })
+    const responseBody = _responseBody as _OChatResp; // kilocode_change
 
     const choice = responseBody.choices[0]
     const content: Array<LanguageModelV3Content> = []
