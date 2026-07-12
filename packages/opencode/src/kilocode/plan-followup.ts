@@ -602,9 +602,6 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_CONTINUE) {
       Telemetry.trackPlanFollowup(input.sessionID, "continue")
-      const code = await resolveCodeModel({
-        model: user.model,
-      })
       const msg = await inject({
         sessionID: input.sessionID,
         agent: "code",
