@@ -26,6 +26,7 @@ import { TurnOutcome } from "../shared/TurnOutcome"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer, type VirtualizerHandle } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
+import { ChatSearchBar } from "./ChatSearchBar"
 import {
   getMeasurement,
   getScroll,
@@ -50,6 +51,7 @@ import {
   type TranscriptRow,
 } from "../../context/transcript-rows"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
+import type { Part } from "../../types/messages"
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
@@ -65,6 +67,57 @@ interface MessageListProps {
   emptyState?: () => JSX.Element
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
   announce?: boolean
+}
+
+interface ChatSearchMatch {
+  key: string
+  ordinal: number
+}
+
+function isEditable(node: unknown): boolean {
+  if (!(node instanceof HTMLElement)) return false
+  if (node.isContentEditable) return true
+  return /^(INPUT|TEXTAREA|SELECT)$/.test(node.tagName)
+}
+
+function textFromPart(part: Part): string {
+  if (part.type === "text" || part.type === "reasoning") return part.text
+  if (part.type === "file") return [part.filename, part.source?.path, part.source?.text?.value].filter(Boolean).join("\n")
+  if (part.type === "tool") {
+    const state = part.state
+    const output = "output" in state ? state.output : undefined
+    const error = "error" in state ? state.error : undefined
+    const title = "title" in state ? state.title : undefined
+    return [part.tool, title, output, error].filter(Boolean).join("\n")
+  }
+  if (part.type === "step-finish") return [part.reason, part.model?.providerID, part.model?.modelID].filter(Boolean).join(" ")
+  return part.type
+}
+
+function textFromRow(row: TranscriptRow): string {
+  if (row.type === "diff") return ""
+  if (row.type === "error") return [row.error.name, JSON.stringify(row.error.data ?? {})].join("\n")
+  const parts = row.parts.map(textFromPart).filter(Boolean).join("\n")
+  return [
+    row.message.content,
+    row.message.summary && typeof row.message.summary !== "boolean" ? row.message.summary.body : undefined,
+    parts,
+  ]
+    .filter(Boolean)
+    .join("\n")
+}
+
+function supportsHighlights() {
+  const g = globalThis as unknown as { CSS?: { highlights?: unknown }; Highlight?: unknown }
+  return typeof g.Highlight === "function" && g.CSS?.highlights != null
+}
+
+function setHighlight(name: string, ranges: Range[]) {
+  const g = globalThis as unknown as {
+    CSS?: { highlights?: { set: (name: string, highlight: unknown) => void } }
+    Highlight: new (...ranges: Range[]) => unknown
+  }
+  g.CSS?.highlights?.set(name, new g.Highlight(...ranges))
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -105,6 +158,22 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const [scrollEl, setScrollEl] = createSignal<HTMLElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
   const [layout, setLayout] = createSignal("")
+  const [searchOpen, setSearchOpen] = createSignal(false)
+  const [searchQuery, setSearchQuery] = createSignal("")
+  const [searchIndex, setSearchIndex] = createSignal(0)
+  let highlightFrame: number | undefined
+
+  const clearHighlights = () => {
+    if (highlightFrame !== undefined) {
+      cancelAnimationFrame(highlightFrame)
+      highlightFrame = undefined
+    }
+    const highlights = (globalThis as { CSS?: { highlights?: { delete: (name: string) => void } } }).CSS?.highlights
+    highlights?.delete("kilo-chat-search")
+    highlights?.delete("kilo-chat-search-current")
+  }
+
+  onCleanup(clearHighlights)
 
   const revert = () => session.revert() ?? undefined
   const turns = createMemo((prev: MessageTurn[] | undefined) =>
@@ -135,6 +204,139 @@ export const MessageList: Component<MessageListProps> = (props) => {
       prev,
     )
   })
+  const searchMatches = createMemo<ChatSearchMatch[]>(() => {
+    const query = searchQuery().trim().toLowerCase()
+    if (!query) return []
+
+    const matches: ChatSearchMatch[] = []
+    for (const row of rows()) {
+      const text = textFromRow(row)
+      const haystack = text.toLowerCase()
+      let match = haystack.indexOf(query)
+      let ordinal = 0
+      while (match !== -1) {
+        matches.push({ key: row.key, ordinal })
+        ordinal += 1
+        match = haystack.indexOf(query, match + query.length)
+      }
+    }
+    return matches
+  })
+
+  createEffect(() => {
+    const count = searchMatches().length
+    if (count === 0) {
+      setSearchIndex(0)
+      clearHighlights()
+      return
+    }
+    setSearchIndex((value) => Math.min(value, count - 1))
+  })
+
+  const scrollToSearchMatch = (match: ChatSearchMatch | undefined) => {
+    if (!match) return
+    const virtualIndex = partition().virtual.findIndex((row) => row.key === match.key)
+    if (virtualIndex !== -1) {
+      virtualizer()?.scrollToIndex(virtualIndex, { align: "center" })
+      autoScroll.pause()
+      return
+    }
+    const el = scrollEl()?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(match.key)}"]`)
+    el?.scrollIntoView({ block: "center" })
+    if (el) autoScroll.pause()
+  }
+
+  const highlightTextInRow = (row: HTMLElement, currentOrdinal: number) => {
+    clearHighlights()
+    if (!supportsHighlights()) return
+
+    const query = searchQuery().trim().toLowerCase()
+    const ranges: Range[] = []
+    const currentRanges: Range[] = []
+    let ordinal = 0
+    const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT)
+    let node = walker.nextNode()
+
+    while (node) {
+      if (node instanceof Text) {
+        const haystack = node.data.toLowerCase()
+        let at = haystack.indexOf(query)
+        while (at !== -1) {
+          const range = document.createRange()
+          range.setStart(node, at)
+          range.setEnd(node, at + query.length)
+          ranges.push(range)
+          if (ordinal === currentOrdinal) currentRanges.push(range.cloneRange())
+          ordinal += 1
+          at = haystack.indexOf(query, at + query.length)
+        }
+      }
+      node = walker.nextNode()
+    }
+
+    if (ranges.length === 0) return
+    setHighlight("kilo-chat-search", ranges)
+    setHighlight("kilo-chat-search-current", currentRanges)
+  }
+
+  createEffect(() => {
+    if (!searchOpen()) {
+      clearHighlights()
+      return
+    }
+    const match = searchMatches()[searchIndex()]
+    scrollToSearchMatch(match)
+    if (highlightFrame !== undefined) cancelAnimationFrame(highlightFrame)
+    highlightFrame = requestAnimationFrame(() => {
+      highlightFrame = undefined
+      if (!searchOpen() || searchMatches()[searchIndex()] !== match || !match) return
+      const row = scrollEl()?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(match.key)}"]`)
+      if (row) highlightTextInRow(row, match.ordinal)
+    })
+  })
+
+  const openSearch = () => setSearchOpen(true)
+  const closeSearch = () => {
+    setSearchOpen(false)
+    clearHighlights()
+    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+  }
+  const moveSearch = (direction: 1 | -1) => {
+    const count = searchMatches().length
+    if (count === 0) return
+    setSearchIndex((value) => (value + direction + count) % count)
+  }
+
+  const handleSearchShortcut = (event: KeyboardEvent) => {
+    if (event.defaultPrevented) return
+    const mod = event.ctrlKey || event.metaKey
+    if (!mod && event.key !== "Escape") return
+    const key = event.key.toLowerCase()
+
+    if (key === "escape" && searchOpen()) {
+      event.preventDefault()
+      closeSearch()
+      return
+    }
+
+    if (!mod) return
+
+    if (key === "g" && searchOpen()) {
+      event.preventDefault()
+      event.stopPropagation()
+      moveSearch(event.shiftKey ? -1 : 1)
+      return
+    }
+
+    if (key !== "f") return
+    if (!searchOpen() && isEditable(event.target)) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    openSearch()
+  }
+  document.addEventListener("keydown", handleSearchShortcut, { capture: true })
+  onCleanup(() => document.removeEventListener("keydown", handleSearchShortcut, { capture: true }))
   const [held, setHeld] = createSignal<TranscriptHold>()
   createEffect(() => {
     const id = activeUserID()
@@ -302,6 +504,19 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   return (
     <div class="message-list-container">
+      <ChatSearchBar
+        open={searchOpen}
+        query={searchQuery}
+        index={searchIndex}
+        count={() => searchMatches().length}
+        onQuery={(value) => {
+          setSearchQuery(value)
+          setSearchIndex(0)
+        }}
+        onNext={() => moveSearch(1)}
+        onPrevious={() => moveSearch(-1)}
+        onClose={closeSearch}
+      />
       <Show when={props.announce === false}>
         <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {announcement()}
