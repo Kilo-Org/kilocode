@@ -13,9 +13,17 @@ export function usable(input: { cfg: Config.Info; model: Provider.Model; outputT
   const reserved =
     input.cfg.compaction?.reserved ??
     Math.min(COMPACTION_BUFFER, ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax))
+  // kilocode_change start
+  // Properly deduct the reserved buffer even when limit.input is unset.
+  // Models lacking a hardcoded input limit (like OpenRouter or Ollama) dynamically calculate
+  // their usable space based on the max context window minus output tokens. If we don't 
+  // subtract the reserved buffer here, the system will use 100% of the context window for 
+  // conversation history, leaving zero headroom for the compaction summarization prompt, 
+  // which causes a ContextOverflowError when compaction is attempted.
   return input.model.limit.input
     ? Math.max(0, input.model.limit.input - reserved)
-    : Math.max(0, context - ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax))
+    : Math.max(0, context - ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax) - reserved)
+  // kilocode_change end
 }
 
 export function isOverflow(input: {
