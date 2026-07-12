@@ -398,12 +398,15 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
     async event(input) {
       if (input.event.type !== "session.deleted") return
       const sessionID = input.event.properties.info.id
-      const codexSessionID = codexSessionIDs.get(sessionID)
-      for (const websocketFetch of websocketFetches) {
-        websocketFetch.remove(sessionID)
-        if (codexSessionID) websocketFetch.remove(codexSessionID)
+      const sources = [sessionID, `title-${sessionID}`, `branch-name:${sessionID}`]
+      for (const source of sources) {
+        const target = codexSessionIDs.get(source)
+        for (const websocketFetch of websocketFetches) {
+          websocketFetch.remove(source)
+          if (target) websocketFetch.remove(target)
+        }
+        codexSessionIDs.delete(source)
       }
-      codexSessionIDs.delete(sessionID)
     },
     // kilocode_change end
     provider: {
@@ -739,7 +742,7 @@ function prepareResponsesLiteRequest(input: {
   ]
   delete input.request.tools
   delete input.request.instructions
-  input.request.tool_choice = "auto"
+  if (input.request.tool_choice === undefined) input.request.tool_choice = "auto"
   input.request.parallel_tool_calls = false
   input.request.prompt_cache_key = sessionID
   input.request.reasoning = {

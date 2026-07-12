@@ -28,6 +28,7 @@ interface PoolEntry {
   busy: boolean
   fallback: boolean
   streamFailures: number
+  removed: boolean // kilocode_change
 }
 
 const DEFAULT_CONNECT_TIMEOUT = 15_000
@@ -78,7 +79,15 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
     }
     const key = `${sessionID}:conversation`
 
-    const entry = pool.get(key) ?? { lastUsedAt: Date.now(), busy: false, fallback: false, streamFailures: 0 }
+    // kilocode_change start
+    const entry = pool.get(key) ?? {
+      lastUsedAt: Date.now(),
+      busy: false,
+      fallback: false,
+      streamFailures: 0,
+      removed: false,
+    }
+    // kilocode_change end
     pool.set(key, entry)
 
     if (entry.fallback) {
@@ -205,7 +214,12 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
   function close() {
     log.debug("websocket pool close", { count: pool.size })
     clearInterval(pruneTimer)
-    for (const entry of pool.values()) invalidate(entry)
+    // kilocode_change start
+    for (const entry of pool.values()) {
+      entry.removed = true
+      invalidate(entry)
+    }
+    // kilocode_change end
     pool.clear()
   }
 
@@ -214,6 +228,7 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
     const key = `${sessionID}:conversation`
     const entry = pool.get(key)
     if (!entry) return
+    entry.removed = true
     invalidate(entry)
     pool.delete(key)
   }
@@ -272,6 +287,13 @@ async function socket(
     timeout: connectTimeout,
     signal: signal ?? undefined,
   })
+  // kilocode_change start
+  if (entry.removed) {
+    next.on("error", () => {})
+    next.terminate()
+    throw new DOMException("WebSocket pool entry removed during connection", "AbortError")
+  }
+  // kilocode_change end
   entry.connectedAt = Date.now()
   return next
 }
