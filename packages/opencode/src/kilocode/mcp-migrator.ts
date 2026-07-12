@@ -174,18 +174,23 @@ export namespace McpMigrator {
       serversByName.set(name, server)
     }
 
-    // Convert each server
+    // Convert each server. Errors for individual servers are caught so that
+    // one malformed entry does not discard all otherwise valid MCP servers.
     for (const [name, server] of serversByName) {
-      // Warn about alwaysAllow permissions that cannot be migrated
-      if (server.alwaysAllow && server.alwaysAllow.length > 0) {
-        warnings.push(
-          `MCP server '${name}' has alwaysAllow permissions that cannot be migrated: ${server.alwaysAllow.join(", ")}`,
-        )
-      }
+      try {
+        if (server.alwaysAllow && server.alwaysAllow.length > 0) {
+          warnings.push(
+            `MCP server '${name}' has alwaysAllow permissions that cannot be migrated: ${server.alwaysAllow.join(", ")}`,
+          )
+        }
 
-      const converted = convertServer(name, server)
-      if (converted) {
-        mcp[name] = converted
+        const converted = convertServer(name, server)
+        if (converted) {
+          mcp[name] = converted
+        }
+      } catch (err) {
+        log.warn("failed to migrate MCP server, skipping", { name, error: err })
+        skipped.push({ name, reason: `conversion error: ${err}` })
       }
     }
 
