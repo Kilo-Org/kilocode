@@ -7,8 +7,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { createServer } from "http"
 import { refreshCodexAuth } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { OpenAIWebSocketPool } from "./ws-pool"
-import { OauthCallbackPage } from "@opencode-ai/core/oauth/page"
-import { isRecord } from "@/util/record"
+import { isRecord } from "@/util/record" // kilocode_change
 
 const log = Log.create({ service: "plugin.codex" })
 
@@ -17,8 +16,10 @@ const ISSUER = "https://auth.openai.com"
 const CODEX_API_ENDPOINT = "https://chatgpt.com/backend-api/codex/responses"
 const OAUTH_PORT = 1455
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000
+// kilocode_change start
 const CODEX_COMPATIBILITY_VERSION = "0.144.0"
 const RESPONSES_LITE_MODELS = new Set(["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"])
+// kilocode_change end
 const ALLOWED_MODELS = new Set([
   "gpt-5.5",
   "gpt-5.2",
@@ -34,9 +35,7 @@ const ALLOWED_MODELS = new Set([
   // kilocode_change end
 ])
 // kilocode_change start
-const DISALLOWED_MODELS = new Set([
-  "gpt-5.5-pro",
-])
+const DISALLOWED_MODELS = new Set(["gpt-5.5-pro"])
 // kilocode_change end
 
 interface PkceCodes {
@@ -386,7 +385,7 @@ function waitForOAuthCallback(pkce: PkceCodes, state: string): Promise<TokenResp
 export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPluginOptions = {}): Promise<Hooks> {
   const issuer = options.issuer ?? ISSUER
   const codexApiEndpoint = options.codexApiEndpoint ?? CODEX_API_ENDPOINT
-  const codexSessionIDs = new Map<string, string>()
+  const codexSessionIDs = new Map<string, string>() // kilocode_change
   let websocketFetchInstalled = false
   const websocketFetches: Array<ReturnType<typeof OpenAIWebSocketPool.createWebSocketFetch>> = []
 
@@ -395,6 +394,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
       for (const websocketFetch of websocketFetches) websocketFetch.close()
       websocketFetches.length = 0
     },
+    // kilocode_change start
     async event(input) {
       if (input.event.type !== "session.deleted") return
       const sessionID = input.event.properties.info.id
@@ -405,6 +405,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
       }
       codexSessionIDs.delete(sessionID)
     },
+    // kilocode_change end
     provider: {
       id: "openai",
       async models(provider, ctx) {
@@ -534,11 +535,14 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
                 ? new URL(codexApiEndpoint)
                 : parsed
 
+            // kilocode_change start
             const liteRequest = parsed.pathname.endsWith("/responses")
               ? parseResponsesLiteRequest(init?.body)
               : undefined
+            // kilocode_change end
             const requestInit = {
               ...init,
+              // kilocode_change start
               ...(liteRequest && {
                 body: prepareResponsesLiteRequest({
                   request: liteRequest,
@@ -546,6 +550,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
                   sessionIDs: codexSessionIDs,
                 }),
               }),
+              // kilocode_change end
               headers,
             }
             if (websocketFetch && parsed.pathname.endsWith("/responses")) return websocketFetch(url, requestInit)
@@ -691,6 +696,7 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
   }
 }
 
+// kilocode_change start
 function parseResponsesLiteRequest(body: BodyInit | null | undefined): Record<string, unknown> | undefined {
   if (typeof body !== "string") return undefined
   const request: unknown = JSON.parse(body)
@@ -758,3 +764,4 @@ function stripImageDetail(input: unknown): void {
   if (input.type === "input_image") delete input.detail
   Object.values(input).forEach(stripImageDetail)
 }
+// kilocode_change end

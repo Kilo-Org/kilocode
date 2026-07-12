@@ -5,8 +5,10 @@ import { isRecord } from "@/util/record"
 import { OpenAIWebSocket } from "./ws"
 
 export const TITLE_HEADER = "x-kilo-title"
+// kilocode_change start
 export const RESPONSES_LITE_HEADER = "x-openai-internal-codex-responses-lite"
 export const RESPONSES_LITE_CLIENT_METADATA = "ws_request_header_x_openai_internal_codex_responses_lite"
+// kilocode_change end
 
 const log = Log.create({ service: "plugin.openai.ws" })
 
@@ -107,6 +109,7 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
       })
       const response = OpenAIWebSocket.streamResponsesWebSocket({
         socket: entry.socket,
+        // kilocode_change start
         body:
           internalHeaders[RESPONSES_LITE_HEADER] === "true"
             ? {
@@ -117,6 +120,7 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
                 },
               }
             : body,
+        // kilocode_change end
         idleTimeout,
         signal: init?.signal ?? undefined,
         onFirstEvent: () => resolveFirstEvent(true),
@@ -205,7 +209,17 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
     pool.clear()
   }
 
-  return Object.assign(websocketFetch, { close })
+  // kilocode_change start
+  function remove(sessionID: string) {
+    const key = `${sessionID}:conversation`
+    const entry = pool.get(key)
+    if (!entry) return
+    invalidate(entry)
+    pool.delete(key)
+  }
+  // kilocode_change end
+
+  return Object.assign(websocketFetch, { close, remove })
 }
 
 function connectionLimitError(event: Record<string, unknown>) {

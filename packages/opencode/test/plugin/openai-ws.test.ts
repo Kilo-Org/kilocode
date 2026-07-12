@@ -165,6 +165,7 @@ describe("plugin.openai.ws-pool", () => {
     fetch.close()
   })
 
+  // kilocode_change start
   test("adds Responses Lite client metadata without splitting the session socket", async () => {
     let connections = 0
     const requests: unknown[] = []
@@ -205,6 +206,7 @@ describe("plugin.openai.ws-pool", () => {
     })
     fetch.close()
   })
+  // kilocode_change end
 
   test("rotates a socket that exceeds max connection age", async () => {
     let connections = 0

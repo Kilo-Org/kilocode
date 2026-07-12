@@ -6,7 +6,7 @@ import {
   extractAccountId,
   type IdTokenClaims,
 } from "../../src/plugin/openai/codex"
-import { isRecord } from "../../src/util/record"
+import { isRecord } from "../../src/util/record" // kilocode_change
 
 function createTestJwt(payload: object): string {
   const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url")
@@ -203,6 +203,7 @@ describe("plugin.codex", () => {
     await enabled.dispose?.()
   })
 
+  // kilocode_change start
   test("rewrites GPT-5.6 OAuth requests for Responses Lite", async () => {
     const requests: Array<{ headers: Headers; body: Record<string, unknown> }> = []
     using server = Bun.serve({
@@ -370,6 +371,7 @@ describe("plugin.codex", () => {
     expect(requests[0]?.headers.get("x-openai-internal-codex-responses-lite")).toBeNull()
     expect(requests[0]?.body).toEqual(body)
   })
+  // kilocode_change end
 
   test("deduplicates concurrent Codex token refreshes", async () => {
     let auth = {
@@ -477,6 +479,7 @@ async function waitFor(predicate: () => boolean) {
   }
 }
 
+// kilocode_change start
 async function readRequestBody(request: Request) {
   const body: unknown = await request.json()
   if (!isRecord(body)) throw new Error("Expected a JSON object")
@@ -501,3 +504,4 @@ async function loadCodexFetch(endpoint: string) {
   if (!loaded.fetch) throw new Error("Expected a provider fetch implementation")
   return loaded.fetch
 }
+// kilocode_change end
