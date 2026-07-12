@@ -219,7 +219,7 @@ export function createWebSocketFetch(options?: CreateWebSocketFetchOptions) {
   }
   // kilocode_change end
 
-  return Object.assign(websocketFetch, { close, remove })
+  return Object.assign(websocketFetch, { close, remove }) // kilocode_change
 }
 
 function connectionLimitError(event: Record<string, unknown>) {
