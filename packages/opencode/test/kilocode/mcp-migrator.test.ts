@@ -1,10 +1,27 @@
-import { test, expect, describe, afterEach } from "bun:test"
+import { test, expect, describe, afterEach, beforeAll, afterAll } from "bun:test"
 import { McpMigrator } from "../../src/kilocode/mcp-migrator"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
 
 describe("McpMigrator", () => {
+  const ORIGINAL_TEST_HOME = process.env.KILO_TEST_HOME
+  let cleanHome: string
+
+  beforeAll(async () => {
+    const tmp = await tmpdir()
+    cleanHome = tmp.path
+    process.env.KILO_TEST_HOME = cleanHome
+  })
+
+  afterAll(async () => {
+    if (ORIGINAL_TEST_HOME === undefined) {
+      delete process.env.KILO_TEST_HOME
+    } else {
+      process.env.KILO_TEST_HOME = ORIGINAL_TEST_HOME
+    }
+    await fs.rm(cleanHome, { recursive: true, force: true })
+  })
   describe("convertServer", () => {
     test("converts local server with command and args", () => {
       const server: McpMigrator.KilocodeMcpServer = {
@@ -822,6 +839,42 @@ describe("McpMigrator", () => {
           await fs.mkdir(mcpDir, { recursive: true })
           await fs.writeFile(path.join(mcpDir, "good.json"), JSON.stringify({ command: "valid-cmd" }))
           await fs.writeFile(path.join(mcpDir, "bad.json"), "{ invalid json !!!")
+          await fs.writeFile(path.join(mcpDir, "also-good.json"), JSON.stringify({ command: "another-cmd" }))
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(2)
+      const names = result.map((r) => r.name).sort()
+      expect(names).toEqual(["also-good", "good"])
+    })
+
+    test("skips valid JSON that is not an object (null)", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(path.join(mcpDir, "good.json"), JSON.stringify({ command: "valid-cmd" }))
+          await fs.writeFile(path.join(mcpDir, "null.json"), "null")
+          await fs.writeFile(path.join(mcpDir, "also-good.json"), JSON.stringify({ command: "another-cmd" }))
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(2)
+      const names = result.map((r) => r.name).sort()
+      expect(names).toEqual(["also-good", "good"])
+    })
+
+    test("skips valid JSON that is not an object (array)", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(path.join(mcpDir, "good.json"), JSON.stringify({ command: "valid-cmd" }))
+          await fs.writeFile(path.join(mcpDir, "array.json"), JSON.stringify([1, 2, 3]))
           await fs.writeFile(path.join(mcpDir, "also-good.json"), JSON.stringify({ command: "another-cmd" }))
         },
       })

@@ -67,7 +67,12 @@ export namespace McpMigrator {
         const filepath = path.join(mcpDir, entry)
         try {
           const content = await fs.readFile(filepath, "utf-8")
-          const server = JSON.parse(content) as KilocodeMcpServer
+          const parsed = JSON.parse(content)
+          if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+            log.warn("MCP server entry must be a JSON object, skipping", { filepath })
+            continue
+          }
+          const server = parsed as KilocodeMcpServer
           servers.push({ name, server })
         } catch (err) {
           log.warn("failed to parse MCP server file, skipping", { filepath, error: err })
@@ -150,10 +155,8 @@ export namespace McpMigrator {
     // 2. Global home-level configs (~/.kilocode and ~/.kilo)
     // File loaded first, then directory (directory overrides file)
     // .kilocode first (lower precedence), .kilo second (higher precedence)
-    if (!options?.skipGlobalPaths) {
-      for (const dir of [".kilocode", ".kilo"]) {
-        await loadMcpFromDir(path.join(home(), dir), allServers)
-      }
+    for (const dir of [".kilocode", ".kilo"]) {
+      await loadMcpFromDir(path.join(home(), dir), allServers)
     }
 
     // 3. Project-level MCP settings (if projectDir provided)
