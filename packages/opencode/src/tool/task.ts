@@ -10,6 +10,7 @@ import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
 import { Permission } from "@/permission"
+import { ForegroundTask } from "@/kilocode/foreground-task" // kilocode_change
 
 // kilocode_change start
 const inFlight = new Map<string, Set<string>>()
@@ -27,6 +28,17 @@ const parameters = z.object({
     .optional(),
   command: z.string().describe("The command that triggered this task").optional(),
 })
+
+// kilocode_change start
+type ForegroundOutcome =
+  | {
+      type: "completed"
+      message: MessageV2.WithParts
+    }
+  | {
+      type: "interrupted"
+    }
+// kilocode_change end
 
 export const TaskTool = Tool.define("task", async (ctx) => {
   const agents = await Agent.list().then((x) => x.filter((a) => a.mode !== "primary"))
@@ -160,41 +172,111 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         modelID: msg.info.modelID,
         providerID: msg.info.providerID,
       }
+      // kilocode_change start - include interrupted flag in task metadata
+      const meta = {
+        sessionId: session.id,
+        model,
+        interrupted: false,
+      }
+      // kilocode_change end
 
       ctx.metadata({
         title: params.description,
-        metadata: {
-          sessionId: session.id,
-          model,
-        },
+        metadata: meta,
       })
 
+      // kilocode_change start
       const messageID = MessageID.ascending()
 
-      function cancel() {
-        SessionPrompt.cancel(session.id)
-      }
-      ctx.abort.addEventListener("abort", cancel)
-      using _ = defer(() => ctx.abort.removeEventListener("abort", cancel))
-      const promptParts = await SessionPrompt.resolvePromptParts(params.prompt)
+      let gateDone = false
+      let unregister = () => {}
 
-      const result = await SessionPrompt.prompt({
-        messageID,
-        sessionID: session.id,
-        model: {
-          modelID: model.modelID,
-          providerID: model.providerID,
-        },
-        agent: agent.name,
-        tools: {
-          ...(hasTodoWritePermission ? {} : { todowrite: false }),
-          ...(hasTaskPermission ? {} : { task: false }),
-          ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
-        },
-        parts: promptParts,
+      const finish = (action: () => void) => {
+        if (gateDone) return
+        gateDone = true
+        unregister()
+        action()
+      }
+
+      const cancelChild = () => {
+        void SessionPrompt.cancel(session.id)
+      }
+
+      ctx.abort.addEventListener("abort", cancelChild)
+      using _cancelListener = defer(() => {
+        ctx.abort.removeEventListener("abort", cancelChild)
       })
 
-      const text = result.parts.findLast((x) => x.type === "text")?.text ?? ""
+      const outcome = await new Promise<ForegroundOutcome>((resolve, reject) => {
+        unregister = ForegroundTask.register(session.id, {
+          interrupt() {
+            finish(() => resolve({ type: "interrupted" }))
+          },
+        })
+
+        if (ctx.abort.aborted) {
+          cancelChild()
+          return
+        }
+
+        const childPromise = (async () => {
+          const promptParts = await SessionPrompt.resolvePromptParts(params.prompt)
+
+          if (gateDone) return undefined
+
+          return SessionPrompt.prompt({
+            messageID,
+            sessionID: session.id,
+            model: {
+              modelID: model.modelID,
+              providerID: model.providerID,
+            },
+            agent: agent.name,
+            tools: {
+              ...(hasTodoWritePermission ? {} : { todowrite: false }),
+              ...(hasTaskPermission ? {} : { task: false }),
+              ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((tool) => [tool, false])),
+            },
+            parts: promptParts,
+          })
+        })()
+
+        childPromise.then(
+          (message) => {
+            if (!message) return
+            finish(() =>
+              resolve({
+                type: "completed",
+                message,
+              }),
+            )
+          },
+          (error) => {
+            finish(() => reject(error))
+          },
+        )
+      })
+
+      if (outcome.type === "interrupted") {
+        return {
+          title: params.description,
+          metadata: {
+            ...meta,
+            interrupted: true,
+          },
+          output: [
+            `task_id: ${session.id} (for resuming to continue this task if needed)`,
+            "",
+            "<task_result>",
+            "[Task was interrupted. Resume with the same task_id above to continue.]",
+            "</task_result>",
+          ].join("\n"),
+        }
+      }
+
+      const result = outcome.message
+      const text = result.parts.findLast((part) => part.type === "text")?.text ?? ""
+      // kilocode_change end
 
       const output = [
         `task_id: ${session.id} (for resuming to continue this task if needed)`,
@@ -206,10 +288,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
 
       return {
         title: params.description,
-        metadata: {
-          sessionId: session.id,
-          model,
-        },
+        metadata: meta,
         output,
       }
     },

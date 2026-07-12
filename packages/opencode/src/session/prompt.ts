@@ -2,6 +2,7 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { ForegroundTask } from "@/kilocode/foreground-task" // kilocode_change
 import z from "zod"
 import { Filesystem } from "../util/filesystem"
 import { SessionID, MessageID, PartID } from "./schema"
@@ -275,11 +276,24 @@ export namespace SessionPrompt {
     const s = state()
     const match = s[sessionID]
     if (!match) {
+      ForegroundTask.interrupt(sessionID) // kilocode_change
       await SessionStatus.set(sessionID, { type: "idle" })
       return
     }
     match.abort.abort()
+    // kilocode_change start — reject callbacks so waiting Promises do not hang
+    // Reject any callbacks waiting in the resume path so the caller's Promise
+    // does not hang forever. Without this, if loop() returned a callback-based
+    // Promise (start/resume returned undefined), that Promise would never
+    // resolve because delete below removes the callbacks array.
+    for (const cb of match.callbacks) {
+      cb.reject(new DOMException("Aborted", "AbortError"))
+    }
+    match.callbacks.length = 0
+    // kilocode_change end
+
     delete s[sessionID]
+    ForegroundTask.interrupt(sessionID) // kilocode_change
     await SessionStatus.set(sessionID, { type: "idle" })
     return
   }

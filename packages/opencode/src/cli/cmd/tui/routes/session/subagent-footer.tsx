@@ -7,6 +7,7 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useKeybind } from "../../context/keybind"
 import { Locale } from "@/util/locale"
+import { Interrupt } from "@/kilocode/interrupt" // kilocode_change
 import { useTerminalDimensions } from "@opentui/solid"
 
 export function SubagentFooter() {
@@ -14,7 +15,22 @@ export function SubagentFooter() {
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
   const session = createMemo(() => sync.session.get(route.sessionID))
-  const busy = createMemo(() => (sync.data.session_status?.[route.sessionID]?.type ?? "idle") !== "idle")
+  // kilocode_change start - keep footer visible while parent task still owns the foreground child
+  const statusType = createMemo(() => sync.data.session_status?.[route.sessionID]?.type as Interrupt.StatusType | undefined)
+  const busy = createMemo(() => statusType() !== undefined && statusType() !== "idle")
+  const foregroundTaskActive = createMemo(() => {
+    const childID = route.sessionID
+    const parentID = sync.session.get(childID)?.parentID
+    if (!parentID) return false
+
+    return Interrupt.foregroundTaskActive({
+      childID,
+      parentID,
+      messages: sync.data.message[parentID] ?? [],
+      parts: sync.data.part,
+    })
+  })
+  // kilocode_change end
 
   const subagentInfo = createMemo(() => {
     const s = session()
@@ -95,10 +111,9 @@ export function SubagentFooter() {
           </box>
           <box flexDirection="row" gap={2}>
             {/* kilocode_change start - visible child-session interrupt hint */}
-            <Show when={busy()}>
+            <Show when={busy() || foregroundTaskActive()}>
               <text fg={theme.textMuted}>
-                {keybind.print("session_interrupt").toLowerCase()} {keybind.print("session_interrupt").toLowerCase()} stop
-                subagent
+                {keybind.print("session_interrupt").toLowerCase()} twice to stop subagent
               </text>
             </Show>
             {/* kilocode_change end */}

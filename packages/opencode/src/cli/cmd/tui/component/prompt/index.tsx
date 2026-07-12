@@ -23,6 +23,7 @@ import { Editor } from "@tui/util/editor"
 import { useExit } from "../../context/exit"
 import { Clipboard } from "../../util/clipboard"
 import type { AssistantMessage, FilePart } from "@kilocode/sdk/v2"
+import { Interrupt } from "@/kilocode/interrupt" // kilocode_change
 import { TuiEvent } from "../../event"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
@@ -84,6 +85,7 @@ export function Prompt(props: PromptProps) {
   const sync = useSync()
   const dialog = useDialog()
   const toast = useToast()
+  const statusType = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""]?.type as Interrupt.StatusType | undefined) // kilocode_change
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
   // kilocode_change start - allow hidden child prompts to interrupt foreground subagents
   const child = createMemo(() => {
@@ -91,16 +93,54 @@ export function Prompt(props: PromptProps) {
     if (!id) return false
     return props.visible === false && !!sync.session.get(id)?.parentID
   })
-  const [childInterrupt, setChildInterrupt] = createSignal(false)
+  const [interrupt, setInterrupt] = createSignal<Interrupt.State>({
+    pending: false,
+    escapeCount: 0,
+    firstEscapeAt: null,
+    target: null,
+  })
+  const ESCAPE_WINDOW_MS = 5000
+  const foregroundTaskActive = createMemo(() => {
+    const childID = props.sessionID
+    if (!childID) return false
+
+    const parentID = sync.session.get(childID)?.parentID
+    if (!parentID) return false
+
+    return Interrupt.foregroundTaskActive({
+      childID,
+      parentID,
+      messages: sync.data.message[parentID] ?? [],
+      parts: sync.data.part,
+    })
+  })
+
   createEffect(
-    on(status, (next, prev) => {
-      if (!childInterrupt()) return
-      if (prev?.type === "idle") return
-      if (next.type !== "idle") return
-      toast.show({ message: "Subagent stopped; context preserved.", variant: "info" })
-      setChildInterrupt(false)
+    on(statusType, (next, prev) => {
+      const res = Interrupt.onStatus(interrupt(), prev, next ?? "idle", child(), foregroundTaskActive())
+      setInterrupt(res.state)
     }),
   )
+
+  createEffect(
+    on(foregroundTaskActive, (next, prev) => {
+      const res = Interrupt.onForegroundTask(interrupt(), prev ?? false, next)
+      setInterrupt(res.state)
+      for (const action of res.actions) {
+        if (action.type === "success") {
+          toast.show({ message: "Subagent stopped; context preserved.", variant: "info" })
+        }
+      }
+    }),
+  )
+  // kilocode_change - clear pending interrupt when the child session leaves sync and no foreground task remains
+  createEffect(() => {
+    const current = interrupt()
+    if (current.target !== "child") return
+    if (child()) return
+    const res = Interrupt.onChildRemoved(current, foregroundTaskActive())
+    setInterrupt(res.state)
+  })
   // kilocode_change end
   const history = usePromptHistory()
   const stash = usePromptStash()
@@ -268,8 +308,9 @@ export function Prompt(props: PromptProps) {
         keybind: "session_interrupt",
         category: "Session",
         hidden: true,
-        enabled: status().type !== "idle",
-        onSelect: (dialog) => {
+        // kilocode_change start - child-aware interrupt handler with normal-session error support
+        enabled: Interrupt.available(statusType(), foregroundTaskActive()),
+          onSelect: (dialog) => {
           if (autocomplete.visible) return
           if (!input.focused && !child()) return
           // TODO: this should be its own command
@@ -279,26 +320,34 @@ export function Prompt(props: PromptProps) {
           }
           if (!props.sessionID) return
 
-          const count = store.interrupt + 1
-          setStore("interrupt", count)
-
-          setTimeout(() => {
-            setStore("interrupt", 0)
-          }, 5000)
-
-          if (count >= 2) {
-            if (child()) setChildInterrupt(true)
-            sdk.client.session
-              .abort({
-                sessionID: props.sessionID,
-              })
-              .catch((error) => {
-                if (child()) setChildInterrupt(false)
-                toast.error(error)
-              })
-            setStore("interrupt", 0)
+          const esc = Interrupt.onEscape(interrupt(), Date.now(), { windowMs: ESCAPE_WINDOW_MS })
+          let next = esc.state
+          const wantsAbort = esc.actions.some((a) => a.type === "abort")
+          if (wantsAbort) {
+            const isChild = child()
+            if (isChild) next = { ...next, pending: true, target: "child" }
+            else next = { ...next, target: "normal" }
+          }
+          setInterrupt(next)
+          setStore("interrupt", next.escapeCount)
+          if (next.escapeCount > 0 && next.firstEscapeAt !== null) {
+            setTimeout(() => setStore("interrupt", 0), ESCAPE_WINDOW_MS)
+          }
+          if (wantsAbort) {
+            const abortPromise = sdk.client.session.abort({
+              sessionID: props.sessionID,
+            })
+            abortPromise.catch((error) => {
+              const message = error instanceof Error ? error.message : String(error)
+              const r = Interrupt.onAbortReject(interrupt(), message)
+              setInterrupt(r.state)
+              for (const action of r.actions) {
+                if (action.type === "error") toast.error(action.message)
+              }
+            })
           }
           dialog.clear()
+            // kilocode_change end
         },
       },
       {
