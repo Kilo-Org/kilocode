@@ -128,10 +128,6 @@ const LOGPROBS_SCHEMA = z.array(
   }),
 )
 
-// kilocode_change start - explicit response type alias
-type _OResponse = Record<string, unknown>;
-// kilocode_change end
-
 export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
   readonly specificationVersion = "v3"
 
@@ -197,7 +193,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
       warnings.push({ type: "unsupported", feature: "stopSequences" })
     }
 
-    const openaiOptions: OpenAIResponsesProviderOptions | undefined = await parseProviderOptions({
+    const openaiOptions = await parseProviderOptions({
       provider: "copilot",
       providerOptions,
       schema: openaiResponsesProviderOptionsSchema,
@@ -403,7 +399,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
 
     const {
       responseHeaders,
-      value: _response,
+      value: response,
       rawValue: rawResponse,
     } = await postJsonToApi({
       url,
@@ -496,8 +492,6 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
       abortSignal: options.abortSignal,
       fetch: this.config.fetch,
     })
-
-    const response = _response as any  // kilocode_change
 
     if (response.error) {
       throw new APICallError({
@@ -692,7 +686,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
             result: {
               queries: part.queries,
               results:
-                part.results?.map((result: any) => ({
+                part.results?.map((result) => ({
                   attributes: result.attributes as Record<string, JSONValue>,
                   fileId: result.file_id,
                   filename: result.filename,
