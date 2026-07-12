@@ -38,6 +38,7 @@ import {
   questionSubmit,
   questionSync,
   questionTabs,
+  questionToggleAction, // kilocode_change
   questionTotal,
 } from "./question.shared"
 import type { RunFooterTheme } from "./theme"
@@ -65,7 +66,7 @@ export function RunQuestionBody(props: {
     }
 
     if (info()?.multiple) {
-      return "toggle"
+      return "continue" // kilocode_change
     }
 
     if (single()) {
@@ -125,7 +126,10 @@ export function RunQuestionBody(props: {
   const choose = (selected: number) => {
     const base = state()
     const cur = questionSetSelected(base, selected)
-    const next = questionSelect(cur, props.request)
+    // kilocode_change start - digit shortcuts toggle in multi-select
+    const info = questionInfo(props.request, cur)
+    const next = info?.multiple ? questionToggleAction(cur, props.request) : questionSelect(cur, props.request)
+    // kilocode_change end
     if (next.state !== base) {
       setState(next.state)
     }
@@ -216,6 +220,17 @@ export function RunQuestionBody(props: {
       }
       return
     }
+
+    // kilocode_change start - space toggles in multi-select
+    if (event.name === "space") {
+      const next = questionToggleAction(cur, props.request)
+      if (next.state !== cur) {
+        setState(next.state)
+      }
+      event.preventDefault()
+      return
+    }
+    // kilocode_change end
 
     const total = questionTotal(props.request, cur)
     const max = Math.min(total, 9)
@@ -562,6 +577,13 @@ export function RunQuestionBody(props: {
                   {"⇆"} <span style={{ fg: props.theme.muted }}>tab</span>
                 </text>
               </Show>
+              {/* kilocode_change start - multi-select space toggle hint */}
+              <Show when={!confirm() && info()?.multiple}>
+                <text fg={props.theme.text}>
+                  space <span style={{ fg: props.theme.muted }}>toggle</span>
+                </text>
+              </Show>
+              {/* kilocode_change end */}
               <Show when={!confirm()}>
                 <text fg={props.theme.text}>
                   {"↑↓"} <span style={{ fg: props.theme.muted }}>select</span>

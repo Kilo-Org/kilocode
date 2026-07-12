@@ -128,6 +128,26 @@ export function QuestionPrompt(props: {
     pick(opt.label)
   }
 
+  // kilocode_change start - space toggles, enter advances in multi-select
+  function continueOption() {
+    if (other()) {
+      if (multi()) {
+        selectTab(Math.min(store.tab + 1, tabs() - 1))
+        return
+      }
+      setStore("editing", true)
+      return
+    }
+    if (multi()) {
+      selectTab(Math.min(store.tab + 1, tabs() - 1))
+      return
+    }
+    const opt = options()[store.selected]
+    if (!opt) return
+    pick(opt.label)
+  }
+  // kilocode_change end
+
   onMount(() => {
     const popMode = modeStack.push(QUESTION_MODE)
     onCleanup(popMode)
@@ -259,15 +279,36 @@ export function QuestionPrompt(props: {
               ...tuiConfig.keybinds.get("app.exit"),
             ]
           : [
+              // kilocode_change start - space toggles, enter advances in multi-select
               ...Array.from({ length: max }, (_, index) => ({
                 key: String(index + 1),
-                desc: `Select answer ${index + 1}`,
+                desc: question()?.multiple ? `Toggle answer ${index + 1}` : `Select answer ${index + 1}`,
                 group: "Question",
                 cmd: () => {
                   moveTo(index)
-                  selectOption()
+                  if (index === options().length) {
+                    if (question()?.multiple) {
+                      const value = input()
+                      if (value) {
+                        toggle(value)
+                      } else {
+                        setStore("editing", true)
+                      }
+                    } else {
+                      setStore("editing", true)
+                    }
+                    return
+                  }
+                  const opt = options()[index]
+                  if (!opt) return
+                  if (question()?.multiple) {
+                    toggle(opt.label)
+                  } else {
+                    pick(opt.label)
+                  }
                 },
               })),
+              // kilocode_change end
               {
                 key: "up",
                 desc: "Previous answer",
@@ -282,7 +323,39 @@ export function QuestionPrompt(props: {
               },
               { key: "down", desc: "Next answer", group: "Question", cmd: () => moveTo((store.selected + 1) % total) },
               { key: "j", desc: "Next answer", group: "Question", cmd: () => moveTo((store.selected + 1) % total) },
-              { key: "return", desc: "Select answer", group: "Question", cmd: () => selectOption() },
+              // kilocode_change start - multi-select space toggle binding
+              ...(question()?.multiple
+                ? [
+                    {
+                      key: "space",
+                      desc: "Toggle answer",
+                      group: "Question",
+                      cmd: () => {
+                        if (other()) {
+                          const value = input()
+                          if (value) {
+                            toggle(value)
+                          } else {
+                            setStore("editing", true)
+                          }
+                          return
+                        }
+                        const opt = options()[store.selected]
+                        if (!opt) return
+                        toggle(opt.label)
+                      },
+                    },
+                  ]
+                : []),
+              // kilocode_change end
+              // kilocode_change start - enter advances in multi-select
+              {
+                key: "return",
+                desc: question()?.multiple ? "Continue" : "Select answer",
+                group: "Question",
+                cmd: () => continueOption(),
+              },
+              // kilocode_change end
               { key: "escape", desc: "Reject question", group: "Question", cmd: () => reject() },
               ...tuiConfig.keybinds.get("app.exit"),
             ]),
@@ -497,16 +570,24 @@ export function QuestionPrompt(props: {
               {"⇆"} <span style={{ fg: theme.textMuted }}>tab</span>
             </text>
           </Show>
+          {/* kilocode_change start - multi-select space toggle hint */}
+          <Show when={!confirm() && multi()}>
+            <text fg={theme.text}>
+              space <span style={{ fg: theme.textMuted }}>toggle</span>
+            </text>
+          </Show>
+          {/* kilocode_change end */}
           <Show when={!confirm()}>
             <text fg={theme.text}>
               {"↑↓"} <span style={{ fg: theme.textMuted }}>select</span>
             </text>
           </Show>
           <text fg={theme.text}>
-            enter{" "}
+            enter {/* kilocode_change start - multi-select uses continue verb */}
             <span style={{ fg: theme.textMuted }}>
-              {confirm() ? "submit" : multi() ? "toggle" : single() ? "submit" : "confirm"}
+              {confirm() ? "submit" : multi() ? "continue" : single() ? "submit" : "confirm"}
             </span>
+            {/* kilocode_change end */}
           </text>
 
           <text fg={theme.text}>

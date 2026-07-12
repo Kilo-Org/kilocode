@@ -216,6 +216,7 @@ export function questionMove(state: QuestionBodyState, request: QuestionRequest,
   }
 }
 
+// kilocode_change start - space toggles, enter advances in multi-select
 export function questionSelect(state: QuestionBodyState, request: QuestionRequest): QuestionStep {
   const info = questionInfo(request, state)
   if (!info) {
@@ -229,8 +230,38 @@ export function questionSelect(state: QuestionBodyState, request: QuestionReques
       }
     }
 
+    const last = request.questions.length - 1
+    const next = state.tab >= last ? last + 1 : state.tab + 1
+    return {
+      state: questionSetTab(state, next),
+    }
+  }
+
+  const option = info.options[state.selected]
+  if (!option) {
+    return { state }
+  }
+
+  if (info.multiple) {
+    const last = request.questions.length - 1
+    const next = state.tab >= last ? last + 1 : state.tab + 1
+    return {
+      state: questionSetTab(state, next),
+    }
+  }
+
+  return questionPick(state, request, option.label)
+}
+
+export function questionToggleAction(state: QuestionBodyState, request: QuestionRequest): QuestionStep {
+  const info = questionInfo(request, state)
+  if (!info || !info.multiple) {
+    return { state }
+  }
+
+  if (questionOther(request, state)) {
     const value = questionInput(state)
-    if (value && questionPicked(state)) {
+    if (value) {
       return {
         state: questionToggle(state, value),
       }
@@ -246,14 +277,11 @@ export function questionSelect(state: QuestionBodyState, request: QuestionReques
     return { state }
   }
 
-  if (info.multiple) {
-    return {
-      state: questionToggle(state, option.label),
-    }
+  return {
+    state: questionToggle(state, option.label),
   }
-
-  return questionPick(state, request, option.label)
 }
+// kilocode_change end
 
 export function questionSave(state: QuestionBodyState, request: QuestionRequest): QuestionStep {
   const info = questionInfo(request, state)
@@ -332,9 +360,15 @@ export function questionHint(request: QuestionRequest, state: QuestionBodyState)
   }
 
   const info = questionInfo(request, state)
+  // kilocode_change start - multi-select hint uses space/continue
   if (questionSingle(request)) {
-    return `↑↓ select   enter ${info?.multiple ? "toggle" : "submit"}   esc dismiss`
+    return `↑↓ select   enter submit   esc dismiss`
   }
 
-  return `⇆ tab   ↑↓ select   enter ${info?.multiple ? "toggle" : "confirm"}   esc dismiss`
+  if (info?.multiple) {
+    return `⇆ tab   ↑↓ select   space toggle   enter continue   esc dismiss`
+  }
+
+  return `⇆ tab   ↑↓ select   enter confirm   esc dismiss`
+  // kilocode_change end
 }

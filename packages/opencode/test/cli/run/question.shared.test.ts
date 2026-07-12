@@ -10,6 +10,7 @@ import {
   questionStoreCustom,
   questionSubmit,
   questionSync,
+  questionToggleAction, // kilocode_change
 } from "@/cli/cmd/run/question.shared"
 
 function req(input: Partial<QuestionRequest> = {}): QuestionRequest {
@@ -71,6 +72,7 @@ describe("run question shared", () => {
     })
   })
 
+  // kilocode_change start - space toggles, enter advances in multi-select
   test("toggles answers for multiple-choice questions", () => {
     const ask = req({
       questions: [
@@ -83,12 +85,155 @@ describe("run question shared", () => {
       ],
     })
 
-    let state = questionSelect(createQuestionBodyState("question-1"), ask).state
+    let state = questionToggleAction(createQuestionBodyState("question-1"), ask).state
     expect(state.answers).toEqual([["bug"]])
 
-    state = questionSelect(state, ask).state
+    state = questionToggleAction(state, ask).state
     expect(state.answers).toEqual([[]])
   })
+
+  test("enter advances multi-select tab without toggling", () => {
+    const ask = req({
+      questions: [
+        {
+          question: "Tags?",
+          header: "Tags",
+          options: [{ label: "bug", description: "Bug fix" }],
+          multiple: true,
+        },
+      ],
+    })
+
+    const state = questionSelect(createQuestionBodyState("question-1"), ask).state
+    expect(state.answers).toEqual([])
+    expect(state.tab).toBe(1)
+    expect(questionConfirm(ask, state)).toBe(true)
+  })
+
+  test("enter advances multi-question single-select tab on the last question to confirm", () => {
+    const ask = req({
+      questions: [
+        {
+          question: "First?",
+          header: "First",
+          options: [{ label: "a", description: "" }],
+          multiple: false,
+        },
+        {
+          question: "Second?",
+          header: "Second",
+          options: [{ label: "b", description: "" }],
+          multiple: false,
+        },
+      ],
+    })
+
+    let state = createQuestionBodyState("question-1")
+    state = questionSelect(state, ask).state
+    expect(state.tab).toBe(1)
+
+    state = questionSelect(state, ask).state
+    expect(questionConfirm(ask, state)).toBe(true)
+  })
+
+  test("toggle is a no-op in single-select", () => {
+    const ask = req({
+      questions: [
+        {
+          question: "Mode?",
+          header: "Mode",
+          options: [{ label: "chunked", description: "" }],
+          multiple: false,
+        },
+      ],
+    })
+
+    const state = questionToggleAction(createQuestionBodyState("question-1"), ask).state
+    expect(state.answers).toEqual([])
+  })
+
+  test("enter advances past the custom row in multi-select", () => {
+    const ask = req({
+      questions: [
+        {
+          question: "Tags?",
+          header: "Tags",
+          options: [{ label: "bug", description: "Bug fix" }],
+          multiple: true,
+          custom: true,
+        },
+      ],
+    })
+
+    let state = questionSetSelected(createQuestionBodyState("question-1"), 1)
+    state = questionSelect(state, ask).state
+    expect(state.editing).toBe(false)
+    expect(state.tab).toBe(1)
+  })
+
+  test("enter on custom row in single-select opens the editor", () => {
+    const ask = req({
+      questions: [
+        {
+          question: "Mode?",
+          header: "Mode",
+          options: [{ label: "chunked", description: "" }],
+          multiple: false,
+          custom: true,
+        },
+      ],
+    })
+
+    const state = questionSetSelected(createQuestionBodyState("question-1"), 1)
+    const next = questionSelect(state, ask).state
+    expect(next.editing).toBe(true)
+  })
+
+  test("space on custom row with typed value toggles it", () => {
+    const ask = req({
+      questions: [
+        {
+          question: "Tags?",
+          header: "Tags",
+          options: [{ label: "bug", description: "Bug fix" }],
+          multiple: true,
+          custom: true,
+        },
+      ],
+    })
+
+    let state = createQuestionBodyState("question-1")
+    state = questionStoreCustom(state, 0, "custom-tag")
+    state = questionSave(state, ask).state
+    expect(state.answers[0]).toContain("custom-tag")
+
+    state = questionSetSelected(state, 1)
+    state = questionToggleAction(state, ask).state
+    expect(state.answers[0]).not.toContain("custom-tag")
+
+    // Toggle it back on
+    state = questionToggleAction(state, ask).state
+    expect(state.answers[0]).toContain("custom-tag")
+  })
+
+  test("space on custom row without typed value opens the editor", () => {
+    const ask = req({
+      questions: [
+        {
+          question: "Tags?",
+          header: "Tags",
+          options: [{ label: "bug", description: "Bug fix" }],
+          multiple: true,
+          custom: true,
+        },
+      ],
+    })
+
+    const state = questionSetSelected(createQuestionBodyState("question-1"), 1)
+    const next = questionToggleAction(state, ask).state
+    expect(next.editing).toBe(true)
+  })
+  // kilocode_change end
 
   test("stores and submits custom answers", () => {
     let state = questionSetSelected(createQuestionBodyState("question-1"), 1)
