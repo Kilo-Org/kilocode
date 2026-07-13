@@ -168,6 +168,7 @@ export interface SessionCreatedMessage {
 export interface SessionForkedMessage {
   type: "sessionForked"
   sessionID: string
+  forkedFromID: string
 }
 
 export interface SessionUpdatedMessage {
