@@ -68,7 +68,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: true
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Run JetBrains unit tests
         run: bun script/test-ci.ts
