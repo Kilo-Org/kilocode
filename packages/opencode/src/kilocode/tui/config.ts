@@ -115,6 +115,8 @@ export namespace KilocodeTuiConfig {
   function writable(config: Patch | TuiConfig.Info, defaults = true): Editable {
     const result = { ...config } as Record<string, unknown>
     delete result.plugin_origins
+    delete result.instruction_origins
+    delete result.skill_path_origins
     const keybinds: Record<string, string> = defaults
       ? Object.fromEntries(KilocodeKeybinds.list().map((item) => [item.id, item.default]))
       : {}

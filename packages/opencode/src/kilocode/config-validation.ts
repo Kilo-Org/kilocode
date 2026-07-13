@@ -73,7 +73,13 @@ export namespace ConfigValidation {
 
     let md: Awaited<ReturnType<typeof ConfigMarkdown.parse>>
     try {
-      md = await ConfigMarkdown.parse(filepath)
+      const trusted = path.isAbsolute(filepath) && ConfigProtection.isAbsolute(filepath)
+      const ctx = Instance.current
+      const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
+      md = await ConfigMarkdown.parse(filepath, {
+        trusted,
+        fileScope: trusted ? undefined : { root, source: filepath },
+      })
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       const msg = FrontmatterError.isInstance(e)

@@ -127,6 +127,7 @@ const live: Layer.Layer<
       })
 
       // kilocode_change start - compact at the configured threshold before contacting the provider
+      const tools = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
       const estimated: ModelMessage[] =
         isOpenaiOauth || isWorkflow
@@ -140,12 +141,11 @@ const live: Layer.Layer<
           : base.messages
       const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
-      const usage =
-        cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools: base.tools }) : undefined
+      const usage = cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools }) : undefined
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,
         messages: estimated,
-        tools: base.tools,
+        tools,
         configured: base.params.maxOutputTokens,
         usage,
         reported: input.reportedContextTokens,
@@ -163,7 +163,6 @@ const live: Layer.Layer<
       ) {
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
       }
-      const tools = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
       const prepared = { ...base, tools, params: { ...base.params, maxOutputTokens } }
       // kilocode_change end
 

@@ -1043,6 +1043,53 @@ describe("ProviderTransform.schema - gemini non-object properties removal", () =
     expect(result.properties.data.required).toEqual(["name"])
   })
 
+  // kilocode_change start
+  test("removes required from object array items with no properties", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        issue_fields: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["type"],
+          },
+        },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(result.properties.issue_fields.items.type).toBe("object")
+    expect(result.properties.issue_fields.items.required).toBeUndefined()
+  })
+
+  test("sanitizes gemini schemas routed through the Kilo Gateway", () => {
+    const gatewayGeminiModel = {
+      providerID: "kilocode",
+      api: {
+        id: "google/gemini-2.5-pro",
+      },
+    } as any
+    const schema = {
+      type: "object",
+      properties: {
+        issue_fields: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["type"],
+          },
+        },
+      },
+    } as any
+
+    const result = ProviderTransform.schema(gatewayGeminiModel, schema) as any
+
+    expect(result.properties.issue_fields.items.required).toBeUndefined()
+  })
+  // kilocode_change end
+
   test("does not affect non-gemini providers", () => {
     const openaiModel = {
       providerID: "openai",

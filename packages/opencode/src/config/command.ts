@@ -13,6 +13,7 @@ import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import { report } from "@/kilocode/config/report"
 import type { Warning } from "./config"
+import type { ConfigVariable } from "./variable"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
@@ -20,7 +21,13 @@ const log = Log.create({ service: "config" })
 const decodeInfo = Schema.decodeUnknownExit(ConfigCommandV1.Info)
 
 // kilocode_change start
-export async function load(dir: string, warnings?: Warning[]) {
+export async function load(
+  dir: string,
+  warnings?: Warning[],
+  trusted = false,
+  fileScope?: ConfigVariable.FileScope,
+  sourceScope?: ConfigVariable.FileScope,
+) {
   // kilocode_change end
   const result: Record<string, ConfigCommandV1.Info> = {}
   for (const item of await Glob.scan("{command,commands}/**/*.md", {
@@ -29,7 +36,9 @@ export async function load(dir: string, warnings?: Warning[]) {
     dot: true,
     symlink: true,
   })) {
-    const md = await ConfigMarkdown.parse(item).catch(async (err) => {
+    // kilocode_change start
+    const md = await ConfigMarkdown.parse(item, { trusted, fileScope, sourceScope }).catch(async (err) => {
+      // kilocode_change end
       const message = FrontmatterError.isInstance(err)
         ? err.data.message
         : `Failed to parse command ${item}`

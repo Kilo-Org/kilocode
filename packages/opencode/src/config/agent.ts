@@ -18,7 +18,13 @@ import type { Warning } from "./config"
 const log = Log.create({ service: "config" })
 
 // kilocode_change start - trusted gates {env:}; fileScope confines untrusted agent prompt {file:} reads
-export async function load(dir: string, warnings?: Warning[], trusted?: boolean, fileScope?: ConfigVariable.FileScope) {
+export async function load(
+  dir: string,
+  warnings?: Warning[],
+  trusted = false,
+  fileScope?: ConfigVariable.FileScope,
+  sourceScope?: ConfigVariable.FileScope,
+) {
   // kilocode_change end
   const result: Record<string, ConfigAgentV1.Info> = {}
   for (const item of await Glob.scan("{agent,agents}/**/*.md", {
@@ -27,7 +33,9 @@ export async function load(dir: string, warnings?: Warning[], trusted?: boolean,
     dot: true,
     symlink: true,
   })) {
-    const md = await ConfigMarkdown.parse(item).catch(async (err) => {
+    // kilocode_change start
+    const md = await ConfigMarkdown.parse(item, { trusted, fileScope, sourceScope }).catch(async (err) => {
+      // kilocode_change end
       const message = FrontmatterError.isInstance(err)
         ? err.data.message
         : `Failed to parse agent ${item}`
@@ -91,7 +99,13 @@ export async function load(dir: string, warnings?: Warning[], trusted?: boolean,
 }
 
 // kilocode_change start
-export async function loadMode(dir: string, warnings?: Warning[]) {
+export async function loadMode(
+  dir: string,
+  warnings?: Warning[],
+  trusted = false,
+  fileScope?: ConfigVariable.FileScope,
+  sourceScope?: ConfigVariable.FileScope,
+) {
   // kilocode_change end
   const result: Record<string, ConfigAgentV1.Info> = {}
   for (const item of await Glob.scan("{mode,modes}/*.md", {
@@ -100,7 +114,9 @@ export async function loadMode(dir: string, warnings?: Warning[]) {
     dot: true,
     symlink: true,
   })) {
-    const md = await ConfigMarkdown.parse(item).catch(async (err) => {
+    // kilocode_change start
+    const md = await ConfigMarkdown.parse(item, { trusted, fileScope, sourceScope }).catch(async (err) => {
+      // kilocode_change end
       const message = FrontmatterError.isInstance(err)
         ? err.data.message
         : `Failed to parse mode ${item}`

@@ -58,16 +58,23 @@ function testLayer(
 
 describe("installation", () => {
   describe("latest", () => {
-    testEffect(testLayer(() => jsonResponse({ tag_name: "v1.2.3" }))).effect(
-      "reads release version from GitHub releases",
-      () =>
-        Effect.gen(function* () {
-          const result = yield* Installation.use.latest("unknown")
-          expect(result).toBe("1.2.3")
-        }),
+    // kilocode_change start - curl/unknown fallback now resolves from the public npm
+    // registry instead of GitHub /releases/latest (which is polluted by JetBrains releases)
+    const curlCalls: string[] = []
+    testEffect(
+      testLayer((request) => {
+        curlCalls.push(request.url)
+        return jsonResponse({ version: "1.2.3" })
+      }),
+    ).effect("reads release version from GitHub releases", () =>
+      Effect.gen(function* () {
+        const result = yield* Installation.use.latest("unknown")
+        expect(result).toBe("1.2.3")
+        expect(curlCalls).toContain("https://registry.npmjs.org/@kilocode%2fcli/local")
+      }),
     )
 
-    testEffect(testLayer(() => jsonResponse({ tag_name: "v4.0.0-beta.1" }))).effect(
+    testEffect(testLayer(() => jsonResponse({ version: "4.0.0-beta.1" }))).effect(
       "strips v prefix from GitHub release tag",
       () =>
         Effect.gen(function* () {
@@ -75,6 +82,7 @@ describe("installation", () => {
           expect(result).toBe("4.0.0-beta.1")
         }),
     )
+    // kilocode_change end
 
     const npmCalls: string[] = []
     testEffect(
