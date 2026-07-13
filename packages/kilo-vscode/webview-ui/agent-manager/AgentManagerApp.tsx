@@ -111,7 +111,7 @@ import {
 } from "../src/utils/draft-store"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
-import { reportRemoteSessions } from "./remote-sessions"
+import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -796,7 +796,10 @@ const AgentManagerContent: Component = () => {
     if (reviewActive()) return REVIEW_TAB_ID
     return session.currentSessionID() ?? activePendingId()
   })
-
+  const visibleSession = createMemo(() =>
+    visible(session.currentSessionID(), !!terms.activeId() || reviewActive() || history()),
+  )
+  reportVisibleSession(vscode, visibleSession)
   const worktreeLabel = (wt: WorktreeState): string => {
     if (wt.label) return wt.label
     return firstOrderedTitle(sessionsForWorktree(wt.id), worktreeTabOrder()[wt.id], wt.branch)

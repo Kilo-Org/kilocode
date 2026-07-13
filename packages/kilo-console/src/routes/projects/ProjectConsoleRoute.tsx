@@ -147,6 +147,7 @@ function terminalKey(url: string, item: ProjectTerminalItem) {
 export function ProjectConsoleRoute() {
   const loc = useLocation()
   const params = useParams()
+  const viewerId = crypto.randomUUID()
   const search = createMemo(() => new URLSearchParams(loc.search))
   const fallback = () => base(search())
   const [url, setUrl] = createSignal(fallback())
@@ -660,19 +661,37 @@ export function ProjectConsoleRoute() {
     if (item) clearUnread(item)
   })
 
-  createEffect(() => {
+  let lastInput: { url: string; dir: string } | undefined
+  let lastSentKey: string | undefined
+  const pendingKeys = new Set<string>()
+
+  function sendSnapshot(force = false) {
     const base = query()
     const data = snap()
     if (!base || !data) return
-    const focused = activeSessionID()
-    const open = terminals().flatMap((item) => {
+    const selected = activeSessionID()
+    const ids = new Set<string>()
+    if (selected) ids.add(selected)
+    for (const item of terminals()) {
       const id = sessionID(item)
-      return id ? [id] : []
-    })
-    void viewProjectSessions({ url: base.url, dir: data.project.worktree }, focused ? [focused] : [], open).catch(
-      () => {},
-    )
-  })
+      if (id) ids.add(id)
+    }
+    const key = base.url + "|" + [...ids].sort().join(",")
+    if (pendingKeys.has(key)) return
+    if (!force && key === lastSentKey) return
+    pendingKeys.add(key)
+    lastInput = { url: base.url, dir: data.project.worktree }
+    void viewProjectSessions(lastInput, { id: viewerId, active: false }, [...ids], [])
+      .then(() => {
+        lastSentKey = key
+      })
+      .catch((err) => console.warn(`Viewed sessions: ${errMsg(err)}`))
+      .finally(() => pendingKeys.delete(key))
+  }
+
+  createEffect(() => sendSnapshot())
+
+  const checkin = window.setInterval(() => sendSnapshot(true), 60_000)
 
   createEffect(() => {
     const base = query()
@@ -704,6 +723,10 @@ export function ProjectConsoleRoute() {
   onCleanup(() => {
     if (events.timer) window.clearTimeout(events.timer)
     if (resize.timer) window.clearTimeout(resize.timer)
+    window.clearInterval(checkin)
+    if (lastInput) {
+      void viewProjectSessions(lastInput, { id: viewerId, active: false }, [], []).catch(() => {})
+    }
   })
 
   createEffect(() => {

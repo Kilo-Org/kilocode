@@ -1,9 +1,6 @@
-// kilocode_change - new file
-
 /**
- * Event Service WebSocket client for the TUI.
+ * Generic Event Service WebSocket client.
  *
- * Minimal inline port of `@kilocode/event-service` (cloud monorepo).
  * Connects via a two-step ticket flow:
  *   1. POST `/connect-ticket` with `Authorization: Bearer <JWT>` to mint a
  *      single-use ticket (30 s TTL).
@@ -11,9 +8,14 @@
  *      `kilo.events.v1`.
  *
  * Uses the global `WebSocket` constructor (Bun, Node 22+, browsers).
+ *
+ * Disconnect invalidation: every `connect()` and `disconnect()` bumps a
+ * generation counter. `connectOnce()` captures the generation at entry and,
+ * after the ticket mint resolves, refuses to construct a socket if the
+ * generation changed or the client was disposed. `disconnect()` also aborts
+ * an in-flight ticket request and the pending handshake, so a ticket response
+ * arriving after disposal can never create a socket.
  */
-
-import type { KiloChatEventMap, KiloChatEventName } from "./types"
 
 const WS_SUBPROTOCOL = "kilo.events.v1"
 const HANDSHAKE_TIMEOUT_MS = 10_000
@@ -44,12 +46,9 @@ export class HandshakeTimeoutError extends Error {
   }
 }
 
-// Close codes that signal the server rejected us for auth/policy reasons
-// and reconnecting with the same token is pointless. Everything else
-// (including 1006 "abnormal closure" from flaky networks) is transient.
 function isAuthCloseCode(code: number): boolean {
-  if (code === 1008) return true // Policy Violation
-  if (code === 4401 || code === 4403) return true // Custom auth rejection
+  if (code === 1008) return true
+  if (code === 4401 || code === 4403) return true
   return false
 }
 
@@ -59,13 +58,10 @@ export type EventServiceConfig = {
   url: string
   getToken: () => Promise<string>
   onUnauthorized?: () => void
+  onServerError?: (error: unknown) => void
+  handshakeTimeoutMs?: number
 }
 
-/**
- * The event-service base URL is configured as a WebSocket URL (`wss://…` /
- * `ws://…`) but the connect-ticket endpoint is a plain HTTP request. Strip
- * the trailing slash and swap the protocol so `fetch()` accepts the URL.
- */
 function toHttpBase(wsBase: string): string {
   const trimmed = wsBase.replace(/\/$/, "")
   if (trimmed.startsWith("wss://")) return "https://" + trimmed.slice(6)
@@ -77,16 +73,20 @@ export class EventServiceClient {
   private readonly url: string
   private readonly getToken: () => Promise<string>
   private readonly onUnauthorized: (() => void) | undefined
+  private readonly onServerError: ((error: unknown) => void) | undefined
+  private readonly handshakeTimeoutMs: number
 
   private ws: WebSocket | null = null
   private connected = false
   private destroyed = false
+  private generation = 0
   private reconnectAttempts = 0
   private hasConnectedBefore = false
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private pingTimer: ReturnType<typeof setInterval> | null = null
   private handshakeTimer: ReturnType<typeof setTimeout> | null = null
   private abortHandshake: ((err: Error) => void) | null = null
+  private ticketAbort: AbortController | null = null
 
   private eventHandlers = new Map<string, Set<EventHandler>>()
   private activeContexts = new Set<string>()
@@ -96,9 +96,12 @@ export class EventServiceClient {
     this.url = config.url
     this.getToken = config.getToken
     this.onUnauthorized = config.onUnauthorized
+    this.onServerError = config.onServerError
+    this.handshakeTimeoutMs = config.handshakeTimeoutMs ?? HANDSHAKE_TIMEOUT_MS
   }
 
   async connect(): Promise<void> {
+    const gen = ++this.generation
     this.destroyed = false
     this.reconnectAttempts = 0
     if (this.reconnectTimer !== null) {
@@ -108,13 +111,19 @@ export class EventServiceClient {
     try {
       await this.connectOnce()
     } catch (err) {
+      if (this.destroyed || this.generation !== gen) return
       if (this.handleAuthFailure(err)) return
       if (!this.destroyed) this.scheduleReconnect()
     }
   }
 
   disconnect(): void {
+    this.generation++
     this.destroyed = true
+    if (this.ticketAbort) {
+      this.ticketAbort.abort()
+      this.ticketAbort = null
+    }
     if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
@@ -149,9 +158,9 @@ export class EventServiceClient {
     }
   }
 
-  on<N extends KiloChatEventName>(event: N, handler: (ctx: string, payload: KiloChatEventMap[N]) => void): () => void {
+  on<T = unknown>(event: string, handler: (context: string, payload: T) => void): () => void {
     const set = this.eventHandlers.get(event) ?? new Set<EventHandler>()
-    const wrapped: EventHandler = (ctx, payload) => handler(ctx, payload as KiloChatEventMap[N])
+    const wrapped: EventHandler = (ctx, payload) => handler(ctx, payload as T)
     set.add(wrapped)
     this.eventHandlers.set(event, set)
     return () => {
@@ -181,6 +190,7 @@ export class EventServiceClient {
   }
 
   private async connectOnce(): Promise<void> {
+    const gen = this.generation
     if (this.ws) {
       const old = this.ws
       this.ws = null
@@ -189,6 +199,7 @@ export class EventServiceClient {
 
     const token = await this.getToken()
     const ticket = await this.fetchTicket(token)
+    if (this.destroyed || this.generation !== gen) return
 
     return new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(`${this.url}/connect?ticket=${encodeURIComponent(ticket)}`, [WS_SUBPROTOCOL])
@@ -215,9 +226,10 @@ export class EventServiceClient {
         this.handshakeTimer = null
         if (this.ws === ws) ws.close(1000, "handshake-timeout")
         settleReject(new HandshakeTimeoutError())
-      }, HANDSHAKE_TIMEOUT_MS)
+      }, this.handshakeTimeoutMs)
 
       ws.addEventListener("open", () => {
+        if (this.ws !== ws) return
         const isReconnect = this.hasConnectedBefore
         this.connected = true
         this.hasConnectedBefore = true
@@ -231,6 +243,7 @@ export class EventServiceClient {
       })
 
       ws.addEventListener("message", (event: MessageEvent) => {
+        if (this.ws !== ws) return
         this.handleMessage(String(event.data))
       })
 
@@ -240,10 +253,6 @@ export class EventServiceClient {
         this.connected = false
         this.stopPing()
         this.clearHandshakeTimer()
-        // A handshake failure always fires `close` after `error`, so we
-        // settle here with a classification based on the close code:
-        // explicit auth/policy codes → fatal; anything else → transient
-        // and the caller (`connect`) will schedule a reconnect.
         if (!wasConnected) {
           if (isAuthCloseCode(event.code)) {
             settleReject(new WebSocketAuthError())
@@ -257,23 +266,13 @@ export class EventServiceClient {
         if (!this.destroyed) this.scheduleReconnect()
       })
 
-      ws.addEventListener("error", () => {
-        // Swallowed: the `close` event fires right after and carries the
-        // close code we need to distinguish auth failures from network
-        // blips. Settling here loses that context.
-      })
+      ws.addEventListener("error", () => {})
     })
   }
 
-  /**
-   * Mint a single-use connection ticket. The event-service issues a 30 s ticket
-   * scoped to the bearer JWT; the WebSocket upgrade then consumes it.
-   *
-   * `this.url` is the WebSocket base (`wss://…` or `ws://…`); `fetch()` only
-   * accepts `http(s)`, so we rewrite the protocol before the HTTP call.
-   */
   private async fetchTicket(token: string): Promise<string> {
     const ctrl = new AbortController()
+    this.ticketAbort = ctrl
     const timer = setTimeout(() => ctrl.abort(), TICKET_FETCH_TIMEOUT_MS)
     try {
       const res = await fetch(toHttpBase(this.url) + "/connect-ticket", {
@@ -300,6 +299,7 @@ export class EventServiceClient {
       throw new WebSocketConnectError(`Event-service ticket request failed: ${(err as Error)?.message ?? err}`, 0)
     } finally {
       clearTimeout(timer)
+      if (this.ticketAbort === ctrl) this.ticketAbort = null
     }
   }
 
@@ -335,6 +335,7 @@ export class EventServiceClient {
     }
     if (m.type === "error") {
       console.warn("[Kilo] event-service server error", m)
+      this.onServerError?.(m)
     }
   }
 
@@ -370,7 +371,10 @@ export class EventServiceClient {
     this.reconnectAttempts++
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
+      if (this.destroyed) return
+      const gen = this.generation
       this.connectOnce().catch((err) => {
+        if (this.destroyed || this.generation !== gen) return
         if (this.handleAuthFailure(err)) return
         if (!this.destroyed) this.scheduleReconnect()
       })

@@ -1,5 +1,8 @@
 import { Auth } from "@/auth"
-import { invalidateAfterProviderAuthChange } from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
+import {
+  invalidateAfterProviderAuthChange,
+  invalidatePresence,
+} from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
@@ -16,6 +19,9 @@ export const controlHandlers = HttpApiBuilder.group(RootHttpApi, "control", (han
       payload: Auth.Info
     }) {
       yield* auth.set(ctx.params.providerID, ctx.payload).pipe(Effect.orDie)
+      // kilocode_change start - drop old presence socket before instance disposal on Kilo auth changes
+      if (ctx.params.providerID === "kilo") yield* invalidatePresence()
+      // kilocode_change end
       yield* invalidateAfterProviderAuthChange(ctx.params.providerID) // kilocode_change
       return true
     })
@@ -24,6 +30,9 @@ export const controlHandlers = HttpApiBuilder.group(RootHttpApi, "control", (han
       params: { providerID: ProviderV2.ID }
     }) {
       yield* auth.remove(ctx.params.providerID).pipe(Effect.orDie)
+      // kilocode_change start - drop old presence socket before instance disposal on Kilo auth changes
+      if (ctx.params.providerID === "kilo") yield* invalidatePresence()
+      // kilocode_change end
       yield* invalidateAfterProviderAuthChange(ctx.params.providerID) // kilocode_change
       return true
     })

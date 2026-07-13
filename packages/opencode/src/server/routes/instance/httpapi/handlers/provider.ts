@@ -5,7 +5,10 @@ import { Provider } from "@/provider/provider"
 
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
-import { disposeAllInstancesAfterProviderAuthCallback } from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
+import {
+  disposeAllInstancesAfterProviderAuthCallback,
+  invalidatePresence,
+} from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
 import { providerMetadata } from "@/kilocode/provider/metadata" // kilocode_change
 import { filterPromptTrainingModels } from "@/kilocode/provider/model-filter" // kilocode_change
 import { overlay as overlayAnacondaDesktop } from "@/kilocode/anaconda-desktop/provider" // kilocode_change
@@ -126,6 +129,9 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
           code: ctx.payload.code,
         }),
       )
+      // kilocode_change start - drop old-user presence before instance disposal on Kilo OAuth callback
+      if (ctx.params.providerID === "kilo") yield* invalidatePresence()
+      // kilocode_change end
       yield* disposeAllInstancesAfterProviderAuthCallback() // kilocode_change
       return true
     })
