@@ -13,6 +13,7 @@ export namespace MemorySessions {
     time: string
     topic: string
     summary: string
+    fallback: boolean
   }
 
   function stamp(input: number) {
@@ -31,7 +32,7 @@ export namespace MemorySessions {
   }
 
   function topic(input: { summary: string; topic?: string }) {
-    return MemoryText.brief(input.topic || input.summary.split(/[.;:]/)[0] || input.summary, 80)
+    return MemoryText.brief(input.topic || input.summary.split(/[.;]/)[0] || input.summary, 80)
   }
 
   async function list(root: string) {
@@ -50,12 +51,13 @@ export namespace MemorySessions {
     })
   }
 
-  function content(input: { id: string; topic: string; summary: string; time: number }) {
+  function content(input: { id: string; topic: string; summary: string; time: number; fallback?: boolean }) {
     return [
       `# Session ${input.id}`,
       "",
       "Version: 1",
       `Updated: ${new Date(input.time).toISOString()}`,
+      ...(input.fallback ? ["Fallback: true"] : []),
       `Topic: ${input.topic}`,
       "",
       "## Summary",
@@ -66,7 +68,7 @@ export namespace MemorySessions {
 
   function draft(
     root: string,
-    input: { sessionID: string; topic?: string; summary: string; max: number; time?: number },
+    input: { sessionID: string; topic?: string; summary: string; max: number; time?: number; fallback?: boolean },
   ) {
     const paths = MemoryPaths.files(root)
     const id = MemorySlug.safe(input.sessionID, { max: MemorySlug.max.label, fallback: "session" })
@@ -80,7 +82,7 @@ export namespace MemorySessions {
       id: input.sessionID,
       name,
       file: path.join(paths.sessions, name),
-      text: content({ id: input.sessionID, topic: label, summary, time }),
+      text: content({ id: input.sessionID, topic: label, summary, time, fallback: input.fallback }),
     }
   }
 
@@ -97,9 +99,10 @@ export namespace MemorySessions {
       .find((line) => line.startsWith("Topic: "))
       ?.slice("Topic: ".length)
       .trim()
+    const fallback = lines.slice(0, idx).some((line) => line.trim().toLowerCase() === "fallback: true")
     const summary = MemoryText.brief(lines.slice(idx + 1).find((line) => line.trim()) ?? "", max)
     if (!summary) return
-    return { file, id: session(file, content), time, topic: topic({ summary, topic: label }), summary }
+    return { file, id: session(file, content), time, topic: topic({ summary, topic: label }), summary, fallback }
   }
 
   async function removePrior(root: string, id: string, keep: string) {
@@ -116,7 +119,7 @@ export namespace MemorySessions {
 
   export async function writeSession(
     root: string,
-    input: { sessionID: string; topic?: string; summary: string; max: number; time?: number },
+    input: { sessionID: string; topic?: string; summary: string; max: number; time?: number; fallback?: boolean },
   ) {
     const paths = MemoryPaths.files(root)
     await MemoryFs.dir(paths.sessions)
@@ -132,15 +135,18 @@ export namespace MemorySessions {
       .filter((item) => item.endsWith(".md"))
       .sort()
       .reverse()
-      .reduce(async (prior, file) => {
-        const current = await prior
-        if (current) return current
-        const content = await MemoryFs.read(path.join(listed.paths.sessions, file))
-        if (!content) return
-        const item = parse(file, content, input.max)
-        if (item?.id !== input.sessionID) return
-        return item
-      }, Promise.resolve(undefined as Digest | undefined))
+      .reduce(
+        async (prior, file) => {
+          const current = await prior
+          if (current) return current
+          const content = await MemoryFs.read(path.join(listed.paths.sessions, file))
+          if (!content) return
+          const item = parse(file, content, input.max)
+          if (item?.id !== input.sessionID) return
+          return item
+        },
+        Promise.resolve(undefined as Digest | undefined),
+      )
   }
 
   export async function pruneSessions(root: string, max: number) {

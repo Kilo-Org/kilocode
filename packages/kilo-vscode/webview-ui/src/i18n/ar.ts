@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "تم التراجع عن {{count}} رسائل",
   "revert.banner.redo": "إعادة",
   "revert.banner.redo.all": "إعادة الكل",
-  "revert.banner.hint": "أرسل رسالة جديدة لجعل هذا دائمًا",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",
@@ -381,6 +381,7 @@ export const dict = {
     "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
   "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
@@ -623,7 +624,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "بحث Grep",
   "ui.permission.toolLabel.webSearch": "بحث ويب",
   "ui.permission.toolLabel.list": "قائمة",
-  "ui.permission.toolLabel.externalDirectory": "قراءة دليل خارجي",
+  "ui.permission.toolLabel.externalDirectory": "السماح بالوصول إلى مجلد خارجي",
   "ui.permission.toolLabel.webFetch": "جلب ويب",
   "ui.permission.toolLabel.task": "مهمة",
   "ui.permission.toolLabel.skill": "مهارة",
@@ -939,6 +940,7 @@ export const dict = {
   "provider.custom.models.name.label": "الاسم",
   "provider.custom.models.name.placeholder": "الاسم المعروض",
   "provider.custom.models.reasoning.label": "الاستدلال",
+  "provider.custom.models.modalities.image": "صورة",
   "provider.custom.models.variants.label": "المتغيرات",
   "provider.custom.models.variants.add": "إضافة متغير",
   "provider.custom.models.variants.remove": "إزالة المتغير",
@@ -1183,6 +1185,8 @@ export const dict = {
 
   "common.retry": "إعادة المحاولة",
   "common.refresh": "تحديث",
+  "common.reload": "إعادة التحميل",
+  "common.reloadDescription": "إعادة تحميل التكوين والمهارات والوكلاء والأوامر من القرص",
 
   "profile.title": "الملف الشخصي",
   "profile.notLoggedIn": "لم يتم تسجيل الدخول",
@@ -1266,6 +1270,11 @@ export const dict = {
   "session.outcome.interrupted": "تمت مقاطعة الدور",
   "session.outcome.error": "فشل الدور",
   "session.outcome.finish": "سبب الإنهاء: {{reason}}",
+  "session.costAlert.header": "تنبيه تكلفة الجلسة",
+  "session.costAlert.continue": "متابعة",
+  "session.costAlert.question":
+    "تجاوزت هذه الجلسة للتو حد التنبيه لكل جلسة البالغ {{limit}} وبلغت تكلفتها {{cost}}. هل تريد المتابعة؟",
+  "session.costAlert.stop": "إيقاف",
 
   "ui.sessionTurn.cancel": "إلغاء",
   "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
@@ -1390,6 +1399,12 @@ export const dict = {
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
+  "settings.experimental.imageGeneration.title": "توليد الصور",
+  "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
+  "settings.experimental.imageGenerationModel.title": "نموذج الصور",
+  "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
+  "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
+
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
   "settings.experimental.speechToText.description":
     "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
@@ -1405,7 +1420,20 @@ export const dict = {
   "settings.sandboxing.title": "العزل",
   "settings.sandboxing.network.title": "تقييد الوصول إلى الشبكة",
   "settings.sandboxing.network.description":
-    "احظر الوصول الصادر إلى الشبكة من الأوامر الصادرة عن النموذج وأدوات HTTP. تعمل خوادم MCP المحلية وخطافات المكونات الإضافية خارج هذا التقييد. تظل حركة مرور استدلال الموفّر والنموذج متاحة.",
+    "حظر الوصول الصادر المباشر من الأوامر الصادرة عن النموذج وأدوات HTTP. تصبح أدوات MCP المحلية والبعيدة غير متاحة أثناء تفعيل التقييد. تظل حركة مرور المزوّد وخطافات الإضافات الموثوقة خارج هذا التقييد.",
+
+  "settings.sandboxing.allowedHosts.title": "وجهات الشبكة المسموح بها",
+  "settings.sandboxing.allowedHosts.description":
+    "وجهات مضيف ومنفذ DNS لحركة مرور وكيل HTTP وHTTPS المعزولة. يحتاج GitHub CLI وHTTPS Git عادةً إلى github.com:443 وapi.github.com:443. تنطبق التغييرات على الجلسات الجديدة.",
+  "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
+  "settings.sandboxing.writablePaths.description":
+    "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "تفعيل SWE-Pruner: تقليم المخرجات الكبيرة لأدوات القراءة والبحث وshell مع مراعاة المهمة، استنادًا إلى سؤال تركيز يقدّمه الوكيل",
+  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1536,12 +1564,15 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
     "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
+  "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
+  "settings.autoApprove.maxCost.description":
+    "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",
   "settings.autoApprove.level.allow": "سماح",
   "settings.autoApprove.level.ask": "سؤال",
   "settings.autoApprove.level.deny": "رفض",
@@ -1575,6 +1606,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
+  "settings.context.compaction.title": "الضغط",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
@@ -1582,6 +1614,42 @@ export const dict = {
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
   "settings.context.watcherPatterns.description": "أنماط glob للملفات التي يجب على المراقب تجاهلها",
+
+  "settings.context.memory.title": "الذاكرة",
+  "settings.context.memory.project.title": "ذاكرة المشروع",
+  "settings.context.memory.autoSave.title": "حفظ ذاكرة المشروع تلقائيًا",
+  "settings.context.memory.autoSave.description":
+    "حفظ حقائق المشروع الدائمة تلقائيًا من الجولات المكتملة عند تفعيل الذاكرة.",
+  "settings.context.memory.index.title": "فهرس الذاكرة",
+  "settings.context.memory.status.notLoaded": "غير محمّلة",
+  "settings.context.memory.status.disabled": "معطّلة",
+  "settings.context.memory.status.enabledTokensOps":
+    "مفعّلة - ~{{session}} رموز سياق بدء التشغيل في هذه الجلسة - ~{{tokens}} رموز في الفهرس المخزّن - آخر عملية {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "فعّل الذاكرة لإنشاء ملفات ذاكرة المشروع.",
+  "settings.context.memory.inspect": "فحص",
+  "settings.context.memory.rebuild": "إعادة بناء فهرس الذاكرة",
+  "chat.memory.on": "الذاكرة مفعّلة",
+  "chat.memory.label": "الذاكرة · {{tokens}} رمز",
+  "chat.memory.status.loading": "جارٍ تحميل حالة الذاكرة",
+  "chat.memory.session.tokens": "سياق بدء التشغيل في هذه الجلسة: {{tokens}} رموز",
+  "chat.memory.total.tokens": "الفهرس المخزّن: {{tokens}} رموز",
+  "chat.memory.project.enabled": "ذاكرة المشروع مفعّلة",
+  "chat.memory.project.disabled": "ذاكرة المشروع معطّلة",
+  "chat.memory.command.failed": "فشل أمر الذاكرة",
+  "chat.memory.savedOperations": "آخر عملية ذاكرة: {{count}} عمليات",
+  "chat.memory.inspect": "فحص الذاكرة",
+  "chat.memory.remember": "تذكّر",
+  "chat.memory.forget": "انسَ",
+  "chat.memory.rebuild": "إعادة بناء الفهرس",
+  "chat.memory.disable": "تعطيل الذاكرة",
+  "chat.memory.badge.injected": "تم حقن الذاكرة",
+  "chat.memory.badge.recalled": "تم استدعاء الذاكرة",
+  "chat.memory.badge.startupCtx": "سياق البدء",
+  "chat.memory.badge.items": "{{count}} عناصر",
+  "chat.memory.badge.tokens": "{{tokens}} رموز",
+  "chat.memory.badge.recalledDetail": "تم استدعاء الذاكرة: {{count}} عناصر - {{tokens}} رموز",
+  "chat.memory.badge.files": "ملفات الذاكرة: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "استخدام prompt مخصص",
@@ -1592,6 +1660,10 @@ export const dict = {
     "الـ prompt النظامي المرسل إلى الذكاء الاصطناعي عند إنشاء commit messages. هذا يستبدل الـ prompt الافتراضي بالكامل.",
   "settings.commitMessage.prompt.placeholder":
     "على سبيل المثال: قم بإنشاء commit messages باللغة الإسبانية باتباع تنسيق conventional commits. أرجع الـ commit message فقط.",
+
+  "settings.commitMessage.language.sync": "مزامنة مع لغة واجهة المستخدم",
+  "settings.commitMessage.language.title": "اللغة",
+  "settings.commitMessage.language.description": "اختر اللغة المستخدمة لرسائل الالتزام التي تولدها الذكاء الاصطناعي:",
 
   "settings.display.username.title": "اسم المستخدم",
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
@@ -1763,4 +1835,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "الخطة جاهزة:",
+  "chat.search.placeholder": "البحث في المحادثة…",
+  "chat.search.toggle": "البحث في المحادثة",
+  "chat.search.matchCase": "مطابقة حالة الأحرف",
+  "chat.search.matchWholeWord": "مطابقة الكلمة بأكملها",
+  "chat.search.useRegex": "استخدام تعبير عادي",
+  "chat.search.previousMatch": "المطابقة السابقة",
+  "chat.search.nextMatch": "المطابقة التالية",
+  "chat.search.close": "إغلاق البحث",
+  "chat.search.invalidRegex": "تعبير عادي غير صالح",
+  "chat.search.noResults": "لا توجد نتائج",
+  "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
 }

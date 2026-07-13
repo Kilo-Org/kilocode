@@ -3,6 +3,7 @@ import { FetchHttpClient } from "effect/unstable/http"
 // kilocode_change start
 import { expect, spyOn } from "bun:test"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { legacyReviewMessage } from "../../src/kilocode/review/command"
 // kilocode_change end
 import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
@@ -12,6 +13,7 @@ import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
+import { Auth } from "../../src/auth" // kilocode_change
 import { Config } from "@/config/config"
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "../../src/mcp"
@@ -59,6 +61,7 @@ import { reply, TestLLMServer } from "../lib/llm-server"
 import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 
 void Log.init({ print: false })
 
@@ -160,13 +163,36 @@ const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
 const run = SessionRunState.layer.pipe(Layer.provide(status))
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 
-const processorCreateStarted: Array<() => void> = []
+// kilocode_change start
+const agent: AgentSvc.Info = {
+  name: "build",
+  mode: "primary",
+  native: true,
+  permission: Permission.fromConfig({ "*": "allow" }),
+  model: ref,
+  options: {},
+}
+const fastAgents = Layer.mock(AgentSvc.Service)({
+  get: () => Effect.succeed(agent),
+  list: () => Effect.succeed([agent]),
+  defaultInfo: () => Effect.succeed(agent),
+  defaultAgent: () => Effect.succeed(agent.name),
+  guardRequirements: () => Effect.void,
+})
+
+const processorCreateStarted: Deferred.Deferred<void>[] = []
 const blockingProcessor = Layer.succeed(
   SessionProcessor.Service,
   SessionProcessor.Service.of({
-    create: () => Effect.sync(() => processorCreateStarted.shift()?.()).pipe(Effect.andThen(Effect.never)),
+    create: () =>
+      Effect.gen(function* () {
+        const started = processorCreateStarted.shift()
+        if (started) yield* Deferred.succeed(started, undefined).pipe(Effect.ignore)
+        return yield* Effect.never
+      }),
   }),
 )
+// kilocode_change end
 
 function makePrompt(input?: { processor?: "blocking" }) {
   const deps = Layer.mergeAll(
@@ -174,7 +200,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
-    AgentSvc.defaultLayer,
+    input?.processor === "blocking" ? fastAgents : AgentSvc.defaultLayer, // kilocode_change
     Command.defaultLayer,
     Permission.defaultLayer,
     Plugin.defaultLayer,
@@ -187,6 +213,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     status,
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
+    MemoryService.layer, // kilocode_change
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
@@ -200,6 +227,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
+    Layer.provide(Auth.defaultLayer), // kilocode_change
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
@@ -322,20 +350,18 @@ const useServerConfig = Effect.fn("test.useServerConfig")(function* (config: (ur
   return { dir, llm }
 })
 
-// Wait for a session's runner to enter a busy state. SessionStatus is flipped to
-// "busy" inside Runner.startShell's modifyEffect at the same moment the runner
-// is registered, so this is a deterministic readiness signal — cancel can't
-// no-op once we observe it.
+// kilocode_change start - wait for the runner state that cancel observes instead of session status
 const waitForBusy = (sessionID: SessionID, duration: Duration.Input = "2 seconds") =>
   pollWithTimeout(
     Effect.gen(function* () {
-      const status = yield* SessionStatus.Service
-      const s = yield* status.get(sessionID)
-      return s.type === "busy" ? (true as const) : undefined
+      const run = yield* SessionRunState.Service
+      const exit = yield* run.assertNotBusy(sessionID).pipe(Effect.exit)
+      return Exit.isFailure(exit) ? (true as const) : undefined
     }),
     `session ${sessionID} never became busy`,
     duration,
   )
+// kilocode_change end
 
 const hasBash = Effect.sync(() => Bun.which("bash") !== null)
 
@@ -356,14 +382,6 @@ const deferredAsPromise = <A>(deferred: Deferred.Deferred<A>): PromiseLike<A> =>
     return deferredAsPromise(deferred) as PromiseLike<never>
   },
 })
-
-function defer<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void
-  const promise = new Promise<T>((done) => {
-    resolve = done
-  })
-  return { promise, resolve }
-}
 
 const succeedVoid = (deferred: Deferred.Deferred<void>) => {
   Effect.runSync(Deferred.succeed(deferred, void 0).pipe(Effect.ignore))
@@ -1149,10 +1167,12 @@ raceNoLLMServer.instance(
         parts: [{ type: "text", text: "first" }],
       })
 
-      const firstCreate = defer<void>()
-      processorCreateStarted.push(firstCreate.resolve)
+      // kilocode_change start
+      const firstCreate = yield* Deferred.make<void>()
+      processorCreateStarted.push(firstCreate)
       const first = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.promise(() => firstCreate.promise)
+      yield* awaitWithTimeout(Deferred.await(firstCreate), "processor.create did not start for first turn")
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const firstExit = yield* Fiber.await(first)
@@ -1175,10 +1195,12 @@ raceNoLLMServer.instance(
         parts: [{ type: "text", text: "second" }],
       })
 
-      const secondCreate = defer<void>()
-      processorCreateStarted.push(secondCreate.resolve)
+      // kilocode_change start
+      const secondCreate = yield* Deferred.make<void>()
+      processorCreateStarted.push(secondCreate)
       const second = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.promise(() => secondCreate.promise)
+      yield* awaitWithTimeout(Deferred.await(secondCreate), "processor.create did not start for second turn")
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const secondExit = yield* Fiber.await(second)
@@ -1500,7 +1522,7 @@ it.instance(
       expect(inputs).toHaveLength(2)
       expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("second")
     }),
-  3_000,
+  10_000, // kilocode_change - loaded CI runners can exceed 3s for two prompt turns
 )
 
 it.instance(
@@ -2582,7 +2604,38 @@ noLLMServer.instance(
   },
 )
 
-// kilocode_change start - /review subtask path tags child completions for telemetry
+// kilocode_change start - Kilo review command behavior
+noLLMServer.instance(
+  "deprecated review alias returns static message without LLM",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({})
+      const text = legacyReviewMessage("local-review-uncommitted")!
+
+      const result = yield* prompt.command({
+        sessionID: session.id,
+        command: "local-review-uncommitted",
+        arguments: "focus on tests",
+        model: "test/test-model",
+      })
+
+      expect(result.info.role).toBe("assistant")
+      expect(result.parts).toHaveLength(1)
+      expect(result.parts[0].type).toBe("text")
+      if (result.parts[0].type === "text") expect(result.parts[0].text).toBe(text)
+
+      const msgs = yield* sessions.messages({ sessionID: session.id })
+      const user = msgs.find((msg) => msg.info.role === "user")
+      expect(
+        user?.parts.some((part) => part.type === "text" && part.text === "/local-review-uncommitted focus on tests"),
+      ).toBe(true)
+    }),
+  { config: cfg },
+  30_000,
+)
+
 it.instance(
   "review command marks child completions with review telemetry",
   () =>
@@ -2631,7 +2684,7 @@ it.instance(
 
       yield* llm.tool("suggest", {
         suggest: "Run a local review?",
-        actions: [{ label: "Review", prompt: "/local-review-uncommitted --focus telemetry" }],
+        actions: [{ label: "Review", prompt: "/review uncommitted --focus telemetry" }],
       })
       yield* llm.text("review done", { usage: { input: 100, output: 50 } })
 
@@ -2659,7 +2712,7 @@ it.instance(
           (p) =>
             p.mode === "review" &&
             p.feature === "code_reviews" &&
-            p.command === "local-review-uncommitted" &&
+            p.command === "review" &&
             p.tool === "suggest",
         )
       expect(tagged).toBeDefined()

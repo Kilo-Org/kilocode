@@ -4,7 +4,13 @@
    ============================================ */
 
 [data-component="tool-output"][data-scrollable]:has([data-component="task-tools"]) {
+  margin-inline: -6px;
   max-height: 200px;
+  background: var(--surface-tool-output-base);
+
+  > [data-component="task-tools"] {
+    padding: 0;
+  }
 }
 
 /* ============================================
@@ -66,4 +72,30 @@ html[data-theme="kilo-vscode"]
   line-height: var(--line-height-large);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* ============================================
+   Generic / MCP Tool
+   ============================================ */
+
+html[data-theme="kilo-vscode"]
+  [data-component="tool-part-wrapper"][data-part-type="tool"]
+  [data-slot="collapsible-content"]:has(> [data-slot="mcp-section-label"]) {
+  overflow: hidden;
+  margin-inline: -6px;
+  width: calc(100% + 12px);
+  border-radius: var(--radius-sm);
+  background: var(--surface-tool-output-base);
+
+  > [data-component="tool-output"] {
+    width: auto;
+    margin-inline: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+
+    [data-component="markdown-code"] {
+      background: transparent;
+    }
+  }
 }

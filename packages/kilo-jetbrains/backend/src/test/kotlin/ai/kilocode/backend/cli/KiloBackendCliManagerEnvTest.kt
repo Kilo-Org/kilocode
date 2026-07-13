@@ -24,6 +24,7 @@ class KiloBackendCliManagerEnvTest {
 
     @AfterTest
     fun tearDown() {
+        KiloClaudeCompatSettings.set(false)
         System.clearProperty("kilo.dev.storage.isolated")
         System.clearProperty("kilo.dev.worktree.root")
         System.clearProperty("idea.plugin.in.sandbox.mode")
@@ -54,6 +55,15 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
+    fun `claude compatibility omits disable env var`() {
+        KiloClaudeCompatSettings.set(true)
+
+        val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertFalse(env.containsKey("KILO_DISABLE_CLAUDE_CODE"))
+    }
+
+    @Test
     fun `isolation disabled - default CLI config asks for edit and bash permissions`() {
         val env = manager.buildEnv("pwd123", emptyMap())
 
@@ -67,6 +77,15 @@ class KiloBackendCliManagerEnvTest {
         val env = manager.buildEnv("pwd123", mapOf("KILO_CONFIG_CONTENT" to cfg))
 
         assertEquals(cfg, env["KILO_CONFIG_CONTENT"])
+    }
+
+    @Test
+    fun `isolation disabled - base PATH is preserved`() {
+        val path = "/opt/homebrew/bin:/usr/bin"
+
+        val env = manager.buildEnv("pwd123", mapOf("PATH" to path))
+
+        assertEquals(path, env["PATH"])
     }
 
     @Test

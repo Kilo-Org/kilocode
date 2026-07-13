@@ -1,10 +1,16 @@
-import { MemoryOperations } from "./ops"
+import { MemoryOperations } from "./operations"
 import { MemoryRedact } from "./redact"
 import { MemoryShared } from "../recall/shared"
 import type { MemoryFiles } from "../storage/store"
 import type { CaptureSkip } from "./parse"
 
-export type CaptureSourceItem = { id: string; text: string }
+export type CaptureSourceItem = {
+  id: string
+  text: string
+  file?: MemoryOperations.Add["file"]
+  section?: string
+  key?: string
+}
 
 export type CaptureDetail = {
   type: "saved" | "skipped"
@@ -96,13 +102,21 @@ function tokens(input: string) {
   return MemoryShared.terms(input)
 }
 
-function duplicate(text: string | undefined, items: CaptureSourceItem[]) {
+function duplicate(input: {
+  text: string | undefined
+  items: CaptureSourceItem[]
+  file?: MemoryOperations.Add["file"]
+  section?: string
+}) {
+  const text = input.text
   if (!text) return
   const query = tokens(text)
   if (query.length === 0) return
   // Majority overlap required: a few shared generic terms must not confirm a duplicate.
   const needed = Math.max(Math.min(3, query.length), Math.ceil(query.length / 2))
-  const hits = items
+  const hits = input.items
+    .filter((item) => !input.file || !item.file || item.file === input.file)
+    .filter((item) => !input.section || !item.section || item.section === input.section)
     .map((item) => {
       const hay = tokens(item.text)
       const found = query.filter((term) => hay.includes(term)).length
@@ -113,27 +127,38 @@ function duplicate(text: string | undefined, items: CaptureSourceItem[]) {
   return hits.at(0)?.item.id
 }
 
-/** Model-claimed duplicates are verified against stored entries; unconfirmed claims are rescued as ops instead of lost. */
+/** Model-claimed duplicates are verified against stored entries; unconfirmed claims are downgraded to
+ * "unsupported" so they read as advisory rather than confirmed against a real entry. */
 export function verifySkips(input: { skipped: CaptureSkip[]; items: CaptureSourceItem[] }) {
   const skipped: CaptureSkip[] = []
-  const rescued: MemoryOperations.Op[] = []
   for (const item of input.skipped) {
     if (item.reason !== "duplicate" || !item.text) {
       skipped.push(item)
       continue
     }
-    const source = duplicate(item.text, input.items)
+    // A model-claimed duplicate is only confirmable when it names the exact scope (file + section).
+    // Any missing scope field would let fuzzy text matching confirm against unrelated memory, so
+    // downgrade partially-scoped or unscoped claims to advisory instead.
+    const scoped = item.file !== undefined && item.section !== undefined
+    const source = scoped
+      ? duplicate({ text: item.text, items: input.items, file: item.file, section: item.section })
+      : undefined
     if (source) {
       skipped.push({ ...item, duplicateOf: item.duplicateOf ?? source })
       continue
     }
     skipped.push({ reason: "unsupported", text: item.text })
   }
-  return { skipped, rescued }
+  return { skipped }
 }
 
-export function duplicateOps(input: { ops: MemoryOperations.Op[]; skipped: CaptureSkip[]; items: CaptureSourceItem[] }) {
+export function duplicateOps(input: {
+  ops: MemoryOperations.Op[]
+  skipped: CaptureSkip[]
+  items: CaptureSourceItem[]
+}) {
   const skipped = [...input.skipped]
+  const existing = new Set(input.items.map((item) => item.id))
   const ops = input.ops.filter((item) => {
     if (item.action !== "add") return true
     const rejected = MemoryOperations.reject(item)
@@ -141,7 +166,15 @@ export function duplicateOps(input: { ops: MemoryOperations.Op[]; skipped: Captu
       skipped.push(rejected)
       return false
     }
-    const source = duplicate(`${item.key} ${item.text}`, input.items)
+    // Exact-key upsert: same file/section/key as an existing entry is an update, not a duplicate —
+    // route it to apply (which updates the line in place) instead of dropping it here.
+    if (item.file && existing.has(MemoryOperations.id(item))) return true
+    const source = duplicate({
+      text: `${item.key} ${item.text}`,
+      items: input.items,
+      file: item.file,
+      section: item.section,
+    })
     if (!source) return true
     skipped.push({ reason: "duplicate", text: item.text, duplicateOf: source })
     return false
@@ -171,7 +204,8 @@ export function notice(input: {
   skipped: CaptureSkip[]
   tokens: number
 }): CaptureDetail | undefined {
-  const references = MemoryShared.refs(input.ops)
+  const ops = input.ops.filter((item) => item.action !== "add" || !MemoryOperations.secret(item))
+  const references = MemoryShared.refs(ops)
   if (input.count > 0) {
     return {
       type: "saved",
@@ -179,7 +213,7 @@ export function notice(input: {
       tokens: input.tokens,
       operationCount: input.count,
       sources: references,
-      files: MemoryShared.files(input.ops),
+      files: MemoryShared.files(ops),
     }
   }
   return {
@@ -189,6 +223,6 @@ export function notice(input: {
     operationCount: 0,
     skippedCount: input.skipped.length,
     sources: references,
-    files: MemoryShared.files(input.ops),
+    files: MemoryShared.files(ops),
   }
 }

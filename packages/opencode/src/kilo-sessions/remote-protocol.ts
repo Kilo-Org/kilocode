@@ -20,6 +20,7 @@ export namespace RemoteProtocol {
     sessions: z.array(SessionInfo),
     focused: z.array(z.string()).optional(),
     open: z.array(z.string()).optional(),
+    protocolVersion: z.string().optional(), // lets relay detect CLI capabilities without probing commands
   })
   export type Heartbeat = z.infer<typeof Heartbeat>
 

@@ -736,6 +736,13 @@ button.am-section-toggle:hover .am-section-label {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .am-pr-badge[data-pending] {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
 .am-worktree-item-active .am-pr-badge {
   background: color-mix(in srgb, var(--pr-accent) 18%, transparent);
 }
@@ -1244,6 +1251,19 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--surface-interactive-base) 10%, transparent);
 }
 
+.am-tab-target {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+}
+
+.am-tab:has(.am-tab-target:focus-visible) {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
+  color: var(--text-base);
+}
+
 .am-tab-icon {
   display: inline-flex;
   align-items: center;
@@ -1279,8 +1299,6 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
   height: 100%;
   flex: 1;
-  padding-right: 27px;
-  margin-right: -27px;
 }
 
 .am-tab-close-wrap {
@@ -2702,10 +2720,11 @@ body.am-wt-dragging-active * {
   overflow-y: auto;
 }
 
-.am-nv-dialog .am-prompt-input-container:has([class~="model-selector-popover"][data-component="popover-content"]),
-.am-nv-dialog-content:has([class~="model-selector-popover"][data-component="popover-content"]),
-[data-component="dialog"]:has(.am-nv-dialog [class~="model-selector-popover"][data-component="popover-content"])
-  [data-slot="dialog-body"] {
+/* While any inline (non-portaled) selector popover is open, let it escape the
+   dialog's scroll containers. Covers model, thinking-variant, and mode pickers. */
+.am-nv-dialog .am-prompt-input-container:has([data-component="popover-content"]),
+.am-nv-dialog-content:has([data-component="popover-content"]),
+[data-component="dialog"]:has(.am-nv-dialog [data-component="popover-content"]) [data-slot="dialog-body"] {
   overflow: visible;
 }
 

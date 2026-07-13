@@ -30,8 +30,7 @@ export namespace MemoryPaths {
   }
 
   export type Host = {
-    home: string
-    config: string
+    data: string
   }
 
   function base(ctx: Ctx) {
@@ -69,7 +68,14 @@ export namespace MemoryPaths {
     const match = text?.match(/^gitdir:\s*(.+)$/m)
     if (!match?.[1]) return dir
     const git = path.resolve(dir, match[1])
+    if (!belongs(dot, git)) return dir
     return checkout(common(git)) ?? dir
+  }
+
+  function belongs(dot: string, git: string) {
+    const back = read(path.join(git, "gitdir"))
+    if (!back) return false
+    return canon(path.resolve(git, back)) === canon(dot)
   }
 
   function canon(dir: string) {
@@ -92,14 +98,8 @@ export namespace MemoryPaths {
     }
   }
 
-  function global(input: Host) {
-    const dir = path.resolve(input.config)
-    if (path.basename(dir) === ".kilo") return dir
-    return path.join(input.home, ".kilo")
-  }
-
   export function root(input: { ctx: Ctx } & Host) {
-    return path.join(global(input), "memory", identity(input).folder)
+    return path.join(input.data, "memory", identity(input).folder)
   }
 
   export function files(root: string): Files {

@@ -122,6 +122,7 @@ export const dict = {
 
   "ui.tool.read": "อ่าน",
   "ui.tool.loaded": "โหลดแล้ว",
+  "ui.tool.swePruned": "SWE-Pruner · เก็บไว้ {{kept}} จาก {{total}} บรรทัด", // kilocode_change
   "ui.tool.list": "รายการ",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -172,7 +173,9 @@ export const dict = {
   "ui.patch.action.patched": "แพตช์",
 
   "ui.question.subtitle.answered": "{{count}} ตอบแล้ว",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(ไม่มีคำตอบ)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(ไม่ได้ตอบ)",
   "ui.question.multiHint": "เลือกทั้งหมดที่ใช้",
   "ui.question.singleHint": "เลือกหนึ่งคำตอบ",

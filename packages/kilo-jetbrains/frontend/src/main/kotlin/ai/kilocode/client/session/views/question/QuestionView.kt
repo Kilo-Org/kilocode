@@ -53,6 +53,7 @@ class QuestionView(
     private val follow: () -> Boolean = { true },
     private val scroll: (Boolean) -> Unit = {},
     private val selection: SessionSelection? = null,
+    focus: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -71,7 +72,7 @@ class QuestionView(
     private var customEditor: SessionEditorTextField? = null
     private var customFocus: FocusAdapter? = null
 
-    private val card = BaseQuestionView(selection)
+    private val card = BaseQuestionView(selection, focus)
 
     private val summary = JBLabel()
     private val nav = JPanel().apply {
@@ -164,8 +165,8 @@ class QuestionView(
         this.style = style
         card.applyStyle(style)
         customEditor?.let { ed ->
-            ed.font = style.editorFont
-            ed.getEditor(false)?.let(style::applyToEditor)
+            ed.font = style.transcriptFont
+            ed.getEditor(false)?.let(style::applyTranscriptToEditor)
             ed.background = style.editorScheme.defaultBackground
         }
         val changed = texts.fold(false) { acc, item -> setFont(item.first, item.second) || acc }
@@ -495,7 +496,7 @@ class QuestionView(
         ed.setShowPlaceholderWhenFocused(true)
         ed.setOneLineMode(false)
         ed.addSettingsProvider { ex ->
-            style.applyToEditor(ex)
+            style.applyTranscriptToEditor(ex)
             ex.setBorder(JBUI.Borders.empty())
             ex.scrollPane.border = JBUI.Borders.empty()
             ex.scrollPane.viewportBorder = JBUI.Borders.empty()
@@ -503,11 +504,12 @@ class QuestionView(
             ex.scrollPane.background = style.editorScheme.defaultBackground
             ex.scrollPane.viewport.background = style.editorScheme.defaultBackground
             ex.settings.isUseSoftWraps = true
+            ex.settings.isPaintSoftWraps = false
             ex.settings.isAdditionalPageAtBottom = false
             ex.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         }
         selection?.register(ed)?.let(regs::add)
-        ed.font = style.editorFont
+        ed.font = style.transcriptFont
         ed.background = style.editorScheme.defaultBackground
 
         // Pre-fill with saved text. This call also forces lazy document creation so

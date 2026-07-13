@@ -6,7 +6,7 @@ import { Memory } from "../src/memory"
 import { MemoryDigest } from "../src/capture/digest"
 import { MemoryFiles } from "../src/storage/store"
 import { MemoryIndexer } from "../src/recall/indexer"
-import { MemoryOperations } from "../src/capture/ops"
+import { MemoryOperations } from "../src/capture/operations"
 import { MemoryPaths } from "../src/storage/paths"
 import { MemoryRecall } from "../src/recall/recall"
 import { MemorySchema } from "../src/schema"
@@ -65,7 +65,8 @@ describe("memory core package", () => {
       limits: { maxSessionFiles: 50, maxRecentSessions: 10, maxSessionLineChars: 160, maxProjectIndexBytes: 1 },
       stats: {
         lastInjectedAt: Number.NaN,
-        lastConsolidatedAt: Number.POSITIVE_INFINITY,
+        lastTypedConsolidationAt: Number.POSITIVE_INFINITY,
+        lastSessionSavedAt: Number.POSITIVE_INFINITY,
       },
     })
 
@@ -78,7 +79,8 @@ describe("memory core package", () => {
     expect(state.limits.maxProjectIndexBytes).toBe(8192)
     expect(state.limits.maxSessionLineChars).toBe(480)
     expect(state.stats.lastInjectedAt).toBeNull()
-    expect(state.stats.lastConsolidatedAt).toBeNull()
+    expect(state.stats.lastTypedConsolidationAt).toBeNull()
+    expect(state.stats.lastSessionSavedAt).toBeNull()
   })
 
   test("state writes omit code-owned limits", async () => {
@@ -112,6 +114,20 @@ describe("memory core package", () => {
       expect(shown.decisions).not.toContain("hunter2")
       expect(shown.changes).toContain("[redacted]")
       expect(shown.decisions).toContain("provider error")
+    })
+  })
+
+  test("targeted recall redacts query before decision truncation", async () => {
+    await use(async (t) => {
+      const secret = "sk-" + "a".repeat(40)
+      await Memory.enable({ root: t.root })
+
+      await Memory.recall({ root: t.root, query: "x".repeat(220) + secret })
+      const shown = await Memory.show({ root: t.root })
+
+      expect(shown.decisions).toContain("[redacted]")
+      expect(shown.decisions).not.toContain(secret)
+      expect(shown.decisions).not.toContain(secret.slice(0, 20))
     })
   })
 
@@ -177,6 +193,38 @@ describe("memory core package", () => {
     })
   })
 
+  test("resolves memory roots under host data storage", async () => {
+    await use(async (t) => {
+      const project = path.join(t.dir, "repo")
+      const data = path.join(t.dir, "data")
+      await mkdir(project)
+
+      const root = MemoryPaths.root({
+        ctx: { directory: project, worktree: project },
+        data,
+      })
+
+      expect(path.dirname(root)).toBe(path.join(data, "memory"))
+      expect(path.basename(root)).toMatch(/^repo-[a-f0-9]{12}$/)
+    })
+  })
+
+  test("does not trust workspace-controlled gitdir pointers for project identity", async () => {
+    await use(async (t) => {
+      const victim = path.join(t.dir, "victim")
+      const other = path.join(t.dir, "other")
+      await mkdir(path.join(other, ".git"), { recursive: true })
+      await mkdir(victim)
+      await writeFile(path.join(victim, ".git"), "gitdir: ../other/.git\n")
+
+      const id = MemoryPaths.identity({ ctx: { directory: victim, worktree: victim } })
+
+      expect(path.basename(id.canonical)).toBe("victim")
+      expect(path.basename(id.canonical)).not.toBe("other")
+      expect(id.folder.startsWith("victim-")).toBe(true)
+    })
+  })
+
   test("serializes concurrent operations for one root", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
@@ -193,7 +241,7 @@ describe("memory core package", () => {
     })
   })
 
-  test("apply upserts, removes, dedupes, and rejects secrets", async () => {
+  test("apply upserts, removes, dedupes, and skips secrets without aborting the batch", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
       await Memory.apply({
@@ -205,11 +253,22 @@ describe("memory core package", () => {
           { action: "add", key: "repo_tests", text: "Run CLI memory tests from packages/opencode." },
         ],
       })
-      await expect(
-        Memory.apply({ root: t.root, ops: [{ action: "add", key: "bad", text: "api_key=sk-abcdefghijklmnopqrstuvwxyz" }] }),
-      ).rejects.toThrow("secret-like content")
+      // A secret-like op is skipped (recorded), not thrown, so the sibling clean op still applies.
+      const mixed = await Memory.apply({
+        root: t.root,
+        ops: [
+          { action: "add", key: "bad", text: "api_key=sk-abcdefghijklmnopqrstuvwxyz" },
+          { action: "add", key: "safe_fact", text: "Memory ops keep applying past a secret op." },
+        ],
+      })
       const shown = await Memory.show({ root: t.root })
 
+      expect(mixed.result.added).toBe(1)
+      // The skip record is redacted: it flows into the persistent decisions audit.
+      expect(mixed.result.skipped).toContainEqual({ reason: "secret", text: "[redacted]" })
+      expect(JSON.stringify(mixed.result.skipped)).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
+      expect(shown.sources.project).toContain("safe_fact")
+      expect(shown.sources.project).not.toContain("sk-abcdefghijklmnopqrstuvwxyz")
       expect(shown.sources.project.match(/repo_tests/g)?.length).toBe(1)
       expect(shown.index).toContain("repo_tests")
     })
@@ -304,6 +363,23 @@ describe("memory core package", () => {
       expect(shown.decisions).not.toContain("I prefer terse summaries")
       expect(shown.decisions).not.toContain("dark mode")
       expect(shown.decisions).not.toContain("Vim keybindings")
+    })
+  })
+
+  test("out-of-scope secret ops stay out of the operations audit", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+
+      const result = await Memory.apply({
+        root: t.root,
+        ops: [{ action: "add", key: "private_pref", text: "My preference is password=hunter2." }],
+      })
+      const shown = await Memory.show({ root: t.root })
+
+      expect(result.result.skipped).toEqual([{ reason: "out_of_scope", text: "My preference is [redacted]" }])
+      expect(shown.decisions).toContain('"reason":"out_of_scope"')
+      expect(shown.decisions).not.toContain("private_pref")
+      expect(shown.decisions).not.toContain("password=hunter2")
     })
   })
 
@@ -457,12 +533,10 @@ describe("memory core package", () => {
 
       const inventory = await MemoryFiles.deriveInventory(t.root)
       const shown = await Memory.show({ root: t.root })
-      const first = inventory.items[
-        MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "first_hint" })
-      ]!
-      const second = inventory.items[
-        MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "second_hint" })
-      ]!
+      const first =
+        inventory.items[MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "first_hint" })]!
+      const second =
+        inventory.items[MemoryFiles.inventoryKey({ file: "project.md", section: "Facts", key: "second_hint" })]!
 
       expect(first.createdAt).toBe(first.updatedAt)
       expect(second.createdAt).toBe(second.updatedAt)
@@ -526,6 +600,67 @@ describe("memory core package", () => {
     })
   })
 
+  test("direct digest recall returns full stored summaries while the index stays brief", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      const tail = "FULL_DETAIL_AFTER_480"
+      const summary = `Long digest start. ${"continuity detail ".repeat(45)}${tail}`
+      await Memory.recordSession({
+        root: t.root,
+        sessionID: "ses_full_digest",
+        topic: "full digest",
+        summary,
+        time: Date.UTC(2026, 0, 1),
+      })
+
+      const saved = await MemoryFiles.readSession(t.root, {
+        sessionID: "ses_full_digest",
+        max: MemorySchema.maxStoredDigestSummary,
+      })
+      const shown = await Memory.show({ root: t.root })
+      const recalled = await MemoryRecall.search({
+        root: t.root,
+        query: "",
+        mode: "digest",
+        sessionID: "ses_full_digest",
+      })
+      const latest = shown.index.match(/type=latest_session_digest[^\n]*\ntext: ([^\n]+)/)?.[1] ?? ""
+      const brief = latest.split(":: ").slice(1).join(":: ")
+
+      expect(saved?.summary.length).toBeGreaterThan(480)
+      expect(saved?.summary).toContain(tail)
+      expect(brief.length).toBeLessThanOrEqual(480)
+      expect(recalled?.block).toContain(tail)
+      expect(recalled?.block.length).toBeGreaterThan(480)
+    })
+  })
+
+  test("blank stored topic re-derives from User-prefixed summaries without splitting on colon", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      await mkdir(MemoryPaths.files(t.root).sessions, { recursive: true })
+      await writeFile(
+        path.join(MemoryPaths.files(t.root).sessions, "2026-01-01T00-00-00.000Z_ses_topic_id.md"),
+        [
+          "# Session ses_topic",
+          "",
+          "Version: 1",
+          "Updated: 2026-01-01T00:00:00.000Z",
+          "Topic: ",
+          "",
+          "## Summary",
+          "User: x Result: y. Next: continue.",
+          "",
+        ].join("\n"),
+      )
+
+      const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_topic", max: 480 })
+
+      expect(saved?.topic).not.toBe("User")
+      expect(saved?.topic).toContain("User: x Result: y")
+    })
+  })
+
   test("non-English stored text remains searchable", async () => {
     await use(async (t) => {
       await Memory.enable({ root: t.root })
@@ -582,6 +717,54 @@ describe("memory core package", () => {
       expect(index.text).toContain("type=project_decision")
       expect(index.text).toContain("architecture_choice")
       expect(index.text).toContain("type=project_constraint")
+      expect(index.text).toContain("project_only")
+    })
+  })
+
+  test("index reserves decisions and constraints against bulk correction pressure", async () => {
+    await use(async (t) => {
+      const enabled = await Memory.enable({ root: t.root })
+      const state = {
+        ...enabled.state,
+        limits: {
+          ...enabled.state.limits,
+          maxProjectIndexBytes: 640,
+        },
+      }
+      await MemoryFiles.writeSource(
+        t.root,
+        "corrections.md",
+        [
+          "# Corrective Memory",
+          "",
+          "## Corrections",
+          ...Array.from(
+            { length: 10 },
+            (_, idx) =>
+              `- correction_${idx} :: Reviewer correction ${idx} keeps ${"long guidance ".repeat(4)}visible in the index.`,
+          ),
+          "",
+        ].join("\n"),
+      )
+      await MemoryFiles.writeSource(
+        t.root,
+        "project.md",
+        [
+          "# Project Memory",
+          "",
+          "## Decisions",
+          "- architecture_choice :: Keep memory v0 file-based before adding databases.",
+          "",
+          "## Constraints",
+          "- project_only :: Memory v0 must stay project-only.",
+          "",
+        ].join("\n"),
+      )
+
+      const index = await MemoryIndexer.rebuild({ root: t.root, state })
+
+      expect(index.truncated).toBe(true)
+      expect(index.text).toContain("architecture_choice")
       expect(index.text).toContain("project_only")
     })
   })
@@ -769,6 +952,49 @@ describe("memory core package", () => {
     })
   })
 
+  test("index caps covered session pointer ids", async () => {
+    await use(async (t) => {
+      const enabled = await Memory.enable({ root: t.root })
+      const state = {
+        ...enabled.state,
+        limits: {
+          ...enabled.state.limits,
+          maxProjectIndexBytes: 100_000,
+          maxSessionFiles: 50,
+          maxRecentSessions: 50,
+        },
+      }
+      await MemoryFiles.writeSource(
+        t.root,
+        "project.md",
+        [
+          "# Project Memory",
+          "",
+          "## Facts",
+          ...Array.from(
+            { length: 40 },
+            (_, idx) => `- covered_${idx} :: Covered Session ${idx} facts are stored in typed memory.`,
+          ),
+          "",
+        ].join("\n"),
+      )
+      for (let idx = 0; idx < 40; idx++) {
+        await MemoryFiles.writeSession(t.root, {
+          sessionID: `ses_covered_${idx}`,
+          topic: `Covered Session ${idx}`,
+          summary: `Covered Session ${idx} summary is already typed.`,
+          max: state.limits.maxSessionLineChars,
+          time: Date.UTC(2026, 0, 1, 0, idx),
+        })
+      }
+
+      const index = await MemoryIndexer.rebuild({ root: t.root, state })
+      const row = index.text.split("\n").find((line) => line.includes("covered by typed memory")) ?? ""
+
+      expect(row.match(/session=ses_covered_/g)).toHaveLength(32)
+    })
+  })
+
   test("index preserves top environment commands before older session digest pressure", async () => {
     await use(async (t) => {
       const enabled = await Memory.enable({ root: t.root })
@@ -922,7 +1148,11 @@ describe("memory core package", () => {
 
       expect(shown.index).toContain("small_model_call_sites")
       expect(shown.index).toContain("session=ses_latest")
-      expect(shown.index).not.toContain("session=ses_small_model")
+      // The bulky SESSION_DIGEST record for the covered session is dropped from the index body...
+      expect(shown.index).not.toContain("source=ses_small_model.md")
+      // ...but a compact pointer keeps its id targetable via kilo_memory_recall mode=digest.
+      expect(shown.index).toContain("covered_session_pointer")
+      expect(shown.index).toContain("session=ses_small_model")
     })
   })
 
@@ -948,7 +1178,9 @@ describe("memory core package", () => {
       expect(shown.index.match(/type=latest_session_digest/g)?.length).toBe(1)
       expect(shown.index).toContain("type=latest_session_digest")
       expect(shown.index).toContain("session=ses_empty_newest")
-      expect(shown.index.indexOf("session=ses_empty_newest")).toBeLessThan(shown.index.indexOf("session=ses_substantive"))
+      expect(shown.index.indexOf("session=ses_empty_newest")).toBeLessThan(
+        shown.index.indexOf("session=ses_substantive"),
+      )
     })
   })
 

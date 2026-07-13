@@ -119,14 +119,12 @@ export namespace MemoryAudit {
   }
 
   export async function readChanges(root: string) {
-    const lines = (await readDecisions(root))
-      .split("\n")
-      .flatMap((line) => {
-        const data = record(line)
-        if (!data) return []
-        const time = data.time ?? ""
-        return [`${time} ${data.summary}`.trim()]
-      })
+    const lines = (await readDecisions(root)).split("\n").flatMap((line) => {
+      const data = record(line)
+      if (!data) return []
+      const time = data.time ?? ""
+      return [`${time} ${data.summary}`.trim()]
+    })
     return lines.join("\n")
   }
 }

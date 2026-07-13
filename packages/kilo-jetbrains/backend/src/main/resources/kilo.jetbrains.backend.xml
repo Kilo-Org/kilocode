@@ -7,6 +7,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloAppRpcApiProvider"/>
+        <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloAgentBehaviorRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloProviderRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloProjectRpcApiProvider"/>
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloSessionRpcApiProvider"/>
@@ -15,6 +16,8 @@
     </extensions>
 
     <applicationListeners>
+        <listener class="ai.kilocode.backend.plugin.KiloBackendAppLifecycleListener"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
         <listener class="ai.kilocode.backend.plugin.KiloBackendDynamicPluginListener"
                   topic="com.intellij.ide.plugins.DynamicPluginListener"/>
     </applicationListeners>

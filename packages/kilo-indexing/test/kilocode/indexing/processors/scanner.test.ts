@@ -1,5 +1,5 @@
 import { createHash } from "crypto"
-import { mkdtemp } from "fs/promises"
+import { mkdir, mkdtemp, rm } from "fs/promises"
 import ignore from "ignore"
 import { tmpdir } from "os"
 import { join } from "path"
@@ -307,6 +307,34 @@ describe("DirectoryScanner", () => {
     expect(result.stats.processed).toBe(1)
     expect(cache.getHash(blocked)).toBeUndefined()
     expect(cache.getHash(open)).toBeDefined()
+  })
+
+  test("skips files matched by nested .kilocodeignore during full scans", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    try {
+      const dir = join(root, "pkg")
+      const blocked = join(dir, "blocked.ts")
+      const open = join(dir, "open.ts")
+
+      await mkdir(dir, { recursive: true })
+      await Bun.write(join(dir, ".kilocodeignore"), "blocked.ts\n")
+      await Bun.write(blocked, "export const blocked = 1\n")
+      await Bun.write(open, "export const open = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const scan = new DirectoryScanner(new Emb(), new Store(), new Parser(), cache, await loadIgnore(root), 1, 1)
+      const result = await scan.scanDirectory(root)
+
+      expect(result.stats.processed).toBe(1)
+      expect(cache.getHash(blocked)).toBeUndefined()
+      expect(cache.getHash(open)).toBeDefined()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
   })
 
   test("emits retry telemetry for transient batch failures", async () => {

@@ -37,6 +37,8 @@ import type {
   BackgroundProcessStopResponses,
   BackgroundProcessStopSessionErrors,
   BackgroundProcessStopSessionResponses,
+  BranchNameGenerateErrors,
+  BranchNameGenerateResponses,
   CommandListErrors,
   CommandListResponses,
   CommitMessageGenerateErrors,
@@ -132,6 +134,8 @@ import type {
   IndexingWarningsResponses,
   InstanceDisposeErrors,
   InstanceDisposeResponses,
+  InstanceReloadErrors,
+  InstanceReloadResponses,
   InteractiveTerminalCloseErrors,
   InteractiveTerminalCloseResponses,
   InteractiveTerminalGetErrors,
@@ -186,6 +190,8 @@ import type {
   KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
+  KiloModelsImagesErrors,
+  KiloModelsImagesResponses,
   KiloModesErrors,
   KiloModesResponses,
   KiloNotificationsErrors,
@@ -214,6 +220,26 @@ import type {
   McpRemoteConfig,
   McpStatusErrors,
   McpStatusResponses,
+  MemoryConfigureErrors,
+  MemoryConfigureResponses,
+  MemoryCorrectErrors,
+  MemoryCorrectResponses,
+  MemoryDisableErrors,
+  MemoryDisableResponses,
+  MemoryEnableErrors,
+  MemoryEnableResponses,
+  MemoryForgetErrors,
+  MemoryForgetResponses,
+  MemoryPurgeErrors,
+  MemoryPurgeResponses,
+  MemoryRebuildErrors,
+  MemoryRebuildResponses,
+  MemoryRememberErrors,
+  MemoryRememberResponses,
+  MemoryShowErrors,
+  MemoryShowResponses,
+  MemoryStatusErrors,
+  MemoryStatusResponses,
   NetworkListErrors,
   NetworkListResponses,
   NetworkRejectErrors,
@@ -2231,6 +2257,36 @@ export class Instance extends HeyApiClient {
     )
     return (options?.client ?? this.client).post<InstanceDisposeResponses, InstanceDisposeErrors, ThrowOnError>({
       url: "/instance/dispose",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reload instance
+   *
+   * Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.
+   */
+  public reload<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<InstanceReloadResponses, InstanceReloadErrors, ThrowOnError>({
+      url: "/instance/reload",
       ...options,
       ...params,
     })
@@ -6249,6 +6305,51 @@ export class BackgroundProcess extends HeyApiClient {
   }
 }
 
+export class BranchName extends HeyApiClient {
+  /**
+   * Generate branch name
+   *
+   * Generate a task-focused branch name from the current conversation.
+   */
+  public generate<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+      prompt?: string
+      providerID?: string
+      modelID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "prompt" },
+            { in: "body", key: "providerID" },
+            { in: "body", key: "modelID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<BranchNameGenerateResponses, BranchNameGenerateErrors, ThrowOnError>({
+      url: "/session/{sessionID}/branch-name",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class CommitMessage extends HeyApiClient {
   /**
    * Generate commit message
@@ -6262,6 +6363,7 @@ export class CommitMessage extends HeyApiClient {
       path?: string
       selectedFiles?: Array<string>
       previousMessage?: string
+      language?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6275,6 +6377,7 @@ export class CommitMessage extends HeyApiClient {
             { in: "body", key: "path" },
             { in: "body", key: "selectedFiles" },
             { in: "body", key: "previousMessage" },
+            { in: "body", key: "language" },
           ],
         },
       ],
@@ -6675,6 +6778,38 @@ export class Audio extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class Models extends HeyApiClient {
+  /**
+   * Image generation models
+   *
+   * List image-capable models from the Kilo Gateway OpenRouter passthrough
+   */
+  public images<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KiloModelsImagesResponses, KiloModelsImagesErrors, ThrowOnError>({
+      url: "/kilo/models/images",
+      ...options,
+      ...params,
     })
   }
 }
@@ -7135,6 +7270,11 @@ export class Kilo extends HeyApiClient {
   private _audio?: Audio
   get audio(): Audio {
     return (this._audio ??= new Audio({ client: this.client }))
+  }
+
+  private _models?: Models
+  get models(): Models {
+    return (this._models ??= new Models({ client: this.client }))
   }
 
   private _organization?: Organization
@@ -8438,6 +8578,357 @@ export class Telemetry extends HeyApiClient {
   }
 }
 
+export class Memory extends HeyApiClient {
+  /**
+   * Get memory status
+   *
+   * Return memory state, index preview, and token estimate for the active workspace.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<MemoryStatusResponses, MemoryStatusErrors, ThrowOnError>({
+      url: "/memory/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Show memory
+   *
+   * Return source memory files, generated index, recent decision summary, and memory save decisions.
+   */
+  public show<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<MemoryShowResponses, MemoryShowErrors, ThrowOnError>({
+      url: "/memory/show",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Enable memory
+   *
+   * Scaffold and enable project memory for the active workspace.
+   */
+  public enable<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryEnableResponses, MemoryEnableErrors, ThrowOnError>({
+      url: "/memory/enable",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Disable memory
+   *
+   * Disable project memory without deleting local memory files.
+   */
+  public disable<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryDisableResponses, MemoryDisableErrors, ThrowOnError>({
+      url: "/memory/disable",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Configure memory
+   *
+   * Update project memory settings such as automatic project fact capture.
+   */
+  public configure<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      autoConsolidate?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "autoConsolidate" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryConfigureResponses, MemoryConfigureErrors, ThrowOnError>({
+      url: "/memory/configure",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Rebuild memory index
+   *
+   * Regenerate index.kmem from source memory files.
+   */
+  public rebuild<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryRebuildResponses, MemoryRebuildErrors, ThrowOnError>({
+      url: "/memory/rebuild",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Remember text
+   *
+   * Persist explicit user-provided memory text through the deterministic operation pipeline.
+   */
+  public remember<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      text?: string
+      key?: string
+      file?: "project.md" | "environment.md" | "corrections.md"
+      section?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "text" },
+            { in: "body", key: "key" },
+            { in: "body", key: "file" },
+            { in: "body", key: "section" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryRememberResponses, MemoryRememberErrors, ThrowOnError>({
+      url: "/memory/remember",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remember correction
+   *
+   * Persist explicit corrective memory under corrections.md.
+   */
+  public correct<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      text?: string
+      key?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "text" },
+            { in: "body", key: "key" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryCorrectResponses, MemoryCorrectErrors, ThrowOnError>({
+      url: "/memory/correct",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Forget memory
+   *
+   * Remove memory lines by exact key, id, or normalized key text and rebuild the index.
+   */
+  public forget<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      query?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "query" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryForgetResponses, MemoryForgetErrors, ThrowOnError>({
+      url: "/memory/forget",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Purge memory
+   *
+   * Delete all project memory files for the active workspace.
+   */
+  public purge<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      confirm?: true
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "confirm" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<MemoryPurgeResponses, MemoryPurgeErrors, ThrowOnError>({
+      url: "/memory/purge",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class KiloClient extends HeyApiClient {
   public static readonly __registry = new HeyApiRegistry<KiloClient>()
 
@@ -8591,6 +9082,11 @@ export class KiloClient extends HeyApiClient {
     return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
   }
 
+  private _branchName?: BranchName
+  get branchName(): BranchName {
+    return (this._branchName ??= new BranchName({ client: this.client }))
+  }
+
   private _commitMessage?: CommitMessage
   get commitMessage(): CommitMessage {
     return (this._commitMessage ??= new CommitMessage({ client: this.client }))
@@ -8649,5 +9145,10 @@ export class KiloClient extends HeyApiClient {
   private _telemetry?: Telemetry
   get telemetry(): Telemetry {
     return (this._telemetry ??= new Telemetry({ client: this.client }))
+  }
+
+  private _memory?: Memory
+  get memory(): Memory {
+    return (this._memory ??= new Memory({ client: this.client }))
   }
 }

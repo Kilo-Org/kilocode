@@ -114,6 +114,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Temiz bir bağlamla yeni bir oturumda uygula",
   "plan.followup.answer.continue": "Burada devam et",
   "plan.followup.answer.continue.description": "Planı bu oturumda uygula",
+  "plan.followup.answer.keepRefining": "İyileştirmeye devam et",
+  "plan.followup.answer.keepRefining.description": "Henüz uygulamadan planlamaya devam et",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Anlık görüntü yavaş",

@@ -12,7 +12,9 @@ function base(): FormState {
     npm: "@ai-sdk/openai-compatible",
     baseURL: "https://example.com/v1",
     apiKey: "",
-    models: [{ id: "model-1", name: "Model One", reasoning: false, variants: [] }],
+    models: [
+      { id: "model-1", name: "Model One", reasoning: false, supportsImages: false, modalities: {}, variants: [] },
+    ],
     headers: [],
     saving: false,
   }
@@ -202,5 +204,64 @@ describe("validateCustomProvider – variant name validation", () => {
         reasoningEffort: "low",
       },
     })
+  })
+
+  it("serializes image modality when supportsImages is set", () => {
+    const form = base()
+    form.models[0].supportsImages = true
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.modalities).toEqual({ input: ["text", "image"] })
+  })
+
+  it("omits modalities when supportsImages is not set on a text-only model", () => {
+    const form = base()
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.modalities).toBeUndefined()
+  })
+
+  it("preserves an existing image-only input when saving", () => {
+    const form = base()
+    form.models[0].modalities = { input: ["image"] }
+    form.models[0].supportsImages = true
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.modalities).toEqual({ input: ["image"] })
+  })
+
+  it("omits an empty input when image support is removed from an image-only model", () => {
+    const form = base()
+    form.models[0].modalities = { input: ["image"] }
+    form.models[0].supportsImages = false
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.modalities).toBeUndefined()
+  })
+
+  it("preserves output-only modalities when saving", () => {
+    const form = base()
+    form.models[0].modalities = { output: ["audio"] }
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.modalities).toEqual({ output: ["audio"] })
+  })
+
+  it("preserves unsupported UI modalities when toggling image support", () => {
+    const form = base()
+    form.models[0].modalities = {
+      input: ["text", "audio", "image", "video", "pdf"],
+      output: ["text", "audio"],
+    }
+    form.models[0].supportsImages = false
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.modalities).toEqual({ input: ["text", "audio", "video", "pdf"], output: ["text", "audio"] })
   })
 })

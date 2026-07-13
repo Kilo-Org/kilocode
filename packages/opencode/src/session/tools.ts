@@ -1,5 +1,6 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { MCP } from "@/mcp"
@@ -20,6 +21,10 @@ import { PartID } from "./schema"
 import * as Log from "@opencode-ai/core/util/log"
 import { EffectBridge } from "@/effect/bridge"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
+// kilocode_change start
+import { SwePruner } from "@/kilocode/swe-pruner"
+import { Config } from "@/config/config"
+// kilocode_change end
 
 const log = Log.create({ service: "session.tools" })
 
@@ -31,6 +36,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   bypassAgentCheck: boolean
   messages: MessageV2.WithParts[]
   promptOps: TaskPromptOps
+  memoryCache: MemoryMarker.Cache // kilocode_change
 }) {
   using _ = log.time("resolveTools")
   const tools: Record<string, AITool> = {}
@@ -44,6 +50,10 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const registry = yield* ToolRegistry.Service
   const mcp = yield* MCP.Service
   const truncate = yield* Truncate.Service
+  // kilocode_change start - SWE-Pruner (experimental)
+  const config = yield* Config.Service
+  const swe = SwePruner.enabled(yield* config.get())
+  // kilocode_change end
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
     sessionID: input.session.id,
@@ -74,9 +84,14 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   for (const item of yield* registry.tools({
     modelID: ModelID.make(input.model.api.id),
     providerID: input.model.providerID,
+    family: input.model.family, // kilocode_change
     agent: input.agent,
   })) {
-    const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
+    // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
+    const pruner = swe && SwePruner.prunable(item.id)
+    const base = ToolJsonSchema.fromTool(item)
+    const schema = ProviderTransform.schema(input.model, pruner ? SwePruner.extend(base) : base)
+    // kilocode_change end
     tools[item.id] = tool({
       description: item.description,
       inputSchema: jsonSchema(schema),
@@ -90,7 +105,11 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { args },
             )
             // kilocode_change start
-            const result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            let result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            // SWE-Pruner (experimental): prune the output when the model provided a focus question.
+            // Runs before tool.execute.after so plugins observe the final output the model will
+            // see; pruning is signalled to them via metadata.swePruner.
+            if (pruner) result = yield* SwePruner.sweep({ tool: item.id, args, result, abort: ctx.abort })
             // kilocode_change end
             const output = {
               ...result,
@@ -101,6 +120,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                 messageID: input.processor.message.id,
               })),
             }
+            // kilocode_change - mark successful targeted memory recalls for the assistant badge
+            if (item.id === "kilo_memory_recall") MemoryMarker.recall({ result: output, cache: input.memoryCache }) // kilocode_change
             yield* plugin.trigger(
               "tool.execute.after",
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
@@ -116,7 +137,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  for (const [key, item] of Object.entries(yield* mcp.tools())) {
+  const mcpTools = (yield* SandboxPolicy.networkRestricted(input.session.id)) ? {} : yield* mcp.tools() // kilocode_change
+  for (const [key, item] of Object.entries(mcpTools)) { // kilocode_change
     const execute = item.execute
     if (!execute) continue
 

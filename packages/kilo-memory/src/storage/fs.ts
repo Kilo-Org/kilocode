@@ -164,10 +164,15 @@ export namespace MemoryFs {
           await rm(file, { recursive: true, force: true })
           throw error
         })
-        const timer = setInterval(() => {
-          const now = new Date()
-          void utimes(file, now, now).catch((error: unknown) => warn("failed to refresh memory lock", { error, root }))
-        }, Math.floor(STALE / 3))
+        const timer = setInterval(
+          () => {
+            const now = new Date()
+            void utimes(file, now, now).catch((error: unknown) =>
+              warn("failed to refresh memory lock", { error, root }),
+            )
+          },
+          Math.floor(STALE / 3),
+        )
         timer.unref()
         return async () => {
           clearInterval(timer)

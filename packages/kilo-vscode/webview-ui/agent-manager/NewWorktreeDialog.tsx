@@ -72,7 +72,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const server = useServer()
   const session = useSession()
   const provider = useProvider()
-  const { config, features } = useConfig()
+  const { config, globalConfig, features } = useConfig()
   const metrics = tracker(vscode)
   const track = (button: string, properties?: Record<string, string | number | boolean | undefined>) =>
     metrics.track(button, "configure_worktree_dialog", properties)
@@ -110,7 +110,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [sandboxReason, setSandboxReason] = createSignal<string | undefined>()
   const [sandboxRevision, setSandboxRevision] = createSignal(-1)
   const sandboxRequestID = crypto.randomUUID()
-  const sandboxVisible = () => features().sandboxControls
+  const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true
   const speech = useSpeechToText(vscode, server, { t })
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())
@@ -468,13 +468,20 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     }}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     rows={3}
+                    dir="auto"
                   />
                 </div>
               </div>
               <div class="prompt-input-hint">
                 <div class="prompt-input-hint-selectors">
                   <Show when={session.agents().length > 1}>
-                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} deferDismiss />
+                    <ModeSwitcherBase
+                      agents={session.agents()}
+                      value={agent()}
+                      onSelect={setAgent}
+                      portal={false}
+                      deferDismiss
+                    />
                   </Show>
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
@@ -490,6 +497,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      portal={false}
                       deferDismiss
                     />
                     <Show when={overridden()}>
@@ -518,7 +526,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       tooltip={
                         <SandboxTooltipContent
                           enabled={sandbox() ?? false}
-                          network={config().experimental?.sandbox_restrict_network !== false}
+                          network={config().sandbox?.network !== "allow"}
                         />
                       }
                       tooltipClass="prompt-sandbox-tooltip-content"

@@ -48,30 +48,48 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.HighlighterColors
+import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.actions.PasteAction
 import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.ide.CopyPasteManager
+import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.openapi.fileTypes.PlainTextLanguage
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.EditorCustomization
+import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import java.awt.Container
 import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Component
+import java.awt.Container
+import java.awt.DefaultKeyboardFocusManager
+import java.awt.Font
+import java.awt.KeyboardFocusManager
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
+import java.awt.event.FocusEvent
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -83,6 +101,8 @@ import javax.swing.JPanel
 import javax.swing.ImageIcon
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
+
+private const val FLOATING = "com.intellij.openapi.editor.toolbar.floating.EditorFloatingToolbar"
 
 @Suppress("UnstableApiUsage")
 class PromptPanelTest : BasePlatformTestCase() {
@@ -108,13 +128,13 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test prompt input uses editor font settings`() {
+    fun `test prompt input uses transcript font settings`() {
         val style = SessionEditorStyle.current()
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val font = panel.inputFont()
 
-        assertEquals(style.editorFamily, font.name)
-        assertEquals(style.editorSize, font.size)
+        assertEquals(style.transcriptFont.name, font.name)
+        assertEquals(style.transcriptFont.size, font.size)
     }
 
     fun `test prompt input uses editor background`() {
@@ -124,15 +144,115 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(style.editorScheme.defaultBackground, panel.defaultFocusedComponent.background)
     }
 
+    fun `test prompt editor hides floating toolbar`() {
+        val control = toolbarControl()
+        realize(control, 260, 400)
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(hasFloatingToolbar(control.getEditor(false)!!.component))
+
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        realize(panel, 260, 400)
+        UIUtil.dispatchAllInvocationEvents()
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+
+        assertFalse(hasFloatingToolbar(editor.component))
+    }
+
+    fun `test prompt editor disables spellchecking`() {
+        var applied: EditorEx? = null
+        val provider = object : SpellCheckingEditorCustomizationProvider() {
+            override fun getDisabledCustomization(): EditorCustomization {
+                return EditorCustomization { ed -> applied = ed }
+            }
+        }
+        ApplicationManager.getApplication().replaceService(
+            SpellCheckingEditorCustomizationProvider::class.java,
+            provider,
+            testRootDisposable,
+        )
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+
+        assertSame(editor, applied)
+    }
+
+    fun `test prompt editor horizontal insets use dedicated prompt inset`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val ins = editor.scrollPane.viewportBorder.getBorderInsets(editor.scrollPane)
+        val pad = JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET)
+
+        assertEquals(pad, ins.left)
+        assertEquals(pad, ins.right)
+    }
+
+    fun `test prompt focus outline follows editor focus`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        realize(panel, 260, 400)
+        panel.setBounds(0, 0, 260, panel.preferredSize.height)
+        panel.doLayout()
+
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val current = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+        val focus = TestFocusManager()
+        KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
+        try {
+            assertEquals(SessionUiStyle.View.Prompt.separator().rgb, paint(panel, panel.width / 2, 0).rgb)
+
+            focus.focus(editor.contentComponent)
+            editor.contentComponent.focusListeners.forEach {
+                it.focusGained(FocusEvent(editor.contentComponent, FocusEvent.FOCUS_GAINED))
+            }
+
+            assertTrue(SessionUiStyle.View.Prompt.separator().rgb != paint(panel, panel.width / 2, 0).rgb)
+            assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width / 2, 1).rgb)
+            assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, 1, panel.height / 2).rgb)
+            assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width - 1, panel.height / 2).rgb)
+        } finally {
+            KeyboardFocusManager.setCurrentKeyboardFocusManager(current)
+        }
+    }
+
     fun `test applyStyle updates prompt input and height`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val style = SessionEditorStyle.create(family = "Courier New", size = 26)
 
         panel.applyStyle(style)
 
-        assertEquals("Courier New", panel.inputFont().name)
-        assertEquals(26, panel.inputFont().size)
+        assertEquals(style.transcriptFont.name, panel.inputFont().name)
+        assertEquals(style.transcriptFont.size, panel.inputFont().size)
         assertTrue(panel.preferredSize.height >= 26)
+    }
+
+    fun `test applyStyle refreshes prompt editor chrome colors`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val bg = Color(0x21, 0x32, 0x43)
+        val scheme = EditorColorsManager.getInstance().globalScheme.clone() as EditorColorsScheme
+        scheme.setAttributes(
+            HighlighterColors.TEXT,
+            TextAttributes(Color(0xEA, 0xEA, 0xEA), bg, null, null, Font.PLAIN),
+        )
+        val style = SessionEditorStyle.create(scheme = scheme)
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        editor.scrollPane.background = Color.BLACK
+        editor.scrollPane.viewport.background = Color.BLACK
+        editor.contentComponent.background = Color.BLACK
+
+        panel.applyStyle(style)
+
+        assertEquals(bg, panel.defaultFocusedComponent.background)
+        assertEquals(bg, editor.backgroundColor)
+        assertEquals(bg, editor.scrollPane.background)
+        assertEquals(bg, editor.scrollPane.viewport.background)
+        assertEquals(bg, editor.contentComponent.background)
     }
 
     fun `test prompt editor grows when lines are added`() {
@@ -230,16 +350,17 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(attachedEditor.preferredSize.height < plainEditor.preferredSize.height)
     }
 
-    fun `test prompt editor scroll policy keeps horizontal disabled`() {
+    fun `test prompt editor hides scrollbars and keeps soft wraps`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 180, 400)
 
         val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
 
-        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, editor.scrollPane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
         assertTrue(editor.settings.isUseSoftWraps)
         assertFalse(editor.settings.isPaintSoftWraps)
+        assertFalse(editor.settings.isBlockCursor)
     }
 
     fun `test prompt editor highlights validated commands and mentions`() {
@@ -570,6 +691,33 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(listOf(part), sent)
     }
 
+    fun `test cancelling submit mention resolution re-enables send`() {
+        val entered = CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
+        val panel = PromptPanel(
+            project = project,
+            onSend = { _, _ -> },
+            onAbort = {},
+            onEnhance = { _, _ -> },
+            onMentions = {
+                entered.complete(Unit)
+                gate.await()
+                emptyList()
+            },
+            cs = scope,
+        )
+        val editor = panel.defaultFocusedComponent as EditorTextField
+        panel.setReady(true)
+        editor.text = "send @file"
+
+        panel.send()
+        waitForSend { entered.isCompleted && !panel.isSendEnabled }
+        scope.cancel(CancellationException("test cancellation"))
+        waitForSend { panel.isSendEnabled }
+
+        assertTrue(panel.isSendEnabled)
+    }
+
     fun `test clear removes attachments`() {
         val panel = PromptPanel(project, { _, _ -> }, {}, { _, _ -> })
 
@@ -840,6 +988,19 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.isStopEnabled)
     }
 
+    fun `test busy disables send button`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setReady(true)
+        ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(panel.isSendEnabled)
+
+        panel.setBusy(true)
+
+        assertFalse(panel.isSendEnabled)
+        assertTrue(panel.isStopEnabled)
+    }
+
     fun `test auto approve button toggles and updates tooltip`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val button = autoApproveButton(panel)
@@ -1051,7 +1212,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         return out
     }
 
-    private fun realize(panel: PromptPanel, width: Int, height: Int): SessionRootPanel {
+    private fun realize(panel: Component, width: Int, height: Int): SessionRootPanel {
         val root = SessionRootPanel()
         root.setSize(width, height)
         root.content.add(JPanel(BorderLayout()).apply { add(panel, BorderLayout.SOUTH) }, BorderLayout.CENTER)
@@ -1061,6 +1222,27 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
         roots.add(root)
         return root
+    }
+
+    private fun toolbarControl(): EditorTextField {
+        val doc = LanguageTextField.createDocument(
+            "",
+            PlainTextLanguage.INSTANCE,
+            project,
+            LanguageTextField.SimpleDocumentCreator(),
+        )
+        return EditorTextField(doc, project, PlainTextFileType.INSTANCE, false, false)
+    }
+
+    private fun paint(component: Component, x: Int, y: Int): Color {
+        val image = BufferedImage(component.width, component.height, BufferedImage.TYPE_INT_ARGB)
+        val g = image.createGraphics()
+        try {
+            component.paint(g)
+        } finally {
+            g.dispose()
+        }
+        return Color(image.getRGB(x, y), true)
     }
 
     private fun completion() = KiloPromptCompletionProvider(
@@ -1154,6 +1336,12 @@ class PromptPanelTest : BasePlatformTestCase() {
         }
     }
 
+    private fun hasFloatingToolbar(component: Component): Boolean {
+        if (component.javaClass.name == FLOATING) return true
+        if (component !is Container) return false
+        return component.components.any(::hasFloatingToolbar)
+    }
+
     private fun createEditor(): Editor {
         val factory = EditorFactory.getInstance()
         return factory.createEditor(factory.createDocument(""), project)
@@ -1214,6 +1402,12 @@ class PromptPanelTest : BasePlatformTestCase() {
             if (flavor == DataFlavor.javaFileListFlavor) return files
             if (flavor == DataFlavor.imageFlavor) return image
             throw java.awt.datatransfer.UnsupportedFlavorException(flavor)
+        }
+    }
+
+    private class TestFocusManager : DefaultKeyboardFocusManager() {
+        fun focus(component: Component) {
+            setGlobalFocusOwner(component)
         }
     }
 

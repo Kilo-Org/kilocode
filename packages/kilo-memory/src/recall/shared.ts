@@ -1,9 +1,10 @@
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemoryFiles } from "../storage/store"
 import { MemoryMarkdown } from "../storage/markdown"
 import { MemorySchema } from "../schema"
 import { MemoryText } from "../text"
 import { MemoryTopics } from "./topics"
+import { MemoryRedact } from "../capture/redact"
 
 export namespace MemoryShared {
   export type TypedItem = {
@@ -18,6 +19,9 @@ export namespace MemoryShared {
 
   export type SourceItem = {
     id: string
+    file: MemorySchema.Source
+    section: string
+    key: string
     text: string
   }
 
@@ -32,18 +36,18 @@ export namespace MemoryShared {
     return { key, text }
   }
 
-  export function terms(input: string) {
-    return MemoryTopics.words(input)
+  export function terms(input: string, opts?: MemoryTopics.WordOptions) {
+    return MemoryTopics.words(input, opts)
   }
 
   export function source(input: { file: MemorySchema.Source; text: string }): SourceItem[] {
-    const result: SourceItem[] = []
-    for (const raw of input.text.split("\n")) {
-      const item = entry(raw.trim().replace(/^- /, ""))
-      if (!item) continue
-      result.push({ id: `${input.file}:${item.key}`, text: `${item.key} ${item.text}` })
-    }
-    return result
+    return MemoryMarkdown.parse(input.text).map((item) => ({
+      id: `${input.file}:${item.section}:${item.key}`,
+      file: input.file,
+      section: item.section,
+      key: item.key,
+      text: `${item.key} ${item.text}`,
+    }))
   }
 
   export function typed(input: {
@@ -101,7 +105,7 @@ export namespace MemoryShared {
           }
         : {
             action: item.action,
-            query: brief(item.query, 120),
+            query: brief(MemoryRedact.text(item.query), 120),
           },
     )
   }

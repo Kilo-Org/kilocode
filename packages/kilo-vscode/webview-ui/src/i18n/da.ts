@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} beskeder fortrudt",
   "revert.banner.redo": "Gentag",
   "revert.banner.redo.all": "Gentag alt",
-  "revert.banner.hint": "Send en ny besked for at gøre dette permanent",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",
@@ -386,6 +386,7 @@ export const dict = {
     "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
   "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.starting": "Starter mikrofonen... Vent med at tale.",
   "speechToText.tooltip.stop": "Stop lydoptagelse",
   "speechToText.tooltip.transcribing": "Transskriberer... Klik for at annullere.",
   "speechToText.tooltip.error": "Stemmeinput mislykkedes. Klik for at rydde.",
@@ -630,7 +631,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-søgning",
   "ui.permission.toolLabel.webSearch": "Websøgning",
   "ui.permission.toolLabel.list": "Liste",
-  "ui.permission.toolLabel.externalDirectory": "Læs ekstern mappe",
+  "ui.permission.toolLabel.externalDirectory": "Giv adgang til ekstern mappe",
   "ui.permission.toolLabel.webFetch": "Webhentning",
   "ui.permission.toolLabel.task": "Opgave",
   "ui.permission.toolLabel.skill": "Færdighed",
@@ -991,6 +992,7 @@ export const dict = {
   "provider.custom.models.name.label": "Navn",
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Ræsonnement",
+  "provider.custom.models.modalities.image": "Billede",
   "provider.custom.models.variants.label": "Varianter",
   "provider.custom.models.variants.add": "Tilføj variant",
   "provider.custom.models.variants.remove": "Fjern variant",
@@ -1238,6 +1240,8 @@ export const dict = {
 
   "common.retry": "Prøv igen",
   "common.refresh": "Opdatér",
+  "common.reload": "Genindlæs",
+  "common.reloadDescription": "Genindlæs konfiguration, færdigheder, agenter og kommandoer fra disken",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke logget ind",
@@ -1286,6 +1290,11 @@ export const dict = {
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",
+  "session.costAlert.header": "Advarsel om sessionsomkostning",
+  "session.costAlert.continue": "Fortsæt",
+  "session.costAlert.question":
+    "Denne session er lige kommet over din advarselsgrænse pr. session på {{limit}} og koster {{cost}}. Fortsæt?",
+  "session.costAlert.stop": "Stop",
 
   "ui.sessionTurn.cancel": "Annuller",
   "ui.sessionTurn.status.thinking": "Tænker...",
@@ -1416,6 +1425,12 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
+  "settings.experimental.imageGeneration.title": "Billedgenerering",
+  "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
+  "settings.experimental.imageGenerationModel.title": "Billedmodel",
+  "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
+  "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
+
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktivér stemmeinput i prompt-felter ved hjælp af din Kilo-konto gennem Kilo Gateway.",
@@ -1431,7 +1446,20 @@ export const dict = {
   "settings.sandboxing.title": "Sandboxing",
   "settings.sandboxing.network.title": "Begræns netværksadgang",
   "settings.sandboxing.network.description":
-    "Bloker udgående netværksadgang fra kommandoer, der stammer fra modellen, og HTTP-værktøjer. Lokale MCP-servere og plugin-hooks er ikke underlagt denne begrænsning. Inferenstrafik til udbydere og modeller er fortsat tilgængelig.",
+    "Blokerer direkte udgående adgang fra modelgenererede kommandoer og HTTP-værktøjer. Lokale og eksterne MCP-værktøjer er ikke tilgængelige, mens begrænsningen er aktiv. Udbydertrafik og pålidelige plugin-hooks forbliver uden for denne begrænsning.",
+
+  "settings.sandboxing.allowedHosts.title": "Tilladte netværksdestinationer",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-værts- og portdestinationer for sandboxet HTTP- og HTTPS-proxytrafik. GitHub CLI og HTTPS Git kræver typisk github.com:443 og api.github.com:443. Ændringer gælder for nye sessioner.",
+  "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
+  "settings.sandboxing.writablePaths.description":
+    "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Aktivér SWE-Pruner: opgavebevidst beskæring af store output fra læse-, søge- og shellværktøjer, styret af et fokusspørgsmål fra agenten",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
+  "settings.experimental.swePrunerModel.description":
+    "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -1563,12 +1591,15 @@ export const dict = {
     "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":
     "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
+  "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
+  "settings.autoApprove.maxCost.description":
+    "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",
@@ -1606,6 +1637,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
+  "settings.context.compaction.title": "Komprimering",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
@@ -1613,6 +1645,42 @@ export const dict = {
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",
   "settings.context.watcherPatterns.description": "Glob-mønstre for filer, som vagten skal ignorere",
+
+  "settings.context.memory.title": "Hukommelse",
+  "settings.context.memory.project.title": "Projekthukommelse",
+  "settings.context.memory.autoSave.title": "Gem projekthukommelse automatisk",
+  "settings.context.memory.autoSave.description":
+    "Gemmer automatisk varige projektfakta fra afsluttede ture, når hukommelse er aktiveret.",
+  "settings.context.memory.index.title": "Hukommelsesindeks",
+  "settings.context.memory.status.notLoaded": "Ikke indlæst",
+  "settings.context.memory.status.disabled": "Deaktiveret",
+  "settings.context.memory.status.enabledTokensOps":
+    "Aktiveret - ~{{session}} opstartstokens i denne session - ~{{tokens}} tokens i gemt indeks - seneste handling {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Aktivér hukommelse for at oprette projektets hukommelsesfiler.",
+  "settings.context.memory.inspect": "Inspicér",
+  "settings.context.memory.rebuild": "Genopbyg hukommelsesindeks",
+  "chat.memory.on": "Hukommelse til",
+  "chat.memory.label": "Hukommelse · {{tokens}} tokens",
+  "chat.memory.status.loading": "Indlæser hukommelsesstatus",
+  "chat.memory.session.tokens": "Opstartskontekst i denne session: {{tokens}} tokens",
+  "chat.memory.total.tokens": "Gemt indeks: {{tokens}} tokens",
+  "chat.memory.project.enabled": "Projekthukommelse aktiveret",
+  "chat.memory.project.disabled": "Projekthukommelse deaktiveret",
+  "chat.memory.command.failed": "Hukommelseskommando mislykkedes",
+  "chat.memory.savedOperations": "Seneste hukommelseshandling: {{count}} handlinger",
+  "chat.memory.inspect": "Inspicér hukommelse",
+  "chat.memory.remember": "Husk",
+  "chat.memory.forget": "Glem",
+  "chat.memory.rebuild": "Genopbyg indeks",
+  "chat.memory.disable": "Deaktivér hukommelse",
+  "chat.memory.badge.injected": "Hukommelse injiceret",
+  "chat.memory.badge.recalled": "Hukommelse genkaldt",
+  "chat.memory.badge.startupCtx": "opstartsctx",
+  "chat.memory.badge.items": "{{count}} elementer",
+  "chat.memory.badge.tokens": "{{tokens}} tokens",
+  "chat.memory.badge.recalledDetail": "Hukommelse genkaldt: {{count}} elementer - {{tokens}} tokens",
+  "chat.memory.badge.files": "Hukommelsesfiler: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Brug brugerdefineret prompt",
@@ -1623,6 +1691,11 @@ export const dict = {
     "System prompt sendt til AI'en ved generering af commit messages. Dette erstatter fuldstændigt standard prompt.",
   "settings.commitMessage.prompt.placeholder":
     "f.eks. Generer commit messages på spansk efter conventional commits formatet. Returner KUN commit message.",
+
+  "settings.commitMessage.language.sync": "Synkroniser med UI sprog",
+  "settings.commitMessage.language.title": "Sprog",
+  "settings.commitMessage.language.description":
+    "Vælg hvilket sprog der skal bruges til AI-genererede commit-meddelelser:",
 
   "settings.display.username.title": "Brugernavn",
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
@@ -1795,4 +1868,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
+  "chat.search.placeholder": "Søg i chat…",
+  "chat.search.toggle": "Søg i chat",
+  "chat.search.matchCase": "Forskel på store/små bogstaver",
+  "chat.search.matchWholeWord": "Match helt ord",
+  "chat.search.useRegex": "Brug regulært udtryk",
+  "chat.search.previousMatch": "Forrige match",
+  "chat.search.nextMatch": "Næste match",
+  "chat.search.close": "Luk søgning",
+  "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
+  "chat.search.noResults": "Ingen resultater",
+  "chat.search.searchingHistory": "Søger i tidligere beskeder…",
 }

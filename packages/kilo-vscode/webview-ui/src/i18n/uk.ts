@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} повідомлень скасовано",
   "revert.banner.redo": "Повторити",
   "revert.banner.redo.all": "Повторити все",
-  "revert.banner.hint": "Надішліть нове повідомлення, щоб зробити це постійним",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Зачекайте завершення агента",
   "command.session.compact": "Стиснути сесію",
   "command.session.compact.description": "Підсумувати сесію для зменшення розміру контексту",
@@ -386,6 +386,7 @@ export const dict = {
     "Натисніть, щоб обмежити запис у файлову систему. Доступ до мережі залишиться дозволеним відповідно до налаштувань пісочниці.",
 
   "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.starting": "Запуск мікрофона... Поки що не говоріть.",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
   "speechToText.tooltip.error": "Помилка голосового введення. Натисніть, щоб очистити.",
@@ -634,7 +635,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Пошук Grep",
   "ui.permission.toolLabel.webSearch": "Веб-пошук",
   "ui.permission.toolLabel.list": "Список",
-  "ui.permission.toolLabel.externalDirectory": "Читати зовнішню директорію",
+  "ui.permission.toolLabel.externalDirectory": "Надати доступ до зовнішньої папки",
   "ui.permission.toolLabel.webFetch": "Веб-запит",
   "ui.permission.toolLabel.task": "Завдання",
   "ui.permission.toolLabel.skill": "Навичка",
@@ -946,6 +947,7 @@ export const dict = {
   "provider.custom.models.name.label": "Назва",
   "provider.custom.models.name.placeholder": "Відображувана назва",
   "provider.custom.models.reasoning.label": "Міркування",
+  "provider.custom.models.modalities.image": "Зображення",
   "provider.custom.models.variants.label": "Варіанти",
   "provider.custom.models.variants.add": "Додати варіант",
   "provider.custom.models.variants.remove": "Видалити варіант",
@@ -1193,6 +1195,8 @@ export const dict = {
 
   "common.retry": "Спробувати ще раз",
   "common.refresh": "Оновити",
+  "common.reload": "Перезавантажити",
+  "common.reloadDescription": "Перезавантажити конфігурацію, навички, агентів та команди з диска",
 
   "profile.title": "Профіль",
   "profile.notLoggedIn": "Не увійшов",
@@ -1274,6 +1278,11 @@ export const dict = {
   "session.outcome.interrupted": "Хід перервано",
   "session.outcome.error": "Хід не вдався",
   "session.outcome.finish": "Причина завершення: {{reason}}",
+  "session.costAlert.header": "Сповіщення про вартість сесії",
+  "session.costAlert.continue": "Продовжити",
+  "session.costAlert.question":
+    "Ця сесія щойно перевищила поріг сповіщення для сесії {{limit}} і коштує {{cost}}. Продовжити?",
+  "session.costAlert.stop": "Зупинити",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1408,6 +1417,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
+  "settings.experimental.imageGeneration.title": "Генерація зображень",
+  "settings.experimental.imageGeneration.description": "Увімкнути генерацію зображень за допомогою ШІ",
+  "settings.experimental.imageGenerationModel.title": "Модель зображень",
+  "settings.experimental.imageGenerationModel.description": "Модель генерації зображень",
+  "settings.experimental.imageGenerationModel.placeholder": "За замовчуванням (Auto Router)",
+
   "settings.experimental.speechToText.title": "Мовлення в текст",
   "settings.experimental.speechToText.description":
     "Увімкніть голосове введення в полях запитів, використовуючи ваш обліковий запис Kilo через Kilo Gateway.",
@@ -1423,7 +1438,20 @@ export const dict = {
   "settings.sandboxing.title": "Пісочниця",
   "settings.sandboxing.network.title": "Обмежити доступ до мережі",
   "settings.sandboxing.network.description":
-    "Блокуйте вихідний доступ до мережі для команд, ініційованих моделлю, та HTTP-інструментів. Локальні MCP-сервери й хуки плагінів працюють поза цим обмеженням. Трафік провайдерів та інференсу моделей залишається доступним.",
+    "Блокуйте прямий вихідний доступ із команд, ініційованих моделлю, та інструментів HTTP. Локальні й віддалені інструменти MCP недоступні, коли обмеження активне. Трафік постачальника та довірені хуки плагінів не підпадають під це обмеження.",
+
+  "settings.sandboxing.allowedHosts.title": "Дозволені мережеві адреси",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-вузли та порти призначення для ізольованого proxy-трафіку HTTP і HTTPS. GitHub CLI та HTTPS Git зазвичай потребують github.com:443 і api.github.com:443. Зміни застосовуються до нових сеансів.",
+  "settings.sandboxing.writablePaths.title": "Додаткові шляхи для запису",
+  "settings.sandboxing.writablePaths.description":
+    "Додаткові шляхи файлової системи, у які дозволено запис у пісочниці (наприклад, /tmp, /var/log). Вони об'єднуються зі шляхами запису за замовчуванням, коли пісочниця активна.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Увімкнути SWE-Pruner: обрізання з урахуванням завдання великих виводів інструментів читання, пошуку та оболонки, кероване фокус-питанням, наданим агентом",
+  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Модель для обрізання виводу інструментів; за замовчуванням — налаштована мала модель",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
   "settings.experimental.remote.title": "Керування Remote",
@@ -1435,8 +1463,8 @@ export const dict = {
   "settings.experimental.remote.inactive": "Неактивний",
   "settings.experimental.remote.hint": "Використовуйте /remote у чаті для перемикання",
   "settings.experimental.toolToggles": "Перемикачі інструментів",
-  "settings.experimental.sandbox.title": "Пісочниця",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Пісочниця",
+  "settings.sandboxing.enabled.description":
     "Виконувати команди оболонки агента в пісочниці на рівні ОС, яка обмежує запис до каталогів стану проєкту та Kilo",
 
   "settings.agentBehaviour.defaultAgent.title": "Агент за замовчуванням",
@@ -1528,6 +1556,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Визначте, як виконуються інструменти. Більшість інструментів за замовчуванням — Дозволити. doom_loop та external_directory за замовчуванням — Запитувати.",
+  "settings.autoApprove.maxCost.title": "Сповіщення про вартість сесії",
+  "settings.autoApprove.maxCost.description":
+    "Попереджати перед продовженням сесії, якщо її витрати перевищують цю суму в USD. Використовуйте цілі долари; залиште порожнім, щоб вимкнути.",
   "settings.autoApprove.level.allow": "Дозволити",
   "settings.autoApprove.level.ask": "Запитувати",
   "settings.autoApprove.level.deny": "Відхилити",
@@ -1567,6 +1598,7 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
   "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
+  "settings.context.compaction.title": "Стискання",
   "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
   "settings.context.compactionLimit.description":
     "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
@@ -1574,6 +1606,42 @@ export const dict = {
   "settings.context.prune.description": "Видаляти старі виводи інструментів під час стиснення",
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
   "settings.context.watcherPatterns.description": "Glob-шаблони для файлів, які спостерігач має ігнорувати",
+
+  "settings.context.memory.title": "Пам’ять",
+  "settings.context.memory.project.title": "Пам’ять проєкту",
+  "settings.context.memory.autoSave.title": "Автозбереження пам’яті проєкту",
+  "settings.context.memory.autoSave.description":
+    "Автоматично зберігає сталі факти проєкту із завершених ходів, коли пам’ять увімкнено.",
+  "settings.context.memory.index.title": "Індекс пам’яті",
+  "settings.context.memory.status.notLoaded": "Не завантажено",
+  "settings.context.memory.status.disabled": "Вимкнено",
+  "settings.context.memory.status.enabledTokensOps":
+    "Увімкнено - ~{{session}} токенів стартового контексту в цій сесії - ~{{tokens}} токенів у збереженому індексі - остання операція {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Увімкніть пам’ять, щоб створити файли пам’яті проєкту.",
+  "settings.context.memory.inspect": "Перевірити",
+  "settings.context.memory.rebuild": "Перебудувати індекс пам’яті",
+  "chat.memory.on": "Пам’ять увімкнено",
+  "chat.memory.label": "Пам’ять · {{tokens}} токенів",
+  "chat.memory.status.loading": "Завантаження стану пам’яті",
+  "chat.memory.session.tokens": "Стартовий контекст цієї сесії: {{tokens}} токенів",
+  "chat.memory.total.tokens": "Збережений індекс: {{tokens}} токенів",
+  "chat.memory.project.enabled": "Пам’ять проєкту увімкнено",
+  "chat.memory.project.disabled": "Пам’ять проєкту вимкнено",
+  "chat.memory.command.failed": "Команду пам’яті не виконано",
+  "chat.memory.savedOperations": "Остання операція пам’яті: {{count}} операцій",
+  "chat.memory.inspect": "Перевірити пам’ять",
+  "chat.memory.remember": "Запам’ятати",
+  "chat.memory.forget": "Забути",
+  "chat.memory.rebuild": "Перебудувати індекс",
+  "chat.memory.disable": "Вимкнути пам’ять",
+  "chat.memory.badge.injected": "Пам’ять додано",
+  "chat.memory.badge.recalled": "Пам’ять відновлено",
+  "chat.memory.badge.startupCtx": "стартовий ctx",
+  "chat.memory.badge.items": "{{count}} елементів",
+  "chat.memory.badge.tokens": "{{tokens}} токенів",
+  "chat.memory.badge.recalledDetail": "Пам’ять відновлено: {{count}} елементів - {{tokens}} токенів",
+  "chat.memory.badge.files": "Файли пам’яті: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Використовувати власний prompt",
@@ -1584,6 +1652,11 @@ export const dict = {
     "Системний prompt, що надсилається ШІ під час генерації commit messages. Це повністю замінює prompt за замовчуванням.",
   "settings.commitMessage.prompt.placeholder":
     "напр., Згенеруй commit messages іспанською мовою у форматі conventional commits. Поверни ЛИШЕ commit message.",
+
+  "settings.commitMessage.language.sync": "Синхронізація з мовою інтерфейсу користувача",
+  "settings.commitMessage.language.title": "Мова",
+  "settings.commitMessage.language.description":
+    "Виберіть, яку мову використовувати для повідомлень, створених штучним інтелектом:",
 
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
@@ -1814,4 +1887,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "План готовий:",
+  "chat.search.placeholder": "Пошук у чаті…",
+  "chat.search.toggle": "Пошук у чаті",
+  "chat.search.matchCase": "Враховувати регістр",
+  "chat.search.matchWholeWord": "Слово цілком",
+  "chat.search.useRegex": "Використовувати регулярний вираз",
+  "chat.search.previousMatch": "Попередній збіг",
+  "chat.search.nextMatch": "Наступний збіг",
+  "chat.search.close": "Закрити пошук",
+  "chat.search.invalidRegex": "Недійсний регулярний вираз",
+  "chat.search.noResults": "Немає результатів",
+  "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
 }

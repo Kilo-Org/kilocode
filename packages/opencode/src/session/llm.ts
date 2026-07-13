@@ -25,6 +25,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
+import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
@@ -52,6 +53,7 @@ export type StreamInput = {
   retries?: number
   toolChoice?: "auto" | "required" | "none"
   preflight?: boolean // kilocode_change - enable proactive threshold compaction for normal session turns
+  reportedContextTokens?: number // kilocode_change - provider-reported context size from the last finished turn, source of truth for the output cap
 }
 
 export type StreamRequest = StreamInput & {
@@ -121,6 +123,7 @@ const live: Layer.Layer<
       })
 
       // kilocode_change start - compact at the configured threshold before contacting the provider
+      const tools = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
       const estimated: ModelMessage[] =
         isOpenaiOauth || isWorkflow
@@ -134,14 +137,14 @@ const live: Layer.Layer<
           : base.messages
       const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
-      const usage =
-        cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools: base.tools }) : undefined
+      const usage = cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools }) : undefined
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,
         messages: estimated,
-        tools: base.tools,
+        tools,
         configured: base.params.maxOutputTokens,
-        tokens: usage?.raw,
+        usage,
+        reported: input.reportedContextTokens,
       })
       if (
         preflight &&
@@ -156,7 +159,7 @@ const live: Layer.Layer<
       ) {
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
       }
-      const prepared = { ...base, params: { ...base.params, maxOutputTokens } }
+      const prepared = { ...base, tools, params: { ...base.params, maxOutputTokens } }
       // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls

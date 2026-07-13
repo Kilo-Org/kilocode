@@ -1,4 +1,3 @@
-import type { Ignore } from "ignore"
 import path from "path"
 
 import { getDefaultModelId } from "./model-registry"
@@ -28,6 +27,7 @@ import {
   REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
 } from "./constants"
 import { Log } from "../util/log"
+import type { IgnoreMatcher } from "./shared/load-ignore"
 
 const log = Log.create({ service: "indexing-factory" })
 
@@ -208,7 +208,7 @@ export class CodeIndexServiceFactory {
     embedder: IEmbedder,
     vectorStore: IVectorStore,
     parser: ICodeParser,
-    ignoreInstance: Ignore,
+    ignoreInstance: IgnoreMatcher,
   ): DirectoryScanner {
     const config = this.configManager.getConfig()
     const meta = this.getTelemetryMeta()
@@ -229,7 +229,7 @@ export class CodeIndexServiceFactory {
     embedder: IEmbedder,
     vectorStore: IVectorStore,
     cacheManager: CacheManager,
-    ignoreInstance: Ignore,
+    ignoreInstance: IgnoreMatcher,
   ): IFileWatcher {
     const config = this.configManager.getConfig()
     const meta = this.getTelemetryMeta()
@@ -248,7 +248,7 @@ export class CodeIndexServiceFactory {
 
   public createServices(
     cacheManager: CacheManager,
-    ignoreInstance: Ignore,
+    ignoreInstance: IgnoreMatcher,
   ): {
     embedder: IEmbedder
     vectorStore: IVectorStore

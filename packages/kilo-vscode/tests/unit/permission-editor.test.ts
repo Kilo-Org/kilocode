@@ -3,10 +3,12 @@ import {
   addExceptionPatch,
   clearGroupedPatch,
   clearWildcardPatch,
+  DEFAULT_RULES,
   inheritedWildcard,
   mostRestrictive,
   permissionExceptions,
   removeExceptionPatch,
+  ruleset,
   setExceptionPatch,
   setGroupedPatch,
   setWildcardPatch,
@@ -45,6 +47,31 @@ describe("effectiveRuleLevel", () => {
   })
 })
 
+describe("ruleset", () => {
+  it("preserves backend defaults when config only customizes bash", () => {
+    const rules = [...DEFAULT_RULES, ...ruleset({ bash: { "*": "ask", "git status *": "allow" } })]
+
+    expect(effectiveRuleLevel(rules, "edit")).toBe("allow")
+    expect(effectiveRuleLevel(rules, "external_directory")).toBe("ask")
+    expect(effectiveRuleLevel(rules, "bash")).toBe("ask")
+    expect(effectiveRuleLevel(rules, "doom_loop")).toBe("ask")
+  })
+
+  it("applies top-level wildcards and direct rules in config order", () => {
+    const broadLast = [...DEFAULT_RULES, ...ruleset({ edit: "allow", "*": "ask" })]
+    const directLast = [...DEFAULT_RULES, ...ruleset({ "*": "ask", edit: "allow" })]
+
+    expect(effectiveRuleLevel(broadLast, "edit")).toBe("ask")
+    expect(effectiveRuleLevel(directLast, "edit")).toBe("allow")
+  })
+
+  it("skips config delete sentinels", () => {
+    expect(ruleset({ edit: null, bash: { "*": null, "git status *": "allow" } })).toEqual([
+      { permission: "bash", pattern: "git status *", action: "allow" },
+    ])
+  })
+})
+
 describe("PermissionEditor inherited wildcard state", () => {
   it("distinguishes inherited defaults from explicit wildcard rules", () => {
     expect(wildcardAction(undefined, "ask")).toBe("ask")
@@ -68,6 +95,7 @@ describe("PermissionEditor patch generation", () => {
   })
 
   it("preserves exceptions when changing wildcard overrides", () => {
+    expect(setWildcardPatch(undefined, "edit", "ask")).toEqual({ edit: "ask" })
     expect(setWildcardPatch({ "*": "deny", "src/**": "allow", "dist/**": null }, "edit", "ask")).toEqual({
       edit: { "*": "ask", "src/**": "allow" },
     })

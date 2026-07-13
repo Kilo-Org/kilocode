@@ -89,7 +89,7 @@ function context(directory: string, main: string, sandboxes: string[]): Instance
 }
 
 const config = TestConfig.layer({
-  get: () => Effect.succeed({ experimental: { sandbox: true } }),
+  get: () => Effect.succeed({ sandbox: { enabled: true } }),
 })
 const agents = Layer.mock(Agent.Service)({
   get: () => Effect.succeed(agent),
@@ -169,6 +169,7 @@ function resolve(ctx: InstanceContext) {
       resolvePromptParts: () => Effect.die(new Error("resolvePromptParts is not used by this test")),
       prompt: () => Effect.die(new Error("prompt is not used by this test")),
     },
+    memoryCache: {},
   }).pipe(Effect.provideService(InstanceRef, ctx))
 }
 

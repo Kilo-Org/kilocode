@@ -126,8 +126,10 @@ Requires Java 21 (see [Prerequisites](#prerequisites)). From `packages/kilo-jetb
 ```bash
 ./gradlew typecheck    # Compile-check all Kotlin sources
 ./gradlew test         # Run all tests (backend + frontend)
-./gradlew runIde       # Launch sandboxed IntelliJ with the plugin
+./gradlew --no-configuration-cache runIdeSplitMode  # Launch local split-mode sandbox; backend downloads the pinned CLI
 ```
+
+Use `./gradlew runIde` only for a monolithic sandbox. JetBrains dev runs do not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
 
 Or via the root turbo filter to run only JetBrains checks from the repo root:
 

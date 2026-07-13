@@ -9,7 +9,7 @@ export interface OpenAIOptionsInput {
   readonly store?: boolean
   readonly promptCacheKey?: string
   readonly reasoningEffort?: ReasoningEffort
-  readonly reasoningSummary?: "auto"
+  readonly reasoningSummary?: "auto" | "concise" | "detailed" // kilocode_change
   // OpenAI Responses `include` wire field. Mirrors the official SDK's
   // `ResponseIncludable[]` union exactly so AI SDK callers and direct
   // native-SDK callers share one shape and no translation is required.

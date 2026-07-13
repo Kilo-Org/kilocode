@@ -3,6 +3,9 @@ package ai.kilocode.client.session.views.tool
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.session.ui.popup.HeaderPopupBody
+import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -23,6 +26,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.Dimension
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 
@@ -125,6 +129,9 @@ class ShellToolView(
     internal fun subtitleForeground() = parts.sub.foreground
 
     @RequiresEdt
+    internal fun subtitleMarkup() = parts.sub.text ?: ""
+
+    @RequiresEdt
     internal fun stateFont() = parts.state.font
 
     @RequiresEdt
@@ -136,6 +143,15 @@ class ShellToolView(
     @RequiresEdt
     internal fun horizontalPolicy() = holder.shell?.scrolls()?.firstOrNull()?.horizontalScrollBarPolicy
         ?: ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+
+    @RequiresEdt
+    override fun headerPopup(): HeaderPopupRequest? {
+        if (isExpanded()) return null
+        val cmd = command(item).takeIf { it.isNotBlank() } ?: return null
+        return HeaderPopupRequest(row, build = { buildPopupBody(cmd) }) {
+            Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "bash"))
+        }
+    }
 
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle) {
@@ -170,12 +186,53 @@ class ShellToolView(
         return body.update(item)
     }
 
+    @RequiresEdt
+    private fun buildPopupBody(cmd: String): HeaderPopupBody {
+        val md = MdViewFactory.create(
+            style,
+            null,
+            MdCodeBlockFactory.default(
+                MdCodeBlockOptions(
+                    border = MdCodeBlockBorder.None,
+                    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                    editorOnly = true,
+                ),
+            ),
+        )
+        md.applyStyle(style)
+        md.font = style.transcriptFont
+        md.foreground = style.editorForeground
+        md.background = style.editorBackground
+        md.preBg = style.editorBackground
+        md.codeFont = style.editorFamily
+        md.component.border = JBUI.Borders.empty()
+        md.set(popupMd(formatCommand(cmd)))
+        padPopup(md.component)
+        return HeaderPopupBody(md.component, md, style.editorBackground)
+    }
+
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"
 
     companion object {
         fun canRender(tool: Tool) = tool.name == "bash"
     }
 }
+
+private fun padPopup(root: JComponent) {
+    root.components.filterIsInstance<JBScrollPane>().forEach { pane ->
+        val field = pane.viewport.view as? EditorTextField ?: return@forEach
+        field.border = JBUI.Borders.empty(SessionUiStyle.View.Code.SCROLLBAR_HEIGHT, 0, 0, 0)
+        val pad = field.border.getBorderInsets(field).top
+        field.preferredSize = grow(field.preferredSize, pad)
+        field.minimumSize = grow(field.minimumSize, pad)
+        field.maximumSize = grow(field.maximumSize, pad)
+        pane.preferredSize = grow(pane.preferredSize, pad)
+        pane.minimumSize = grow(pane.minimumSize, pad)
+        pane.maximumSize = grow(pane.maximumSize, pad)
+    }
+}
+
+private fun grow(size: Dimension, pad: Int) = Dimension(size.width, size.height + pad)
 
 class ShellHolder(
     private val tool: Tool,
@@ -248,7 +305,7 @@ class ShellBody(
     private fun styleShell() {
         val root = md.component as? JPanel ?: return
         root.components.filterIsInstance<JBHtmlPane>().forEach {
-            it.border = JBUI.Borders.emptyLeft(JBUI.scale(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING))
+            it.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING)
         }
     }
 
@@ -292,6 +349,51 @@ private data class ShellContent(
 }
 
 private fun outputLang(text: String): String = if (MdTerminal.hasAnsi(text)) "ansi-stdout" else "shell-output"
+
+private fun popupMd(text: String): String = buildString {
+    val fence = fence(text)
+    append(fence).append("shell-command\n")
+    append(text)
+    if (!text.endsWith('\n')) append('\n')
+    append(fence)
+}
+
+/**
+ * Inserts line breaks after shell separators (`&&`, `||`, `|`, `;`) that sit outside quotes,
+ * so a long single-line command reads as one statement per line in the popup. Quote and escape
+ * state is tracked so separators inside string literals are left untouched.
+ */
+private fun formatCommand(cmd: String): String {
+    val out = StringBuilder(cmd.length + 8)
+    var quote = ' '
+    var i = 0
+    while (i < cmd.length) {
+        val c = cmd[i]
+        if (quote != ' ') {
+            out.append(c)
+            if (c == '\\' && quote == '"' && i + 1 < cmd.length) {
+                out.append(cmd[i + 1])
+                i += 2
+                continue
+            }
+            if (c == quote) quote = ' '
+            i++
+            continue
+        }
+        val next = cmd.getOrNull(i + 1)
+        when {
+            c == '\'' || c == '"' -> { quote = c; out.append(c); i++ }
+            c == '\\' && next != null -> { out.append(c).append(next); i += 2 }
+            c == '&' && next == '&' -> { out.append("&&\n"); i += 2 }
+            c == '|' && next == '|' -> { out.append("||\n"); i += 2 }
+            c == '|' && next == '&' -> { out.append("|&\n"); i += 2 }
+            c == '|' -> { out.append("|\n"); i++ }
+            c == ';' -> { out.append(";\n"); i++ }
+            else -> { out.append(c); i++ }
+        }
+    }
+    return out.toString()
+}
 
 private fun StringBuilder.section(title: String, text: String, lang: String) {
     if (text.isBlank()) return

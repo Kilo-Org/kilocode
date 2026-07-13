@@ -5,6 +5,7 @@ import { Global } from "@opencode-ai/core/global"
 import { assertWrite, run as runSandbox } from "@kilocode/sandbox"
 import { Effect, Exit } from "effect"
 import { profile } from "@/kilocode/sandbox/policy"
+import { SandboxPreference } from "@/kilocode/sandbox/preference"
 import { SandboxStore } from "@/kilocode/sandbox/store"
 import type { InstanceContext } from "@/project/instance-context"
 import { ProjectID } from "@/project/schema"
@@ -178,13 +179,29 @@ describe("sandbox policy", () => {
     const dirs = tmp.extra
     const ctx = context(dirs.a, dirs.a, dirs)
     const policy = profile(ctx)
-    const write = await Effect.runPromise(runSandbox(policy, assertWrite(SandboxStore.root)).pipe(Effect.exit))
+    const [storeWrite, prefWrite] = await Effect.runPromise(
+      Effect.all([
+        runSandbox(policy, assertWrite(SandboxStore.root)).pipe(Effect.exit),
+        runSandbox(policy, assertWrite(SandboxPreference.root)).pipe(Effect.exit),
+      ]),
+    )
 
     expect(new Set(roots(ctx))).toEqual(expected(dirs.a))
     expect(policy.filesystem.temporaryDirectory).toBe(Global.Path.tmp)
-    expect(policy.filesystem.denyWrite).toEqual([{ path: SandboxStore.root, kind: "subtree" }])
-    expect(policy.environment.deny).toEqual(["KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"])
-    expect(Exit.isFailure(write)).toBe(true)
+    expect(policy.filesystem.denyWrite).toEqual([
+      { path: SandboxStore.root, kind: "subtree" },
+      { path: SandboxPreference.root, kind: "subtree" },
+      { path: Global.Path.config, kind: "subtree" },
+    ])
+    expect(policy.environment.deny).toEqual([
+      "KILO_CONFIG",
+      "KILO_CONFIG_CONTENT",
+      "KILO_CONFIG_DIR",
+      "KILO_SERVER_PASSWORD",
+      "KILO_SERVER_USERNAME",
+    ])
+    expect(Exit.isFailure(storeWrite)).toBe(true)
+    expect(Exit.isFailure(prefWrite)).toBe(true)
   })
 
   test("uses deny-by-default and configurable network profiles", async () => {
@@ -222,6 +239,36 @@ describe("sandbox policy", () => {
     )
 
     expect(roots(ctx)).not.toContain(dirs.approved)
+    expect(Exit.isFailure(result)).toBe(true)
+  })
+
+  test("makes configured extra writable paths writable while unlisted paths stay denied", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.a, dirs.a, dirs)
+    const policy = profile(ctx, "deny", [dirs.approved])
+    const result = await Effect.runPromise(
+      Effect.all({
+        extra: runSandbox(policy, assertWrite(path.join(dirs.approved, "allowed.txt")).pipe(Effect.exit)),
+        other: runSandbox(policy, assertWrite(path.join(dirs.b, "denied.txt")).pipe(Effect.exit)),
+      }),
+    )
+
+    expect(policy.filesystem.allowWrite.map((rule) => rule.path)).toContain(dirs.approved)
+    expect(roots(ctx)).not.toContain(dirs.approved)
+    expect(Exit.isSuccess(result.extra)).toBe(true)
+    expect(Exit.isFailure(result.other)).toBe(true)
+  })
+
+  test("keeps .git denied inside a configured extra writable path", async () => {
+    await using tmp = await fixture()
+    const dirs = tmp.extra
+    const ctx = context(dirs.a, dirs.a, dirs)
+    const policy = profile(ctx, "deny", [dirs.approved])
+    const result = await Effect.runPromise(
+      runSandbox(policy, assertWrite(path.join(dirs.approved, ".git", "config")).pipe(Effect.exit)),
+    )
+
     expect(Exit.isFailure(result)).toBe(true)
   })
 })

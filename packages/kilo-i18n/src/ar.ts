@@ -112,6 +112,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "نفّذ في جلسة جديدة بسياق نظيف",
   "plan.followup.answer.continue": "المتابعة هنا",
   "plan.followup.answer.continue.description": "نفّذ الخطة في هذه الجلسة",
+  "plan.followup.answer.keepRefining": "واصل التحسين",
+  "plan.followup.answer.keepRefining.description": "واصل التخطيط دون التنفيذ الآن",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "اللقطة بطيئة",
