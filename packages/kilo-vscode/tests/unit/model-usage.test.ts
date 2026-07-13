@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import type { Provider, SessionModelUsage } from "../../webview-ui/src/types/messages"
 import {
+  formatCost,
+  formatSummaryCost,
   groupModelUsage,
   hasModelUsage,
   isSameSessionTree,
   modelUsageName,
+  summaryCost,
   tokenSummary,
 } from "../../webview-ui/src/context/model-usage"
 
@@ -32,8 +35,40 @@ const providers = {
     models: { "minimax-m3": { id: "minimax-m3", name: "MiniMax M3" } },
   },
 } satisfies Record<string, Provider>
+const money = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 6,
+})
 
 describe("model usage", () => {
+  test("formats detailed model costs with precision", () => {
+    expect(formatCost(0.270162, money)).toBe("$0.270162")
+    expect(formatCost(0.0000001, money)).toBe("<$0.000001")
+    expect(formatCost(Number.NaN, money)).toBe("$0.00")
+  })
+
+  test("formats summary costs as dollars and cents", () => {
+    expect(formatSummaryCost(0.270162, "en-US")).toBe("$0.27")
+    expect(formatSummaryCost(1_234_567.899, "en-US")).toBe("$1,234,567.90")
+    expect(formatSummaryCost(Number.NaN, "en-US")).toBe("$0.00")
+  })
+
+  test("uses message costs only for cloud previews", () => {
+    const fallback = [{ cost: 0.17 }, { cost: 0.1 }]
+    let reads = 0
+    const read = () => {
+      reads++
+      return fallback
+    }
+    expect(summaryCost("local", usage, read)).toBe(0.03)
+    expect(summaryCost("local", undefined, read)).toBeUndefined()
+    expect(reads).toBe(0)
+    expect(summaryCost("cloud:preview", undefined, read)).toBe(0.27)
+    expect(reads).toBe(1)
+  })
+
   test("groups billing routes and resolves compact catalog names", () => {
     expect(hasModelUsage(usage)).toBeTrue()
     expect(

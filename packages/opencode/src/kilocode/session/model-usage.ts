@@ -42,11 +42,6 @@ export namespace ModelUsage {
     projectID: ProjectID
   }
 
-  type Ancestor = {
-    id: SessionID
-    parentID: SessionID | null
-  }
-
   type Row = {
     providerID: ProviderID
     modelID: ModelID
@@ -61,22 +56,9 @@ export namespace ModelUsage {
 
   const ANCHOR_SQL = "SELECT project_id AS projectID FROM session WHERE id = ?"
 
-  const ANCESTORS_SQL = `
-    WITH RECURSIVE ancestor(id, parent_id) AS (
-      SELECT id, parent_id
-      FROM session
-      WHERE id = ? AND project_id = ?
-
-      UNION
-
-      SELECT parent.id, parent.parent_id
-      FROM session AS parent
-      JOIN ancestor AS child ON child.parent_id = parent.id
-      WHERE parent.project_id = ?
-    )
-    SELECT id, parent_id AS parentID
-    FROM ancestor`
-
+  // Scope aggregation to the viewed session and its descendants only. Walking up
+  // to the root would fold in parent and sibling spend the viewer did not open,
+  // so the family starts at the requested session and only walks down.
   const FAMILY_SQL = `
     WITH RECURSIVE family(id) AS (
       SELECT id
@@ -148,11 +130,7 @@ export namespace ModelUsage {
       const anchor = db.prepare<Anchor, [string]>(ANCHOR_SQL).get(sessionID)
       if (!anchor) return undefined
 
-      const args = [sessionID, anchor.projectID, anchor.projectID] as const
-      const ancestors = db.prepare<Ancestor, [string, string, string]>(ANCESTORS_SQL).all(...args)
-      const ids = new Set(ancestors.map((item) => item.id))
-      const rootID = ancestors.find((item) => !item.parentID || !ids.has(item.parentID))?.id ?? sessionID
-      const familyArgs = [rootID, anchor.projectID, anchor.projectID] as const
+      const familyArgs = [sessionID, anchor.projectID, anchor.projectID] as const
       const sessionIDs = db
         .prepare<{ id: SessionID }, [string, string, string]>(FAMILY_SQL)
         .all(...familyArgs)

@@ -5,7 +5,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import type { SessionModelUsage } from "../../types/messages"
-import { groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
+import { formatCost, groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
 import { formatCompactCount } from "../../utils/format"
 
 interface TaskUsageProps {
@@ -27,14 +27,8 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
         maximumFractionDigits: 6,
       }),
   )
-
   const number = formatCompactCount
   const count = (value: number) => value.toLocaleString(language.locale())
-  const cost = (input: number) => {
-    const value = Math.max(0, Number.isFinite(input) ? input : 0)
-    if (value > 0 && value < 0.000001) return "<$0.000001"
-    return money().format(value)
-  }
   const rate = (model: SessionModelUsage["models"][number]) => {
     const total = model.tokens.input + model.tokens.cache.read
     if (total === 0) return "-"
@@ -94,7 +88,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
                           {modelUsageName(model, provider.providers())}
                         </div>
                         <div class="task-header-usage-meta">
-                          {model.steps} {model.steps === 1 ? "step" : "steps"} · {cost(model.cost)}
+                          {model.steps} {model.steps === 1 ? "step" : "steps"} · {formatCost(model.cost, money())}
                         </div>
                         <div class="task-header-usage-meta">
                           In {count(model.tokens.input)} · Out {count(model.tokens.output)} · Reason{" "}

@@ -1,19 +1,16 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
-import { createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js"
+import { createMemo, createSignal, For, Show } from "solid-js"
 import { useLocal } from "@tui/context/local"
 import * as Model from "@tui/util/model"
 import { Locale } from "@/util/locale"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { fmtAttemptCost, fmtScore } from "@/kilocode/components/model-info-panel-utils"
 import {
-  failed,
   formatCost,
   formatCount,
   formatRate,
   groupModelsByProvider,
-  isSessionTreeMember,
-  select,
-  type UsageResult,
+  useModelUsage,
 } from "@/kilocode/plugins/model-usage"
 
 const id = "internal:kilo-sidebar-usage"
@@ -23,16 +20,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const [expanded, setExpanded] = createSignal(new Set<string>())
   const theme = () => props.api.theme.current
   const local = useLocal()
-  const [result, { refetch }] = createResource(
-    () => props.session_id,
-    (sessionID): Promise<UsageResult> =>
-      props.api.client.kilocode.sessionModelUsage({ sessionID }).then(
-        (response) => ({ sessionID, data: response.data }),
-        () => ({ sessionID }),
-      ),
-  )
-  const usage = createMemo(() => select(result(), props.session_id))
-  const unavailable = createMemo(() => failed(result(), props.session_id))
+  const { usage, unavailable } = useModelUsage(props.api, () => props.session_id)
   const providers = createMemo(() => Model.index([...props.api.state.provider]))
   const groups = createMemo(() => groupModelsByProvider(usage()?.models ?? [], props.api.state.provider))
   const bench = createMemo(() => {
@@ -54,33 +42,6 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       else next.add(key)
       return next
     })
-
-  onMount(() => {
-    const refresh = () => void refetch()
-    const related = (sessionID: string, info?: ReturnType<typeof props.api.state.session.get>) =>
-      isSessionTreeMember({ root: props.session_id, sessionID, info, get: props.api.state.session.get })
-    const offs = [
-      props.api.event.on("message.part.updated", (event) => {
-        if (event.properties.part.type === "step-finish" && related(event.properties.sessionID)) refresh()
-      }),
-      props.api.event.on("message.part.removed", (event) => {
-        if (related(event.properties.sessionID)) refresh()
-      }),
-      props.api.event.on("message.removed", (event) => {
-        if (related(event.properties.sessionID)) refresh()
-      }),
-      props.api.event.on("session.created", (event) => {
-        if (related(event.properties.sessionID, event.properties.info)) refresh()
-      }),
-      props.api.event.on("session.deleted", (event) => {
-        if (related(event.properties.sessionID, event.properties.info)) refresh()
-      }),
-      props.api.event.on("server.connected", refresh),
-    ]
-    onCleanup(() => {
-      for (const off of offs) off()
-    })
-  })
 
   return (
     <box gap={1}>
