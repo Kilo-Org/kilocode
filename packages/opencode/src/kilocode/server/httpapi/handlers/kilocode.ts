@@ -6,6 +6,8 @@ import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
+import type { RequestID as IdeLspRequestID } from "@/kilocode/ide-lsp/protocol"
+import { IdeLsp } from "@/kilocode/ide-lsp/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
@@ -13,7 +15,14 @@ import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
 import type { SessionID } from "@/session/schema"
-import { NotebookRejectPayload, NotebookReplyPayload, RemoveAgentPayload, RemoveSkillPayload } from "../groups/kilocode"
+import {
+  IdeLspRejectPayload,
+  IdeLspReplyPayload,
+  NotebookRejectPayload,
+  NotebookReplyPayload,
+  RemoveAgentPayload,
+  RemoveSkillPayload,
+} from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
   Effect.gen(function* () {
@@ -21,6 +30,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const skills = yield* Skill.Service
     const config = yield* Config.Service
     const store = yield* InstanceStore.Service
+    const ide = yield* IdeLsp.Service
     const notebook = yield* Notebook.Service
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
@@ -69,6 +79,31 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return yield* notebook.list()
     })
 
+    const ideLspList = Effect.fn("KilocodeHttpApi.ideLspList")(function* () {
+      return yield* ide.list()
+    })
+
+    const ideLspReply = Effect.fn("KilocodeHttpApi.ideLspReply")(function* (ctx: {
+      params: { requestID: IdeLspRequestID }
+      payload: typeof IdeLspReplyPayload.Type
+    }) {
+      yield* ide.reply({ requestID: ctx.params.requestID, result: ctx.payload.result }).pipe(
+        Effect.catchTag("IdeLsp.NotFoundError", () => Effect.fail(new HttpApiError.NotFound({}))),
+        Effect.catchTag("IdeLsp.InvalidReplyError", () => Effect.fail(new HttpApiError.BadRequest({}))),
+      )
+      return true
+    })
+
+    const ideLspReject = Effect.fn("KilocodeHttpApi.ideLspReject")(function* (ctx: {
+      params: { requestID: IdeLspRequestID }
+      payload: typeof IdeLspRejectPayload.Type
+    }) {
+      yield* ide
+        .reject({ requestID: ctx.params.requestID, error: ctx.payload.error })
+        .pipe(Effect.catchTag("IdeLsp.NotFoundError", () => Effect.fail(new HttpApiError.NotFound({}))))
+      return true
+    })
+
     const notebookReply = Effect.fn("KilocodeHttpApi.notebookReply")(function* (ctx: {
       params: { requestID: NotebookRequestID }
       payload: typeof NotebookReplyPayload.Type
@@ -104,6 +139,9 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
       .handle("notebookList", notebookList)
+      .handle("ideLspList", ideLspList)
+      .handle("ideLspReply", ideLspReply)
+      .handle("ideLspReject", ideLspReject)
       .handle("notebookReply", notebookReply)
       .handle("notebookReject", notebookReject)
       .handle("sessionModelUsage", sessionModelUsage)

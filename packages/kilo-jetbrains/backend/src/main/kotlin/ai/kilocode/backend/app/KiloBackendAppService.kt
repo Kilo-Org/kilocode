@@ -131,6 +131,7 @@ class KiloBackendAppService private constructor(
 
     val sessions = KiloBackendSessionManager(cs, log)
     val chat = KiloBackendChatManager(cs, log)
+    val ideLsp = KiloBackendIdeLspManager(cs, log)
     val models = KiloBackendModelStateManager(log)
     val workspaces = KiloBackendWorkspaceManager(cs, sessions, log)
     @Volatile var profile: KiloProfile200Response? = null
@@ -443,6 +444,7 @@ class KiloBackendAppService private constructor(
                     models.start(connection.apiClient!!, connection.port)
                     sessions.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     chat.start(connection.apiClient!!, connection.port, connection.events)
+                    ideLsp.start(connection.apiClient!!, connection.port, connection.events)
                     workspaces.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
                     startWatchingGlobalSseEvents()
                     setTelemetry(true)
@@ -841,6 +843,7 @@ class KiloBackendAppService private constructor(
     private fun stopRuntime() {
         workspaces.stop()
         models.stop()
+        ideLsp.stop()
         chat.stop()
         sessions.stop()
     }

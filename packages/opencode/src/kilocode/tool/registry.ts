@@ -5,6 +5,7 @@ import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
 import { GenerateImageTool } from "./generate-image"
+import { IntellijReadTool } from "./ide-lsp"
 import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
@@ -13,6 +14,7 @@ import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
 import { Notebook } from "@/kilocode/notebook/service"
+import { IdeLsp } from "@/kilocode/ide-lsp/service"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
@@ -52,7 +54,7 @@ export namespace KiloToolRegistry {
 
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
-  export function infos(notebook?: Notebook.Interface) {
+  export function infos(notebook?: Notebook.Interface, ideLsp?: IdeLsp.Interface) {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
@@ -63,13 +65,17 @@ export namespace KiloToolRegistry {
       const process = yield* BackgroundProcessTool
       const image = yield* GenerateImageTool
       const terminal = yield* InteractiveTerminalTool
-      if (!notebook) return { codebase, recall, managerModels, memory, save, manager, process, image, terminal }
-      const tools = yield* Effect.all({
-        notebookRead: NotebookReadTool,
-        notebookEdit: NotebookEditTool,
-        notebookExecute: NotebookExecuteTool,
-      }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, ...tools }
+      const notebooks = notebook
+        ? yield* Effect.all({
+            notebookRead: NotebookReadTool,
+            notebookEdit: NotebookEditTool,
+            notebookExecute: NotebookExecuteTool,
+          }).pipe(Effect.provideService(Notebook.Service, notebook))
+        : {}
+      const ide = ideLsp
+        ? yield* Effect.all({ intellijRead: IntellijReadTool }).pipe(Effect.provideService(IdeLsp.Service, ideLsp))
+        : {}
+      return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, ...notebooks, ...ide }
     })
   }
 
@@ -89,6 +95,7 @@ export namespace KiloToolRegistry {
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
+      intellijRead?: Tool.Info
     },
     deps: Deps,
     loaders: Loaders = {},
@@ -113,8 +120,9 @@ export namespace KiloToolRegistry {
               notebookExecute: Tool.init(tools.notebookExecute),
             })
           : {}
+      const ide = tools.intellijRead ? { intellijRead: yield* Tool.init(tools.intellijRead) } : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, ...notebooks, semantic }
+      return { ...base, terminal, ...notebooks, ...ide, semantic }
     })
   }
 
@@ -177,8 +185,16 @@ export namespace KiloToolRegistry {
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
+      intellijRead?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean; native_notebook_tools?: boolean } },
+    cfg: {
+      experimental?: {
+        codebase_search?: boolean
+        image_generation?: boolean
+        native_notebook_tools?: boolean
+        ide_code_intelligence?: boolean
+      }
+    },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
@@ -197,6 +213,11 @@ export namespace KiloToolRegistry {
       tools.notebookEdit &&
       tools.notebookExecute
         ? [tools.notebookRead, tools.notebookEdit, tools.notebookExecute]
+        : []),
+      ...(Flag.KILO_CLIENT === "jetbrains" &&
+      cfg.experimental?.ide_code_intelligence === true &&
+      tools.intellijRead
+        ? [tools.intellijRead]
         : []),
     ]
   }
@@ -249,11 +270,14 @@ export namespace KiloToolRegistry {
     })
   })
 
-  export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def }): Tool.Def[] {
-    if (!extra.semantic) return tools
+  export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def; intellijRead?: Tool.Def }): Tool.Def[] {
+    if (!extra.semantic && !extra.intellijRead) return tools
     return tools.map((tool) => {
       if (tool.id !== "glob" && tool.id !== "grep") return tool
-      return { ...tool, description: `${tool.description}\n${hint}` }
+      const intel = extra.intellijRead
+        ? "- When you need precise symbol navigation, references, implementations, document/workspace symbols, or class/type hierarchy in JetBrains, use the `intellij_read` tool"
+        : undefined
+      return { ...tool, description: [tool.description, extra.semantic ? hint : undefined, intel].filter(Boolean).join("\n") }
     })
   }
 }

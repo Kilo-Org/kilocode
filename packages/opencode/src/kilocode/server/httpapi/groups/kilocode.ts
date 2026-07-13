@@ -16,6 +16,12 @@ import {
   RequestID as NotebookRequestID,
   Result as NotebookResult,
 } from "@/kilocode/notebook/protocol"
+import {
+  Failure as IdeLspFailure,
+  Request as IdeLspRequest,
+  RequestID as IdeLspRequestID,
+  Result as IdeLspResult,
+} from "@/kilocode/ide-lsp/protocol"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { SessionID } from "@/session/schema"
 
@@ -35,6 +41,8 @@ export const AgentRequirementQuery = Schema.Struct({
 })
 export const NotebookReplyPayload = Schema.Struct({ result: NotebookResult })
 export const NotebookRejectPayload = Schema.Struct({ error: NotebookFailure })
+export const IdeLspReplyPayload = Schema.Struct({ result: IdeLspResult })
+export const IdeLspRejectPayload = Schema.Struct({ error: IdeLspFailure })
 
 export const KilocodePaths = {
   heapSnapshot: `${root}/heap/snapshot`,
@@ -44,6 +52,9 @@ export const KilocodePaths = {
   notebookList: `${root}/notebook`,
   notebookReply: `${root}/notebook/:requestID/reply`,
   notebookReject: `${root}/notebook/:requestID/reject`,
+  ideLspList: `${root}/ide-lsp`,
+  ideLspReply: `${root}/ide-lsp/:requestID/reply`,
+  ideLspReject: `${root}/ide-lsp/:requestID/reject`,
   sessionModelUsage: `/session/:sessionID/model-usage`,
 } as const
 
@@ -105,6 +116,42 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.notebook.list",
             summary: "List pending notebook requests",
             description: "List pending native notebook requests for the routed workspace.",
+          }),
+        ),
+        HttpApiEndpoint.get("ideLspList", KilocodePaths.ideLspList, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(IdeLspRequest), "Pending IDE code intelligence requests"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.ideLsp.list",
+            summary: "List pending IDE code intelligence requests",
+            description: "List pending IDE code intelligence requests for the routed workspace.",
+          }),
+        ),
+        HttpApiEndpoint.post("ideLspReply", KilocodePaths.ideLspReply, {
+          params: { requestID: IdeLspRequestID },
+          query: WorkspaceRoutingQuery,
+          payload: IdeLspReplyPayload,
+          success: described(Schema.Boolean, "IDE code intelligence reply accepted"),
+          error: [HttpApiError.BadRequest, HttpApiError.NotFound],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.ideLsp.reply",
+            summary: "Reply to an IDE code intelligence request",
+            description: "Complete a pending IDE code intelligence request with a structured result.",
+          }),
+        ),
+        HttpApiEndpoint.post("ideLspReject", KilocodePaths.ideLspReject, {
+          params: { requestID: IdeLspRequestID },
+          query: WorkspaceRoutingQuery,
+          payload: IdeLspRejectPayload,
+          success: described(Schema.Boolean, "IDE code intelligence rejection accepted"),
+          error: HttpApiError.NotFound,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.ideLsp.reject",
+            summary: "Reject an IDE code intelligence request",
+            description: "Complete a pending IDE code intelligence request with a structured host error.",
           }),
         ),
         HttpApiEndpoint.post("notebookReply", KilocodePaths.notebookReply, {

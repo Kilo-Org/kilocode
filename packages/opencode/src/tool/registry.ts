@@ -27,6 +27,7 @@ import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
+import { IdeLsp } from "@/kilocode/ide-lsp/service" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { RepoCloneTool } from "./repo_clone"
 import { RepoOverviewTool } from "./repo_overview"
@@ -162,7 +163,8 @@ export const layer: Layer.Layer<
     // kilocode_change start
     const suggesttool = yield* SuggestTool
     const notebook = Option.getOrUndefined(yield* Effect.serviceOption(Notebook.Service))
-    const kiloToolInfos = yield* KiloToolRegistry.infos(notebook).pipe(Effect.provide(MemoryService.layer))
+    const ideLsp = Option.getOrUndefined(yield* Effect.serviceOption(IdeLsp.Service))
+    const kiloToolInfos = yield* KiloToolRegistry.infos(notebook, ideLsp).pipe(Effect.provide(MemoryService.layer))
     // kilocode_change end
 
     const state = yield* InstanceState.make<State>(
@@ -460,6 +462,7 @@ export const defaultLayer = Layer.suspend(
       // kilocode_change start - provide Kilo-owned registry dependencies
       .pipe(
         Layer.provide(Command.defaultLayer),
+        Layer.provide(IdeLsp.defaultLayer),
         Layer.provide(Notebook.defaultLayer),
         Layer.provide(RuntimeFlags.defaultLayer),
         Layer.provide(SessionStatus.defaultLayer),

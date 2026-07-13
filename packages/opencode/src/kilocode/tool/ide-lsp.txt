@@ -1,0 +1,15 @@
+IntelliJ-backed read-only code intelligence tool for structural navigation when running in the JetBrains plugin.
+
+Use this tool for precise symbol and type-aware operations powered by the already-indexed IntelliJ PSI model. It is best for JVM and other JetBrains-supported languages when you need accurate definitions, references, implementations, symbols, or direct class/type hierarchy.
+
+Supported operations:
+- goToDefinition: find where the symbol at filePath:line:character is defined.
+- findReferences: find references to the symbol at filePath:line:character.
+- goToImplementation: find implementations of the symbol at filePath:line:character.
+- workspaceSymbol: search indexed workspace symbols by query. line and character are not required.
+- documentSymbol: list symbols in filePath. line and character are not required.
+- typeHierarchy: find direct supertypes and subtypes for the type at filePath:line:character.
+
+Positions are 1-based line and character numbers, matching what users see in editors. filePath may be absolute or relative to the workspace.
+
+If the result says IntelliJ is indexing or that code intelligence is unavailable (for example the project has not been imported yet and only its directory tree is loaded), do NOT treat an empty or missing result as authoritative. Retry shortly if the task depends on typed symbol data, or fall back to grep/glob/read (and the lsp tool if available) for text-based investigation.

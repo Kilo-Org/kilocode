@@ -126,6 +126,9 @@ import type {
   GlobalHealthResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
+  IdeLspFailure,
+  IdeLspRequestId,
+  IdeLspResult,
   IndexingModelsErrors,
   IndexingModelsResponses,
   IndexingStatusErrors,
@@ -166,6 +169,12 @@ import type {
   KilocodeAgentRequirementsResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeIdeLspListErrors,
+  KilocodeIdeLspListResponses,
+  KilocodeIdeLspRejectErrors,
+  KilocodeIdeLspRejectResponses,
+  KilocodeIdeLspReplyErrors,
+  KilocodeIdeLspReplyResponses,
   KilocodeNotebookListErrors,
   KilocodeNotebookListResponses,
   KilocodeNotebookRejectErrors,
@@ -7451,6 +7460,122 @@ export class Notebook extends HeyApiClient {
   }
 }
 
+export class IdeLsp extends HeyApiClient {
+  /**
+   * List pending IDE code intelligence requests
+   *
+   * List pending IDE code intelligence requests for the routed workspace.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KilocodeIdeLspListResponses, KilocodeIdeLspListErrors, ThrowOnError>({
+      url: "/kilocode/ide-lsp",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Reply to an IDE code intelligence request
+   *
+   * Complete a pending IDE code intelligence request with a structured result.
+   */
+  public reply<ThrowOnError extends boolean = false>(
+    parameters: {
+      requestID: IdeLspRequestId
+      directory?: string
+      workspace?: string
+      result?: IdeLspResult
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "requestID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "result" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<KilocodeIdeLspReplyResponses, KilocodeIdeLspReplyErrors, ThrowOnError>(
+      {
+        url: "/kilocode/ide-lsp/{requestID}/reply",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+
+  /**
+   * Reject an IDE code intelligence request
+   *
+   * Complete a pending IDE code intelligence request with a structured host error.
+   */
+  public reject<ThrowOnError extends boolean = false>(
+    parameters: {
+      requestID: IdeLspRequestId
+      directory?: string
+      workspace?: string
+      error?: IdeLspFailure
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "requestID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "error" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeIdeLspRejectResponses,
+      KilocodeIdeLspRejectErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/ide-lsp/{requestID}/reject",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
@@ -7994,6 +8119,11 @@ export class Kilocode extends HeyApiClient {
   private _notebook?: Notebook
   get notebook(): Notebook {
     return (this._notebook ??= new Notebook({ client: this.client }))
+  }
+
+  private _ideLsp?: IdeLsp
+  get ideLsp(): IdeLsp {
+    return (this._ideLsp ??= new IdeLsp({ client: this.client }))
   }
 
   private _sessionImport?: SessionImport
