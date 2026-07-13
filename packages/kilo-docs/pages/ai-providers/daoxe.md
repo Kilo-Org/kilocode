@@ -28,7 +28,7 @@ DaoXE is not available in mainland China. Requests from mainland China may be bl
 3. Enter your DaoXE API key.
 4. Select a model that is available to your DaoXE account.
 
-The extension stores the provider configuration in your `kilo.json` file. You can also configure it directly using the CLI format below.
+The extension stores provider credentials in Kilo's `auth.json` store. The CLI tab below shows the separate `kilo.json` provider configuration.
 
 {% /tab %}
 {% tab label="CLI" %}
