@@ -194,7 +194,7 @@ export const layer: Layer.Layer<
                 const bridge = yield* EffectBridge.make()
                 const pluginCtx: PluginToolContext = {
                   ...toolCtx,
-                  ask: (req) => bridge.promise(toolCtx.ask(req)),
+                  ask: (req) => bridge.promise(toolCtx.ask(req), { signal: toolCtx.abort }), // kilocode_change
                   directory: ctx.directory,
                   worktree: ctx.worktree,
                 }

@@ -77,6 +77,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           sessionID: input.session.id,
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
         },
+        abort: options.abortSignal!,
       }).pipe(Effect.orDie),
   })
   // kilocode_change end

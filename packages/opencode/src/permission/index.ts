@@ -22,6 +22,7 @@ import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { KiloPermission } from "@/kilocode/permission/lifecycle"
 // kilocode_change end
 
 const log = Log.create({ service: "permission" })
@@ -303,14 +304,25 @@ export const layer = Layer.effect(
       log.info("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
-      yield* bus.publish(Event.Asked, info)
+      // kilocode_change start - arm terminal cleanup before publishing the pending request
       return yield* Effect.ensuring(
-        Deferred.await(deferred),
-        Effect.sync(() => {
-          pending.delete(id)
+        Effect.gen(function* () {
+          pending.set(id, { info, ruleset, hardRuleset, deferred })
+          yield* bus.publish(Event.Asked, info)
+          return yield* Deferred.await(deferred)
+        }),
+        KiloPermission.finalize({
+          pending,
+          id,
+          publish: () =>
+            bus.publish(Event.Replied, {
+              sessionID: info.sessionID,
+              requestID: info.id,
+              reply: "reject",
+            }),
         }),
       )
+      // kilocode_change end
     })
 
     const reply = Effect.fn("Permission.reply")(function* (input: ReplyInput) {
