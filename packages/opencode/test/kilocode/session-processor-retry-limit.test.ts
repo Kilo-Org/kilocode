@@ -9,7 +9,7 @@ import { afterEach, describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
-import type { LLMEvent } from "@opencode-ai/llm"
+import { LLMEvent } from "@opencode-ai/llm"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
@@ -144,7 +144,7 @@ afterEach(() => {
 
 describe("session processor retry limit", () => {
   it.live(
-    "retries missing finish reasons three times and then stops",
+    "retries empty responses but not terminal or partial responses",
     () =>
       provideTmpdirInstance(
         (dir) =>
@@ -154,66 +154,98 @@ describe("session processor retry limit", () => {
             const processors = yield* SessionProcessor.Service
             const session = yield* Session.Service
 
-            yield* test.push(Stream.empty)
-            yield* test.push(Stream.empty)
-            yield* test.push(Stream.empty)
-            yield* test.push(Stream.empty)
-            yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
-
             const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
-
-            const chat = yield* session.create({})
-            const parent = yield* session.updateMessage({
-              id: MessageID.ascending(),
-              role: "user",
-              sessionID: chat.id,
-              agent: "code",
-              model: ref,
-              time: { created: Date.now() },
-            })
-            const msg: MessageV2.Assistant = {
-              id: MessageID.ascending(),
-              role: "assistant",
-              sessionID: chat.id,
-              parentID: parent.id,
-              mode: "code",
-              agent: "code",
-              path: { cwd: path.resolve(dir), root: path.resolve(dir) },
-              cost: 0,
-              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-              modelID: ref.modelID,
-              providerID: ref.providerID,
-              time: { created: Date.now() },
-            }
-            yield* session.updateMessage(msg)
-
             const mdl = model()
-            const handle = yield* processors.create({
-              assistantMessage: msg,
-              sessionID: chat.id,
-              model: mdl,
+            const setup = Effect.fn(function* () {
+              const chat = yield* session.create({})
+              const parent = yield* session.updateMessage({
+                id: MessageID.ascending(),
+                role: "user",
+                sessionID: chat.id,
+                agent: "code",
+                model: ref,
+                time: { created: Date.now() },
+              })
+              const msg: MessageV2.Assistant = {
+                id: MessageID.ascending(),
+                role: "assistant",
+                sessionID: chat.id,
+                parentID: parent.id,
+                mode: "code",
+                agent: "code",
+                path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+                cost: 0,
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ref.modelID,
+                providerID: ref.providerID,
+                time: { created: Date.now() },
+              }
+              yield* session.updateMessage(msg)
+              const handle = yield* processors.create({ assistantMessage: msg, sessionID: chat.id, model: mdl })
+              return {
+                handle,
+                input: {
+                  user: parent as MessageV2.User,
+                  sessionID: chat.id,
+                  model: mdl,
+                  agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+                  system: [],
+                  messages: [],
+                  tools: {},
+                } satisfies LLM.StreamInput,
+              }
             })
-
-            const input: LLM.StreamInput = {
-              user: parent as MessageV2.User,
-              sessionID: chat.id,
-              model: mdl,
-              agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-              system: [],
-              messages: [],
-              tools: {},
-            }
 
             try {
-              const result = yield* handle.process(input)
-              const calls = yield* test.calls
-
-              expect(result).toBe("stop")
-              expect(calls).toBe(4)
-              expect(handle.message.finish).toBe("unknown")
-              expect(handle.message.error).toMatchObject({
+              yield* test.push(Stream.make(LLMEvent.stepStart({ index: 0 })))
+              yield* test.push(Stream.make(LLMEvent.stepStart({ index: 0 })))
+              yield* test.push(Stream.make(LLMEvent.stepStart({ index: 0 })))
+              yield* test.push(Stream.make(LLMEvent.stepStart({ index: 0 })))
+              const empty = yield* setup()
+              expect(yield* empty.handle.process(empty.input)).toBe("stop")
+              expect(yield* test.calls).toBe(4)
+              expect(empty.handle.message.finish).toBe("unknown")
+              expect(empty.handle.message.error).toMatchObject({
                 data: { message: "Response ended without a finish reason and may be incomplete." },
               })
+
+              yield* test.push(
+                Stream.make(
+                  LLMEvent.stepFinish({ index: 0, reason: "unknown" }),
+                  LLMEvent.finish({ reason: "unknown" }),
+                ),
+              )
+              const terminal = yield* setup()
+              expect(yield* terminal.handle.process(terminal.input)).toBe("continue")
+              expect(yield* test.calls).toBe(5)
+              expect(terminal.handle.message.finish).toBe("unknown")
+              expect(terminal.handle.message.error).toBeUndefined()
+
+              yield* test.push(
+                Stream.make(
+                  LLMEvent.textStart({ id: "text" }),
+                  LLMEvent.textDelta({ id: "text", text: "partial" }),
+                  LLMEvent.textEnd({ id: "text" }),
+                ),
+              )
+              const partial = yield* setup()
+              expect(yield* partial.handle.process(partial.input)).toBe("continue")
+              expect(yield* test.calls).toBe(6)
+              expect(partial.handle.message.finish).toBe("unknown")
+              expect(partial.handle.message.error).toBeUndefined()
+              expect(MessageV2.parts(partial.handle.message.id)).toContainEqual(
+                expect.objectContaining({ type: "text", text: "partial" }),
+              )
+
+              yield* test.push(Stream.make(LLMEvent.toolCall({ id: "call", name: "write", input: {} })))
+              const tool = yield* setup()
+              expect(yield* tool.handle.process(tool.input)).toBe("continue")
+              expect(yield* test.calls).toBe(7)
+              expect(tool.handle.message.finish).toBe("unknown")
+              expect(tool.handle.message.error).toBeUndefined()
+              expect(MessageV2.parts(tool.handle.message.id)).toContainEqual(
+                expect.objectContaining({ type: "tool", tool: "write" }),
+              )
             } finally {
               delay.mockRestore()
             }

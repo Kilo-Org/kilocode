@@ -201,8 +201,12 @@ export namespace KiloSessionProcessor {
   }
 
   export function ensureFinish(msg: MessageV2.Assistant) {
-    if (msg.finish && msg.finish !== "unknown") return Effect.void
+    if (msg.finish) return Effect.void
     msg.finish = "unknown"
+    const visible = MessageV2.parts(msg.id).some(
+      (part) => part.type === "text" || part.type === "reasoning" || part.type === "tool",
+    )
+    if (visible) return Effect.void
     return Effect.fail(new MissingFinishError())
   }
 
