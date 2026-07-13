@@ -33,6 +33,7 @@ export namespace KiloCompactionChunks {
   type Output = {
     result: SessionProcessor.Result
     output: string | undefined
+    error: MessageV2.Assistant["error"]
   }
 
   type Deps = {
@@ -272,7 +273,11 @@ export namespace KiloCompactionChunks {
           model: mdl,
         })
         const parts = yield* MessageV2.parts(worker.message.id)
-        return { result, output: text(worker.message, parts) }
+        return {
+          result,
+          output: text(worker.message, parts),
+          error: worker.message.error ?? worker.compactError?.(),
+        }
       }).pipe(
         Effect.ensuring(
           input.session.removeMessage({ sessionID: input.sessionID, messageID: worker.message.id }).pipe(Effect.ignore),
@@ -280,9 +285,37 @@ export namespace KiloCompactionChunks {
       )
       const result = out.result
       const output = out.output
-      if (result !== "continue") return { result, output: undefined }
-      if (!output) return { result: "stop" as const, output: undefined }
-      return { result, output }
+      if (result !== "continue") return { result, output: undefined, error: out.error }
+      if (!output)
+        return {
+          result: "stop" as const,
+          output: undefined,
+          error:
+            out.error ??
+            new MessageV2.APIError({
+              message: "Compaction worker returned an empty response",
+              isRetryable: true,
+            }).toObject(),
+        }
+      return { result, output, error: undefined }
+    })
+  }
+
+  function fatal(output: Output | undefined) {
+    return output?.result === "stop" && !!output.error && output.error.name !== "ContextOverflowError"
+  }
+
+  function fail(input: Input, output: Output | undefined) {
+    return Effect.gen(function* () {
+      if (output?.result !== "stop") return false
+      const error = output.error
+      if (!error || error.name === "ContextOverflowError") return false
+
+      input.target.error = error
+      input.target.finish = "error"
+      input.target.time.completed = Date.now()
+      yield* input.updateMessage(input.target)
+      return true
     })
   }
 
@@ -332,7 +365,8 @@ export namespace KiloCompactionChunks {
         (group) => reduce({ ...input, summaries: group, depth: input.depth + 1 }),
         { concurrency: 1 },
       )
-      if (next.some((item) => item.result !== "continue" || !item.output)) return result
+      const failed = next.find(fatal) ?? next.find((item) => item.result !== "continue" || !item.output)
+      if (failed) return fatal(failed) ? failed : result
       return yield* reduce({ ...input, summaries: next.map((item) => item.output!), depth: input.depth + 2 })
     })
   }
@@ -346,13 +380,20 @@ export namespace KiloCompactionChunks {
       const partial = yield* Effect.forEach(chunks, (chunk) => summarize({ ...input, chunk, total: chunks.length }), {
         concurrency: Math.min(CONCURRENCY, chunks.length),
       })
-      if (partial.some((item) => item.result !== "continue" || !item.output)) return "compact" as const
+      const failed = partial.find(fatal) ?? partial.find((item) => item.result !== "continue" || !item.output)
+      if (failed) {
+        if (yield* fail(input, failed)) return "stop" as const
+        return "compact" as const
+      }
 
       const final =
         chunks.length === 1 && (yield* large({ messages: chunks[0].messages, model: input.model, size }))
           ? partial[0]
           : yield* reduce({ ...input, summaries: partial.map((item) => item.output!), depth: 0 })
-      if (!final || final.result !== "continue" || !final.output) return "compact" as const
+      if (!final || final.result !== "continue" || !final.output) {
+        if (yield* fail(input, final)) return "stop" as const
+        return "compact" as const
+      }
 
       yield* input.updatePart({
         id: PartID.ascending(),
