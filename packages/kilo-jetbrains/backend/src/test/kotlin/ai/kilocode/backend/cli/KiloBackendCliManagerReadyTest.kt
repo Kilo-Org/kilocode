@@ -1,9 +1,11 @@
 package ai.kilocode.backend.cli
 
+import ai.kilocode.backend.testing.TestLog
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import java.io.ByteArrayInputStream
@@ -82,6 +84,17 @@ class KiloBackendCliManagerReadyTest {
         assertEquals("CLI process exited with code 9 before announcing a port", err.message)
         assertContains(err.details.orEmpty(), "bad db")
         assertContains(err.details.orEmpty(), "diag line")
+    }
+
+    @Test
+    fun `init after dispose is rejected without spawning`() = runBlocking {
+        val manager = KiloBackendCliManager(log = TestLog())
+        manager.dispose()
+        var resolved = false
+        val state = manager.init(onProgress = {}, onResolved = { resolved = true })
+        val err = assertIs<CliServer.State.Error>(state)
+        assertEquals("CLI manager is disposed", err.message)
+        assertFalse(resolved)
     }
 
     @Test

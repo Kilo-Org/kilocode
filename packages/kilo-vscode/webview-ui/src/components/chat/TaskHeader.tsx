@@ -21,6 +21,8 @@ import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
+import { TranscriptSearch } from "./TranscriptSearch"
+import { useTranscriptSearch } from "../../context/transcript-search"
 import { hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
@@ -35,6 +37,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
   const memory = useMemory()
   const language = useLanguage()
+  const search = useTranscriptSearch()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!session.currentSession())
@@ -228,6 +231,18 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             </Tooltip>
           </Show>
           <Show when={hasMessages()}>
+            <Tooltip value={language.t("chat.search.toggle")} placement="bottom">
+              <IconButton
+                icon="magnifying-glass"
+                size="small"
+                variant="ghost"
+                class="task-header-search-toggle"
+                data-active={search.active() ? "" : undefined}
+                onClick={() => search.setActive(!search.active())}
+                aria-label={language.t("chat.search.toggle")}
+                aria-pressed={search.active()}
+              />
+            </Tooltip>
             <button
               data-slot="task-header-expand"
               onClick={toggle}
@@ -239,6 +254,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
       </div>
+      {/* Standalone search bar, directly under the header, so it has room for
+          the VS Code–style inline options and doesn't require the timeline
+          to be expanded. */}
+      <Show when={search.active()}>
+        <div data-component="task-header-search">
+          <TranscriptSearch />
+        </div>
+      </Show>
       {/* Expanded graph section: timeline + context bar + token breakdown */}
       <Show when={expanded() && hasTimeline()}>
         <div data-component="task-header-graph">

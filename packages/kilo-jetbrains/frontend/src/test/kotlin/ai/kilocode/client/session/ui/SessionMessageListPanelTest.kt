@@ -40,6 +40,7 @@ import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
@@ -294,6 +295,27 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         assertEquals(Cursor.HAND_CURSOR, rollback.cursor.type)
         assertEquals("u1", called)
+    }
+
+    fun `test rollback state shows inline prompt progress and suppresses toolbar`() {
+        var cancelled = false
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, revert = {}, cancelRevert = { cancelled = true })
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+        val message = panel.findMessage("u1")!!
+        val target = components(message).filterIsInstance<SessionCopyTarget>().single { it.copyToolbar != null }
+
+        model.setState(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+
+        val progress = components(message).filterIsInstance<RevertProgress>().single()
+        assertNull(target.copyToolbar)
+        components(progress).filterIsInstance<ActionLink>().single().doClick()
+        assertTrue(cancelled)
+
+        model.setState(SessionState.Idle)
+
+        assertTrue(components(message).filterIsInstance<RevertProgress>().isEmpty())
+        assertNotNull(target.copyToolbar)
     }
 
     fun `test latest non blank assistant text part gets copy toolbar`() {
@@ -696,7 +718,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test rollback banner is anchored inside transcript before progress footer`() {
-        val banner = RevertBanner(model, {}, {})
+        val banner = RevertBanner(model, {}, {}, {})
         val item = SessionMessageListPanel(model, parent, openFile = openFile, banner = banner)
         model.upsertMessage(msg("u1", "user"))
         model.upsertMessage(msg("a1", "assistant"))
@@ -713,7 +735,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test rollback banner uses session dialog card with standard actions`() {
-        val banner = RevertBanner(model, {}, {})
+        val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
         model.setRevert(SessionRevertDto("u1"))
         banner.update()
@@ -735,7 +757,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test rollback banner reuses file rows across updates`() {
-        val banner = RevertBanner(model, {}, {})
+        val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
         model.setRevert(SessionRevertDto("u1"))
         model.setDiff(listOf(DiffFileDto("src/A.kt", 1, 0), DiffFileDto("src/B.kt", 2, 1)))
@@ -762,7 +784,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test rollback banner shows redo all only for multiple reverted messages`() {
-        val banner = RevertBanner(model, {}, {})
+        val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
         model.upsertMessage(msg("a1", "assistant"))
         model.upsertMessage(msg("u2", "user"))
@@ -782,7 +804,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     fun `test rollback banner buttons invoke actions`() {
         var redo = 0
         var all = 0
-        val banner = RevertBanner(model, { redo++ }, { all++ })
+        val banner = RevertBanner(model, { redo++ }, { all++ }, {})
         model.upsertMessage(msg("u1", "user"))
         model.upsertMessage(msg("a1", "assistant"))
         model.upsertMessage(msg("u2", "user"))
@@ -796,8 +818,33 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals(1, all)
     }
 
+    fun `test rollback state disables banner actions and shows inline progress`() {
+        var cancelled = false
+        val banner = RevertBanner(model, {}, {}, { cancelled = true })
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setRevert(SessionRevertDto("u1"))
+        banner.update()
+
+        banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+
+        val buttons = components(banner).filterIsInstance<JButton>()
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo") }.all { !it.isEnabled })
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo.all") }.all { !it.isEnabled })
+        val progress = components(banner).filterIsInstance<RevertProgress>().single()
+        components(progress).filterIsInstance<ActionLink>().single().doClick()
+        assertTrue(cancelled)
+
+        banner.setReverting(SessionState.Idle)
+
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo") }.all { it.isEnabled })
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo.all") }.all { it.isEnabled })
+        assertTrue(components(banner).filterIsInstance<RevertProgress>().isEmpty())
+    }
+
     fun `test rollback banner explains snapshotless history only revert`() {
-        val banner = RevertBanner(model, {}, {})
+        val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
         model.setRevert(SessionRevertDto("u1", snapshot = null))
         banner.update()
@@ -810,7 +857,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
     }
 
     fun `test rollback banner hides snapshotless notice when snapshot exists`() {
-        val banner = RevertBanner(model, {}, {})
+        val banner = RevertBanner(model, {}, {}, {})
         model.upsertMessage(msg("u1", "user"))
         model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
         banner.update()

@@ -1429,8 +1429,11 @@ export const dict = {
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
   "settings.sandboxing.network.title": "จำกัดการเข้าถึงเครือข่าย",
   "settings.sandboxing.network.description":
-    "บล็อกการเข้าถึงเครือข่ายขาออกจากคำสั่งที่มาจากโมเดลและเครื่องมือ HTTP เซิร์ฟเวอร์ MCP ภายในเครื่องและฮุกของปลั๊กอินทำงานอยู่นอกข้อจำกัดนี้ การรับส่งข้อมูลสำหรับการอนุมานของผู้ให้บริการและโมเดลยังคงใช้งานได้",
+    "บล็อกการเข้าถึงขาออกโดยตรงจากคำสั่งที่เริ่มต้นโดยโมเดลและเครื่องมือ HTTP เครื่องมือ MCP ทั้งในเครื่องและระยะไกลจะใช้งานไม่ได้ในขณะที่มีการจำกัดนี้ การรับส่งข้อมูลของผู้ให้บริการและฮุกของปลั๊กอินที่เชื่อถือได้จะไม่อยู่ภายใต้ข้อจำกัดนี้",
 
+  "settings.sandboxing.allowedHosts.title": "ปลายทางเครือข่ายที่อนุญาต",
+  "settings.sandboxing.allowedHosts.description":
+    "โฮสต์ DNS และพอร์ตปลายทางสำหรับทราฟฟิกพร็อกซี HTTP และ HTTPS ในแซนด์บ็อกซ์ GitHub CLI และ HTTPS Git มักต้องใช้ github.com:443 และ api.github.com:443 การเปลี่ยนแปลงจะมีผลกับเซสชันใหม่",
   "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
   "settings.sandboxing.writablePaths.description":
     "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
@@ -1838,4 +1841,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "แผนพร้อมแล้ว:",
+  "chat.search.placeholder": "ค้นหาในแชท…",
+  "chat.search.toggle": "ค้นหาในแชท",
+  "chat.search.matchCase": "ตรงตามตัวพิมพ์ใหญ่-เล็ก",
+  "chat.search.matchWholeWord": "ตรงทั้งคำ",
+  "chat.search.useRegex": "ใช้นิพจน์ทั่วไป",
+  "chat.search.previousMatch": "รายการที่ตรงกันก่อนหน้า",
+  "chat.search.nextMatch": "รายการที่ตรงกันถัดไป",
+  "chat.search.close": "ปิดการค้นหา",
+  "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
+  "chat.search.noResults": "ไม่มีผลลัพธ์",
+  "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
 }
