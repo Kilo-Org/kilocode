@@ -6,7 +6,7 @@ import { useLocalTabs } from "../../context/local-tabs"
 import { useSession } from "../../context/session"
 import { isPendingTab } from "../../utils/local-tabs"
 import { useTabScroll } from "../../utils/tab-scroll"
-import { focusPrompt, focusSelectedTab, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
+import { focusPrompt, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
 import { setTabWidths } from "../../utils/tab-widths"
 import { useVSCode } from "../../context/vscode"
 import { SessionTab } from "./SessionTab"
@@ -62,7 +62,6 @@ export const SessionTabStrip: Component = () => {
   const close = (id: string) => {
     freeze()
     tabs.close(id)
-    focusSelectedTab(document, focusPrompt)
     requestAnimationFrame(release)
   }
   const closeOthers = (id: string) => {
