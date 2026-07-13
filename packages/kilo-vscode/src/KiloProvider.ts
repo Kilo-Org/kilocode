@@ -65,6 +65,7 @@ import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch } from "./kilo-provider/file-search"
+import { handleFilePicker } from "./kilo-provider/file-picker"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { getTerminalContents } from "./services/terminal/context"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
@@ -110,7 +111,9 @@ import {
   handleSkipLegacyMigration,
   handleClearLegacyData,
   type MigrationContext,
+  type MigrationSource,
 } from "./kilo-provider/handlers/migration"
+import type { MigrationSelections } from "./legacy-migration/legacy-types"
 // legacy-migration end
 import {
   handleLogin,
@@ -944,6 +947,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (await this.handleModelSelectorExpandedMessage(message)) return
       this.visibleTaskStreams.handle(message)
       if (await this.handleMemoryMessage(message)) return
+      if (this.handleLegacyMigrationMessage(message)) return
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -1277,6 +1281,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             post: (msg) => this.postMessage(msg),
           })
           break
+        case "requestFilePicker":
+          await handleFilePicker({ requestId: message.requestId, post: (msg) => this.postMessage(msg) })
+          break
         case "requestTerminalContext":
           void this.handleTerminalContext(message.requestId)
           break
@@ -1391,23 +1398,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.postMessage({ type: "favoritesLoaded", favorites })
           break
         }
-        // legacy-migration start
-        case "requestMigrationData":
-          void handleRequestMigrationData(this.migrationCtx, message.source, message.operationId)
-          break
-        case "startMigration":
-          void handleStartMigration(this.migrationCtx, message.source, message.operationId, message.selections)
-          break
-        case "skipLegacyMigration":
-          void handleSkipLegacyMigration(this.migrationCtx)
-          break
-        case "clearLegacyData":
-          void handleClearLegacyData(this.migrationCtx)
-          break
-        case "finalizeLegacyMigration":
-          void handleFinalizeLegacyMigration(this.migrationCtx)
-          break
-        // legacy-migration end
         case "enhancePrompt": {
           const sdkClient = this.client
           if (!sdkClient) {
@@ -1465,6 +1455,39 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     return false
   }
+
+  // legacy-migration start
+  private handleLegacyMigrationMessage(message: { type: string }): boolean {
+    switch (message.type) {
+      case "requestMigrationData": {
+        const msg = message as unknown as { source: MigrationSource; operationId: string }
+        void handleRequestMigrationData(this.migrationCtx, msg.source, msg.operationId)
+        break
+      }
+      case "startMigration": {
+        const msg = message as unknown as {
+          source: MigrationSource
+          operationId: string
+          selections: MigrationSelections
+        }
+        void handleStartMigration(this.migrationCtx, msg.source, msg.operationId, msg.selections)
+        break
+      }
+      case "skipLegacyMigration":
+        void handleSkipLegacyMigration(this.migrationCtx)
+        break
+      case "clearLegacyData":
+        void handleClearLegacyData(this.migrationCtx)
+        break
+      case "finalizeLegacyMigration":
+        void handleFinalizeLegacyMigration(this.migrationCtx)
+        break
+      default:
+        return false
+    }
+    return true
+  }
+  // legacy-migration end
 
   private async toggleFavorite(message: {
     action: "add" | "remove"

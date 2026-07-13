@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { lstat } from "node:fs/promises"
 import { connect, type Socket } from "node:net"
 import { startProxy, type ProxyResolver, type ProxyRuntime } from "../src/proxy"
+import { TlsClientHello } from "../src/tls-client-hello"
 
 const close: Array<() => Promise<void> | void> = []
 const posix = process.platform === "win32" ? test.skip : test
@@ -143,16 +144,29 @@ function closed(socket: Socket) {
 function receive(socket: Socket, length: number) {
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = []
-    const timer = setTimeout(() => reject(new Error("tunnel did not return ClientHello bytes")), 1_000)
+    const cleanup = () => {
+      socket.off("data", data)
+      socket.off("error", error)
+      socket.off("close", closed)
+    }
+    const error = (cause: Error) => {
+      cleanup()
+      reject(cause)
+    }
+    const closed = () => {
+      cleanup()
+      reject(new Error("tunnel closed before returning ClientHello bytes"))
+    }
     const data = (chunk: Buffer) => {
       chunks.push(chunk)
       const result = Buffer.concat(chunks)
       if (result.length < length) return
-      clearTimeout(timer)
-      socket.off("data", data)
+      cleanup()
       resolve(result)
     }
     socket.on("data", data)
+    socket.once("error", error)
+    socket.once("close", closed)
   })
 }
 
@@ -196,19 +210,34 @@ describe("sandbox trusted proxy", () => {
   test("preserves fragmented ClientHello before opening CONNECT upstream", async () => {
     const upstream = target()
     const calls: string[] = []
-    const proxy = await startProxy([`allowed.test:${upstream.port}`], "darwin", resolver(upstream.port, calls))
+    const started = Promise.withResolvers<void>()
+    const gate = Promise.withResolvers<void>()
+    const resolve: ProxyResolver = async (dest) => {
+      calls.push(dest.authority)
+      started.resolve()
+      await gate.promise
+      return { address: "127.0.0.1", family: 4 }
+    }
+    const proxy = await startProxy([`allowed.test:${upstream.port}`], "darwin", resolve)
     close.push(proxy.close)
     const socket = await tunnel(proxy, `allowed.test:${upstream.port}`)
     const input = fragmented(hello("allowed.test"))
-    const output = receive(socket, input.length)
+    const parser = new TlsClientHello("allowed.test")
 
     for (const byte of input.subarray(0, -1)) {
-      socket.write(Buffer.from([byte]))
-      await Bun.sleep(1)
+      expect(parser.push(Buffer.from([byte]))).toBe("pending")
     }
+    expect(parser.push(input.subarray(-1))).toBe("valid")
+    expect(parser.bytes()).toEqual(input)
+
+    const output = receive(socket, input.length)
+    socket.write(input)
+    await started.promise
+
     expect(upstream.accepted()).toBe(0)
-    expect(calls).toEqual([])
-    socket.write(input.subarray(-1))
+    expect(upstream.bytes()).toHaveLength(0)
+    expect(calls).toEqual([`allowed.test:${upstream.port}`])
+    gate.resolve()
 
     expect(await output).toEqual(input)
     expect(upstream.accepted()).toBe(1)
