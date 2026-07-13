@@ -8,6 +8,7 @@ permission:
   glob: allow
   list: allow
   task: allow
+  background_task: allow
   todoread: allow
   todowrite: allow
   question: allow

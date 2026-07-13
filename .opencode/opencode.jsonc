@@ -9,6 +9,7 @@
     },
   },
   "permission": {
+    "background_task": "deny",
     "edit": {
       "packages/opencode/migration/*": "deny",
     },

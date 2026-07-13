@@ -5,6 +5,8 @@ import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { ToolRegistry } from "../../src/tool/registry"
 
+const root = path.resolve(import.meta.dir, "../../../..")
+
 afterEach(async () => {
   await Instance.disposeAll()
 })
@@ -30,6 +32,23 @@ describe("tool.registry", () => {
       else process.env["KILO_CLIENT"] = original
     }
   })
+  // kilocode_change start - A12B background_task registration
+  test(
+    "background_task registry wiring includes task once and background_task once",
+    async () => {
+      await Instance.provide({
+        directory: root,
+        fn: async () => {
+          const ids = await ToolRegistry.ids()
+          expect(ids).toContain("task")
+          expect(ids).toContain("background_task")
+          expect(ids.filter((id) => id === "task")).toHaveLength(1)
+          expect(ids.filter((id) => id === "background_task")).toHaveLength(1)
+        },
+      })
+    },
+    { timeout: 30000 },
+  )
   // kilocode_change end
 
   test("loads tools from .opencode/tool (singular)", async () => {

@@ -5,6 +5,7 @@ import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
+import { ToolRegistry } from "../../src/tool/registry"
 
 // Helper to evaluate permission for a tool with wildcard pattern
 function evalToolPerm(agent: Agent.Info | undefined, permission: string): Permission.Action | undefined {
@@ -17,7 +18,23 @@ const custom = path.join(root, ".kilo", "agent")
 
 async function copyAgent(dir: string, name: string) {
   await fs.mkdir(path.join(dir, ".kilo", "agent"), { recursive: true })
-  await Bun.write(path.join(dir, ".kilo", "agent", name + ".md"), await Bun.file(path.join(custom, name + ".md")).text())
+  await Bun.write(
+    path.join(dir, ".kilo", "agent", name + ".md"),
+    await Bun.file(path.join(custom, name + ".md")).text(),
+  )
+}
+
+async function copyOpencodeConfig(dir: string) {
+  await fs.mkdir(path.join(dir, ".opencode"), { recursive: true })
+  await Bun.write(
+    path.join(dir, ".opencode", "opencode.jsonc"),
+    await Bun.file(path.join(root, ".opencode", "opencode.jsonc")).text(),
+  )
+}
+
+async function initBackgroundTaskRepo(dir: string) {
+  await copyAgent(dir, "orchestrator")
+  await copyOpencodeConfig(dir)
 }
 
 afterEach(async () => {
@@ -372,6 +389,89 @@ test("orchestrator agent from .kilo/agent/orchestrator.md loads with planning-fi
       expect(evalToolPerm(orch, "bash")).toBe("ask")
       expect(orch?.prompt).toContain("brainstorming")
       expect(orch?.prompt).toContain("shared skill now")
+    },
+  })
+})
+
+test("background_task repo wiring keeps defaultAgent as code", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    config: {
+      default_agent: "code",
+    },
+    init: initBackgroundTaskRepo,
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      expect(await Agent.defaultAgent()).toBe("code")
+    },
+  })
+})
+
+test("background_task repo wiring exposes the custom orchestrator with bash ask and background_task allow", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    config: {
+      default_agent: "code",
+    },
+    init: initBackgroundTaskRepo,
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const orch = await Agent.get("orchestrator")
+      expect(orch).toBeDefined()
+      expect(orch?.mode).toBe("primary")
+      expect(orch?.native).toBe(false)
+      expect(evalToolPerm(orch, "background_task")).toBe("allow")
+      expect(evalToolPerm(orch, "task")).toBe("allow")
+      expect(evalToolPerm(orch, "bash")).toBe("ask")
+      const hidden = Permission.disabled(["background_task"], orch!.permission)
+      expect(hidden.has("background_task")).toBe(false)
+    },
+  })
+})
+
+test("background_task repo wiring keeps code and general denied and hidden", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    config: {
+      default_agent: "code",
+    },
+    init: initBackgroundTaskRepo,
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const code = await Agent.get("code")
+      const general = await Agent.get("general")
+      expect(evalToolPerm(code, "background_task")).toBe("deny")
+      expect(evalToolPerm(general, "background_task")).toBe("deny")
+      expect(Permission.disabled(["background_task"], code!.permission).has("background_task")).toBe(true)
+      expect(Permission.disabled(["background_task"], general!.permission).has("background_task")).toBe(true)
+    },
+  })
+})
+
+test("background_task repo wiring registers the tool globally while keeping task present", async () => {
+  await using tmp = await tmpdir({
+    git: true,
+    config: {
+      default_agent: "code",
+    },
+    init: initBackgroundTaskRepo,
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const ids = await ToolRegistry.ids()
+      expect(ids).toContain("task")
+      expect(ids).toContain("background_task")
     },
   })
 })
