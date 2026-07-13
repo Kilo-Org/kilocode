@@ -183,13 +183,17 @@ else
     fi
 
     if [ -z "$requested_version" ]; then
-        specific_version=$(curl -s "https://api.github.com/repos/Kilo-Org/kilocode/releases?per_page=30" | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p' | head -n 1) # kilocode_change
-        url="https://github.com/Kilo-Org/kilocode/releases/download/v${specific_version}/$filename" # kilocode_change
-
-        if [[ $? -ne 0 || -z "$specific_version" ]]; then
+        # The npm latest tag tracks stable CLI releases independently of other GitHub release types.
+        if ! specific_version=$(curl -fsSL "https://registry.npmjs.org/-/package/%40kilocode%2Fcli/dist-tags" |
+            sed -n 's/.*"latest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'); then
             echo -e "${RED}Failed to fetch version information${NC}"
             exit 1
         fi
+        if [[ ! "$specific_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo -e "${RED}Failed to fetch version information${NC}"
+            exit 1
+        fi
+        url="https://github.com/Kilo-Org/kilocode/releases/download/v${specific_version}/$filename"
     else
         # Strip leading 'v' if present
         requested_version="${requested_version#v}"

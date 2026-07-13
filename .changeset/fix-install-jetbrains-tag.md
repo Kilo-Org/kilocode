@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Fix install script failing when the latest GitHub release is not a CLI release.
+Install the latest stable CLI release when newer non-CLI or prerelease releases exist.
