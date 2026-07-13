@@ -43,6 +43,53 @@ const write = (filepath: string, content: string) =>
   })
 
 describe("instruction markdown substitutions", () => {
+  it.live("preserves trusted relative instructions when project config is disabled", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const prior = {
+          flag: process.env.KILO_DISABLE_PROJECT_CONFIG,
+          secret: process.env.KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET,
+        }
+        process.env.KILO_DISABLE_PROJECT_CONFIG = "1"
+        process.env.KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET = "environment secret"
+        return prior
+      }),
+      () =>
+        Effect.gen(function* () {
+          const dir = yield* tmpdirScoped()
+          const project = path.join(dir, "project")
+          const home = path.join(dir, "global")
+          yield* write(path.join(project, "README.md"), "project")
+          yield* write(
+            path.join(home, "rules", "trusted.md"),
+            "{env:KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET}",
+          )
+          const config = TestConfig.layer({
+            get: () =>
+              Effect.succeed({
+                instructions: ["rules/*.md"],
+                instruction_origins: { "rules/*.md": { trusted: true, source: "global config" } },
+              }),
+          })
+
+          yield* provideInstance(project)(
+            Effect.gen(function* () {
+              const svc = yield* Instruction.Service
+              const results = yield* svc.system()
+              expect(results.join("\n")).toContain("environment secret")
+            }).pipe(Effect.provide(layer(home, config))),
+          )
+        }),
+      (prior) =>
+        Effect.sync(() => {
+          if (prior.flag === undefined) delete process.env.KILO_DISABLE_PROJECT_CONFIG
+          else process.env.KILO_DISABLE_PROJECT_CONFIG = prior.flag
+          if (prior.secret === undefined) delete process.env.KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET
+          else process.env.KILO_INSTRUCTION_GLOBAL_PATTERN_SECRET = prior.secret
+        }),
+    ),
+  )
+
   it.live("does not trust project markdown selected by a trusted relative instruction", () =>
     provideTmpdirInstance((dir) => {
       const config = TestConfig.layer({

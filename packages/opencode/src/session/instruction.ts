@@ -170,7 +170,7 @@ export const layer: Layer.Layer<
               : relative(instruction)
           ).pipe(Effect.catch(() => Effect.succeed([] as string[])))
           const declared = config.instruction_origins?.[raw] ?? { trusted: false, source: raw, root }
-          const trusted = declared.trusted && path.isAbsolute(instruction)
+          const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
           matches.forEach((item) => add(item, origin))
         }
