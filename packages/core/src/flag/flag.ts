@@ -6,6 +6,7 @@ export function truthy(key: string) {
 }
 
 const copy = process.env["KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"]
+const fff = process.env["KILO_DISABLE_FFF"]
 
 function enabledByExperimental(key: string) {
   return process.env[key] === undefined ? truthy("KILO_EXPERIMENTAL") : truthy(key)
@@ -30,6 +31,7 @@ export const Flag = {
   KILO_FAKE_VCS: process.env["KILO_FAKE_VCS"],
   KILO_SERVER_PASSWORD: process.env["KILO_SERVER_PASSWORD"],
   KILO_SERVER_USERNAME: process.env["KILO_SERVER_USERNAME"],
+  KILO_DISABLE_FFF: fff === undefined ? process.platform === "win32" : truthy("KILO_DISABLE_FFF"),
 
   // Experimental
   KILO_EXPERIMENTAL_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(
@@ -46,7 +48,6 @@ export const Flag = {
 
   KILO_WORKSPACE_ID: process.env["KILO_WORKSPACE_ID"],
   KILO_EXPERIMENTAL_WORKSPACES: enabledByExperimental("KILO_EXPERIMENTAL_WORKSPACES"),
-  KILO_EXPERIMENTAL_SESSION_SWITCHER: enabledByExperimental("KILO_EXPERIMENTAL_SESSION_SWITCHER"),
 
   // Evaluated at access time (not module load) because tests, the CLI, and
   // external tooling set these env vars at runtime.
