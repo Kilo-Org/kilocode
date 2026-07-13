@@ -33,7 +33,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.profile"
-                groupWeight="2"
+                groupWeight="4"
                 instance="ai.kilocode.client.settings.profile.UserProfileConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.profile.displayName"/>
@@ -41,7 +41,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.models"
-                groupWeight="1"
+                groupWeight="3"
                 instance="ai.kilocode.client.settings.models.ModelsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.models.displayName"/>
@@ -49,10 +49,32 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.providers"
-                groupWeight="1"
+                groupWeight="2"
                 instance="ai.kilocode.client.settings.providers.ProvidersConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.providers.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.agentBehavior"
+                groupWeight="1"
+                instance="ai.kilocode.client.settings.agents.AgentBehaviorConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.agents"
+                instance="ai.kilocode.client.settings.agents.AgentsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.agents.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.mcp"
+                instance="ai.kilocode.client.settings.agents.McpConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.mcp.displayName"/>
 
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
@@ -83,6 +105,9 @@
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
+        <action id="Kilo.CoreInfo"
+                class="ai.kilocode.client.actions.CoreInfoAction"/>
+
         <action id="Kilo.OpenSettings"
                 class="ai.kilocode.client.actions.OpenSettingsAction"/>
 
@@ -92,9 +117,11 @@
         <action id="Kilo.OpenGlobalConfig"
                 class="ai.kilocode.client.actions.OpenGlobalConfigAction"/>
 
-        <group id="Kilo.CliGroup" text="CLI" popup="true">
+        <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
+            <separator/>
+            <reference ref="Kilo.CoreInfo"/>
         </group>
 
         <group id="Kilo.OpenConfigGroup" text="Config Files" popup="true">

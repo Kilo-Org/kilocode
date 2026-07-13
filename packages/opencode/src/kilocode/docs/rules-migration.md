@@ -70,7 +70,7 @@ The migrator reads rules from these locations:
 
 - `AGENTS.md` in project root
 - `CLAUDE.md` in project root
-- `~/.opencode/AGENTS.md` (global)
+- `~/.config/kilo/AGENTS.md` (global)
 
 ## Not Migrated
 

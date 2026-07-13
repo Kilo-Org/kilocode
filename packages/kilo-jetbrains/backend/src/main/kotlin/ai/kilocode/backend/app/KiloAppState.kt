@@ -1,9 +1,9 @@
 package ai.kilocode.backend.app
 
-import ai.kilocode.jetbrains.api.model.Config
 import ai.kilocode.jetbrains.api.model.KiloNotifications200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.backend.migration.LegacyMigrationDetection
+import ai.kilocode.rpc.dto.ConfigDto
 
 /**
  * Full application lifecycle state, combining CLI transport connection
@@ -14,10 +14,11 @@ import ai.kilocode.backend.migration.LegacyMigrationDetection
  */
 sealed class KiloAppState {
     data object Disconnected : KiloAppState()
+    data class Downloading(val percent: Int, val version: String, val platform: String) : KiloAppState()
     data object Connecting : KiloAppState()
     data class Loading(val progress: LoadProgress) : KiloAppState()
     data class MigrationRequired(val detection: LegacyMigrationDetection) : KiloAppState()
-    data class Ready(val data: AppData) : KiloAppState()
+    data class Ready(val data: AppData, val rev: Long = 0) : KiloAppState()
     data class Error(val message: String, val errors: List<LoadError> = emptyList()) : KiloAppState()
 }
 
@@ -54,7 +55,7 @@ data class ConfigWarning(
  */
 data class AppData(
     val profile: KiloProfile200Response?,
-    val config: Config,
+    val config: ConfigDto,
     val notifications: List<KiloNotifications200ResponseInner>,
     val warnings: List<ConfigWarning> = emptyList(),
 )

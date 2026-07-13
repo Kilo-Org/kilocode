@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Anaconda Desktop verbinden",
+  "provider.anaconda.title.manage": "Anaconda Desktop beheren",
+  "provider.anaconda.status.checking": "Anaconda Desktop controleren...",
+  "provider.anaconda.status.opening": "Anaconda Desktop openen...",
+  "provider.anaconda.status.syncing": "Providermodellen vernieuwen...",
+  "provider.anaconda.status.ready": "Klaar om te verbinden",
+  "provider.anaconda.status.waiting": "Wachten op Desktop",
+  "provider.anaconda.status.attention": "Vereist aandacht",
+  "provider.anaconda.status.unavailable": "Niet beschikbaar",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop wordt niet ondersteund op {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installeer Anaconda Desktop op deze machine en kom hier dan terug. Kilo voert het installatieprogramma niet voor je uit.",
+  "provider.anaconda.state.notRunning":
+    "Open Anaconda Desktop, voltooi de installatie en meld je aan, kies daarna Opnieuw controleren.",
+  "provider.anaconda.state.invalidConfig":
+    "De installatie van Anaconda Desktop is onvolledig. Open Desktop, voltooi de installatie en herstart het indien nodig.",
+  "provider.anaconda.state.signedOut": "Open Anaconda Desktop en meld je aan voordat je Kilo verbindt.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo kon geen toegang krijgen tot Anaconda Desktop. Open Desktop, meld je opnieuw aan en herstart het indien nodig.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop reageert nog niet. Open het en wacht tot de applicatie volledig is opgestart.",
+  "provider.anaconda.state.noModel":
+    "Download in Anaconda Desktop een tekstgeneratiemodel. Kies er indien mogelijk een met ondersteuning voor toolaanroepen en start daarna de server.",
+  "provider.anaconda.state.noServer_one":
+    "Er is 1 gedownload tekstgeneratiemodel beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
+  "provider.anaconda.state.noServer_other":
+    "Er zijn {{count}} gedownloade tekstgeneratiemodellen beschikbaar. Start een modelserver in Anaconda Desktop. Modellen met ondersteuning voor toolaanroepen worden sterk aanbevolen.",
+  "provider.anaconda.state.unhealthy":
+    "De actieve inferentieserver is nog niet gezond. Controleer deze in Anaconda Desktop en herstart de server indien nodig.",
+  "provider.anaconda.state.ready":
+    "Kilo heeft een gezonde lokale tekstgeneratieserver gevonden en kan de huidige verbindingsinstellingen importeren.",
+  "provider.anaconda.server": "Actieve inferentieserver",
+  "provider.anaconda.context": "Contextvenster",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Toolaanroepen",
+  "provider.anaconda.tools.supported": "Ondersteund",
+  "provider.anaconda.tools.unsupported": "Niet ingeschakeld",
+  "provider.anaconda.tools.unknown": "Onbekend",
+  "provider.anaconda.warning.title": "Toolondersteuning is beperkt",
+  "provider.anaconda.warning.description":
+    "Deze server bevestigt geen toolaanroepen. Acties van de codeeragent kunnen mislukken of niet beschikbaar zijn. Ga alleen verder als je deze beperkingen accepteert.",
+  "provider.anaconda.action.download": "Anaconda Desktop downloaden",
+  "provider.anaconda.action.open": "Anaconda Desktop openen",
+  "provider.anaconda.action.checkAgain": "Opnieuw controleren",
+  "provider.anaconda.action.continue": "Toch doorgaan",
+  "provider.anaconda.action.manage": "Beheren / Vernieuwen",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop vernieuwd",
+  "provider.anaconda.toast.refreshed.description": "De actieve lokale server en modellen zijn up-to-date in Kilo.",
+  "settings.providers.note.anacondaDesktop": "Voer een model uit dat lokaal door Anaconda Desktop wordt aangeboden.",
+  "settings.providers.tag.local": "Lokaal",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Voorgesteld",
   "command.category.view": "Weergave",
   "command.category.project": "Project",
@@ -82,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} berichten teruggedraaid",
   "revert.banner.redo": "Opnieuw uitvoeren",
   "revert.banner.redo.all": "Alles opnieuw uitvoeren",
-  "revert.banner.hint": "Stuur een nieuw bericht om dit definitief te maken",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
   "command.session.compact": "Sessie comprimeren",
   "command.session.compact.description": "De sessie samenvatten om de contextgrootte te verkleinen",
@@ -93,6 +147,31 @@ export const dict = {
   "command.session.unshare": "Delen van sessie stoppen",
   "command.session.unshare.description": "Stop met het delen van deze sessie",
   "command.session.export": "Sessietranscript exporteren",
+
+  "agentRequirements.skill.installed": "Geïnstalleerd",
+  "agentRequirements.skill.checkFailed": "De skillcontrole is mislukt",
+  "agentRequirements.skill.missing": "Niet geïnstalleerd",
+  "agentRequirements.mcp.connected": "Verbonden",
+  "agentRequirements.mcp.checkFailed": "De MCP-controle is mislukt",
+  "agentRequirements.mcp.missing": "Niet verbonden",
+  "agentRequirements.extension.installed": "Geïnstalleerd",
+  "agentRequirements.extension.checkFailed": "De controle van de VS Code-extensie is mislukt",
+  "agentRequirements.extension.missing": "Niet geïnstalleerd",
+  "agentRequirements.extension.description": "Installeer de ontbrekende extensies in VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCP’s",
+  "agentRequirements.group.extensions": "VS Code-extensies",
+  "agentRequirements.blocked.title": "Vereisten voor agent {{agent}}",
+  "agentRequirements.blocked.description":
+    "Deze agent heeft de volgende tools nodig voordat deze kan worden uitgevoerd.",
+  "agentRequirements.prompt.blocked": "Voltooi eerst de vereiste controles om deze agent te gebruiken",
+  "agentRequirements.action.openMarketplace": "Marketplace openen",
+  "agentRequirements.error.unknownAgent": "De geselecteerde agent kon niet worden gevonden.",
+  "agentRequirements.error.malformedDeclaration": "Deze agent heeft een ongeldige vereistenverklaring.",
+  "agentRequirements.error.discoveryFailed": "Kilo kon de beschikbare skills niet controleren.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo kon de MCP-serverstatus niet controleren.",
+  "agentRequirements.error.scopeMismatch": "Deze controle van agentvereisten is niet meer actief.",
+  "agentRequirements.error.requestFailed": "Kilo kon de agentvereisten niet controleren.",
 
   "palette.search.placeholder": "Zoeken naar bestanden, commando's en sessies",
   "palette.empty": "Geen resultaten gevonden",
@@ -175,6 +254,7 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Gegevens kunnen worden gebruikt voor training",
   "model.tag.latest": "Nieuwste",
+  "model.group.auto": "Automatische modellen",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
   "model.group.collapse": "{{group}} inklappen",
@@ -202,6 +282,7 @@ export const dict = {
   "model.preview.label.average": "Gesch. gem. kosten",
   "model.preview.label.context": "Context",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Modelkeuzes",
   "model.preview.label.completion": "Voltooiing",
   "model.preview.label.costAttempt": "Kosten / poging",
   "model.preview.value.notSupported": "Niet ondersteund",
@@ -309,6 +390,7 @@ export const dict = {
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
@@ -554,7 +636,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep Zoeken",
   "ui.permission.toolLabel.webSearch": "Web Zoeken",
   "ui.permission.toolLabel.list": "Lijst",
-  "ui.permission.toolLabel.externalDirectory": "Externe map lezen",
+  "ui.permission.toolLabel.externalDirectory": "Externe map openen",
   "ui.permission.toolLabel.webFetch": "Web Ophalen",
   "ui.permission.toolLabel.task": "Taak",
   "ui.permission.toolLabel.skill": "Vaardigheid",
@@ -868,6 +950,7 @@ export const dict = {
   "provider.custom.models.name.label": "Naam",
   "provider.custom.models.name.placeholder": "Weergavenaam",
   "provider.custom.models.reasoning.label": "Redeneren",
+  "provider.custom.models.modalities.image": "Afbeelding",
   "provider.custom.models.variants.label": "Varianten",
   "provider.custom.models.variants.add": "Variant toevoegen",
   "provider.custom.models.variants.remove": "Variant verwijderen",
@@ -1117,6 +1200,8 @@ export const dict = {
 
   "common.retry": "Opnieuw proberen",
   "common.refresh": "Vernieuwen",
+  "common.reload": "Herladen",
+  "common.reloadDescription": "Herlaad configuratie, vaardigheden, agents en opdrachten vanaf schijf",
 
   "profile.title": "Profiel",
   "profile.notLoggedIn": "Niet ingelogd",
@@ -1124,6 +1209,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Saldo vernieuwen",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Opwaarderen",
+  "profile.pass.subscribe": "Schaf Kilo Pass aan om tegoed toe te voegen en bonussen te verdienen",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Vernieuwt",
   "profile.action.logout": "Uitloggen",
 
   "settings.section.configuration": "Configuratie",
@@ -1196,6 +1285,11 @@ export const dict = {
   "session.outcome.interrupted": "Beurt onderbroken",
   "session.outcome.error": "Beurt mislukt",
   "session.outcome.finish": "Voltooiingsreden: {{reason}}",
+  "session.costAlert.header": "Sessiekostenwaarschuwing",
+  "session.costAlert.continue": "Doorgaan",
+  "session.costAlert.question":
+    "Deze sessie is net boven je waarschuwingsdrempel per sessie van {{limit}} gekomen en kost {{cost}}. Doorgaan?",
+  "session.costAlert.stop": "Stoppen",
 
   "ui.sessionTurn.cancel": "Annuleren",
   "ui.sessionTurn.status.thinking": "Denken...",
@@ -1241,6 +1335,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dit reset alleen VS Code-extensiespecifieke instellingen naar hun standaardwaarden. Instellingen die gedeeld worden met de CLI, zoals modi en regels voor automatisch goedkeuren, worden opgeslagen in de CLI-configuratie en worden niet gereset.",
   "settings.aboutKiloCode.resetSettings.button": "Alle instellingen resetten",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Instellingen overdragen",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Exporteer of importeer uw instellingen om ze tussen VS Code-instanties over te dragen.",
@@ -1333,6 +1428,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
+  "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
+  "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
+  "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
+  "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
+  "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
+
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
@@ -1340,13 +1441,29 @@ export const dict = {
     "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.models.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
+  "settings.experimental.nativeNotebookTools.title": "Native notebooktools",
+  "settings.experimental.nativeNotebookTools.description":
+    "Experimentele tools inschakelen voor het lezen, bewerken en uitvoeren van VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Netwerktoegang beperken",
   "settings.sandboxing.network.description":
-    "Blokkeer uitgaande netwerktoegang voor door het model geïnitieerde opdrachten en HTTP-tools. Lokale MCP-servers en plugin-hooks vallen buiten deze beperking. Netwerkverkeer voor providers en modelinferentie blijft beschikbaar.",
+    "Blokkeer directe uitgaande toegang vanuit opdrachten die door het model zijn geïnitieerd en HTTP-hulpprogramma's. Lokale en externe MCP-hulpprogramma's zijn niet beschikbaar zolang deze beperking actief is. Verkeer van providers en hooks van vertrouwde plug-ins vallen buiten deze beperking.",
+
+  "settings.sandboxing.allowedHosts.title": "Toegestane netwerkbestemmingen",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-host- en poortbestemmingen voor HTTP- en HTTPS-proxyverkeer in een sandbox. GitHub CLI en HTTPS Git hebben doorgaans github.com:443 en api.github.com:443 nodig. Wijzigingen gelden voor nieuwe sessies.",
+  "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
+  "settings.sandboxing.writablePaths.description":
+    "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner inschakelen: taakgericht snoeien van grote uitvoer van lees-, zoek- en shelltools, gestuurd door een focusvraag van de agent",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
+  "settings.experimental.swePrunerModel.description":
+    "Model dat wordt gebruikt om tooluitvoer te snoeien; standaard het geconfigureerde kleine model",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1358,8 +1475,8 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",
 
   "settings.agentBehaviour.defaultAgent.title": "Standaard Agent",
@@ -1453,6 +1570,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
+  "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
+  "settings.autoApprove.maxCost.description":
+    "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",
   "settings.autoApprove.level.allow": "Toestaan",
   "settings.autoApprove.level.ask": "Vragen",
   "settings.autoApprove.level.deny": "Weigeren",
@@ -1494,6 +1614,7 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
+  "settings.context.compaction.title": "Compactie",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
@@ -1501,6 +1622,42 @@ export const dict = {
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
   "settings.context.watcherPatterns.description": "Glob-patronen voor bestanden die de watcher moet negeren",
+
+  "settings.context.memory.title": "Geheugen",
+  "settings.context.memory.project.title": "Projectgeheugen",
+  "settings.context.memory.autoSave.title": "Projectgeheugen automatisch opslaan",
+  "settings.context.memory.autoSave.description":
+    "Sla duurzame projectfeiten automatisch op uit voltooide beurten wanneer geheugen is ingeschakeld.",
+  "settings.context.memory.index.title": "Geheugenindex",
+  "settings.context.memory.status.notLoaded": "Niet geladen",
+  "settings.context.memory.status.disabled": "Uitgeschakeld",
+  "settings.context.memory.status.enabledTokensOps":
+    "Ingeschakeld - ~{{session}} startcontexttokens in deze sessie - ~{{tokens}} tokens in opgeslagen index - laatste bewerking {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Schakel geheugen in om projectgeheugenbestanden te maken.",
+  "settings.context.memory.inspect": "Inspecteren",
+  "settings.context.memory.rebuild": "Geheugenindex opnieuw opbouwen",
+  "chat.memory.on": "Geheugen aan",
+  "chat.memory.label": "Geheugen · {{tokens}} tokens",
+  "chat.memory.status.loading": "Geheugenstatus laden",
+  "chat.memory.session.tokens": "Startcontext deze sessie: {{tokens}} tokens",
+  "chat.memory.total.tokens": "Opgeslagen index: {{tokens}} tokens",
+  "chat.memory.project.enabled": "Projectgeheugen ingeschakeld",
+  "chat.memory.project.disabled": "Projectgeheugen uitgeschakeld",
+  "chat.memory.command.failed": "Geheugenopdracht mislukt",
+  "chat.memory.savedOperations": "Laatste geheugenbewerking: {{count}} bewerkingen",
+  "chat.memory.inspect": "Geheugen inspecteren",
+  "chat.memory.remember": "Onthouden",
+  "chat.memory.forget": "Vergeten",
+  "chat.memory.rebuild": "Index opnieuw opbouwen",
+  "chat.memory.disable": "Geheugen uitschakelen",
+  "chat.memory.badge.injected": "Geheugen geïnjecteerd",
+  "chat.memory.badge.recalled": "Geheugen opgehaald",
+  "chat.memory.badge.startupCtx": "startctx",
+  "chat.memory.badge.items": "{{count}} items",
+  "chat.memory.badge.tokens": "{{tokens}} tokens",
+  "chat.memory.badge.recalledDetail": "Geheugen opgehaald: {{count}} items - {{tokens}} tokens",
+  "chat.memory.badge.files": "Geheugenbestanden: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",
@@ -1511,6 +1668,11 @@ export const dict = {
     "Systeem prompt die naar de AI wordt gestuurd bij het genereren van commit messages. Dit vervangt de standaard prompt volledig.",
   "settings.commitMessage.prompt.placeholder":
     "bijv. Genereer commit messages in het Spaans volgens het conventional commits formaat. Retourneer ALLEEN de commit message.",
+
+  "settings.commitMessage.language.sync": "Synchroniseren met UI taal",
+  "settings.commitMessage.language.title": "Taal",
+  "settings.commitMessage.language.description":
+    "Kies welke taal je wilt gebruiken voor AI-gegenereerde commitberichten:",
 
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
@@ -1741,4 +1903,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan is klaar:",
+  "chat.search.placeholder": "Chat doorzoeken…",
+  "chat.search.toggle": "Chat doorzoeken",
+  "chat.search.matchCase": "Hoofdlettergevoelig",
+  "chat.search.matchWholeWord": "Heel woord",
+  "chat.search.useRegex": "Reguliere expressie gebruiken",
+  "chat.search.previousMatch": "Vorige overeenkomst",
+  "chat.search.nextMatch": "Volgende overeenkomst",
+  "chat.search.close": "Zoeken sluiten",
+  "chat.search.invalidRegex": "Ongeldige reguliere expressie",
+  "chat.search.noResults": "Geen resultaten",
+  "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
 }

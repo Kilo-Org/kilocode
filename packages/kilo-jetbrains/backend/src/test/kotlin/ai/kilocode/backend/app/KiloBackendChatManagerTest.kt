@@ -2,17 +2,21 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import java.util.concurrent.CountDownLatch
 import kotlin.test.AfterTest
@@ -45,6 +49,77 @@ class KiloBackendChatManagerTest {
         assertNotNull(mock.lastSummarizePath)
         assertTrue(mock.lastSummarizePath!!.startsWith("/session/ses_abc/summarize?directory="))
         assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", mock.lastSummarizeBody)
+    }
+
+    @Test
+    fun `revert posts message and part to revert endpoint`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.revert("ses_abc", "/test/project", "msg1", "prt1")
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/revert"))
+        assertTrue(mock.lastRevertPath!!.startsWith("/session/ses_abc/revert?directory="))
+        assertEquals("""{"messageID":"msg1","partID":"prt1"}""", mock.lastRevertBody)
+    }
+
+    @Test
+    fun `revert omits part when absent`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.revert("ses_abc", "/test/project", "msg1", null)
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/revert"))
+        assertTrue(mock.lastRevertPath!!.startsWith("/session/ses_abc/revert?directory="))
+        assertEquals("""{"messageID":"msg1"}""", mock.lastRevertBody)
+    }
+
+    @Test
+    fun `unrevert posts empty body to unrevert endpoint`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+
+        chat.unrevert("ses_abc", "/test/project")
+
+        assertEquals(1, mock.requestCount("/session/ses_abc/unrevert"))
+        assertTrue(mock.lastUnrevertPath!!.startsWith("/session/ses_abc/unrevert?directory="))
+        assertEquals("{}", mock.lastUnrevertBody)
+    }
+
+    @Test
+    fun `revert failure throws on non successful response`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.revertStatus = 500
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.revert("ses_abc", "/test/project", "msg1", "prt1")
+        }
+
+        assertEquals("revert failed: HTTP 500", error.message)
+        assertEquals(1, mock.requestCount("/session/ses_abc/revert"))
+        assertEquals("""{"messageID":"msg1","partID":"prt1"}""", mock.lastRevertBody)
+    }
+
+    @Test
+    fun `unrevert failure throws on non successful response`() = runBlocking {
+        val port = mock.start()
+        val chat = KiloBackendChatManager(scope, TestLog())
+        chat.start(OkHttpClient(), port, MutableSharedFlow())
+        mock.unrevertStatus = 500
+
+        val error = assertFailsWith<RuntimeException> {
+            chat.unrevert("ses_abc", "/test/project")
+        }
+
+        assertEquals("unrevert failed: HTTP 500", error.message)
+        assertEquals(1, mock.requestCount("/session/ses_abc/unrevert"))
+        assertEquals("{}", mock.lastUnrevertBody)
     }
 
     @Test
@@ -107,5 +182,24 @@ class KiloBackendChatManagerTest {
         gate.countDown()
 
         assertTrue(request.isCancelled)
+    }
+
+    @Test
+    fun `malformed session error logs warning and keeps collecting`() = runBlocking {
+        val port = mock.start()
+        val log = TestLog()
+        val sse = MutableSharedFlow<SseEvent>(replay = 8)
+        val chat = KiloBackendChatManager(scope, log)
+        chat.start(OkHttpClient(), port, sse)
+
+        val received = async(start = CoroutineStart.UNDISPATCHED) { withTimeout(5_000) { chat.events.first() } }
+        withTimeout(5_000) { sse.subscriptionCount.first { it > 0 } }
+        sse.emit(SseEvent("session.error", """{"payload":{"properties":{"sessionID":"ses_abc","error":42}}}"""))
+        sse.emit(SseEvent("session.turn.open", """{"payload":{"properties":{"sessionID":"ses_abc"}}}"""))
+
+        val event = received.await()
+        assertTrue(event is ChatEventDto.TurnOpen)
+        assertEquals("ses_abc", event.sessionID)
+        assertTrue(log.messages.any { it.contains("route=chat-events parse=false type=session.error") }, log.messages.joinToString("\n"))
     }
 }

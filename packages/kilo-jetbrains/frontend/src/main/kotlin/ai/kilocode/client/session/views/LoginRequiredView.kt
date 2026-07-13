@@ -23,11 +23,12 @@ class LoginRequiredView(
     private val openProfile: () -> Unit,
     private val dismiss: () -> Unit,
     selection: SessionSelection? = null,
+    focus: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
 
     override val sessionViewKind = SessionView.Kind.Default
 
-    private val card = BaseQuestionView(selection)
+    private val card = BaseQuestionView(selection, focus)
 
     private val ID_DISMISS = "dismiss"
     private val ID_OPEN = "open"

@@ -49,6 +49,19 @@ data class SessionEditorStyle(
         }
     }
 
+    /** Apply editor colors while using standard transcript typography for the embedded editor text. */
+    fun applyTranscriptToEditor(editor: EditorEx) {
+        try {
+            if (editor.isDisposed) return
+            applyToEditor(editor)
+            if (editor.isDisposed) return
+            editor.colorsScheme.setEditorFontName(transcriptFont.fontName)
+            editor.colorsScheme.setEditorFontSize(transcriptFont.size)
+        } catch (err: RuntimeException) {
+            if (err.javaClass.name != "com.intellij.openapi.util.TraceableDisposable\$DisposalException") throw err
+        }
+    }
+
     companion object {
         /** Builds a style snapshot from the current global editor color scheme. */
         fun current(): SessionEditorStyle {

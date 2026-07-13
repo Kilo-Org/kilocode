@@ -5,12 +5,17 @@ import HomeNews from "@/kilocode/plugins/home-news"
 import HomeOnboarding from "@/kilocode/plugins/home-onboarding"
 import KiloAttention from "@/kilocode/plugins/attention"
 import KiloHomeFooter from "@/kilocode/plugins/home-footer"
+import KiloPermissions from "@/kilocode/plugins/permissions" // kilocode_change
 import KiloSidebarFooter from "@/kilocode/plugins/sidebar-footer"
 import KiloSidebarBackgroundProcesses from "@/kilocode/plugins/sidebar-background-processes"
 import KiloSidebarIndexing from "@/kilocode/plugins/sidebar-indexing"
+import KiloSidebarMemory from "@/kilocode/plugins/sidebar-memory" // kilocode_change
+import KiloMemoryPalette from "@/kilocode/plugins/memory-palette" // kilocode_change
 import KiloSidebarPr from "@/kilocode/plugins/sidebar-pr"
 import KiloSidebarUsage from "@/kilocode/plugins/sidebar-usage"
 import KiloSandbox from "@/kilocode/plugins/sandbox"
+import KiloRemote from "@/kilocode/plugins/remote"
+import KiloReload from "@/kilocode/plugins/reload"
 // kilocode_change end
 import SidebarContext from "../feature-plugins/sidebar/context"
 import SidebarMcp from "../feature-plugins/sidebar/mcp"
@@ -40,12 +45,17 @@ export function internalTuiPlugins(flags: Pick<RuntimeFlags.Info, "experimentalE
     HomeOnboarding, // kilocode_change
     KiloAttention, // kilocode_change
     KiloHomeFooter, // kilocode_change
+    KiloPermissions, // kilocode_change
     KiloSidebarFooter, // kilocode_change
+    KiloSidebarMemory, // kilocode_change
+    KiloMemoryPalette, // kilocode_change
     KiloSidebarBackgroundProcesses, // kilocode_change
     KiloSidebarIndexing, // kilocode_change
     KiloSidebarPr, // kilocode_change
     KiloSidebarUsage, // kilocode_change
     KiloSandbox, // kilocode_change
+    KiloRemote, // kilocode_change
+    KiloReload, // kilocode_change
     HomeFooter,
     HomeTips,
     SidebarContext,

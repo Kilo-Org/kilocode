@@ -16,6 +16,18 @@
   }
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .prompt-review-comments {
   margin: 6px 6px 0;
   border: 1px solid var(--vscode-panel-border);
@@ -362,6 +374,8 @@
   font-size: var(--font-size-base);
   line-height: 1.4;
   white-space: pre-wrap;
+  /* Match textarea plaintext bidi behavior for each hard-newline paragraph. */
+  unicode-bidi: plaintext;
   word-wrap: break-word;
   overflow-x: hidden;
   overflow-y: auto;
@@ -640,6 +654,11 @@
   .prompt-speech-icon {
     animation: prompt-speech-recording-pulse 1.1s ease-in-out infinite;
   }
+}
+
+.prompt-speech-button--starting {
+  cursor: progress;
+  opacity: 0.7;
 }
 
 .prompt-speech-button--recording::after {

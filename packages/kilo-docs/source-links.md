@@ -25,12 +25,15 @@
   <!-- packages/opencode/src/config/config.ts -->
 - <https://app.kilo.ai/credits>
   <!-- packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts -->
+  <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
 - <https://app.kilo.ai/profile>
   <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
 - <https://app.kilo.ai/tui.json>
   <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://app.kilo.ai/usage>
   <!-- packages/opencode/src/kilocode/components/dialog-kilo-profile.tsx -->
+- <https://arxiv.org/abs/2601.16746>
+  <!-- packages/opencode/src/kilocode/swe-pruner.ts -->
 - <https://auth.x.ai>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://auth.x.ai/oauth2/authorize>
@@ -51,6 +54,8 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
   <!-- packages/opencode/src/session/network.ts -->
+- <https://developers.google.com/identity/sign-in/web/devconsole-project>
+  <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://docs.inceptionlabs.ai/capabilities/next-edit>
@@ -113,6 +118,8 @@
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
   <!-- packages/opencode/src/provider/provider.ts -->
+- <https://kilo.ai/cli/install>
+  <!-- packages/opencode/src/kilocode/installation/index.ts -->
 - <https://kilo.ai/discord>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
@@ -121,23 +128,32 @@
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/app.tsx -->
 - <https://kilo.ai/docs/ai-providers/cloudflare>
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
+- <https://kilo.ai/docs/ai-providers/gemini>
+  <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://kilo.ai/docs/ai-providers#custom-provider>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
+- <https://kilo.ai/docs/automate/mcp/what-is-mcp>
+  <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://kilo.ai/docs/customize/custom-subagents>
   <!-- packages/opencode/src/config/config.ts -->
+- <https://kilo.ai/docs/customize/marketplace>
+  <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
+  <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
 - <https://kilo.ai/docs/customize/workflows>
   <!-- packages/opencode/src/config/config.ts -->
+- <https://kilo.ai/docs/getting-started/settings>
+  <!-- packages/opencode/src/kilocode/config/config.ts -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
-- <https://kilo.ai/install>
-  <!-- packages/opencode/src/kilocode/installation/index.ts -->
 - <https://kilo.ai/kiloclaw>
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
 - <https://kilo.ai/pricing>
   <!-- packages/opencode/src/cli/cmd/tui/component/dialog-retry-action.tsx -->
+- <https://kilo.ai/pricing/kilo-pass>
+  <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
 - <https://kilo.ai/support>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
@@ -148,6 +164,8 @@
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
+- <https://openrouter.ai/api/v1/chat/completions>
+  <!-- packages/opencode/src/kilocode/tool/generate-image.ts -->
 - <https://openrouter.ai/docs/cookbook/administration/usage-accounting>
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opncd.ai>
@@ -188,6 +206,8 @@
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://vercel.link/ai-gateway-token>
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
+- <https://www.anaconda.com/products/desktop>
+  <!-- packages/opencode/src/kilocode/anaconda-desktop/domain.ts -->
 - <https://www.eclipse.org/downloads/download.php?file=/jdtls/snapshots/jdt-language-server-latest.tar.gz>
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://www.googleapis.com/auth/cloud-platform>

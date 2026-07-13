@@ -4,7 +4,7 @@ import { TestProfile } from "../../script/kilocode/test-profile"
 
 const root = path.resolve(import.meta.dir, "..")
 const glob = new Bun.Glob("**/*.test.{ts,tsx}")
-const all = (await Array.fromAsync(glob.scan({ cwd: root }))).sort()
+const all = (await Array.fromAsync(glob.scan({ cwd: root }))).map((file) => file.replaceAll("\\", "/")).sort()
 
 describe("test profiles", () => {
   test("darwin profile contains valid test files", () => {
@@ -15,8 +15,16 @@ describe("test profiles", () => {
     expect(result.files).toContain("pty/pty-session.test.ts")
     expect(result.files).toContain("kilocode/cli/install-artifact.test.ts")
     expect(result.files).toContain("kilocode/sandbox/macos-confinement.test.ts")
-    expect(result.files).toContain("kilocode/sessions/remote-ws.test.ts")
-    expect(result.files).toContain("kilocode/sessions/remote-sender.test.ts")
+    expect(result.files).toContain("file/watcher.test.ts")
+    expect(result.files).toContain("kilocode/interactive-terminal.test.ts")
+    const sandbox = all.filter((file) => file.startsWith("kilocode/sandbox/"))
+    expect(result.files.filter((file) => file.startsWith("kilocode/sandbox/"))).toEqual(sandbox)
+    expect(result.files).not.toContain("cli/run/footer.view.test.tsx")
+    expect(result.files).not.toContain("mcp/lifecycle.test.ts")
+    expect(result.files).not.toContain("server/httpapi-pty-websocket.test.ts")
+    expect(result.files).not.toContain("shell/shell.test.ts")
+    expect(result.files).not.toContain("kilocode/sessions/remote-ws.test.ts")
+    expect(result.files).not.toContain("provider/header-timeout.test.ts")
   })
 
   test("normalizes Windows test paths", () => {

@@ -23,7 +23,7 @@ export namespace KilocodeTuiConfig {
   export type Editable = Omit<Patch, "keybinds"> & { keybinds?: Record<string, string> }
 
   const files = ["tui.jsonc", "tui.json"] as const
-  const dirs = [".kilo", ".kilocode", ".opencode"] as const
+  const dirs = [".kilo", ".kilocode"] as const
 
   export async function get(input: { directory: string }) {
     const cfg = await Effect.runPromise(
@@ -115,6 +115,8 @@ export namespace KilocodeTuiConfig {
   function writable(config: Patch | TuiConfig.Info, defaults = true): Editable {
     const result = { ...config } as Record<string, unknown>
     delete result.plugin_origins
+    delete result.instruction_origins
+    delete result.skill_path_origins
     const keybinds: Record<string, string> = defaults
       ? Object.fromEntries(KilocodeKeybinds.list().map((item) => [item.id, item.default]))
       : {}

@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Подключить Anaconda Desktop",
+  "provider.anaconda.title.manage": "Управление Anaconda Desktop",
+  "provider.anaconda.status.checking": "Проверка Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Открытие Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Обновление моделей провайдера...",
+  "provider.anaconda.status.ready": "Готово к подключению",
+  "provider.anaconda.status.waiting": "Ожидание Desktop",
+  "provider.anaconda.status.attention": "Требуется внимание",
+  "provider.anaconda.status.unavailable": "Недоступно",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop не поддерживается на {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Установите Anaconda Desktop на этом компьютере, затем вернитесь сюда. Kilo не запускает установщик за вас.",
+  "provider.anaconda.state.notRunning":
+    "Откройте Anaconda Desktop, завершите настройку и войдите в систему, затем выберите «Проверить снова».",
+  "provider.anaconda.state.invalidConfig":
+    "Настройка Anaconda Desktop не завершена. Откройте Desktop, завершите настройку и при необходимости перезапустите его.",
+  "provider.anaconda.state.signedOut": "Откройте Anaconda Desktop и войдите в систему перед подключением Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo не удалось получить доступ к Anaconda Desktop. Откройте Desktop, войдите снова и при необходимости перезапустите его.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop пока не отвечает. Откройте его и дождитесь завершения запуска приложения.",
+  "provider.anaconda.state.noModel":
+    "В Anaconda Desktop загрузите модель генерации текста. По возможности выберите модель с поддержкой вызова инструментов, затем запустите её сервер.",
+  "provider.anaconda.state.noServer_one":
+    "Доступна 1 загруженная модель генерации текста. Запустите сервер модели в Anaconda Desktop. Настоятельно рекомендуется использовать модели с поддержкой вызова инструментов.",
+  "provider.anaconda.state.noServer_other":
+    "Доступно загруженных моделей генерации текста: {{count}}. Запустите сервер модели в Anaconda Desktop. Настоятельно рекомендуется использовать модели с поддержкой вызова инструментов.",
+  "provider.anaconda.state.unhealthy":
+    "Активный сервер вывода пока не работает исправно. Проверьте его в Anaconda Desktop и при необходимости перезапустите сервер.",
+  "provider.anaconda.state.ready":
+    "Kilo обнаружил исправный локальный сервер генерации текста и может импортировать его текущие настройки подключения.",
+  "provider.anaconda.server": "Активный сервер вывода",
+  "provider.anaconda.context": "Контекстное окно",
+  "provider.anaconda.contextValue": "{{count}} токенов",
+  "provider.anaconda.tools": "Вызов инструментов",
+  "provider.anaconda.tools.supported": "Поддерживается",
+  "provider.anaconda.tools.unsupported": "Не включено",
+  "provider.anaconda.tools.unknown": "Неизвестно",
+  "provider.anaconda.warning.title": "Поддержка инструментов ограничена",
+  "provider.anaconda.warning.description":
+    "Этот сервер не подтверждает вызов инструментов. Действия агента-программиста могут завершаться сбоем или быть недоступными. Продолжайте только если вы принимаете эти ограничения.",
+  "provider.anaconda.action.download": "Скачать Anaconda Desktop",
+  "provider.anaconda.action.open": "Открыть Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Проверить снова",
+  "provider.anaconda.action.continue": "Всё равно продолжить",
+  "provider.anaconda.action.manage": "Управление / Обновить",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop обновлён",
+  "provider.anaconda.toast.refreshed.description": "Активный локальный сервер и модели актуальны в Kilo.",
+  "settings.providers.note.anacondaDesktop": "Запустите модель, обслуживаемую локально через Anaconda Desktop.",
+  "settings.providers.tag.local": "Локально",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Предложено",
   "command.category.view": "Просмотр",
   "command.category.project": "Проект",
@@ -82,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "Отменено {{count}} сообщений",
   "revert.banner.redo": "Повторить",
   "revert.banner.redo.all": "Повторить всё",
-  "revert.banner.hint": "Отправьте новое сообщение, чтобы сделать это постоянным",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Дождитесь завершения агента",
   "command.session.compact": "Сжать сессию",
   "command.session.compact.description": "Сократить сессию для уменьшения размера контекста",
@@ -93,6 +147,30 @@ export const dict = {
   "command.session.unshare": "Отменить публикацию",
   "command.session.unshare.description": "Прекратить публикацию сессии",
   "command.session.export": "Экспортировать запись сеанса",
+
+  "agentRequirements.skill.installed": "Установлено",
+  "agentRequirements.skill.checkFailed": "Не удалось проверить навык",
+  "agentRequirements.skill.missing": "Не установлено",
+  "agentRequirements.mcp.connected": "Подключено",
+  "agentRequirements.mcp.checkFailed": "Не удалось проверить MCP",
+  "agentRequirements.mcp.missing": "Не подключено",
+  "agentRequirements.extension.installed": "Установлено",
+  "agentRequirements.extension.checkFailed": "Не удалось проверить расширение VS Code",
+  "agentRequirements.extension.missing": "Не установлено",
+  "agentRequirements.extension.description": "Установите отсутствующие расширения в VS Code.",
+  "agentRequirements.group.skills": "Навыки",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "Расширения VS Code",
+  "agentRequirements.blocked.title": "Требования агента {{agent}}",
+  "agentRequirements.blocked.description": "Этому агенту нужны следующие инструменты перед запуском.",
+  "agentRequirements.prompt.blocked": "Сначала выполните необходимые проверки, чтобы использовать этого агента",
+  "agentRequirements.action.openMarketplace": "Открыть Marketplace",
+  "agentRequirements.error.unknownAgent": "Выбранный агент не найден.",
+  "agentRequirements.error.malformedDeclaration": "У этого агента недопустимое объявление требований.",
+  "agentRequirements.error.discoveryFailed": "Kilo не смог проверить доступные навыки.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo не смог проверить состояние сервера MCP.",
+  "agentRequirements.error.scopeMismatch": "Эта проверка требований агента больше не активна.",
+  "agentRequirements.error.requestFailed": "Kilo не смог проверить требования агента.",
 
   "palette.search.placeholder": "Поиск файлов, команд и сессий",
   "palette.empty": "Ничего не найдено",
@@ -174,6 +252,7 @@ export const dict = {
   "model.tag.free": "Бесплатно",
   "model.tag.dataCollected": "Данные могут использоваться для обучения",
   "model.tag.latest": "Последняя",
+  "model.group.auto": "Автоматические модели",
   "model.group.recommended": "Рекомендуемые",
   "model.group.favorites": "Избранное",
   "model.group.collapse": "Свернуть {{group}}",
@@ -201,6 +280,7 @@ export const dict = {
   "model.preview.label.average": "Средняя стоимость",
   "model.preview.label.context": "Контекст",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Варианты моделей",
   "model.preview.label.completion": "Выполнение",
   "model.preview.label.costAttempt": "Стоимость / попытка",
   "model.preview.value.notSupported": "Не поддерживается",
@@ -304,6 +384,7 @@ export const dict = {
     "Нажмите, чтобы ограничить запись в файловую систему. Доступ к сети останется разрешённым согласно настройкам песочницы.",
 
   "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
+  "speechToText.tooltip.starting": "Запуск микрофона... Пока не говорите.",
   "speechToText.tooltip.stop": "Остановить захват звука",
   "speechToText.tooltip.transcribing": "Распознавание... Нажмите для отмены.",
   "speechToText.tooltip.error": "Ошибка голосового ввода. Нажмите, чтобы очистить.",
@@ -552,7 +633,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-поиск",
   "ui.permission.toolLabel.webSearch": "Веб-поиск",
   "ui.permission.toolLabel.list": "Список",
-  "ui.permission.toolLabel.externalDirectory": "Чтение внешнего каталога",
+  "ui.permission.toolLabel.externalDirectory": "Открыть доступ к внешней папке",
   "ui.permission.toolLabel.webFetch": "Веб-загрузка",
   "ui.permission.toolLabel.task": "Задача",
   "ui.permission.toolLabel.skill": "Навык",
@@ -915,6 +996,7 @@ export const dict = {
   "provider.custom.models.name.label": "Название",
   "provider.custom.models.name.placeholder": "Отображаемое имя",
   "provider.custom.models.reasoning.label": "Рассуждение",
+  "provider.custom.models.modalities.image": "Изображение",
   "provider.custom.models.variants.label": "Варианты",
   "provider.custom.models.variants.add": "Добавить вариант",
   "provider.custom.models.variants.remove": "Удалить вариант",
@@ -1164,6 +1246,8 @@ export const dict = {
 
   "common.retry": "Повторить",
   "common.refresh": "Обновить",
+  "common.reload": "Перезагрузить",
+  "common.reloadDescription": "Перезагрузить конфигурацию, навыки, агентов и команды с диска",
 
   "profile.title": "Профиль",
   "profile.notLoggedIn": "Не авторизован",
@@ -1171,6 +1255,10 @@ export const dict = {
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Обновить баланс",
   "profile.action.dashboard": "Панель управления",
+  "profile.action.topUp": "Пополнить",
+  "profile.pass.subscribe": "Оформите Kilo Pass, чтобы добавить кредиты и получать бонусы",
+  "profile.pass.bonus": "Бонус",
+  "profile.pass.renews": "Продлевается",
   "profile.action.logout": "Выйти",
 
   "settings.section.configuration": "Конфигурация",
@@ -1208,6 +1296,11 @@ export const dict = {
   "session.outcome.interrupted": "Раунд прерван",
   "session.outcome.error": "Раунд завершился с ошибкой",
   "session.outcome.finish": "Причина завершения: {{reason}}",
+  "session.costAlert.header": "Оповещение о стоимости сессии",
+  "session.costAlert.continue": "Продолжить",
+  "session.costAlert.question":
+    "Эта сессия только что превысила порог оповещения на сессию {{limit}} и стоит {{cost}}. Продолжить?",
+  "session.costAlert.stop": "Остановить",
 
   "ui.sessionTurn.cancel": "Отмена",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1252,6 +1345,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Это сбрасывает только настройки, специфичные для расширения VS Code, до значений по умолчанию. Настройки, общие с CLI, такие как режимы и правила автоматического утверждения, хранятся в конфигурации CLI и не будут сброшены.",
   "settings.aboutKiloCode.resetSettings.button": "Сбросить все настройки",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Перенос настроек",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Экспортируйте или импортируйте настройки для переноса между экземплярами VS Code.",
@@ -1335,6 +1429,12 @@ export const dict = {
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
+  "settings.experimental.imageGeneration.title": "Генерация изображений",
+  "settings.experimental.imageGeneration.description": "Включить генерацию изображений с помощью ИИ",
+  "settings.experimental.imageGenerationModel.title": "Модель изображений",
+  "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
+  "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
+
   "settings.experimental.speechToText.title": "Речь в текст",
   "settings.experimental.speechToText.description":
     "Включите голосовой ввод в полях запросов, используя вашу учетную запись Kilo через Kilo Gateway.",
@@ -1342,12 +1442,28 @@ export const dict = {
     "Включите провайдер Kilo и выполните вход, чтобы использовать Speech to Text. В настоящее время Speech to Text поддерживается только с Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Модель речи в текст",
   "settings.models.speechToTextModel.description": "Выберите модель транскрипции Kilo Gateway для голосового ввода.",
+  "settings.experimental.nativeNotebookTools.title": "Нативные инструменты блокнотов",
+  "settings.experimental.nativeNotebookTools.description":
+    "Включить экспериментальные инструменты для чтения, редактирования и выполнения блокнотов VS Code",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.sandboxing.title": "Изоляция в песочнице",
   "settings.sandboxing.network.title": "Ограничить доступ к сети",
   "settings.sandboxing.network.description":
-    "Блокировать исходящий доступ к сети для команд, инициированных моделью, и HTTP-инструментов. Локальные серверы MCP и хуки плагинов не подпадают под это ограничение. Трафик к провайдерам и моделям для инференса остаётся доступным.",
+    "Блокировать прямой исходящий доступ из команд, инициированных моделью, и HTTP-инструментов. Локальные и удалённые MCP-инструменты недоступны, пока это ограничение активно. Трафик провайдеров и доверенные хуки плагинов не подпадают под это ограничение.",
+
+  "settings.sandboxing.allowedHosts.title": "Разрешенные сетевые назначения",
+  "settings.sandboxing.allowedHosts.description":
+    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443. Изменения применяются к новым сеансам.",
+  "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
+  "settings.sandboxing.writablePaths.description":
+    "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Включить SWE-Pruner: обрезка больших объёмов вывода инструментов чтения, поиска и командной оболочки с учётом задачи и на основе предоставленного агентом фокус-вопроса",
+  "settings.experimental.swePrunerModel.title": "Модель SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Модель для обрезки вывода инструментов; по умолчанию — настроенная малая модель",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
   "settings.experimental.remote.title": "Управление Remote",
@@ -1480,12 +1596,15 @@ export const dict = {
     "Пользовательские команды не настроены. Добавьте команды в opencode.json, чтобы увидеть их здесь.",
   "settings.agentBehaviour.workflows.detail.description": "Описание",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
-  "settings.experimental.sandbox.title": "Песочница",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Песочница",
+  "settings.sandboxing.enabled.description":
     "Выполнять команды оболочки агента в песочнице на уровне ОС, которая ограничивает запись в каталоги состояния проекта и Kilo",
 
   "settings.autoApprove.description":
     "Определите правила запуска инструментов. Большинство инструментов по умолчанию Разрешены. Для doom_loop и external_directory по умолчанию установлено Спрашивать.",
+  "settings.autoApprove.maxCost.title": "Оповещение о стоимости сессии",
+  "settings.autoApprove.maxCost.description":
+    "Предупреждать перед продолжением сессии, если ее стоимость превышает эту сумму в USD. Используйте целые доллары; оставьте пустым, чтобы отключить.",
   "settings.autoApprove.level.allow": "Разрешить",
   "settings.autoApprove.level.ask": "Спросить",
   "settings.autoApprove.level.deny": "Отклонить",
@@ -1525,6 +1644,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
   "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
+  "settings.context.compaction.title": "Сжатие",
   "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
   "settings.context.compactionLimit.description":
     "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
@@ -1532,6 +1652,42 @@ export const dict = {
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",
   "settings.context.watcherPatterns.description": "Glob-шаблоны для файлов, которые наблюдатель должен игнорировать",
+
+  "settings.context.memory.title": "Память",
+  "settings.context.memory.project.title": "Память проекта",
+  "settings.context.memory.autoSave.title": "Автосохранение памяти проекта",
+  "settings.context.memory.autoSave.description":
+    "Автоматически сохраняет устойчивые факты проекта из завершённых ходов, когда память включена.",
+  "settings.context.memory.index.title": "Индекс памяти",
+  "settings.context.memory.status.notLoaded": "Не загружена",
+  "settings.context.memory.status.disabled": "Отключена",
+  "settings.context.memory.status.enabledTokensOps":
+    "Включена - ~{{session}} токенов начального контекста в этой сессии - ~{{tokens}} токенов в сохранённом индексе - последняя операция {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Включите память, чтобы создать файлы памяти проекта.",
+  "settings.context.memory.inspect": "Проверить",
+  "settings.context.memory.rebuild": "Перестроить индекс памяти",
+  "chat.memory.on": "Память включена",
+  "chat.memory.label": "Память · {{tokens}} токенов",
+  "chat.memory.status.loading": "Загрузка состояния памяти",
+  "chat.memory.session.tokens": "Начальный контекст этой сессии: {{tokens}} токенов",
+  "chat.memory.total.tokens": "Сохранённый индекс: {{tokens}} токенов",
+  "chat.memory.project.enabled": "Память проекта включена",
+  "chat.memory.project.disabled": "Память проекта отключена",
+  "chat.memory.command.failed": "Команда памяти не выполнена",
+  "chat.memory.savedOperations": "Последняя операция памяти: {{count}} операций",
+  "chat.memory.inspect": "Проверить память",
+  "chat.memory.remember": "Запомнить",
+  "chat.memory.forget": "Забыть",
+  "chat.memory.rebuild": "Перестроить индекс",
+  "chat.memory.disable": "Отключить память",
+  "chat.memory.badge.injected": "Память внедрена",
+  "chat.memory.badge.recalled": "Память извлечена",
+  "chat.memory.badge.startupCtx": "начальный ctx",
+  "chat.memory.badge.items": "{{count}} элементов",
+  "chat.memory.badge.tokens": "{{tokens}} токенов",
+  "chat.memory.badge.recalledDetail": "Память извлечена: {{count}} элементов - {{tokens}} токенов",
+  "chat.memory.badge.files": "Файлы памяти: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Использовать пользовательский prompt",
@@ -1542,6 +1698,10 @@ export const dict = {
     "Системный prompt, отправляемый ИИ при генерации commit messages. Это полностью заменяет prompt по умолчанию.",
   "settings.commitMessage.prompt.placeholder":
     "напр., Сгенерируй commit messages на испанском языке в формате conventional commits. Верни ТОЛЬКО commit message.",
+
+  "settings.commitMessage.language.sync": "Синхронизация с языком пользовательского интерфейса",
+  "settings.commitMessage.language.title": "Язык",
+  "settings.commitMessage.language.description": "Выберите язык для сообщений, генерированных ИИ:",
 
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",
@@ -1712,4 +1872,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Загрузка веток…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "План готов:",
+  "chat.search.placeholder": "Поиск в чате…",
+  "chat.search.toggle": "Поиск в чате",
+  "chat.search.matchCase": "Учитывать регистр",
+  "chat.search.matchWholeWord": "Слово целиком",
+  "chat.search.useRegex": "Использовать регулярное выражение",
+  "chat.search.previousMatch": "Предыдущее совпадение",
+  "chat.search.nextMatch": "Следующее совпадение",
+  "chat.search.close": "Закрыть поиск",
+  "chat.search.invalidRegex": "Недопустимое регулярное выражение",
+  "chat.search.noResults": "Нет результатов",
+  "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
 }

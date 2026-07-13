@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Connetti Anaconda Desktop",
+  "provider.anaconda.title.manage": "Gestisci Anaconda Desktop",
+  "provider.anaconda.status.checking": "Controllo di Anaconda Desktop in corso...",
+  "provider.anaconda.status.opening": "Apertura di Anaconda Desktop in corso...",
+  "provider.anaconda.status.syncing": "Aggiornamento dei modelli del provider in corso...",
+  "provider.anaconda.status.ready": "Pronto per la connessione",
+  "provider.anaconda.status.waiting": "In attesa di Desktop",
+  "provider.anaconda.status.attention": "Richiede attenzione",
+  "provider.anaconda.status.unavailable": "Non disponibile",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop non è supportato su {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installa Anaconda Desktop su questo computer, poi torna qui. Kilo non esegue il programma di installazione per te.",
+  "provider.anaconda.state.notRunning":
+    "Apri Anaconda Desktop, completa la configurazione e accedi, poi scegli Controlla di nuovo.",
+  "provider.anaconda.state.invalidConfig":
+    "La configurazione di Anaconda Desktop è incompleta. Apri Desktop, completa la configurazione e riavvialo se necessario.",
+  "provider.anaconda.state.signedOut": "Apri Anaconda Desktop e accedi prima di connettere Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo non è riuscito ad accedere ad Anaconda Desktop. Apri Desktop, accedi di nuovo e riavvialo se necessario.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop non risponde ancora. Aprilo e attendi che l'applicazione finisca di avviarsi.",
+  "provider.anaconda.state.noModel":
+    "In Anaconda Desktop, scarica un modello di generazione del testo. Quando possibile, scegline uno con il supporto alle chiamate agli strumenti, poi avvia il suo server.",
+  "provider.anaconda.state.noServer_one":
+    "È disponibile 1 modello di generazione del testo scaricato. In Anaconda Desktop, avvia un server di modelli. I modelli che supportano le chiamate agli strumenti sono fortemente consigliati.",
+  "provider.anaconda.state.noServer_other":
+    "Sono disponibili {{count}} modelli di generazione del testo scaricati. In Anaconda Desktop, avvia un server di modelli. I modelli che supportano le chiamate agli strumenti sono fortemente consigliati.",
+  "provider.anaconda.state.unhealthy":
+    "Il server di inferenza attivo non è ancora integro. Controllalo in Anaconda Desktop e riavvia il server se necessario.",
+  "provider.anaconda.state.ready":
+    "Kilo ha trovato un server locale di generazione del testo integro e può importare le sue attuali impostazioni di connessione.",
+  "provider.anaconda.server": "Server di inferenza attivo",
+  "provider.anaconda.context": "Finestra di contesto",
+  "provider.anaconda.contextValue": "{{count}} token",
+  "provider.anaconda.tools": "Chiamata agli strumenti",
+  "provider.anaconda.tools.supported": "Supportata",
+  "provider.anaconda.tools.unsupported": "Non abilitata",
+  "provider.anaconda.tools.unknown": "Sconosciuta",
+  "provider.anaconda.warning.title": "Il supporto agli strumenti è limitato",
+  "provider.anaconda.warning.description":
+    "Questo server non conferma la chiamata agli strumenti. Le azioni dell'agente di programmazione potrebbero non riuscire o non essere disponibili. Continua solo se accetti queste limitazioni.",
+  "provider.anaconda.action.download": "Scarica Anaconda Desktop",
+  "provider.anaconda.action.open": "Apri Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Controlla di nuovo",
+  "provider.anaconda.action.continue": "Continua comunque",
+  "provider.anaconda.action.manage": "Gestisci / Aggiorna",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop aggiornato",
+  "provider.anaconda.toast.refreshed.description": "Il server locale attivo e i modelli sono aggiornati in Kilo.",
+  "settings.providers.note.anacondaDesktop": "Esegui un modello servito localmente da Anaconda Desktop.",
+  "settings.providers.tag.local": "Locale",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Suggeriti",
   "command.category.view": "Vista",
   "command.category.project": "Progetto",
@@ -76,7 +130,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} messaggi ripristinati",
   "revert.banner.redo": "Ripeti",
   "revert.banner.redo.all": "Ripeti tutto",
-  "revert.banner.hint": "Invia un nuovo messaggio per rendere permanente questa modifica",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Attendi che l'agente finisca",
   "command.session.compact": "Compatta sessione",
   "command.session.compact.description": "Riassumi la sessione per ridurre la dimensione del contesto",
@@ -150,6 +204,7 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "I dati possono essere utilizzati per l'addestramento",
   "model.tag.latest": "Più recente",
+  "model.group.auto": "Modelli automatici",
   "model.group.recommended": "Consigliati",
   "model.group.favorites": "Preferiti",
   "model.favorite.add": "Aggiungi ai preferiti",
@@ -175,6 +230,7 @@ export const dict = {
   "model.preview.label.average": "Costo medio stimato",
   "model.preview.label.context": "Contesto",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Opzioni modello",
   "model.preview.label.completion": "Completamento",
   "model.preview.label.costAttempt": "Costo / tentativo",
   "model.preview.value.notSupported": "Non supportato",
@@ -453,7 +509,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Ricerca grep",
   "ui.permission.toolLabel.webSearch": "Ricerca web",
   "ui.permission.toolLabel.list": "Elenco",
-  "ui.permission.toolLabel.externalDirectory": "Leggi directory esterna",
+  "ui.permission.toolLabel.externalDirectory": "Accedi alla directory esterna",
   "ui.permission.toolLabel.webFetch": "Recupero web",
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
@@ -711,6 +767,7 @@ export const dict = {
   "provider.custom.models.name.label": "Nome",
   "provider.custom.models.name.placeholder": "Nome visualizzato",
   "provider.custom.models.reasoning.label": "Reasoning",
+  "provider.custom.models.modalities.image": "Immagine",
   "provider.custom.models.variants.label": "Variants",
   "provider.custom.models.variants.add": "Aggiungi variante",
   "provider.custom.models.variants.remove": "Rimuovi variante",
@@ -950,12 +1007,18 @@ export const dict = {
   "deviceAuth.error.detailsTitle": "Dettagli errore accesso",
   "common.retry": "Riprova",
   "common.refresh": "Aggiorna",
+  "common.reload": "Ricarica",
+  "common.reloadDescription": "Ricarica configurazione, competenze, agenti e comandi dal disco",
   "profile.title": "Profilo",
   "profile.notLoggedIn": "Accesso non effettuato",
   "profile.action.login": "Accedi con Kilo Code",
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Aggiorna saldo",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Ricarica",
+  "profile.pass.subscribe": "Ottieni Kilo Pass per aggiungere crediti e guadagnare bonus",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Si rinnova",
   "profile.action.logout": "Esci",
   "settings.section.configuration": "Configurazione",
   "settings.agentBehaviour.title": "Comportamento agente",
@@ -1076,6 +1139,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Ripristina solo le impostazioni specifiche dell'estensione VS Code ai valori predefiniti. Le impostazioni condivise con la CLI, come modalità e regole di approvazione automatica, sono salvate nella configurazione CLI e non verranno ripristinate.",
   "settings.aboutKiloCode.resetSettings.button": "Ripristina tutte le impostazioni",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Trasferimento impostazioni",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Esporta o importa le impostazioni per trasferirle tra istanze VS Code.",
@@ -1159,12 +1223,34 @@ export const dict = {
     "Abilita l'indicizzazione semantica del codebase e il tool semantic_search. Richiede configurazione indicizzazione.",
   "settings.experimental.codebaseSearch.title": "Ricerca codebase",
   "settings.experimental.codebaseSearch.description": "Abilita ricerca in linguaggio naturale con AI nel codebase",
+  "settings.experimental.imageGeneration.title": "Generazione di immagini",
+  "settings.experimental.imageGeneration.description": "Abilita la generazione di immagini con AI",
+  "settings.experimental.imageGenerationModel.title": "Modello di immagine",
+  "settings.experimental.imageGenerationModel.description": "Modello di generazione di immagini",
+  "settings.experimental.imageGenerationModel.placeholder": "Predefinito (Auto Router)",
+
+  "settings.experimental.nativeNotebookTools.title": "Strumenti nativi per notebook",
+  "settings.experimental.nativeNotebookTools.description":
+    "Abilita strumenti sperimentali per leggere, modificare ed eseguire i notebook di VS Code",
   "settings.experimental.continueOnDeny.title": "Continua dopo rifiuto",
   "settings.experimental.continueOnDeny.description": "Continua il loop agente quando un'autorizzazione viene negata",
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Limita l'accesso alla rete",
   "settings.sandboxing.network.description":
-    "Blocca l'accesso in uscita alla rete per i comandi avviati dal modello e gli strumenti HTTP. I server MCP locali e gli hook dei plugin operano al di fuori di questa restrizione. Il traffico verso i provider e per l'inferenza dei modelli rimane disponibile.",
+    "Blocca l'accesso in uscita diretto dai comandi avviati dal modello e dagli strumenti HTTP. Gli strumenti MCP locali e remoti non sono disponibili mentre la restrizione è attiva. Il traffico del provider e gli hook dei plugin attendibili restano al di fuori di questa restrizione.",
+
+  "settings.sandboxing.allowedHosts.title": "Destinazioni di rete consentite",
+  "settings.sandboxing.allowedHosts.description":
+    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443. Le modifiche si applicano alle nuove sessioni.",
+  "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
+  "settings.sandboxing.writablePaths.description":
+    "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Abilita SWE-Pruner: potatura degli output di grandi dimensioni degli strumenti di lettura, ricerca e shell, che tiene conto del compito ed è guidata da una domanda di focalizzazione fornita dall'agente",
+  "settings.experimental.swePrunerModel.title": "Modello SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Modello usato per potare le uscite degli strumenti; per impostazione predefinita, il modello piccolo configurato",
   "settings.experimental.mcpTimeout.title": "Timeout MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout per richieste server MCP in millisecondi",
   "settings.experimental.remote.title": "Controllo remoto",
@@ -1223,8 +1309,8 @@ export const dict = {
     "Fai clic per limitare le scritture nel file system e l'accesso alla rete.",
   "prompt.action.sandbox.description.disabledNetworkAllowed":
     "Fai clic per limitare le scritture nel file system. L'accesso alla rete resta consentito dalle impostazioni della sandbox.",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Esegui i comandi shell dell'agente all'interno di un sandbox a livello di sistema operativo che limita le scritture alle directory di stato del progetto e di Kilo",
 
   "settings.agentBehaviour.skillPaths": "Percorsi cartelle skill",
@@ -1319,6 +1405,9 @@ export const dict = {
     "Le regole vengono valutate in ordine: l'ultima regola corrispondente vince. Questo è il set di regole risolto dal backend CLI.",
   "settings.autoApprove.description":
     "Definisci come i tool possono essere eseguiti. La maggior parte dei tool usa Consenti di default. doom_loop e external_directory usano Chiedi di default.",
+  "settings.autoApprove.maxCost.title": "Avviso costo sessione",
+  "settings.autoApprove.maxCost.description":
+    "Avvisa prima di continuare una sessione quando la spesa supera questo importo in USD. Usa dollari interi; lascia vuoto per disattivare.",
   "settings.autoApprove.level.allow": "Consenti",
   "settings.autoApprove.level.ask": "Chiedi",
   "settings.autoApprove.level.deny": "Nega",
@@ -1355,10 +1444,47 @@ export const dict = {
     "Crea checkpoint prima delle modifiche ai file così puoi ripristinare stati precedenti",
   "settings.context.autoCompaction.title": "Compattazione automatica",
   "settings.context.autoCompaction.description": "Compatta automaticamente il contesto quando è pieno",
+  "settings.context.compaction.title": "Compattazione",
   "settings.context.prune.title": "Riduci output vecchi",
   "settings.context.prune.description": "Rimuovi output tool vecchi durante la compattazione",
   "settings.context.watcherPatterns": "Pattern ignore file watcher",
   "settings.context.watcherPatterns.description": "Pattern glob per file che il watcher deve ignorare",
+  "settings.context.memory.title": "Memoria",
+  "settings.context.memory.project.title": "Memoria del progetto",
+  "settings.context.memory.autoSave.title": "Salvataggio automatico memoria progetto",
+  "settings.context.memory.autoSave.description":
+    "Salva automaticamente fatti durevoli del progetto dai turni completati quando la memoria è attiva.",
+  "settings.context.memory.index.title": "Indice della memoria",
+  "settings.context.memory.status.notLoaded": "Non caricata",
+  "settings.context.memory.status.disabled": "Disattivata",
+  "settings.context.memory.status.enabledTokensOps":
+    "Attivata - ~{{session}} token di contesto iniziale in questa sessione - ~{{tokens}} token nell’indice salvato - ultima operazione {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Attiva la memoria per creare i file di memoria del progetto.",
+  "settings.context.memory.inspect": "Ispeziona",
+  "settings.context.memory.rebuild": "Ricostruisci indice della memoria",
+  "chat.memory.on": "Memoria attivata",
+  "chat.memory.label": "Memoria · {{tokens}} token",
+  "chat.memory.status.loading": "Caricamento stato memoria",
+  "chat.memory.session.tokens": "Contesto iniziale di questa sessione: {{tokens}} token",
+  "chat.memory.total.tokens": "Indice salvato: {{tokens}} token",
+  "chat.memory.project.enabled": "Memoria del progetto attivata",
+  "chat.memory.project.disabled": "Memoria del progetto disattivata",
+  "chat.memory.command.failed": "Comando memoria non riuscito",
+  "chat.memory.savedOperations": "Ultima operazione di memoria: {{count}} ops",
+  "chat.memory.inspect": "Ispeziona memoria",
+  "chat.memory.remember": "Ricorda",
+  "chat.memory.forget": "Dimentica",
+  "chat.memory.rebuild": "Ricostruisci indice",
+  "chat.memory.disable": "Disattiva memoria",
+  "chat.memory.badge.injected": "Memoria iniettata",
+  "chat.memory.badge.recalled": "Memoria richiamata",
+  "chat.memory.badge.startupCtx": "ctx iniziale",
+  "chat.memory.badge.items": "{{count}} elementi",
+  "chat.memory.badge.tokens": "{{tokens}} token",
+  "chat.memory.badge.recalledDetail": "Memoria richiamata: {{count}} elementi - {{tokens}} token",
+  "chat.memory.badge.files": "File di memoria: {{files}}",
+
   "settings.commitMessage.title": "Messaggio commit",
   "settings.commitMessage.override.title": "Usa prompt personalizzato",
   "settings.commitMessage.override.description":
@@ -1368,6 +1494,11 @@ export const dict = {
     "Prompt di sistema inviato all'AI quando genera messaggi di commit. Sostituisce completamente il prompt predefinito.",
   "settings.commitMessage.prompt.placeholder":
     "es. Genera messaggi di commit in spagnolo seguendo il formato conventional commits. Restituisci SOLO il messaggio di commit.",
+
+  "settings.commitMessage.language.sync": "Sincronizzazione con la lingua dell'interfaccia utente",
+  "settings.commitMessage.language.title": "Lingua",
+  "settings.commitMessage.language.description": "Scegli quale lingua usare per i messaggi di commit generati da AI:",
+
   "settings.display.username.title": "Nome utente",
   "settings.display.username.description": "Nome utente personalizzato mostrato nelle conversazioni",
   "settings.display.fontSize.title": "Dimensione font",
@@ -1550,6 +1681,11 @@ export const dict = {
   "session.outcome.interrupted": "Turno interrotto.",
   "session.outcome.error": "Turno fallito.",
   "session.outcome.finish": "Motivo tecnico di fine: {{reason}}",
+  "session.costAlert.header": "Avviso costo sessione",
+  "session.costAlert.continue": "Continua",
+  "session.costAlert.question":
+    "Questa sessione ha appena superato la soglia di avviso per sessione di {{limit}} e costa {{cost}}. Continuare?",
+  "session.costAlert.stop": "Interrompi",
 
   // Speech to Text
   "settings.experimental.speechToText.title": "Da voce a testo",
@@ -1608,6 +1744,31 @@ export const dict = {
   // Session export
   "command.session.export": "Esporta trascrizione sessione",
 
+  "agentRequirements.skill.installed": "Installata",
+  "agentRequirements.skill.checkFailed": "Il controllo della skill non è riuscito",
+  "agentRequirements.skill.missing": "Non installata",
+  "agentRequirements.mcp.connected": "Connesso",
+  "agentRequirements.mcp.checkFailed": "Il controllo MCP non è riuscito",
+  "agentRequirements.mcp.missing": "Non connesso",
+  "agentRequirements.extension.installed": "Installata",
+  "agentRequirements.extension.checkFailed": "Il controllo dell’estensione VS Code non è riuscito",
+  "agentRequirements.extension.missing": "Non installata",
+  "agentRequirements.extension.description": "Installa le estensioni mancanti in VS Code.",
+  "agentRequirements.group.skills": "Skill",
+  "agentRequirements.group.mcps": "MCP",
+  "agentRequirements.group.extensions": "Estensioni VS Code",
+  "agentRequirements.blocked.title": "Prerequisiti dell’agente {{agent}}",
+  "agentRequirements.blocked.description":
+    "Questo agente richiede i seguenti strumenti prima di poter essere eseguito.",
+  "agentRequirements.prompt.blocked": "Completa prima i controlli richiesti per usare questo agente",
+  "agentRequirements.action.openMarketplace": "Apri Marketplace",
+  "agentRequirements.error.unknownAgent": "Impossibile trovare l’agente selezionato.",
+  "agentRequirements.error.malformedDeclaration": "Questo agente ha una dichiarazione dei requisiti non valida.",
+  "agentRequirements.error.discoveryFailed": "Kilo non ha potuto controllare le skill disponibili.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo non ha potuto controllare lo stato del server MCP.",
+  "agentRequirements.error.scopeMismatch": "Questo controllo dei requisiti dell’agente non è più attivo.",
+  "agentRequirements.error.requestFailed": "Kilo non ha potuto controllare i requisiti dell’agente.",
+
   // Model groups
   "model.group.collapse": "Comprimi {{group}}",
   "model.group.expand": "Espandi {{group}}",
@@ -1627,6 +1788,7 @@ export const dict = {
 
   // Speech to Text tooltips and errors
   "speechToText.tooltip.start": "Avvia input vocale con Kilo Gateway",
+  "speechToText.tooltip.starting": "Avvio del microfono... Attendi prima di parlare.",
   "speechToText.tooltip.stop": "Interrompi acquisizione",
   "speechToText.tooltip.transcribing": "Trascrizione... Fai clic per annullare.",
   "speechToText.tooltip.error": "Input vocale fallito. Fai clic per cancellare.",
@@ -1639,4 +1801,15 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Nessun parlato rilevato.",
   "speechToText.error.encoding": "Impossibile codificare la registrazione.",
   "speechToText.toast.transcribed": "Trascrizione inserita",
+  "chat.search.placeholder": "Cerca nella chat…",
+  "chat.search.toggle": "Cerca nella chat",
+  "chat.search.matchCase": "Maiuscole/minuscole",
+  "chat.search.matchWholeWord": "Parola intera",
+  "chat.search.useRegex": "Usa espressione regolare",
+  "chat.search.previousMatch": "Risultato precedente",
+  "chat.search.nextMatch": "Risultato successivo",
+  "chat.search.close": "Chiudi ricerca",
+  "chat.search.invalidRegex": "Espressione regolare non valida",
+  "chat.search.noResults": "Nessun risultato",
+  "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
 } as const

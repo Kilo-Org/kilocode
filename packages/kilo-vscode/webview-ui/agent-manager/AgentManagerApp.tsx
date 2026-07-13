@@ -78,29 +78,41 @@ import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
 import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-models"
+import { ImageModelsProvider } from "../src/context/image-models"
 import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
+import { MemoryProvider } from "../src/context/memory"
 import { SessionProvider, useSession } from "../src/context/session"
+import { AgentRequirementsProvider } from "../src/context/agent-requirements"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
+import { SpeechToTextPrewarm } from "../src/components/speech-to-text/SpeechToTextPrewarm"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { DataBridge, MermaidDownloadBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
+import { createTabFocus } from "../src/utils/tab-navigation"
+import { nextSelectionAfterDelete, adjacentHint, filterUnassignedSessions, LOCAL } from "./navigate"
 import {
-  nextSelectionAfterDelete,
-  adjacentHint,
-  restoreLocalSessions,
-  reconcileLocalSessions,
-  filterUnassignedSessions,
-  LOCAL,
-} from "./navigate"
+  addPendingTab as addLocalPendingTab,
+  nextTabAfterClose,
+  openSessionTab,
+  reconcileTrackedTabs,
+  replacePendingTab,
+  restoreTrackedTabs,
+} from "../src/utils/local-tabs"
+import {
+  deletePendingDraft,
+  discardPendingDraft,
+  isPendingSend,
+  promotePendingDraftDiscard,
+} from "../src/utils/draft-store"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { reportRemoteSessions } from "./remote-sessions"
-import { ConstrainDragYAxis } from "./sortable-tab"
+import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
@@ -233,8 +245,12 @@ const AgentManagerContent: Component = () => {
   /** Remove a session ID from the local tab (no-op if absent). */
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
+  const inventory = (items: ManagedSessionState[]) => ({
+    local: items.filter((item) => !item.worktreeId).map((item) => item.id),
+    external: new Set(items.filter((item) => item.worktreeId).map((item) => item.id)),
+  })
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
-  const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
+  const [sessionsCollapsed, setSessionsCollapsed] = createSignal(true)
   const sidebar = createSidebarCollapse(vscode)
   const sidebarCollapsed = sidebar.collapsed
   const expandSidebar = sidebar.expand
@@ -280,7 +296,6 @@ const AgentManagerContent: Component = () => {
   const [applySelectionTouched, setApplySelectionTouched] = createSignal(false)
 
   // Pending local tab counter for generating unique IDs
-  let pendingCounter = 0
   const PENDING_PREFIX = "pending:"
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
 
@@ -596,8 +611,9 @@ const AgentManagerContent: Component = () => {
   const appendToTabOrder = tabOrderSync.append
 
   const addPendingTab = () => {
-    const id = `${PENDING_PREFIX}${++pendingCounter}`
-    setLocalSessionIDs((prev) => [...prev, id])
+    const id = `${PENDING_PREFIX}${crypto.randomUUID()}`
+    const next = addLocalPendingTab({ ids: localSessionIDs(), active: activePendingId() }, id)
+    setLocalSessionIDs(next.ids)
     appendToTabOrder(LOCAL, id)
     // Deactivate any focused terminal so the new pending session is
     // actually visible — visibleTabId prioritises terms.activeId().
@@ -605,6 +621,16 @@ const AgentManagerContent: Component = () => {
     setActivePendingId(id)
     session.clearCurrentSession()
     return id
+  }
+
+  const placeLocal = (id: string, pending: string | undefined, active: string | undefined) => {
+    const next = pending
+      ? replacePendingTab({ ids: localSessionIDs(), active }, pending, id)
+      : openSessionTab({ ids: localSessionIDs(), active }, id)
+    setLocalSessionIDs(next.ids)
+    if (pending) tabOrderSync.replaceOrAppend(LOCAL, pending, id)
+    if (!pending) tabOrderSync.append(LOCAL, id)
+    if (pending && pending === active) setActivePendingId(undefined)
   }
 
   // Persist local session IDs and sidebar width to webview state for recovery (exclude pending tabs).
@@ -638,10 +664,10 @@ const AgentManagerContent: Component = () => {
     if (!worktreesLoaded()) return
     const all = session.sessions()
     if (all.length === 0) return // sessions not loaded yet
-    const next = reconcileLocalSessions(
+    const next = reconcileTrackedTabs(
       localSessionIDs(),
       all.map((s) => s.id),
-      managedSessions(),
+      inventory(managedSessions()),
       isPending,
     )
     if (!next) return
@@ -770,7 +796,6 @@ const AgentManagerContent: Component = () => {
     if (reviewActive()) return REVIEW_TAB_ID
     return session.currentSessionID() ?? activePendingId()
   })
-  const tabScroll = useTabScroll(activeTabs, visibleTabId)
 
   const worktreeLabel = (wt: WorktreeState): string => {
     if (wt.label) return wt.label
@@ -1140,25 +1165,21 @@ const AgentManagerContent: Component = () => {
 
     // Add created sessions as local tabs (both direct from the prompt and
     // backend follow-ups). Dedups HTTP + SSE firing together.
+    const createdSessions = new Set<string>()
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
       const created = msg as SessionCreatedMessage
+      if (!created.draftID && createdSessions.delete(created.session.id)) return
+      if (created.draftID) createdSessions.add(created.session.id)
+      if (created.draftID && promotePendingDraftDiscard(created.draftID, created.session.id)) return
       const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
       if (!pending && localSessionIDs().includes(created.session.id)) return
       if (worktreeSessionIds().has(created.session.id)) return
-
       const active = activePendingId()
       const focus = !pending || (selection() === LOCAL && pending === active)
-      if (pending) {
-        setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
-        tabOrderSync.replaceOrAppend(LOCAL, pending, created.session.id)
-        if (pending === active) setActivePendingId(undefined)
-      } else {
-        saveTabMemory()
-        setLocalSessionIDs((prev) => [...prev, created.session.id])
-        tabOrderSync.append(LOCAL, created.session.id)
-        setSelection(LOCAL)
-      }
+      if (!pending) saveTabMemory()
+      placeLocal(created.session.id, pending, active)
+      if (!pending) setSelection(LOCAL)
       vscode.postMessage({ type: "agentManager.persistSession", sessionId: created.session.id })
       if (focus) session.selectSession(created.session.id)
     })
@@ -1298,8 +1319,8 @@ const AgentManagerContent: Component = () => {
           if (ms?.worktreeId) setSelection(ms.worktreeId)
         }
         // Restore local session IDs from persisted state (sessions with no worktreeId)
-        const restored = restoreLocalSessions(
-          state.sessions,
+        const restored = restoreTrackedTabs(
+          inventory(state.sessions),
           localSessionIDs(),
           state.tabOrder?.[LOCAL],
           isPending,
@@ -1566,6 +1587,7 @@ const AgentManagerContent: Component = () => {
     freezeTabs()
     setReviewActive(false)
     setReviewOpenForSelection(false)
+    tabFocus.restore()
   }
 
   // Data for the review tab: use local diff data for local context,
@@ -1895,10 +1917,7 @@ const AgentManagerContent: Component = () => {
     saveTabMemory()
     expandSidebar()
     const pending = activePendingId()
-    if (pending) {
-      setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
-      setActivePendingId(undefined)
-    } else setLocalSessionIDs((prev) => [...prev, sid])
+    placeLocal(sid, pending, pending ?? session.currentSessionID())
     setSelection(LOCAL)
     setReviewActive(false)
     session.selectSession(sid)
@@ -1926,16 +1945,19 @@ const AgentManagerContent: Component = () => {
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
     if (isActive) {
-      const tabs = activeTabs()
-      const idx = tabs.findIndex((s) => s.id === sessionId)
-      const next = tabs[idx + 1] ?? tabs[idx - 1]
-      if (next && isPending(next.id)) {
-        setActivePendingId(next.id)
+      const id = nextTabAfterClose(
+        activeTabs().map((tab) => tab.id),
+        sessionId,
+      )
+      if (id && isPending(id)) {
+        setActivePendingId(id)
         session.clearCurrentSession()
-      } else if (next) {
+      }
+      if (id && !isPending(id)) {
         setActivePendingId(undefined)
-        session.selectSession(next.id)
-      } else {
+        session.selectSession(id)
+      }
+      if (!id) {
         setActivePendingId(undefined)
         session.clearCurrentSession()
       }
@@ -1946,6 +1968,11 @@ const AgentManagerContent: Component = () => {
     } else {
       vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     }
+    if (pending) {
+      if (session.isSubmitting(sessionId) || isPendingSend(sessionId)) discardPendingDraft(sessionId)
+      queueMicrotask(() => deletePendingDraft(sessionId))
+    }
+    tabFocus.restore()
   }
 
   const handleTabMouseDown = (sessionId: string, e: MouseEvent) => {
@@ -2011,6 +2038,7 @@ const AgentManagerContent: Component = () => {
       worktreeTabOrder()[key],
     ).map((item) => item.id)
   })
+  const tabScroll = useTabScroll(tabIds, visibleTabId)
   const handleDragStart = (event: DragEvent) => {
     const id = event.draggable?.id
     if (typeof id === "string") setDraggingTab(id)
@@ -2078,11 +2106,15 @@ const AgentManagerContent: Component = () => {
       selectSession: session.selectSession,
       activateTerminal: termHandlers.activate,
     })
+  const tabFocus = createTabFocus({ ids: () => tabIds(), select: focusTab })
 
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
-    if (termHandlers.closeActive()) return
+    if (termHandlers.closeActive()) {
+      tabFocus.restore()
+      return
+    }
     if (reviewActive()) {
       closeReviewTab()
       return
@@ -2629,6 +2661,8 @@ const AgentManagerContent: Component = () => {
                   <div
                     class="am-tab-list"
                     ref={tabScroll.setRef}
+                    role="tablist"
+                    aria-label={t("agentManager.shortcuts.category.tabs")}
                     style={{ "--tab-count": `${tabIds().length}` } as JSX.CSSProperties}
                   >
                     <SortableProvider ids={tabIds()}>
@@ -2649,8 +2683,9 @@ const AgentManagerContent: Component = () => {
                             adjacentHint,
                             activateTerminal: termHandlers.activate,
                             deactivateTerminal: termHandlers.deactivate,
-                            closeTerminal: termHandlers.closeTerminal,
-                            terminalMiddleClick: termHandlers.middleClick,
+                            closeTerminal: (id) => tabFocus.run(() => termHandlers.closeTerminal(id)),
+                            terminalMiddleClick: (id, event) =>
+                              tabFocus.middle(event, () => termHandlers.middleClick(id, event)),
                             closeReview: closeReviewTab,
                             reviewMiddleClick: handleReviewTabMouseDown,
                             selectReviewTab: () => setReviewActive(true),
@@ -2658,6 +2693,7 @@ const AgentManagerContent: Component = () => {
                             sessionMiddleClick: handleTabMouseDown,
                             sessionClose: handleCloseTab,
                             sessionFork: handleForkSession,
+                            onTabKey: tabFocus.key,
                             reviewLabel: t("session.tab.review"),
                             reviewTooltip: t("command.review.toggle"),
                           })
@@ -3131,20 +3167,27 @@ export const AgentManagerApp: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
+                          <SpeechToTextPrewarm />
                           <DisplayProvider>
                             <IndexingProvider>
                               <KiloEmbeddingModelsProvider>
-                                <NotificationsProvider>
-                                  <SessionProvider>
-                                    <FeedbackProvider>
-                                      <WorktreeModeProvider>
-                                        <DataBridge>
-                                          <AgentManagerContent />
-                                        </DataBridge>
-                                      </WorktreeModeProvider>
-                                    </FeedbackProvider>
-                                  </SessionProvider>
-                                </NotificationsProvider>
+                                <ImageModelsProvider>
+                                  <NotificationsProvider>
+                                    <SessionProvider>
+                                      <AgentRequirementsProvider>
+                                        <MemoryProvider>
+                                          <FeedbackProvider>
+                                            <WorktreeModeProvider>
+                                              <DataBridge>
+                                                <AgentManagerContent />
+                                              </DataBridge>
+                                            </WorktreeModeProvider>
+                                          </FeedbackProvider>
+                                        </MemoryProvider>
+                                      </AgentRequirementsProvider>
+                                    </SessionProvider>
+                                  </NotificationsProvider>
+                                </ImageModelsProvider>
                               </KiloEmbeddingModelsProvider>
                             </IndexingProvider>
                           </DisplayProvider>

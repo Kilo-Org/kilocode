@@ -8,6 +8,7 @@ import os from "os"
 import path from "path"
 import fs from "fs/promises"
 import { TestProfile } from "./kilocode/test-profile"
+import { TestShard } from "./kilocode/test-shard"
 
 const root = path.resolve(import.meta.dir, "..")
 const argv = process.argv.slice(2)
@@ -31,7 +32,9 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
       "  --retries <N>        Extra attempts for failing files (default: 1)",
       "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
+      "  --shard <N/M>        Run one balanced file shard (env: KILO_TEST_SHARD)",
       "  --bail               Stop on first failure",
+      "  --dots               Show compact dot progress",
       "  --verbose            Show full output for every file",
       "  -h, --help           Show this help",
       "",
@@ -64,6 +67,7 @@ function text(name: string) {
 const ci = argv.includes("--ci")
 const bail = argv.includes("--bail")
 const verbose = argv.includes("--verbose")
+const dots = !verbose && (ci || argv.includes("--dots"))
 // Cap concurrency at 4 even on bigger runners: the bottleneck is shared
 // resources (ports, global filesystem like ~/.local/share/kilo), not CPU.
 // Eight parallel processes was triggering port/FS races, not going faster.
@@ -78,8 +82,20 @@ if (flag && env && flag !== env) {
   process.exit(2)
 }
 const profile = flag ?? env
+const shardFlag = text("shard")
+const shardEnv = process.env.KILO_TEST_SHARD?.trim() || undefined
+if (shardFlag && shardEnv && shardFlag !== shardEnv) {
+  console.error(`Conflicting test shards: --shard=${shardFlag}, KILO_TEST_SHARD=${shardEnv}`)
+  process.exit(2)
+}
+const parsed = TestShard.parse(shardFlag ?? shardEnv)
+if (!parsed.ok) {
+  console.error(parsed.error)
+  process.exit(2)
+}
+const shard = parsed.value
 
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile"])
+const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile", "--shard"])
 const patterns = argv.filter((arg, i) => {
   if (arg.startsWith("-")) return false
   if (i > 0 && valued.has(argv[i - 1])) return false
@@ -133,7 +149,13 @@ const matched =
         patterns.some((pattern) => file.includes(pattern) || path.join("test", file).includes(pattern)),
       )
     : selected
-const files = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
+const candidates = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
+if (shard && shard.total > candidates.length) {
+  console.error(`Test shard count ${shard.total} exceeds selected file count ${candidates.length}`)
+  process.exit(2)
+}
+const weight = (file: string) => Bun.file(path.join(root, "test", file)).size
+const files = shard ? TestShard.split(candidates, weight, shard.total)[shard.index - 1] : candidates
 
 if (files.length === 0) {
   console.log("No test files found")
@@ -164,6 +186,14 @@ if (ci) await fs.mkdir(xmldir, { recursive: true })
 
 const counter = { done: 0 }
 const pad = String(files.length).length
+const progress = { width: 80 }
+const marks = {
+  pass: ".",
+  retry: "R",
+  fail: "F",
+  timeout: "T",
+} as const
+const legend = `Legend: ${marks.pass}=pass ${marks.retry}=pass-after-retry ${marks.fail}=fail ${marks.timeout}=timeout`
 
 // ---------------------------------------------------------------------------
 // Run a single test file
@@ -185,6 +215,7 @@ async function run(file: string): Promise<Result> {
     cwd: root,
     stdout: "pipe",
     stderr: "pipe",
+    windowsHide: true,
   })
 
   const timer = setTimeout(() => {
@@ -216,8 +247,21 @@ async function run(file: string): Promise<Result> {
 // Report a single result
 // ---------------------------------------------------------------------------
 
+function mark(result: Result) {
+  if (result.timedout) return marks.timeout
+  if (!result.passed) return marks.fail
+  if (result.attempts > 1) return marks.retry
+  return marks.pass
+}
+
 function report(result: Result) {
   counter.done++
+  if (dots) {
+    process.stdout.write(mark(result))
+    if (counter.done % progress.width === 0) process.stdout.write("\n")
+    return
+  }
+
   const idx = String(counter.done).padStart(pad)
   const secs = (result.duration / 1000).toFixed(1)
   const tries = result.attempts > 1 ? dim(` [attempt ${result.attempts}/${retries + 1}]`) : ""
@@ -250,11 +294,14 @@ function report(result: Result) {
 // Parallel execution
 // ---------------------------------------------------------------------------
 
-console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}\n`)
+console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
+if (shard) console.log(`Using balanced test shard ${shard.index}/${shard.total}`)
+if (dots) console.log(dim(legend))
+console.log()
 
 const start = performance.now()
 const results: Result[] = []
-const queue = [...files]
+const queue = TestShard.order(files, weight)
 const stopped = { value: false }
 
 const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
@@ -277,6 +324,8 @@ const workers = Array.from({ length: Math.min(concurrency, files.length) }, asyn
 })
 
 await Promise.all(workers)
+
+if (dots && counter.done % progress.width !== 0) console.log()
 
 const elapsed = (performance.now() - start) / 1000
 

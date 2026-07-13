@@ -144,11 +144,27 @@ export function useSlashCommand(
       },
     },
     {
+      name: "kiloclaw",
+      description: "Open KiloClaw chat",
+      hints: ["claw"],
+      action: () => {
+        vscode.postMessage({ type: "openKiloClaw" })
+      },
+    },
+    {
       name: "sandbox",
       description: "Toggle sandbox",
       hints: [],
       action: sandbox.action,
       enabled: sandbox.enabled,
+    },
+    {
+      name: "reload",
+      description: "Reload config, skills, agents, and commands from disk",
+      hints: ["refresh"],
+      action: () => {
+        vscode.postMessage({ type: "reload" })
+      },
     },
   ]
 

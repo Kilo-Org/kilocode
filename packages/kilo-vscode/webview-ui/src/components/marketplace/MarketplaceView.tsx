@@ -5,7 +5,11 @@ import { useVSCode } from "../../context/vscode"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../../types/marketplace"
+import type {
+  MarketplaceItem,
+  MarketplaceInstalledMetadata,
+  MarketplaceRelevanceMetadata,
+} from "../../types/marketplace"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 import { MarketplaceListView } from "./MarketplaceListView"
 import { InstallModal } from "./InstallModal"
@@ -13,6 +17,7 @@ import { RemoveDialog } from "./RemoveDialog"
 import "./marketplace.css"
 
 const EMPTY_METADATA: MarketplaceInstalledMetadata = { project: {}, global: {} }
+const EMPTY_RELEVANCE: MarketplaceRelevanceMetadata = {}
 
 export const MarketplaceView = () => {
   const vscode = useVSCode()
@@ -22,6 +27,7 @@ export const MarketplaceView = () => {
 
   const [items, setItems] = createSignal<MarketplaceItem[]>([])
   const [metadata, setMetadata] = createSignal<MarketplaceInstalledMetadata>(EMPTY_METADATA)
+  const [relevance, setRelevance] = createSignal<MarketplaceRelevanceMetadata>(EMPTY_RELEVANCE)
   const [fetching, setFetching] = createSignal(true)
   const [errors, setErrors] = createSignal<string[]>([])
   const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
@@ -38,9 +44,14 @@ export const MarketplaceView = () => {
       if (msg.type === "marketplaceData") {
         setItems(msg.marketplaceItems ?? [])
         setMetadata(msg.marketplaceInstalledMetadata ?? EMPTY_METADATA)
+        setRelevance(msg.marketplaceRelevance ?? EMPTY_RELEVANCE)
         setErrors(msg.errors ?? [])
         setFetching(false)
         setShowMigrationBanner(msg.showAgentMigrationBanner ?? false)
+      }
+      if (msg.type === "openInstallModal") {
+        const match = items().find((i) => i.type === msg.mpItem.type && i.id === msg.mpItem.id)
+        handleInstall(match ?? msg.mpItem)
       }
       if (msg.type === "marketplaceRemoveResult") {
         const removed = pending()
@@ -97,7 +108,6 @@ export const MarketplaceView = () => {
               ...(extra?.hasParameters && { hasParameters: true }),
               ...(extra?.installationMethodName && { installationMethodName: extra.installationMethodName }),
             })
-            dialog.close()
             fetchData()
           }
         }}
@@ -157,9 +167,11 @@ export const MarketplaceView = () => {
       <MarketplaceListView
         items={items()}
         metadata={metadata()}
+        relevance={relevance()}
         fetching={fetching()}
         searchPlaceholder={t("marketplace.search")}
         emptyMessage={t("marketplace.empty")}
+        relevantEmptyMessage={t("marketplace.empty.relevant")}
         onInstall={handleInstall}
         onRemove={handleRemove}
       />

@@ -3,6 +3,7 @@ package ai.kilocode.backend.cli
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -17,6 +18,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ChatLogSummaryTest {
@@ -195,5 +197,64 @@ class ChatLogSummaryTest {
         assertTrue(out.contains("role=assistant"), out)
         assertTrue(out.contains("agent=code"), out)
         assertTrue(out.contains("model=kilo/gpt-5"), out)
+    }
+
+    @Test
+    fun `message updated with message error is error-bearing`() {
+        val event = ChatEventDto.MessageUpdated(
+            sessionID = "ses_1",
+            info = MessageDto(
+                id = "msg_1",
+                sessionID = "ses_1",
+                role = "assistant",
+                time = MessageTimeDto(created = 0.0),
+                error = MessageErrorDto(
+                    type = "APIError",
+                    message = "Bad Request",
+                    statusCode = 400,
+                    responseBody = "secret provider payload",
+                ),
+            ),
+        )
+
+        val out = ChatLogSummary.error(event)
+
+        assertTrue(ChatLogSummary.hasError(event))
+        assertTrue(out!!.contains("sid=ses_1"), out)
+        assertTrue(out.contains("evt=message.updated"), out)
+        assertTrue(out.contains("mid=msg_1"), out)
+        assertTrue(out.contains("err=APIError"), out)
+        assertTrue(out.contains("code=400"), out)
+        assertFalse(out.contains("secret"), out)
+    }
+
+    @Test
+    fun `session error summary includes nested named error details by default`() {
+        val event = ChatEventDto.Error(
+            sessionID = "ses_1",
+            error = MessageErrorDto(
+                type = "UnknownError",
+                message = "Cannot find module '@kilocode/plugin' from '/workspace/.opencode/tool/github-triage.ts'",
+                dataKeys = listOf("message", "ref"),
+                ref = "err_123",
+            ),
+        )
+
+        val out = ChatLogSummary.error(event)!!
+
+        assertTrue(out.contains("sid=ses_1"), out)
+        assertTrue(out.contains("evt=session.error"), out)
+        assertTrue(out.contains("err=UnknownError"), out)
+        assertTrue(out.contains("Cannot find module '@kilocode/plugin'"), out)
+        assertTrue(out.contains("dataKeys=message,ref"), out)
+        assertTrue(out.contains("ref=err_123"), out)
+    }
+
+    @Test
+    fun `non-error event has no error summary`() {
+        val event = ChatEventDto.TurnOpen("ses_1")
+
+        assertFalse(ChatLogSummary.hasError(event))
+        assertNull(ChatLogSummary.error(event))
     }
 }

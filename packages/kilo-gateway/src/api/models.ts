@@ -38,6 +38,12 @@ const openRouterModelSchema = z.object({
   isFree: z.boolean().optional(),
   mayTrainOnYourPrompts: z.boolean().optional(),
   hasUserByokAvailable: z.boolean().optional(),
+  autoRouting: z
+    .object({
+      models: z.array(z.string()),
+    })
+    .optional()
+    .catch(undefined),
   terminalBench: z
     .object({
       overallScore: z.number(),
@@ -84,6 +90,75 @@ export async function fetchKiloModels(options?: {
   kilocodeOrganizationId?: string
   baseURL?: string
 }): Promise<KiloModelsResult> {
+  const raw = await fetchRawKiloModels(options)
+  if (raw.error) return { models: {}, error: raw.error }
+
+  // Transform models to ModelsDev.Model format
+  const models: Record<string, any> = {}
+
+  for (const model of raw.data) {
+    // Skip image generation models
+    if (model.architecture?.output_modalities?.includes("image")) {
+      continue
+    }
+
+    // Skip models that don't support tools — Kilo requires tool calling
+    if (!model.supported_parameters?.includes("tools")) {
+      continue
+    }
+
+    const transformedModel = transformToModelDevFormat(model)
+    models[model.id] = transformedModel
+  }
+
+  return { models }
+}
+
+export type KiloImageModel = {
+  id: string
+  name: string
+  description?: string
+}
+
+export type KiloImageModelsResult = {
+  models: KiloImageModel[]
+  error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
+}
+
+/**
+ * Fetch image-capable models from Kilo API (OpenRouter-compatible endpoint).
+ * Uses the same raw fetch as {@link fetchKiloModels} but keeps only models
+ * whose `output_modalities` include `"image"`.
+ */
+export async function fetchKiloImageModels(options?: {
+  kilocodeToken?: string
+  kilocodeOrganizationId?: string
+  baseURL?: string
+}): Promise<KiloImageModelsResult> {
+  const raw = await fetchRawKiloModels(options)
+  if (raw.error) return { models: [], error: raw.error }
+
+  const models: KiloImageModel[] = []
+
+  for (const model of raw.data) {
+    if (model.architecture?.output_modalities?.includes("image")) {
+      models.push({ id: model.id, name: model.name, description: model.description })
+    }
+  }
+
+  return { models }
+}
+
+/**
+ * Shared raw fetch + validate used by both {@link fetchKiloModels} and {@link fetchKiloImageModels}.
+ */
+async function fetchRawKiloModels(options?: {
+  kilocodeToken?: string
+  kilocodeOrganizationId?: string
+  baseURL?: string
+}): Promise<
+  { data: OpenRouterModel[]; error?: undefined } | { data?: undefined; error: NonNullable<KiloModelsResult["error"]> }
+> {
   const token = options?.kilocodeToken
   const organizationId = options?.kilocodeOrganizationId
 
@@ -108,50 +183,32 @@ export async function fetchKiloModels(options?: {
   }).catch((err: unknown) => err as Error)
 
   if (response instanceof Error) {
-    return { models: {}, error: { kind: "network" } }
+    return { error: { kind: "network" } }
   }
 
   if (!response.ok) {
     // 401 with auth credentials: fall back to unauthenticated public endpoint
     if (response.status === 401 && (token || organizationId)) {
-      return fetchKiloModels({})
+      return fetchRawKiloModels({})
     }
     const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
-    return { models: {}, error: { kind, status: response.status } }
+    return { error: { kind, status: response.status } }
   }
 
   const json = await response.json().catch(() => null)
 
   if (json === null) {
-    return { models: {}, error: { kind: "schema" } }
+    return { error: { kind: "schema" } }
   }
 
   // Validate response schema
   const result = openRouterModelsResponseSchema.safeParse(json)
 
   if (!result.success) {
-    return { models: {}, error: { kind: "schema" } }
+    return { error: { kind: "schema" } }
   }
 
-  // Transform models to ModelsDev.Model format
-  const models: Record<string, any> = {}
-
-  for (const model of result.data.data) {
-    // Skip image generation models
-    if (model.architecture?.output_modalities?.includes("image")) {
-      continue
-    }
-
-    // Skip models that don't support tools — Kilo requires tool calling
-    if (!model.supported_parameters?.includes("tools")) {
-      continue
-    }
-
-    const transformedModel = transformToModelDevFormat(model)
-    models[model.id] = transformedModel
-  }
-
-  return { models }
+  return { data: result.data.data }
 }
 
 /**
@@ -194,6 +251,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
     isFree: model.isFree,
     mayTrainOnYourPrompts: model.mayTrainOnYourPrompts,
     hasUserByokAvailable: model.hasUserByokAvailable,
+    ...(model.autoRouting && { autoRouting: model.autoRouting }),
     ...(model.terminalBench && { terminalBench: model.terminalBench }),
     ...(inputPrice !== undefined &&
       outputPrice !== undefined && {

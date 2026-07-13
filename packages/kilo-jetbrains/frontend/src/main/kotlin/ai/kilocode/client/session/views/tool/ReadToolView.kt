@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
@@ -17,10 +18,10 @@ import javax.swing.ScrollPaneConstants
 /** Renders read calls with secondary, borderless chrome. */
 class ReadToolView(
     tool: Tool,
-    openFile: (String) -> Unit = {},
+    openFile: SessionFileOpener = { _, _ -> },
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool, openFile),
-) : SecondarySessionPartView(parts.header, parts.scroll(tool), expandable = false) {
+    ) : SecondarySessionPartView(parts.header, parts.scroll(tool), expandable = false) {
 
     companion object {
         fun canRender(tool: Tool): Boolean = tool.kind == ToolKind.READ

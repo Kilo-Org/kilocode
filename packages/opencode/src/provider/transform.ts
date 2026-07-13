@@ -6,6 +6,7 @@ import type * as ModelsDev from "@opencode-ai/core/models-dev"
 import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
+import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -614,9 +615,16 @@ function anthropicOpus47OrLater(apiId: string) {
   return major > 4 || (major === 4 && minor >= 7)
 }
 
+// kilocode_change start - fable and sonnet-5 models are adaptive thinking models like opus-4.7/4.8
+function anthropicClaude5(apiId: string) {
+  const id = apiId.toLowerCase()
+  return id.includes("fable") || /sonnet[.-]5/.test(id)
+}
+// kilocode_change end
+
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
-  // kilocode_change start - treat opus-4.8 like opus-4.7
-  if (anthropicOpus47OrLater(apiId)) {
+  // kilocode_change start - treat opus-4.8 and fable like opus-4.7
+  if (anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId)) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
   // kilocode_change end
@@ -667,7 +675,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       thinking: { thinking: { type: "adaptive" } },
     }
   }
-  const adaptiveOpus = anthropicOpus47OrLater(model.api.id)
+  const adaptiveOpus = anthropicOpus47OrLater(model.api.id) || anthropicClaude5(model.api.id) // kilocode_change - fable/sonnet-5
   const adaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
   if (glm52 && model.api.npm === "@openrouter/ai-sdk-provider") {
     // OpenRouter maps xhigh to GLM-5.2's native max effort.
@@ -895,7 +903,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           effort,
           {
             reasoningEffort: effort,
-            reasoningSummary: "auto",
+            reasoningSummary: reasoningSummary(model), // kilocode_change
             include: INCLUDE_ENCRYPTED_REASONING,
           },
         ]),
@@ -917,8 +925,8 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {
-          // kilocode_change start - treat opus-4.8 like opus-4.7
-          if (model.api.id.includes("opus-4.7") || model.api.id.includes("opus-4.8")) {
+          // kilocode_change start - treat opus-4.8 and fable like opus-4.7
+          if (model.api.id.includes("opus-4.7") || model.api.id.includes("opus-4.8") || anthropicClaude5(model.api.id)) {
             efforts = ["medium"]
           }
           // kilocode_change end
@@ -1009,6 +1017,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex
     case "@ai-sdk/google":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-generative-ai
+      if (id.includes("gemma")) return {} // kilocode_change
       if (id.includes("2.5")) {
         return {
           high: {
@@ -1252,7 +1261,7 @@ export function options(input: {
         input.model.api.npm === "@openrouter/ai-sdk-provider" || // kilocode_change
         input.model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
       ) {
-        result["reasoningSummary"] = "auto"
+        result["reasoningSummary"] = reasoningSummary(input.model) // kilocode_change
         if (input.model.api.npm === "@ai-sdk/openai") {
           result["include"] = INCLUDE_ENCRYPTED_REASONING
         }
@@ -1482,9 +1491,15 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
       }
 
       // Filter required array to only include fields that exist in properties
-      if (result.type === "object" && result.properties && Array.isArray(result.required)) {
-        result.required = result.required.filter((field: any) => field in result.properties)
+      // kilocode_change start - Gemini rejects required entries without matching properties
+      if (result.type === "object" && Array.isArray(result.required)) {
+        const properties = isPlainObject(result.properties) ? result.properties : undefined
+        result.required = properties ? result.required.filter((field: any) => field in properties) : []
+        if (result.required.length === 0) {
+          delete result.required
+        }
       }
+      // kilocode_change end
 
       if (result.type === "array" && !hasCombiner(result)) {
         if (result.items == null) {

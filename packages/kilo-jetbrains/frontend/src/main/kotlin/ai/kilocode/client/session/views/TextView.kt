@@ -1,8 +1,13 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionFileLinks
+import ai.kilocode.client.session.SessionFileOpener
+import ai.kilocode.client.session.openSessionLink
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.ui.md.MdView
@@ -11,6 +16,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.awt.BorderLayout
 import javax.swing.JButton
+import javax.swing.JComponent
 
 /**
  * Renders a [Text] part as markdown using [MdView].
@@ -20,25 +26,36 @@ import javax.swing.JButton
 open class TextView(
     text: Text,
     transparent: Boolean = true,
+    private val openFile: SessionFileOpener = { _, _ -> },
     private val openUrl: (String) -> Unit = {},
     selection: SessionSelection? = null,
-) : PartView() {
+) : PartView(), SessionCopyTarget {
 
     override val contentId: String = text.id
 
     val md: MdView = MdViewFactory.create(SessionEditorStyle.current(), selection)
     private var mode: CopyMode? = null
-    private val toolbar = MessageToolbar { copyText() }
+    private val toolbar = MessageToolbar(
+        text = { copyText() },
+        tooltip = KiloBundle.message("session.copy.response"),
+    )
+    private val placeholder = toolbar.placeholder()
+
+    override val copyEligible: Boolean get() = hasCopyToolbar()
+
+    override val copyAnchor: JComponent get() = placeholder
+
+    override val copyToolbar: JComponent? get() = toolbar.takeIf { hasCopyToolbar() }
 
     init {
         layout = BorderLayout()
         isOpaque = false
         Disposer.register(this, md)
         md.opaque = !transparent
-        md.addLinkListener { onLink(it.href) }
+        md.addLinkListener { onLink(it) }
         applyStyle(SessionEditorStyle.current())
         add(md.component, BorderLayout.CENTER)
-        add(toolbar, BorderLayout.SOUTH)
+        add(placeholder, BorderLayout.SOUTH)
         if (text.content.isNotEmpty()) md.set(text.content.toString())
         syncToolbar()
     }
@@ -82,7 +99,9 @@ open class TextView(
 
     internal fun contentOpaque() = md.opaque
 
-    protected open fun onLink(href: String) = openUrl(href)
+    protected open fun onLink(event: MdView.LinkEvent) {
+        openSessionLink(event, openFile, openUrl)
+    }
 
     override fun applyStyle(style: SessionEditorStyle) {
         val font = styleFont(style)
@@ -111,11 +130,15 @@ open class TextView(
 
     @RequiresEdt
     private fun syncToolbar() {
-        toolbar.sync(copyText()?.isNotEmpty() == true)
+        val on = copyText()?.isNotEmpty() == true
+        toolbar.sync(on)
+        if (placeholder.isVisible == on) return
+        placeholder.isVisible = on
+        refresh()
     }
 
     @RequiresEdt
-    private fun copyText(): String? {
+    override fun copyText(): String? {
         val item = mode ?: return null
         return copyMarkdown(item.trim)
     }

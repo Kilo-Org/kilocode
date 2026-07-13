@@ -4,6 +4,7 @@ import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2/client"
 import { SdkSSEAdapter, type SSEPayload } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import { SandboxPreference } from "../sandbox-preference"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: SSEPayload, directory?: string) => void
@@ -14,8 +15,34 @@ type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
 type MigrationCompleteListener = () => void
 type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
+type ModelSelectorExpandedListener = (value: boolean) => void
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
+const DRAIN_CONCURRENCY = 4
+
+async function parallel(items: string[], fn: (item: string) => Promise<void>): Promise<void> {
+  let next = 0
+  const errors = new Map<number, unknown>()
+  const worker = async () => {
+    while (errors.size === 0) {
+      const index = next++
+      if (index >= items.length) return
+      try {
+        await fn(items[index]!)
+      } catch (error) {
+        errors.set(index, error)
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(DRAIN_CONCURRENCY, items.length) }, worker))
+  if (errors.size === 0) return
+  const failures = [...errors].sort((a, b) => a[0] - b[0])
+  for (const [index, error] of failures.slice(1)) {
+    console.warn(`[Kilo New] ConnectionService: Additional prompt drain failed for ${items[index]}:`, error)
+  }
+  throw failures[0]![1]
+}
 
 function isNotFound(err: unknown) {
   if (!err || typeof err !== "object") return false
@@ -50,6 +77,7 @@ async function drainNetworkWaits(client: KiloClient, dir: string) {
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
 export class KiloConnectionService {
+  readonly sandboxPreference: SandboxPreference
   private readonly serverManager: ServerManager
   private client: KiloClient | null = null
   private sseClient: SdkSSEAdapter | null = null
@@ -68,8 +96,11 @@ export class KiloConnectionService {
   private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
   private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
   private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
+  private readonly modelSelectorExpandedListeners: Set<ModelSelectorExpandedListener> = new Set()
   private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
   private readonly directoryProviders: Set<DirectoryProvider> = new Set()
+  private rootDirectory: string | undefined = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+  private currentDirectory: string | undefined
   private readonly permissionDirectories: Map<string, string> = new Map()
   private readonly questionDirectories: Map<string, string> = new Map()
   private questionRevision = 0
@@ -90,6 +121,13 @@ export class KiloConnectionService {
   private unsubRemote: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext) {
+    const state =
+      context.workspaceState ??
+      ({
+        get: <T>(_key: string, fallback?: T) => fallback,
+        update: async () => undefined,
+      } satisfies Pick<vscode.Memento, "get" | "update">)
+    this.sandboxPreference = new SandboxPreference(state)
     this.serverManager = new ServerManager(context, (code) => this.handleServerExit(code))
   }
 
@@ -97,6 +135,7 @@ export class KiloConnectionService {
    * Lazily start server + SSE. Multiple callers share the same promise.
    */
   async connect(workspaceDir: string): Promise<void> {
+    this.trackDirectory(workspaceDir)
     if (this.connectPromise) {
       return this.connectPromise
     }
@@ -136,11 +175,26 @@ export class KiloConnectionService {
    * or if the connection fails.
    */
   async getClientAsync(dir?: string): Promise<KiloClient> {
+    if (dir) this.trackDirectory(dir)
     if (this.client && this.state === "connected") return this.client
     const root = dir ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
     if (!root) throw new Error("No workspace folder open")
+    this.trackDirectory(root)
     await this.connect(root)
     return this.getClient()
+  }
+
+  /** Directories that may own directory-scoped requests on the shared backend. */
+  getKnownDirectories(): string[] {
+    const dirs = new Set<string>()
+    if (this.rootDirectory) dirs.add(this.rootDirectory)
+    if (this.currentDirectory) dirs.add(this.currentDirectory)
+    for (const provider of this.directoryProviders) {
+      for (const dir of provider()) {
+        if (dir) dirs.add(dir)
+      }
+    }
+    return [...dirs]
   }
 
   /**
@@ -230,11 +284,25 @@ export class KiloConnectionService {
    * Remove all messageID → sessionID entries for a given session.
    * Called when a session is deleted or otherwise pruned so the map
    * does not grow unbounded over the extension lifetime.
+   *
+   * Also drops the session from any provider's focused or opened set
+   * so the server's `viewed` notification stops advertising a deleted
+   * id after external (CLI/TUI/cascade) deletes arrive via SSE.
    */
   pruneSession(sessionId: string): void {
     for (const [mid, sid] of this.messageSessionIdsByMessageId) {
       if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
     }
+    for (const [key, sid] of this.focused) {
+      if (sid === sessionId) this.focused.delete(key)
+    }
+    for (const [key, ids] of this.opened) {
+      if (!ids.includes(sessionId)) continue
+      const next = ids.filter((id) => id !== sessionId)
+      if (next.length === 0) this.opened.delete(key)
+      else this.opened.set(key, next)
+    }
+    this.flushViewed()
   }
 
   /**
@@ -402,6 +470,25 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to model-selector expand/collapse changes broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onModelSelectorExpandedChanged(listener: ModelSelectorExpandedListener): () => void {
+    this.modelSelectorExpandedListeners.add(listener)
+    return () => {
+      this.modelSelectorExpandedListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a model-selector expand/collapse change to all subscribed KiloProvider instances.
+   */
+  notifyModelSelectorExpandedChanged(value: boolean): void {
+    for (const listener of this.modelSelectorExpandedListeners) {
+      listener(value)
+    }
+  }
+
+  /**
    * Subscribe to clear-pending-prompts broadcast. Returns unsubscribe function.
    * Fired after a config save drains all pending permissions/questions so each
    * webview can clear stale prompt UI.
@@ -425,6 +512,12 @@ export class KiloConnectionService {
     }
   }
 
+  private trackDirectory(dir: string): void {
+    if (!dir) return
+    this.rootDirectory ??= dir
+    this.currentDirectory = dir
+  }
+
   /**
    * Reject all pending permission requests and questions across every
    * directory known to any currently-mounted KiloProvider.
@@ -437,7 +530,8 @@ export class KiloConnectionService {
    * destructive operation.
    */
   async drainPendingPrompts(): Promise<void> {
-    if (!this.client) return
+    const client = this.client
+    if (!client) return
 
     // Only drain directories from currently-mounted providers (root + worktree dirs).
     // Previously this also called project.list() to include every historically-opened
@@ -451,26 +545,29 @@ export class KiloConnectionService {
       }
     }
 
-    for (const dir of dirs) {
-      const { data: perms, error: permsErr } = await this.client.permission.list({ directory: dir })
+    const list = [...dirs]
+    await parallel(list, async (dir) => {
+      const { data: perms, error: permsErr } = await client.permission.list({ directory: dir })
       if (permsErr) throw new Error(`Failed to list permissions for ${dir}: ${String(permsErr)}`)
       if (perms) {
         for (const perm of perms) {
-          const { error } = await this.client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
+          const { error } = await client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
           if (error && !isNotFound(error)) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
         }
       }
-      const { data: qs, error: qsErr } = await this.client.question.list({ directory: dir })
+      const { data: qs, error: qsErr } = await client.question.list({ directory: dir })
       if (qsErr) throw new Error(`Failed to list questions for ${dir}: ${String(qsErr)}`)
       if (qs) {
         for (const q of qs) {
-          const { error } = await this.client.question.reject({ requestID: q.id, directory: dir })
+          const { error } = await client.question.reject({ requestID: q.id, directory: dir })
           if (error && !isNotFound(error)) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
-      await drainSuggestions(this.client, dir)
-      await drainNetworkWaits(this.client, dir)
-    }
+    })
+
+    // Suggestions are backend-global despite the directory-bearing SDK route.
+    if (list[0]) await drainSuggestions(client, list[0])
+    await parallel(list, (dir) => drainNetworkWaits(client, dir))
     for (const listener of this.clearPendingPromptsListeners) {
       listener()
     }
@@ -571,6 +668,8 @@ export class KiloConnectionService {
     this.favoritesChangeListeners.clear()
     this.clearPendingPromptsListeners.clear()
     this.directoryProviders.clear()
+    this.rootDirectory = undefined
+    this.currentDirectory = undefined
     this.messageSessionIdsByMessageId.clear()
     this.permissionDirectories.clear()
     this.questionDirectories.clear()

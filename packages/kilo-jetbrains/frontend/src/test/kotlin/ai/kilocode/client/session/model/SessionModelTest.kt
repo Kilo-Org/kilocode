@@ -13,6 +13,7 @@ import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
@@ -109,6 +110,46 @@ class SessionModelTest : BasePlatformTestCase() {
     fun `test removeMessage unknown id is noop`() {
         model.removeMessage("unknown")
         assertTrue(events.isEmpty())
+    }
+
+    fun `test reverted count includes user messages from marker`() {
+        model.addMessage(msg("u1", "user"))
+        model.addMessage(msg("a1", "assistant"))
+        model.addMessage(msg("u2", "user"))
+        model.addMessage(msg("a2", "assistant"))
+
+        model.setRevert(SessionRevertDto("u1"))
+        assertEquals(2, model.revertedCount())
+
+        model.setRevert(SessionRevertDto("u2"))
+        assertEquals(1, model.revertedCount())
+
+        model.setRevert(SessionRevertDto("missing"))
+        assertEquals(0, model.revertedCount())
+    }
+
+    fun `test isRevertedMessage matches marker and later messages`() {
+        model.addMessage(msg("u1", "user"))
+        model.addMessage(msg("a1", "assistant"))
+        model.addMessage(msg("u2", "user"))
+        model.addMessage(msg("a2", "assistant"))
+
+        model.setRevert(SessionRevertDto("u2"))
+
+        assertFalse(model.isRevertedMessage("u1"))
+        assertFalse(model.isRevertedMessage("a1"))
+        assertTrue(model.isRevertedMessage("u2"))
+        assertTrue(model.isRevertedMessage("a2"))
+    }
+
+    fun `test snapshotless revert still counts reverted messages`() {
+        model.addMessage(msg("u1", "user"))
+        model.addMessage(msg("a1", "assistant"))
+
+        model.setRevert(SessionRevertDto("u1", snapshot = null))
+
+        assertEquals(1, model.revertedCount())
+        assertTrue(model.isRevertedMessage("u1"))
     }
 
     fun `test updateContent text creates Text content and fires ContentAdded`() {
@@ -356,6 +397,62 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals(ToolKind.GENERIC, p.kind)
         assertEquals(ToolExecState.COMPLETED, p.state)
         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
+    }
+
+    fun `test updateContent task rekeys child tracking when session id changes`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child_old"))
+        model.upsertChildTool("child_old", childPart("read_old"))
+        assertEquals("read_old", task("m1", "task").childTools.single().id)
+
+        model.updateContent("m1", taskPart("task", "m1", "child_new"))
+        assertTrue(task("m1", "task").childTools.isEmpty())
+
+        model.upsertChildTool("child_old", childPart("read_stale"))
+        assertTrue(task("m1", "task").childTools.isEmpty())
+
+        model.upsertChildTool("child_new", childPart("read_new"))
+        assertEquals("read_new", task("m1", "task").childTools.single().id)
+    }
+
+    fun `test stale child history cannot resurrect removed child tool`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child"))
+
+        model.removeChildTool("child", "read_old")
+        model.upsertChildTool("child", childPart("read_old"), replace = false)
+
+        assertTrue(task("m1", "task").childTools.isEmpty())
+
+        model.upsertChildTool("child", childPart("read_old"))
+
+        assertEquals("read_old", task("m1", "task").childTools.single().id)
+    }
+
+    fun `test removeContent untracks child tools`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child"))
+        model.upsertChildTool("child", childPart("read_old"))
+        model.removeContent("m1", "task")
+        events.clear()
+
+        model.upsertChildTool("child", childPart("read_new"))
+
+        assertNull(model.content("m1", "task"))
+        assertTrue(events.isEmpty())
+    }
+
+    fun `test removeMessage untracks child tools`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", taskPart("task", "m1", "child"))
+        model.upsertChildTool("child", childPart("read_old"))
+        model.removeMessage("m1")
+        events.clear()
+
+        model.upsertChildTool("child", childPart("read_new"))
+
+        assertNull(model.message("m1"))
+        assertTrue(events.isEmpty())
     }
 
     fun `test updateContent tool updates rich fields`() {
@@ -1055,6 +1152,24 @@ class SessionModelTest : BasePlatformTestCase() {
         filename = filename,
         source = source,
     )
+
+    private fun taskPart(id: String, mid: String, child: String) = part(
+        id = id,
+        mid = mid,
+        type = "tool",
+        tool = "task",
+        metadata = mapOf("sessionId" to child),
+    )
+
+    private fun childPart(id: String) = part(
+        id = id,
+        mid = "child_msg",
+        type = "tool",
+        tool = "read",
+        input = mapOf("filePath" to "src/Main.kt"),
+    )
+
+    private fun task(mid: String, id: String) = model.content(mid, id) as Tool
 
     private fun question(id: String) = Question(
         id = id,

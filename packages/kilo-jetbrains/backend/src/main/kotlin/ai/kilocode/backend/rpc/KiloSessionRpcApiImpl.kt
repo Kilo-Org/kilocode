@@ -25,8 +25,11 @@ import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
 import ai.kilocode.log.KiloLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
 
 /**
  * Backend implementation of [KiloSessionRpcApi].
@@ -37,7 +40,11 @@ import kotlinx.coroutines.flow.filter
  * [KiloBackendSessionManager]. Chat operations delegate to
  * [KiloBackendChatManager].
  */
-class KiloSessionRpcApiImpl : KiloSessionRpcApi {
+class KiloSessionRpcApiImpl internal constructor(
+    private val appOverride: KiloBackendAppService? = null,
+    private val log: KiloLog = LOG,
+    private val source: Flow<ChatEventDto>? = null,
+) : KiloSessionRpcApi {
     companion object {
         private val LOG = KiloLog.create(KiloSessionRpcApiImpl::class.java)
     }
@@ -52,7 +59,7 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
         get() = app.chat
 
     private val app: KiloBackendAppService
-        get() = service()
+        get() = appOverride ?: service()
 
     override suspend fun list(directory: String): SessionListDto =
         ready { workspaces.get(directory).sessions() }
@@ -62,7 +69,7 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
 
     override suspend fun create(directory: String): SessionDto {
         app.requireReady()
-        LOG.info("create session: directory=$directory")
+        log.info("create session: directory=$directory")
         return workspaces.get(directory).createSession()
     }
 
@@ -106,13 +113,13 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
 
     override suspend fun prompt(id: String, directory: String, prompt: PromptDto) {
         app.requireReady()
-        LOG.info("prompt RPC: session=$id, dir=$directory, parts=${prompt.parts.size}")
+        log.info("prompt RPC: session=$id, dir=$directory, parts=${prompt.parts.size}")
         chat.prompt(id, directory, prompt)
     }
 
     override suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto) {
         app.requireReady()
-        LOG.info("command RPC: session=$id, dir=$directory, command=$command, parts=${prompt.parts.size}")
+        log.info("command RPC: session=$id, dir=$directory, command=$command, parts=${prompt.parts.size}")
         chat.command(id, directory, command, arguments, prompt)
     }
 
@@ -122,6 +129,12 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
     override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) =
         ready { chat.compact(id, directory, model) }
 
+    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?) =
+        ready { chat.revert(id, sessions.getDirectory(id, directory), messageID, partID) }
+
+    override suspend fun unrevert(id: String, directory: String) =
+        ready { chat.unrevert(id, sessions.getDirectory(id, directory)) }
+
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> =
         ready { chat.messages(id, directory) }
 
@@ -129,40 +142,31 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
         ready { chat.attachmentPart(id, directory, messageId, partId, attachmentKey) }
 
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> =
-        chat.events.filter { event ->
-            val sid = when (event) {
-                is ChatEventDto.MessageUpdated -> event.sessionID
-                is ChatEventDto.PartUpdated -> event.sessionID
-                is ChatEventDto.PartDelta -> event.sessionID
-                is ChatEventDto.PartRemoved -> event.sessionID
-                is ChatEventDto.TurnOpen -> event.sessionID
-                is ChatEventDto.TurnClose -> event.sessionID
-                is ChatEventDto.SessionCreated -> event.sessionID
-                is ChatEventDto.Error -> event.sessionID
-                is ChatEventDto.MessageRemoved -> event.sessionID
-                is ChatEventDto.PermissionAsked -> event.sessionID
-                is ChatEventDto.PermissionReplied -> event.sessionID
-                is ChatEventDto.QuestionAsked -> event.sessionID
-                is ChatEventDto.QuestionReplied -> event.sessionID
-                is ChatEventDto.QuestionRejected -> event.sessionID
-                is ChatEventDto.SessionStatusChanged -> event.sessionID
-                is ChatEventDto.SessionUpdated -> event.sessionID
-                is ChatEventDto.SessionIdle -> event.sessionID
-                is ChatEventDto.SessionCompacted -> event.sessionID
-                is ChatEventDto.SessionDiffChanged -> event.sessionID
-                is ChatEventDto.TodoUpdated -> event.sessionID
+        (source ?: chat.events)
+            .onStart { log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events start=true dir=${ChatLogSummary.dir(directory)}") }
+            .filter { event ->
+                val sid = ChatLogSummary.sid(event)
+                val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
+                if (passes) log.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
+                else log.debug { "${ChatLogSummary.sid(id)} pass=false srcSid=$sid ${ChatLogSummary.eventBody(event)}" }
+                if (passes) {
+                    ChatLogSummary.error(event)?.let { log.warn("${ChatLogSummary.sid(id)} route=rpc-events pass=true $it") }
+                }
+                if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
+                    log.info(
+                        "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
+                            ChatLogSummary.status(event.status),
+                    )
+                }
+                passes
             }
-            val passes = event is ChatEventDto.SessionCreated || sid == null || sid == id
-            if (passes) LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
-            else LOG.debug { "${ChatLogSummary.sid(id)} pass=false srcSid=$sid ${ChatLogSummary.eventBody(event)}" }
-            if (passes && event is ChatEventDto.SessionStatusChanged && event.status.type != "busy") {
-                LOG.info(
-                    "${ChatLogSummary.sid(id)} kind=status route=rpc-events pass=true " +
-                        ChatLogSummary.status(event.status),
-                )
+            .onCompletion { cause ->
+                if (cause == null || cause is CancellationException) {
+                    log.info("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events stop=true cancelled=${cause is CancellationException}")
+                    return@onCompletion
+                }
+                log.warn("${ChatLogSummary.sid(id)} kind=subscription route=rpc-events stop=true failed message=${cause.message}", cause)
             }
-            passes
-        }
 
     override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) =
         ready { chat.updateConfig(directory, config) }
@@ -171,25 +175,25 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
 
     override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
         app.requireReady()
-        LOG.info("replyPermission: requestId=$requestId, reply=${reply.reply}")
+        log.info("replyPermission: requestId=$requestId, reply=${reply.reply}")
         chat.replyPermission(requestId, directory, reply)
     }
 
     override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
         app.requireReady()
-        LOG.info("savePermissionRules: requestId=$requestId")
+        log.info("savePermissionRules: requestId=$requestId")
         chat.savePermissionRules(requestId, directory, rules)
     }
 
     override suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto) {
         app.requireReady()
-        LOG.info("replyQuestion: requestId=$requestId, answers=${answers.answers.size}")
+        log.info("replyQuestion: requestId=$requestId, answers=${answers.answers.size}")
         chat.replyQuestion(requestId, directory, answers)
     }
 
     override suspend fun rejectQuestion(requestId: String, directory: String) {
         app.requireReady()
-        LOG.info("rejectQuestion: requestId=$requestId")
+        log.info("rejectQuestion: requestId=$requestId")
         chat.rejectQuestion(requestId, directory)
     }
 

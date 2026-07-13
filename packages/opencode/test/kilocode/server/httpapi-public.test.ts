@@ -3,9 +3,12 @@ import { Result, Schema as EffectSchema } from "effect"
 import { OpenApi } from "effect/unstable/httpapi"
 import { AgentBuilderPaths } from "../../../src/kilocode/server/httpapi/groups/agent-builder"
 import { BackgroundProcessPaths } from "../../../src/kilocode/server/httpapi/groups/background-process"
+import { BranchNamePaths } from "../../../src/kilocode/server/httpapi/groups/branch-name"
 import { ConfigConsolePaths } from "../../../src/kilocode/server/httpapi/groups/config-console"
 import { IndexingPaths, KiloEmbeddingModel } from "../../../src/kilocode/server/httpapi/groups/indexing"
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
+import { KilocodePaths } from "../../../src/kilocode/server/httpapi/groups/kilocode"
+import { MemoryPaths } from "../../../src/kilocode/server/httpapi/groups/memory"
 import { NetworkPaths } from "../../../src/kilocode/server/httpapi/groups/network"
 import { TelemetryPaths } from "../../../src/kilocode/server/httpapi/groups/telemetry"
 import { ExperimentalPaths } from "../../../src/server/routes/instance/httpapi/groups/experimental"
@@ -136,6 +139,18 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.tuiConfig },
       { method: "get", path: ConfigConsolePaths.tuiKeybinds },
       { method: "patch", path: ConfigConsolePaths.tuiConfig },
+      { method: "get", path: KilocodePaths.sessionModelUsage },
+      { method: "post", path: BranchNamePaths.generate },
+      { method: "get", path: MemoryPaths.status },
+      { method: "get", path: MemoryPaths.show },
+      { method: "post", path: MemoryPaths.enable },
+      { method: "post", path: MemoryPaths.disable },
+      { method: "post", path: MemoryPaths.configure },
+      { method: "post", path: MemoryPaths.rebuild },
+      { method: "post", path: MemoryPaths.remember },
+      { method: "post", path: MemoryPaths.correct },
+      { method: "post", path: MemoryPaths.forget },
+      { method: "post", path: MemoryPaths.purge },
     ] satisfies Array<{ method: Method; path: string }>
 
     for (const route of routes) {
@@ -155,6 +170,15 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(props?.organizationId).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
   })
 
+  test("keeps branch-name responses nullable", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const path = BranchNamePaths.generate.replace(/:([A-Za-z0-9_]+)/g, "{$1}")
+    const body = spec.paths[path]?.post?.responses?.["200"] as Body | undefined
+    const branch = body?.content?.["application/json"]?.schema?.properties?.branch
+
+    expect(branch).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
+  })
+
   test("keeps Kilo gateway responses nullable", () => {
     const spec = OpenApi.fromApi(PublicApi)
     const response = (path: string) => {
@@ -164,6 +188,11 @@ describe("Kilo PublicApi OpenAPI contract", () => {
 
     const profile = response(KiloGatewayPaths.profile)?.properties
     expect(profile?.balance).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
+    expect(profile?.kiloPass).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
+    expect(profile?.profile?.properties?.selectedOrganizationId).toEqual({ type: "string" })
+    expect(profile?.profile?.properties?.hasPersonalAccount).toEqual({ type: "boolean" })
+    const pass = profile?.kiloPass?.anyOf?.find((item) => item.type === "object")?.properties
+    expect(pass?.nextBillingAt).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
     expect(profile?.currentOrgId).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
 
     const auth = response(KiloGatewayPaths.authStatus)?.properties

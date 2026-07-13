@@ -47,6 +47,17 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(listOf("/test/.kilo/plans/a.md"), rpc.opened)
     }
 
+    fun `test openPath passes line and column to backend`() = runBlocking {
+        rpc.fileMatches = listOf(WorkspaceFileDto("/test/src/Foo.kt", "Foo.kt"))
+
+        val ok = withContext(Dispatchers.Default) {
+            service.openPath("/test", "src/Foo.kt", line = 12, column = 3)
+        }
+
+        assertTrue(ok)
+        assertEquals(listOf(FakeWorkspaceRpcApi.Opened("/test/src/Foo.kt", 12, 3)), rpc.openedFiles)
+    }
+
     fun `test openPath returns false when no match exists`() = runBlocking {
         val ok = withContext(Dispatchers.Default) {
             service.openPath("/test", ".kilo/plans/missing.md")

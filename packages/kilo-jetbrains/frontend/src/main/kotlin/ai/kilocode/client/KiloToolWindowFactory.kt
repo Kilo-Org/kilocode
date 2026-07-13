@@ -12,6 +12,7 @@ import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.platform.project.projectIdOrNull
 import com.intellij.ui.content.ContentFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,9 +45,11 @@ internal class KiloToolWindowSetupService(
         try {
             val workspaces = service<KiloWorkspaceService>()
             val hint = project.basePath ?: ""
+            // Experimental IntelliJ ProjectId API keeps multi-window and split-mode routing exact.
+            val pid = project.projectIdOrNull()
 
             cs.launch {
-                val dir = workspaces.resolveProjectDirectory(hint)
+                val dir = workspaces.resolveProjectDirectory(pid, hint)
                 val workspace = workspaces.workspace(dir)
                 withContext(Dispatchers.Main) {
                     setup(project, toolWindow, workspace)

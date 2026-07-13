@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.views.base.GenericView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.question.QuestionResultView
@@ -7,6 +8,7 @@ import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
 import ai.kilocode.client.session.views.tool.ShellToolView
+import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.model.Compaction
@@ -30,28 +32,29 @@ import ai.kilocode.client.session.views.todo.TodoWriteView
 object ViewFactory {
     fun create(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
     ): PartView = create(content, openFile, openUrl = {}, selection = null, repo = null)
 
     fun create(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
         openAttachment: (FileAttachment) -> Unit = { AttachmentView.openDefault(it, openFile, openUrl) },
     ): PartView = when (content) {
-        is Text -> TextView(content, openUrl = openUrl, selection = selection)
-        is Reasoning -> ReasoningView(content, openUrl = openUrl, selection = selection)
+        is Text -> TextView(content, openFile = openFile, openUrl = openUrl, selection = selection)
+        is Reasoning -> ReasoningView(content, openFile = openFile, openUrl = openUrl, selection = selection)
         is FileAttachment -> AttachmentView(content, openAttachment)
         is Tool -> when {
             TodoWriteView.canRender(content) -> TodoWriteView(content)
-            PlanExitView.canRender(content) -> PlanExitView(content, openFile, selection)
+            PlanExitView.canRender(content) -> PlanExitView(content, openFile, openUrl, selection)
             QuestionResultView.canRender(content) -> QuestionResultView(content, selection)
             ShellToolView.canRender(content) -> ShellToolView(content, selection = selection)
             GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
+            TaskToolView.canRender(content) -> TaskToolView(content, selection = selection)
             else -> ToolView(content, selection = selection)
         }
         is Compaction -> CompactionView(content)
@@ -61,12 +64,12 @@ object ViewFactory {
 
     fun createUser(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
     ): PartView = createUser(content, openFile, openUrl = {}, selection = null, repo = null)
 
     fun createUser(
         content: Content,
-        openFile: (String) -> Unit,
+        openFile: SessionFileOpener,
         openUrl: (String) -> Unit = {},
         selection: SessionSelection? = null,
         repo: String? = null,
@@ -97,6 +100,8 @@ object ViewFactory {
         if (view !is SearchToolView && SearchToolView.canRender(content)) return true
         if (view is ReadToolView) return !ReadToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view is ToolView && ReadToolView.canRender(content)) return true
+        if (view is TaskToolView) return !TaskToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view !is TaskToolView && TaskToolView.canRender(content)) return true
         if (view is ToolView) return QuestionResultView.canRender(content)
         return false
     }

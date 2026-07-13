@@ -1,7 +1,17 @@
-import { describe, expect, it, mock } from "bun:test"
+import { afterEach, describe, expect, it, mock } from "bun:test"
 import { parseToolRequest, startFromTool, type ToolDeps, type ToolRequest } from "../../src/agent-manager/tool-start"
 import type { CreateWorktreeResult } from "../../src/agent-manager/WorktreeManager"
 import type { Session } from "@kilocode/sdk/v2/client"
+
+const platform = Object.getOwnPropertyDescriptor(process, "platform")
+
+function setPlatform(value: string) {
+  Object.defineProperty(process, "platform", { value, configurable: true })
+}
+
+afterEach(() => {
+  if (platform) Object.defineProperty(process, "platform", platform)
+})
 
 function session(id: string): Session {
   return { id, title: id, createdAt: "", updatedAt: "" } as Session
@@ -34,6 +44,7 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
     cleanupWorktree: mock(async () => calls.push("cleanupWorktree")),
     setup: mock(async () => calls.push("setup")),
     createSessionInWorktree: mock(async () => session("s-wt")),
+    sessionMetadata: mock(async () => ({ "kilocode.sandbox": { enabled: true, version: 0 } })),
     registerWorktreeSession: mock(() => calls.push("registerWorktreeSession")),
     notifyReady: mock(() => calls.push("notifyReady")),
     push: mock(() => calls.push("push")),
@@ -47,13 +58,41 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
 
 describe("agent manager tool start", () => {
   it("parses tool start events defensively", () => {
-    const parsed = parseToolRequest({ mode: "local", tasks: [{ prompt: "one" }] })
+    const parsed = parseToolRequest({
+      mode: "local",
+      tasks: [
+        {
+          prompt: "one",
+          model: { providerID: " test ", modelID: " reasoning/model " },
+          variant: " high ",
+        },
+      ],
+    })
     expect(parsed?.requestID.startsWith("am-")).toBe(true)
     expect(parsed?.sessionID).toBeUndefined()
     expect(parsed?.directory).toBeUndefined()
     expect(parsed?.mode).toBe("local")
     expect(parsed?.versions).toBeUndefined()
-    expect(parsed?.tasks).toEqual([{ prompt: "one" }])
+    expect(parsed?.tasks).toEqual([
+      {
+        prompt: "one",
+        model: { providerID: "test", modelID: "reasoning/model" },
+        variant: "high",
+      },
+    ])
+    expect(
+      parseToolRequest({
+        mode: "local",
+        tasks: [{ prompt: "one", model: { providerID: "", modelID: "model" }, variant: "high" }],
+      }),
+    ).toBeUndefined()
+    expect(parseToolRequest({ mode: "local", tasks: [{ prompt: "one", variant: "high" }] })).toBeUndefined()
+    expect(
+      parseToolRequest({
+        mode: "local",
+        tasks: [{ name: "Prepared session", model: { providerID: "test", modelID: "model" } }],
+      }),
+    ).toBeUndefined()
     expect(parseToolRequest({ mode: "bad", tasks: [{ prompt: "one" }] })).toBeUndefined()
     expect(parseToolRequest({ mode: "local", tasks: [] })).toBeUndefined()
     expect(parseToolRequest({ mode: "local", tasks: [{}] })).toBeUndefined()
@@ -70,7 +109,13 @@ describe("agent manager tool start", () => {
     const req: ToolRequest = {
       requestID: "am-1",
       mode: "local",
-      tasks: [{ prompt: "Do work" }],
+      tasks: [
+        {
+          prompt: "Do work",
+          model: { providerID: "test", modelID: "reasoning/model" },
+          variant: "high",
+        },
+      ],
     }
 
     await startFromTool(c, req)
@@ -79,7 +124,11 @@ describe("agent manager tool start", () => {
     const panel = c.getPanel()
     expect(panel?.waitForReady).toHaveBeenCalled()
     expect(client.session.create).toHaveBeenCalledWith(
-      { directory: "/repo", platform: "agent-manager" },
+      {
+        directory: "/repo",
+        platform: "agent-manager",
+        metadata: { "kilocode.sandbox": { enabled: true, version: 0 } },
+      },
       { throwOnError: true },
     )
     expect(client.session.promptAsync).toHaveBeenCalledWith(
@@ -87,15 +136,71 @@ describe("agent manager tool start", () => {
         sessionID: "s-local",
         directory: "/repo",
         parts: [{ type: "text", text: "Do work" }],
+        model: { providerID: "test", modelID: "reasoning/model" },
+        variant: "high",
         snapshotInitialization: "wait",
       }),
       { throwOnError: true },
     )
   })
 
+  it("starts local sessions when Windows drive-letter casing differs", async () => {
+    setPlatform("win32")
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const state = {
+      addSession: mock(() => {}),
+      findWorktreeByPath: mock(() => undefined),
+    }
+    const c = deps({
+      getClient: () => client as never,
+      getRoot: () => "c:\\Users\\dev\\repo",
+      getState: () => state as never,
+    })
+
+    await startFromTool(c, {
+      requestID: "am-windows-dir",
+      mode: "local",
+      directory: "C:\\Users\\dev\\repo",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(client.session.create).toHaveBeenCalledWith(expect.objectContaining({ directory: "c:\\Users\\dev\\repo" }), {
+      throwOnError: true,
+    })
+    expect(client.session.promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ directory: "c:\\Users\\dev\\repo" }),
+      { throwOnError: true },
+    )
+    expect(state.addSession).toHaveBeenCalledWith("s-local", null)
+    expect(state.findWorktreeByPath).not.toHaveBeenCalled()
+    expect(c.error).not.toHaveBeenCalled()
+  })
+
   it("starts worktree sessions through existing hooks", async () => {
-    const c = deps()
-    await startFromTool(c, { requestID: "am-2", mode: "worktree", tasks: [{ prompt: "Fix", branchName: "fix/one" }] })
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+    await startFromTool(c, {
+      requestID: "am-2",
+      mode: "worktree",
+      tasks: [
+        {
+          prompt: "Fix",
+          branchName: "fix/one",
+          model: { providerID: "test", modelID: "reasoning/model" },
+          variant: "low",
+        },
+      ],
+    })
 
     expect(c.createWorktree).toHaveBeenCalledWith(
       expect.objectContaining({ branchName: "fix-one", name: "fix-one", label: "one" }),
@@ -104,6 +209,15 @@ describe("agent manager tool start", () => {
     expect(c.createSessionInWorktree).toHaveBeenCalled()
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
     expect(c.notifyReady).toHaveBeenCalled()
+    expect(client.session.promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionID: "s-wt",
+        directory: "/repo/.kilo/worktrees/wt-1",
+        model: { providerID: "test", modelID: "reasoning/model" },
+        variant: "low",
+      }),
+      { throwOnError: true },
+    )
   })
 
   it("deduplicates repeated delivery of the same exact request", async () => {

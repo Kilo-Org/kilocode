@@ -111,6 +111,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
       setFeatures(message.features)
       setSaved(message.config)
+      if (message.settings) mergeSettings(message.settings)
       if (message.globalConfig !== undefined) {
         setGlobalConfig(mergeScopedConfig(message.globalConfig, globalDraft()))
         setSavedGlobal(message.globalConfig)
@@ -161,6 +162,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         }
         setFeatures(message.features)
       }
+      if (message.settings) mergeSettings(message.settings)
       setSaved(message.config)
       return
     }

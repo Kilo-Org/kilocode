@@ -61,6 +61,7 @@ import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
 // kilocode_change start
 import type { BackgroundProcessTool } from "@/kilocode/tool/background-process"
+import type { InteractiveTerminalTool } from "@/kilocode/tool/interactive-terminal"
 import type { SemanticSearchTool } from "@/kilocode/tool/semantic-search"
 // kilocode_change end
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
@@ -95,6 +96,7 @@ import { QuestionPrompt } from "./question"
 import { Suggest } from "@/kilocode/suggestion/tui/render"
 import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt"
 import { NetworkPrompt } from "./network"
+import { TerminalPrompt } from "./terminal"
 // kilocode_change end
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import * as Model from "../../util/model"
@@ -108,6 +110,7 @@ import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-mo
 
 import { formatMarkdownTables } from "../../util/markdown"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
+import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory" // kilocode_change
 // kilocode_change end
 import { nextThinkingMode, reasoningSummary, useThinkingMode, type ThinkingMode } from "../../context/thinking"
 import { getScrollAcceleration } from "../../util/scroll"
@@ -246,6 +249,11 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.network[x.id] ?? [])
   })
+  const terminals = createMemo(() => {
+    if (session()?.parentID) return []
+    return children().flatMap((x) => sync.data.interactive_terminal[x.id] ?? [])
+  })
+  const terminal = createMemo(() => terminals()[0])
   const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
   const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
   const question = createMemo(() => blockingQuestions()[0] ?? nonBlockingQuestions()[0])
@@ -258,13 +266,15 @@ export function Session() {
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
-      network().length === 0,
+      network().length === 0 &&
+      terminals().length === 0,
   )
   const networkVisible = createMemo(
     () =>
       permissions().length === 0 &&
       blockingQuestions().length === 0 &&
       blockingSuggestions().length === 0 &&
+      terminals().length === 0 &&
       network().length > 0,
   )
   const disabled = createMemo(
@@ -272,7 +282,8 @@ export function Session() {
       permissions().length > 0 ||
       blockingQuestions().length > 0 ||
       blockingSuggestions().length > 0 ||
-      network().length > 0,
+      network().length > 0 ||
+      terminals().length > 0,
   )
   // kilocode_change end
 
@@ -441,6 +452,8 @@ export function Session() {
       kv.set(keys.lastSeenAt, Date.now())
     })
   })
+
+  onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
 
   const exit = useExit()
 
@@ -1399,11 +1412,16 @@ export function Session() {
                 </For>
               </scrollbox>
               <box flexShrink={0}>
-                <Show when={permissions().length > 0}>
+                {/* kilocode_change start - the terminal owns the input area while active */}
+                <Show when={!terminal() && permissions().length > 0}>
                   <PermissionPrompt request={permissions()[0]} />
                 </Show>
+                {/* kilocode_change end */}
                 {/* kilocode_change start */}
-                <Show when={permissions().length === 0 && question()} keyed>
+                <Show when={terminal()} keyed>
+                  {(value) => <TerminalPrompt sessionID={value.info.sessionID} terminalID={value.info.id} />}
+                </Show>
+                <Show when={!terminal() && permissions().length === 0 ? question() : undefined} keyed>
                   {(request) => (
                     <QuestionPrompt
                       request={request}
@@ -1412,7 +1430,7 @@ export function Session() {
                     />
                   )}
                 </Show>
-                <Show when={permissions().length === 0 && !question()}>
+                <Show when={!terminal() && permissions().length === 0 && !question()}>
                   <Show when={blockingSuggestion()} keyed>
                     {(request) => <SuggestPrompt request={request} />}
                   </Show>
@@ -1423,7 +1441,7 @@ export function Session() {
                 <Show when={networkVisible()}>
                   <NetworkPrompt request={network()[0]} />
                 </Show>
-                <Show when={!session()?.parentID}>
+                <Show when={!terminal() && !session()?.parentID}>
                   <TuiPluginRuntime.Slot
                     name="session_prompt"
                     mode="replace"
@@ -1441,6 +1459,7 @@ export function Session() {
                         toBottom()
                       }}
                       sessionID={route.sessionID}
+                      directory={session()?.directory}
                       right={<TuiPluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
                     />
                   </TuiPluginRuntime.Slot>
@@ -1690,6 +1709,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
+              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} /> {/* kilocode_change */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
@@ -1923,6 +1943,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         {/* kilocode_change start */}
         <Match when={props.part.tool === "background_process"}>
           <BackgroundProcess {...toolprops} />
+        </Match>
+        <Match when={props.part.tool === "interactive_terminal"}>
+          <InteractiveTerminal {...toolprops} />
         </Match>
         <Match when={props.part.tool === "semantic_search"}>
           <SemanticSearch {...toolprops} />
@@ -2465,6 +2488,44 @@ function BackgroundProcess(props: ToolProps<typeof BackgroundProcessTool>) {
   )
 }
 
+function InteractiveTerminal(props: ToolProps<typeof InteractiveTerminalTool>) {
+  const sync = useSync()
+  const pathFormatter = usePathFormatter()
+  const running = createMemo(() => props.part.state.status === "running")
+  const command = createMemo(() => (typeof props.input.command === "string" ? props.input.command : ""))
+  const description = createMemo(() => props.input.description || command() || "interactive command")
+  const dir = createMemo(() => {
+    const raw = props.input.workdir
+    if (!raw || raw === ".") return undefined
+    const base = sync.path.directory
+    if (!base) return pathFormatter.format(raw)
+    const abs = path.resolve(base, raw)
+    if (abs === base) return undefined
+    return pathFormatter.format(abs)
+  })
+  const status = createMemo(() => {
+    if (props.metadata.closedBy === "user") return "closed by user"
+    if (props.metadata.closedBy === "abort") return "cancelled"
+    if (props.metadata.closedBy !== "exit") return undefined
+    return typeof props.metadata.exitCode === "number" ? `exit ${props.metadata.exitCode}` : "completed"
+  })
+
+  return (
+    <InlineTool
+      icon="$"
+      pending="Opening interactive terminal..."
+      complete={description()}
+      spinner={running()}
+      part={props.part}
+    >
+      Interactive terminal: {description()}
+      <Show when={dir()}> in {dir()}</Show>
+      <Show when={command()}> · $ {command()}</Show>
+      <Show when={status()}> ({status()})</Show>
+    </InlineTool>
+  )
+}
+
 function SemanticSearch(props: ToolProps<typeof SemanticSearchTool>) {
   const pathFormatter = usePathFormatter()
   const meta = createMemo(() => props.metadata as { results?: { length: number }[] })
@@ -2754,28 +2815,64 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
 function Question(props: ToolProps<typeof QuestionTool>) {
   const { theme } = useTheme()
   const count = createMemo(() => props.input.questions?.length ?? 0)
+  // kilocode_change start - show dismissed question content with toggle;
+  // use input.questions presence (not metadata) so dismissed/answered/error
+  // states all render content.  Clicking the one-liner expands to the full
+  // block; clicking the block title collapses back.
+  const dismissed = createMemo(
+    () =>
+      props.metadata.dismissed === true ||
+      (props.part.state.status === "error" && String(props.part.state.error ?? "").includes("dismissed")),
+  )
+  const [expanded, setExpanded] = createSignal(false)
 
   function format(answer?: ReadonlyArray<string>) {
+    if (dismissed()) return "Dismissed"
     if (!answer?.length) return "(no answer)"
     return answer.join(", ")
   }
 
+  const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
+  const subtitle = createMemo(() => {
+    if (dismissed()) return `${count()} dismissed`
+    if ((props.metadata.answers?.length ?? 0) > 0) return `${count()} answered`
+    return `${count()} question${count() !== 1 ? "s" : ""}`
+  })
+  // kilocode_change end
+
   return (
     <Switch>
-      <Match when={props.metadata.answers}>
-        <BlockTool title="# Questions" part={props.part}>
-          <box gap={1}>
-            <For each={props.input.questions ?? []}>
-              {(q, i) => (
-                <box flexDirection="column">
-                  <text fg={theme.textMuted}>{q.question}</text>
-                  <text fg={theme.text}>{format(props.metadata.answers?.[i()])}</text>
-                </box>
-              )}
-            </For>
-          </box>
-        </BlockTool>
+      {/* kilocode_change start - toggle between one-liner and full block */}
+      <Match when={count() > 0}>
+        <Show
+          when={expanded()}
+          fallback={
+            <InlineTool
+              icon="→"
+              complete={count()}
+              pending="Asking questions..."
+              part={props.part}
+              onClick={() => setExpanded(true)}
+            >
+              {subtitle()}
+            </InlineTool>
+          }
+        >
+          <BlockTool title={title()} part={props.part} onClick={() => setExpanded(false)}>
+            <box gap={1}>
+              <For each={props.input.questions ?? []}>
+                {(q, i) => (
+                  <box flexDirection="column">
+                    <text fg={theme.textMuted}>{q.question}</text>
+                    <text fg={theme.text}>{format(props.metadata.answers?.[i()])}</text>
+                  </box>
+                )}
+              </For>
+            </box>
+          </BlockTool>
+        </Show>
       </Match>
+      {/* kilocode_change end */}
       <Match when={true}>
         <InlineTool icon="→" pending="Asking questions..." complete={count()} part={props.part}>
           Asked {count()} question{count() !== 1 ? "s" : ""}

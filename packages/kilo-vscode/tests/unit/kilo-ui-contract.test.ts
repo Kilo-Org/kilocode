@@ -23,6 +23,7 @@ const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/bas
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
 const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
+const KILO_MESSAGE_HIGHLIGHT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-highlight.ts")
 const KILO_MESSAGE_PART_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.css")
 const SHELL_ROLLING_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/shell-rolling-results.tsx")
 const ASSISTANT_MESSAGE_FILE = path.join(
@@ -251,6 +252,11 @@ describe("Bash tool static terminal preview (source)", () => {
   it("bash tool passes outputPath from metadata to BashHighlightedOutput", () => {
     expect(block).toContain("props.metadata.outputPath")
   })
+
+  it("bash tool shows the SWE-Pruner kept-lines indicator", () => {
+    expect(block).toContain("swePruned(props.metadata)")
+    expect(block).toContain('i18n.t("ui.tool.swePruned"')
+  })
 })
 
 describe("Expanded tool motion and typography (source)", () => {
@@ -272,16 +278,18 @@ describe("Expanded tool motion and typography (source)", () => {
 
 describe("HighlightedText @mention regex fallback and click handler (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const helper = fs.readFileSync(KILO_MESSAGE_HIGHLIGHT_FILE, "utf-8")
 
   it("detects @path patterns via regex when source offsets are missing", () => {
-    // detectMentions is the regex fallback for when the backend doesn't
-    // populate FilePart.source.text.{start,end}
-    expect(src).toContain("detectMentions")
-    expect(src).toMatch(/MENTION_RE/)
+    // detect is the regex fallback for when the backend doesn't populate FilePart.source.text.{start,end}
+    expect(src).toContain("buildHighlightedTextSegments")
+    expect(helper).toMatch(/MENTION_RE/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
   })
 
   it("prefers source offsets over regex when both are available", () => {
-    expect(src).toMatch(/offset\.length\s*>\s*0\s*\?/)
+    expect(helper).toMatch(/const refs = \[/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
   })
 
   it("file mention spans are clickable via data.openFile", () => {

@@ -13,12 +13,7 @@ import { Component, createMemo, Show } from "solid-js"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useProvider } from "../../context/provider"
-
-function fmt(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return String(n)
-}
+import { formatCompactCount as fmt } from "../../utils/format"
 
 export const ContextProgress: Component = () => {
   const session = useSession()

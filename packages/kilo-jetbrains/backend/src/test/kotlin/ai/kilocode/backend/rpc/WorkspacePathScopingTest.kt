@@ -59,6 +59,40 @@ class WorkspacePathScopingTest {
     }
 
     @Test
+    fun `workspace scope keeps normal project and kilo plan files`() {
+        assertEquals("backend/src/Main.java", relativeWithinWorkspace(base, at("backend", "src", "Main.java")))
+        assertEquals(".kilo/plans/x.md", relativeWithinWorkspace(base, at(".kilo", "plans", "x.md")))
+    }
+
+    @Test
+    fun `workspace scope rejects managed worktree storage from main checkout`() {
+        assertNull(relativeWithinWorkspace(base, at(".kilo", "worktrees")))
+        assertNull(relativeWithinWorkspace(base, at(".kilo", "worktrees", "foo", "backend", "src", "Main.java")))
+    }
+
+    @Test
+    fun `workspace scope allows files inside the active worktree`() {
+        val root = at(".kilo", "worktrees", "foo")
+
+        assertEquals("backend/src/Main.java", relativeWithinWorkspace(root, root.resolve("backend/src/Main.java")))
+    }
+
+    @Test
+    fun `workspace scope rejects sibling worktrees from active worktree`() {
+        val root = at(".kilo", "worktrees", "foo")
+        val sibling = at(".kilo", "worktrees", "bar", "backend", "src", "Main.java")
+
+        assertNull(relativeWithinWorkspace(root, sibling))
+    }
+
+    @Test
+    fun `workspace scope rejects nested managed worktree storage`() {
+        val root = at(".kilo", "worktrees", "foo")
+
+        assertNull(relativeWithinWorkspace(root, root.resolve(".kilo/worktrees/bar/backend/src/Main.java")))
+    }
+
+    @Test
     fun `normalizes encoded file URLs`() {
         val path = base.resolve("dir with spaces").resolve("A.kt")
         val url = path.toUri().toString() + "?query#fragment"
@@ -75,6 +109,40 @@ class WorkspacePathScopingTest {
     fun `rejects blank and invalid paths`() {
         assertNull(normalizeWorkspacePath("   "))
         assertNull(normalizeWorkspacePath("file://%"))
+    }
+
+    @Test
+    fun `project directory hint matches second open project`() {
+        assertEquals(
+            "/repo/wt-b",
+            resolveProjectDirectoryHint("/repo/wt-b", listOf("/repo/wt-a", "/repo/wt-b")),
+        )
+    }
+
+    @Test
+    fun `unmatched project directory hint is preserved`() {
+        assertEquals(
+            "/repo/wt-c",
+            resolveProjectDirectoryHint("/repo/wt-c", listOf("/repo/wt-a", "/repo/wt-b")),
+        )
+    }
+
+    @Test
+    fun `blank project directory hint falls back to first project`() {
+        assertEquals("/repo/wt-a", resolveProjectDirectoryHint("", listOf("/repo/wt-a", "/repo/wt-b")))
+    }
+
+    @Test
+    fun `blank project directory hint without projects stays blank`() {
+        assertEquals("", resolveProjectDirectoryHint("", emptyList()))
+    }
+
+    @Test
+    fun `project directory hint comparison normalizes paths`() {
+        assertEquals(
+            "/repo/wt-b",
+            resolveProjectDirectoryHint("/repo/wt-b/./", listOf("/repo/wt-a", "/repo/wt-b")),
+        )
     }
 
     @Test
