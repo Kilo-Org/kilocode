@@ -1,4 +1,5 @@
 import path from "path"
+import { existsSync, realpathSync } from "fs"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
@@ -75,6 +76,51 @@ export namespace ConfigProtection {
     ).filter(Boolean)
   }
 
+  function physical(filepath: string): string | undefined {
+    try {
+      const parts: string[] = []
+      let current = path.resolve(filepath)
+      while (!existsSync(current)) {
+        const parent = path.dirname(current)
+        if (parent === current) return
+        parts.unshift(path.basename(current))
+        current = parent
+      }
+      return path.join(realpathSync.native(current), ...parts)
+    } catch {
+      return
+    }
+  }
+
+  function skillRoot(pattern: string): string | undefined {
+    const dir = pattern.replace(/[\\/]\*$/, "")
+    if (!path.isAbsolute(dir)) return
+    const normalized = normalize(dir)
+    const dirResolved = physical(dir) ?? dir
+
+    const roots = [...configs(), ...KilocodePaths.globalDirs()]
+    for (const root of roots) {
+      for (const name of ["skill", "skills"]) {
+        const skills = path.join(root, name)
+        const skillsResolved = physical(skills) ?? skills
+        if (!within(dirResolved, skillsResolved) || within(skillsResolved, dirResolved)) continue
+        const marker = `/${name}/`
+        const offset = normalized.toLowerCase().lastIndexOf(marker)
+        if (offset === -1) continue
+        const skill = normalized.slice(offset + marker.length).split("/")[0]
+        if (!skill || /[*?\[\]{}]/.test(skill)) continue
+        const candidate = normalized.slice(0, offset + marker.length + skill.length)
+        const base = physical(skills)
+        const actual = physical(candidate)
+        if (!base || !actual) continue
+        const expected = path.join(base, skill)
+        if (!within(actual, expected) || !within(expected, actual)) continue
+        if (!within(dirResolved, actual)) continue
+        return candidate
+      }
+    }
+  }
+
   function fallback(p: string): boolean {
     if (process.platform !== "win32") return false
     return keys(p).some(
@@ -109,6 +155,20 @@ export namespace ConfigProtection {
     }
 
     return false
+  }
+
+  /** Return the only persistent rule allowed for one exact global skill subtree. */
+  export function globalSkillPattern(request: { permission: string; patterns: readonly string[] }): string | undefined {
+    if (request.permission !== "external_directory" || request.patterns.length === 0) return
+
+    const roots = request.patterns.map(skillRoot)
+    const first = roots[0]
+    if (!first || roots.some((root) => !root || !within(root, first) || !within(first, root))) return
+    return normalize(path.join(first, "*"))
+  }
+
+  export function isGlobalSkillRequest(request: { permission: string; patterns: readonly string[] }): boolean {
+    return globalSkillPattern(request) !== undefined
   }
 
   /** Check a single path (absolute or relative) against config protection. */

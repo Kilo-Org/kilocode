@@ -19,6 +19,7 @@ import { Plugin } from "../../../src/plugin"
 import { disposeAllInstances, provideTmpdirInstance, tmpdir } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
+import { KilocodePaths } from "../../../src/kilocode/paths"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
@@ -87,6 +88,12 @@ const reply = (input: Permission.ReplyInput) =>
   Effect.gen(function* () {
     const permission = yield* Permission.Service
     return yield* permission.reply(input)
+  })
+
+const saveAlwaysRules = (input: Parameters<Permission.Interface["saveAlwaysRules"]>[0]) =>
+  Effect.gen(function* () {
+    const permission = yield* Permission.Service
+    return yield* permission.saveAlwaysRules(input)
   })
 
 const list = () =>
@@ -229,6 +236,90 @@ describe("external_directory allow config protection", () => {
           if (Exit.isFailure(exit)) {
             expect(Cause.squash(exit.cause)).toBeInstanceOf(Permission.RejectedError)
           }
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("persists approval for one exact global skill directory", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const pattern = glob(path.join(KilocodePaths.globalDirs()[0], "skills", "axiom-sre", "*"))
+          const input = {
+            sessionID: SessionID.make("session_global_skill"),
+            permission: "external_directory",
+            patterns: [pattern],
+            metadata: { command: "node scripts/query.mjs", rules: ["*"] },
+            always: [pattern],
+            ruleset,
+          } as const
+          const pending = yield* ask({
+            ...input,
+            id: PermissionID.make("permission_global_skill"),
+          }).pipe(Effect.forkScoped)
+
+          const requests = yield* wait(1)
+          expect(requests[0]).toMatchObject({
+            id: PermissionID.make("permission_global_skill"),
+            permission: "external_directory",
+            patterns: [pattern],
+          })
+          const always = (requests[0]?.always ?? []) as string[]
+          expect(always).toHaveLength(1)
+          expect(always[0]).toMatch(/skills\/axiom-sre\/\*$/)
+          const rules = (requests[0]?.metadata?.rules ?? []) as string[]
+          expect(rules).toHaveLength(1)
+          expect(rules[0]).toMatch(/skills\/axiom-sre\/\*$/)
+          expect(requests[0]?.metadata).not.toMatchObject({ disableAlways: true, configProtected: true })
+
+          yield* reply({ requestID: PermissionID.make("permission_global_skill"), reply: "always" })
+          yield* Fiber.join(pending)
+          yield* immediate(ask(input))
+
+          const sibling = glob(path.join(KilocodePaths.globalDirs()[0], "skills", "other", "*"))
+          const next = yield* ask({
+            ...input,
+            id: PermissionID.make("permission_other_skill"),
+            patterns: [sibling],
+            always: [sibling],
+          }).pipe(Effect.forkScoped)
+          expect(yield* wait(1)).toMatchObject([{ id: PermissionID.make("permission_other_skill") }])
+          yield* reply({ requestID: PermissionID.make("permission_other_skill"), reply: "reject" })
+          expect(Exit.isFailure(yield* Fiber.await(next))).toBe(true)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("limits selected approval rules to the exact global skill directory", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const pattern = glob(path.join(KilocodePaths.globalDirs()[0], "skills", "selected-skill", "*"))
+          const id = PermissionID.make("permission_selected_skill")
+          const input = {
+            sessionID: SessionID.make("session_selected_skill"),
+            permission: "external_directory",
+            patterns: [pattern],
+            metadata: { command: "node scripts/query.mjs", rules: ["*"] },
+            always: ["*"],
+            ruleset,
+          } as const
+          const pending = yield* ask({ ...input, id }).pipe(Effect.forkScoped)
+
+          const reqs = yield* wait(1)
+          expect(reqs[0]).toMatchObject({ id })
+          const always = (reqs[0]?.always ?? []) as string[]
+          expect(always).toHaveLength(1)
+          expect(always[0]).toMatch(/skills\/selected-skill\/\*$/)
+          const rules = (reqs[0]?.metadata?.rules ?? []) as string[]
+          expect(rules).toHaveLength(1)
+          expect(rules[0]).toMatch(/skills\/selected-skill\/\*$/)
+          yield* saveAlwaysRules({ requestID: id, approvedAlways: ["*", pattern] })
+          yield* reply({ requestID: id, reply: "once" })
+          yield* Fiber.join(pending)
+          yield* immediate(ask(input))
         }),
       { git: true },
     ),
