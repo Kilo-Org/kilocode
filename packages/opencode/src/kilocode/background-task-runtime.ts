@@ -25,17 +25,23 @@ export namespace BackgroundTaskRuntime {
       (error) => ({ ok: false, error }),
     )
 
-    let result: BackgroundTaskStart.Result
-    try {
-      result = await BackgroundTaskStart.start({
-        parentSessionID: input.parentSessionID,
-        childSessionID: input.childSessionID,
-        childUserMessageID: input.childUserMessageID,
-        launch: input.launch,
-      })
-    } catch (error) {
-      throw error
-    }
+    const neverFailure = new Promise<never>(() => {})
+    const startupFailure: Promise<{
+      error: unknown
+    }> = settled.then((state) => {
+      if (state.ok) return neverFailure
+      return {
+        error: state.error,
+      }
+    })
+
+    const result = await BackgroundTaskStart.start({
+      parentSessionID: input.parentSessionID,
+      childSessionID: input.childSessionID,
+      childUserMessageID: input.childUserMessageID,
+      launch: input.launch,
+      startupFailure,
+    })
 
     const completion = settled.then((state) => {
       if (state.ok) return state.value

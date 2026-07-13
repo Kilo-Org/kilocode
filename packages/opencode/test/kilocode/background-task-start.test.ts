@@ -230,6 +230,196 @@ describe("BackgroundTaskStart", () => {
     })
   })
 
+  test("resolved startupFailure before launch fails queued task without running", async () => {
+    await using tmp = await tmpdir()
+    const parent = sid()
+    const child = sid()
+    const msg = mid()
+
+    await withInstance(tmp.path, async () => {
+      const err = new Error("startup failed")
+      let launchCount = 0
+      let runCount = 0
+      const origRunning = BackgroundTask.transitionToRunning
+
+      try {
+        Object.defineProperty(BackgroundTask, "transitionToRunning", {
+          value: (claim: Parameters<typeof origRunning>[0]) => {
+            runCount++
+            return origRunning(claim)
+          },
+          configurable: true,
+          writable: true,
+        })
+
+        await expect(
+          BackgroundTaskStart.start({
+            parentSessionID: parent,
+            childSessionID: child,
+            childUserMessageID: msg,
+            launch: () => {
+              launchCount++
+            },
+            startupFailure: Promise.resolve({ error: err }),
+          }),
+        ).rejects.toBe(err)
+
+        expect(launchCount).toBe(1)
+        expect(runCount).toBe(0)
+
+        const info = BackgroundTask.list({ parentSessionID: parent })
+        expect(info).toHaveLength(1)
+        expect(info[0].status).toBe("failed")
+        expect(info[0].startedAt).toBeUndefined()
+        expect(info[0].error?.message).toBe("startup failed")
+      } finally {
+        Object.defineProperty(BackgroundTask, "transitionToRunning", {
+          value: origRunning,
+          configurable: true,
+          writable: true,
+        })
+      }
+    })
+  })
+
+  test("startupFailure after launch fails queued task and cleans acknowledgement", async () => {
+    await using tmp = await tmpdir()
+    const parent = sid()
+    const child = sid()
+    const msg = mid()
+
+    await withInstance(tmp.path, async () => {
+      const fail = defer<{ error: unknown }>()
+      const err = new Error("child failed before open")
+      let subscribeCalls = 0
+      let unsubCalls = 0
+      const removeCalls: string[] = []
+      const origSubscribe = Bus.subscribe
+      const origRemove = AbortSignal.prototype.removeEventListener
+
+      try {
+        Object.defineProperty(Bus, "subscribe", {
+          value: (def: Parameters<typeof origSubscribe>[0], cb: Parameters<typeof origSubscribe>[1]) => {
+            subscribeCalls++
+            const unsub = origSubscribe(def, cb)
+            return () => {
+              unsubCalls++
+              unsub()
+            }
+          },
+          configurable: true,
+          writable: true,
+        })
+
+        Object.defineProperty(AbortSignal.prototype, "removeEventListener", {
+          value: function (
+            type: string,
+            listener: EventListenerOrEventListenerObject,
+            options?: boolean | EventListenerOptions,
+          ) {
+            removeCalls.push(type)
+            return origRemove.call(this, type, listener, options)
+          },
+          configurable: true,
+          writable: true,
+        })
+
+        const p = BackgroundTaskStart.start({
+          parentSessionID: parent,
+          childSessionID: child,
+          childUserMessageID: msg,
+          launch: () => {},
+          startupFailure: fail.promise,
+        })
+
+        fail.resolve({ error: err })
+
+        await expect(p).rejects.toBe(err)
+        expect(subscribeCalls).toBe(1)
+        expect(unsubCalls).toBe(1)
+        expect(removeCalls).toContain("abort")
+
+        const info = BackgroundTask.list({ parentSessionID: parent })
+        expect(info).toHaveLength(1)
+        expect(info[0].status).toBe("failed")
+        expect(info[0].startedAt).toBeUndefined()
+      } finally {
+        Object.defineProperty(Bus, "subscribe", {
+          value: origSubscribe,
+          configurable: true,
+          writable: true,
+        })
+        Object.defineProperty(AbortSignal.prototype, "removeEventListener", {
+          value: origRemove,
+          configurable: true,
+          writable: true,
+        })
+      }
+    })
+  })
+
+  test("late TurnOpen after startupFailure keeps failed state terminal", async () => {
+    await using tmp = await tmpdir()
+    const parent = sid()
+    const child = sid()
+    const msg = mid()
+
+    await withInstance(tmp.path, async () => {
+      const fail = defer<{ error: unknown }>()
+      const err = new Error("failed before open")
+
+      const p = BackgroundTaskStart.start({
+        parentSessionID: parent,
+        childSessionID: child,
+        childUserMessageID: msg,
+        launch: () => {},
+        startupFailure: fail.promise,
+      })
+
+      fail.resolve({ error: err })
+      await expect(p).rejects.toBe(err)
+
+      await Bus.publish(Session.Event.TurnOpen, { sessionID: child })
+      await Bun.sleep(20)
+
+      const info = BackgroundTask.list({ parentSessionID: parent })
+      expect(info).toHaveLength(1)
+      expect(info[0].status).toBe("failed")
+      expect(info[0].startedAt).toBeUndefined()
+      expect(info[0].error?.message).toBe("failed before open")
+    })
+  })
+
+  test("TurnOpen before late startupFailure keeps running state unchanged", async () => {
+    await using tmp = await tmpdir()
+    const parent = sid()
+    const child = sid()
+    const msg = mid()
+
+    await withInstance(tmp.path, async () => {
+      const fail = defer<{ error: unknown }>()
+      const result = await BackgroundTaskStart.start({
+        parentSessionID: parent,
+        childSessionID: child,
+        childUserMessageID: msg,
+        launch: () => {
+          void Bus.publish(Session.Event.TurnOpen, { sessionID: child })
+        },
+        startupFailure: fail.promise,
+      })
+
+      expect(result.info.status).toBe("running")
+
+      fail.resolve({ error: new Error("late failure") })
+      await Bun.sleep(20)
+
+      const info = BackgroundTask.get(result.info.taskID)
+      expect(info?.status).toBe("running")
+      expect(info?.startedAt).toBeDefined()
+      expect(info?.error).toBeUndefined()
+    })
+  })
+
   test("synchronous launch throw marks the task failed", async () => {
     await using tmp = await tmpdir()
     const parent = sid()

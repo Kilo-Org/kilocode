@@ -308,66 +308,36 @@ describe("BackgroundTaskRuntime", () => {
     })
   })
 
-  // TEST FIX 2: deterministic rejection-before-TurnOpen race
-  test("completion rejected before TurnOpen is not unhandled or lost", async () => {
+  test("completion rejection before TurnOpen fails startup instead of hanging", async () => {
     await using tmp = await tmpdir()
     const parent = sid()
     const child = sid()
     const msg = mid()
-    const err = new Error("pre-launch crash")
-    const unhandled: unknown[] = []
+    const err = new Error("pre-open crash")
 
-    const onUnhandled = (reason: unknown) => {
-      unhandled.push(reason)
-    }
-    process.on("unhandledRejection", onUnhandled)
+    await withInstance(tmp.path, async () => {
+      let launchCount = 0
 
-    try {
-      await withInstance(tmp.path, async () => {
-        // Create rejected promise and pass to start() in the SAME synchronous
-        // block so settled attaches .then() before unhandledRejection fires.
-        const completion = Promise.reject<{ resultMessageID: MessageID }>(err)
-        let publishTurnOpen: (() => void) | undefined
-
-        const p = BackgroundTaskRuntime.start({
+      await expect(
+        BackgroundTaskRuntime.start({
           parentSessionID: parent,
           childSessionID: child,
           childUserMessageID: msg,
           launch: () => {
-            publishTurnOpen = () => {
-              void Bus.publish(Session.Event.TurnOpen, { sessionID: child })
-            }
+            launchCount++
           },
-          completion,
-        })
+          completion: Promise.reject<{ resultMessageID: MessageID }>(err),
+        }),
+      ).rejects.toBe(err)
 
-        // Yield so the rejection microtask fires — settled catches it.
-        await new Promise<void>((r) => setTimeout(r, 0))
+      expect(launchCount).toBe(1)
 
-        // No unhandled rejection — settled catches it.
-        expect(unhandled).toHaveLength(0)
-
-        // Task is still queued — no observer, no transitionToRunning.
-        const queued = BackgroundTask.list({ parentSessionID: parent })
-        expect(queued.length).toBe(1)
-        expect(queued[0].status).toBe("queued")
-
-        // Now publish TurnOpen so start() resolves.
-        publishTurnOpen!()
-        const result = await p
-        expect(result.info.status).toBe("running")
-
-        // Yield for the retained observer to observe settled (already rejected).
-        await Bun.sleep(20)
-
-        // Final state: failed with the exact sanitized error.
-        const final = BackgroundTask.list({ parentSessionID: parent })
-        expect(final[0].status).toBe("failed")
-        expect(final[0].error?.message).toBe("pre-launch crash")
-      })
-    } finally {
-      process.removeListener("unhandledRejection", onUnhandled)
-    }
+      const info = BackgroundTask.list({ parentSessionID: parent })
+      expect(info).toHaveLength(1)
+      expect(info[0].status).toBe("failed")
+      expect(info[0].startedAt).toBeUndefined()
+      expect(info[0].error?.message).toBe("pre-open crash")
+    })
   })
 
   test("early fulfillment does not complete while queued", async () => {
@@ -400,53 +370,102 @@ describe("BackgroundTaskRuntime", () => {
     })
   })
 
-  // TEST FIX 3: early rejection while queued — reject before TurnOpen
-  test("early rejection does not fail while queued", async () => {
+  test("completion rejection during launch before TurnOpen fails startup", async () => {
     await using tmp = await tmpdir()
     const parent = sid()
     const child = sid()
     const msg = mid()
-    const err = new Error("pre-launch crash")
+    const completion = defer<{ resultMessageID: MessageID }>()
+    const err = new Error("launch-time crash")
 
     await withInstance(tmp.path, async () => {
-      // Create rejected promise and pass to start() in the SAME synchronous
-      // block so settled attaches .then() before unhandledRejection fires.
-      const completion = Promise.reject<{ resultMessageID: MessageID }>(err)
-      let publishTurnOpen: (() => void) | undefined
+      await expect(
+        BackgroundTaskRuntime.start({
+          parentSessionID: parent,
+          childSessionID: child,
+          childUserMessageID: msg,
+          launch: () => {
+            completion.reject(err)
+          },
+          completion: completion.promise,
+        }),
+      ).rejects.toBe(err)
 
-      const p = BackgroundTaskRuntime.start({
-        parentSessionID: parent,
-        childSessionID: child,
-        childUserMessageID: msg,
-        launch: () => {
-          publishTurnOpen = () => {
-            void Bus.publish(Session.Event.TurnOpen, { sessionID: child })
-          }
+      const info = BackgroundTask.list({ parentSessionID: parent })
+      expect(info).toHaveLength(1)
+      expect(info[0].status).toBe("failed")
+      expect(info[0].startedAt).toBeUndefined()
+      expect(info[0].error?.message).toBe("launch-time crash")
+    })
+  })
+
+  test("completion rejection beats TurnOpen race without double transition", async () => {
+    await using tmp = await tmpdir()
+    const parent = sid()
+    const child = sid()
+    const msg = mid()
+    const completion = defer<{ resultMessageID: MessageID }>()
+    const err = new Error("race crash")
+    let runCount = 0
+    let failCount = 0
+    const origRunning = BackgroundTask.transitionToRunning
+    const origFailed = BackgroundTask.transitionToFailed
+
+    try {
+      Object.defineProperty(BackgroundTask, "transitionToRunning", {
+        value: (claim: Parameters<typeof origRunning>[0]) => {
+          runCount++
+          return origRunning(claim)
         },
-        completion,
+        configurable: true,
+        writable: true,
+      })
+      Object.defineProperty(BackgroundTask, "transitionToFailed", {
+        value: (input: Parameters<typeof origFailed>[0]) => {
+          failCount++
+          return origFailed(input)
+        },
+        configurable: true,
+        writable: true,
       })
 
-      // Yield so the rejection microtask fires — settled catches it.
-      await new Promise<void>((r) => setTimeout(r, 0))
+      await withInstance(tmp.path, async () => {
+        await expect(
+          BackgroundTaskRuntime.start({
+            parentSessionID: parent,
+            childSessionID: child,
+            childUserMessageID: msg,
+            launch: () => {
+              queueMicrotask(() => completion.reject(err))
+              setTimeout(() => {
+                void Bus.publish(Session.Event.TurnOpen, { sessionID: child })
+              }, 0)
+            },
+            completion: completion.promise,
+          }),
+        ).rejects.toBe(err)
 
-      // Find the entry by parentSessionID.
-      const entries = BackgroundTask.list({ parentSessionID: parent })
-      expect(entries.length).toBe(1)
-      expect(entries[0].status).toBe("queued")
-      expect(entries[0].error).toBeUndefined()
+        await Bun.sleep(20)
 
-      // Now publish TurnOpen so start() resolves.
-      publishTurnOpen!()
-      const result = await p
-
-      // Yield for the retained observer to observe settled (already rejected).
-      await Bun.sleep(20)
-
-      // Final status: failed with the expected sanitized error.
-      const final = BackgroundTask.list({ parentSessionID: parent })
-      expect(final[0].status).toBe("failed")
-      expect(final[0].error?.message).toBe("pre-launch crash")
-    })
+        const info = BackgroundTask.list({ parentSessionID: parent })
+        expect(info).toHaveLength(1)
+        expect(info[0].status).toBe("failed")
+        expect(info[0].startedAt).toBeUndefined()
+        expect(runCount).toBe(0)
+        expect(failCount).toBe(1)
+      })
+    } finally {
+      Object.defineProperty(BackgroundTask, "transitionToRunning", {
+        value: origRunning,
+        configurable: true,
+        writable: true,
+      })
+      Object.defineProperty(BackgroundTask, "transitionToFailed", {
+        value: origFailed,
+        configurable: true,
+        writable: true,
+      })
+    }
   })
 
   test("cancellation after startup wins over late completion", async () => {
