@@ -159,11 +159,13 @@ export const layer = Layer.effect(
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
       const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
 
+      // kilocode_change start
       const parse = (e: unknown) =>
         KiloSessionProcessor.parseError(e, {
           providerID: input.model.providerID,
           aborted,
-        }) // kilocode_change
+        })
+      // kilocode_change end
 
       const settleToolCall = Effect.fn("SessionProcessor.settleToolCall")(function* (toolCallID: string) {
         const done = ctx.toolcalls[toolCallID]?.done
@@ -989,9 +991,11 @@ export const layer = Layer.effect(
 
         return yield* Effect.gen(function* () {
           yield* Effect.gen(function* () {
+            // kilocode_change start
             ctx.currentText = undefined
             ctx.reasoningMap = {}
-            ctx.assistantMessage.finish = undefined // kilocode_change - reset a missing-finish retry before streaming again
+            ctx.assistantMessage.finish = undefined
+            // kilocode_change end
             yield* status.set(ctx.sessionID, { type: "busy" })
             // kilocode_change start
             ctx.step = { reasoning: false, text: false, tool: false }
@@ -1001,12 +1005,14 @@ export const layer = Layer.effect(
             })
             // kilocode_change end
 
+            // kilocode_change start
             yield* stream.pipe(
               Stream.tap((event) => handleEvent(event)),
               Stream.takeUntil(() => ctx.needsCompaction),
               Stream.runDrain,
             )
-            yield* KiloSessionProcessor.ensureFinish(ctx.assistantMessage) // kilocode_change
+            yield* KiloSessionProcessor.ensureFinish(ctx.assistantMessage)
+            // kilocode_change end
           }).pipe(
             Effect.onInterrupt(() =>
               Effect.gen(function* () {
