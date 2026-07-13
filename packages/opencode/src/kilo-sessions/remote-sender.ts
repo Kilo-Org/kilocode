@@ -73,6 +73,7 @@ function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
   return {
     ...input,
     model: normalizeModel(input.model),
+    tools: { ...input.tools, interactive_terminal: false },
   }
 }
 
@@ -97,6 +98,11 @@ export namespace RemoteSender {
       readonly reject: (requestID: QuestionID) => Promise<void>
     }
     prompt?: (input: SessionPrompt.PromptInput) => Promise<unknown>
+    cancel?: (sessionID: SessionID) => Promise<void>
+    session?: {
+      readonly get: (sessionID: SessionID) => Promise<Session.Info>
+      readonly children: (sessionID: SessionID) => Promise<Session.Info[]>
+    }
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -144,6 +150,12 @@ export namespace RemoteSender {
         const { AppRuntime } = await import("@/effect/app-runtime")
         return AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.prompt(input)))
       })
+    const cancel =
+      options.cancel ??
+      (async (sessionID: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.cancel(sessionID)))
+      })
     const catalog = options.catalog ?? {
       get: async (sessionID: SessionID) => {
         const { AppRuntime } = await import("@/effect/app-runtime")
@@ -168,6 +180,16 @@ export namespace RemoteSender {
         return AppRuntime.runPromise(Provider.Service.use((svc) => svc.defaultModel()))
       },
     }
+    const session = options.session ?? {
+      get: async (sessionID: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Session.Service.use((svc) => svc.get(sessionID)))
+      },
+      children: async (sessionID: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(Session.Service.use((svc) => svc.children(sessionID)))
+      },
+    }
 
     const sub =
       options.subscribe ??
@@ -180,10 +202,7 @@ export namespace RemoteSender {
       })
 
     async function directoryFor(sid: string): Promise<string> {
-      const { AppRuntime } = await import("@/effect/app-runtime")
-      const info = await AppRuntime.runPromise(
-        Session.Service.use((svc) => svc.get(SessionID.make(sid)).pipe(Effect.orElseSucceed(() => undefined))),
-      )
+      const info = await session.get(SessionID.make(sid)).catch(() => undefined)
       return info?.directory ?? options.directory
     }
 
@@ -218,6 +237,7 @@ export namespace RemoteSender {
     // sees state that was asked before it connected — analogous to the Cloud
     // Agent's `connected` event carrying pending question/permission fields.
     async function replay(sessionId: string) {
+      const root = rootOf(sessionId)
       const [suggestions, questions, permissions] = await Promise.all([
         Suggestion.list(),
         question.list(),
@@ -228,6 +248,7 @@ export namespace RemoteSender {
         options.conn.send({
           type: "event",
           sessionId,
+          ...(root ? { parentSessionId: root } : {}),
           event: "suggestion.shown",
           data: suggestion,
         })
@@ -237,6 +258,7 @@ export namespace RemoteSender {
         options.conn.send({
           type: "event",
           sessionId,
+          ...(root ? { parentSessionId: root } : {}),
           event: "question.asked",
           data: q,
         })
@@ -246,6 +268,7 @@ export namespace RemoteSender {
         options.conn.send({
           type: "event",
           sessionId,
+          ...(root ? { parentSessionId: root } : {}),
           event: "permission.asked",
           data: p,
         })
@@ -266,10 +289,7 @@ export namespace RemoteSender {
     }
 
     async function discoverChildren(parentId: string) {
-      const { AppRuntime } = await import("@/effect/app-runtime")
-      const childSessions = await AppRuntime.runPromise(
-        Session.Service.use((svc) => svc.children(SessionID.make(parentId))),
-      )
+      const childSessions = await session.children(SessionID.make(parentId))
       for (const child of childSessions) {
         children.set(child.id, parentId)
         const root = rootOf(child.id) ?? parentId
@@ -413,6 +433,19 @@ export namespace RemoteSender {
         dispatchLongRunning(msg, directoryFor(input.data.sessionID), async () => {
           await prompt(input.data as SessionPrompt.PromptInput)
         })
+        return
+      }
+      if (msg.command === "interrupt") {
+        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (Option.isNone(session)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid interrupt command",
+          })
+          return
+        }
+        dispatchQuick(msg, directoryFor(session.value), () => cancel(session.value))
         return
       }
       if (msg.command === "question_reply") {
