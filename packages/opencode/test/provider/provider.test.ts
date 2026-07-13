@@ -6,6 +6,7 @@ import { Instance } from "../../src/project/instance"
 import { Provider } from "../../src/provider/provider"
 import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Env } from "../../src/env"
+import { Auth } from "../../src/auth"
 
 test("provider loaded from env variable", async () => {
   await using tmp = await tmpdir({
@@ -2281,4 +2282,94 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
       })
     },
   })
+})
+
+test("openai oauth keeps verified gpt-5.5 and gpt-5.6 ids with xhigh variants", async () => {
+  // kilocode_change start
+  const prev = await Auth.get("openai")
+  const item = (name: string, release: string) => ({
+    name,
+    attachment: true,
+    reasoning: true,
+    tool_call: true,
+    temperature: false,
+    release_date: release,
+    limit: { context: 400_000, output: 128_000 },
+  })
+
+  await Auth.set("openai", {
+    type: "oauth",
+    access: "test-access",
+    refresh: "test-refresh",
+    expires: Date.now() + 60_000,
+  })
+
+  try {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+            provider: {
+              openai: {
+                models: {
+                  "gpt-5.4": item("GPT-5.4", "2026-03-05"),
+                  "gpt-5.4-mini": item("GPT-5.4 Mini", "2026-03-17"),
+                  "gpt-5.5": item("GPT-5.5", "2026-04-23"),
+                  "gpt-5.5-pro": item("GPT-5.5 Pro", "2026-04-23"),
+                  "gpt-5.6": item("GPT-5.6", "2026-07-09"),
+                  "gpt-5.6-sol": item("GPT-5.6 Sol", "2026-07-09"),
+                  "gpt-5.6-luna": item("GPT-5.6 Luna", "2026-07-09"),
+                  "gpt-5.6-terra": item("GPT-5.6 Terra", "2026-07-09"),
+                  "gpt-5.6-fast": item("GPT-5.6 Fast", "2026-07-09"),
+                  "gpt-5-chat-latest": item("GPT-5 Chat Latest", "2026-07-09"),
+                },
+              },
+            },
+          }),
+        )
+      },
+    })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const providers = await Provider.list()
+        const provider = providers[ProviderID.openai]
+        const ids = [
+          "gpt-5.4",
+          "gpt-5.4-mini",
+          "gpt-5.5",
+          "gpt-5.5-pro",
+          "gpt-5.6",
+          "gpt-5.6-sol",
+          "gpt-5.6-luna",
+          "gpt-5.6-terra",
+        ]
+
+        expect(provider).toBeDefined()
+        expect(provider.id).toBe(ProviderID.openai)
+
+        for (const id of ids) {
+          const model = provider.models[id]
+          expect(model).toBeDefined()
+          expect(model.providerID).toBe(ProviderID.openai)
+          expect(model.api.npm).toBe("@ai-sdk/openai")
+          expect(model.api.id).toBe(id)
+          expect(model.variants?.["xhigh"]).toBeDefined()
+        }
+
+        expect(provider.models["gpt-5.6-fast"]).toBeUndefined()
+        expect(provider.models["gpt-5-chat-latest"]).toBeUndefined()
+      },
+    })
+  } finally {
+    if (prev) {
+      await Auth.set("openai", prev)
+    } else {
+      await Auth.remove("openai")
+    }
+  }
+  // kilocode_change end
 })

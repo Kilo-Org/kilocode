@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  allowOauthModel,
   parseJwtClaims,
   extractAccountIdFromClaims,
   extractAccountId,
@@ -118,6 +119,38 @@ describe("plugin.codex", () => {
           refresh_token: "rt",
         }),
       ).toBe("acc-123")
+    })
+  })
+
+  describe("allowOauthModel", () => {
+    test("allows existing and verified OpenAI OAuth ids", () => {
+      // kilocode_change start
+      const ids = [
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.5",
+        "gpt-5.5-pro",
+        "gpt-5.6",
+        "gpt-5.6-sol",
+        "gpt-5.6-luna",
+        "gpt-5.6-terra",
+      ]
+      // kilocode_change end
+
+      for (const id of ids) {
+        expect(allowOauthModel(id)).toBeTrue()
+      }
+    })
+
+    test("keeps filtering unknown and label-only ids", () => {
+      // kilocode_change start
+      const ids = ["gpt-4o", "gpt-5-chat-latest", "gpt-5.6-fast", "gpt-5.7", "o3"]
+      // kilocode_change end
+
+      for (const id of ids) {
+        expect(allowOauthModel(id)).toBeFalse()
+      }
     })
   })
 })
