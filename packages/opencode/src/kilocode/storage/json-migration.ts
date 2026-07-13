@@ -17,6 +17,47 @@ import { errorMessage } from "@/util/error"
 
 const log = Log.create({ service: "json-migration" })
 
+const usage = `
+  UPDATE session
+  SET
+    cost = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.cost'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_input = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.input'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_output = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.output'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_reasoning = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.reasoning'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_cache_read = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.cache.read'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_cache_write = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.cache.write'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0)
+`
+
 export type Progress = {
   current: number
   total: number
@@ -30,7 +71,9 @@ type Options = {
 export async function bootstrap() {
   const marker = Database.path()
   if (marker === ":memory:") return
-  if (await Filesystem.exists(marker)) return
+  const pending = marker + ".json-migration"
+  if ((await Filesystem.exists(marker)) && !(await Filesystem.exists(pending))) return
+  await Filesystem.write(pending, "1")
 
   const tty = process.stderr.isTTY
   process.stderr.write("Performing one time database migration, may take a few minutes..." + EOL)
@@ -44,7 +87,7 @@ export async function bootstrap() {
     await Effect.runPromise(Database.Service.use(() => Effect.void).pipe(Effect.provide(Database.defaultLayer)))
     const sqlite = new BunDatabase(marker)
     try {
-      await run(drizzle({ client: sqlite }), {
+      const stats = await run(drizzle({ client: sqlite }), {
         progress: (event) => {
           const percent = Math.floor((event.current / event.total) * 100)
           if (percent === last && event.current !== event.total) return
@@ -61,6 +104,10 @@ export async function bootstrap() {
           process.stderr.write(`sqlite-migration:${percent}${EOL}`)
         },
       })
+      if (stats.errors.length > 0) {
+        process.stderr.write("Database migration incomplete; retrying on next start." + EOL)
+        return
+      }
     } finally {
       sqlite.close()
     }
@@ -68,6 +115,7 @@ export async function bootstrap() {
     if (tty) process.stderr.write("\x1b[?25h")
     else process.stderr.write(`sqlite-migration:done${EOL}`)
   }
+  await Bun.file(pending).delete()
   process.stderr.write("Database migration complete." + EOL)
 }
 
@@ -327,6 +375,7 @@ export async function run(db: SQLiteBunDatabase | NodeSQLiteDatabase, options?: 
     step("messages", end - i)
   }
   log.info("migrated messages", { count: stats.messages })
+  db.run(usage)
 
   // Migrate parts using pre-scanned file map
   for (let i = 0; i < partFiles.length; i += batchSize) {

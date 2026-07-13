@@ -488,16 +488,41 @@ describe("JSON to SQLite migration", () => {
       time: { created: 1700000000000, updated: 1700000001000 },
       sandboxes: [],
     })
+    await writeSession(storageDir, "proj_test123abc", { ...fixtures.session })
+    await Bun.write(
+      path.join(storageDir, "message", "ses_test456def", "msg_usage.json"),
+      JSON.stringify({
+        role: "assistant",
+        cost: 1.25,
+        tokens: {
+          input: 10,
+          output: 20,
+          reasoning: 3,
+          cache: { read: 4, write: 5 },
+        },
+        time: { created: 1700000000000, completed: 1700000001000 },
+      }),
+    )
 
     const marker = path.join(Global.Path.data, "json-migration-bootstrap.db")
+    const pending = marker + ".json-migration"
     const previous = Flag.KILO_DB
     Flag.KILO_DB = marker
     try {
       await JsonMigration.bootstrap()
       expect(await Bun.file(marker).exists()).toBe(true)
+      expect(await Bun.file(pending).exists()).toBe(false)
       const sqlite = new Database(marker)
       const migrated = drizzle({ client: sqlite })
       expect(migrated.select().from(ProjectTable).all()).toHaveLength(1)
+      expect(migrated.select().from(SessionTable).get()).toMatchObject({
+        cost: 1.25,
+        tokens_input: 10,
+        tokens_output: 20,
+        tokens_reasoning: 3,
+        tokens_cache_read: 4,
+        tokens_cache_write: 5,
+      })
       sqlite.close()
 
       await JsonMigration.bootstrap()
@@ -506,7 +531,41 @@ describe("JSON to SQLite migration", () => {
       reopened.close()
     } finally {
       Flag.KILO_DB = previous
-      await Promise.all([marker, marker + "-shm", marker + "-wal"].map(cleanup))
+      await Promise.all([marker, marker + "-shm", marker + "-wal", pending].map(cleanup))
+    }
+  })
+
+  test("retries bootstrap after a partial import", async () => {
+    await writeProject(storageDir, {
+      id: "proj_test123abc",
+      worktree: "/test/path",
+      vcs: "git",
+      sandboxes: [],
+    })
+    const broken = path.join(storageDir, "project", "proj_retry.json")
+    await Bun.write(broken, "{ invalid json")
+
+    const marker = path.join(Global.Path.data, "json-migration-retry.db")
+    const pending = marker + ".json-migration"
+    const previous = Flag.KILO_DB
+    Flag.KILO_DB = marker
+    try {
+      await JsonMigration.bootstrap()
+      expect(await Bun.file(pending).exists()).toBe(true)
+
+      await Bun.write(
+        broken,
+        JSON.stringify({ id: "proj_retry", worktree: "/retry", vcs: "git", sandboxes: [] }),
+      )
+      await JsonMigration.bootstrap()
+      expect(await Bun.file(pending).exists()).toBe(false)
+
+      const sqlite = new Database(marker)
+      expect(drizzle({ client: sqlite }).select().from(ProjectTable).all()).toHaveLength(2)
+      sqlite.close()
+    } finally {
+      Flag.KILO_DB = previous
+      await Promise.all([marker, marker + "-shm", marker + "-wal", pending].map(cleanup))
     }
   })
 

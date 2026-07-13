@@ -19596,7 +19596,7 @@
     },
     "/api/health": {
       "get": {
-        "tags": ["opencode experimental HttpApi"],
+        "tags": ["kilo experimental HttpApi"],
         "operationId": "v2.health.get",
         "parameters": [],
         "security": [],
@@ -19652,7 +19652,7 @@
     },
     "/api/agent": {
       "get": {
-        "tags": ["opencode experimental HttpApi"],
+        "tags": ["kilo experimental HttpApi"],
         "operationId": "v2.agent.list",
         "parameters": [
           {
@@ -41518,11 +41518,11 @@
       "description": "Kilo memory routes."
     },
     {
-      "name": "opencode experimental HttpApi",
+      "name": "kilo experimental HttpApi",
       "description": "Experimental HttpApi surface for selected instance routes."
     },
     {
-      "name": "opencode experimental HttpApi",
+      "name": "kilo experimental HttpApi",
       "description": "Experimental HttpApi surface for selected instance routes."
     },
     {
