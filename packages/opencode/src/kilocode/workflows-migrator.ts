@@ -1,8 +1,8 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
-import type { Config } from "../config/config"
 import type { ConfigCommand } from "../config/command"
+import { InvalidError } from "../config/error"
 import { Filesystem } from "../util/filesystem"
 import { KilocodeMarkdown } from "./config/markdown"
 import { KilocodePaths } from "./paths"
@@ -55,12 +55,30 @@ export namespace WorkflowsMigrator {
     return undefined
   }
 
-  async function loadWorkflowsFromDir(dir: string, source: "global" | "project"): Promise<KilocodeWorkflow[]> {
+  async function loadWorkflowsFromDir(
+    dir: string,
+    source: "global" | "project",
+    root?: string,
+    warnings: string[] = [],
+  ): Promise<KilocodeWorkflow[]> {
     if (!(await Filesystem.isDir(dir))) return []
     const files = await findWorkflowFiles(dir)
     const workflows: KilocodeWorkflow[] = []
     for (const file of files) {
-      const content = await KilocodeMarkdown.substitute(await fs.readFile(file, "utf-8"), file)
+      const options = {
+        trusted: source === "global",
+        fileScope: source === "project" && root ? { root, source: file } : undefined,
+      }
+      const content = await KilocodeMarkdown.read(file, options)
+        .then((text) => KilocodeMarkdown.substitute(text, file, options))
+        .catch((err) => {
+          const message = InvalidError.isInstance(err) ? err.data.message : undefined
+          warnings.push(
+            `Skipped workflow '${extractNameFromFilename(file)}': ${message ?? (err instanceof Error ? err.message : String(err))}`,
+          )
+          return undefined
+        })
+      if (content === undefined) continue
       workflows.push({
         name: extractNameFromFilename(file),
         path: file,
@@ -71,23 +89,27 @@ export namespace WorkflowsMigrator {
     return workflows
   }
 
-  export async function discoverWorkflows(projectDir: string, skipGlobalPaths?: boolean): Promise<KilocodeWorkflow[]> {
+  export async function discoverWorkflows(
+    projectDir: string,
+    skipGlobalPaths?: boolean,
+    warnings: string[] = [],
+  ): Promise<KilocodeWorkflow[]> {
     const workflows: KilocodeWorkflow[] = []
 
     if (!skipGlobalPaths) {
       // 1. VSCode extension global storage (primary location for global workflows)
       const vscodeWorkflowsDir = path.join(KilocodePaths.vscodeGlobalStorage(), "workflows")
-      workflows.push(...(await loadWorkflowsFromDir(vscodeWorkflowsDir, "global")))
+      workflows.push(...(await loadWorkflowsFromDir(vscodeWorkflowsDir, "global", undefined, warnings)))
 
       // 2. Home directories ~/.kilocode/workflows and ~/.kilo/workflows
       for (const dir of globalWorkflowsDirs()) {
-        workflows.push(...(await loadWorkflowsFromDir(dir, "global")))
+        workflows.push(...(await loadWorkflowsFromDir(dir, "global", undefined, warnings)))
       }
     }
 
     // 3. Project workflows (.kilo/workflows/ and .kilocode/workflows/)
     for (const dir of KILO_WORKFLOWS_DIRS) {
-      workflows.push(...(await loadWorkflowsFromDir(path.join(projectDir, dir), "project")))
+      workflows.push(...(await loadWorkflowsFromDir(path.join(projectDir, dir), "project", projectDir, warnings)))
     }
 
     return workflows
@@ -108,7 +130,7 @@ export namespace WorkflowsMigrator {
     const warnings: string[] = []
     const commands: Record<string, ConfigCommand.Info> = {}
 
-    const workflows = await discoverWorkflows(options.projectDir, options.skipGlobalPaths)
+    const workflows = await discoverWorkflows(options.projectDir, options.skipGlobalPaths, warnings)
 
     // Deduplicate by name (project takes precedence over global)
     const workflowsByName = new Map<string, KilocodeWorkflow>()

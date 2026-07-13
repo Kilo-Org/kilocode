@@ -208,8 +208,8 @@ export namespace KilocodeConfigOverlay {
     if (!dir) return input
     if (!existsSync(dir)) return withAgents(input, rest, trusted, warnings, root)
     const fileScope = trusted || !root ? undefined : { root, source: dir }
-    const agent = await ConfigAgent.load(dir, warnings, trusted, fileScope)
-    const mode = await ConfigAgent.loadMode(dir, warnings)
+    const agent = await ConfigAgent.load(dir, warnings, trusted, fileScope, fileScope)
+    const mode = await ConfigAgent.loadMode(dir, warnings, trusted, fileScope, fileScope)
     const next = KilocodeConfig.mergeConfig(KilocodeConfig.mergeConfig(input, { agent }), { agent: mode })
     return withAgents(next, rest, trusted, warnings, root)
   }

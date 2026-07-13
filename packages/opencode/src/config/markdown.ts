@@ -104,13 +104,16 @@ function isDuplicateKeyError(err: unknown): boolean {
 // kilocode_change end
 
 // kilocode_change start - expose structured errors while substituting content and retrying invalid frontmatter
-export async function parse(filePath: string) {
-  const template = await Filesystem.readText(filePath)
+// kilocode_change - accept source trust and confine untrusted markdown source reads
+export async function parse(filePath: string, options: KilocodeMarkdown.Options) {
+  const template = options.trusted
+    ? await Filesystem.readText(filePath)
+    : await KilocodeMarkdown.read(filePath, options)
 
   // substitute content and retry invalid frontmatter with permissive sanitization
   try {
     const md = matter(template)
-    md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
+    md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
     return md
   } catch (err) {
     // Duplicate keys are a real configuration error; do not paper over them with the permissive fallback.
@@ -126,7 +129,7 @@ export async function parse(filePath: string) {
     try {
       // Passing options bypasses gray-matter's cache, which retains the partial file from the failed first parse.
       const md = matter(fallbackSanitization(template), {})
-      md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
+      md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
       return md
     } catch (fallbackErr) {
       throw new FrontmatterError(

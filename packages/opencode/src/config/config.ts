@@ -55,6 +55,7 @@ import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
 import { SandboxConfig } from "@/kilocode/sandbox/config"
+import type { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
@@ -444,6 +445,10 @@ export type Info = DeepMutable<Schema.Schema.Type<typeof Info>> & {
   // plugin_origins is derived state, not a persisted config field. It keeps each winning plugin spec together
   // with the file and scope it came from so later runtime code can make location-sensitive decisions.
   plugin_origins?: ConfigPlugin.Origin[]
+  // kilocode_change start - derived provenance for markdown paths selected by config
+  instruction_origins?: Record<string, KilocodeMarkdown.Source>
+  skill_path_origins?: Record<string, KilocodeMarkdown.Source>
+  // kilocode_change end
 }
 
 type State = {
@@ -523,7 +528,14 @@ function patchJsonc(input: string, patch: unknown, path: string[] = []): string 
 }
 
 function writable(info: Info) {
-  const { plugin_origins: _plugin_origins, ...next } = info
+  // kilocode_change start - derived provenance is runtime-only and must never be persisted
+  const {
+    plugin_origins: _plugin_origins,
+    instruction_origins: _instruction_origins,
+    skill_path_origins: _skill_path_origins,
+    ...next
+  } = info
+  // kilocode_change end
   return next
 }
 
@@ -731,6 +743,14 @@ export const layer = Layer.effect(
           }),
         )
         result = mergeConfigConcatArrays(result, legacy.config)
+        // Legacy rules are discovered from fixed global/project directories, so their paths safely identify the
+        // source boundary even though the migrator returns them as one merged instruction list.
+        result.instruction_origins = Object.fromEntries(
+          (legacy.config.instructions ?? []).map((item) => {
+            const trusted = !containsPath(item, ctx)
+            return [item, { trusted, source: item, root: trusted ? undefined : projectRoot }]
+          }),
+        )
         warnings.push(...legacy.warnings)
 
         const orgModes = yield* Effect.promise(() => KilocodeConfig.loadOrganizationModes(auth))
@@ -773,10 +793,36 @@ export const layer = Layer.effect(
         })
 
         // kilocode_change start
-        const merge = Effect.fnUntraced(function* (source: string, next: Info, kind?: ConfigPlugin.Scope) {
+        const origins = (
+          prev: Record<string, KilocodeMarkdown.Source> | undefined,
+          values: readonly string[],
+          trusted: boolean,
+          source: string,
+        ) => {
+          const result = { ...prev }
+          for (const value of values) {
+            if (result[value]?.trusted) continue
+            result[value] = { trusted, source, root: trusted ? undefined : projectRoot }
+          }
+          return result
+        }
+
+        const merge = Effect.fnUntraced(function* (
+          source: string,
+          next: Info,
+          kind?: ConfigPlugin.Scope,
+          sourceTrusted?: boolean,
+        ) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
+          const trusted = sourceTrusted ?? scope === "global"
           const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
+          if (next.instructions?.length) {
+            result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
+          }
+          if (next.skills?.paths?.length) {
+            result.skill_path_origins = origins(result.skill_path_origins, next.skills.paths, trusted, source)
+          }
           return yield* mergePluginOrigins(source, scoped.plugin, scope)
         })
         // kilocode_change end
@@ -861,6 +907,8 @@ export const layer = Layer.effect(
                 return Effect.succeed({} as Info)
               }),
             ),
+            undefined,
+            true,
           )
           // kilocode_change end
           log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
@@ -911,9 +959,12 @@ export const layer = Layer.effect(
           const scope = primarySet.has(dir) ? "local" : undefined
           // kilocode_change - trust {file:}/{env:} only for global-scoped config dirs, never project ones
           const dirScope = scope ?? (yield* pluginScopeForSource(dir))
-          const dirTrusted = dirScope === "global"
+          const dirTrusted = dir === Flag.KILO_CONFIG_DIR || dirScope === "global"
           // kilocode_change - untrusted config dirs confine {file:} reads to projectRoot
           const dirFileScope = dirTrusted ? undefined : { root: projectRoot, source: dir }
+          const dirSourceScope = dirTrusted
+            ? undefined
+            : { root: primarySet.has(dir) ? path.dirname(dir) : projectRoot, source: dir }
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
             for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
               const source = path.join(dir, file)
@@ -929,7 +980,8 @@ export const layer = Layer.effect(
                     return Effect.succeed({} as Info)
                   }),
                 ),
-                dirScope, // kilocode_change
+                dirScope,
+                dirTrusted,
               )
               result.agent ??= {}
               result.mode ??= {}
@@ -966,13 +1018,16 @@ export const layer = Layer.effect(
           // kilocode_change start - propagate parse errors to the Warning accumulator
           result.command = mergeDeep(
             result.command ?? {},
-            yield* Effect.promise(() => ConfigCommand.load(dir, warnings)),
+            yield* Effect.promise(() => ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
           )
           result.agent = mergeDeep(
             result.agent ?? {},
-            yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope)), // kilocode_change
+            yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
           )
-          result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings)))
+          result.agent = mergeDeep(
+            result.agent ?? {},
+            yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
+          )
           // kilocode_change end
           // kilocode_change - Auto-discovered plugins under config directories are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
@@ -1001,6 +1056,7 @@ export const layer = Layer.effect(
               }),
             ),
             "local",
+            true,
           )
           // kilocode_change end
         }
