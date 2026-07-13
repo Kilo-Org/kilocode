@@ -94,17 +94,9 @@ export namespace KilocodeConfig {
     const before = source ?? "{}"
     const patch = input.writable(input.config)
 
-    if (file.endsWith(".jsonc")) {
-      if (source === undefined && Object.keys(mergeConfig({}, patch)).length === 0) return
-      const updated = input.patch(before, patch)
-      yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
-      return
-    }
-
-    const existing = input.parse(before, file)
-    const merged = mergeConfig(input.writable(existing), patch)
-    if (source === undefined && Object.keys(merged).length === 0) return
-    yield* input.fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+    if (source === undefined && Object.keys(mergeConfig({}, patch)).length === 0) return
+    const updated = input.patch(before, patch)
+    yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
   })
 
   export function scopeIndexing(info: Config.Info, scope: "global" | "local"): Config.Info {

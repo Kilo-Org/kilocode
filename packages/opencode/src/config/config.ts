@@ -489,7 +489,15 @@ function globalConfigFile() {
 
 function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
   if (!isRecord(patch)) {
-    const edits = modify(input, path, patch === null ? undefined : patch, {
+    // kilocode_change start - deleting an absent JSONC node is a no-op.
+    const value = patch === null ? undefined : patch
+    if (value === undefined && path.length > 0) {
+      const tree = parseTree(input)
+      const node = tree ? findNodeAtLocation(tree, path) : undefined
+      if (node === undefined) return input
+    }
+    // kilocode_change end
+    const edits = modify(input, path, value, {
       // kilocode_change
       formattingOptions: {
         insertSpaces: true,
@@ -1219,21 +1227,12 @@ export const layer = Layer.effect(
       const before = (yield* readConfigFile(file)) ?? "{}"
       const patch = writableGlobal(config)
 
-      let next: Info
-      let changed: boolean
-      if (!file.endsWith(".jsonc")) {
-        const existing = ConfigParse.schema(Info, ConfigParse.jsonc(before, file), file)
-        const merged = KilocodeConfig.mergeConfig(writable(existing), patch) // kilocode_change
-        const serialized = JSON.stringify(merged, null, 2)
-        changed = serialized !== before
-        if (changed) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
-        next = merged
-      } else {
-        const updated = patchJsonc(before, patch)
-        next = ConfigParse.schema(Info, ConfigParse.jsonc(updated, file), file)
-        changed = updated !== before
-        if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
-      }
+      // kilocode_change start - patch plain JSON with the same JSONC-aware path so nested unknown keys survive saves.
+      const updated = patchJsonc(before, patch)
+      const next = ConfigParse.schema(Info, ConfigParse.jsonc(updated, file), file)
+      const changed = updated !== before
+      if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
+      // kilocode_change end
 
       // kilocode_change start - skip dispose when caller opts out
       if (!dispose) {
