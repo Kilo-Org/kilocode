@@ -74,6 +74,7 @@ export namespace KilocodeConfigOverlay {
   }
 
   const files = KilocodeConfig.CONFIG_LOAD_ORDER
+  const targetFiles = KilocodeConfig.ALL_CONFIG_FILES
   const dirs = [".kilocode", ".kilo"] as const
 
   const fieldPaths = [
@@ -130,8 +131,8 @@ export namespace KilocodeConfigOverlay {
 
   export async function projectTarget(input: { directory: string; worktree?: string }) {
     const found = await Filesystem.findUp(dirs.toReversed(), input.directory, input.worktree)
-    const roots = await Filesystem.findUp([...files], input.directory, input.worktree)
-    const candidates = [...found.flatMap((dir) => files.map((file) => path.join(dir, file))), ...roots]
+    const roots = await Filesystem.findUp([...targetFiles], input.directory, input.worktree)
+    const candidates = [...found.flatMap((dir) => targetFiles.map((file) => path.join(dir, file))), ...roots]
     return candidates.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
   }
 
