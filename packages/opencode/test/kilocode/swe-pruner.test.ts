@@ -84,10 +84,17 @@ describe("SwePruner.prunable", () => {
 })
 
 describe("SwePruner.enabled", () => {
-  test("requires the experimental feature flag", () => {
+  test("is enabled by default but permits explicit opt-out", () => {
+    expect(SwePruner.enabled({})).toBe(true)
     expect(SwePruner.enabled({ experimental: { swe_pruner: true } })).toBe(true)
     expect(SwePruner.enabled({ experimental: { swe_pruner: false } })).toBe(false)
-    expect(SwePruner.enabled({})).toBe(false)
+  })
+})
+
+describe("SwePruner.model", () => {
+  test("defaults to DeepSeek V4 Flash but permits an explicit override", () => {
+    expect(SwePruner.model({})).toBe("kilo/deepseek/deepseek-v4-flash")
+    expect(SwePruner.model({ experimental: { swe_pruner_model: "custom/model" } })).toBe("custom/model")
   })
 })
 

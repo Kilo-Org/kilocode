@@ -420,11 +420,11 @@ export const Info = Schema.Struct({
       // kilocode_change start
       swe_pruner: Schema.optional(Schema.Boolean).annotate({
         description:
-          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: false)",
+          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: true; set to false to opt out)",
       }),
       swe_pruner_model: Schema.optional(Schema.String).annotate({
         description:
-          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: the configured small model)',
+          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: kilo/deepseek/deepseek-v4-flash)',
       }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({

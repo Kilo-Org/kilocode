@@ -23,6 +23,7 @@ const log = Log.create({ service: "swe-pruner" })
 
 export const PARAMETER = "context_focus_question"
 
+const DEFAULT_MODEL = "kilo/deepseek/deepseek-v4-flash"
 const TOOLS = new Set(["read", "grep", "bash"])
 const MIN_LINES = 50
 const MIN_CHARS = 2_000
@@ -58,7 +59,11 @@ const INSTRUCTION = [
 ].join(" ")
 
 export function enabled(cfg: Config.Info) {
-  return cfg.experimental?.swe_pruner === true
+  return cfg.experimental?.swe_pruner ?? true
+}
+
+export function model(cfg: Config.Info) {
+  return cfg.experimental?.swe_pruner_model ?? DEFAULT_MODEL
 }
 
 export function prunable(tool: string) {
@@ -168,15 +173,13 @@ const resolve = Effect.fn("SwePruner.resolve")(function* () {
   const provider = yield* Provider.Service
   const config = yield* Config.Service
   const cfg = yield* config.get()
-  const configured = cfg.experimental?.swe_pruner_model
-  if (configured) {
-    const parsed = Provider.parseModel(configured)
-    const model = yield* provider
-      .getModel(parsed.providerID, parsed.modelID)
-      .pipe(Effect.catch(() => Effect.succeed(undefined)))
-    if (model) return model
-    log.warn("configured model unavailable, falling back to small model", { model: configured })
-  }
+  const configured = model(cfg)
+  const parsed = Provider.parseModel(configured)
+  const found = yield* provider
+    .getModel(parsed.providerID, parsed.modelID)
+    .pipe(Effect.catch(() => Effect.succeed(undefined)))
+  if (found) return found
+  log.warn("configured model unavailable, falling back to small model", { model: configured })
   const ref = yield* provider.defaultModel()
   return (yield* provider.getSmallModel(ref.providerID)) ?? (yield* provider.getModel(ref.providerID, ref.modelID))
 })
