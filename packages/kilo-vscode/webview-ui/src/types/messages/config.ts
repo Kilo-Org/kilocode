@@ -56,6 +56,7 @@ export interface SandboxConfig {
   enabled?: boolean
   network?: "allow" | "deny"
   writable_paths?: string[]
+  allowed_hosts?: string[]
 }
 
 export interface CommitMessageConfig {

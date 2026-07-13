@@ -9,6 +9,7 @@ import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
@@ -59,6 +60,8 @@ import { decodeDataUrl } from "@/util/data-url"
 import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
 import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
+import { InstanceRef } from "@/effect/instance-ref"
+import { Instance } from "@/kilocode/instance"
 import { EffectBridge } from "@/effect/bridge"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
@@ -825,6 +828,13 @@ export const layer = Layer.effect(
         id: part.id ? PartID.make(part.id) : PartID.ascending(),
       })
 
+      // kilocode_change start
+      const networkRestricted = yield* SandboxPolicy.networkRestricted(input.sessionID).pipe(
+        Effect.provideService(Config.Service, config),
+        Effect.provideService(Database.Service, database),
+        Effect.provideService(InstanceRef, Instance.current),
+      )
+      // kilocode_change end
       const resolvePart: (part: PromptInput["parts"][number]) => Effect.Effect<Draft<SessionV1.Part>[]> = Effect.fn(
         "SessionPrompt.resolveUserPart",
       )(function* (part) {
@@ -841,7 +851,12 @@ export const layer = Layer.effect(
                 text: `Reading MCP resource: ${part.filename} (${uri})`,
               },
             ]
-            const exit = yield* mcp.readResource(clientName, uri).pipe(Effect.exit)
+            // kilocode_change start
+            const exit = yield* (networkRestricted
+              ? Effect.fail(new Error("Sandbox denied MCP resource access"))
+              : mcp.readResource(clientName, uri)
+            ).pipe(Effect.exit)
+            // kilocode_change end
             if (Exit.isSuccess(exit)) {
               const content = exit.value
               if (!content) throw new Error(`Resource not found: ${clientName}/${uri}`)
@@ -1585,6 +1600,7 @@ export const layer = Layer.effect(
             // kilocode_change start - SWE-Pruner (experimental)
             Effect.provideService(Config.Service, config),
             Effect.provideService(Provider.Service, provider),
+            Effect.provideService(Database.Service, database),
             // kilocode_change end
           )
 

@@ -332,3 +332,38 @@
   display: inline-flex;
   align-items: center;
 }
+
+/* ============================================
+   Search Active Match Highlight
+   ============================================ */
+
+.vscode-session-turn[data-search-active] {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: -2px;
+  border-radius: 4px;
+  animation: search-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes search-pulse {
+  0%,
+  100% {
+    outline-color: var(--vscode-focusBorder);
+  }
+  50% {
+    outline-color: color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
+  }
+}
+
+/* Occurrence-level highlights painted via the CSS Custom Highlight API (see
+   transcript-search-highlight.ts). Falls back to no visual effect in engines
+   without ::highlight() support — row-level scroll navigation still works.
+   Uses VS Code's own editor find-match theme colors so this matches
+   whatever color scheme the user has configured, rather than a fixed
+   palette that can clash with some themes. */
+::highlight(kilo-transcript-search-match) {
+  background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 190, 0, 0.35));
+}
+
+::highlight(kilo-transcript-search-match-active) {
+  background-color: var(--vscode-editor-findMatchBackground, rgba(255, 165, 0, 0.65));
+}

@@ -255,17 +255,32 @@ describe("kilocode sandbox config", () => {
     try {
       await writeConfig(globalTmp.path, {
         $schema: "https://app.kilo.ai/config.json",
-        sandbox: { enabled: true, network: "deny", writable_paths: ["/tmp/global"] },
+        sandbox: {
+          enabled: true,
+          network: "deny",
+          writable_paths: ["/tmp/global"],
+          allowed_hosts: ["api.github.com"],
+        },
       })
       await writeConfig(tmp.path, {
-        sandbox: { enabled: false, network: "allow", writable_paths: ["/tmp/project"] },
+        sandbox: {
+          enabled: false,
+          network: "allow",
+          writable_paths: ["/tmp/project"],
+          allowed_hosts: ["evil.example"],
+        },
       })
 
       await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const config = await load()
-          expect(config.sandbox).toEqual({ enabled: true, network: "deny", writable_paths: ["/tmp/global"] })
+          expect(config.sandbox).toEqual({
+            enabled: true,
+            network: "deny",
+            writable_paths: ["/tmp/global"],
+            allowed_hosts: ["api.github.com"],
+          })
         },
       })
     } finally {
@@ -286,17 +301,32 @@ describe("kilocode sandbox config", () => {
 
     try {
       await writeConfig(globalTmp.path, {
-        sandbox: { enabled: false, network: "allow", writable_paths: ["/tmp/global"] },
+        sandbox: {
+          enabled: false,
+          network: "allow",
+          writable_paths: ["/tmp/global"],
+          allowed_hosts: ["api.github.com"],
+        },
       })
       await writeConfig(tmp.path, {
-        sandbox: { enabled: true, network: "deny", writable_paths: ["/tmp/project"] },
+        sandbox: {
+          enabled: true,
+          network: "deny",
+          writable_paths: ["/tmp/project"],
+          allowed_hosts: ["evil.example"],
+        },
       })
 
       await provideTestInstance({
         directory: tmp.path,
         fn: async () => {
           const config = await load()
-          expect(config.sandbox).toEqual({ enabled: true, network: "deny", writable_paths: ["/tmp/global"] })
+          expect(config.sandbox).toEqual({
+            enabled: true,
+            network: "deny",
+            writable_paths: ["/tmp/global"],
+            allowed_hosts: [],
+          })
         },
       })
     } finally {

@@ -1433,8 +1433,11 @@ export const dict = {
   "settings.sandboxing.title": "샌드박스",
   "settings.sandboxing.network.title": "네트워크 액세스 제한",
   "settings.sandboxing.network.description":
-    "모델이 실행한 명령과 HTTP 도구의 아웃바운드 네트워크 액세스를 차단합니다. 로컬 MCP 서버와 플러그인 훅에는 이 제한이 적용되지 않습니다. 공급자 및 모델 추론 트래픽은 계속 사용할 수 있습니다.",
+    "모델에서 시작된 명령 및 HTTP 도구의 직접적인 아웃바운드 액세스를 차단합니다. 제한이 적용되는 동안 로컬 및 원격 MCP 도구를 사용할 수 없습니다. 공급자 트래픽과 신뢰할 수 있는 플러그인 후크는 이 제한의 적용 대상이 아닙니다.",
 
+  "settings.sandboxing.allowedHosts.title": "허용된 네트워크 대상",
+  "settings.sandboxing.allowedHosts.description":
+    "샌드박스 처리된 HTTP 및 HTTPS 프록시 트래픽의 DNS 호스트 및 포트 대상입니다. GitHub CLI 및 HTTPS Git에는 일반적으로 github.com:443 및 api.github.com:443가 필요합니다. 변경 사항은 새 세션에 적용됩니다.",
   "settings.sandboxing.writablePaths.title": "추가 쓰기 가능 경로",
   "settings.sandboxing.writablePaths.description":
     "샌드박스에서 쓰기를 허용하는 추가 파일시스템 경로(예: /tmp, /var/log). 샌드박스가 활성화되면 기본 쓰기 가능 경로와 병합됩니다.",
@@ -1840,4 +1843,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "브랜치 로딩 중…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "계획이 준비되었습니다:",
+  "chat.search.placeholder": "채팅 검색…",
+  "chat.search.toggle": "채팅 검색",
+  "chat.search.matchCase": "대/소문자 구분",
+  "chat.search.matchWholeWord": "단어 단위로 검색",
+  "chat.search.useRegex": "정규식 사용",
+  "chat.search.previousMatch": "이전 검색 결과",
+  "chat.search.nextMatch": "다음 검색 결과",
+  "chat.search.close": "검색 닫기",
+  "chat.search.invalidRegex": "정규식이 잘못되었습니다",
+  "chat.search.noResults": "검색 결과 없음",
+  "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
 }

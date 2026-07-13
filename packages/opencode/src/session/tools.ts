@@ -140,7 +140,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  for (const [key, item] of Object.entries(yield* mcp.tools())) {
+  const mcpTools = (yield* SandboxPolicy.networkRestricted(input.session.id)) ? {} : yield* mcp.tools() // kilocode_change
+  for (const [key, item] of Object.entries(mcpTools)) { // kilocode_change
     const execute = item.execute
     if (!execute) continue
 

@@ -26232,6 +26232,13 @@
                   "type": "string"
                 },
                 "description": "Additional filesystem paths that sandboxed tools may write to"
+              },
+              "allowed_hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Exact network destinations sandboxed tools may access while network restriction is enabled"
               }
             },
             "additionalProperties": false,

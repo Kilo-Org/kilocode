@@ -1,5 +1,8 @@
+import fs from "node:fs/promises"
+import path from "node:path"
+import { $ } from "bun"
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Deferred, Effect, Exit, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionV2 } from "@opencode-ai/core/session"
@@ -8,9 +11,14 @@ import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { BackgroundProcess } from "@/kilocode/background-process"
+import { Notebook } from "@/kilocode/notebook/service"
+import * as SandboxActivation from "@/kilocode/sandbox/activation"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { SandboxStore } from "@/kilocode/sandbox/store"
 import { Session } from "@/session/session"
+import { SessionStatus } from "@/session/status"
+import { Shell } from "@/shell/shell"
 import { Storage } from "@/storage/storage"
 import { SyncEvent } from "@/sync"
 import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
@@ -28,13 +36,63 @@ const it = testEffect(
       Layer.provide(EventV2Bridge.defaultLayer),
       Layer.provide(SessionV2.defaultLayer),
     ),
+    BackgroundJob.defaultLayer,
     Bus.layer,
     Config.defaultLayer,
     Database.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     testInstanceStoreLayer,
+    Notebook.defaultLayer,
+    SessionStatus.defaultLayer,
   ),
 )
+
+function quote(input: string) {
+  const value = input.replaceAll("\\", "/")
+  if (process.platform === "win32") return `"${value.replaceAll('"', '""')}"`
+  return `'${value.replaceAll("'", "'\\''")}'`
+}
+
+async function script(dir: string) {
+  const file = path.join(dir, "sandbox-parent-process.mjs")
+  await Bun.write(file, `console.log("ready")\nsetInterval(() => {}, 1_000)\n`)
+  const bin = quote(process.execPath)
+  const arg = quote(file)
+  if (Shell.ps(Shell.acceptable())) return `& ${bin} ${arg}`
+  return `${bin} ${arg}`
+}
+
+function linked(root: string) {
+  return Effect.gen(function* () {
+    const dir = path.join(path.dirname(root), path.basename(root) + "-sandbox-worktree")
+    yield* Effect.addFinalizer(() =>
+      Effect.promise(async () => {
+        await $`git worktree remove --force ${dir}`.cwd(root).quiet().nothrow()
+        await fs.rm(dir, { recursive: true, force: true })
+      }),
+    )
+    yield* Effect.promise(() =>
+      $`git worktree add --quiet -b sandbox-activation-${Date.now()} ${dir} HEAD`.cwd(root).quiet(),
+    )
+    return dir
+  })
+}
+
+function activate(sessionID: Session.Info["id"]) {
+  const check = (family: readonly SandboxPolicy.Target[]) =>
+    Effect.gen(function* () {
+      if (!(yield* SandboxActivation.idle(sessionID, family))) yield* Effect.fail("busy")
+    })
+  return SandboxPolicy.toggleGuarded(
+    sessionID,
+    (enabling, family) =>
+      enabling
+        ? check(family).pipe(Effect.andThen(Effect.promise(() => BackgroundProcess.stopSession(sessionID))))
+        : Effect.void,
+    SandboxActivation.family(sessionID),
+    check,
+  )
+}
 
 describe("sandbox session cleanup", () => {
   it.live("forks inherit the source session snapshot", () =>
@@ -105,6 +163,136 @@ describe("sandbox session cleanup", () => {
       yield* session.remove(info.id)
       expect(yield* Effect.promise(() => SandboxStore.read(dir, info.id))).toBeUndefined()
       expect(yield* Effect.promise(() => SandboxStore.read(worktree, info.id))).toBeUndefined()
+    }),
+  )
+})
+
+describe("sandbox activation", () => {
+  it.live("refuses activation while a background descendant is running", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const background = yield* BackgroundJob.Service
+      const dir = yield* tmpdirScoped({ git: true })
+      yield* provideInstance(dir)(
+        Effect.gen(function* () {
+          const parent = yield* sessions.create({ title: "sandbox-parent" })
+          const child = yield* sessions.create({ parentID: parent.id, title: "sandbox-child" })
+          const support = yield* SandboxPolicy.status(parent.id)
+          if (!support.available) return
+          const release = yield* Deferred.make<void>()
+          yield* background.start({
+            id: child.id,
+            type: "task",
+            metadata: { background: true, parentSessionId: parent.id, sessionId: child.id },
+            run: Deferred.await(release).pipe(Effect.as("complete")),
+          })
+
+          const result = yield* activate(parent.id).pipe(Effect.exit)
+          expect(Exit.isFailure(result)).toBe(true)
+          expect((yield* SandboxPolicy.status(parent.id)).enabled).toBe(false)
+          yield* Deferred.succeed(release, undefined)
+        }),
+      )
+    }),
+  )
+
+  it.live("activates idle descendants without relaxing disable behavior", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const dir = yield* tmpdirScoped({ git: true })
+      yield* provideInstance(dir)(
+        Effect.gen(function* () {
+          const parent = yield* sessions.create({ title: "sandbox-parent" })
+          const child = yield* sessions.create({ parentID: parent.id, title: "sandbox-child" })
+          const grandchild = yield* sessions.create({ parentID: child.id, title: "sandbox-grandchild" })
+          const support = yield* SandboxPolicy.status(parent.id)
+          if (!support.available) return
+
+          expect((yield* activate(parent.id)).enabled).toBe(true)
+          expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
+          expect((yield* SandboxPolicy.status(grandchild.id)).enabled).toBe(true)
+
+          expect((yield* activate(parent.id)).enabled).toBe(false)
+          expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
+          expect((yield* SandboxPolicy.status(grandchild.id)).enabled).toBe(true)
+        }),
+      )
+    }),
+  )
+
+  it.live("activates an idle descendant in its linked worktree", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const root = yield* tmpdirScoped({ git: true })
+      const worktree = yield* linked(root)
+      const parent = yield* provideInstance(root)(sessions.create({ title: "sandbox-parent" }))
+      const child = yield* provideInstance(worktree)(
+        sessions.create({ parentID: parent.id, title: "sandbox-worktree-child" }),
+      )
+      const support = yield* provideInstance(root)(SandboxPolicy.status(parent.id))
+      if (!support.available) return
+      expect((yield* provideInstance(worktree)(SandboxPolicy.status(child.id))).enabled).toBe(false)
+
+      const family = yield* provideInstance(root)(SandboxActivation.family(parent.id))
+      expect(family.find((target) => target.id === child.id)?.directory).toBe(worktree)
+      expect((yield* provideInstance(root)(activate(parent.id))).enabled).toBe(true)
+      expect((yield* Effect.promise(() => SandboxStore.read(worktree, child.id)))?.enabled).toBe(true)
+      expect(yield* Effect.promise(() => SandboxStore.read(root, child.id))).toBeUndefined()
+    }),
+  )
+
+  it.live("rejects linked-worktree jobs and parent-lifetime processes", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const background = yield* BackgroundJob.Service
+      const root = yield* tmpdirScoped({ git: true })
+      const worktree = yield* linked(root)
+      const parent = yield* provideInstance(root)(sessions.create({ title: "sandbox-parent" }))
+      const child = yield* provideInstance(worktree)(
+        sessions.create({ parentID: parent.id, title: "sandbox-worktree-child" }),
+      )
+      const support = yield* provideInstance(root)(SandboxPolicy.status(parent.id))
+      if (!support.available) return
+      const release = yield* Deferred.make<void>()
+      yield* provideInstance(worktree)(
+        background.start({
+          id: child.id,
+          type: "task",
+          metadata: { background: true, parentSessionId: parent.id, sessionId: child.id },
+          run: Deferred.await(release).pipe(Effect.as("complete")),
+        }),
+      )
+      expect(Exit.isFailure(yield* provideInstance(root)(activate(parent.id).pipe(Effect.exit)))).toBe(true)
+      yield* Deferred.succeed(release, undefined)
+      yield* provideInstance(worktree)(background.wait({ id: child.id }))
+
+      const command = yield* Effect.promise(() => script(worktree))
+      const process = yield* provideInstance(worktree)(
+        Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID: child.id,
+            parentID: parent.id,
+            command,
+            cwd: worktree,
+            lifetime: "parent",
+            ready: { pattern: "ready", timeout: 5_000 },
+          }),
+        ),
+      )
+      yield* Effect.addFinalizer(() =>
+        provideInstance(worktree)(Effect.promise(() => BackgroundProcess.stop(process.id))).pipe(Effect.ignore),
+      )
+
+      expect(Exit.isFailure(yield* provideInstance(root)(activate(parent.id).pipe(Effect.exit)))).toBe(true)
+      expect(Exit.isFailure(yield* provideInstance(worktree)(activate(child.id).pipe(Effect.exit)))).toBe(true)
+      const children = yield* provideInstance(worktree)(
+        Effect.promise(() => BackgroundProcess.list({ sessionID: child.id })),
+      )
+      const parents = yield* provideInstance(worktree)(
+        Effect.promise(() => BackgroundProcess.list({ sessionID: parent.id })),
+      )
+      expect(children.find((item) => item.id === process.id)?.lifetime).toBe("parent")
+      expect(parents).toEqual([])
     }),
   )
 })

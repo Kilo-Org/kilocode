@@ -18,6 +18,31 @@ type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: 
 type ModelSelectorExpandedListener = (value: boolean) => void
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
+const DRAIN_CONCURRENCY = 4
+
+async function parallel(items: string[], fn: (item: string) => Promise<void>): Promise<void> {
+  let next = 0
+  const errors = new Map<number, unknown>()
+  const worker = async () => {
+    while (errors.size === 0) {
+      const index = next++
+      if (index >= items.length) return
+      try {
+        await fn(items[index]!)
+      } catch (error) {
+        errors.set(index, error)
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(DRAIN_CONCURRENCY, items.length) }, worker))
+  if (errors.size === 0) return
+  const failures = [...errors].sort((a, b) => a[0] - b[0])
+  for (const [index, error] of failures.slice(1)) {
+    console.warn(`[Kilo New] ConnectionService: Additional prompt drain failed for ${items[index]}:`, error)
+  }
+  throw failures[0]![1]
+}
 
 function isNotFound(err: unknown) {
   if (!err || typeof err !== "object") return false
@@ -505,7 +530,8 @@ export class KiloConnectionService {
    * destructive operation.
    */
   async drainPendingPrompts(): Promise<void> {
-    if (!this.client) return
+    const client = this.client
+    if (!client) return
 
     // Only drain directories from currently-mounted providers (root + worktree dirs).
     // Previously this also called project.list() to include every historically-opened
@@ -519,26 +545,29 @@ export class KiloConnectionService {
       }
     }
 
-    for (const dir of dirs) {
-      const { data: perms, error: permsErr } = await this.client.permission.list({ directory: dir })
+    const list = [...dirs]
+    await parallel(list, async (dir) => {
+      const { data: perms, error: permsErr } = await client.permission.list({ directory: dir })
       if (permsErr) throw new Error(`Failed to list permissions for ${dir}: ${String(permsErr)}`)
       if (perms) {
         for (const perm of perms) {
-          const { error } = await this.client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
+          const { error } = await client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
           if (error && !isNotFound(error)) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
         }
       }
-      const { data: qs, error: qsErr } = await this.client.question.list({ directory: dir })
+      const { data: qs, error: qsErr } = await client.question.list({ directory: dir })
       if (qsErr) throw new Error(`Failed to list questions for ${dir}: ${String(qsErr)}`)
       if (qs) {
         for (const q of qs) {
-          const { error } = await this.client.question.reject({ requestID: q.id, directory: dir })
+          const { error } = await client.question.reject({ requestID: q.id, directory: dir })
           if (error && !isNotFound(error)) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
-      await drainSuggestions(this.client, dir)
-      await drainNetworkWaits(this.client, dir)
-    }
+    })
+
+    // Suggestions are backend-global despite the directory-bearing SDK route.
+    if (list[0]) await drainSuggestions(client, list[0])
+    await parallel(list, (dir) => drainNetworkWaits(client, dir))
     for (const listener of this.clearPendingPromptsListeners) {
       listener()
     }
