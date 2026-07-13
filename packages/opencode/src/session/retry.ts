@@ -132,13 +132,15 @@ export function policy(opts: {
   set: (input: { attempt: number; message: string; action?: Retryable["action"]; next: number }) => Effect.Effect<void>
   // kilocode_change start
   limit?: number
+  allow?: (error: unknown) => boolean | undefined
   offline?: (input: { error: unknown; message: string }) => Effect.Effect<"retry" | "blocked" | "aborted">
   // kilocode_change end
 }) {
   return Schedule.fromStepWithMetadata(
     Effect.succeed((meta: Schedule.InputMetadata<unknown>) => {
       // kilocode_change start — enforce retry limit
-      if (opts.limit !== undefined && meta.attempt > opts.limit) {
+      const allowed = opts.allow?.(meta.input)
+      if (allowed === false || (allowed !== true && opts.limit !== undefined && meta.attempt > opts.limit)) {
         return Cause.done(meta.attempt)
       }
       // kilocode_change end

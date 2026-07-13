@@ -144,6 +144,86 @@ afterEach(() => {
 
 describe("session processor retry limit", () => {
   it.live(
+    "retries missing finish reasons three times and then stops",
+    () =>
+      provideTmpdirInstance(
+        (dir) =>
+          Effect.gen(function* () {
+            process.env.KILO_SESSION_RETRY_LIMIT = "2"
+            const test = yield* TestLLM
+            const processors = yield* SessionProcessor.Service
+            const session = yield* Session.Service
+
+            yield* test.push(Stream.empty)
+            yield* test.push(Stream.empty)
+            yield* test.push(Stream.empty)
+            yield* test.push(Stream.empty)
+            yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
+
+            const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+
+            const chat = yield* session.create({})
+            const parent = yield* session.updateMessage({
+              id: MessageID.ascending(),
+              role: "user",
+              sessionID: chat.id,
+              agent: "code",
+              model: ref,
+              time: { created: Date.now() },
+            })
+            const msg: MessageV2.Assistant = {
+              id: MessageID.ascending(),
+              role: "assistant",
+              sessionID: chat.id,
+              parentID: parent.id,
+              mode: "code",
+              agent: "code",
+              path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+              cost: 0,
+              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              modelID: ref.modelID,
+              providerID: ref.providerID,
+              time: { created: Date.now() },
+            }
+            yield* session.updateMessage(msg)
+
+            const mdl = model()
+            const handle = yield* processors.create({
+              assistantMessage: msg,
+              sessionID: chat.id,
+              model: mdl,
+            })
+
+            const input: LLM.StreamInput = {
+              user: parent as MessageV2.User,
+              sessionID: chat.id,
+              model: mdl,
+              agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+              system: [],
+              messages: [],
+              tools: {},
+            }
+
+            try {
+              const result = yield* handle.process(input)
+              const calls = yield* test.calls
+
+              expect(result).toBe("stop")
+              expect(calls).toBe(4)
+              expect(handle.message.finish).toBe("unknown")
+              expect(handle.message.error).toMatchObject({
+                data: { message: "Response ended without a finish reason and may be incomplete." },
+              })
+            } finally {
+              delay.mockRestore()
+            }
+          }),
+        { git: true },
+      ),
+    15000,
+  )
+
+  it.live(
     "stops after two retries with the normalized retryable error",
     () =>
       provideTmpdirInstance(

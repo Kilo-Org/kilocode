@@ -4,6 +4,7 @@ import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { MessageV2 } from "@/session/message-v2"
+import type { ProviderID } from "@/provider/schema"
 import { isRecord } from "@/util/record"
 import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
@@ -20,6 +21,14 @@ export type ReviewTelemetry = {
 
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })
+  export const MISSING_FINISH_RETRIES = 3
+  export const MISSING_FINISH_MESSAGE = "Response ended without a finish reason and may be incomplete."
+  export class MissingFinishError extends Error {
+    constructor() {
+      super(MISSING_FINISH_MESSAGE)
+      this.name = "MissingFinishError"
+    }
+  }
   export const OUTPUT_LENGTH_WARNING = "The model hit its output limit, so this response may be incomplete."
   export const REASONING_LENGTH_WARNING =
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
@@ -173,8 +182,14 @@ export namespace KiloSessionProcessor {
     abort: AbortSignal
     set: (sessionID: SessionID, status: SessionStatus.Info) => Effect.Effect<void>
   }) {
+    let missing = 0
     return {
       limit: Flag.KILO_SESSION_RETRY_LIMIT,
+      allow: (error: unknown) => {
+        if (!(error instanceof MissingFinishError)) return
+        missing++
+        return missing <= MISSING_FINISH_RETRIES
+      },
       offline: (info: { error: unknown; message: string }) =>
         handleOffline({
           error: info.error,
@@ -183,6 +198,20 @@ export namespace KiloSessionProcessor {
           set: input.set,
         }),
     }
+  }
+
+  export function ensureFinish(msg: MessageV2.Assistant) {
+    if (msg.finish && msg.finish !== "unknown") return Effect.void
+    msg.finish = "unknown"
+    return Effect.fail(new MissingFinishError())
+  }
+
+  export function parseError(error: unknown, input: { providerID: ProviderID; aborted: boolean }) {
+    if (!(error instanceof MissingFinishError)) return MessageV2.fromError(error, input)
+    return new MessageV2.APIError({
+      message: error.message,
+      isRetryable: true,
+    }).toObject()
   }
 
   /**
