@@ -105,7 +105,7 @@ describe("markdown substitutions", () => {
       },
     })
 
-    const md = await ConfigMarkdown.parse(path.join(tmp.path, "SKILL.md"))
+    const md = await ConfigMarkdown.parse(path.join(tmp.path, "SKILL.md"), { trusted: true })
 
     expect(md.content).toContain("file content")
     expect(md.content).toContain("env content")
