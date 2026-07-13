@@ -1367,8 +1367,11 @@ export const dict = {
   "settings.sandboxing.title": "沙盒",
   "settings.sandboxing.network.title": "限制網路存取",
   "settings.sandboxing.network.description":
-    "封鎖模型發起的命令和 HTTP 工具的對外網路存取。本機 MCP 伺服器和外掛程式鉤子不受此限制。供應商與模型推論流量仍然可用。",
+    "阻止由模型發起的命令和 HTTP 工具直接進行對外存取。受限時，本機和遠端 MCP 工具均無法使用。提供者流量和受信任的外掛程式掛鉤不受此限制。",
 
+  "settings.sandboxing.allowedHosts.title": "允許的網路目的地",
+  "settings.sandboxing.allowedHosts.description":
+    "適用於沙盒 HTTP 和 HTTPS Proxy 流量的 DNS 主機與連接埠目標。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。變更將套用至新工作階段。",
   "settings.sandboxing.writablePaths.title": "額外可寫路徑",
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
@@ -1793,4 +1796,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "正在載入分支…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "計畫已準備就緒：",
+  "chat.search.placeholder": "搜尋聊天…",
+  "chat.search.toggle": "搜尋聊天",
+  "chat.search.matchCase": "區分大小寫",
+  "chat.search.matchWholeWord": "全字拼寫須相符",
+  "chat.search.useRegex": "使用規則運算式",
+  "chat.search.previousMatch": "上一個相符項",
+  "chat.search.nextMatch": "下一個相符項",
+  "chat.search.close": "關閉搜尋",
+  "chat.search.invalidRegex": "規則運算式無效",
+  "chat.search.noResults": "無結果",
+  "chat.search.searchingHistory": "正在搜尋較早的訊息…",
 } satisfies Partial<Record<Keys, string>>

@@ -7,6 +7,7 @@ import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
@@ -874,6 +875,11 @@ export const layer = Layer.effect(
         })
       })
 
+      // kilocode_change start
+      const networkRestricted = yield* SandboxPolicy.networkRestricted(input.sessionID).pipe(
+        Effect.provideService(Config.Service, config),
+      )
+      // kilocode_change end
       const resolvePart: (part: PromptInput["parts"][number]) => Effect.Effect<Draft<MessageV2.Part>[]> = Effect.fn(
         "SessionPrompt.resolveUserPart",
       )(function* (part) {
@@ -890,7 +896,12 @@ export const layer = Layer.effect(
                 text: `Reading MCP resource: ${part.filename} (${uri})`,
               },
             ]
-            const exit = yield* mcp.readResource(clientName, uri).pipe(Effect.exit)
+            // kilocode_change start
+            const exit = yield* (networkRestricted
+              ? Effect.fail(new Error("Sandbox denied MCP resource access"))
+              : mcp.readResource(clientName, uri)
+            ).pipe(Effect.exit)
+            // kilocode_change end
             if (Exit.isSuccess(exit)) {
               const content = exit.value
               if (!content) throw new Error(`Resource not found: ${clientName}/${uri}`)

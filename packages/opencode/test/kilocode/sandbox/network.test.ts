@@ -56,19 +56,23 @@ describe("model network boundaries", () => {
     }),
   )
 
-  it.effect("keeps local MCP tools outside remote delegated-authority policy", () =>
+  it.effect("rejects local MCP delegated authority in deny mode", () =>
     Effect.gen(function* () {
       let called = false
-      yield* run(
-        profile("deny"),
-        Network.mcp(
-          {},
-          Effect.sync(() => {
-            called = true
-          }),
+      const exit = yield* Effect.exit(
+        run(
+          profile("deny"),
+          Network.mcp(
+            {},
+            Effect.sync(() => {
+              called = true
+            }),
+          ),
         ),
       )
-      expect(called).toBe(true)
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain("local MCP delegated authority")
+      expect(called).toBe(false)
     }),
   )
 
@@ -106,6 +110,29 @@ describe("model network boundaries", () => {
       expect(called).toBe(false)
     }),
   )
+
+  for (const id of ["interactive_terminal", "notebook_execute", "background_process"]) {
+    for (const mode of ["allow", "deny"] as const) {
+      it.effect(`fails closed before ${id} can execute outside the ${mode} sandbox`, () =>
+        Effect.gen(function* () {
+          let called = false
+          const exit = yield* Effect.exit(
+            run(
+              profile(mode),
+              Network.tool(
+                Network.builtin({ id }),
+                Effect.sync(() => {
+                  called = true
+                }),
+              ),
+            ),
+          )
+          expect(Exit.isFailure(exit)).toBe(true)
+          expect(called).toBe(false)
+        }),
+      )
+    }
+  }
 
   it.live("fails closed before custom tool network code runs", () => {
     let requests = 0

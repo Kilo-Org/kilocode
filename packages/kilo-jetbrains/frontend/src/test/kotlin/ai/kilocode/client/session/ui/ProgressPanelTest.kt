@@ -103,6 +103,10 @@ class ProgressPanelTest : BasePlatformTestCase() {
         assertEquals("Rate limited", panel.labelText())
     }
 
+    fun `test reverting state is busy`() {
+        assertTrue(SessionState.Reverting("x", SessionState.Reverting.Kind.ROLLBACK).isBusy())
+    }
+
     fun `test state churn retains footer components`() {
         val count = panel.componentCount
         val icon = panel.components[0]

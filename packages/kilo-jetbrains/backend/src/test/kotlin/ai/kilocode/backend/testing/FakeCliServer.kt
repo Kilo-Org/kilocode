@@ -18,6 +18,8 @@ class FakeCliServer(private val mock: MockCliServer) : CliServer {
         private set
     var disposeCount = 0
         private set
+    var closeCount = 0
+        private set
 
     override fun process(): Process? = null
 
@@ -38,5 +40,11 @@ class FakeCliServer(private val mock: MockCliServer) : CliServer {
     override fun dispose() {
         disposeCount++
         mock.close()
+    }
+
+    /** Fast app-close teardown — stops the socket but keeps the mock alive (no final dispose). */
+    override fun closeForShutdown() {
+        closeCount++
+        mock.shutdown()
     }
 }
