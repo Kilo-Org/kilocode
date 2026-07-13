@@ -92,50 +92,6 @@ describe("Responses request sanitization", () => {
     expect(data.input[0].id).toBeUndefined()
   })
 
-  test("removes regex lookarounds from function tool schemas", () => {
-    const body = JSON.stringify({
-      tools: [
-        {
-          type: "function",
-          name: "invite",
-          parameters: {
-            type: "object",
-            examples: [{ pattern: "(?=annotation)" }],
-            patternProperties: {
-              "(?=private-)": { type: "string" },
-              "^public-": { type: "string" },
-            },
-            properties: {
-              email: {
-                type: "string",
-                format: "email",
-                pattern:
-                  "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
-              },
-              slug: { type: "string", pattern: "^[a-z0-9-]+$" },
-              nested: {
-                oneOf: [
-                  { type: "string", pattern: "value(?=suffix)" },
-                  { type: "string", pattern: "(?<=prefix)value" },
-                  { type: "string", pattern: "(?<!prefix)value" },
-                ],
-              },
-            },
-          },
-        },
-      ],
-    })
-    const result = transformRequestBody("https://api.kilo.ai/api/openrouter/responses", body)
-    const data = JSON.parse(result as string)
-    const properties = data.tools[0].parameters.properties
-
-    expect(properties.email).toEqual({ type: "string", format: "email" })
-    expect(properties.slug.pattern).toBe("^[a-z0-9-]+$")
-    expect(properties.nested.oneOf.every((item: { pattern?: string }) => item.pattern === undefined)).toBe(true)
-    expect(data.tools[0].parameters.examples).toEqual([{ pattern: "(?=annotation)" }])
-    expect(data.tools[0].parameters.patternProperties).toEqual({ "^public-": { type: "string" } })
-  })
-
   test("sanitizes responses and denies data collection in one transform", () => {
     const body = JSON.stringify({
       input: [{ type: "message", role: "assistant", id: "msg_tmp_123" }],

@@ -2,51 +2,6 @@ function record(input: unknown): input is Record<string, unknown> {
   return typeof input === "object" && input !== null && !Array.isArray(input)
 }
 
-const LOOKAROUND = /\(\?(?:[=!]|<[=!])/
-const MAPS = ["$defs", "definitions", "dependencies", "dependentSchemas", "patternProperties", "properties"]
-const NODES = [
-  "additionalItems",
-  "additionalProperties",
-  "allOf",
-  "anyOf",
-  "contains",
-  "contentSchema",
-  "else",
-  "extends",
-  "if",
-  "items",
-  "not",
-  "oneOf",
-  "prefixItems",
-  "propertyNames",
-  "then",
-  "unevaluatedItems",
-  "unevaluatedProperties",
-]
-
-function sanitize(input: unknown): boolean {
-  if (Array.isArray(input)) return input.reduce((changed, item) => sanitize(item) || changed, false)
-  if (!record(input)) return false
-
-  const found = typeof input.pattern === "string" && LOOKAROUND.test(input.pattern)
-  if (found) delete input.pattern
-  const maps = MAPS.reduce((changed, key) => {
-    const value = input[key]
-    if (!record(value)) return changed
-
-    const removed =
-      key === "patternProperties"
-        ? Object.keys(value).reduce((removed, pattern) => {
-            if (!LOOKAROUND.test(pattern)) return removed
-            delete value[pattern]
-            return true
-          }, false)
-        : false
-    return Object.values(value).reduce<boolean>((nested, item) => sanitize(item) || nested, removed || changed)
-  }, found)
-  return NODES.reduce((changed, key) => sanitize(input[key]) || changed, maps)
-}
-
 function endpoint(input: string | URL | Request) {
   const raw = input instanceof Request ? input.url : input.toString()
   const path = (() => {
@@ -92,14 +47,7 @@ export function transformRequestBody(
   if (!record(data)) return body
 
   const result = responses && data.store !== true && Array.isArray(data.input) ? strip(data.input) : undefined
-  const sanitized =
-    responses && Array.isArray(data.tools)
-      ? data.tools.reduce((changed, item) => {
-          if (!record(item) || item.type !== "function") return changed
-          return sanitize(item.parameters) || changed
-        }, false)
-      : false
-  if (!result?.changed && !sanitized && !value) return body
+  if (!result?.changed && !value) return body
 
   const provider = record(data.provider) ? data.provider : {}
   return JSON.stringify({
