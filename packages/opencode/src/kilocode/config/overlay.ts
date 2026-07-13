@@ -73,7 +73,7 @@ export namespace KilocodeConfigOverlay {
     sources: KilocodeConfigSources.Source[]
   }
 
-  const files = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
+  const files = KilocodeConfig.CONFIG_LOAD_ORDER
   const dirs = [".kilocode", ".kilo"] as const
 
   const fieldPaths = [

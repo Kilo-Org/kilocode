@@ -144,6 +144,22 @@ describe("config overlay routes", () => {
     expect(body.targets.project).toBe(path.join(project.path, ".kilo", "kilo.json"))
   })
 
+  test("prefers Kilo config over legacy config in the same project directory", async () => {
+    await using project = await tmpdir()
+    await Filesystem.write(path.join(project.path, "opencode.json"), JSON.stringify({ model: "test/legacy" }))
+    await Filesystem.write(path.join(project.path, "kilo.json"), JSON.stringify({ model: "test/kilo" }))
+
+    const body = await KilocodeConfigOverlay.resolve({
+      directory: project.path,
+      scope: "project",
+      effective: {},
+      global: {},
+      sources: [],
+    })
+
+    expect(body.project.model).toBe("test/kilo")
+  })
+
   test.serial("tolerates unsafe project config instead of failing the overlay", async () => {
     await using project = await tmpdir()
     // A project config that references a file outside the project root throws during substitution.
