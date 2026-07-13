@@ -239,6 +239,53 @@ describe("EventServiceClient transport", () => {
     expect(sockets[0].closedWith).not.toBeNull()
   })
 
+  test("disposal during token lookup does not start a ticket request", async () => {
+    useFakeWebSocket()
+    let resolveToken!: (token: string) => void
+    const token = new Promise<string>((resolve) => (resolveToken = resolve))
+    let requests = 0
+    installFetch(() => {
+      requests++
+      return ticketBody()
+    })
+    client = new EventServiceClient({ url: "wss://events.test", getToken: () => token })
+
+    const pending = client.connect()
+    await drain()
+    client.disconnect()
+    resolveToken("tok")
+    await pending
+
+    expect(requests).toBe(0)
+    expect(sockets.length).toBe(0)
+  })
+
+  test("disconnect aborts ticket requests from concurrent connect attempts", async () => {
+    useFakeWebSocket()
+    installTimers()
+    const signals: AbortSignal[] = []
+    installFetch(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal
+          if (!signal) return
+          signals.push(signal)
+          signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")))
+        }),
+    )
+    client = new EventServiceClient({ url: "wss://events.test", getToken: async () => "tok" })
+
+    void client.connect()
+    await drain()
+    void client.connect()
+    await drain()
+    expect(signals).toHaveLength(2)
+
+    client.disconnect()
+    await drain()
+    expect(signals.every((signal) => signal.aborted)).toBe(true)
+  })
+
   test("disposal during ticket minting never creates a socket", async () => {
     useFakeWebSocket()
     let resolveFetch!: (r: Response) => void

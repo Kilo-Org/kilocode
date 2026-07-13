@@ -86,7 +86,7 @@ export class EventServiceClient {
   private pingTimer: ReturnType<typeof setInterval> | null = null
   private handshakeTimer: ReturnType<typeof setTimeout> | null = null
   private abortHandshake: ((err: Error) => void) | null = null
-  private ticketAbort: AbortController | null = null
+  private tickets = new Set<AbortController>()
 
   private eventHandlers = new Map<string, Set<EventHandler>>()
   private activeContexts = new Set<string>()
@@ -120,10 +120,8 @@ export class EventServiceClient {
   disconnect(): void {
     this.generation++
     this.destroyed = true
-    if (this.ticketAbort) {
-      this.ticketAbort.abort()
-      this.ticketAbort = null
-    }
+    for (const ctrl of this.tickets) ctrl.abort()
+    this.tickets.clear()
     if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
@@ -198,6 +196,7 @@ export class EventServiceClient {
     }
 
     const token = await this.getToken()
+    if (this.destroyed || this.generation !== gen) return
     const ticket = await this.fetchTicket(token)
     if (this.destroyed || this.generation !== gen) return
 
@@ -272,7 +271,7 @@ export class EventServiceClient {
 
   private async fetchTicket(token: string): Promise<string> {
     const ctrl = new AbortController()
-    this.ticketAbort = ctrl
+    this.tickets.add(ctrl)
     const timer = setTimeout(() => ctrl.abort(), TICKET_FETCH_TIMEOUT_MS)
     try {
       const res = await fetch(toHttpBase(this.url) + "/connect-ticket", {
@@ -299,7 +298,7 @@ export class EventServiceClient {
       throw new WebSocketConnectError(`Event-service ticket request failed: ${(err as Error)?.message ?? err}`, 0)
     } finally {
       clearTimeout(timer)
-      if (this.ticketAbort === ctrl) this.ticketAbort = null
+      this.tickets.delete(ctrl)
     }
   }
 
