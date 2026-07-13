@@ -277,6 +277,35 @@ class KiloConnectionServiceTest {
         assertEquals(ConnectionState.Disconnected, svc.state.value)
     }
 
+    @Test
+    fun `dispose prevents reconnect on late SSE callbacks`() = runBlocking {
+        val reconnects = AtomicInteger(0)
+        val svc = KiloConnectionService(scope, fake, { reconnects.incrementAndGet() }, log)
+        svc.connect()
+        mock.awaitSseConnection()
+
+        withTimeout(5_000) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+
+        svc.dispose()
+
+        // Simulate a late SSE close/failure arriving after teardown. The stale source must be
+        // ignored so shutdown neither resurrects the connection nor schedules a reconnect.
+        val field = KiloConnectionService::class.java.getDeclaredField("listener")
+        field.isAccessible = true
+        val listener = field.get(svc) as EventSourceListener
+        val stale = object : EventSource {
+            override fun request(): Request = Request.Builder().url("http://127.0.0.1/global/event").build()
+            override fun cancel() {}
+        }
+        listener.onFailure(stale, RuntimeException("late failure"), null)
+        listener.onClosed(stale)
+
+        assertEquals(ConnectionState.Disconnected, svc.state.value)
+        assertEquals(0, reconnects.get())
+    }
+
     // ------ Reconnect & health ------
 
     @Test

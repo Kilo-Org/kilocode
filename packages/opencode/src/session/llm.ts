@@ -25,6 +25,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
+import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
@@ -158,7 +159,8 @@ const live: Layer.Layer<
       ) {
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
       }
-      const prepared = { ...base, params: { ...base.params, maxOutputTokens } }
+      const tools = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
+      const prepared = { ...base, tools, params: { ...base.params, maxOutputTokens } }
       // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls

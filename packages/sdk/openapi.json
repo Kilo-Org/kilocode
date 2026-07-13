@@ -14387,16 +14387,6 @@
                 }
               }
             }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/effect_HttpApiError_Unauthorized"
-                }
-              }
-            }
           }
         },
         "description": "List image-capable models from the Kilo Gateway OpenRouter passthrough",
@@ -14404,7 +14394,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.models.images({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilo.models.images({\n  ...\n})"
           }
         ]
       }
@@ -24934,6 +24924,13 @@
                   "type": "string"
                 },
                 "description": "Additional filesystem paths that sandboxed tools may write to"
+              },
+              "allowed_hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Exact network destinations sandboxed tools may access while network restriction is enabled"
               }
             },
             "additionalProperties": false,

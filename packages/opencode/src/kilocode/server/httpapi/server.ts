@@ -6,6 +6,7 @@ import { corsVaryFix } from "@/server/routes/instance/httpapi/middleware/cors-va
 import { errorLayer } from "@/server/routes/instance/httpapi/middleware/error"
 import { fenceLayer } from "@/server/routes/instance/httpapi/middleware/fence"
 import * as AnacondaDesktop from "@/kilocode/anaconda-desktop/service"
+import { BackgroundJob } from "@/background/job"
 
 import { agentBuilderHandlers } from "./handlers/agent-builder"
 import { anacondaDesktopHandlers } from "./handlers/anaconda-desktop"
@@ -43,7 +44,7 @@ export const provide = Layer.provide([
   memoryHandlers,
   networkHandlers,
   remoteHandlers,
-  sandboxHandlers,
+  sandboxHandlers.pipe(Layer.provide(BackgroundJob.defaultLayer)),
   sessionImportHandlers,
   suggestionHandlers,
   telemetryHandlers,

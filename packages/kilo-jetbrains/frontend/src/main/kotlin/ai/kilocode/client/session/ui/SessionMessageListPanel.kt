@@ -59,6 +59,7 @@ class SessionMessageListPanel(
     private val repo: String? = null,
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    private val cancelRevert: (() -> Unit)? = null,
     private val banner: RevertBanner? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
@@ -76,6 +77,7 @@ class SessionMessageListPanel(
     private var style = SessionEditorStyle.current()
     private var hiddenTool: ToolCallRef? = null
     private var hovered: PartView? = null
+    private var revertingMessage: String? = null
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
 
@@ -131,6 +133,7 @@ class SessionMessageListPanel(
                 is SessionModelEvent.StateChanged -> {
                     syncActive(event.state)
                     syncReverted()
+                    syncReverting(event.state)
                     anchorFooter()
                     refresh()
                 }
@@ -283,6 +286,7 @@ class SessionMessageListPanel(
 
         syncActive(model.state)
         syncReverted()
+        syncReverting(model.state)
         banner?.update()
         anchorFooter()
         refresh()
@@ -306,8 +310,10 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
+        revertingMessage = null
         removeAll()
         syncActive(model.state)
+        syncReverting(model.state)
         banner?.update()
         anchorFooter()
         refresh()
@@ -347,6 +353,21 @@ class SessionMessageListPanel(
         }
     }
 
+    private fun syncReverting(state: SessionState) {
+        val current = revertingMessage
+        val rollback = state as? SessionState.Reverting
+        if (rollback?.kind == SessionState.Reverting.Kind.ROLLBACK && rollback.message != null) {
+            if (current != null && current != rollback.message) msgToView[current]?.setReverting(false, "", {})
+            val view = msgToView[rollback.message]
+            view?.setReverting(true, rollback.text) { cancelRevert?.invoke() }
+            revertingMessage = if (view == null) null else rollback.message
+        } else {
+            if (current != null) msgToView[current]?.setReverting(false, "", {})
+            revertingMessage = null
+        }
+        banner?.setReverting(state)
+    }
+
     /** Fan out the hidden question tool ref to all registered [MessageView]s. */
     private fun setHiddenQuestionTool(ref: ToolCallRef?) {
         if (hiddenTool == ref) return
@@ -382,6 +403,7 @@ class SessionMessageListPanel(
     }
 
     private fun unregister(msgId: String) {
+        if (revertingMessage == msgId) revertingMessage = null
         msgToTurn.remove(msgId)
         msgToView.remove(msgId)
     }
@@ -433,6 +455,7 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
+        revertingMessage = null
         onHover = null
         removeAll()
     }
