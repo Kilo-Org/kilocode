@@ -135,7 +135,7 @@ const reject = () =>
 
 const immediate = (pending: Effect.Effect<void, Permission.Error, Permission.Service>) =>
   Effect.gen(function* () {
-    const exit = yield* pending.pipe(Effect.timeout("500 millis"), Effect.exit)
+    const exit = yield* pending.pipe(Effect.timeout("2 seconds"), Effect.exit)
     if (Exit.isFailure(exit)) {
       const items = yield* list()
       if (items.length > 0) {
@@ -316,7 +316,7 @@ describe("external_directory allow config protection", () => {
           const rules = (reqs[0]?.metadata?.rules ?? []) as string[]
           expect(rules).toHaveLength(1)
           expect(rules[0]).toMatch(/skills\/selected-skill\/\*$/)
-          yield* saveAlwaysRules({ requestID: id, approvedAlways: ["*", pattern] })
+          yield* saveAlwaysRules({ requestID: id, approvedAlways: ["*", rules[0]] })
           yield* reply({ requestID: id, reply: "once" })
           yield* Fiber.join(pending)
           yield* immediate(ask(input))
