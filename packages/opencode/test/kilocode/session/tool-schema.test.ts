@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { asSchema, jsonSchema, tool } from "ai"
-import type { JSONSchema7 } from "json-schema"
+import { asSchema, jsonSchema, type JSONSchema7, tool } from "ai"
 import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 
 describe("provider tool schema sanitization", () => {

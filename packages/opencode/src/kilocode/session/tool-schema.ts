@@ -1,5 +1,4 @@
-import { asSchema, jsonSchema, type Tool } from "ai"
-import type { JSONSchema7 } from "json-schema"
+import { asSchema, jsonSchema, type JSONSchema7, type Tool } from "ai"
 
 const MAPS = ["$defs", "definitions", "dependencies", "dependentSchemas", "patternProperties", "properties"]
 const NODES = [
