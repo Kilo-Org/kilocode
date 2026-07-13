@@ -498,8 +498,13 @@ export class AgentManagerProvider implements Disposable {
     }
 
     if (m.type === "requestTerminalContext") {
-      if (m.sessionID && !this.terminalManager.hasActiveTerminal()) this.terminalManager.showExisting(m.sessionID)
-      return msg
+      if (!m.sessionID || this.terminalManager.prepareContext(m.sessionID)) return msg
+      this.panel?.postMessage({
+        type: "terminalContextError",
+        requestId: m.requestId,
+        error: "No terminal is associated with this session",
+      })
+      return null
     }
 
     if (m.type === "loadMessages") {
