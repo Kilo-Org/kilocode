@@ -191,8 +191,15 @@ describe("sandbox policy", () => {
     expect(policy.filesystem.denyWrite).toEqual([
       { path: SandboxStore.root, kind: "subtree" },
       { path: SandboxPreference.root, kind: "subtree" },
+      { path: Global.Path.config, kind: "subtree" },
     ])
-    expect(policy.environment.deny).toEqual(["KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"])
+    expect(policy.environment.deny).toEqual([
+      "KILO_CONFIG",
+      "KILO_CONFIG_CONTENT",
+      "KILO_CONFIG_DIR",
+      "KILO_SERVER_PASSWORD",
+      "KILO_SERVER_USERNAME",
+    ])
     expect(Exit.isFailure(storeWrite)).toBe(true)
     expect(Exit.isFailure(prefWrite)).toBe(true)
   })

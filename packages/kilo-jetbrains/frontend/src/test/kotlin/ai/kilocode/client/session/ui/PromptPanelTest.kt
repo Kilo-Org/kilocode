@@ -988,6 +988,19 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.isStopEnabled)
     }
 
+    fun `test busy disables send button`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setReady(true)
+        ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(panel.isSendEnabled)
+
+        panel.setBusy(true)
+
+        assertFalse(panel.isSendEnabled)
+        assertTrue(panel.isStopEnabled)
+    }
+
     fun `test auto approve button toggles and updates tooltip`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val button = autoApproveButton(panel)

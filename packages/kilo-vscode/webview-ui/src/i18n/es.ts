@@ -1464,8 +1464,11 @@ export const dict = {
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Restringir el acceso a la red",
   "settings.sandboxing.network.description":
-    "Bloquea el acceso saliente a la red para los comandos iniciados por el modelo y las herramientas HTTP. Los servidores MCP locales y los hooks de plugins no están sujetos a esta restricción. El tráfico de proveedores y de inferencia de modelos sigue estando disponible.",
+    "Bloquea el acceso saliente directo de los comandos originados por el modelo y las herramientas HTTP. Las herramientas MCP locales y remotas no están disponibles mientras se aplica la restricción. El tráfico del proveedor y los hooks de plugins de confianza permanecen fuera de esta restricción.",
 
+  "settings.sandboxing.allowedHosts.title": "Destinos de red permitidos",
+  "settings.sandboxing.allowedHosts.description":
+    "Destinos de host y puerto DNS para el tráfico de proxy HTTP y HTTPS en zona de pruebas. GitHub CLI y HTTPS Git suelen necesitar github.com:443 y api.github.com:443. Los cambios se aplican a las sesiones nuevas.",
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
@@ -1889,4 +1892,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Cargando ramas…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "El plan está listo:",
+  "chat.search.placeholder": "Buscar en el chat…",
+  "chat.search.toggle": "Buscar en el chat",
+  "chat.search.matchCase": "Coincidir mayúsculas y minúsculas",
+  "chat.search.matchWholeWord": "Solo palabras completas",
+  "chat.search.useRegex": "Usar expresión regular",
+  "chat.search.previousMatch": "Coincidencia anterior",
+  "chat.search.nextMatch": "Coincidencia siguiente",
+  "chat.search.close": "Cerrar búsqueda",
+  "chat.search.invalidRegex": "Expresión regular no válida",
+  "chat.search.noResults": "Sin resultados",
+  "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
 }

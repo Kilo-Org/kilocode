@@ -168,6 +168,7 @@ export interface SessionCreatedMessage {
 export interface SessionForkedMessage {
   type: "sessionForked"
   sessionID: string
+  forkedFromID: string
 }
 
 export interface SessionUpdatedMessage {
@@ -434,6 +435,12 @@ export interface FileSearchResultMessage {
   paths: string[]
   items?: FileSearchItem[]
   dir: string
+  requestId: string
+}
+
+export interface FilePickerResultMessage {
+  type: "filePickerResult"
+  path: string
   requestId: string
 }
 
@@ -1117,6 +1124,7 @@ export type ExtensionMessage =
   | SpeechToTextResultMessage
   | SpeechToTextErrorMessage
   | FileSearchResultMessage
+  | FilePickerResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
   | GitChangesContextResultMessage

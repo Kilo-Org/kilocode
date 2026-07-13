@@ -10,6 +10,7 @@ import {
   isCursorAtMentionEnd,
   getMentionRemovalRange,
   findMentionRange,
+  FILE_PICKER_RESULT,
   type MentionResult,
 } from "./file-mention-utils"
 
@@ -65,6 +66,8 @@ export interface FileMention {
   snapSelection: (textarea: HTMLTextAreaElement) => void
   /** Seed known paths from existing text (e.g. after undo restores a draft). */
   seedFromText: (text: string) => void
+  /** Insert a file-picker result at the stored cursor position. Ignored unless requestId matches the pending request. */
+  insertFilePickerResult: (path: string, requestId: string) => void
 }
 
 export function useFileMention(
@@ -83,6 +86,15 @@ export function useFileMention(
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
+  let filePickerCounter = 0
+  let pickerState: {
+    requestId: string
+    textarea: HTMLTextAreaElement
+    atStart: number
+    atEnd: number
+    setText: (text: string) => void
+    onSelect?: () => void
+  } | null = null
   let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
 
   const showMention = () => mentionQuery() !== null
@@ -140,6 +152,18 @@ export function useFileMention(
     const cursor = textarea.selectionStart ?? val.length
     const before = val.substring(0, cursor)
     const after = val.substring(cursor)
+
+    if (result.type === "file-picker") {
+      const match = before.match(AT_PATTERN)!
+      const prefix = /^\s/.test(match[0]) ? 1 : 0
+      const atPos = match.index! + prefix
+      filePickerCounter++
+      const requestId = `file-picker-${filePickerCounter}`
+      pickerState = { requestId, textarea, atStart: atPos, atEnd: cursor, setText: _setText, onSelect }
+      closeMention()
+      vscode.postMessage({ type: "requestFilePicker", requestId })
+      return
+    }
 
     // Add to knownPaths BEFORE execCommand so syncMentionedPaths (triggered
     // by the input event) can discover the new path.
@@ -357,12 +381,53 @@ export function useFileMention(
   }
 
   const seedFromText = (text: string) => {
-    const re = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
+    // The optional drive-letter prefix is scoped to a single letter directly after
+    // @ (e.g. "C:") so a colon elsewhere in the match (as in "@https://example.com")
+    // doesn't get mistaken for a Windows path.
+    const re = /@((?:[A-Za-z]:)?(?:[\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+))/g
     let m: RegExpExecArray | null
     while ((m = re.exec(text))) {
       knownPaths.add(m[1])
     }
     syncMentionedPaths(text)
+  }
+
+  const insertFilePickerResult = (path: string, requestId: string) => {
+    const state = pickerState
+    if (!state || state.requestId !== requestId) return
+    if (!path) {
+      pickerState = null
+      return
+    }
+    const norm = path.replaceAll("\\", "/")
+    pickerState = null
+    const textarea = state.textarea
+    if (!textarea.isConnected) return
+    const after = textarea.value.substring(state.atEnd)
+    const suffix = /^\s/.test(after) ? "" : " "
+    // Insert as a styled @mention so it renders like any other file reference and
+    // is clickable to preview (openFile is a plain editor action on the user's own
+    // disk, unrelated to the AI permission system). The actual security boundary
+    // lives in buildFileAttachments: paths outside the workspace are never turned
+    // into an auto-read FileAttachment, regardless of how they were mentioned, so
+    // a prior "deny" decision can't be bypassed by picking/attaching this way. If
+    // the model wants the file's contents it must call the Read tool, which
+    // enforces the normal external-directory permission checks.
+    // Restore focus before execCommand: after the native dialog closes the textarea
+    // is no longer the active element, so execCommand would otherwise silently no-op.
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(state.atStart, state.atEnd)
+      document.execCommand("insertText", false, `@${norm}${suffix}`)
+    } finally {
+      suppress = false
+    }
+    knownPaths.add(norm)
+    setMentionedPaths((prev) => new Set([...prev, norm]))
+    syncMentionedPaths(textarea.value)
+    state.setText(textarea.value)
+    state.onSelect?.()
   }
 
   return {
@@ -381,5 +446,6 @@ export function useFileMention(
     handleArrowKey,
     snapSelection,
     seedFromText,
+    insertFilePickerResult,
   }
 }

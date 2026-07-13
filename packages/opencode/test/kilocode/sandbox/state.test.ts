@@ -64,14 +64,29 @@ test("restores the session snapshot after a backend restart", async () => {
     expect(result.exitCode, result.stderr.toString()).toBe(0)
     return JSON.parse(result.stdout.toString().trim().split("\n").at(-1)!) as {
       status: { enabled: boolean; available: boolean; version: number }
-      state: { enabled: boolean; mode: string; version: number }
+      state: { enabled: boolean; mode: string; allowedHosts: string[]; writablePaths: string[]; version: number }
     }
   }
 
   try {
-    const initial = run({ sandbox: { enabled: true, network: "deny" } })
-    expect(initial.state).toEqual({ enabled: true, mode: "deny", version: 0 })
-    const restored = run({ sandbox: { enabled: false, network: "allow" } })
+    const initial = run({
+      sandbox: {
+        enabled: true,
+        network: "deny",
+        allowed_hosts: ["API.GITHUB.COM."],
+        writable_paths: ["~/sandbox-output"],
+      },
+    })
+    expect(initial.state).toEqual({
+      enabled: true,
+      mode: "proxy",
+      allowedHosts: ["api.github.com:443"],
+      writablePaths: [path.join(os.homedir(), "sandbox-output")],
+      version: 0,
+    })
+    const restored = run({
+      sandbox: { enabled: false, network: "deny", allowed_hosts: ["evil.example"], writable_paths: ["/tmp/evil"] },
+    })
     expect(restored.state).toEqual(initial.state)
     expect(restored.status.enabled).toBe(restored.status.available)
   } finally {
@@ -132,6 +147,8 @@ linux("reports configured network namespace availability", async () => {
     "const allow = await status(false)",
     'if (deny.available || deny.enabled || !deny.reason?.includes("Linux network sandbox")) process.exit(2)',
     "if (!allow.available || !allow.enabled) process.exit(3)",
+    'const blocked = await SandboxPolicy.executeTool(SessionID.make("ses_sandbox_status_true"), { id: "read" }, Effect.succeed("escaped")).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ sandbox: { enabled: true, network: "deny" } }) })), Effect.provideService(InstanceRef, context), Effect.exit, Effect.runPromise)',
+    "if (blocked._tag !== 'Failure') process.exit(4)",
   ].join("\n")
 
   try {
@@ -242,7 +259,13 @@ it.instance(
       const id = SessionID.make("ses_sandbox_default_on")
       const status = yield* SandboxPolicy.status(id)
       expect(status.enabled).toBe(status.available)
-      expect(yield* execute(id, sandboxed)).toBe(status.available)
+      const result = yield* execute(id, sandboxed).pipe(Effect.exit)
+      if (!status.available) {
+        expect(Exit.isFailure(result)).toBe(true)
+        return
+      }
+      expect(Exit.isSuccess(result)).toBe(true)
+      if (Exit.isSuccess(result)) expect(result.value).toBe(true)
     }),
   { config: { sandbox: { enabled: true } } },
 )
@@ -339,10 +362,48 @@ it.instance("serializes concurrent toggles for a session", () =>
   }),
 )
 
+it.instance("serializes activation with unrestricted tool start", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const id = SessionID.make("ses_sandbox_activation_tool_race")
+    if (!(yield* SandboxPolicy.status(id)).available) return
+    const entered = yield* Deferred.make<void>()
+    const release = yield* Deferred.make<void>()
+    const family = yield* Deferred.make<void>()
+    const preflight = yield* Deferred.make<void>()
+    const guard = yield* Deferred.make<void>()
+    const running = yield* execute(
+      id,
+      Effect.gen(function* () {
+        yield* Deferred.succeed(entered, undefined)
+        yield* Deferred.await(release)
+        return yield* sandboxed
+      }),
+    ).pipe(Effect.forkChild)
+    yield* Deferred.await(entered)
+    const activation = yield* SandboxPolicy.toggleGuarded(
+      id,
+      () => Deferred.succeed(guard, undefined),
+      Deferred.succeed(family, undefined).pipe(Effect.as([{ id, directory: test.directory }])),
+      () => Deferred.succeed(preflight, undefined),
+    ).pipe(Effect.forkChild)
+    yield* Deferred.await(family)
+    yield* Deferred.await(preflight)
+    expect(yield* Deferred.isDone(guard)).toBe(false)
+
+    yield* Deferred.succeed(release, undefined)
+    expect(yield* Fiber.join(running)).toBe(false)
+    expect((yield* Fiber.join(activation)).enabled).toBe(true)
+    expect(yield* Deferred.isDone(guard)).toBe(true)
+    expect(yield* execute(id, sandboxed)).toBe(true)
+  }),
+)
+
 it.instance("prevents a queued toggle from restoring a retired override", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     const id = SessionID.make("ses_sandbox_retire_race")
+    if (!(yield* SandboxPolicy.status(id)).available) return
     const entered = yield* Deferred.make<void>()
     const release = yield* Deferred.make<void>()
     const removal = yield* SandboxPolicy.retire(
@@ -372,7 +433,12 @@ it.instance(
       const status = yield* SandboxPolicy.status(parent)
       if (!status.available) return
 
-      yield* SandboxPolicy.inherit(parent, child, { enabled: true, mode: "deny" })
+      yield* SandboxPolicy.inherit(parent, child, {
+        enabled: true,
+        mode: "deny",
+        allowedHosts: [],
+        writablePaths: [],
+      })
       yield* SandboxPolicy.toggle(parent)
       expect((yield* SandboxPolicy.status(parent)).enabled).toBe(false)
       expect((yield* SandboxPolicy.status(child)).enabled).toBe(true)
@@ -385,6 +451,41 @@ it.instance(
       expect(yield* execute(child, sandboxed)).toBe(true)
     }),
   { config: { sandbox: { enabled: true } } },
+)
+
+it.instance("intersects inherited network and write authority", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const parent = SessionID.make("ses_sandbox_intersection_parent")
+    const child = SessionID.make("ses_sandbox_intersection_child")
+    yield* Effect.promise(() =>
+      SandboxStore.write(test.directory, parent, {
+        enabled: true,
+        mode: "proxy",
+        allowedHosts: ["api.github.com:443", "github.com:443"],
+        writablePaths: ["/shared", "/parent"],
+        version: 0,
+      }),
+    )
+    yield* Effect.promise(() =>
+      SandboxStore.write(test.directory, child, {
+        enabled: false,
+        mode: "proxy",
+        allowedHosts: ["api.github.com:443", "example.com:443"],
+        writablePaths: ["/child", "/shared"],
+        version: 0,
+      }),
+    )
+
+    yield* SandboxPolicy.inherit(parent, child)
+    expect(yield* SandboxPolicy.peek(test.directory, child)).toEqual({
+      enabled: true,
+      mode: "proxy",
+      allowedHosts: ["api.github.com:443"],
+      writablePaths: ["/shared"],
+      version: 1,
+    })
+  }),
 )
 
 it.instance("enforces writes only while the macOS session override is active", () =>

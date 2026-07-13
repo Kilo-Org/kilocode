@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionModel
+import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.BaseQuestionView
@@ -21,6 +22,7 @@ class RevertBanner(
     private val model: SessionModel,
     private val redoAction: () -> Unit,
     private val redoAllAction: () -> Unit,
+    private val cancelAction: () -> Unit,
     focus: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionView, SessionEditorStyleTarget {
     override val sessionViewKind = SessionView.Kind.Default
@@ -32,6 +34,7 @@ class RevertBanner(
     private val files = Stack.vertical(UiStyle.Gap.xs())
 
     private val rows = LinkedHashMap<String, Row>()
+    private var progress: RevertProgress? = null
 
     private val hint = JBLabel(KiloBundle.message("revert.banner.hint")).apply {
         font = JBFont.small()
@@ -81,8 +84,28 @@ class RevertBanner(
         repaint()
     }
 
+    @RequiresEdt
+    fun setReverting(state: SessionState) {
+        val busy = state is SessionState.Reverting
+        if (busy) {
+            card.setActionEnabled("redo", false)
+            card.setActionEnabled("all", false)
+            val node = progress ?: RevertProgress(cancelAction).also {
+                it.applyStyle(SessionEditorStyle.current())
+                progress = it
+            }
+            node.setText(state.text)
+            card.setActionLeft(node)
+            return
+        }
+        card.setActionLeft(null)
+        card.setActionEnabled("redo", true)
+        card.setActionEnabled("all", true)
+    }
+
     override fun applyStyle(style: SessionEditorStyle) {
         card.applyStyle(style)
+        progress?.applyStyle(style)
         hint.foreground = UIUtil.getLabelForeground()
         notice.foreground = UIUtil.getContextHelpForeground()
         rows.values.forEach { it.applyStyle() }

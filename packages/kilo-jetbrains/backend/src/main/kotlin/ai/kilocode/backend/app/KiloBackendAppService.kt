@@ -188,11 +188,14 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    suspend fun shutdownForUnload() {
-        mutex.withLock {
-            shutdown()
-        }
-    }
+    /**
+     * Synchronous CLI teardown for plugin unload. Confirms process exit but does not wait on the
+     * lifecycle mutex, so an in-flight download/spawn cannot delay unload. Safe to call repeatedly.
+     */
+    fun shutdownForUnload() = shutdown(fast = false)
+
+    /** Best-effort CLI teardown for IDE app close. Non-blocking; safe to call repeatedly. */
+    fun shutdownForAppClose() = shutdown(fast = true)
 
     suspend fun retry() {
         mutex.withLock {
@@ -926,17 +929,17 @@ class KiloBackendAppService private constructor(
     }
 
     override fun dispose() {
-        shutdown()
+        shutdown(fast = false)
     }
 
-    private fun shutdown() {
+    private fun shutdown(fast: Boolean) {
         if (closed) return
         closed = true
         watcher?.cancel()
         watcher = null
         clearNow()
         connection.dispose()
-        server.dispose()
+        if (fast) server.closeForShutdown() else server.dispose()
     }
 }
 
