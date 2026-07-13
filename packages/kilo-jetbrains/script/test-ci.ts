@@ -3,7 +3,7 @@
 /**
  * CI test runner for the JetBrains plugin.
  *
- * Runs ./gradlew clean test --continue --no-build-cache --stacktrace --console=plain
+ * Runs ./gradlew clean test --continue --stacktrace --console=plain
  * so all modules run even when some fail,
  * then collects per-module JUnit XML results into .artifacts/unit/junit.xml
  * so mikepenz/action-junit-report can find them at the standard path.
