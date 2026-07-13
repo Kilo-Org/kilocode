@@ -76,6 +76,7 @@ describe("config source routes", () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(path.join(dir, "env.json"), "{}")
+        await Bun.write(path.join(dir, "opencode.json"), "{}")
         await Bun.write(path.join(dir, "kilo.json"), "{}")
 
         for (const root of [".opencode", ".kilocode", ".kilo"]) {
@@ -83,6 +84,7 @@ describe("config source routes", () => {
           await fs.mkdir(local, { recursive: true })
           await Bun.write(path.join(local, "kilo.jsonc"), "{}")
         }
+        await Bun.write(path.join(dir, ".kilo", "opencode.jsonc"), "{}")
 
         const extra = path.join(dir, "extra")
         await fs.mkdir(extra, { recursive: true })
@@ -95,10 +97,12 @@ describe("config source routes", () => {
     })
 
     const envFile = path.join(tmp.path, "env.json")
+    const legacyProjectFile = path.join(tmp.path, "opencode.json")
     const projectFile = path.join(tmp.path, "kilo.json")
     const opencodeFile = path.join(tmp.path, ".opencode", "kilo.jsonc")
     const kilocodeFile = path.join(tmp.path, ".kilocode", "kilo.jsonc")
     const configFile = path.join(tmp.path, ".kilo", "kilo.jsonc")
+    const legacyConfigFile = path.join(tmp.path, ".kilo", "opencode.jsonc")
     const extraFile = path.join(tmp.path, "extra", "opencode.json")
     const managedFile = path.join(tmp.path, "managed", "kilo.json")
 
@@ -112,9 +116,11 @@ describe("config source routes", () => {
     const inline = body.sources.find((source) => source.source === "KILO_CONFIG_CONTENT")
 
     expect(order(body, envFile)).toBeLessThan(order(body, projectFile))
+    expect(order(body, legacyProjectFile)).toBeLessThan(order(body, projectFile))
     expect(order(body, projectFile)).toBeLessThan(order(body, kilocodeFile))
     expect(order(body, kilocodeFile)).toBeLessThan(order(body, configFile))
     expect(body.sources.some((source) => source.path === opencodeFile)).toBe(false)
+    expect(order(body, legacyConfigFile)).toBeLessThan(order(body, configFile))
     expect(order(body, configFile)).toBeLessThan(order(body, extraFile))
     expect(inline?.order).toBeGreaterThan(order(body, extraFile))
     expect(inline?.order).toBeLessThan(order(body, managedFile))

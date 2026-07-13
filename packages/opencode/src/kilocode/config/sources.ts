@@ -57,7 +57,7 @@ export namespace KilocodeConfigSources {
   type Pending = Omit<Source, "order">
 
   const roots = [".kilocode", ".kilo"] as const
-  const global = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"] as const
+  const global = ["config.json", "opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"] as const
 
   export async function list(input: Input): Promise<Result> {
     const project = Flag.KILO_DISABLE_PROJECT_CONFIG ? [] : await projectSources(input)
@@ -119,17 +119,18 @@ export namespace KilocodeConfigSources {
   }
 
   async function projectSources(input: Input): Promise<Pending[]> {
-    const kilo = await projectFiles("kilo", input)
-    const opencode = await projectFiles("opencode", input)
+    // Mirror ConfigPaths.namedFiles(["opencode", "kilo"]): keep directory
+    // proximity primary, then apply Kilo-over-legacy precedence within each directory.
+    const files = (
+      await Filesystem.findUp(
+        ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"],
+        input.directory,
+        input.worktree,
+      )
+    ).toReversed()
     return Promise.all(
-      [...kilo, ...opencode].map((file) =>
-        fileSource({ kind: "project-file", scope: "project", label: "Project config", file }),
-      ),
+      files.map((file) => fileSource({ kind: "project-file", scope: "project", label: "Project config", file })),
     )
-  }
-
-  async function projectFiles(name: string, input: Input) {
-    return (await Filesystem.findUp([`${name}.jsonc`, `${name}.json`], input.directory, input.worktree)).toReversed()
   }
 
   async function configDirSources(input: Input): Promise<Pending[]> {
@@ -153,7 +154,7 @@ export namespace KilocodeConfigSources {
         editable: scope !== "managed" && scope !== "cloud",
       })
 
-      for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
+      for (const name of KilocodeConfig.CONFIG_LOAD_ORDER) {
         const file = path.join(dir, name)
         result.push(await fileSource({ kind: "config-dir-file", scope, label: `Config directory ${name}`, file }))
       }
@@ -225,7 +226,7 @@ export namespace KilocodeConfigSources {
   async function managedSources(): Promise<Pending[]> {
     const dir = ConfigManaged.managedConfigDir()
     const files = await Promise.all(
-      KilocodeConfig.ALL_CONFIG_FILES.map((name) =>
+      KilocodeConfig.CONFIG_LOAD_ORDER.map((name) =>
         fileSource({
           kind: "managed-file",
           scope: "managed",

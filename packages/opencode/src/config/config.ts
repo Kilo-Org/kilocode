@@ -635,11 +635,11 @@ export const layer = Layer.effect(
       // kilocode_change - global config is user-owned and trusted to resolve {file:}/{env:} tokens
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json"), env, true))
       // kilocode_change start
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json"), env, true)) // kilocode_change
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc"), env, true)) // kilocode_change
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.json"), env, true))
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.jsonc"), env, true))
       // kilocode_change end
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json"), env, true)) // kilocode_change
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc"), env, true)) // kilocode_change
 
       const legacy = path.join(Global.Path.config, "config")
       if (existsSync(legacy)) {
@@ -868,20 +868,23 @@ export const layer = Layer.effect(
 
         if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
           // kilocode_change start - also discover kilo.json project files
-          for (const name of ["kilo", "opencode"] as const) {
-            for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
-              yield* merge(
-                file,
-                // kilocode_change - project config is untrusted: {env:} rejected, {file:} confined to projectRoot
-                yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }).pipe(
-                  Effect.catchDefect((err: unknown) => {
-                    caughtWarning(warnings, file, err)
-                    return Effect.succeed({} as Info)
-                  }),
-                ),
-                "local",
-              )
-            }
+          const projectConfigFiles = yield* ConfigPaths.namedFiles(
+            ["opencode", "kilo"],
+            ctx.directory,
+            ctx.worktree,
+          ).pipe(Effect.orDie)
+          for (const file of projectConfigFiles) {
+            yield* merge(
+              file,
+              // kilocode_change - project config is untrusted: {env:} rejected, {file:} confined to projectRoot
+              yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }).pipe(
+                Effect.catchDefect((err: unknown) => {
+                  caughtWarning(warnings, file, err)
+                  return Effect.succeed({} as Info)
+                }),
+              ),
+              "local",
+            )
           }
           // kilocode_change end
         }
@@ -915,7 +918,7 @@ export const layer = Layer.effect(
           // kilocode_change - untrusted config dirs confine {file:} reads to projectRoot
           const dirFileScope = dirTrusted ? undefined : { root: projectRoot, source: dir }
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
-            for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
+            for (const file of KilocodeConfig.CONFIG_LOAD_ORDER) {
               const source = path.join(dir, file)
               log.debug(`loading config from ${source}`)
               // kilocode_change - untrusted config dirs confine {file:} reads to projectRoot
@@ -1052,7 +1055,7 @@ export const layer = Layer.effect(
         const managedDir = ConfigManaged.managedConfigDir()
         // kilocode_change start - include kilo.json/kilo.jsonc in managed dir loading
         if (existsSync(managedDir)) {
-          for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
+          for (const file of KilocodeConfig.CONFIG_LOAD_ORDER) {
             const source = path.join(managedDir, file)
             // kilocode_change - MDM/enterprise-managed config is a trusted source
             yield* merge(source, yield* loadFile(source, undefined, true), "global")
