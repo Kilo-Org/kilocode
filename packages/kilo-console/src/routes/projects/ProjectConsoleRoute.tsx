@@ -49,6 +49,7 @@ import {
   normalizeConsoleDiffStyle,
   normalizeContextSidebarWidth,
 } from "../config/state/console"
+import { sender } from "./project-console-presence-sender"
 import { GhosttyTerminal } from "./terminal/GhosttyTerminal"
 
 const ui = new Set(["3017", "3018"])
@@ -662,8 +663,7 @@ export function ProjectConsoleRoute() {
   })
 
   let lastInput: { url: string; dir: string } | undefined
-  let lastSentKey: string | undefined
-  const pendingKeys = new Set<string>()
+  const queue = sender((err) => console.warn(`Viewed sessions: ${errMsg(err)}`))
 
   function sendSnapshot(force = false) {
     const base = query()
@@ -676,17 +676,18 @@ export function ProjectConsoleRoute() {
       const id = sessionID(item)
       if (id) ids.add(id)
     }
-    const key = base.url + "|" + [...ids].sort().join(",")
-    if (pendingKeys.has(key)) return
-    if (!force && key === lastSentKey) return
-    pendingKeys.add(key)
-    lastInput = { url: base.url, dir: data.project.worktree }
-    void viewProjectSessions(lastInput, { id: viewerId, active: false }, [...ids], [])
-      .then(() => {
-        lastSentKey = key
-      })
-      .catch((err) => console.warn(`Viewed sessions: ${errMsg(err)}`))
-      .finally(() => pendingKeys.delete(key))
+    const input = { url: base.url, dir: data.project.worktree }
+    const key = input.url + "|" + input.dir + "|" + [...ids].sort().join(",")
+    lastInput = input
+    queue.push(
+      {
+        key,
+        run: async () => {
+          await viewProjectSessions(input, { id: viewerId, active: false }, [...ids], [])
+        },
+      },
+      force,
+    )
   }
 
   createEffect(() => sendSnapshot())
@@ -725,7 +726,16 @@ export function ProjectConsoleRoute() {
     if (resize.timer) window.clearTimeout(resize.timer)
     window.clearInterval(checkin)
     if (lastInput) {
-      void viewProjectSessions(lastInput, { id: viewerId, active: false }, [], []).catch(() => {})
+      const input = lastInput
+      queue.push(
+        {
+          key: input.url + "|" + input.dir + "|",
+          run: async () => {
+            await viewProjectSessions(input, { id: viewerId, active: false }, [], [])
+          },
+        },
+        true,
+      )
     }
   })
 

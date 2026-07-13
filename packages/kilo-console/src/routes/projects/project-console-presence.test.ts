@@ -5,9 +5,9 @@
  * so these source assertions pin the load-bearing presence behaviour instead:
  * the console is a dashboard viewer (always inactive, never reports visible
  * sessions), the attached union covers the selected session plus every terminal
- * session, a 60s check-in re-sends the snapshot, and cleanup reuses the exact
- * url+dir the last regular snapshot used (review finding P2-2) to post a final
- * empty snapshot, swallowing errors.
+ * session, the sender serializes snapshots and forced check-ins, and cleanup
+ * reuses the exact url+dir the last regular snapshot used to queue a final empty
+ * snapshot.
  */
 
 import { describe, expect, test } from "bun:test"
@@ -26,7 +26,7 @@ describe("project console presence contract", () => {
     const content = fs.readFileSync(ROUTE_FILE, "utf-8")
     expect(content).toContain("const viewerId = crypto.randomUUID()")
     expect(flat(content)).toContain(
-      "void viewProjectSessions(lastInput, { id: viewerId, active: false }, [...ids], [])",
+      "run: async () => { await viewProjectSessions(input, { id: viewerId, active: false }, [...ids], []) }",
     )
     expect(content).not.toContain("active: true")
   })
@@ -44,26 +44,25 @@ describe("project console presence contract", () => {
   test("snapshots record the url+dir they were sent with", () => {
     const content = fs.readFileSync(ROUTE_FILE, "utf-8")
     expect(content).toContain("let lastInput: { url: string; dir: string } | undefined")
-    expect(content).toContain("lastInput = { url: base.url, dir: data.project.worktree }")
+    expect(content).toContain("const input = { url: base.url, dir: data.project.worktree }")
+    expect(content).toContain("lastInput = input")
   })
 
-  test("reactive snapshots are deduplicated while 60s check-ins always renew the lease", () => {
+  test("routes reactive snapshots and forced check-ins through the serialized sender", () => {
     const content = fs.readFileSync(ROUTE_FILE, "utf-8")
+    expect(content).toContain('import { sender } from "./project-console-presence-sender"')
+    expect(content).toContain("const queue = sender")
     expect(content).toContain("function sendSnapshot(force = false)")
-    expect(content).toContain("if (pendingKeys.has(key)) return")
-    expect(content).toContain("if (!force && key === lastSentKey) return")
-    expect(content).toContain("lastSentKey = key")
+    expect(content).toContain("queue.push(")
     expect(content).toContain("createEffect(() => sendSnapshot())")
     expect(content).toContain("const checkin = window.setInterval(() => sendSnapshot(true), 60_000)")
     expect(content).toContain("window.clearInterval(checkin)")
   })
 
-  test("cleanup posts a final empty snapshot reusing the last snapshot's url+dir, swallowing errors", () => {
+  test("cleanup queues a final empty snapshot using the last snapshot's url+dir", () => {
     const content = flat(fs.readFileSync(ROUTE_FILE, "utf-8"))
-    // clearInterval and the final send live in the same onCleanup block, and the
-    // final send targets lastInput — not the raw query dir (review finding P2-2).
     expect(content).toContain(
-      "window.clearInterval(checkin) if (lastInput) { void viewProjectSessions(lastInput, { id: viewerId, active: false }, [], []).catch(() => {}) }",
+      'window.clearInterval(checkin) if (lastInput) { const input = lastInput queue.push({ key: input.url + "|" + input.dir + "|", run: async () => { await viewProjectSessions(input, { id: viewerId, active: false }, [], []) }, }, true) }',
     )
     expect(content).not.toContain("dir: base.dir")
   })
