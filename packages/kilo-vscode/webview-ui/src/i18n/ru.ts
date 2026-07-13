@@ -1450,8 +1450,11 @@ export const dict = {
   "settings.sandboxing.title": "Изоляция в песочнице",
   "settings.sandboxing.network.title": "Ограничить доступ к сети",
   "settings.sandboxing.network.description":
-    "Блокировать исходящий доступ к сети для команд, инициированных моделью, и HTTP-инструментов. Локальные серверы MCP и хуки плагинов не подпадают под это ограничение. Трафик к провайдерам и моделям для инференса остаётся доступным.",
+    "Блокировать прямой исходящий доступ из команд, инициированных моделью, и HTTP-инструментов. Локальные и удалённые MCP-инструменты недоступны, пока это ограничение активно. Трафик провайдеров и доверенные хуки плагинов не подпадают под это ограничение.",
 
+  "settings.sandboxing.allowedHosts.title": "Разрешенные сетевые назначения",
+  "settings.sandboxing.allowedHosts.description":
+    "Целевые DNS-хосты и порты для прокси-трафика HTTP и HTTPS в песочнице. GitHub CLI и HTTPS Git обычно требуют github.com:443 и api.github.com:443. Изменения применяются к новым сеансам.",
   "settings.sandboxing.writablePaths.title": "Дополнительные пути для записи",
   "settings.sandboxing.writablePaths.description":
     "Дополнительные пути файловой системы, в которые разрешена запись в песочнице (например, /tmp, /var/log). Они объединяются с путями записи по умолчанию при активной песочнице.",
@@ -1869,4 +1872,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Загрузка веток…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "План готов:",
+  "chat.search.placeholder": "Поиск в чате…",
+  "chat.search.toggle": "Поиск в чате",
+  "chat.search.matchCase": "Учитывать регистр",
+  "chat.search.matchWholeWord": "Слово целиком",
+  "chat.search.useRegex": "Использовать регулярное выражение",
+  "chat.search.previousMatch": "Предыдущее совпадение",
+  "chat.search.nextMatch": "Следующее совпадение",
+  "chat.search.close": "Закрыть поиск",
+  "chat.search.invalidRegex": "Недопустимое регулярное выражение",
+  "chat.search.noResults": "Нет результатов",
+  "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
 }

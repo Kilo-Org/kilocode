@@ -12,6 +12,7 @@ const cache = process.env.KILO_BWRAP_CACHE ?? path.join(os.tmpdir(), "kilo-bubbl
 const capability = `#pragma once
 #include <errno.h>
 #include <linux/capability.h>
+#include <string.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -28,8 +29,10 @@ static inline int capset(cap_user_header_t header, const cap_user_data_t data) {
 }
 
 static inline int cap_from_name(const char *name, cap_value_t *cap) {
-  (void) name;
-  (void) cap;
+  if (strcmp(name, "cap_sys_admin") == 0) {
+    *cap = CAP_SYS_ADMIN;
+    return 0;
+  }
   errno = EINVAL;
   return -1;
 }

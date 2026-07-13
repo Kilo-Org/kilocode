@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
@@ -7,7 +6,7 @@ import { Bus } from "../../../src/bus"
 import * as Config from "../../../src/config/config"
 import { AllowEverythingPermission } from "../../../src/kilocode/permission/allow-everything"
 import { Permission } from "../../../src/permission"
-import { EventV2Bridge } from "../../../src/event-v2-bridge" // kilocode_change - Permission publishes via EventV2Bridge
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Database } from "@opencode-ai/core/database/database"
 import { provideTestInstance } from "../../fixture/fixture"

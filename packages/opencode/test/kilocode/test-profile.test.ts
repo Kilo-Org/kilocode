@@ -15,6 +15,8 @@ describe("test profiles", () => {
     expect(result.files).toContain("pty/pty-shell.test.ts")
     expect(result.files).toContain("kilocode/cli/install-artifact.test.ts")
     expect(result.files).toContain("kilocode/sandbox/macos-confinement.test.ts")
+    expect(result.files).toContain("kilocode/core-watcher.test.ts")
+    expect(result.files).toContain("kilocode/tool/repo_clone.test.ts")
     expect(result.files).toContain("filesystem/filesystem.test.ts")
     expect(result.files).toContain("kilocode/interactive-terminal.test.ts")
     const sandbox = all.filter((file) => file.startsWith("kilocode/sandbox/"))

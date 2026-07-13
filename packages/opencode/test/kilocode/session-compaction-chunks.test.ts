@@ -14,7 +14,7 @@ import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { provideTestInstance } from "../fixture/fixture"
+import { disposeTestRuntime, provideTestInstance } from "../fixture/fixture"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Snapshot } from "../../src/snapshot"
@@ -34,6 +34,8 @@ import { SyncEvent } from "../../src/sync"
 import { ProviderTest } from "../fake/provider"
 import { tmpdir } from "../fixture/fixture"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { remove as cleanup } from "./cleanup"
 
 const providerID = ProviderV2.ID.make("test")
 const modelID = ModelV2.ID.make("test-model")
@@ -47,8 +49,10 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await AppRuntime.dispose()
+  await disposeTestRuntime()
   Flag.KILO_DB = previous
-  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map((file) => fs.rm(file, { force: true })))
+  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
 })
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {

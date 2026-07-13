@@ -1,6 +1,7 @@
 import { APICallError } from "ai"
 import { STATUS_CODES } from "http"
 import { iife } from "@/util/iife"
+import * as KiloError from "@/kilocode/provider/error" // kilocode_change
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 
 export class HeaderTimeoutError extends Error {
@@ -63,6 +64,8 @@ function isOverflow(message: string) {
 
 function message(providerID: ProviderV2.ID, e: APICallError) {
   return iife(() => {
+    const hint = KiloError.hint(providerID, e) // kilocode_change
+    if (hint) return hint // kilocode_change
     // kilocode_change start - surface a branded reauth hint for expired Copilot tokens
     if (providerID.includes("github-copilot") && e.statusCode === 403) {
       return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Kilo."

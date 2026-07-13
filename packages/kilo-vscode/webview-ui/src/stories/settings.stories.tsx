@@ -74,6 +74,27 @@ export const SandboxingPanel: Story = {
   ),
 }
 
+export const SandboxingAllowlist: Story = {
+  name: "Settings — sandboxing with network destinations",
+  render: () => (
+    <StoryProviders
+      config={{
+        sandbox: {
+          enabled: true,
+          network: "deny",
+          allowed_hosts: ["github.com:443", "api.github.com:443"],
+          writable_paths: ["~/shared-output"],
+        },
+      }}
+      features={{ sandboxControls: true }}
+    >
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ProvidersConfigure: Story = {
   name: "ProvidersTab — no providers configured",
   render: () => (

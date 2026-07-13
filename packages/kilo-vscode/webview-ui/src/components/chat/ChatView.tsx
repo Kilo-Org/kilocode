@@ -24,6 +24,7 @@ import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
 import { useAgentRequirements } from "../../context/agent-requirements"
+import { TranscriptSearchProvider } from "../../context/transcript-search"
 import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 
 interface ChatViewProps {
@@ -325,59 +326,61 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   )
 
   return (
-    <div class="chat-view">
-      <TaskHeader readonly={props.readonly} />
-      <div class="chat-messages-wrapper">
-        <div class="chat-messages">
-          <Show
-            when={!props.readonly && requirements.visible()}
-            fallback={
-              <MessageList
-                onSelectSession={props.onSelectSession}
-                onShowHistory={props.onShowHistory}
-                onForkMessage={props.onForkMessage}
-                questions={standaloneQuestions}
-                suggestions={standaloneSuggestions}
-                readonly={props.readonly}
-                emptyState={props.emptyState}
-                announce={isSidebar()}
-              />
-            }
-          >
-            <AgentRequirements />
-          </Show>
+    <TranscriptSearchProvider>
+      <div class="chat-view">
+        <TaskHeader readonly={props.readonly} />
+        <div class="chat-messages-wrapper">
+          <div class="chat-messages">
+            <Show
+              when={!props.readonly && requirements.visible()}
+              fallback={
+                <MessageList
+                  onSelectSession={props.onSelectSession}
+                  onShowHistory={props.onShowHistory}
+                  onForkMessage={props.onForkMessage}
+                  questions={standaloneQuestions}
+                  suggestions={standaloneSuggestions}
+                  readonly={props.readonly}
+                  emptyState={props.emptyState}
+                  announce={isSidebar()}
+                />
+              }
+            >
+              <AgentRequirements />
+            </Show>
+          </div>
         </div>
-      </div>
 
-      <Show when={dock()}>
-        <div class="chat-input">
-          <Show when={server.connectionState() === "error" && server.errorMessage()}>
-            <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
-          </Show>
-          <Show when={permissionRequest()} keyed>
-            {(perm) => (
-              <PermissionDock
-                request={perm}
-                responding={session.respondingPermissions().has(perm.id)}
-                onDecide={decide}
+        <Show when={dock()}>
+          <div class="chat-input">
+            <Show when={server.connectionState() === "error" && server.errorMessage()}>
+              <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
+            </Show>
+            <Show when={permissionRequest()} keyed>
+              {(perm) => (
+                <PermissionDock
+                  request={perm}
+                  responding={session.respondingPermissions().has(perm.id)}
+                  onDecide={decide}
+                />
+              )}
+            </Show>
+            <Show when={!props.readonly && idle() && !blocked() && hasActions(hasMessages())}>
+              {renderActions(hasMessages())}
+            </Show>
+            <Show when={!props.readonly}>
+              <PromptInput
+                blocked={blocked}
+                blockedReason={requirementReason}
+                suggesting={suggesting}
+                questioning={questioning}
+                boxId={props.promptBoxId}
+                pendingSessionID={props.pendingSessionID}
               />
-            )}
-          </Show>
-          <Show when={!props.readonly && idle() && !blocked() && hasActions(hasMessages())}>
-            {renderActions(hasMessages())}
-          </Show>
-          <Show when={!props.readonly}>
-            <PromptInput
-              blocked={blocked}
-              blockedReason={requirementReason}
-              suggesting={suggesting}
-              questioning={questioning}
-              boxId={props.promptBoxId}
-              pendingSessionID={props.pendingSessionID}
-            />
-          </Show>
-        </div>
-      </Show>
-    </div>
+            </Show>
+          </div>
+        </Show>
+      </div>
+    </TranscriptSearchProvider>
   )
 }

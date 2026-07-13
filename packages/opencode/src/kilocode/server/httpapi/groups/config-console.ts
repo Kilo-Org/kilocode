@@ -1,5 +1,5 @@
 import { Config } from "@/config/config"
-import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin" // kilocode_change - Spec/Options moved to core
+import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
 import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
 import { KiloTitleIcon } from "@/kilocode/cli/cmd/tui/title-icon"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"

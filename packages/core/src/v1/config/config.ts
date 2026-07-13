@@ -141,6 +141,11 @@ export const Info = Schema.Struct({
           description: "Additional filesystem paths that sandboxed tools may write to",
         }),
       ),
+      allowed_hosts: Schema.optional(
+        Schema.mutable(Schema.Array(Schema.String)).annotate({
+          description: "Exact network destinations sandboxed tools may access while network restriction is enabled",
+        }),
+      ),
     }).annotate({ description: "Sandbox configuration for agent tools" }),
   ),
   model: Schema.optional(Schema.NullOr(Schema.String)).annotate({

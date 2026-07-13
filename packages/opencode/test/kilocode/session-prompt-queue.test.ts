@@ -19,8 +19,9 @@ import { SessionCompaction } from "../../src/session/compaction"
 import { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
+import { disposeTestRuntime, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { remove as cleanup } from "./cleanup"
 
 Log.init({ print: false })
 
@@ -34,8 +35,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await AppRuntime.dispose()
+  await disposeTestRuntime()
   Flag.KILO_DB = previous
-  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map((file) => fs.rm(file, { force: true })))
+  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
 })
 
 const store = {

@@ -1,13 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
+import { HttpRouter } from "effect/unstable/http"
 import { createKiloClient } from "@kilocode/sdk/v2/client"
 import { provideTestInstance } from "../fixture/fixture"
-import { Server } from "../../src/server/server"
+import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, disposeTestRuntime, tmpdir } from "../fixture/fixture"
 import { eq } from "drizzle-orm"
 import { EventSequenceTable, EventTable } from "@opencode-ai/core/event/sql"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -20,6 +21,8 @@ import { InstanceRef } from "../../src/effect/instance-ref"
 import path from "path"
 import os from "os"
 import fs from "fs/promises"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { remove as cleanup } from "./cleanup"
 
 Log.init({ print: false })
 
@@ -32,8 +35,10 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await AppRuntime.dispose()
+  await disposeTestRuntime()
   Flag.KILO_DB = previous
-  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map((file) => fs.rm(file, { force: true })))
+  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
 })
 
 const sessions = {
@@ -202,15 +207,16 @@ describe("Session.fork task detachment", () => {
           await sessions.updatePart(taskPart({ messageID: assistant, sessionID: parent.id, childSessionID: child.id }))
           const before = await sessions.list()
 
+          const server = HttpRouter.toWebHandler(HttpApiApp.routes, { disableLogger: true })
           const client = createKiloClient({
             baseUrl: "http://localhost",
             directory: tmp.path,
-            fetch: ((request: Request) => Server.Default().app.fetch(request)) as unknown as typeof fetch,
+            fetch: ((request: Request) => server.handler(request, HttpApiApp.context)) as unknown as typeof fetch,
           })
           const { data: forked } = await client.session.fork(
             { sessionID: parent.id, directory: tmp.path },
             { throwOnError: true },
-          )
+          ).finally(() => server.dispose())
 
           const after = await sessions.list()
           expect(after).toHaveLength(before.length + 1)

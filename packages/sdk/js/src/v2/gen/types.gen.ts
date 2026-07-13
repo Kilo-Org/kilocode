@@ -1548,6 +1548,10 @@ export type Config = {
      * Additional filesystem paths that sandboxed tools may write to
      */
     writable_paths?: Array<string>
+    /**
+     * Exact network destinations sandboxed tools may access while network restriction is enabled
+     */
+    allowed_hosts?: Array<string>
   }
   model?: string
   small_model?: string

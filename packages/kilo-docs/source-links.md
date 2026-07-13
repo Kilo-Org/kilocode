@@ -9,7 +9,7 @@
   <!-- packages/opencode/src/provider/models.ts -->
 - <https://api.digitalocean.com>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
-- <https://api.opencode.ai>
+- <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
@@ -54,8 +54,8 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://cloudflare.com/cdn-cgi/trace>
   <!-- packages/opencode/src/session/network.ts -->
-- <https://dev.opencode.ai>
-  <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
+- <https://developers.google.com/identity/sign-in/web/devconsole-project>
+  <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://docs.inceptionlabs.ai/capabilities/next-edit>
@@ -128,6 +128,8 @@
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/app.tsx -->
 - <https://kilo.ai/docs/ai-providers/cloudflare>
   <!-- packages/opencode/src/cli/cmd/providers.ts -->
+- <https://kilo.ai/docs/ai-providers/gemini>
+  <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://kilo.ai/docs/ai-providers#custom-provider>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
 - <https://kilo.ai/docs/automate/mcp/what-is-mcp>
@@ -155,8 +157,6 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://kilocode.ai>
   <!-- packages/opencode/src/kilocode/const.ts -->
-- <https://opencode.ai>
-  <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/kilocode/server/httpapi/public.ts -->

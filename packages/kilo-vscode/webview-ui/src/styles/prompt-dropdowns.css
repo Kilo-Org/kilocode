@@ -64,6 +64,13 @@
   text-align: center;
 }
 
+.file-mention-separator {
+  height: 1px;
+  margin: 4px 10px;
+  background: var(--vscode-editorWidget-border, var(--vscode-input-border));
+  opacity: 0.5;
+}
+
 /* ============================================
    Slash Command Dropdown
    ============================================ */

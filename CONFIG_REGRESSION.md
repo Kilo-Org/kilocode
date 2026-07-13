@@ -1,43 +1,30 @@
-# Config Regression Review: PR #12088
+# Config Regression Re-review: PR #12088
 
-## Scope and methodology
+## Second-pass verdict
 
-Reviewed `origin/main...HEAD` for config discovery, loading, precedence, path resolution, environment overrides, and command/agent/skill registration. I searched added and changed lines for Kilo and OpenCode config paths, compared the current implementations with `origin/main`, and traced both the v1 CLI loader and the core v2 loader through plugin boot and HTTP route assembly. Generated SDK/OpenAPI changes were used only to confirm route exposure.
+**Reviewed head:** `b42f911f7680559b536850aab414258d0eb59a88`
 
-## Finding
+**Current `origin/main`:** `6639022345dd0966b6e028f2c7e533ab91e97166`
 
-### High: the expanded v2 config surface loads `.opencode` resources and does not load `.kilo`
+**Merge base:** `be15cf4b556bea96aaef6de1b3c405b86c0d1a6c`
 
-The PR adds config-backed v2 commands, agents, and skills, but wires them to the upstream-oriented core loader rather than Kilo's config discovery contract.
+**Pass with follow-up.** No shipped Kilo config regression remains. The experimental core v2 registries still use `.opencode` discovery and omit Kilo roots/environment semantics, but no first-party Kilo client consumes those agent, command, or skill endpoints, and `kilo serve` does not mount v2 routes.
 
-- Kilo's retained contract says project config directories are `.kilocode` then `.kilo` (with `.kilo` winning), and explicitly says `.opencode` directories are not loaded (`packages/opencode/src/kilocode/skills/kilo-config.md:342-379`).
-- `packages/core/src/config.ts:135-196` recognizes only `config.json`, `opencode.json`, and `opencode.jsonc`, discovers `.opencode` directories, emits those directories as config entries, and applies `.opencode` entries after direct project files. It has no `.kilo`, `.kilocode`, or `kilo.json` candidate.
-- The new/expanded readers consume every emitted directory: commands scan `{command,commands}/**/*.md` (`packages/core/src/config/plugin/command.ts:22-29,53-57`), agents scan `{agent,agents}/**/*.md` and `{mode,modes}/*.md` (`packages/core/src/config/plugin/agent.ts:42-57,104-114`), and skills append `skill/` and `skills/` (`packages/core/src/config/plugin/skill.ts:20-31`). The skill test explicitly fixes `.opencode` as the expected source (`packages/core/test/config/skill.test.ts:30-66`), while the config integration test fixes `.opencode` discovery and precedence (`packages/core/test/config/config.test.ts:610-668`).
-- `PluginBoot` now registers all three readers (`packages/core/src/plugin/boot.ts:92-105`), and the new server package exposes their results through `/api/agent`, `/api/command`, and `/api/skill` (`packages/server/src/api.ts:16-31`, `packages/server/src/handlers.ts:36-55`). These routes are mounted into the CLI server by `packages/opencode/src/server/routes/instance/httpapi/api.ts:97-103` and `packages/opencode/src/server/routes/instance/httpapi/server.ts:151-166`.
+## Follow-up: align core v2 discovery before adoption
 
-Consequently, a project can newly influence these v2 registries through `.opencode/agent`, `.opencode/command`, and `.opencode/skill(s)`, while equivalent `.kilo` resources are invisible. The same loader also ignores `KILO_CONFIG`, `KILO_CONFIG_CONTENT`, and `KILO_DISABLE_PROJECT_CONFIG`; `KILO_CONFIG_DIR` reaches it only because `Global.make()` replaces `global.config` with that directory (`packages/core/src/global.ts:74-86`), rather than following the v1 loader's additive ordering. This makes the new v2 discovery inconsistent with both Kilo path policy and Kilo environment semantics.
+`packages/core/src/config.ts` recognizes OpenCode filenames and discovers `.opencode`, with no `.kilo`, `.kilocode`, or Kilo environment controls. The command, agent, and skill plugins scan those emitted directories and are exposed in the private experimental v2 API.
 
-The `.opencode` literal and direct `opencode.json` loading already existed in the core v2 loader on `origin/main`, where v2 model/provider/session routes used it. The PR regression is the addition and exposure of command/agent/skill readers over those entries, plus the continued omission of `.kilo` while broadening the v2 runtime. It is not merely an internal package-name compatibility issue.
+Production-source searches found no first-party use of `client.v2.agent`, `client.v2.command`, or `client.v2.skill`. VS Code, TUI, ACP, and Console continue to use stable `/agent`, `/command`, and `/skill` methods backed by the Kilo-aware v1 loader. The active network listener also omits `v2Routes` in `createListenerRoutes()`.
 
-Recommended fix: give the core v2 loader Kilo-specific discovery inputs matching the v1 loader, or adapt the new readers to Kilo's existing directory list. Add focused coverage proving `.opencode` directories are ignored, `.kilo` wins over `.kilocode`, and the four Kilo config environment controls retain their documented behavior. Human verification is needed only if the experimental v2 API is intentionally exempt from Kilo config policy; if so, that exception should be explicit before these routes are consumed by Kilo clients.
+Before mounting or adopting these registries, make v2 discovery honor `.kilocode`/`.kilo` precedence, ignore `.opencode` directories, and support `KILO_CONFIG`, `KILO_CONFIG_CONTENT`, `KILO_CONFIG_DIR`, and `KILO_DISABLE_PROJECT_CONFIG`. Add focused tests for those semantics.
 
-## Notable non-findings
+## Cleared checks
 
-- The active v1 CLI loader did not restore `.opencode` directory fallback. `packages/opencode/src/config/paths.ts:23-40` still discovers `Global.Path.config`, project/home `.kilocode` and `.kilo`, then `KILO_CONFIG_DIR`; its diff is an `AppFileSystem` to `FSUtil` migration. The primary-worktree insertion and `.kilo` ordering in `packages/opencode/src/config/config.ts:568-680` are unchanged in substance.
-- Existing support for `opencode.json` filenames inside Kilo roots or as direct project files is legacy filename compatibility, not an `~/.config/opencode` or `.opencode` directory fallback introduced by this PR.
-- `@opencode-ai/*` imports, `@opencode/*` service identifiers, the `opencode` provider ID, API names, and auth username are package/protocol compatibility identifiers and do not themselves read OpenCode config paths.
-- The added `customize-opencode` embedded skill text mentions `.opencode`, but `packages/core/src/plugin/boot.ts:97` deliberately does not register that upstream skill in Kilo; those strings do not create a filesystem read.
-- The core global XDG application name remains `kilo` (`packages/core/src/global.ts:11-24`). No new `~/.config/opencode` global fallback was found.
+- The active v1 loader still discovers `.kilocode` then `.kilo`; `.kilo` wins at the same level.
+- No `.opencode` directory fallback was restored in the active loader. Detection code only emits migration guidance.
+- Legacy `opencode.json` filename support inside Kilo roots remains compatibility behavior, not directory fallback.
+- Primary/active worktree ordering and explicit Kilo environment source precedence remain intact.
 
 ## Commands and limitations
 
-Key commands included `git status --short`, `git diff --name-status origin/main...HEAD`, `git diff --stat origin/main...HEAD`, `git log --oneline origin/main..HEAD`, focused `git diff -G`/`git diff --unified` searches, `git grep` against `origin/main`, and source/reference searches across `packages/core`, `packages/opencode`, and `packages/server`.
-
-Focused tests were attempted with:
-
-```sh
-cd packages/core
-bun test ./test/config/config.test.ts ./test/config/command.test.ts ./test/config/agent.test.ts ./test/config/skill.test.ts
-```
-
-They did not start because dependencies are not installed in this worktree (`Cannot find package 'effect'`). This is therefore a static review; no live CLI or HTTP request was exercised. The branch contains 1,206 changed files, so generated outputs and unrelated migrations were not reviewed exhaustively after path-focused searches and call-chain tracing.
+The review used exact-ref path/environment searches, loader precedence comparison, generated SDK route mapping, client call-site searches, and listener route assembly. Static searches cannot identify third-party users of private/experimental APIs, but establish that current first-party products do not adopt the mismatched registries. No live config-loading test was run against the immutable ref.

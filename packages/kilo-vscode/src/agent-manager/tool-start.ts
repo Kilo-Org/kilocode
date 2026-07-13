@@ -4,6 +4,7 @@ import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
+import { sameDirectory } from "../kilo-provider-utils"
 
 const LABEL_MAX = 28
 const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
@@ -121,8 +122,9 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
   if (!root || !state) return false
 
   const dir = clean(directory) ?? root
-  const wt = dir === root ? undefined : state.findWorktreeByPath(dir)
-  if (dir !== root && !wt) {
+  const match = sameDirectory(dir, root)
+  const wt = match ? undefined : state.findWorktreeByPath(dir)
+  if (!match && !wt) {
     deps.log("Agent Manager tool local request ignored unknown directory", dir)
     deps.post({
       type: "error",

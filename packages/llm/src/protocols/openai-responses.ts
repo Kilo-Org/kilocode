@@ -131,7 +131,7 @@ const OpenAIResponsesCoreFields = {
   reasoning: Schema.optional(
     Schema.Struct({
       effort: Schema.optional(OpenAIOptions.OpenAIReasoningEffort),
-      summary: Schema.optional(Schema.Literal("auto")),
+      summary: Schema.optional(OpenAIOptions.OpenAIReasoningSummary), // kilocode_change
     }),
   ),
   text: Schema.optional(

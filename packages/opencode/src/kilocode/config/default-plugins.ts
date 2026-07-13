@@ -1,6 +1,6 @@
 import { createRequire } from "module"
 import { ConfigPlugin } from "@/config/plugin"
-import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin" // kilocode_change - Spec/Options moved to core
+import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
 import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { ensureAtomicChatPlugin, isAtomicChatPlugin } from "@/kilocode/atomic-chat-feature"
 import { ensureIndexingPlugin, resolveIndexingPlugin } from "@/kilocode/indexing-feature"

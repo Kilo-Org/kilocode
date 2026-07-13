@@ -1,9 +1,10 @@
 import { $ } from "bun"
+import * as Observability from "@opencode-ai/core/effect/observability"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import * as fs from "fs/promises"
 import os from "os"
 import path from "path"
-import { Effect, Context, Layer } from "effect"
+import { Effect, Context, Layer, ManagedRuntime } from "effect"
 import type * as PlatformError from "effect/PlatformError"
 import type * as Scope from "effect/Scope"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -23,34 +24,49 @@ import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 export const testInstanceStoreLayer = InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap))
+const makeTestRuntime = () =>
+  ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
+let testRuntime: ReturnType<typeof makeTestRuntime> | undefined
+const runtime = () => (testRuntime ??= makeTestRuntime())
+
+const runTestInstanceStore = <A>(fn: (store: InstanceStore.Interface) => Effect.Effect<A>) =>
+  runtime().runPromise(InstanceStore.Service.use(fn))
+
+export async function disposeTestRuntime() {
+  const rt = testRuntime
+  testRuntime = undefined
+  await rt?.dispose()
+}
 
 export async function provideTestInstance<R>(input: {
   directory: string
   init?: Effect.Effect<void>
   fn: (ctx: InstanceContext) => R
 }) {
-  const ctx = await InstanceRuntime.load({ directory: input.directory })
+  const ctx = await runTestInstanceStore((store) => store.load({ directory: input.directory }))
   try {
-    if (input.init) await Effect.runPromise(input.init.pipe(Effect.provideService(InstanceRef, ctx)))
+    if (input.init) await runtime().runPromise(input.init.pipe(Effect.provideService(InstanceRef, ctx)))
     return await instanceContext.provide(ctx, () => input.fn(ctx)) // kilocode_change
   } finally {
     // kilocode_change start
-    await instanceContext.provide(ctx, () => InstanceRuntime.disposeInstance(ctx)) // kilocode_change
+    await instanceContext.provide(ctx, () =>
+      runTestInstanceStore((store) => store.dispose(ctx).pipe(Effect.provideService(InstanceRef, ctx))),
+    )
     // kilocode_change end
   }
 }
 
 export async function withTestInstance<R>(input: { directory: string; fn: (ctx: InstanceContext) => R }) {
-  const ctx = await InstanceRuntime.load({ directory: input.directory })
+  const ctx = await runTestInstanceStore((store) => store.load({ directory: input.directory }))
   return instanceContext.provide(ctx, () => input.fn(ctx)) // kilocode_change
 }
 
 export async function reloadTestInstance(input: { directory: string }) {
-  return InstanceRuntime.reloadInstance(input)
+  return runTestInstanceStore((store) => store.reload(input))
 }
 
 export async function disposeAllInstances() {
-  await InstanceRuntime.disposeAllInstances()
+  await Promise.all([InstanceRuntime.disposeAllInstances(), runTestInstanceStore((store) => store.disposeAll())])
 }
 
 // Strip null bytes from paths (defensive fix for CI environment issues)

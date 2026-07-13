@@ -3,7 +3,7 @@ import { expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
 import type { Event, GlobalEvent } from "@kilocode/sdk/v2"
 import { onMount } from "solid-js"
-import { ProjectProvider } from "../../../src/cli/cmd/tui/context/project"
+import { ProjectProvider, useProject } from "../../../src/cli/cmd/tui/context/project" // kilocode_change
 import { SDKProvider } from "../../../src/cli/cmd/tui/context/sdk"
 import { SyncProviderV2, useSyncV2 } from "../../../src/cli/cmd/tui/context/sync-v2"
 import { createEventSource, createFetch, directory, json } from "../../fixture/tui-sdk"
@@ -15,6 +15,16 @@ async function wait(fn: () => boolean, timeout = 2000) {
     await Bun.sleep(10)
   }
 }
+
+// kilocode_change start - live events are filtered by the resolved project ID
+function synced(ready: () => void) {
+  const project = useProject()
+  onMount(async () => {
+    await project.sync()
+    ready()
+  })
+}
+// kilocode_change end
 
 function global(payload: Event): GlobalEvent {
   return { directory, project: "proj_test", payload }
@@ -37,7 +47,7 @@ test("sync v2 settles pending tools when a live failure arrives", async () => {
 
   function Probe() {
     sync = useSyncV2()
-    onMount(ready)
+    synced(ready)
     return <box />
   }
 
@@ -164,7 +174,7 @@ test("sync v2 renders admitted prompts only after promotion", async () => {
 
   function Probe() {
     sync = useSyncV2()
-    onMount(ready)
+    synced(ready)
     return <box />
   }
 
@@ -226,7 +236,7 @@ test("sync v2 renders a promoted prompt when admission was missed", async () => 
 
   function Probe() {
     sync = useSyncV2()
-    onMount(ready)
+    synced(ready)
     return <box />
   }
 
@@ -272,7 +282,7 @@ test("sync v2 projects live context updates with their message ID", async () => 
 
   function Probe() {
     sync = useSyncV2()
-    onMount(ready)
+    synced(ready)
     return <box />
   }
 
@@ -325,7 +335,7 @@ test("sync v2 preserves live events while snapshot hydration is in flight", asyn
 
   function Probe() {
     sync = useSyncV2()
-    onMount(ready)
+    synced(ready)
     return <box />
   }
 
@@ -373,7 +383,7 @@ test("sync v2 replaces stale cached rows while preserving in-flight live rows", 
 
   function Probe() {
     sync = useSyncV2()
-    onMount(ready)
+    synced(ready)
     return <box />
   }
 
@@ -440,7 +450,7 @@ test("sync v2 preserves snapshot order and metadata for in-flight updates", asyn
 
   function Probe() {
     sync = useSyncV2()
-    onMount(ready)
+    synced(ready)
     return <box />
   }
 
