@@ -25,6 +25,7 @@ import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
+import { Notices } from "@/kilocode/notices" // kilocode_change
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -465,6 +466,9 @@ export namespace KiloSessions {
       remote = { conn, sender }
       log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
+      // kilocode_change start - mark Cloud Agent (remote) usage so cross-surface promo notices can target these users
+      void Notices.markCloudAgentUsed().catch((err) => log.warn("failed to persist cloud agent usage", { error: String(err) }))
+      // kilocode_change end
       void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
     })()
       .catch((err) => {

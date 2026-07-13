@@ -25,6 +25,10 @@ export const RemoveSkillPayload = Schema.Struct({
   location: Schema.String,
 })
 
+export const MobileAppNotice = Schema.Struct({
+  show: Schema.Boolean,
+})
+
 export const RemoveAgentPayload = Schema.Struct({
   name: Schema.String,
 })
@@ -45,6 +49,8 @@ export const KilocodePaths = {
   notebookReply: `${root}/notebook/:requestID/reply`,
   notebookReject: `${root}/notebook/:requestID/reject`,
   sessionModelUsage: `/session/:sessionID/model-usage`,
+  mobileAppNotice: `${root}/notice/mobile-app`,
+  dismissMobileAppNotice: `${root}/notice/mobile-app/dismiss`,
 } as const
 
 export const KilocodeApi = HttpApi.make("kilocode")
@@ -143,6 +149,27 @@ export const KilocodeApi = HttpApi.make("kilocode")
             identifier: "kilocode.sessionModelUsage",
             summary: "Get session model usage",
             description: "Get token usage and direct cost by model for the complete top-level session tree.",
+          }),
+        ),
+        HttpApiEndpoint.get("mobileAppNotice", KilocodePaths.mobileAppNotice, {
+          query: WorkspaceRoutingQuery,
+          success: described(MobileAppNotice, "Mobile app notice visibility"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.mobileAppNotice",
+            summary: "Get mobile app notice visibility",
+            description:
+              "Whether to show the 'continue your /remote sessions in the Kilo mobile app' notice. Only true for users who have previously used a Cloud Agent / remote session relay and have not dismissed the notice.",
+          }),
+        ),
+        HttpApiEndpoint.post("dismissMobileAppNotice", KilocodePaths.dismissMobileAppNotice, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Boolean, "Notice dismissed"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilocode.dismissMobileAppNotice",
+            summary: "Dismiss mobile app notice",
+            description: "Permanently dismiss the Kilo mobile app promo notice for this machine.",
           }),
         ),
       )

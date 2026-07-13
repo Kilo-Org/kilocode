@@ -164,8 +164,12 @@ import type {
   KiloCloudSessionsResponses,
   KilocodeAgentRequirementsErrors,
   KilocodeAgentRequirementsResponses,
+  KilocodeDismissMobileAppNoticeErrors,
+  KilocodeDismissMobileAppNoticeResponses,
   KilocodeHeapSnapshotErrors,
   KilocodeHeapSnapshotResponses,
+  KilocodeMobileAppNoticeErrors,
+  KilocodeMobileAppNoticeResponses,
   KilocodeNotebookListErrors,
   KilocodeNotebookListResponses,
   KilocodeNotebookRejectErrors,
@@ -7981,6 +7985,74 @@ export class Kilocode extends HeyApiClient {
       ThrowOnError
     >({
       url: "/session/{sessionID}/model-usage",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get mobile app notice visibility
+   *
+   * Whether to show the 'continue your /remote sessions in the Kilo mobile app' notice. Only true for users who have previously used a Cloud Agent / remote session relay and have not dismissed the notice.
+   */
+  public mobileAppNotice<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeMobileAppNoticeResponses,
+      KilocodeMobileAppNoticeErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/notice/mobile-app",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Dismiss mobile app notice
+   *
+   * Permanently dismiss the Kilo mobile app promo notice for this machine.
+   */
+  public dismissMobileAppNotice<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeDismissMobileAppNoticeResponses,
+      KilocodeDismissMobileAppNoticeErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/notice/mobile-app/dismiss",
       ...options,
       ...params,
     })

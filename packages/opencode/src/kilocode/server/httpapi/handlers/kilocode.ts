@@ -4,10 +4,12 @@ import * as KiloAgent from "@/kilocode/agent"
 import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
+import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
+import { Notices } from "@/kilocode/notices"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
@@ -98,6 +100,16 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return usage
     })
 
+    const mobileAppNotice = Effect.fn("KilocodeHttpApi.mobileAppNotice")(function* () {
+      const show = yield* EffectBridge.fromPromise(() => Notices.shouldShowMobileAppNotice())
+      return { show }
+    })
+
+    const dismissMobileAppNotice = Effect.fn("KilocodeHttpApi.dismissMobileAppNotice")(function* () {
+      yield* EffectBridge.fromPromise(() => Notices.dismissMobileAppNotice())
+      return true
+    })
+
     return handlers
       .handle("heapSnapshot", heapSnapshot)
       .handle("agentRequirements", agentRequirements)
@@ -107,5 +119,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("notebookReply", notebookReply)
       .handle("notebookReject", notebookReject)
       .handle("sessionModelUsage", sessionModelUsage)
+      .handle("mobileAppNotice", mobileAppNotice)
+      .handle("dismissMobileAppNotice", dismissMobileAppNotice)
   }),
 )

@@ -5,20 +5,10 @@ export type ClientOptions = {
 }
 
 export type Event =
+  | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
-  | EventTuiPromptAppend
-  | EventTuiCommandExecute
-  | EventTuiToastShow1
-  | EventTuiSessionSelect
-  | EventSandboxStatusChanged
-  | EventKilocodeAgentManagerStart
-  | EventKilocodeNotebookRequested
-  | EventKilocodeNotebookCancelled
-  | EventIndexingStatus
-  | EventIndexingWarning
-  | EventServerInstanceDisposed
   | EventFileEdited
   | EventFileWatcherUpdated
   | EventQuestionAsked
@@ -26,6 +16,10 @@ export type Event =
   | EventQuestionRejected
   | EventLspClientDiagnostics
   | EventLspUpdated
+  | EventTuiPromptAppend
+  | EventTuiCommandExecute
+  | EventTuiToastShow1
+  | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
   | EventSessionNetworkAsked
@@ -42,6 +36,7 @@ export type Event =
   | EventInteractiveTerminalDeleted
   | EventSessionTurnOpen
   | EventSessionTurnClose
+  | EventSandboxStatusChanged
   | EventSessionDiff
   | EventSessionError
   | EventTodoUpdated
@@ -55,6 +50,9 @@ export type Event =
   | EventCommandExecuted
   | EventProjectUpdated
   | EventSessionCompacted
+  | EventKilocodeAgentManagerStart
+  | EventKilocodeNotebookRequested
+  | EventKilocodeNotebookCancelled
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
   | EventMemoryStatus1
@@ -102,9 +100,11 @@ export type Event =
   | EventSessionNextCompactionStarted
   | EventSessionNextCompactionDelta
   | EventSessionNextCompactionEnded
+  | EventIndexingStatus
+  | EventIndexingWarning
+  | EventModelsDevRefreshed
   | EventPluginAdded
   | EventCatalogModelUpdated
-  | EventModelsDevRefreshed
   | EventAccountAdded
   | EventAccountRemoved
   | EventAccountSwitched
@@ -143,137 +143,6 @@ export type InvalidRequestError = {
   message: string
   kind?: string
   field?: string
-}
-
-export type EventTuiPromptAppend = {
-  id: string
-  type: "tui.prompt.append"
-  properties: {
-    text: string
-  }
-}
-
-export type EventTuiCommandExecute = {
-  id: string
-  type: "tui.command.execute"
-  properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.line.up"
-      | "session.line.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  id: string
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  id: string
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-}
-
-export type NotebookRequestId = string
-
-export type NotebookReadRequest = {
-  id: NotebookRequestId
-  sessionID: string
-  path: string
-  operation: "read"
-  includeOutputs: boolean
-}
-
-export type NotebookEditRequest = {
-  id: NotebookRequestId
-  sessionID: string
-  path: string
-  operation: "edit"
-  /**
-   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
-   */
-  expectedRevision?: string
-  /**
-   * Zero-based cell index
-   */
-  index: number
-  edit:
-    | {
-        action: "insert"
-        kind: "code" | "markdown"
-        language?: string
-        source: string
-      }
-    | {
-        action: "replace"
-        kind: "code" | "markdown"
-        language?: string
-        source: string
-      }
-    | {
-        action: "delete"
-      }
-    | {
-        action: "create"
-      }
-}
-
-export type NotebookExecuteRequest = {
-  id: NotebookRequestId
-  sessionID: string
-  path: string
-  operation: "execute"
-  /**
-   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
-   */
-  expectedRevision: string
-  /**
-   * Zero-based cell index
-   */
-  index: number
-}
-
-export type NotebookRequest = NotebookReadRequest | NotebookEditRequest | NotebookExecuteRequest
-
-export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
-
-export type IndexingStatus = {
-  state: IndexingStatusState
-  message: string
-  processedFiles: number
-  totalFiles: number
-  percent: number
-}
-
-export type IndexingWarning = {
-  code: "qdrant.version-incompatible" | "qdrant.version-unavailable"
-  message: string
 }
 
 export type QuestionOption = {
@@ -336,6 +205,61 @@ export type QuestionReplied = {
 export type QuestionRejected = {
   sessionID: string
   requestID: string
+}
+
+export type EventTuiPromptAppend = {
+  id: string
+  type: "tui.prompt.append"
+  properties: {
+    text: string
+  }
+}
+
+export type EventTuiCommandExecute = {
+  id: string
+  type: "tui.command.execute"
+  properties: {
+    command:
+      | "session.list"
+      | "session.new"
+      | "session.share"
+      | "session.interrupt"
+      | "session.compact"
+      | "session.page.up"
+      | "session.page.down"
+      | "session.line.up"
+      | "session.line.down"
+      | "session.half.page.up"
+      | "session.half.page.down"
+      | "session.first"
+      | "session.last"
+      | "prompt.clear"
+      | "prompt.submit"
+      | "agent.cycle"
+      | string
+  }
+}
+
+export type EventTuiToastShow = {
+  id: string
+  type: "tui.toast.show"
+  properties: {
+    title?: string
+    message: string
+    variant: "info" | "success" | "warning" | "error"
+    duration?: number
+  }
+}
+
+export type EventTuiSessionSelect = {
+  id: string
+  type: "tui.session.select"
+  properties: {
+    /**
+     * Session ID to navigate to
+     */
+    sessionID: string
+  }
 }
 
 export type SessionNetworkWait = {
@@ -586,6 +510,67 @@ export type Project = {
   }
   sandboxes: Array<string>
 }
+
+export type NotebookRequestId = string
+
+export type NotebookReadRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "read"
+  includeOutputs: boolean
+}
+
+export type NotebookEditRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "edit"
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  expectedRevision?: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+  edit:
+    | {
+        action: "insert"
+        kind: "code" | "markdown"
+        language?: string
+        source: string
+      }
+    | {
+        action: "replace"
+        kind: "code" | "markdown"
+        language?: string
+        source: string
+      }
+    | {
+        action: "delete"
+      }
+    | {
+        action: "create"
+      }
+}
+
+export type NotebookExecuteRequest = {
+  id: NotebookRequestId
+  sessionID: string
+  path: string
+  operation: "execute"
+  /**
+   * Opaque notebook content revision; pass it back unchanged and do not parse or increment it
+   */
+  expectedRevision: string
+  /**
+   * Zero-based cell index
+   */
+  index: number
+}
+
+export type NotebookRequest = NotebookReadRequest | NotebookEditRequest | NotebookExecuteRequest
 
 export type Pty = {
   id: string
@@ -1033,25 +1018,30 @@ export type Prompt = {
   references?: Array<PromptReferenceAttachment>
 }
 
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
+export type IndexingWarning = {
+  code: "qdrant.version-incompatible" | "qdrant.version-unavailable"
+  message: string
+}
+
 export type GlobalEvent = {
   directory: string
   project?: string
   workspace?: string
   payload:
+    | EventServerInstanceDisposed
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
-    | EventTuiPromptAppend
-    | EventTuiCommandExecute
-    | EventTuiToastShow
-    | EventTuiSessionSelect
-    | EventSandboxStatusChanged
-    | EventKilocodeAgentManagerStart
-    | EventKilocodeNotebookRequested
-    | EventKilocodeNotebookCancelled
-    | EventIndexingStatus
-    | EventIndexingWarning
-    | EventServerInstanceDisposed
     | EventFileEdited
     | EventFileWatcherUpdated
     | EventQuestionAsked
@@ -1059,6 +1049,10 @@ export type GlobalEvent = {
     | EventQuestionRejected
     | EventLspClientDiagnostics
     | EventLspUpdated
+    | EventTuiPromptAppend
+    | EventTuiCommandExecute
+    | EventTuiToastShow
+    | EventTuiSessionSelect
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
     | EventSessionNetworkAsked
@@ -1075,6 +1069,7 @@ export type GlobalEvent = {
     | EventInteractiveTerminalDeleted
     | EventSessionTurnOpen
     | EventSessionTurnClose
+    | EventSandboxStatusChanged
     | EventSessionDiff
     | EventSessionError
     | EventTodoUpdated
@@ -1088,6 +1083,9 @@ export type GlobalEvent = {
     | EventCommandExecuted
     | EventProjectUpdated
     | EventSessionCompacted
+    | EventKilocodeAgentManagerStart
+    | EventKilocodeNotebookRequested
+    | EventKilocodeNotebookCancelled
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
     | EventMemoryStatus
@@ -1135,9 +1133,11 @@ export type GlobalEvent = {
     | EventSessionNextCompactionStarted
     | EventSessionNextCompactionDelta
     | EventSessionNextCompactionEnded
+    | EventIndexingStatus
+    | EventIndexingWarning
+    | EventModelsDevRefreshed
     | EventPluginAdded
     | EventCatalogModelUpdated
-    | EventModelsDevRefreshed
     | EventAccountAdded
     | EventAccountRemoved
     | EventAccountSwitched
@@ -3393,6 +3393,14 @@ export type SyncEventSessionNextCompactionEnded = {
   }
 }
 
+export type EventServerInstanceDisposed = {
+  id: string
+  type: "server.instance.disposed"
+  properties: {
+    directory: string
+  }
+}
+
 export type EventServerConnected = {
   id: string
   type: "server.connected"
@@ -3414,78 +3422,6 @@ export type EventGlobalConfigUpdated = {
   type: "global.config.updated"
   properties: {
     [key: string]: unknown
-  }
-}
-
-export type EventSandboxStatusChanged = {
-  id: string
-  type: "sandbox.status.changed"
-  properties: {
-    sessionID: string
-    directory: string
-    enabled: boolean
-    available: boolean
-    reason?: string
-    version: number
-  }
-}
-
-export type EventKilocodeAgentManagerStart = {
-  id: string
-  type: "kilocode.agent_manager.start"
-  properties: {
-    requestID: string
-    sessionID: string
-    mode: "worktree" | "local"
-    versions?: boolean
-    tasks: Array<{
-      prompt?: string
-      name?: string
-      branchName?: string
-      model?: {
-        providerID: string
-        modelID: string
-      }
-      variant?: string
-    }>
-  }
-}
-
-export type EventKilocodeNotebookRequested = {
-  id: string
-  type: "kilocode.notebook.requested"
-  properties: NotebookRequest
-}
-
-export type EventKilocodeNotebookCancelled = {
-  id: string
-  type: "kilocode.notebook.cancelled"
-  properties: {
-    requestID: NotebookRequestId
-    sessionID: string
-    reason: "cancelled" | "disposed" | "timeout"
-  }
-}
-
-export type EventIndexingStatus = {
-  id: string
-  type: "indexing.status"
-  properties: {
-    status: IndexingStatus
-  }
-}
-
-export type EventIndexingWarning = {
-  id: string
-  type: "indexing.warning"
-  properties: IndexingWarning
-}
-
-export type EventServerInstanceDisposed = {
-  id: string
-  type: "server.instance.disposed"
-  properties: {
-    directory: string
   }
 }
 
@@ -3685,6 +3621,19 @@ export type EventSessionTurnClose = {
   }
 }
 
+export type EventSandboxStatusChanged = {
+  id: string
+  type: "sandbox.status.changed"
+  properties: {
+    sessionID: string
+    directory: string
+    enabled: boolean
+    available: boolean
+    reason?: string
+    version: number
+  }
+}
+
 export type EventSessionDiff = {
   id: string
   type: "session.diff"
@@ -3811,6 +3760,43 @@ export type EventSessionCompacted = {
   type: "session.compacted"
   properties: {
     sessionID: string
+  }
+}
+
+export type EventKilocodeAgentManagerStart = {
+  id: string
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      prompt?: string
+      name?: string
+      branchName?: string
+      model?: {
+        providerID: string
+        modelID: string
+      }
+      variant?: string
+    }>
+  }
+}
+
+export type EventKilocodeNotebookRequested = {
+  id: string
+  type: "kilocode.notebook.requested"
+  properties: NotebookRequest
+}
+
+export type EventKilocodeNotebookCancelled = {
+  id: string
+  type: "kilocode.notebook.cancelled"
+  properties: {
+    requestID: NotebookRequestId
+    sessionID: string
+    reason: "cancelled" | "disposed" | "timeout"
   }
 }
 
@@ -4457,6 +4443,28 @@ export type EventSessionNextCompactionEnded = {
   }
 }
 
+export type EventIndexingStatus = {
+  id: string
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
+export type EventIndexingWarning = {
+  id: string
+  type: "indexing.warning"
+  properties: IndexingWarning
+}
+
+export type EventModelsDevRefreshed = {
+  id: string
+  type: "models-dev.refreshed"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventPluginAdded = {
   id: string
   type: "plugin.added"
@@ -4568,14 +4576,6 @@ export type EventCatalogModelUpdated = {
   type: "catalog.model.updated"
   properties: {
     model: ModelV2Info
-  }
-}
-
-export type EventModelsDevRefreshed = {
-  id: string
-  type: "models-dev.refreshed"
-  properties: {
-    [key: string]: unknown
   }
 }
 
@@ -11708,6 +11708,66 @@ export type KilocodeSessionModelUsageResponses = {
 
 export type KilocodeSessionModelUsageResponse =
   KilocodeSessionModelUsageResponses[keyof KilocodeSessionModelUsageResponses]
+
+export type KilocodeMobileAppNoticeData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notice/mobile-app"
+}
+
+export type KilocodeMobileAppNoticeErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeMobileAppNoticeError = KilocodeMobileAppNoticeErrors[keyof KilocodeMobileAppNoticeErrors]
+
+export type KilocodeMobileAppNoticeResponses = {
+  /**
+   * Mobile app notice visibility
+   */
+  200: {
+    show: boolean
+  }
+}
+
+export type KilocodeMobileAppNoticeResponse = KilocodeMobileAppNoticeResponses[keyof KilocodeMobileAppNoticeResponses]
+
+export type KilocodeDismissMobileAppNoticeData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/notice/mobile-app/dismiss"
+}
+
+export type KilocodeDismissMobileAppNoticeErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeDismissMobileAppNoticeError =
+  KilocodeDismissMobileAppNoticeErrors[keyof KilocodeDismissMobileAppNoticeErrors]
+
+export type KilocodeDismissMobileAppNoticeResponses = {
+  /**
+   * Notice dismissed
+   */
+  200: boolean
+}
+
+export type KilocodeDismissMobileAppNoticeResponse =
+  KilocodeDismissMobileAppNoticeResponses[keyof KilocodeDismissMobileAppNoticeResponses]
 
 export type AnacondaDesktopStatusData = {
   body?: never
