@@ -768,6 +768,21 @@ const AgentManagerContent: Component = () => {
     return false
   })
 
+  const overlay = createMemo((): SetupState | null => {
+    const state = setup()
+    const sel = selection()
+    if (state.active && (!state.worktreeId || sel === state.worktreeId)) return state
+    if (typeof sel !== "string" || sel === LOCAL) return null
+    const busy = busyWorktrees().get(sel)
+    if (busy?.reason !== "setting-up") return null
+    const tree = worktrees().find((item) => item.id === sel)
+    return {
+      active: true,
+      message: busy.message ?? "",
+      branch: busy.branch ?? tree?.branch,
+    }
+  })
+
   createEffect(() => {
     const sel = selection()
     if (sel === null) {
@@ -797,7 +812,10 @@ const AgentManagerContent: Component = () => {
     return session.currentSessionID() ?? activePendingId()
   })
   const visibleSession = createMemo(() =>
-    visible(session.currentSessionID(), !!terms.activeId() || reviewActive() || history()),
+    visible(
+      session.currentSessionID(),
+      !!terms.activeId() || reviewActive() || history() || !!overlay() || contextEmpty(),
+    ),
   )
   reportVisibleSession(vscode, visibleSession)
   const worktreeLabel = (wt: WorktreeState): string => {
@@ -2917,54 +2935,29 @@ const AgentManagerContent: Component = () => {
           </div>
         </Show>
 
-        {(() => {
-          // Show setup overlay: either the transient ready/error state for the selected worktree,
-          // or if the selected worktree is still being set up (from busyWorktrees map)
-          const overlayState = (): SetupState | null => {
-            const s = setup()
-            const sel = selection()
-            // Transient ready/error overlay for the selected worktree (or worktree-less setup)
-            if (s.active && (!s.worktreeId || sel === s.worktreeId)) return s
-            // Persistent setup-in-progress for the currently selected worktree
-            if (typeof sel === "string" && sel !== LOCAL) {
-              const busy = busyWorktrees().get(sel)
-              if (busy?.reason === "setting-up") {
-                const wt = worktrees().find((w) => w.id === sel)
-                return {
-                  active: true,
-                  message: busy.message ?? "",
-                  branch: busy.branch ?? wt?.branch,
-                } satisfies SetupState
-              }
-            }
-            return null
-          }
-          return (
-            <Show when={overlayState()}>
-              {(state) => (
-                <div class="am-setup-overlay">
-                  <div class="am-setup-card">
-                    <Icon name="branch" size="large" />
-                    <div class="am-setup-title">
-                      {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
-                    </div>
-                    <Show when={state().branch}>
-                      <div class="am-setup-branch">{state().branch}</div>
-                    </Show>
-                    <div class="am-setup-status">
-                      <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
-                        <Spinner class="am-setup-spinner" />
-                      </Show>
-                      <span>
-                        {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
-                      </span>
-                    </div>
-                  </div>
+        <Show when={overlay()}>
+          {(state) => (
+            <div class="am-setup-overlay">
+              <div class="am-setup-card">
+                <Icon name="branch" size="large" />
+                <div class="am-setup-title">
+                  {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
                 </div>
-              )}
-            </Show>
-          )
-        })()}
+                <Show when={state().branch}>
+                  <div class="am-setup-branch">{state().branch}</div>
+                </Show>
+                <div class="am-setup-status">
+                  <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
+                    <Spinner class="am-setup-spinner" />
+                  </Show>
+                  <span>
+                    {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </Show>
         <Show when={history()}>
           <HistoryView
             onSelectSession={(id) => {
