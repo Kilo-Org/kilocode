@@ -16,6 +16,7 @@ import { SessionSchema } from "@opencode-ai/core/session/schema"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { remove as cleanup } from "../cleanup"
 
 // Test fixtures
 const fixtures = {
@@ -505,7 +506,7 @@ describe("JSON to SQLite migration", () => {
       reopened.close()
     } finally {
       Flag.KILO_DB = previous
-      await Promise.all([marker, marker + "-shm", marker + "-wal"].map((file) => fs.rm(file, { force: true })))
+      await Promise.all([marker, marker + "-shm", marker + "-wal"].map(cleanup))
     }
   })
 
