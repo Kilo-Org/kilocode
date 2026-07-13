@@ -9,7 +9,18 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { type Component, type JSX, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
+import {
+  type Accessor,
+  type Component,
+  type JSX,
+  For,
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  onCleanup,
+} from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
@@ -77,6 +88,7 @@ interface MessageListProps {
   emptyState?: () => JSX.Element
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
   announce?: boolean
+  sessionID?: Accessor<string | undefined>
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -742,7 +754,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       <Show when={isEmpty()}>
         <div class="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
-          <KiloNotifications />
+          <KiloNotifications sessionID={props.sessionID} />
         </div>
       </Show>
       <div

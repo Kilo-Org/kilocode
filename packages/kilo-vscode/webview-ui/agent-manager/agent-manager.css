@@ -1251,6 +1251,19 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--surface-interactive-base) 10%, transparent);
 }
 
+.am-tab-target {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+}
+
+.am-tab:has(.am-tab-target:focus-visible) {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
+  color: var(--text-base);
+}
+
 .am-tab-icon {
   display: inline-flex;
   align-items: center;
@@ -1286,8 +1299,6 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
   height: 100%;
   flex: 1;
-  padding-right: 27px;
-  margin-right: -27px;
 }
 
 .am-tab-close-wrap {

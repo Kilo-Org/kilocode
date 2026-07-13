@@ -13,7 +13,6 @@ describe("provider tool schema sanitization", () => {
       type: "object",
       examples: [{ pattern: "(?=annotation)" }],
       patternProperties: {
-        "(?=private-)": { type: "string" },
         "[(?=]": { type: "string" },
         [escaped]: { type: "string" },
       },
@@ -70,5 +69,51 @@ describe("provider tool schema sanitization", () => {
     }
 
     expect(await KiloToolSchema.sanitize(input)).toBe(input)
+  })
+
+  test("keeps strict dynamic properties available when their key pattern is removed", async () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      patternProperties: {
+        "^(?!reserved$).+$": { type: "string", minLength: 1, pattern: "(?=value)" },
+        "^safe-": { type: "number" },
+      },
+      additionalProperties: false,
+    }
+    const input = { dynamic: tool({ inputSchema: jsonSchema(schema) }) }
+
+    const output = await KiloToolSchema.sanitize(input)
+    const result = (await asSchema(output.dynamic.inputSchema).jsonSchema) as JSONSchema7
+
+    expect(result).toEqual({ type: "object", additionalProperties: true })
+    expect(schema.patternProperties).toEqual({
+      "^(?!reserved$).+$": { type: "string", minLength: 1, pattern: "(?=value)" },
+      "^safe-": { type: "number" },
+    })
+    expect(schema.additionalProperties).toBe(false)
+  })
+
+  test("keeps object inputs available when an exact-match branch is widened", async () => {
+    const schema: JSONSchema7 = {
+      type: "object",
+      oneOf: [
+        {
+          type: "object",
+          properties: { x: { type: "string", pattern: "(?=value)" } },
+          required: ["x"],
+        },
+        {
+          type: "object",
+          properties: { y: { type: "string" } },
+          required: ["y"],
+        },
+      ],
+    }
+    const input = { exact: tool({ inputSchema: jsonSchema(schema) }) }
+
+    const output = await KiloToolSchema.sanitize(input)
+    const result = await asSchema(output.exact.inputSchema).jsonSchema
+
+    expect(result).toEqual({ type: "object", additionalProperties: true })
   })
 })
