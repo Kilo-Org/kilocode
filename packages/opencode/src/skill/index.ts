@@ -18,6 +18,7 @@ import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
 import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
 import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
@@ -79,15 +80,24 @@ type State = {
   dirs: Set<string>
 }
 
+// kilocode_change start - retain markdown trust provenance through discovery
+type Match = {
+  path: string
+  trusted: boolean
+  root?: string
+  sourceRoot?: string
+}
+
 type DiscoveryState = {
-  matches: string[]
+  matches: Match[]
   dirs: string[]
 }
 
 type ScanState = {
-  matches: Set<string>
+  matches: Map<string, Match>
   dirs: Set<string>
 }
+// kilocode_change end
 
 export interface Interface {
   readonly get: (name: string) => Effect.Effect<Info | undefined>
@@ -97,19 +107,29 @@ export interface Interface {
   readonly available: (agent?: Agent.Info) => Effect.Effect<Info[]>
 }
 
-const add = Effect.fnUntraced(function* (state: State, match: string, bus: Bus.Interface) {
+// kilocode_change start
+const add = Effect.fnUntraced(function* (state: State, match: Match, bus: Bus.Interface) {
+  const source = match.sourceRoot ?? match.root
+  // kilocode_change end
   const md = yield* Effect.tryPromise({
-    try: () => ConfigMarkdown.parse(match),
+    // kilocode_change start - project skills cannot read env or files outside the project root
+    try: () =>
+      ConfigMarkdown.parse(match.path, {
+        trusted: match.trusted,
+        fileScope: match.trusted || !match.root ? undefined : { root: match.root, source: match.path },
+        sourceScope: match.trusted || !source ? undefined : { root: source, source: match.path },
+      }),
+    // kilocode_change end
     catch: (err) => err,
   }).pipe(
     Effect.catch(
       Effect.fnUntraced(function* (err) {
         const message = ConfigMarkdown.FrontmatterError.isInstance(err)
           ? err.data.message
-          : `Failed to parse skill ${match}`
+          : `Failed to parse skill ${match.path}` // kilocode_change
         const { Session } = yield* Effect.promise(() => import("@/session/session"))
         yield* bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-        log.error("failed to load skill", { skill: match, err })
+        log.error("failed to load skill", { skill: match.path, err }) // kilocode_change
         return undefined
       }),
     ),
@@ -123,15 +143,15 @@ const add = Effect.fnUntraced(function* (state: State, match: string, bus: Bus.I
     log.warn("duplicate skill name", {
       name: md.data.name,
       existing: state.skills[md.data.name].location,
-      duplicate: match,
+      duplicate: match.path, // kilocode_change
     })
   }
 
-  state.dirs.add(path.dirname(match))
+  state.dirs.add(path.dirname(match.path)) // kilocode_change
   state.skills[md.data.name] = {
     name: md.data.name,
     description: md.data.description,
-    location: match,
+    location: match.path, // kilocode_change
     content: md.content,
   }
 })
@@ -140,7 +160,7 @@ const scan = Effect.fnUntraced(function* (
   state: ScanState,
   root: string,
   pattern: string,
-  opts?: { dot?: boolean; scope?: string },
+  opts?: { dot?: boolean; scope?: string; trusted?: boolean; root?: string; sourceRoot?: string }, // kilocode_change
 ) {
   const matches = yield* Effect.tryPromise({
     try: () =>
@@ -161,7 +181,14 @@ const scan = Effect.fnUntraced(function* (
   )
 
   for (const match of matches) {
-    state.matches.add(match)
+    // kilocode_change start
+    state.matches.set(match, {
+      path: match,
+      trusted: opts?.trusted ?? false,
+      root: opts?.root,
+      sourceRoot: opts?.sourceRoot,
+    })
+    // kilocode_change end
     state.dirs.add(path.dirname(match))
   }
 })
@@ -176,7 +203,8 @@ const discoverSkills = Effect.fnUntraced(function* (
   directory: string,
   worktree: string,
 ) {
-  const state: ScanState = { matches: new Set(), dirs: new Set() }
+  const state: ScanState = { matches: new Map(), dirs: new Set() } // kilocode_change
+  const projectRoot = worktree === "/" ? directory : worktree // kilocode_change - project substitution boundary
 
   const externalDirs: string[] = []
   if (!disableExternalSkills) {
@@ -186,24 +214,45 @@ const discoverSkills = Effect.fnUntraced(function* (
     for (const dir of externalDirs) {
       const root = path.join(global.home, dir)
       if (!(yield* fsys.isDir(root))) continue
-      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global" })
+      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "global", trusted: true }) // kilocode_change
     }
 
     // kilocode_change start
     const local = yield* fsys
       .up({ targets: externalDirs, start: directory, stop: worktree })
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
-    const upDirs = [...(yield* primaryPaths(directory, worktree, externalDirs)), ...local]
+    const fallbacks = yield* primaryPaths(directory, worktree, externalDirs) // kilocode_change
+    const upDirs = [...fallbacks, ...local]
     // kilocode_change end
 
     for (const root of upDirs) {
-      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, { dot: true, scope: "project" })
+      const scope = fallbacks.includes(root) ? path.dirname(root) : projectRoot // kilocode_change
+      // kilocode_change start
+      yield* scan(state, root, EXTERNAL_SKILL_PATTERN, {
+        dot: true,
+        scope: "project",
+        root: projectRoot,
+        sourceRoot: scope,
+      })
+      // kilocode_change end
     }
   }
 
   const configDirs = yield* config.directories()
+  const primary = new Set(yield* primaryPaths(directory, worktree, [".kilocode", ".kilo"])) // kilocode_change
   for (const dir of configDirs) {
-    yield* scan(state, dir, KILO_SKILL_PATTERN)
+    // kilocode_change start - global and explicit KILO_CONFIG_DIR skills are trusted; project and primary-checkout
+    // skills remain confined to the active project boundary.
+    const rel = path.relative(projectRoot, dir)
+    const local = primary.has(dir) || rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel))
+    const trusted = dir === Flag.KILO_CONFIG_DIR || !local
+    const sourceRoot = primary.has(dir) ? path.dirname(dir) : projectRoot
+    yield* scan(state, dir, KILO_SKILL_PATTERN, {
+      trusted,
+      root: trusted ? undefined : projectRoot,
+      sourceRoot: trusted ? undefined : sourceRoot,
+    })
+    // kilocode_change end
   }
 
   const cfg = yield* config.get()
@@ -215,18 +264,22 @@ const discoverSkills = Effect.fnUntraced(function* (
       continue
     }
 
-    yield* scan(state, dir, SKILL_PATTERN)
+    // kilocode_change start - trust follows the config source that declared the path, never the selected path.
+    const origin = cfg.skill_path_origins?.[item]
+    const trusted = origin?.trusted === true && path.isAbsolute(expanded)
+    yield* scan(state, dir, SKILL_PATTERN, { trusted, root: trusted ? undefined : (origin?.root ?? projectRoot) })
+    // kilocode_change end
   }
 
   for (const url of cfg.skills?.urls ?? []) {
     const pulledDirs = yield* discovery.pull(url)
     for (const dir of pulledDirs) {
-      yield* scan(state, dir, SKILL_PATTERN)
+      yield* scan(state, dir, SKILL_PATTERN, { root: dir }) // kilocode_change - downloaded markdown is untrusted
     }
   }
 
   return {
-    matches: Array.from(state.matches),
+    matches: Array.from(state.matches.values()), // kilocode_change
     dirs: Array.from(state.dirs),
   }
 })

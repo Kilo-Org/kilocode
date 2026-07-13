@@ -9,6 +9,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodeInstruction } from "@/kilocode/session/instruction" // kilocode_change
+import type { KilocodeMarkdown } from "@/kilocode/config/markdown" // kilocode_change
 import type { MessageV2 } from "./message-v2"
 import type { MessageID } from "./schema"
 
@@ -91,10 +92,22 @@ export const layer: Layer.Layer<
       return yield* fs.globUp(instruction, root, root).pipe(Effect.catch(() => Effect.succeed([] as string[]))) // kilocode_change
     })
 
-    const read = Effect.fnUntraced(function* (filepath: string) {
-      const content = yield* fs.readFileString(filepath).pipe(Effect.catch(() => Effect.succeed(""))) // kilocode_change
-      return yield* Effect.promise(() => KilocodeInstruction.content(content, filepath)) // kilocode_change
+    // kilocode_change start - project instructions cannot read env or files outside the project root
+    const options = Effect.fnUntraced(function* (filepath: string, origin?: KilocodeMarkdown.Source) {
+      const ctx = yield* InstanceState.context
+      const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
+      const trusted = origin?.trusted ?? false
+      return {
+        trusted,
+        fileScope: trusted ? undefined : { root: origin?.root ?? root, source: origin?.source ?? filepath },
+      }
     })
+
+    const read = Effect.fnUntraced(function* (filepath: string, origin?: KilocodeMarkdown.Source) {
+      const opts = yield* options(filepath, origin)
+      return yield* Effect.promise(() => KilocodeInstruction.read(filepath, opts).catch(() => ""))
+    })
+    // kilocode_change end
 
     const fetch = Effect.fnUntraced(function* (url: string) {
       const res = yield* http.execute(HttpClientRequest.get(url)).pipe(
@@ -111,14 +124,21 @@ export const layer: Layer.Layer<
       s.claims.delete(messageID)
     })
 
-    const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
+    // kilocode_change start - retain declaration provenance through instruction path expansion
+    const systemSources = Effect.fn("Instruction.systemSources")(function* () {
       const config = yield* cfg.get()
       const ctx = yield* InstanceState.context
-      const paths = new Set<string>()
+      const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
+      const paths = new Map<string, KilocodeMarkdown.Source>()
+      const add = (item: string, origin: KilocodeMarkdown.Source) => {
+        const filepath = path.resolve(item)
+        if (paths.get(filepath)?.trusted) return
+        paths.set(filepath, origin)
+      }
 
       for (const file of globalFiles) {
         if (yield* fs.existsSafe(file)) {
-          paths.add(path.resolve(file))
+          add(file, { trusted: true, source: file })
           break
         }
       }
@@ -130,7 +150,7 @@ export const layer: Layer.Layer<
             .findUp(file, ctx.directory, ctx.worktree)
             .pipe(Effect.catch(() => Effect.succeed([])))
           if (matches.length > 0) {
-            matches.forEach((item) => paths.add(path.resolve(item)))
+            matches.forEach((item) => add(item, { trusted: false, source: item, root }))
             break
           }
         }
@@ -149,25 +169,38 @@ export const layer: Layer.Layer<
                 })
               : relative(instruction)
           ).pipe(Effect.catch(() => Effect.succeed([] as string[])))
-          matches.forEach((item) => paths.add(path.resolve(item)))
+          const declared = config.instruction_origins?.[raw] ?? { trusted: false, source: raw, root }
+          const trusted = declared.trusted && path.isAbsolute(instruction)
+          const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
+          matches.forEach((item) => add(item, origin))
         }
       }
 
       return paths
     })
 
+    const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
+      return new Set((yield* systemSources()).keys())
+    })
+    // kilocode_change end
+
     const system = Effect.fn("Instruction.system")(function* () {
       const config = yield* cfg.get()
-      const paths = yield* systemPaths()
+      const sources = yield* systemSources() // kilocode_change
+      const paths = Array.from(sources.keys()) // kilocode_change
       const urls = (config.instructions ?? []).filter(
         (item) => item.startsWith("https://") || item.startsWith("http://"),
       )
 
-      const files = yield* Effect.forEach(Array.from(paths), read, { concurrency: 8 })
+      // kilocode_change start
+      const files = yield* Effect.forEach(Array.from(sources.entries()), (item) => read(item[0], item[1]), {
+        concurrency: 8,
+      })
+      // kilocode_change end
       const remote = yield* Effect.forEach(urls, fetch, { concurrency: 4 })
 
       return [
-        ...Array.from(paths).flatMap((item, i) => (files[i] ? [`Instructions from: ${item}\n${files[i]}`] : [])),
+        ...paths.flatMap((item, i) => (files[i] ? [`Instructions from: ${item}\n${files[i]}`] : [])), // kilocode_change
         ...urls.flatMap((item, i) => (remote[i] ? [`Instructions from: ${item}\n${remote[i]}`] : [])),
       ]
     })
