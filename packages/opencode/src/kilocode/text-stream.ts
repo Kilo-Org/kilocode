@@ -1,4 +1,4 @@
-import type { AppFileSystem } from "@opencode-ai/core/filesystem"
+import type { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Stream } from "effect"
 import { addAbortSignal, Readable } from "stream"
 import * as Encoding from "./encoding"
@@ -18,7 +18,7 @@ export class InvalidUtf8Error extends Error {
   }
 }
 
-type FileSystem = Pick<AppFileSystem.Interface, "readFile" | "stream">
+type FileSystem = Pick<FSUtil.Interface, "readFile" | "stream">
 
 function decode(decoder: TextDecoder, bytes?: Uint8Array) {
   try {

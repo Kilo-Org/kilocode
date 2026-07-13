@@ -4,26 +4,26 @@ import { $ } from "bun"
 import { describe, expect } from "bun:test"
 import { Deferred, Effect, Exit, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
+import { SessionV2 } from "@opencode-ai/core/session"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { Notebook } from "@/kilocode/notebook/service"
 import * as SandboxActivation from "@/kilocode/sandbox/activation"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { SandboxStore } from "@/kilocode/sandbox/store"
-import { InstanceBootstrap } from "@/project/bootstrap-service"
-import { InstanceStore } from "@/project/instance-store"
 import { Session } from "@/session/session"
 import { SessionStatus } from "@/session/status"
 import { Shell } from "@/shell/shell"
 import { Storage } from "@/storage/storage"
 import { SyncEvent } from "@/sync"
-import { provideInstance, tmpdirScoped } from "../../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const bootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const it = testEffect(
   Layer.mergeAll(
     Session.layer.pipe(
@@ -32,12 +32,16 @@ const it = testEffect(
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(RuntimeFlags.layer({ experimentalWorkspaces: false })),
       Layer.provide(BackgroundJob.defaultLayer),
+      Layer.provide(Database.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(SessionV2.defaultLayer),
     ),
     BackgroundJob.defaultLayer,
     Bus.layer,
     Config.defaultLayer,
+    Database.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
-    InstanceStore.defaultLayer.pipe(Layer.provide(bootstrap)),
+    testInstanceStoreLayer,
     Notebook.defaultLayer,
     SessionStatus.defaultLayer,
   ),

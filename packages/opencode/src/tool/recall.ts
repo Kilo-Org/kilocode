@@ -70,15 +70,17 @@ async function search(
 
   const dirs = await bridge.promise(WorktreeFamily.list().pipe(Effect.provideService(Git.Service, git))) // kilocode_change
   const boundary = KiloSessionPromptQueue.active(ctx.sessionID) ?? RecallSearch.active(ctx.messages, ctx.messageID)
-  const found = await RecallSearch.search({
-    query: params.query,
-    projectID: Instance.project.id,
-    directories: dirs,
-    limit: params.limit,
-    signal: ctx.abort,
-    excludeSessionID: ctx.sessionID,
-    excludeFromMessageID: boundary,
-  }) // kilocode_change
+  const found = await bridge.promise(
+    RecallSearch.search({
+      query: params.query,
+      projectID: Instance.project.id,
+      directories: dirs,
+      limit: params.limit,
+      signal: ctx.abort,
+      excludeSessionID: ctx.sessionID,
+      excludeFromMessageID: boundary,
+    }),
+  ) // kilocode_change
 
   const coverage = `Searched ${found.sessions} sessions and ${found.parts} transcript parts.`
   const query = RecallSearch.inert(params.query)

@@ -9,7 +9,18 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { type Component, type JSX, For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
+import {
+  type Accessor,
+  type Component,
+  type JSX,
+  For,
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  onCleanup,
+} from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
@@ -77,6 +88,7 @@ interface MessageListProps {
   emptyState?: () => JSX.Element
   /** Announce transcript changes as a live log. Disable for multi-session surfaces with concurrent streams. */
   announce?: boolean
+  sessionID?: Accessor<string | undefined>
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -643,7 +655,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       return
     }
     if (!handle || saved.keys.length === 0) return
-    const index = handle.findStartIndex()
+    const index = handle.findItemIndex(handle.scrollOffset)
     const key = saved.keys[index]
     if (!key) return
     setScroll(id, { type: "anchor", key, offset: handle.scrollOffset - handle.getItemOffset(index) })
@@ -742,7 +754,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       <Show when={isEmpty()}>
         <div class="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
-          <KiloNotifications />
+          <KiloNotifications sessionID={props.sessionID} />
         </div>
       </Show>
       <div
@@ -799,7 +811,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     scrollRef={scrollEl()}
                     shift={session.messageMutation() === "prepend"}
                     cache={measurement()}
-                    overscan={2}
+                    bufferSize={520}
                     itemSize={260}
                   >
                     {(row, index) => (

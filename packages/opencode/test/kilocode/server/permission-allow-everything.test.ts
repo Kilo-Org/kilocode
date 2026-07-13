@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
@@ -7,7 +6,9 @@ import { Bus } from "../../../src/bus"
 import * as Config from "../../../src/config/config"
 import { AllowEverythingPermission } from "../../../src/kilocode/permission/allow-everything"
 import { Permission } from "../../../src/permission"
-import { PermissionID } from "../../../src/permission/schema"
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { Database } from "@opencode-ai/core/database/database"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Server } from "../../../src/server/server"
 import { Session } from "../../../src/session/session"
@@ -16,7 +17,11 @@ import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  Permission.layer.pipe(
+    Layer.provide(EventV2Bridge.defaultLayer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Database.defaultLayer),
+  ),
   Config.defaultLayer,
   Session.defaultLayer,
   bus,
@@ -112,7 +117,7 @@ describe("AllowEverythingPermission", () => {
 
           const session = yield* sessions.create({})
           const pending = yield* ask({
-            id: PermissionID.make("permission_global_disable"),
+            id: PermissionV1.ID.make("permission_global_disable"),
             sessionID: session.id,
             permission: "bash",
             patterns: ["ls"],
@@ -123,7 +128,7 @@ describe("AllowEverythingPermission", () => {
 
           yield* wait()
           yield* reply({
-            requestID: PermissionID.make("permission_global_disable"),
+            requestID: PermissionV1.ID.make("permission_global_disable"),
             reply: "reject",
           })
 
@@ -153,7 +158,7 @@ describe("AllowEverythingPermission", () => {
           expect(next.permission ?? []).toEqual([])
 
           const pending = yield* ask({
-            id: PermissionID.make("permission_session_disable"),
+            id: PermissionV1.ID.make("permission_session_disable"),
             sessionID: session.id,
             permission: "bash",
             patterns: ["ls"],
@@ -164,7 +169,7 @@ describe("AllowEverythingPermission", () => {
 
           yield* wait()
           yield* reply({
-            requestID: PermissionID.make("permission_session_disable"),
+            requestID: PermissionV1.ID.make("permission_session_disable"),
             reply: "reject",
           })
 
@@ -176,7 +181,7 @@ describe("AllowEverythingPermission", () => {
 
           const other = yield* sessions.create({})
           const blocked = yield* ask({
-            id: PermissionID.make("permission_other_session"),
+            id: PermissionV1.ID.make("permission_other_session"),
             sessionID: other.id,
             permission: "bash",
             patterns: ["pwd"],
@@ -187,7 +192,7 @@ describe("AllowEverythingPermission", () => {
 
           yield* wait()
           yield* reply({
-            requestID: PermissionID.make("permission_other_session"),
+            requestID: PermissionV1.ID.make("permission_other_session"),
             reply: "reject",
           })
 

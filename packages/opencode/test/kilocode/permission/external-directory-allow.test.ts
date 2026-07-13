@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer, ManagedRuntime } from "effect"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { Agent } from "../../../src/agent/agent"
@@ -9,7 +9,9 @@ import { Bus } from "../../../src/bus"
 import { Config } from "../../../src/config/config"
 import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { Permission } from "../../../src/permission"
-import { PermissionID } from "../../../src/permission/schema"
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { Database } from "@opencode-ai/core/database/database"
 import { provideTestInstance } from "../../fixture/fixture"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Shell } from "../../../src/shell/shell"
@@ -24,7 +26,7 @@ import { KilocodePaths } from "../../../src/kilocode/paths"
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
     CrossSpawnSpawner.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     Config.defaultLayer,
     RuntimeFlags.layer(),
     Plugin.defaultLayer,
@@ -59,10 +61,10 @@ Shell.acceptable.reset()
 const init = () => runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))
 const quote = (text: string) => `"${text.replaceAll('"', '\\"')}"`
 const glob = (file: string) =>
-  process.platform === "win32" ? AppFileSystem.normalizePathPattern(file) : file.replaceAll("\\", "/")
+  process.platform === "win32" ? FSUtil.normalizePathPattern(file) : file.replaceAll("\\", "/")
 const variants = (dir: string) => {
   if (process.platform !== "win32") return [dir]
-  const full = AppFileSystem.normalizePath(dir)
+  const full = FSUtil.normalizePath(dir)
   const slash = full.replaceAll("\\", "/")
   const root = slash.replace(/^[A-Za-z]:/, "")
   return Array.from(new Set([full, slash, root, root.toLowerCase()]))
@@ -72,7 +74,11 @@ const configFile = path.join(config, "hello.txt")
 const configGlob = glob(path.join(config, "*"))
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  Permission.layer.pipe(
+    Layer.provide(EventV2Bridge.defaultLayer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Database.defaultLayer),
+  ),
   bus,
   CrossSpawnSpawner.defaultLayer,
 )
@@ -166,7 +172,7 @@ describe("external_directory allow config protection", () => {
       () =>
         immediate(
           ask({
-            id: PermissionID.make("permission_file_external_read"),
+            id: PermissionV1.ID.make("permission_file_external_read"),
             sessionID: SessionID.make("session_file_external_read"),
             permission: "external_directory",
             patterns: [configGlob],
@@ -184,7 +190,7 @@ describe("external_directory allow config protection", () => {
       () =>
         immediate(
           ask({
-            id: PermissionID.make("permission_bash_external_read"),
+            id: PermissionV1.ID.make("permission_bash_external_read"),
             sessionID: SessionID.make("session_bash_external_read"),
             permission: "external_directory",
             patterns: [configGlob],
@@ -214,7 +220,7 @@ describe("external_directory allow config protection", () => {
       () =>
         Effect.gen(function* () {
           const pending = yield* ask({
-            id: PermissionID.make("permission_bash_external_write"),
+            id: PermissionV1.ID.make("permission_bash_external_write"),
             sessionID: SessionID.make("session_bash_external_write"),
             permission: "external_directory",
             patterns: [configGlob],
@@ -225,12 +231,12 @@ describe("external_directory allow config protection", () => {
 
           const requests = yield* wait(1)
           expect(requests[0]).toMatchObject({
-            id: PermissionID.make("permission_bash_external_write"),
+            id: PermissionV1.ID.make("permission_bash_external_write"),
             permission: "external_directory",
             metadata: { disableAlways: true, configProtected: true },
           })
 
-          yield* reply({ requestID: PermissionID.make("permission_bash_external_write"), reply: "reject" })
+          yield* reply({ requestID: PermissionV1.ID.make("permission_bash_external_write"), reply: "reject" })
           const exit = yield* Fiber.await(pending)
           expect(Exit.isFailure(exit)).toBe(true)
           if (Exit.isFailure(exit)) {
@@ -256,12 +262,12 @@ describe("external_directory allow config protection", () => {
           } as const
           const pending = yield* ask({
             ...input,
-            id: PermissionID.make("permission_global_skill"),
+            id: PermissionV1.ID.make("permission_global_skill"),
           }).pipe(Effect.forkScoped)
 
           const requests = yield* wait(1)
           expect(requests[0]).toMatchObject({
-            id: PermissionID.make("permission_global_skill"),
+            id: PermissionV1.ID.make("permission_global_skill"),
             permission: "external_directory",
             patterns: [pattern],
           })
@@ -273,19 +279,19 @@ describe("external_directory allow config protection", () => {
           expect(rules[0]).toMatch(/skills\/axiom-sre\/\*$/)
           expect(requests[0]?.metadata).not.toMatchObject({ disableAlways: true, configProtected: true })
 
-          yield* reply({ requestID: PermissionID.make("permission_global_skill"), reply: "always" })
+          yield* reply({ requestID: PermissionV1.ID.make("permission_global_skill"), reply: "always" })
           yield* Fiber.join(pending)
           yield* immediate(ask(input))
 
           const sibling = glob(path.join(KilocodePaths.globalDirs()[0], "skills", "other", "*"))
           const next = yield* ask({
             ...input,
-            id: PermissionID.make("permission_other_skill"),
+            id: PermissionV1.ID.make("permission_other_skill"),
             patterns: [sibling],
             always: [sibling],
           }).pipe(Effect.forkScoped)
-          expect(yield* wait(1)).toMatchObject([{ id: PermissionID.make("permission_other_skill") }])
-          yield* reply({ requestID: PermissionID.make("permission_other_skill"), reply: "reject" })
+          expect(yield* wait(1)).toMatchObject([{ id: PermissionV1.ID.make("permission_other_skill") }])
+          yield* reply({ requestID: PermissionV1.ID.make("permission_other_skill"), reply: "reject" })
           expect(Exit.isFailure(yield* Fiber.await(next))).toBe(true)
         }),
       { git: true },
@@ -297,7 +303,7 @@ describe("external_directory allow config protection", () => {
       () =>
         Effect.gen(function* () {
           const pattern = glob(path.join(KilocodePaths.globalDirs()[0], "skills", "selected-skill", "*"))
-          const id = PermissionID.make("permission_selected_skill")
+          const id = PermissionV1.ID.make("permission_selected_skill")
           const input = {
             sessionID: SessionID.make("session_selected_skill"),
             permission: "external_directory",

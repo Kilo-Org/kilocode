@@ -1,7 +1,11 @@
-import { afterEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
+import fs from "fs/promises"
+import os from "os"
+import path from "path"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
+import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
@@ -10,8 +14,9 @@ import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { provideTestInstance } from "../fixture/fixture"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { disposeTestRuntime, provideTestInstance } from "../fixture/fixture"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Snapshot } from "../../src/snapshot"
 import { KiloCompactionChunks } from "../../src/kilocode/session/compaction-chunks"
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
@@ -28,10 +33,27 @@ import { SessionSummary } from "../../src/session/summary"
 import { SyncEvent } from "../../src/sync"
 import { ProviderTest } from "../fake/provider"
 import { tmpdir } from "../fixture/fixture"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { remove as cleanup } from "./cleanup"
 
-const providerID = ProviderID.make("test")
-const modelID = ModelID.make("test-model")
+const providerID = ProviderV2.ID.make("test")
+const modelID = ModelV2.ID.make("test-model")
 const ref = { providerID, modelID }
+const previous = Flag.KILO_DB
+const dbfile = path.join(os.tmpdir(), `kilo-compaction-chunks-${process.pid}-${crypto.randomUUID()}.db`)
+
+beforeAll(async () => {
+  await fs.rm(dbfile, { force: true })
+  Flag.KILO_DB = dbfile
+})
+
+afterAll(async () => {
+  await AppRuntime.dispose()
+  await disposeTestRuntime()
+  Flag.KILO_DB = previous
+  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
+})
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {
   return Effect.runPromise(fx.pipe(Effect.provide(SessionNs.defaultLayer)))
@@ -202,6 +224,7 @@ function fakeRuntime(outputTokenMax?: number) {
         Layer.provide(Plugin.defaultLayer),
         Layer.provide(SyncEvent.defaultLayer),
         Layer.provide(EventV2Bridge.defaultLayer),
+        Layer.provide(Database.defaultLayer),
         Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
         Layer.provide(Reference.defaultLayer),
         Layer.provide(bus),
@@ -217,7 +240,7 @@ function fakeRuntime(outputTokenMax?: number) {
 
 function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
   const bus = Bus.layer
-  const status = SessionStatus.layer.pipe(Layer.provide(bus))
+  const status = SessionStatus.layer.pipe(Layer.provide(bus), Layer.provide(EventV2Bridge.defaultLayer))
   const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
     Layer.provide(summary),
     Layer.provide(Image.defaultLayer),
@@ -235,6 +258,7 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(Database.defaultLayer),
       Layer.provide(RuntimeFlags.layer()),
       Layer.provide(Reference.defaultLayer),
       Layer.provide(status),

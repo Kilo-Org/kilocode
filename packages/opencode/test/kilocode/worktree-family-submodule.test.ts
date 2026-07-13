@@ -8,12 +8,14 @@ import { Git } from "../../src/git"
 import { WorktreeFamily } from "../../src/kilocode/worktree-family"
 import { Project } from "../../src/project/project"
 import * as Log from "@opencode-ai/core/util/log"
-import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
-const it = testEffect(Layer.mergeAll(Project.defaultLayer, Git.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(
+  Layer.mergeAll(Project.defaultLayer, Git.defaultLayer, CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer),
+)
 
 describe("WorktreeFamily.list — git submodule", () => {
   it.live("returns the submodule's working tree, not its gitdir", () =>

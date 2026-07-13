@@ -3,8 +3,9 @@ import { expect } from "bun:test"
 import { Effect, Exit, Fiber, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import fs from "fs/promises"
+import { Database } from "@opencode-ai/core/database/database"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
@@ -44,7 +45,7 @@ import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
 import { Storage } from "../../src/storage/storage"
 import { SyncEvent } from "../../src/sync"
-import { Ripgrep } from "../../src/file/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { KiloHeadless } from "../../src/kilocode/permission/headless"
@@ -119,7 +120,7 @@ const lsp = Layer.succeed(
   }),
 )
 
-const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
+const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
 const run = SessionRunState.layer.pipe(Layer.provide(status))
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 
@@ -139,10 +140,11 @@ function makeHttp() {
     ProviderSvc.defaultLayer,
     lsp,
     mcp,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     Reference.defaultLayer,
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
+    Database.defaultLayer,
     status,
     MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
@@ -409,8 +411,8 @@ it.live("headless run: subagent permission asks fail instead of waiting forever"
 
       expect(err).toBeInstanceOf(Permission.DeniedError)
       expect(yield* permission.list()).toEqual([])
-      expect(KiloHeadless.denies(child.id)).toBe(true)
-      expect(KiloHeadless.denies(root.id)).toBe(false)
+          expect(yield* KiloHeadless.denies(child.id)).toBe(true)
+          expect(yield* KiloHeadless.denies(root.id)).toBe(false)
 
       KiloHeadless.clear(root.id)
     }),

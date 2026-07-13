@@ -91,7 +91,7 @@ describe("ConfigMarkdown: normal template", () => {
 })
 
 describe("ConfigMarkdown: frontmatter parsing", async () => {
-  const parsed = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/frontmatter.md")
+  const parsed = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/frontmatter.md", { trusted: true }) // kilocode_change
 
   test("should parse without throwing", () => {
     expect(parsed).toBeDefined()
@@ -172,7 +172,7 @@ describe("ConfigMarkdown: frontmatter parsing", async () => {
 })
 
 describe("ConfigMarkdown: frontmatter parsing w/ empty frontmatter", async () => {
-  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/empty-frontmatter.md")
+  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/empty-frontmatter.md", { trusted: true }) // kilocode_change
 
   test("should parse without throwing", () => {
     expect(result).toBeDefined()
@@ -182,7 +182,7 @@ describe("ConfigMarkdown: frontmatter parsing w/ empty frontmatter", async () =>
 })
 
 describe("ConfigMarkdown: frontmatter parsing w/ no frontmatter", async () => {
-  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/no-frontmatter.md")
+  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/no-frontmatter.md", { trusted: true }) // kilocode_change
 
   test("should parse without throwing", () => {
     expect(result).toBeDefined()
@@ -192,7 +192,7 @@ describe("ConfigMarkdown: frontmatter parsing w/ no frontmatter", async () => {
 })
 
 describe("ConfigMarkdown: frontmatter parsing w/ Markdown header", async () => {
-  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/markdown-header.md")
+  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/markdown-header.md", { trusted: true }) // kilocode_change
 
   test("should parse and match", () => {
     expect(result).toBeDefined()
@@ -212,7 +212,7 @@ Always structure your responses using clear markdown formatting:
 })
 
 describe("ConfigMarkdown: frontmatter has weird model id", async () => {
-  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/weird-model-id.md")
+  const result = await ConfigMarkdown.parse(import.meta.dir + "/fixtures/weird-model-id.md", { trusted: true }) // kilocode_change
 
   test("should parse and match", () => {
     expect(result).toBeDefined()

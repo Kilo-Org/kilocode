@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import * as Log from "@opencode-ai/core/util/log"
 import { Hash } from "@opencode-ai/core/util/hash"
 
@@ -21,7 +21,7 @@ export namespace KiloSnapshotMaterialize {
   export interface Input {
     readonly gitdir: string
     readonly git: Git
-    readonly fs: AppFileSystem.Interface
+    readonly fs: FSUtil.Interface
   }
 
   export const ref = (gitdir: string) => `refs/kilo/materialize/${Hash.fast(path.resolve(gitdir))}`

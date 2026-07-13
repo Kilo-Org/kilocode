@@ -5,6 +5,7 @@ import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
+import { Instance } from "@/kilocode/instance"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import type { InstanceContext } from "@/project/instance-context"
@@ -286,7 +287,8 @@ function change<E, R, F = never, Q = never, P = never, S = never>(
             Effect.catch(() => Effect.void),
           )
           const value = { ...status, enabled: next.enabled && support.available, version: next.version }
-          yield* (yield* Bus.Service).publish(Changed, { sessionID, ...value })
+          // Publish through the standalone Bus facade so HTTP handlers do not need Bus.Service.
+          yield* Effect.promise(() => Bus.publish(Instance.current, Changed, { sessionID, ...value }))
           return value
         })
         if (enabling) {

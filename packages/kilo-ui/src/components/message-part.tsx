@@ -1481,6 +1481,14 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   const display = createThrottledValue(text)
   const view = createMemo(() => reasoningHeading(display()))
 
+  const Header = () => (
+    <div data-slot="reasoning-header">
+      <Icon name="brain" size="small" />
+      <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label" as never)}</span>
+      <Show when={view().title}>{(title) => <span data-slot="reasoning-title">{title()}</span>}</Show>
+    </div>
+  )
+
   // time.end is set by the processor on reasoning-end.
   // v1 parts lack time entirely → treat as historical.
   const done = () => {
@@ -1549,29 +1557,34 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   })
 
   return (
-    <Show when={display()}>
+    <Show when={view().title || view().body}>
       <div
         data-component="reasoning-part"
         data-streaming={!done() ? "" : undefined}
         data-auto-collapse={props.reasoningAutoCollapse ? "" : undefined}
       >
-        <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
-          <Collapsible.Trigger>
-            <div data-slot="reasoning-header">
-              <Icon name="brain" size="small" />
-              <span data-slot="reasoning-label">{i18n.t("ui.reasoning.label" as never)}</span>
-              <Show when={view().title}>{(title) => <span data-slot="reasoning-title">{title()}</span>}</Show>
+        <Show
+          when={view().body}
+          fallback={
+            <div data-slot="collapsible-trigger" data-static="">
+              <Header />
             </div>
-            <Collapsible.Arrow />
-          </Collapsible.Trigger>
-          <Collapsible.Content>
-            <div data-slot="reasoning-details">
-              <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
-                <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+          }
+        >
+          <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
+            <Collapsible.Trigger>
+              <Header />
+              <Collapsible.Arrow />
+            </Collapsible.Trigger>
+            <Collapsible.Content>
+              <div data-slot="reasoning-details">
+                <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
+                  <Markdown text={view().body} cacheKey={id} streaming={!done()} />
+                </div>
               </div>
-            </div>
-          </Collapsible.Content>
-        </Collapsible>
+            </Collapsible.Content>
+          </Collapsible>
+        </Show>
       </div>
     </Show>
   )

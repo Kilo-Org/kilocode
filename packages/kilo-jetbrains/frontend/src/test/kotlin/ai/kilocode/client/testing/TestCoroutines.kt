@@ -7,7 +7,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 
 class TestCoroutines {
-    private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val job = SupervisorJob()
 
     val scope = CoroutineScope(job + dispatcher)

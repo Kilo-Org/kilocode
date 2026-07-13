@@ -6,7 +6,7 @@ import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
 import { normalizeIndexingStatus } from "@kilocode/kilo-indexing/status"
 import type { Config } from "../../src/config/config"
 import { GlobalBus } from "../../src/bus/global"
-import { WorkspaceID } from "../../src/control-plane/schema"
+import { WorkspaceV2 } from "@opencode-ai/core/workspace"
 import { WorkspaceContext } from "../../src/control-plane/workspace-context"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { indexingWarningKey } from "../../src/kilocode/indexing-warning"
@@ -255,7 +255,7 @@ describe("indexing startup degradation", () => {
     GlobalBus.on("event", on)
 
     try {
-      const workspace = WorkspaceID.make("wrk_indexing_warning")
+      const workspace = WorkspaceV2.ID.make("wrk_indexing_warning")
       await WorkspaceContext.provide({
         workspaceID: workspace,
         fn: () =>
@@ -291,7 +291,7 @@ describe("indexing startup degradation", () => {
       expect(workspaces.every((item) => item === undefined || item === workspace)).toBe(true)
 
       const offset = events.length
-      const second = WorkspaceID.make("wrk_indexing_warning_second")
+      const second = WorkspaceV2.ID.make("wrk_indexing_warning_second")
       await WorkspaceContext.provide({
         workspaceID: second,
         fn: () =>

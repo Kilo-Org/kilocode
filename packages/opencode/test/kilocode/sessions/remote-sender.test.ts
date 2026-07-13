@@ -9,8 +9,9 @@ import type { SessionPrompt } from "../../../src/session/prompt"
 import { Question } from "../../../src/question"
 import { QuestionID } from "../../../src/question/schema"
 import { Permission } from "../../../src/permission"
-import { PermissionID } from "../../../src/permission/schema"
-import { ModelID, ProviderID } from "../../../src/provider/schema"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "../../../src/session/schema"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
 
@@ -75,8 +76,8 @@ function prompts(calls: SessionPrompt.PromptInput[]) {
 
 function catalogModel(providerID: string, modelID: string, name: string, reasoning = false) {
   return {
-    id: ModelID.make(modelID),
-    providerID: ProviderID.make(providerID),
+    id: ModelV2.ID.make(modelID),
+    providerID: ProviderV2.ID.make(providerID),
     api: { id: "private-deployment", url: "https://private.example.com", npm: "file:///private/provider" },
     name,
     capabilities: {
@@ -343,8 +344,8 @@ describe("RemoteSender", () => {
             id: SessionID.make("ses_models"),
             directory: "/workspace/project-a",
             model: {
-              id: ModelID.make("deployment/model"),
-              providerID: ProviderID.make("custom"),
+              id: ModelV2.ID.make("deployment/model"),
+              providerID: ProviderV2.ID.make("custom"),
               variant: "precise",
             },
           }) as any,
@@ -352,7 +353,7 @@ describe("RemoteSender", () => {
         providers: async () =>
           ({
             custom: {
-              id: ProviderID.make("custom"),
+              id: ProviderV2.ID.make("custom"),
               name: "Custom Provider",
               source: "config",
               env: ["PRIVATE_API_KEY"],
@@ -363,7 +364,7 @@ describe("RemoteSender", () => {
               },
             },
           }) as any,
-        default: async () => ({ providerID: ProviderID.make("custom"), modelID: ModelID.make("deployment/model") }),
+        default: async () => ({ providerID: ProviderV2.ID.make("custom"), modelID: ModelV2.ID.make("deployment/model") }),
       },
     })
 
@@ -429,7 +430,7 @@ describe("RemoteSender", () => {
           const id = state.directory === "/workspace/first" ? "first-provider" : "second-provider"
           return {
             [id]: {
-              id: ProviderID.make(id),
+              id: ProviderV2.ID.make(id),
               name: id,
               source: "custom",
               env: [],
@@ -728,7 +729,7 @@ describe("RemoteSender", () => {
       {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("anthropic/claude-sonnet-4-20250514") },
+        model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("anthropic/claude-sonnet-4-20250514") },
       },
     ])
   })
@@ -762,7 +763,7 @@ describe("RemoteSender", () => {
       {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("gpt-5-mini") },
+        model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("gpt-5-mini") },
       },
     ])
   })
@@ -799,8 +800,8 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: {
-          providerID: ProviderID.make("custom:edge"),
-          modelID: ModelID.make("deployment/model-v1"),
+          providerID: ProviderV2.ID.make("custom:edge"),
+          modelID: ModelV2.ID.make("deployment/model-v1"),
         },
         variant: "precise",
       },
@@ -896,7 +897,7 @@ describe("RemoteSender", () => {
       {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("kilo/gpt-5-mini") },
+        model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("kilo/gpt-5-mini") },
       },
     ])
   })
@@ -957,12 +958,12 @@ describe("RemoteSender", () => {
       type: "command",
       id: "req_permission",
       command: "permission_respond",
-      data: { requestID: PermissionID.make("permission_1"), reply: "once" },
+      data: { requestID: PermissionV1.ID.make("permission_1"), reply: "once" },
     })
 
     await new Promise((r) => setTimeout(r, 10))
 
-    expect(calls).toEqual([{ requestID: PermissionID.make("permission_1"), reply: "once" }])
+    expect(calls).toEqual([{ requestID: PermissionV1.ID.make("permission_1"), reply: "once" }])
     expect(sent).toContainEqual({ type: "response", id: "req_permission", result: {} })
   })
 

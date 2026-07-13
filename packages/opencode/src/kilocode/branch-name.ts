@@ -1,6 +1,7 @@
 import { Agent } from "@/agent/agent"
 import { KiloLLM } from "@/kilocode/session/llm"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
@@ -70,8 +71,8 @@ export function parse(value: string) {
 export const generate = Effect.fn("BranchName.generate")(function* (input: {
   sessionID: SessionID
   messages: string[]
-  providerID?: ProviderID
-  modelID?: ModelID
+  providerID?: ProviderV2.ID
+  modelID?: ModelV2.ID
 }) {
   if (input.messages.length === 0) return null
 
