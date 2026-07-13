@@ -21,7 +21,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from 
 
 const root = join(import.meta.dir, "..")
 const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew"
-const args = ["clean", "test", "--continue", "--no-build-cache", "--stacktrace", "--console=plain"]
+const args = ["clean", "test", "--continue", "--stacktrace", "--console=plain"]
 const cmd = process.platform === "win32" ? ["cmd.exe", "/c", gradlew, ...args] : [gradlew, ...args]
 const fallback = 45 * 60 * 1000
 const parsed = Number(process.env.KILO_JETBRAINS_TEST_TIMEOUT_MS ?? fallback)

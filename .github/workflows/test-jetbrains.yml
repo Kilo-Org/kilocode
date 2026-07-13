@@ -56,8 +56,11 @@ jobs:
       - name: Mark workspace as git-safe
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Install dependencies
-        run: bun install
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+          cache-overwrite-existing: true
 
       - name: Run JetBrains unit tests
         run: bun script/test-ci.ts
