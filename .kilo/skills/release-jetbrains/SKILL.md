@@ -38,36 +38,67 @@ Show the resolved `version`, `kind`, and default `fromTagDefault` to the user.
 
 ## CLI Pin Verification
 
-Before dispatching prepare, verify the JetBrains plugin is pinned to the intended Kilo Core release. The plugin downloads the CLI version from `packages/kilo-jetbrains/package.json`, not from the JetBrains plugin version.
+Before dispatching prepare, verify the JetBrains plugin is pinned to the intended Kilo Core release. The plugin downloads the CLI version from `packages/kilo-jetbrains/package.json`, not from the JetBrains plugin version. Prepare tags `origin/main`, so the authoritative pin is the value on `origin/main`, not a local edit.
 
-Read the pinned CLI version:
-
-```bash
-bun -e 'const p=require("./packages/kilo-jetbrains/package.json"); console.log(p.version)'
-```
-
-Verify the matching GitHub Release exists and includes every runtime asset the backend may download:
+Run the pin preflight:
 
 ```bash
-cli_version="7.4.1"
-gh release view "v${cli_version}" --repo Kilo-Org/kilocode --json assets \
-  --jq '.assets[].name' | sort
+bun .kilo/skills/release-jetbrains/script/check-pin.ts
 ```
 
-Expected assets:
+The script prints:
 
-```text
-kilo-darwin-arm64.zip
-kilo-darwin-x64.zip
-kilo-linux-arm64.tar.gz
-kilo-linux-x64.tar.gz
-kilo-windows-arm64.zip
-kilo-windows-x64.zip
+| Field | Meaning |
+|---|---|
+| `pinMain` | CLI version that `origin/main` will lock into the release tag. |
+| `pinLocal` | CLI version in the current worktree, useful for catching stale local checkouts. |
+| `latestCli` | Latest stable `v*` Kilo CLI GitHub release. |
+| `prevJetbrainsCli` | CLI pin used by the latest `jetbrains/v*` release tag, for reviewing the jump. |
+| `pinnedMain` / `pinnedLocal` | Whether `kilo.cli.pinned=true`; `false` means repo CLI dev mode. |
+| `assetsOk` / `missingAssets` | Whether the pinned CLI release has every runtime asset. |
+| `drift` | `up-to-date`, `behind`, `worktree-behind-main`, `repo-mode-on-main`, `repo-mode-local`, or `assets-missing`. |
+
+Interpretation:
+
+| Drift | Action |
+|---|---|
+| `up-to-date` | Continue after user confirmation. |
+| `behind` | Stop and show `pinMain`, `latestCli`, and `prevJetbrainsCli`; ask whether to cancel, bump + test, or proceed anyway. |
+| `worktree-behind-main` | Explain that prepare tags `origin/main`; refresh the worktree or rely on `pinMain` in the confirmation. |
+| `repo-mode-on-main` | Stop. `kilo.cli.pinned=false` is dev-only and must be reset to `true` on `main` before release. |
+| `repo-mode-local` | Stop or reset local `kilo.cli.pinned=true`; release checks should run from a releasable local state. |
+| `assets-missing` | Stop. The pinned CLI release is incomplete and would fail runtime download. |
+
+Show the resolved JetBrains plugin version, release kind, default `fromTagDefault`, `pinMain`, `latestCli`, `prevJetbrainsCli`, and `assetsOk` to the user, then ask for confirmation before continuing. If the user wants a different CLI pin, use the bump workflow below and do not dispatch prepare until the bump is merged to `main`.
+
+## Bump the CLI Pin
+
+Use this only when the user wants to test or release with a different CLI than `origin/main` currently pins. The helper refuses versions whose GitHub release or runtime assets are missing.
+
+Local test edit only:
+
+```bash
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest
+# or
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1
 ```
 
-If the pin is stale or the release assets are missing, stop and ask the user to update `packages/kilo-jetbrains/package.json` on `main` before dispatching prepare. The prepare workflow tags `origin/main`, so the pin must already be reviewed and merged before the release tag is created.
+Then test from `packages/kilo-jetbrains/`:
 
-Show the resolved JetBrains plugin version, release kind, default `fromTagDefault`, pinned CLI version, and CLI release asset status to the user, then ask for confirmation before continuing.
+```bash
+./gradlew typecheck
+./gradlew test
+```
+
+If the user confirms the tested pin should be released, open or update a pin bump PR to `main`:
+
+```bash
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
+# or
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --version 7.4.1 --pr
+```
+
+After that PR merges to `main`, re-run `resolve-version.ts`, re-run `check-pin.ts`, confirm `drift=up-to-date`, then dispatch prepare. Do not dispatch prepare from a local-only pin edit; the prepare workflow tags `origin/main`.
 
 ## Prepare Workflow
 
@@ -200,6 +231,7 @@ Report the Marketplace channel and GitHub Release URL. RC versions publish to th
 
 - If prepare created the tag but failed before creating a PR, rerun prepare for the same version. The existing workflow reuses the tag if it points to the same commit.
 - If a tag points to an unexpected SHA, stop and inspect manually. Do not move or delete release tags casually.
+- If prepare tagged an unintended CLI pin, do not move the tag. Land the intended pin on `main`, resolve the next JetBrains version, and create a new release tag.
 - If release PR checks fail from an apparent flake, use `gh run rerun <run-id> --failed`, then `gh run watch <run-id> --exit-status` before publishing.
 - If publish fails after merge, rerun the failed workflow only if Marketplace did not already accept the version.
 - If Marketplace succeeds but GitHub Release upload fails, manually create or edit the GitHub Release for `jetbrains/v<version>` using the reviewed changelog.

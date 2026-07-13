@@ -4,6 +4,7 @@ import { RecallTool } from "../../tool/recall"
 import { AgentManagerModelsTool } from "./agent-manager-models"
 import { AgentManagerTool } from "./agent-manager"
 import { BackgroundProcessTool } from "./background-process"
+import { GenerateImageTool } from "./generate-image"
 import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
@@ -60,14 +61,15 @@ export namespace KiloToolRegistry {
       const save = yield* MemorySaveTool
       const manager = yield* AgentManagerTool
       const process = yield* BackgroundProcessTool
+      const image = yield* GenerateImageTool
       const terminal = yield* InteractiveTerminalTool
-      if (!notebook) return { codebase, recall, managerModels, memory, save, manager, process, terminal }
+      if (!notebook) return { codebase, recall, managerModels, memory, save, manager, process, image, terminal }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, terminal, ...tools }
+      return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, ...tools }
     })
   }
 
@@ -82,6 +84,7 @@ export namespace KiloToolRegistry {
       save: Tool.Info
       manager: Tool.Info
       process: Tool.Info
+      image: Tool.Info
       terminal?: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
@@ -99,6 +102,7 @@ export namespace KiloToolRegistry {
         save: Tool.init(tools.save),
         manager: Tool.init(tools.manager),
         process: Tool.init(tools.process),
+        image: Tool.init(tools.image),
       })
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const notebooks =
@@ -168,15 +172,17 @@ export namespace KiloToolRegistry {
       save: Tool.Def
       manager: Tool.Def
       process: Tool.Def
+      image: Tool.Def
       terminal?: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
     },
-    cfg: { experimental?: { codebase_search?: boolean; native_notebook_tools?: boolean } },
+    cfg: { experimental?: { codebase_search?: boolean; image_generation?: boolean; native_notebook_tools?: boolean } },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
+      ...(cfg.experimental?.image_generation === true ? [tools.image] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,

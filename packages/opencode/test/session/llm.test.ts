@@ -1889,6 +1889,11 @@ describe("session.llm.stream", () => {
           | undefined
 
         expect(capture.url.pathname).toBe(pathSuffix)
+        // kilocode_change start - auth keys use the same Google API key header as Standard keys
+        expect(capture.headers.get("x-goog-api-key")).toBe("test-google-key")
+        expect(capture.headers.get("authorization")).toBeNull()
+        expect(capture.url.searchParams.get("key")).toBeNull()
+        // kilocode_change end
         expect(config?.temperature).toBe(0.3)
         expect(config?.topP).toBe(0.8)
         expect(config?.maxOutputTokens).toBe(ProviderTransform.maxOutputTokens(resolved))

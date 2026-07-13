@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/sandbox",
-  "version": "7.4.1",
+  "version": "7.4.5",
   "type": "module",
   "license": "MIT",
   "private": true,
@@ -18,7 +18,9 @@
     "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --dots --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "dependencies": {
-    "effect": "catalog:"
+    "@anthropic-ai/sandbox-runtime": "catalog:",
+    "effect": "catalog:",
+    "ipaddr.js": "catalog:"
   },
   "devDependencies": {
     "@effect/platform-node": "catalog:",

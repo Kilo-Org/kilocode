@@ -78,6 +78,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
+  private unsubStatus: (() => void) | undefined
   private unsubFont: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
@@ -184,6 +185,19 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "kilocode.agent_manager.start",
       (event, directory) => this.onToolEvent(event, directory),
     )
+    this.unsubStatus = this.connectionService.onEventFiltered(
+      (event) => (event as { type?: string }).type === "session.status",
+      (event) => this.onSessionStatus(event),
+    )
+  }
+
+  private onSessionStatus(event: unknown): void {
+    const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } }).properties
+    const sid = props?.sessionID
+    const type = props?.status?.type
+    if (!sid || !type) return
+    if (type === "idle") this.naming.idle(sid)
+    else this.naming.busy(sid)
   }
 
   private log(...args: unknown[]) {
@@ -484,8 +498,13 @@ export class AgentManagerProvider implements Disposable {
     }
 
     if (m.type === "requestTerminalContext") {
-      if (m.sessionID && !this.terminalManager.hasActiveTerminal()) this.terminalManager.showExisting(m.sessionID)
-      return msg
+      if (!m.sessionID || this.terminalManager.prepareContext(m.sessionID)) return msg
+      this.panel?.postMessage({
+        type: "terminalContextError",
+        requestId: m.requestId,
+        error: "No terminal is associated with this session",
+      })
+      return null
     }
 
     if (m.type === "loadMessages") {
@@ -1062,6 +1081,7 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
     this.run.remove(worktreeId)
+    this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
@@ -1095,6 +1115,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
+    this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
@@ -1959,6 +1980,7 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
+    this.unsubStatus?.()
     this.unsubFont?.()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])

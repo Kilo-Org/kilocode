@@ -50,6 +50,7 @@ class KiloBackendChatManager(
     companion object {
         private val JSON_TYPE = "application/json".toMediaType()
         private const val ENHANCE_TIMEOUT_MINUTES = 2L
+        private const val REVERT_TIMEOUT_SECONDS = 35L
 
         private val CHAT_EVENTS = setOf(
             "message.updated",
@@ -257,6 +258,17 @@ class KiloBackendChatManager(
         }
     }
 
+    suspend fun revert(id: String, dir: String, message: String, part: String?) {
+        log.info("${ChatLogSummary.sid(id)} kind=revert ${ChatLogSummary.dir(dir)} message=$message part=${part ?: "none"}")
+        val body = KiloCliDataParser.buildRevertJson(message, part)
+        postCancellable("/session/$id/revert?directory=${encode(dir)}", body, "revert", "${ChatLogSummary.sid(id)} kind=revert")
+    }
+
+    suspend fun unrevert(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=unrevert ${ChatLogSummary.dir(dir)}")
+        postCancellable("/session/$id/unrevert?directory=${encode(dir)}", "{}", "unrevert", "${ChatLogSummary.sid(id)} kind=unrevert")
+    }
+
     // ------ messages ------
 
     fun messages(id: String, dir: String): List<MessageWithPartsDto> {
@@ -356,7 +368,7 @@ class KiloBackendChatManager(
 
     // ------ utilities ------
 
-    private fun post(path: String, body: String, op: String, meta: String) {
+    private fun post(path: String, body: String, op: String, meta: String, strict: Boolean = false) {
         val http = requireClient()
         val url = requireBase()
         val request = Request.Builder()
@@ -365,8 +377,33 @@ class KiloBackendChatManager(
             .build()
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                log.warn("$op failed: HTTP ${response.code}")
+                val code = response.code
+                val raw = response.body?.string()
+                log.warn("$op failed: HTTP $code")
+                raw?.let { log.debug { "$meta op=$op error=${ChatLogSummary.body(it)}" } }
+                if (strict) throw RuntimeException("$op failed: HTTP $code")
                 return
+            }
+            log.debug { "$meta op=$op ok=true code=${response.code}" }
+        }
+    }
+
+    private suspend fun postCancellable(path: String, body: String, op: String, meta: String) {
+        val http = requireClient()
+        val url = requireBase()
+        val request = Request.Builder()
+            .url("$url$path")
+            .post(body.toRequestBody(JSON_TYPE))
+            .build()
+        val call = http.newCall(request)
+        call.timeout().timeout(REVERT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        call.await().use { response ->
+            if (!response.isSuccessful) {
+                val code = response.code
+                val raw = response.body?.string()
+                log.warn("$op failed: HTTP $code")
+                raw?.let { log.debug { "$meta op=$op error=${ChatLogSummary.body(it)}" } }
+                throw RuntimeException("$op failed: HTTP $code")
             }
             log.debug { "$meta op=$op ok=true code=${response.code}" }
         }

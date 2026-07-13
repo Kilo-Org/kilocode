@@ -312,6 +312,40 @@ describe("MemoryCapture (fake ports)", () => {
     }
   })
 
+  test("small file edit with recalled memory still records digest (edit defeats echo, any file type)", async () => {
+    const t = await tmp()
+    try {
+      await KiloMemory.enable({ root: t.root })
+      await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
+
+      let runs = 0
+      const result = await run({
+        root: t.root,
+        session: session(
+          view({
+            assistant: "Fixed the parser.",
+            recalledMemory: true,
+            diffs: [{ file: "src/parser", additions: 4, deletions: 0 }],
+          }),
+        ),
+        model: model({
+          digest: '{"topic":"parser","summary":"Fixed the parser in src/parser."}',
+          typed: '{"operations":[],"skipped":[]}',
+          onRun: (system) => {
+            if (system === digestPrompt) runs++
+          },
+        }),
+      })
+
+      expect(result).toMatchObject({ skipped: false })
+      expect(runs).toBe(1)
+      const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_effect", max: 480 })
+      expect(saved?.summary).toContain("Fixed the parser")
+    } finally {
+      await t.done()
+    }
+  })
+
   test("interrupted close records a non-LLM fallback digest tagged with the reason", async () => {
     const t = await tmp()
     try {

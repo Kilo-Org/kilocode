@@ -58,6 +58,9 @@ class SessionMessageListPanel(
     private val openAttachment: (String, FileAttachment) -> Unit = { _, item -> ai.kilocode.client.session.views.AttachmentView.openDefault(item, openFile, openUrl) },
     private val repo: String? = null,
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
+    private val revert: ((String) -> Unit)? = null,
+    private val cancelRevert: (() -> Unit)? = null,
+    private val banner: RevertBanner? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
@@ -74,6 +77,7 @@ class SessionMessageListPanel(
     private var style = SessionEditorStyle.current()
     private var hiddenTool: ToolCallRef? = null
     private var hovered: PartView? = null
+    private var revertingMessage: String? = null
 
     var onHover: ((PartView, Boolean) -> Unit)? = null
 
@@ -82,8 +86,8 @@ class SessionMessageListPanel(
 
     init {
         isOpaque = true
-        background = SessionUiStyle.Transcript.bgColor()
         Disposer.register(parent, this)
+        applyStyle(style)
 
         model.addListener(parent) { event ->
             when (event) {
@@ -128,7 +132,15 @@ class SessionMessageListPanel(
 
                 is SessionModelEvent.StateChanged -> {
                     syncActive(event.state)
+                    syncReverted()
+                    syncReverting(event.state)
                     anchorFooter()
+                    refresh()
+                }
+
+                is SessionModelEvent.RevertChanged -> {
+                    syncReverted()
+                    banner?.update()
                     refresh()
                 }
 
@@ -136,11 +148,15 @@ class SessionMessageListPanel(
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.MessageRemoved,
-                is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
+
+                is SessionModelEvent.DiffUpdated -> {
+                    banner?.update()
+                    refresh()
+                }
             }
         }
 
@@ -196,7 +212,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -204,6 +220,7 @@ class SessionMessageListPanel(
             register(msgId, tv, mv)
         }
         tv.syncCopyToolbars()
+        syncReverted()
         add(tv)
         anchorFooter()
         refresh()
@@ -230,6 +247,7 @@ class SessionMessageListPanel(
             register(id, tv, mv)
         }
         tv.syncCopyToolbars()
+        syncReverted()
 
         refresh()
     }
@@ -255,7 +273,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
@@ -267,8 +285,20 @@ class SessionMessageListPanel(
         }
 
         syncActive(model.state)
+        syncReverted()
+        syncReverting(model.state)
+        banner?.update()
         anchorFooter()
         refresh()
+    }
+
+    private fun syncReverted() {
+        for ((id, view) in msgToView) {
+            view.isVisible = !model.isRevertedMessage(id)
+        }
+        for (view in turnViews.values) {
+            view.isVisible = view.messageIds().any { msgToView[it]?.isVisible == true }
+        }
     }
 
     private fun clear() {
@@ -280,8 +310,11 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
+        revertingMessage = null
         removeAll()
         syncActive(model.state)
+        syncReverting(model.state)
+        banner?.update()
         anchorFooter()
         refresh()
     }
@@ -320,6 +353,21 @@ class SessionMessageListPanel(
         }
     }
 
+    private fun syncReverting(state: SessionState) {
+        val current = revertingMessage
+        val rollback = state as? SessionState.Reverting
+        if (rollback?.kind == SessionState.Reverting.Kind.ROLLBACK && rollback.message != null) {
+            if (current != null && current != rollback.message) msgToView[current]?.setReverting(false, "", {})
+            val view = msgToView[rollback.message]
+            view?.setReverting(true, rollback.text) { cancelRevert?.invoke() }
+            revertingMessage = if (view == null) null else rollback.message
+        } else {
+            if (current != null) msgToView[current]?.setReverting(false, "", {})
+            revertingMessage = null
+        }
+        banner?.setReverting(state)
+    }
+
     /** Fan out the hidden question tool ref to all registered [MessageView]s. */
     private fun setHiddenQuestionTool(ref: ToolCallRef?) {
         if (hiddenTool == ref) return
@@ -339,10 +387,12 @@ class SessionMessageListPanel(
         if (question != null) remove(question)
         if (permission != null) remove(permission)
         if (login != null) remove(login)
+        if (banner != null) remove(banner)
         remove(progress)
         if (question != null) add(question)
         if (permission != null) add(permission)
         if (login != null) add(login)
+        if (banner != null) add(banner)
         add(progress)
     }
 
@@ -353,6 +403,7 @@ class SessionMessageListPanel(
     }
 
     private fun unregister(msgId: String) {
+        if (revertingMessage == msgId) revertingMessage = null
         msgToTurn.remove(msgId)
         msgToView.remove(msgId)
     }
@@ -385,11 +436,12 @@ class SessionMessageListPanel(
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        background = SessionUiStyle.Transcript.bgColor()
+        background = style.editorBackground
         for (view in turnViews.values) view.applyStyle(style)
         question?.applyStyle(style)
         permission?.applyStyle(style)
         login?.applyStyle(style)
+        banner?.applyStyle(style)
         progress.applyStyle(style)
         refresh()
     }
@@ -403,6 +455,7 @@ class SessionMessageListPanel(
         turnViews.clear()
         msgToTurn.clear()
         msgToView.clear()
+        revertingMessage = null
         onHover = null
         removeAll()
     }

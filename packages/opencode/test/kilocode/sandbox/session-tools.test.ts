@@ -89,7 +89,7 @@ function context(directory: string, main: string, sandboxes: string[]): Instance
 }
 
 const config = TestConfig.layer({
-  get: () => Effect.succeed({ experimental: { sandbox: true } }),
+  get: () => Effect.succeed({ sandbox: { enabled: true } }),
 })
 const agents = Layer.mock(Agent.Service)({
   get: () => Effect.succeed(agent),

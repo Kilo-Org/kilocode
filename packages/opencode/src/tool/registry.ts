@@ -31,6 +31,7 @@ import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { RepoCloneTool } from "./repo_clone"
 import { RepoOverviewTool } from "./repo_overview"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { Auth } from "@/auth" // kilocode_change
 import { RepositoryCache } from "@/reference/repository-cache"
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
@@ -128,6 +129,7 @@ export const layer: Layer.Layer<
   | Command.Service
   // kilocode_change end
   | RuntimeFlags.Service
+  | Auth.Service // kilocode_change - required by generate-image tool
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -461,6 +463,7 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Notebook.defaultLayer),
         Layer.provide(RuntimeFlags.defaultLayer),
         Layer.provide(SessionStatus.defaultLayer),
+        Layer.provide(Auth.defaultLayer),
       ),
   // kilocode_change end
 )

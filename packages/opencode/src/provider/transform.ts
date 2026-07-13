@@ -6,6 +6,7 @@ import type * as ModelsDev from "@opencode-ai/core/models-dev"
 import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
+import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -900,7 +901,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           effort,
           {
             reasoningEffort: effort,
-            reasoningSummary: "auto",
+            reasoningSummary: reasoningSummary(model), // kilocode_change
             include: INCLUDE_ENCRYPTED_REASONING,
           },
         ]),
@@ -1257,7 +1258,7 @@ export function options(input: {
         input.model.api.npm === "@openrouter/ai-sdk-provider" || // kilocode_change
         input.model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
       ) {
-        result["reasoningSummary"] = "auto"
+        result["reasoningSummary"] = reasoningSummary(input.model) // kilocode_change
         if (input.model.api.npm === "@ai-sdk/openai") {
           result["include"] = INCLUDE_ENCRYPTED_REASONING
         }
@@ -1487,9 +1488,15 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
       }
 
       // Filter required array to only include fields that exist in properties
-      if (result.type === "object" && result.properties && Array.isArray(result.required)) {
-        result.required = result.required.filter((field: any) => field in result.properties)
+      // kilocode_change start - Gemini rejects required entries without matching properties
+      if (result.type === "object" && Array.isArray(result.required)) {
+        const properties = isPlainObject(result.properties) ? result.properties : undefined
+        result.required = properties ? result.required.filter((field: any) => field in properties) : []
+        if (result.required.length === 0) {
+          delete result.required
+        }
       }
+      // kilocode_change end
 
       if (result.type === "array" && !hasCombiner(result)) {
         if (result.items == null) {

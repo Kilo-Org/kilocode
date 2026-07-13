@@ -401,6 +401,11 @@ export interface RequestFileSearchMessage {
   sessionID?: string
 }
 
+export interface RequestFilePickerMessage {
+  type: "requestFilePicker"
+  requestId: string
+}
+
 export interface RequestTerminalContextMessage {
   type: "requestTerminalContext"
   requestId: string
@@ -474,6 +479,10 @@ export interface RequestIndexingSettingsMessage {
 
 export interface RequestKiloEmbeddingModelsMessage {
   type: "requestKiloEmbeddingModels"
+}
+
+export interface RequestImageModelsMessage {
+  type: "requestImageModels"
 }
 
 export interface OpenSettingsTabRequest {
@@ -965,6 +974,12 @@ export interface AgentManagerOpenSessionsMessage {
   sessionIDs: string[]
 }
 
+// Report open local sidebar/editor-tab session IDs without creating new provider connections.
+export interface SidebarOpenSessionsMessage {
+  type: "sidebar.openSessions"
+  sessionIDs: string[]
+}
+
 export interface RequestAutoApproveStateMessage {
   type: "requestAutoApproveState"
 }
@@ -1246,6 +1261,7 @@ export type WebviewMessage =
   | SpeechToTextStopMessage
   | SpeechToTextCancelMessage
   | RequestFileSearchMessage
+  | RequestFilePickerMessage
   | RequestTerminalContextMessage
   | RequestGitChangesContextMessage
   | ChatCompletionAcceptedMessage
@@ -1349,6 +1365,7 @@ export type WebviewMessage =
   | SaveImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | SidebarOpenSessionsMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage
@@ -1395,6 +1412,7 @@ export type WebviewMessage =
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalResizeRequest
+  | RequestImageModelsMessage
 
 // ============================================
 // VS Code API type

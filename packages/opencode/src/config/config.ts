@@ -54,6 +54,7 @@ import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
+import { SandboxConfig } from "@/kilocode/sandbox/config"
 import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
@@ -250,6 +251,7 @@ export const Info = Schema.Struct({
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),
+  sandbox: Schema.optional(SandboxConfig.Info),
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Model to use in the format of provider/model, eg anthropic/claude-2",
   }),
@@ -392,6 +394,10 @@ export const Info = Schema.Struct({
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       // kilocode_change start
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }),
+      image_generation: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI image generation" }),
+      image_generation_model: Schema.optional(Schema.String).annotate({
+        description: "Model ID to use for image generation (default: openrouter/auto)",
+      }),
       agent_requirements: Schema.optional(Schema.Boolean).annotate({
         description: "Require declared agent skills, MCPs, and VS Code extensions before VS Code prompts can run",
       }),
@@ -412,17 +418,13 @@ export const Info = Schema.Struct({
         description: "Continue the agent loop when a tool call is denied",
       }),
       // kilocode_change start
-      sandbox: Schema.optional(Schema.Boolean).annotate({
+      swe_pruner: Schema.optional(Schema.Boolean).annotate({
         description:
-          "Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access",
+          "Enable SWE-Pruner: task-aware pruning of large read, grep, and bash tool outputs guided by a focus question provided by the agent (default: false)",
       }),
-      sandbox_restrict_network: Schema.optional(Schema.Boolean).annotate({
+      swe_pruner_model: Schema.optional(Schema.String).annotate({
         description:
-          "Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)",
-      }),
-      sandbox_writable_paths: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
-        description:
-          "Additional filesystem paths the sandbox allows writes to (e.g. ['/tmp', '/var/log']). These are merged with the default writable paths when the sandbox is active.",
+          'Model used by SWE-Pruner to skim tool outputs, in "provider/model" format (default: the configured small model)',
       }),
       // kilocode_change end
       mcp_timeout: Schema.optional(PositiveInt).annotate({
@@ -779,10 +781,7 @@ export const layer = Layer.effect(
         // kilocode_change start
         const merge = Effect.fnUntraced(function* (source: string, next: Info, kind?: ConfigPlugin.Scope) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
-          // sandbox_writable_paths is security-sensitive — only global config may set it.
-          // A project kilo.json must not widen the sandbox beyond the user's intent.
-          if (scope === "local") delete next.experimental?.sandbox_writable_paths
-          const scoped = KilocodeConfig.scopeIndexing(next, scope)
+          const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
           return yield* mergePluginOrigins(source, scoped.plugin, scope)
         })

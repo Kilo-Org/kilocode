@@ -190,6 +190,8 @@ import type {
   KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
+  KiloModelsImagesErrors,
+  KiloModelsImagesResponses,
   KiloModesErrors,
   KiloModesResponses,
   KiloNotificationsErrors,
@@ -6361,6 +6363,7 @@ export class CommitMessage extends HeyApiClient {
       path?: string
       selectedFiles?: Array<string>
       previousMessage?: string
+      language?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -6374,6 +6377,7 @@ export class CommitMessage extends HeyApiClient {
             { in: "body", key: "path" },
             { in: "body", key: "selectedFiles" },
             { in: "body", key: "previousMessage" },
+            { in: "body", key: "language" },
           ],
         },
       ],
@@ -6774,6 +6778,38 @@ export class Audio extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class Models extends HeyApiClient {
+  /**
+   * Image generation models
+   *
+   * List image-capable models from the Kilo Gateway OpenRouter passthrough
+   */
+  public images<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KiloModelsImagesResponses, KiloModelsImagesErrors, ThrowOnError>({
+      url: "/kilo/models/images",
+      ...options,
+      ...params,
     })
   }
 }
@@ -7234,6 +7270,11 @@ export class Kilo extends HeyApiClient {
   private _audio?: Audio
   get audio(): Audio {
     return (this._audio ??= new Audio({ client: this.client }))
+  }
+
+  private _models?: Models
+  get models(): Models {
+    return (this._models ??= new Models({ client: this.client }))
   }
 
   private _organization?: Organization
