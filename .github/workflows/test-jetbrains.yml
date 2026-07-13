@@ -47,6 +47,8 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      GRADLE_USER_HOME: /home/runner/.gradle
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
