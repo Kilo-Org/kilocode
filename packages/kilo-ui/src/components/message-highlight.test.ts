@@ -329,6 +329,56 @@ describe("message highlight", () => {
     expect(segments).toEqual([{ text: "read " }, { text: "@文件.txt", type: "file" }])
   })
 
+  test("does not let a repeated mention hide a distinct mention that sits between the repeats", () => {
+    // Regression: for "@a.ts @b.ts @a.ts", locating the first "@a.ts" ref must
+    // not swallow "@b.ts" while scanning forward for the second "@a.ts" repeat.
+    const text = "@a.ts @b.ts @a.ts"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        { source: { type: "file", path: "a.ts", text: { value: "@a.ts", start: 0, end: 5 } } },
+        { source: { type: "file", path: "b.ts", text: { value: "@b.ts", start: 6, end: 11 } } },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "@a.ts", type: "file" },
+      { text: " " },
+      { text: "@b.ts", type: "file" },
+      { text: " " },
+      { text: "@a.ts", type: "file" },
+    ])
+  })
+
+  test("does not let a repeated shorter mention with spaces collide with a longer, distinct mention that starts the same way", () => {
+    // "@a.txt" is a literal prefix of the space-containing "@a.txt backup.txt".
+    // A generic continuation-character heuristic would treat the space after
+    // "@a.txt" as a valid boundary, since paths may now legitimately contain
+    // spaces. Checking against the other ref's actual mention text catches this.
+    const text = "@a.txt @a.txt backup.txt"
+    const segments = buildHighlightedTextSegments(
+      text,
+      [
+        { source: { type: "file", path: "a.txt", text: { value: "@a.txt", start: 0, end: 6 } } },
+        {
+          source: {
+            type: "file",
+            path: "a.txt backup.txt",
+            text: { value: "@a.txt backup.txt", start: 7, end: 24 },
+          },
+        },
+      ],
+      [],
+    )
+
+    expect(segments).toEqual([
+      { text: "@a.txt", type: "file" },
+      { text: " " },
+      { text: "@a.txt backup.txt", type: "file" },
+    ])
+  })
+
   test("highlights filename with space in directory and source offsets", () => {
     const text = "using @my folder/report.xlsx here"
     const segments = buildHighlightedTextSegments(

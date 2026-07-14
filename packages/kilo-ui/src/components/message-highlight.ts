@@ -40,23 +40,41 @@ function detect(text: string): Ref[] {
   }))
 }
 
-function locate(text: string, ref: Ref, index: number): Ref | undefined {
+function locate(text: string, ref: Ref, claimed: { start: number; end: number }[]): Ref | undefined {
   const source = ref.source
   if (!source.value) return undefined
+
+  const free = (start: number, end: number) => !claimed.some((c) => start < c.end && end > c.start)
 
   if (Number.isFinite(source.start) && Number.isFinite(source.end)) {
     const start = Math.min(text.length, Math.max(0, source.start))
     const end = Math.min(text.length, Math.max(0, source.end))
-    if (start >= index && start <= end && text.slice(start, end) === source.value) {
+    if (text.slice(start, end) === source.value && free(start, end)) {
       return { ...ref, source: { ...source, start, end } }
     }
   }
 
-  const hint = Number.isFinite(source.start) ? Math.min(text.length, Math.max(index, source.start)) : index
-  const found = text.indexOf(source.value, hint)
-  const start = found === -1 ? text.indexOf(source.value, index) : found
-  if (start === -1) return undefined
-  return { ...ref, source: { ...source, start, end: start + source.value.length } }
+  const firstFree = (from: number) => {
+    let search = from
+    while (true) {
+      const found = text.indexOf(source.value, search)
+      if (found === -1) return undefined
+      const end = found + source.value.length
+      if (free(found, end)) return { start: found, end }
+      search = found + 1
+    }
+  }
+
+  // Prefer the first unclaimed occurrence at or after this ref's own recorded
+  // position, falling back to the first unclaimed occurrence anywhere. Each
+  // ref is searched against its own hint rather than a cursor shared across
+  // every other ref, so locating one ref can't skip past a distinct ref's real
+  // occurrence that sits between two repeats of an earlier one (see the
+  // interleaved-mentions regression test).
+  const hint = Number.isFinite(source.start) ? Math.min(text.length, Math.max(0, source.start)) : 0
+  const match = firstFree(hint) ?? firstFree(0)
+  if (!match) return undefined
+  return { ...ref, source: { ...source, start: match.start, end: match.end } }
 }
 
 // Any letter, digit, underscore, slash, or hyphen unambiguously continues a
@@ -85,17 +103,22 @@ function continuesPath(text: string, end: number): boolean {
 
 /**
  * Find every position at or after `from` where `value` occurs as a complete
- * token, not immediately preceded or followed by a character that could
- * extend it into a longer, different path. A plain substring search would
- * let a shorter mention match as a prefix of a longer, distinct one that
- * starts the same way (e.g. "@a.ts" inside "@a.tsx"), truncating the real
- * mention's highlight. Ordinary punctuation such as a trailing comma,
+ * token, not immediately preceded by a character that could extend it into a
+ * longer, different path, and not immediately claimed by `others` — the exact
+ * mention text of every other known ref. A plain substring search would let a
+ * shorter mention match as a prefix of a longer, distinct one that starts the
+ * same way (e.g. "@a.ts" inside "@a.tsx", or "@a.txt" inside the space-containing
+ * "@a.txt backup.txt"). Checking against the other refs' actual mention text,
+ * rather than only a generic continuation-character heuristic, is required
+ * because a space can no longer be assumed to end a mention now that paths may
+ * contain spaces — `continuesPath` alone would treat the boundary before
+ * "backup.txt" as valid. Ordinary punctuation such as a trailing comma,
  * sentence-ending period, or closing paren is not a continuation character,
  * so a repeat directly followed by it is still accepted.
  */
-function repeats(text: string, value: string, from: number): number[] {
+function repeats(text: string, value: string, others: string[], claimed: { start: number; end: number }[]): number[] {
   const result: number[] = []
-  let search = from
+  let search = 0
 
   while (true) {
     const found = text.indexOf(value, search)
@@ -104,7 +127,9 @@ function repeats(text: string, value: string, from: number): number[] {
     const end = found + value.length
     const before = found === 0 || !PATH_CONTINUATION.test(text[found - 1] ?? "")
     const after = !continuesPath(text, end)
-    if (before && after) result.push(found)
+    const collides = others.some((other) => other !== value && other.length > value.length && text.startsWith(other, found))
+    const free = !claimed.some((c) => found < c.end && end > c.start)
+    if (before && after && !collides && free) result.push(found)
     search = found + 1
   }
 
@@ -112,24 +137,30 @@ function repeats(text: string, value: string, from: number): number[] {
 }
 
 function resolve(text: string, refs: Ref[]): Ref[] {
+  const others = refs.map((ref) => ref.source.value)
+  const claimed: { start: number; end: number }[] = []
   const result: Ref[] = []
-  let index = 0
 
+  // Locate each ref's own primary occurrence first, independently of every
+  // other ref, so a distinct ref's real occurrence sitting between two
+  // repeats of an earlier one is never skipped over (see the
+  // interleaved-mentions regression test).
   for (const ref of [...refs].sort((a, b) => a.source.start - b.source.start || b.source.end - a.source.end)) {
-    const next = locate(text, ref, index)
+    const next = locate(text, ref, claimed)
     if (!next) continue
-
     result.push(next)
-    index = next.source.end
+    claimed.push({ start: next.source.start, end: next.source.end })
+  }
 
-    // mentionedPaths is a Set, so a path mentioned more than once in the same
-    // message only produces a single attachment/ref. Highlight any later
-    // boundary-delimited repeats of this ref's mention text too, so every
-    // occurrence stays highlighted, not just the first.
-    for (const start of repeats(text, next.source.value, index)) {
-      const end = start + next.source.value.length
-      result.push({ ...next, source: { ...next.source, start, end } })
-      index = Math.max(index, end)
+  // mentionedPaths is a Set, so a path mentioned more than once in the same
+  // message only produces a single attachment/ref. Highlight any later
+  // boundary-delimited repeats of each located ref's mention text too, so
+  // every occurrence stays highlighted, not just the first.
+  for (const ref of [...result]) {
+    for (const start of repeats(text, ref.source.value, others, claimed)) {
+      const end = start + ref.source.value.length
+      result.push({ ...ref, source: { ...ref.source, start, end } })
+      claimed.push({ start, end })
     }
   }
 

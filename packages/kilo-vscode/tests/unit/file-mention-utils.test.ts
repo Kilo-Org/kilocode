@@ -370,6 +370,20 @@ describe("buildFileAttachments", () => {
     expect(result[0]!.url).toContain("my%20folder")
     expect(result[0]!.url).toContain("my%20file.txt")
   })
+
+  it("round-trips a filename containing a literal percent-encoded-looking sequence", () => {
+    // Only escaping spaces before assigning to url.pathname is not enough: a
+    // real filename like "100%20real.txt" already contains the literal text
+    // "%20". If "%" itself isn't escaped first, the URL's "%20" is
+    // indistinguishable from an actually-encoded space, and decoding it (as
+    // Bun's fileURLToPath does server-side) would produce "100 real.txt" --
+    // a different, wrong filename.
+    const paths = new Set(["100%20real.txt"])
+    const result = buildFileAttachments("@100%20real.txt", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    const decoded = decodeURIComponent(new URL(result[0]!.url).pathname)
+    expect(decoded).toBe("/workspace/100%20real.txt")
+  })
 })
 
 describe("getMentionRemovalRange", () => {
