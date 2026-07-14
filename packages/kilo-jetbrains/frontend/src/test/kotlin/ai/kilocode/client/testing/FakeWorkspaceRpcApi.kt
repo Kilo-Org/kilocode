@@ -2,6 +2,7 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -45,6 +46,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var beforeGlobalConfigTarget: (suspend () -> Unit)? = null
     val fileCalls = CopyOnWriteArrayList<Pair<String, String>>()
     val searchQueries = CopyOnWriteArrayList<String>()
+    val searchBackends = CopyOnWriteArrayList<FileSearchBackendDto>()
     val opened = CopyOnWriteArrayList<String>()
     val openedFiles = CopyOnWriteArrayList<Opened>()
     val localConfigs = CopyOnWriteArrayList<String>()
@@ -81,9 +83,15 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         return fileResolver?.invoke(path) ?: fileMatches
     }
 
-    override suspend fun searchFiles(directory: String, query: String, limit: Int): FileSearchResultDto {
+    override suspend fun searchFiles(
+        directory: String,
+        query: String,
+        limit: Int,
+        backend: FileSearchBackendDto,
+    ): FileSearchResultDto {
         assertNotEdt("searchFiles")
         searchQueries.add(query)
+        searchBackends.add(backend)
         return search?.invoke(query) ?: searchResult
     }
 

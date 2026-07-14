@@ -1,6 +1,7 @@
 package ai.kilocode.client.app
 
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +20,7 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        KiloFileSearchSettingsService.getInstance().loadState(KiloFileSearchSettingsService.State())
         scope = CoroutineScope(SupervisorJob())
         rpc = FakeWorkspaceRpcApi()
         service = KiloWorkspaceService(scope, rpc)
@@ -26,6 +28,7 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            KiloFileSearchSettingsService.getInstance().loadState(KiloFileSearchSettingsService.State())
             scope.cancel()
         } finally {
             super.tearDown()
@@ -96,5 +99,25 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
 
         assertEquals(err.message, seen?.message)
         assertEquals(listOf("dep"), rpc.searchQueries)
+    }
+
+    fun `test searchFiles sends default Kilo backend`() = runBlocking {
+        withContext(Dispatchers.Default) {
+            service.searchFiles("/test", "src")
+        }
+
+        assertEquals(listOf("src"), rpc.searchQueries)
+        assertEquals(listOf(FileSearchBackendDto.KILO), rpc.searchBackends)
+    }
+
+    fun `test searchFiles sends IntelliJ backend after setting change`() = runBlocking {
+        KiloFileSearchSettingsService.getInstance().setBackend(FileSearchBackendDto.INTELLIJ)
+
+        withContext(Dispatchers.Default) {
+            service.searchFiles("/test", "src")
+        }
+
+        assertEquals(listOf("src"), rpc.searchQueries)
+        assertEquals(listOf(FileSearchBackendDto.INTELLIJ), rpc.searchBackends)
     }
 }

@@ -1,9 +1,11 @@
 package ai.kilocode.client.session.ui.prompt
 
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.app.KiloFileSearchSettingsService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -26,6 +28,7 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
+        KiloFileSearchSettingsService.getInstance().loadState(KiloFileSearchSettingsService.State())
         scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         rpc = FakeWorkspaceRpcApi()
         val workspaces = KiloWorkspaceService(scope, rpc)
@@ -48,6 +51,7 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            KiloFileSearchSettingsService.getInstance().loadState(KiloFileSearchSettingsService.State())
             scope.cancel()
         } finally {
             super.tearDown()
@@ -87,6 +91,17 @@ class KiloPromptCompletionProviderTest : BasePlatformTestCase() {
         complete("@main<caret>")
 
         assertEquals(listOf("main"), rpc.searchQueries)
+    }
+
+    fun `test mention completion refetches same prefix after backend changes`() {
+        rpc.search = { query -> FileSearchResultDto(files = listOf(file("kilo/$query.kt"))) }
+
+        complete("@main<caret>")
+        KiloFileSearchSettingsService.getInstance().setBackend(FileSearchBackendDto.INTELLIJ)
+        complete("@main<caret>")
+
+        assertEquals(listOf("main", "main"), rpc.searchQueries)
+        assertEquals(listOf(FileSearchBackendDto.KILO, FileSearchBackendDto.INTELLIJ), rpc.searchBackends)
     }
 
     fun `test clearing mentions resets cached prefix result`() {

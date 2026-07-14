@@ -4,6 +4,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -139,14 +140,23 @@ class KiloWorkspaceService internal constructor(
     }
 
     suspend fun searchFiles(directory: String, query: String, limit: Int = 50): FileSearchResultDto {
+        return searchFiles(directory, query, limit, fileSearchBackend())
+    }
+
+    suspend fun searchFiles(directory: String, query: String, limit: Int, backend: FileSearchBackendDto): FileSearchResultDto {
+        LOG.debug { "workspace file search backend=$backend directory=$directory query=$query limit=$limit" }
         return try {
-            call { searchFiles(directory, query, limit) }
+            call { searchFiles(directory, query, limit, backend) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             LOG.warn("workspace file search failed for directory=$directory query=$query", e)
             FileSearchResultDto()
         }
+    }
+
+    fun fileSearchBackend(): FileSearchBackendDto {
+        return KiloFileSearchSettingsService.getInstance().backend()
     }
 
     suspend fun gitChanges(directory: String): String? {

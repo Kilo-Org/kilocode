@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.codeInsight.completion.CompletionParameters
@@ -35,11 +36,13 @@ class KiloPromptCompletionProvider(
     private val paths = Collections.synchronizedSet(mutableSetOf<String>())
     private val exists = Collections.synchronizedMap(mutableMapOf<String, Boolean>())
     private val pending = Collections.synchronizedSet(mutableSetOf<String>())
-    private val cache: MutableMap<String, FileSearchResultDto> = Collections.synchronizedMap(
-        object : LinkedHashMap<String, FileSearchResultDto>(64, 0.75f, true) {
-            override fun removeEldestEntry(eldest: Map.Entry<String, FileSearchResultDto>) = size > 64
+    private val cache: MutableMap<SearchKey, FileSearchResultDto> = Collections.synchronizedMap(
+        object : LinkedHashMap<SearchKey, FileSearchResultDto>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: Map.Entry<SearchKey, FileSearchResultDto>) = size > 64
         },
     )
+
+    private data class SearchKey(val prefix: String, val backend: FileSearchBackendDto)
 
     data class Highlight(val start: Int, val end: Int, val kind: HighlightKind)
 
@@ -73,10 +76,11 @@ class KiloPromptCompletionProvider(
     }
 
     fun prewarm() {
-        if (cache.containsKey("")) return
         scope.launch {
-            val result = service.searchFiles(workspace.directory, "", 50)
-            if (result.files.isNotEmpty() || result.git) cache.putIfAbsent("", result)
+            val key = SearchKey("", service.fileSearchBackend())
+            if (cache.containsKey(key)) return@launch
+            val result = service.searchFiles(workspace.directory, "", 50, key.backend)
+            if (result.files.isNotEmpty() || result.git) cache.putIfAbsent(key, result)
         }
     }
 
@@ -193,11 +197,14 @@ class KiloPromptCompletionProvider(
         }
     }
 
-    private fun search(prefix: String): FileSearchResultDto = cache[prefix] ?: fetch(prefix)
+    private fun search(prefix: String): FileSearchResultDto {
+        val key = SearchKey(prefix, service.fileSearchBackend())
+        return cache[key] ?: fetch(key)
+    }
 
-    private fun fetch(prefix: String): FileSearchResultDto {
-        val result = runBlockingCancellable { service.searchFiles(workspace.directory, prefix, 50) }
-        cache[prefix] = result
+    private fun fetch(key: SearchKey): FileSearchResultDto {
+        val result = runBlockingCancellable { service.searchFiles(workspace.directory, key.prefix, 50, key.backend) }
+        cache[key] = result
         return result
     }
 

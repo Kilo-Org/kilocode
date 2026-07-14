@@ -15,6 +15,7 @@ import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -47,6 +48,7 @@ import com.intellij.navigation.NavigationItem
 import com.intellij.psi.PsiFileSystemItem
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.indexing.FindSymbolParameters
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -56,6 +58,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import okhttp3.Request
 import java.net.URI
 import java.net.URLDecoder
@@ -74,7 +78,9 @@ import kotlin.coroutines.resume
  * for the given directory. Project lookup is only used to resolve the
  * calling frontend project to the correct backend directory.
  */
-class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
+class KiloWorkspaceRpcApiImpl internal constructor(
+    private val svc: KiloBackendAppService? = null,
+) : KiloWorkspaceRpcApi {
     companion object {
         private val LOG = KiloLog.create(KiloWorkspaceRpcApiImpl::class.java)
         private const val SCHEMA = "https://app.kilo.ai/config.json"
@@ -84,13 +90,14 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
         private const val SEARCH_CAP = 2_000
         private const val DIFF_CAP = 200_000
+        private val JSON = Json { ignoreUnknownKeys = true }
         private val CONFIG = """{
   "${'$'}schema": "$SCHEMA"
 }
 """
     }
 
-    private val app: KiloBackendAppService get() = service()
+    private val app: KiloBackendAppService get() = svc ?: service()
 
     private val gitCache = ConcurrentHashMap<String, Boolean>()
 
@@ -193,9 +200,20 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         return found.values.toList()
     }
 
-    override suspend fun searchFiles(directory: String, query: String, limit: Int): FileSearchResultDto {
+    override suspend fun searchFiles(
+        directory: String,
+        query: String,
+        limit: Int,
+        backend: FileSearchBackendDto,
+    ): FileSearchResultDto {
         val base = file(clean(directory) ?: directory) ?: return FileSearchResultDto()
         val git = withContext(Dispatchers.IO) { gitAvailable(base) }
+        LOG.debug { "workspace file search backend=$backend directory=$directory query=$query limit=$limit" }
+        if (backend == FileSearchBackendDto.KILO) return searchKilo(directory, query, limit, git)
+        return searchIntellij(base, query, limit, git)
+    }
+
+    private suspend fun searchIntellij(base: Path, query: String, limit: Int, git: Boolean): FileSearchResultDto {
         val project = project(base) ?: return FileSearchResultDto(git = git)
         if (DumbService.getInstance(project).isDumb) return FileSearchResultDto(indexing = true, git = git)
         return try {
@@ -207,6 +225,49 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
             LOG.warn("file search API unavailable; returning no suggestions", e)
             FileSearchResultDto(git = git)
         }
+    }
+
+    private suspend fun searchKilo(directory: String, query: String, limit: Int, git: Boolean): FileSearchResultDto {
+        return try {
+            val cap = limit.coerceIn(1, 200)
+            val files = kiloResults(directory, query, "file", cap, false)
+            val dirs = kiloResults(directory, query, "directory", cap, true)
+            val found = linkedMapOf<String, WorkspaceFileDto>()
+            (dirs + files).forEach { file -> found.putIfAbsent(file.path, file) }
+            FileSearchResultDto(files = found.values.take(cap), git = git)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("Kilo Core file search failed for directory=$directory query=$query", e)
+            FileSearchResultDto(git = git)
+        }
+    }
+
+    private suspend fun kiloResults(
+        directory: String,
+        query: String,
+        type: String,
+        limit: Int,
+        dir: Boolean,
+    ): List<WorkspaceFileDto> {
+        val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        val raw = withContext(Dispatchers.IO) {
+            val request = Request.Builder()
+                .url("http://127.0.0.1:${app.port}/find/file?directory=${encode(directory)}&query=${encode(query)}&type=$type&limit=$limit")
+                .get()
+                .build()
+            http.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) throw RuntimeException("HTTP ${response.code}: $body")
+                body
+            }
+        }
+        return JSON.decodeFromString<List<String>>(raw)
+            .asSequence()
+            .map { it.trimEnd('/') }
+            .filter { it.isNotBlank() && !isManagedWorktreeStorage(it) }
+            .map { WorkspaceFileDto(it, it.substringAfterLast('/'), dir) }
+            .toList()
     }
 
     override suspend fun gitChanges(directory: String): String? = withContext(Dispatchers.IO) {
@@ -315,6 +376,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
     }
 
     private fun project(path: Path): Project? {
+        if (ApplicationManager.getApplication() == null) return null
         val projects = ProjectManager.getInstance().openProjects.filter { !it.isDefault }
         return projects.firstOrNull { item ->
             val base = item.basePath?.let(::file) ?: return@firstOrNull false
