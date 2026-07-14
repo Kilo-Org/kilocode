@@ -80,6 +80,7 @@ async function main() {
   if (eventsPort) {
     env.EVENT_SERVICE_URL = `ws://localhost:${eventsPort}`
     delete env.KILO_DISABLE_PRESENCE
+    delete env.KILO_EVENT_SERVICE_URL
   } else env.KILO_DISABLE_PRESENCE = "1"
 
   const webUp = await alive(webPort)
