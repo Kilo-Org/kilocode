@@ -581,6 +581,26 @@ describe("tool.read loaded instructions", () => {
       expect(result.metadata.loaded).toContain(path.join(dir, "subdir", "AGENTS.md"))
     }),
   )
+
+  // kilocode_change start - attachment reads must deliver instructions before claiming them
+  it.live("includes loaded instructions when reading an image attachment", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const png = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+        "base64",
+      )
+      yield* put(path.join(dir, "subdir", "AGENTS.md"), "# Image Instructions")
+      yield* put(path.join(dir, "subdir", "image.png"), png)
+
+      const result = yield* exec(dir, { filePath: path.join(dir, "subdir", "image.png") })
+      expect(result.output).toContain("Image read successfully")
+      expect(result.output).toContain("<system-reminder>")
+      expect(result.output).toContain("# Image Instructions")
+      expect(result.metadata.loaded).toContain(path.join(dir, "subdir", "AGENTS.md"))
+    }),
+  )
+  // kilocode_change end
 })
 
 describe("tool.read binary detection", () => {

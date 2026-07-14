@@ -138,6 +138,7 @@ export const layer: Layer.Layer<
       const ctx = yield* InstanceState.context
       const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
       const paths = new Map<string, KilocodeMarkdown.Source>()
+      const rules = new Set<string>()
       const add = (item: string, origin: KilocodeMarkdown.Source) => {
         const filepath = path.resolve(item)
         if (paths.get(filepath)?.trusted) return
@@ -164,18 +165,30 @@ export const layer: Layer.Layer<
         }
       }
 
-      const claude = flags.disableClaudeCodePrompt
-        ? { global: [], project: [] }
-        : yield* Effect.promise(() =>
-            KilocodeInstruction.claude({
-              home: global.home,
-              directory: ctx.directory,
-              worktree: ctx.worktree,
-              project: !Flag.KILO_DISABLE_PROJECT_CONFIG,
-            }),
-          )
-      claude.global.forEach((item) => add(item, { trusted: true, source: item }))
-      claude.project.forEach((item) => add(item, { trusted: false, source: item, root }))
+      if (!flags.disableClaudeCodePrompt) {
+        const globalRules = yield* fs
+          .glob("rules/**/*.md", {
+            cwd: path.join(global.home, ".claude"),
+            absolute: true,
+            include: "file",
+            dot: true,
+            symlink: true,
+          })
+          .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+        globalRules.forEach((item) => {
+          add(item, { trusted: true, source: item })
+          rules.add(path.resolve(item))
+        })
+        if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+          const projectRules = yield* fs
+            .globUp(".claude/rules/**/*.md", ctx.directory, ctx.worktree)
+            .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+          projectRules.forEach((item) => {
+            add(item, { trusted: false, source: item, root })
+            rules.add(path.resolve(item))
+          })
+        }
+      }
 
       if (config.instructions) {
         for (const raw of config.instructions) {
@@ -193,21 +206,27 @@ export const layer: Layer.Layer<
           const declared = config.instruction_origins?.[raw] ?? { trusted: false, source: raw, root }
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
-          matches.forEach((item) => add(item, origin))
+          matches.forEach((item) => {
+            add(item, origin)
+            if (path.extname(item).toLowerCase() === ".md" && !instructionFiles.includes(path.basename(item))) {
+              rules.add(path.resolve(item))
+            }
+          })
         }
       }
 
-      return paths
+      return { sources: paths, rules }
     })
 
-    const classify = Effect.fn("Instruction.classifySources")(function* (
-      sources: Map<string, KilocodeMarkdown.Source>,
-    ) {
+    const classify = Effect.fn("Instruction.classifySources")(function* (input: {
+      sources: Map<string, KilocodeMarkdown.Source>
+      rules: Set<string>
+    }) {
       const entries = yield* Effect.forEach(
-        Array.from(sources.entries()),
+        Array.from(input.sources.entries()),
         (item) =>
           Effect.gen(function* () {
-            if (!KilocodeInstruction.rule(item[0])) return { item, parsed: undefined }
+            if (!input.rules.has(item[0])) return { item, parsed: undefined }
             return { item, parsed: yield* parse(item[0], item[1]) }
           }),
         { concurrency: 8 },
