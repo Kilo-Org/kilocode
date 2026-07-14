@@ -293,6 +293,7 @@ class SessionUi(
 
         migrationOverlay = MigrationOverlayPanel().apply {
             onSkip = { migration.skip() }
+            onLater = { migration.later() }
             onDone = { migration.finish() }
             onContinueFromError = { migration.finish() }
             onStart = { sel -> migration.start(sel) }
