@@ -24641,6 +24641,12 @@
           "descriptionKey": {
             "type": "string"
           },
+          "descriptionArgs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "mode": {
             "type": "string"
           }

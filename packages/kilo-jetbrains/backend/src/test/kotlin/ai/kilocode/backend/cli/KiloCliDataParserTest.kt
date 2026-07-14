@@ -911,6 +911,7 @@ class KiloCliDataParserTest {
                             "labelKey": "plan.followup.answer.continue",
                             "description": "Implement the plan in this session",
                             "descriptionKey": "plan.followup.answer.continue.description",
+                            "descriptionArgs": ["75"],
                             "mode": "code"
                         }]
                     }],
@@ -930,6 +931,7 @@ class KiloCliDataParserTest {
             val opt = item.options.single()
             assertEquals("plan.followup.answer.continue", opt.labelKey)
             assertEquals("plan.followup.answer.continue.description", opt.descriptionKey)
+            assertEquals(listOf("75"), opt.descriptionArgs)
             assertEquals("code", opt.mode)
         }
 

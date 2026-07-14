@@ -29,6 +29,9 @@ export const Option = Schema.Struct({
   descriptionKey: Schema.optional(Schema.String).annotate({
     description: "Optional i18n key for the description",
   }),
+  descriptionArgs: Schema.optional(Schema.Array(Schema.String)).annotate({
+    description: "Optional positional arguments for the description i18n key",
+  }),
   // kilocode_change end
   // kilocode_change start - hint to UI clients to switch the active agent/mode picker
   // when this option is selected (before the reply is confirmed by the server).

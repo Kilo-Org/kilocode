@@ -860,6 +860,7 @@ export type QuestionOption = {
   description: string
   labelKey?: string
   descriptionKey?: string
+  descriptionArgs?: Array<string>
   mode?: string
 }
 

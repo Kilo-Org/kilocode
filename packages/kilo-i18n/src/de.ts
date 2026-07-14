@@ -113,8 +113,10 @@ export const dict = {
   "plan.followup.question": "Bereit zur Umsetzung?",
   "plan.followup.answer.newSession": "Neue Sitzung starten",
   "plan.followup.answer.newSession.description": "In einer neuen Sitzung mit leerem Kontext umsetzen",
+  "plan.followup.answer.newSession.recommended.description": "In einer neuen Sitzung mit leerem Kontext umsetzen (Empfohlen)",
   "plan.followup.answer.continue": "Hier fortfahren",
   "plan.followup.answer.continue.description": "Den Plan in dieser Sitzung umsetzen",
+  "plan.followup.answer.continue.estimated.description": "Den Plan in dieser Sitzung umsetzen ({{0}}% des Code-Kontextes verwendet)",
   "plan.followup.answer.keepRefining": "Weiter verfeinern",
   "plan.followup.answer.keepRefining.description": "Weiter planen, ohne jetzt zu implementieren",
 

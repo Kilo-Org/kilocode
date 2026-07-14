@@ -110,8 +110,10 @@ export const dict = {
   "plan.followup.question": "جاهز للتنفيذ؟",
   "plan.followup.answer.newSession": "بدء جلسة جديدة",
   "plan.followup.answer.newSession.description": "نفّذ في جلسة جديدة بسياق نظيف",
+  "plan.followup.answer.newSession.recommended.description": "نفّذ في جلسة جديدة بسياق نظيف (موصى به)",
   "plan.followup.answer.continue": "المتابعة هنا",
   "plan.followup.answer.continue.description": "نفّذ الخطة في هذه الجلسة",
+  "plan.followup.answer.continue.estimated.description": "نفّذ الخطة في هذه الجلسة (باستخدام {{0}}٪ من سياق وضع البرمجة)",
   "plan.followup.answer.keepRefining": "واصل التحسين",
   "plan.followup.answer.keepRefining.description": "واصل التخطيط دون التنفيذ الآن",
 

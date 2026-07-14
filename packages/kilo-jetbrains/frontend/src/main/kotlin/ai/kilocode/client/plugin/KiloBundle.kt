@@ -10,8 +10,8 @@ object KiloBundle : DynamicBundle(BUNDLE) {
         return getMessage(key, *params)
     }
 
-    fun optional(key: String): String? {
+    fun optional(key: String, vararg params: Any): String? {
         if (!containsKey(key)) return null
-        return getMessage(key)
+        return getMessage(key, *params)
     }
 }
