@@ -328,7 +328,7 @@ export const layer = Layer.effect(
 
     let globalStamp = "" // kilocode_change
 
-    const loadGlobalUnlocked = Effect.fnUntraced(function* (env?: Record<string, string>) {
+    const loadGlobal = Effect.fnUntraced(function* (env?: Record<string, string>) {
       // kilocode_change start
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission())
       globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
@@ -372,14 +372,6 @@ export const layer = Layer.effect(
       globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config) // kilocode_change
       return result
     })
-
-    // kilocode_change start - serialize every global config migration and update under one stable lock
-    const loadGlobal = Effect.fnUntraced(function* (env?: Record<string, string>) {
-      return yield* flock
-        .withLock(loadGlobalUnlocked(env), `config:global:${path.resolve(Global.Path.config)}`)
-        .pipe(Effect.orDie)
-    })
-    // kilocode_change end
 
     const [cachedGlobal, invalidateGlobal] = yield* Effect.cachedInvalidateWithTTL(
       loadGlobal().pipe(

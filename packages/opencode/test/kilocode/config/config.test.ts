@@ -149,46 +149,6 @@ describe("global config updates", () => {
       await disposeAllInstances()
     }
   })
-
-  test("preserves updates concurrent with global config migration", async () => {
-    await using globalTmp = await tmpdir()
-    await using tmp = await tmpdir()
-    const prev = Global.Path.config
-    ;(Global.Path as { config: string }).config = globalTmp.path
-    await writeConfig(globalTmp.path, {}, "kilo.jsonc")
-    await clear()
-    await disposeAllInstances()
-
-    try {
-      await provideTestInstance({
-        directory: tmp.path,
-        fn: async () => {
-          await Effect.runPromise(
-            Config.Service.use((svc) =>
-              Effect.all(
-                [
-                  svc.getGlobal(),
-                  svc.updateGlobal(
-                    { permission: { external_directory: { "/skills/concurrent/*": "allow" } } },
-                    { dispose: false },
-                  ),
-                ],
-                { concurrency: "unbounded" },
-              ),
-            ).pipe(Effect.scoped, Effect.provide(layer)),
-          )
-
-          const config = await Bun.file(path.join(globalTmp.path, "kilo.jsonc")).json()
-          expect(config.permission.external_directory["/skills/concurrent/*"]).toBe("allow")
-          expect(config.$schema).toBe("https://app.kilo.ai/config.json")
-        },
-      })
-    } finally {
-      ;(Global.Path as { config: string }).config = prev
-      await clear()
-      await disposeAllInstances()
-    }
-  })
 })
 
 describe("kilocode indexing config", () => {
