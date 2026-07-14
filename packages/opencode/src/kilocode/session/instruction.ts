@@ -43,7 +43,7 @@ export namespace KilocodeInstruction {
   }
 
   const scan = (pattern: string, cwd: string) =>
-    Glob.scan(pattern, { cwd, absolute: true, include: "file", dot: true, symlink: true })
+    Glob.scan(pattern, { cwd, absolute: true, include: "file", dot: true })
       .then((items) => items.sort())
       .catch(() => [])
 

@@ -200,18 +200,32 @@ export const layer: Layer.Layer<
       return paths
     })
 
-    const startupSources = Effect.fn("Instruction.startupSources")(function* () {
-      const sources = yield* systemSources()
+    const classify = Effect.fn("Instruction.classifySources")(function* (
+      sources: Map<string, KilocodeMarkdown.Source>,
+    ) {
       const entries = yield* Effect.forEach(
         Array.from(sources.entries()),
         (item) =>
           Effect.gen(function* () {
-            if (!KilocodeInstruction.rule(item[0])) return item
-            return (yield* parse(item[0], item[1])).paths ? undefined : item
+            if (!KilocodeInstruction.rule(item[0])) return { item, parsed: undefined }
+            return { item, parsed: yield* parse(item[0], item[1]) }
           }),
         { concurrency: 8 },
       )
-      return new Map(entries.filter((item): item is [string, KilocodeMarkdown.Source] => item !== undefined))
+      const startup = new Map<string, KilocodeMarkdown.Source>()
+      const scoped: { item: string; content: string; paths: string[] }[] = []
+      for (const entry of entries) {
+        if (!entry.parsed?.paths) {
+          startup.set(entry.item[0], entry.item[1])
+          continue
+        }
+        scoped.push({ item: entry.item[0], content: entry.parsed.content, paths: entry.parsed.paths })
+      }
+      return { startup, scoped }
+    })
+
+    const startupSources = Effect.fn("Instruction.startupSources")(function* () {
+      return (yield* classify(yield* systemSources())).startup
     })
 
     const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
@@ -253,7 +267,8 @@ export const layer: Layer.Layer<
       filepath: string,
       messageID: MessageID,
     ) {
-      const sys = yield* systemPaths()
+      const sources = yield* classify(yield* systemSources()) // kilocode_change
+      const sys = new Set(sources.startup.keys()) // kilocode_change
       const already = extract(messages)
       const results: { filepath: string; content: string }[] = []
       const s = yield* InstanceState.get(state)
@@ -290,24 +305,22 @@ export const layer: Layer.Layer<
       }
 
       // kilocode_change start - attach configured path-scoped rules after existing nearby instructions
-      const sources = yield* systemSources()
       const ctx = yield* InstanceState.context
       const worktree = path.resolve(ctx.worktree === "/" ? ctx.directory : ctx.worktree)
-      for (const [item, origin] of sources) {
-        if (!KilocodeInstruction.rule(item) || item === target || sys.has(item) || already.has(item)) continue
-        const parsed = yield* parse(item, origin)
-        if (!parsed.paths || !KilocodeInstruction.match(parsed.paths, target, worktree)) continue
+      for (const item of sources.scoped) {
+        if (item.item === target || already.has(item.item)) continue
+        if (!KilocodeInstruction.match(item.paths, target, worktree)) continue
 
         let set = s.claims.get(messageID)
         if (!set) {
           set = new Set()
           s.claims.set(messageID, set)
         }
-        if (set.has(item)) continue
+        if (set.has(item.item)) continue
 
-        set.add(item)
-        if (parsed.content) {
-          results.push({ filepath: item, content: `Instructions from: ${item}\n${parsed.content}` })
+        set.add(item.item)
+        if (item.content) {
+          results.push({ filepath: item.item, content: `Instructions from: ${item.item}\n${item.content}` })
         }
       }
       // kilocode_change end
