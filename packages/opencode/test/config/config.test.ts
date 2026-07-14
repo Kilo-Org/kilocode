@@ -570,7 +570,7 @@ it.instance("injects $schema into config without existing schema", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     // Config without $schema - should trigger auto-add
-    yield* AppFileSystem.use.writeWithDirs(
+    yield* FSUtil.use.writeWithDirs(
       path.join(test.directory, "kilo.json"),
       JSON.stringify({ username: "test-user" }),
     )
@@ -579,7 +579,7 @@ it.instance("injects $schema into config without existing schema", () =>
     expect(config.$schema).toBe("https://app.kilo.ai/config.json")
 
     // Read the file to verify $schema was injected
-    const content = yield* AppFileSystem.use.readFileString(path.join(test.directory, "kilo.json"))
+    const content = yield* FSUtil.use.readFileString(path.join(test.directory, "kilo.json"))
     expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
     const schemaIndex = content.indexOf('"$schema"')
     const usernameIndex = content.indexOf('"username"')
@@ -591,7 +591,7 @@ it.instance("injects $schema into comment-first JSONC config", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     // Config with leading comment - regex-based injection would fail
-    yield* AppFileSystem.use.writeWithDirs(
+    yield* FSUtil.use.writeWithDirs(
       path.join(test.directory, "kilo.jsonc"),
       '// project config\n{\n  "model": "test/model"\n}\n',
     )
@@ -600,7 +600,7 @@ it.instance("injects $schema into comment-first JSONC config", () =>
     expect(config.$schema).toBe("https://app.kilo.ai/config.json")
 
     // Read the file to verify $schema was injected correctly
-    const content = yield* AppFileSystem.use.readFileString(path.join(test.directory, "kilo.jsonc"))
+    const content = yield* FSUtil.use.readFileString(path.join(test.directory, "kilo.jsonc"))
     expect(content).toContain('"$schema": "https://app.kilo.ai/config.json"')
     expect(content).toContain("// project config")
     const schemaIndex = content.indexOf('"$schema"')
@@ -614,7 +614,7 @@ it.instance("does not write config when $schema already present", () =>
     const test = yield* TestInstance
     const filepath = path.join(test.directory, "kilo.json")
     // Config already has $schema - should not rewrite file
-    yield* AppFileSystem.use.writeWithDirs(
+    yield* FSUtil.use.writeWithDirs(
       filepath,
       JSON.stringify({ $schema: "https://app.kilo.ai/config.json", username: "test-user" }),
     )
