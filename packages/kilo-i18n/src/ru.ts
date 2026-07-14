@@ -113,8 +113,10 @@ export const dict = {
   "plan.followup.question": "Готовы реализовать?",
   "plan.followup.answer.newSession": "Начать новую сессию",
   "plan.followup.answer.newSession.description": "Реализовать в новой сессии с чистым контекстом",
+  "plan.followup.answer.newSession.recommended.description": "Реализовать в новой сессии с чистым контекстом (Рекомендуется)",
   "plan.followup.answer.continue": "Продолжить здесь",
   "plan.followup.answer.continue.description": "Реализовать план в этой сессии",
+  "plan.followup.answer.continue.estimated.description": "Реализовать план в этой сессии (используя {{0}}% контекста режима кода)",
   "plan.followup.answer.keepRefining": "Продолжить уточнение",
   "plan.followup.answer.keepRefining.description": "Продолжить планирование без реализации пока что",
 

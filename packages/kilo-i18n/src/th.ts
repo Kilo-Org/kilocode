@@ -111,8 +111,10 @@ export const dict = {
   "plan.followup.question": "พร้อมดำเนินการหรือยัง?",
   "plan.followup.answer.newSession": "เริ่มเซสชันใหม่",
   "plan.followup.answer.newSession.description": "ดำเนินการในเซสชันใหม่ที่มีบริบทว่างเปล่า",
+  "plan.followup.answer.newSession.recommended.description": "ดำเนินการในเซสชันใหม่ที่มีบริบทว่างเปล่า (แนะนำ)",
   "plan.followup.answer.continue": "ดำเนินการต่อที่นี่",
   "plan.followup.answer.continue.description": "ดำเนินการตามแผนในเซสชันนี้",
+  "plan.followup.answer.continue.estimated.description": "ดำเนินการตามแผนในเซสชันนี้ (ใช้บริบทโหมดโค้ด {{0}}%)",
   "plan.followup.answer.keepRefining": "ปรับแผนต่อ",
   "plan.followup.answer.keepRefining.description": "วางแผนต่อโดยยังไม่ดำเนินการ",
 

@@ -1,13 +1,13 @@
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/kilocode/instance"
 import { Provider } from "@/provider/provider"
-import { ProviderID, ModelID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Config } from "@/config/config"
 import { Question } from "@/question"
 import { Session } from "@/session/session"
@@ -39,7 +39,7 @@ export const PlanFollowupRuntime = {
   agent(name: string): Promise<Agent.Info | undefined> {
     return agents().runPromise((svc) => svc.get(name))
   },
-  model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
+  model(providerID: ProviderV2.ID, modelID: ModelV2.ID): Promise<Provider.Model> {
     return providers().runPromise((svc) => svc.getModel(providerID, modelID))
   },
   config(): Promise<Config.Info> {
@@ -189,8 +189,8 @@ export namespace PlanFollowup {
         .record(
           z.string(),
           z.object({
-            providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
-            modelID: z.custom<ModelID>(Schema.is(ModelID)),
+            providerID: z.custom<ProviderV2.ID>(Schema.is(ProviderV2.ID)),
+            modelID: z.custom<ModelV2.ID>(Schema.is(ModelV2.ID)),
           }),
         )
         .optional(),
@@ -240,13 +240,15 @@ export namespace PlanFollowup {
     const tokens = KiloSessionOverflow.count(input.assistant.info.tokens)
     if (!tokens) return
 
-    const percent = Math.round((tokens / input.model.limit.context) * 100)
+    const context = input.model.limit.input || input.model.limit.context
+    if (context === 0) return
+    const percent = Math.round((tokens / context) * 100)
     const cfg = await PlanFollowupRuntime.config().catch(() => undefined)
+    if (!cfg) return { percent, recommended: false }
     return {
       percent,
       recommended:
-        cfg?.compaction?.auto !== false &&
-        typeof cfg?.compaction?.threshold_percent === "number" &&
+        cfg.compaction?.auto !== false &&
         tokens >=
           KiloSessionOverflow.limit({
             cfg,
@@ -364,7 +366,7 @@ export namespace PlanFollowup {
                 ? "Implement in a fresh session with a clean context (Recommended)"
                 : "Implement in a fresh session with a clean context",
               descriptionKey: input.estimate?.recommended
-                ? undefined
+                ? "plan.followup.answer.newSession.recommended.description"
                 : "plan.followup.answer.newSession.description",
             },
             {
@@ -373,7 +375,10 @@ export namespace PlanFollowup {
               description: input.estimate
                 ? `Implement the plan in this session (using ${input.estimate.percent}% of Code mode context)`
                 : "Implement the plan in this session",
-              descriptionKey: input.estimate ? undefined : "plan.followup.answer.continue.description",
+              descriptionKey: input.estimate
+                ? "plan.followup.answer.continue.estimated.description"
+                : "plan.followup.answer.continue.description",
+              descriptionArgs: input.estimate ? [String(input.estimate.percent)] : undefined,
               mode: "code",
             },
             {
@@ -433,9 +438,14 @@ export namespace PlanFollowup {
         const next = await PlanFollowupRuntime.session((svc) => svc.create({}))
         const ctl = new AbortController()
         pending.set(next.id, ctl)
-        const { AppRuntime } = await import("@/effect/app-runtime")
+        const [{ AppRuntime }, { EventV2Bridge }] = await Promise.all([
+          import("@/effect/app-runtime"),
+          import("@/event-v2-bridge"),
+        ])
         await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
-        await Bus.publish(Instance.current, TuiEvent.SessionSelect, { sessionID: next.id })
+        await AppRuntime.runPromise(
+          EventV2Bridge.Service.use((events) => events.publish(TuiEvent.SessionSelect, { sessionID: next.id })),
+        )
 
         const idle = () =>
           AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {

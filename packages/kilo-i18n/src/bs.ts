@@ -116,8 +116,10 @@ export const dict = {
   "plan.followup.question": "Spreman za implementaciju?",
   "plan.followup.answer.newSession": "Pokreni novu sesiju",
   "plan.followup.answer.newSession.description": "Implementiraj u novoj sesiji s čistim kontekstom",
+  "plan.followup.answer.newSession.recommended.description": "Implementiraj u novoj sesiji s čistim kontekstom (Preporučeno)",
   "plan.followup.answer.continue": "Nastavi ovdje",
   "plan.followup.answer.continue.description": "Implementiraj plan u ovoj sesiji",
+  "plan.followup.answer.continue.estimated.description": "Implementiraj plan u ovoj sesiji (koristi {{0}}% konteksta režima koda)",
   "plan.followup.answer.keepRefining": "Nastavi dorađivati",
   "plan.followup.answer.keepRefining.description": "Nastavi planirati bez implementacije za sada",
 

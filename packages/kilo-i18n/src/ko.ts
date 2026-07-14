@@ -110,8 +110,10 @@ export const dict = {
   "plan.followup.question": "구현할 준비가 되셨나요?",
   "plan.followup.answer.newSession": "새 세션 시작",
   "plan.followup.answer.newSession.description": "깨끗한 컨텍스트의 새 세션에서 구현",
+  "plan.followup.answer.newSession.recommended.description": "깨끗한 컨텍스트의 새 세션에서 구현 (권장)",
   "plan.followup.answer.continue": "여기서 계속하기",
   "plan.followup.answer.continue.description": "이 세션에서 계획 구현",
+  "plan.followup.answer.continue.estimated.description": "이 세션에서 계획 구현 (Code 모드 컨텍스트의 {{0}}% 사용)",
   "plan.followup.answer.keepRefining": "계속 다듬기",
   "plan.followup.answer.keepRefining.description": "아직 구현하지 않고 계획을 계속 진행",
 

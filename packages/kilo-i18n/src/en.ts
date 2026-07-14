@@ -113,8 +113,10 @@ export const dict = {
   "plan.followup.question": "Ready to implement?",
   "plan.followup.answer.newSession": "Start new session",
   "plan.followup.answer.newSession.description": "Implement in a fresh session with a clean context",
+  "plan.followup.answer.newSession.recommended.description": "Implement in a fresh session with a clean context (Recommended)",
   "plan.followup.answer.continue": "Continue here",
   "plan.followup.answer.continue.description": "Implement the plan in this session",
+  "plan.followup.answer.continue.estimated.description": "Implement the plan in this session (using {{0}}% of Code mode context)",
   "plan.followup.answer.keepRefining": "Keep refining",
   "plan.followup.answer.keepRefining.description": "Keep planning without implementing yet",
 

@@ -110,8 +110,10 @@ export const dict = {
   "plan.followup.question": "実装する準備はできましたか？",
   "plan.followup.answer.newSession": "新しいセッションを開始",
   "plan.followup.answer.newSession.description": "クリーンなコンテキストの新しいセッションで実装する",
+  "plan.followup.answer.newSession.recommended.description": "クリーンなコンテキストの新しいセッションで実装する（推奨）",
   "plan.followup.answer.continue": "ここで続行",
   "plan.followup.answer.continue.description": "このセッションで計画を実装する",
+  "plan.followup.answer.continue.estimated.description": "このセッションで計画を実装する（Code モードのコンテキストを {{0}}% 使用）",
   "plan.followup.answer.keepRefining": "さらに調整する",
   "plan.followup.answer.keepRefining.description": "まだ実装せずに計画を続ける",
 

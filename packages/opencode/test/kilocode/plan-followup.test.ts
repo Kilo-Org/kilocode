@@ -459,8 +459,90 @@ describe("plan follow-up", () => {
       const cont = q.options.find((o) => o.label === PlanFollowup.ANSWER_CONTINUE)
       expect(fresh?.description).toContain("(Recommended)")
       expect(cont?.description).toContain("using 86% of Code mode context")
-      expect(cont?.descriptionKey).toBeUndefined()
+      expect(fresh?.descriptionKey).toBe("plan.followup.answer.newSession.recommended.description")
+      expect(cont?.descriptionKey).toBe("plan.followup.answer.continue.estimated.description")
+      expect(cont?.descriptionArgs).toEqual(["86"])
       expect(configSpy).toHaveBeenCalled()
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+      configSpy.mockRestore()
+      modelSpy.mockRestore()
+    }))
+
+  test("ask - uses the model input limit for the displayed percentage", () =>
+    withInstance(async () => {
+      const configSpy = spyOn(PlanFollowupRuntime, "config").mockResolvedValue({
+        compaction: { threshold_percent: 75 },
+      } as any)
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue({
+        ...fakeModel,
+        limit: { context: 400_000, input: 200_000 },
+      } as Provider.Model)
+      const seeded = await seed({
+        text: "1. Build",
+        tokens: {
+          total: 150_000,
+          input: 150_000,
+          output: 0,
+          reasoning: 0,
+          cache: { read: 0, write: 0 },
+        },
+      })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      const cont = q.options.find((o) => o.label === PlanFollowup.ANSWER_CONTINUE)
+      expect(cont?.description).toContain("using 75% of Code mode context")
+      expect(cont?.descriptionArgs).toEqual(["75"])
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+      configSpy.mockRestore()
+      modelSpy.mockRestore()
+    }))
+
+  test("ask - recommends a fresh session at the default usable limit", () =>
+    withInstance(async () => {
+      const configSpy = spyOn(PlanFollowupRuntime, "config").mockResolvedValue({} as any)
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const seeded = await seed({
+        text: "1. Build",
+        tokens: {
+          total: 108_000,
+          input: 108_000,
+          output: 0,
+          reasoning: 0,
+          cache: { read: 0, write: 0 },
+        },
+      })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      const fresh = q.options.find((o) => o.label === PlanFollowup.ANSWER_NEW_SESSION)
+      expect(fresh?.descriptionKey).toBe("plan.followup.answer.newSession.recommended.description")
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")

@@ -114,8 +114,10 @@ export const dict = {
   "plan.followup.question": "Klaar om te implementeren?",
   "plan.followup.answer.newSession": "Nieuwe sessie starten",
   "plan.followup.answer.newSession.description": "Implementeren in een nieuwe sessie met een lege context",
+  "plan.followup.answer.newSession.recommended.description": "Implementeren in een nieuwe sessie met een lege context (Aanbevolen)",
   "plan.followup.answer.continue": "Hier doorgaan",
   "plan.followup.answer.continue.description": "Het plan in deze sessie implementeren",
+  "plan.followup.answer.continue.estimated.description": "Het plan in deze sessie implementeren (gebruikt {{0}}% van de Code-moduscontext)",
   "plan.followup.answer.keepRefining": "Blijven verfijnen",
   "plan.followup.answer.keepRefining.description": "Blijven plannen zonder nu te implementeren",
 

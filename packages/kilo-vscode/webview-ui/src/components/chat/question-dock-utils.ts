@@ -1,4 +1,5 @@
 import type { QuestionOption } from "../../types/messages"
+import type { UiI18nParams } from "@opencode-ai/ui/context/i18n"
 
 /**
  * Translate a backend-provided i18n key, falling back to the canonical label when no key is
@@ -13,9 +14,18 @@ import type { QuestionOption } from "../../types/messages"
  * helper would falsely fall back to the English label. Namespaced keys (`plan.followup.*`)
  * make this practically impossible, but keep it in mind before picking ambiguous key names.
  */
-export function tr(translate: (key: string) => string, key: string | undefined, fallback: string): string {
+export function tr(
+  translate: (key: string, params?: UiI18nParams) => string,
+  key: string | undefined,
+  fallback: string,
+  args?: string[],
+): string {
   if (!key) return fallback
-  const result = translate(key)
+  const params = args?.reduce<UiI18nParams>((result, value, index) => {
+    result[index] = value
+    return result
+  }, {})
+  const result = translate(key, params)
   if (result === key) return fallback
   return result
 }

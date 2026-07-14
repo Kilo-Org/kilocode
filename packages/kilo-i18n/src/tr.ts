@@ -112,8 +112,10 @@ export const dict = {
   "plan.followup.question": "Uygulamaya hazır mısın?",
   "plan.followup.answer.newSession": "Yeni oturum başlat",
   "plan.followup.answer.newSession.description": "Temiz bir bağlamla yeni bir oturumda uygula",
+  "plan.followup.answer.newSession.recommended.description": "Temiz bir bağlamla yeni bir oturumda uygula (Önerilen)",
   "plan.followup.answer.continue": "Burada devam et",
   "plan.followup.answer.continue.description": "Planı bu oturumda uygula",
+  "plan.followup.answer.continue.estimated.description": "Planı bu oturumda uygula (Kod modu bağlamının {{0}}% kadarı kullanılıyor)",
   "plan.followup.answer.keepRefining": "İyileştirmeye devam et",
   "plan.followup.answer.keepRefining.description": "Henüz uygulamadan planlamaya devam et",
 

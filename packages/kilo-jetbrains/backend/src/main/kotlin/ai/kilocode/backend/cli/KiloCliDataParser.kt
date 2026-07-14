@@ -1193,6 +1193,7 @@ object KiloCliDataParser {
                     description = oo.str("description") ?: "",
                     labelKey = oo.str("labelKey"),
                     descriptionKey = oo.str("descriptionKey"),
+                    descriptionArgs = oo["descriptionArgs"]?.arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                     mode = oo.str("mode"),
                 )
             } ?: emptyList()
