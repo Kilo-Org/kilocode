@@ -77,8 +77,10 @@ async function main() {
   env.KILO_DISABLE_AUTOUPDATE = "1"
   if (ingestPort) env.KILO_SESSION_INGEST_URL = `http://localhost:${ingestPort}`
   else env.KILO_DISABLE_SESSION_INGEST = "1"
-  if (eventsPort) env.EVENT_SERVICE_URL = `ws://localhost:${eventsPort}`
-  else env.KILO_DISABLE_PRESENCE = "1"
+  if (eventsPort) {
+    env.EVENT_SERVICE_URL = `ws://localhost:${eventsPort}`
+    delete env.KILO_DISABLE_PRESENCE
+  } else env.KILO_DISABLE_PRESENCE = "1"
 
   const webUp = await alive(webPort)
   console.log(`${dim}project${rst}  ${project}`)
