@@ -1,8 +1,8 @@
 /** @jsxImportSource @opentui/solid */
 import { describe, expect, test } from "bun:test"
 import type { BackgroundProcessInfo, GlobalEvent } from "@kilocode/sdk/v2"
-import { normalizeSyncEvent } from "../../src/cli/cmd/tui/context/event"
-import { mount, wait } from "../cli/cmd/tui/sync-fixture"
+import { normalizeSyncEvent } from "@tui/context/event"
+import { mount, wait } from "../../../tui/test/cli/cmd/tui/sync-fixture"
 
 function processInfo(id: string, sessionID: string, lifetime: BackgroundProcessInfo["lifetime"], updated: number) {
   return {
@@ -80,7 +80,7 @@ describe("TUI sync event wire format", () => {
     try {
       emit({
         directory: "/tmp/opencode/packages/opencode",
-        project: "proj_test",
+        project: "proj_other",
         payload: {
           type: "background_process.updated",
           properties: {

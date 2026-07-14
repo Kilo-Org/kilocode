@@ -524,7 +524,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
                 const clash = (a: string, b: string) => a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)
 
-                for (let i = 0; i < ops.length;) {
+                for (let i = 0; i < ops.length; ) {
                   const first = ops[i]!
                   const run = [first]
                   let j = i + 1
@@ -960,6 +960,6 @@ export const defaultLayer = layer.pipe(
   Layer.provide(EffectFlock.defaultLayer), // kilocode_change
 )
 
-export const node = LayerNode.make(layer, [FSUtil.node, AppProcess.node, Config.node])
+export const node = LayerNode.make(layer, [FSUtil.node, AppProcess.node, Config.node, EffectFlock.node]) // kilocode_change
 
 export * as Snapshot from "."

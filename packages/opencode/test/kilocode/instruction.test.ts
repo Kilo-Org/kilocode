@@ -7,28 +7,14 @@ import { NodeFileSystem } from "@effect/platform-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
-import { Reference } from "../../src/reference/reference"
 import { Instruction } from "../../src/session/instruction"
 import { Global } from "@opencode-ai/core/global"
 import { TestConfig } from "../fixture/config"
 import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const reference = Layer.mock(Reference.Service)({
-  init: () => Effect.void,
-  list: () => Effect.succeed([]),
-  get: () => Effect.succeed(undefined),
-  ensure: () => Effect.void,
-  contains: () => Effect.succeed(false),
-})
 const it = testEffect(
-  Layer.mergeAll(
-    CrossSpawnSpawner.defaultLayer,
-    NodeFileSystem.layer,
-    reference,
-    RuntimeFlags.layer(),
-    testInstanceStoreLayer,
-  ),
+  Layer.mergeAll(CrossSpawnSpawner.defaultLayer, NodeFileSystem.layer, RuntimeFlags.layer(), testInstanceStoreLayer),
 )
 
 const configLayer = TestConfig.layer()

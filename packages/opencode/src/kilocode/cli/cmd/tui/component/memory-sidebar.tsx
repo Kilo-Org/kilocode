@@ -2,7 +2,7 @@ import type { TuiPluginApi } from "@kilocode/plugin/tui"
 import { MemoryAutosaveStatus } from "@kilocode/kilo-memory/autosave-status"
 import { createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js"
 import * as Log from "@opencode-ai/core/util/log"
-import { relativeTime } from "@/cli/cmd/tui/feature-plugins/session/util"
+import { relativeTime } from "@/kilocode/cli/cmd/tui/relative-time"
 import { route } from "@/kilocode/cli/cmd/tui/memory-command"
 import { errorMessage } from "@/util/error"
 import { Locale } from "@/util/locale"
@@ -39,12 +39,12 @@ export function MemorySidebar(props: { api: TuiPluginApi; sessionID: string }) {
   const [data] = createResource(
     () => `${workspace() ?? "__default__"}:${dir()}:${tick()}`,
     async () => {
-      const status = await props.api.client.memory.status(route({ workspace: workspace(), directory: dir() })).catch(
-        (error: unknown) => {
+      const status = await props.api.client.memory
+        .status(route({ workspace: workspace(), directory: dir() }))
+        .catch((error: unknown) => {
           log.warn("memory status unavailable", { error: errorMessage(error) })
           return undefined
-        },
-      )
+        })
       if (!status) return
       if (status.error || !status.data) return
       return status.data

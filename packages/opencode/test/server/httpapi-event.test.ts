@@ -259,7 +259,7 @@ describe("event HttpApi", () => {
           timestamp,
           messageID: SessionMessageID.ID.create(),
           delivery: "queue",
-          prompt: new Prompt({ text: "hello", files: [], agents: [], references: [] }), // kilocode_change - upstream made prompt a Prompt class
+          prompt: new Prompt({ text: "hello", files: [], agents: [] }), // kilocode_change - upstream made prompt a Prompt class
         })
         expect(properties(yield* Fiber.join(prompted))).toMatchObject({
           timestamp: 1_234,

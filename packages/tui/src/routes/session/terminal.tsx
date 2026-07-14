@@ -3,7 +3,7 @@ import { TextAttributes, decodePasteBytes, type MouseEvent, type PasteEvent } fr
 import { useKeyboard, usePaste, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import type { InteractiveTerminalSnapshot } from "@kilocode/sdk/v2"
 import { VtScreen } from "@/kilocode/cli/cmd/tui/vt/vt-screen"
-import { SplitBorder } from "@tui/component/border"
+import { SplitBorder } from "@tui/ui/border"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"

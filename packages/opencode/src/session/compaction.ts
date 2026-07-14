@@ -728,6 +728,7 @@ export const node = LayerNode.make(layer, [
   Provider.node,
   EventV2Bridge.node,
   RuntimeFlags.node,
+  Database.node, // kilocode_change
 ])
 
 export * as SessionCompaction from "./compaction"

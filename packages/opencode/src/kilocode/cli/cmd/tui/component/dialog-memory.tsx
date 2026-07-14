@@ -6,14 +6,14 @@ import { MemoryDecisions } from "@kilocode/kilo-memory/decisions"
 import { MemoryToken } from "@kilocode/kilo-memory/token"
 import { Global } from "@opencode-ai/core/global"
 import { createMemo, createResource, For, Match, Show, Switch } from "solid-js"
-import { relativeTime } from "@/cli/cmd/tui/feature-plugins/session/util"
-import { useProject } from "@/cli/cmd/tui/context/project"
-import { useSDK } from "@/cli/cmd/tui/context/sdk"
-import { useTheme } from "@/cli/cmd/tui/context/theme"
-import { useTuiConfig } from "@/cli/cmd/tui/context/tui-config"
-import { useBindings } from "@/cli/cmd/tui/keymap"
-import { useDialog, type DialogContext } from "@/cli/cmd/tui/ui/dialog"
-import { getScrollAcceleration } from "@/cli/cmd/tui/util/scroll"
+import { relativeTime } from "@/kilocode/cli/cmd/tui/relative-time"
+import { useProject } from "@tui/context/project"
+import { useSDK } from "@tui/context/sdk"
+import { useTheme } from "@tui/context/theme"
+import { useTuiConfig } from "@tui/config"
+import { useBindings } from "@tui/keymap"
+import { useDialog, type DialogContext } from "@tui/ui/dialog"
+import { getScrollAcceleration } from "@tui/util/scroll"
 import { route } from "@/kilocode/cli/cmd/tui/memory-command"
 import { errorMessage } from "@/util/error"
 
@@ -163,9 +163,7 @@ export function DialogMemoryHelp(props: { reason?: string }) {
           esc
         </text>
       </box>
-      <Show when={props.reason}>
-        {(reason) => <text fg={theme.error}>{reason()}</text>}
-      </Show>
+      <Show when={props.reason}>{(reason) => <text fg={theme.error}>{reason()}</text>}</Show>
       <box gap={0}>
         <For each={MEMORY_COMMAND_CATALOG}>
           {(item) => (
@@ -232,8 +230,8 @@ function DialogMemoryStatus(props: { workspace?: string; directory?: string }) {
               <box>
                 <text fg={theme.text}>Startup context</text>
                 <text fg={theme.textMuted}>
-                  {item().state.autoInject ? "on" : "off"} · last injected{" "}
-                  {fmt(item().state.stats.lastInjectedTokens)} tokens
+                  {item().state.autoInject ? "on" : "off"} · last injected {fmt(item().state.stats.lastInjectedTokens)}{" "}
+                  tokens
                 </text>
               </box>
               <MemorySourcesInfo sources={item().sources} />

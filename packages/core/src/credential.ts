@@ -12,6 +12,7 @@ import { FSUtil } from "./fs-util"
 import { Global } from "./global"
 import { DataMigrationTable } from "./data-migration.sql"
 import path from "path"
+import { parse as parseKiloAccounts } from "./kilocode/credential-migration" // kilocode_change
 
 export const ID = Schema.String.pipe(
   Schema.brand("Credential.ID"),
@@ -106,6 +107,62 @@ export const legacyImportLayer = Layer.effectDiscard(
     const { db } = yield* Database.Service
     const fs = yield* FSUtil.Service
     const global = yield* Global.Service
+    // kilocode_change start - preserve Kilo's multi-account JSON stores before the upstream auth.json fallback
+    const kiloName = "credential.kilo-account-json"
+    if (!(yield* db.select().from(DataMigrationTable).where(eq(DataMigrationTable.name, kiloName)).get())) {
+      const current = yield* fs.readJson(path.join(global.data, "account.json")).pipe(Effect.option)
+      const prior = yield* fs.readJson(path.join(global.data, "auth-v2.json")).pipe(Effect.option)
+      const raw = Option.isSome(current) ? current.value : Option.getOrUndefined(prior)
+      const values = parseKiloAccounts(raw)
+      if (values.length > 0) {
+        yield* db.transaction((tx) =>
+          Effect.gen(function* () {
+            const existing = new Set(
+              (yield* tx.select({ connectorID: CredentialTable.connector_id }).from(CredentialTable).all()).map(
+                (item) => item.connectorID,
+              ),
+            )
+            for (const item of values) {
+              const connector = ConnectorSchema.ID.make(item.connectorID.replace(/\/+$/, ""))
+              if (existing.has(connector)) continue
+              const value: Value =
+                item.credential.type === "api"
+                  ? new Key({
+                      type: "key",
+                      key: item.credential.key,
+                      metadata: item.credential.metadata,
+                    })
+                  : new OAuth({
+                      type: "oauth",
+                      refresh: item.credential.refresh,
+                      access: item.credential.access,
+                      expires: item.credential.expires,
+                      metadata: {
+                        ...(item.credential.accountId ? { accountID: item.credential.accountId } : {}),
+                        ...(item.credential.enterpriseUrl ? { enterpriseURL: item.credential.enterpriseUrl } : {}),
+                      },
+                    })
+              yield* tx.insert(CredentialTable).values({
+                id: ID.create(),
+                connector_id: connector,
+                method_id: ConnectorSchema.MethodID.make(
+                  item.credential.type === "api"
+                    ? "api-key"
+                    : connector === ConnectorSchema.ID.make("openai")
+                      ? "chatgpt-browser"
+                      : "oauth",
+                ),
+                label: item.label,
+                value,
+                active: item.active,
+              })
+            }
+            yield* tx.insert(DataMigrationTable).values({ name: kiloName, time_completed: Date.now() }).run()
+          }),
+        )
+      }
+    }
+    // kilocode_change end
     const name = "credential.auth-json"
     if (yield* db.select().from(DataMigrationTable).where(eq(DataMigrationTable.name, name)).get()) return
     const raw = yield* fs.readJson(path.join(global.data, "auth.json")).pipe(Effect.option)

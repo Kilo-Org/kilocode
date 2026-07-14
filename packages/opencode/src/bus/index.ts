@@ -14,6 +14,7 @@ import { Identifier } from "@/id/id"
 import { context as instanceContext, type InstanceContext } from "@/project/instance-context" // kilocode_change
 import { InstanceRef } from "@/effect/instance-ref"
 import { LocalContext } from "@/util/local-context" // kilocode_change
+import { LayerNode } from "@opencode-ai/core/effect/layer-node" // kilocode_change
 
 const log = Log.create({ service: "bus" })
 
@@ -193,6 +194,7 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer
+export const node = LayerNode.make(layer, []) // kilocode_change
 
 const { runPromise, runSync } = makeRuntime(Service, layer)
 

@@ -497,6 +497,6 @@ export function toConfig(rules: Ruleset): ConfigPermissionV1.Info {
 }
 // kilocode_change end
 
-export const node = LayerNode.make(layer, [EventV2Bridge.node])
+export const node = LayerNode.make(layer, [EventV2Bridge.node, Config.node, Database.node]) // kilocode_change
 
 export * as Permission from "."

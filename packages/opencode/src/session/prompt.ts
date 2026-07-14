@@ -2052,7 +2052,10 @@ export const PromptInput = Schema.Struct({
 // `parts` type from the exported Schema input types so callers see a proper
 // tagged union.
 type PartInputUnion =
-  MessageV2.TextPartInput | MessageV2.FilePartInput | MessageV2.AgentPartInput | MessageV2.SubtaskPartInput
+  | MessageV2.TextPartInput
+  | MessageV2.FilePartInput
+  | MessageV2.AgentPartInput
+  | MessageV2.SubtaskPartInput
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
@@ -2169,6 +2172,7 @@ export const node = LayerNode.make(layer, [
   EventV2Bridge.node,
   RuntimeFlags.node,
   Database.node,
+  Question.node, // kilocode_change
 ])
 
 export * as SessionPrompt from "./prompt"

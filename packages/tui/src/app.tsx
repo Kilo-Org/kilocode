@@ -63,7 +63,7 @@ import * as Model from "./util/model"
 import { ArgsProvider, useArgs, type Args } from "./context/args"
 import open from "open"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
-import { TuiConfigProvider, useTuiConfig, type TuiConfig } from "./config"
+import type { TuiConfig } from "./config"
 import { createTuiApiAdapters } from "./plugin/adapters"
 import { createTuiApi } from "./plugin/api"
 import { createPluginRuntime, PluginRuntimeProvider, usePluginRuntime, type TuiPluginHost } from "./plugin/runtime"
@@ -290,7 +290,8 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                         : undefined
                                     }
                                   >
-                                    <TuiConfigProvider config={input.config}>
+                                    {/* kilocode_change - retain reactive Kilo TUI config hot reload after package extraction */}
+                                    <KiloApp.KiloTuiConfig.Provider config={input.config}>
                                       <PluginRuntimeProvider value={pluginRuntime}>
                                         <SDKProvider
                                           url={input.url}
@@ -331,7 +332,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                           </ProjectProvider>
                                         </SDKProvider>
                                       </PluginRuntimeProvider>
-                                    </TuiConfigProvider>
+                                    </KiloApp.KiloTuiConfig.Provider>
                                   </RouteProvider>
                                 </ToastProvider>
                               </KVProvider>
@@ -362,7 +363,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
 
 function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPluginHost }) {
   const startup = useTuiStartup()
-  const tuiConfig = useTuiConfig()
+  const tuiConfig = KiloApp.KiloTuiConfig.use() // kilocode_change
   const route = useRoute()
   const dimensions = useTerminalDimensions()
   const renderer = useRenderer()

@@ -10,7 +10,7 @@ import { Global } from "@opencode-ai/core/global"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Truncate } from "../../../src/tool/truncate"
 import { RepoCloneTool } from "../../../src/tool/repo_clone"
-import { RepositoryCache } from "../../../src/reference/repository-cache"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { disposeAllInstances, provideTmpdirInstance, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 

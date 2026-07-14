@@ -3,6 +3,7 @@
 import os from "os"
 import path from "path"
 import fs from "fs/promises"
+import { setTimeout as sleep } from "node:timers/promises"
 import { afterAll } from "bun:test"
 import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 

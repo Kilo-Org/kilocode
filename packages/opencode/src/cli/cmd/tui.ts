@@ -167,6 +167,7 @@ export const TuiThreadCommand = cmd({
       // kilocode_change end
       const auth = KiloTuiThreadDaemon.workerAuth() // kilocode_change - protect TUI-owned HTTP routes from unauthenticated local callers
       const worker = new Worker(file, {
+        preload: ["@opentui/solid/preload"], // kilocode_change - Bun workers do not inherit the parent preload
         env: {
           ...process.env,
           ...auth.env, // kilocode_change

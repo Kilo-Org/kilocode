@@ -78,6 +78,7 @@ export const node = LayerNode.make(layer, [
   LSP.node,
   Plugin.node,
   Project.node,
+  KilocodeBootstrap.node, // kilocode_change
   Snapshot.node,
   Vcs.node,
 ])

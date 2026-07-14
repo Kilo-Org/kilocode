@@ -23,6 +23,7 @@ import type {
   ConsoleState,
   BackgroundProcessInfo, // kilocode_change
   InteractiveTerminalSnapshot, // kilocode_change
+  IndexingStatus, // kilocode_change
 } from "@kilocode/sdk/v2"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useProject } from "./project"
@@ -38,7 +39,6 @@ import { useKV } from "./kv"
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { appendTerminalOutput } from "@/kilocode/interactive-terminal/output" // kilocode_change
 import { useToast } from "../ui/toast" // kilocode_change
-import type { IndexingStatus } from "@kilocode/kilo-indexing/status" // kilocode_change
 
 const emptyConsoleState: ConsoleState = {
   consoleManagedProviders: [],
@@ -123,6 +123,7 @@ export const {
         all: [],
         default: {},
         connected: [],
+        failed: [],
       },
       console_state: emptyConsoleState,
       provider_auth: {},
@@ -159,11 +160,6 @@ export const {
     const toast = useToast() // kilocode_change
 
     // kilocode_change start
-    function processScope(scope: string) {
-      const current = project.instance.path()
-      return scope === current.directory || scope === current.worktree || scope === project.data.project.worktree
-    }
-
     function evict(sessionID: string) {
       const children = store.session.filter((session) => session.parentID === sessionID).map((session) => session.id)
       setStore(
@@ -402,7 +398,6 @@ export const {
 
         // kilocode_change start
         case "background_process.updated": {
-          if (!processScope(event.properties.scope)) break
           const info = event.properties.info
           deleted.delete(info.id)
           setStore(
@@ -423,7 +418,6 @@ export const {
           break
         }
         case "background_process.deleted": {
-          if (!processScope(event.properties.scope)) break
           deleted.add(event.properties.processID)
           setStore(
             "background_process",
@@ -439,7 +433,6 @@ export const {
           break
         }
         case "interactive_terminal.updated": {
-          if (!processScope(event.properties.scope)) break
           const info = event.properties.info
           terminalDeleted.delete(info.id)
           const list = store.interactive_terminal[info.sessionID] ?? []
@@ -625,6 +618,126 @@ export const {
         // kilocode_change end
       }
     })
+
+    // kilocode_change start - retain versioned Sync events used by Kilo clients
+    event.sync((event) => {
+      switch (event.name) {
+        case "session.created.1": {
+          const info = event.data.info
+          const match = search(store.session, info.id, (item) => item.id)
+          if (match.found) setStore("session", match.index, reconcile(info))
+          if (!match.found)
+            setStore(
+              "session",
+              produce((draft) => draft.splice(match.index, 0, info)),
+            )
+          break
+        }
+        case "session.updated.1": {
+          const id = event.data.sessionID
+          const match = search(store.session, id, (item) => item.id)
+          if (!match.found) break
+          setStore(
+            "session",
+            match.index,
+            produce((draft) => void Object.assign(draft, event.data.info)),
+          )
+          break
+        }
+        case "session.deleted.1": {
+          const id = event.data.sessionID
+          const match = search(store.session, id, (item) => item.id)
+          if (match.found)
+            setStore(
+              "session",
+              produce((draft) => draft.splice(match.index, 1)),
+            )
+          evict(id)
+          break
+        }
+        case "message.updated.1": {
+          touchMessage(event.data.info.sessionID, event.data.info.id)
+          const info = strip(event.data.info)
+          const messages = store.message[info.sessionID]
+          if (!messages) {
+            setStore("message", info.sessionID, [info])
+            break
+          }
+          const match = search(messages, info.id, (item) => item.id)
+          if (match.found) {
+            setStore("message", info.sessionID, match.index, reconcile(info))
+            break
+          }
+          setStore(
+            "message",
+            info.sessionID,
+            produce((draft) => draft.splice(match.index, 0, info)),
+          )
+          const updated = store.message[info.sessionID]
+          if (updated.length <= 100) break
+          const oldest = updated[0]
+          batch(() => {
+            setStore(
+              "message",
+              info.sessionID,
+              produce((draft) => draft.shift()),
+            )
+            setStore(
+              "part",
+              produce((draft) => void delete draft[oldest.id]),
+            )
+          })
+          break
+        }
+        case "message.removed.1": {
+          touchMessage(event.data.sessionID, event.data.messageID)
+          const messages = store.message[event.data.sessionID]
+          if (!messages) break
+          const match = search(messages, event.data.messageID, (item) => item.id)
+          if (!match.found) break
+          setStore(
+            "message",
+            event.data.sessionID,
+            produce((draft) => draft.splice(match.index, 1)),
+          )
+          break
+        }
+        case "message.part.updated.1": {
+          touchPart(event.data.sessionID, event.data.part.id)
+          const part = event.data.part
+          const parts = store.part[part.messageID]
+          if (!parts) {
+            setStore("part", part.messageID, [part])
+            break
+          }
+          const match = search(parts, part.id, (item) => item.id)
+          if (match.found) {
+            setStore("part", part.messageID, match.index, reconcile(part))
+            break
+          }
+          setStore(
+            "part",
+            part.messageID,
+            produce((draft) => draft.splice(match.index, 0, part)),
+          )
+          break
+        }
+        case "message.part.removed.1": {
+          touchPart(event.data.sessionID, event.data.partID)
+          const parts = store.part[event.data.messageID]
+          if (!parts) break
+          const match = search(parts, event.data.partID, (item) => item.id)
+          if (!match.found) break
+          setStore(
+            "part",
+            event.data.messageID,
+            produce((draft) => draft.splice(match.index, 1)),
+          )
+          break
+        }
+      }
+    })
+    // kilocode_change end
 
     const exit = useExit()
     const args = useArgs()

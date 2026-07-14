@@ -55,6 +55,9 @@ import {
 import { unique } from "remeda"
 // kilocode_change end
 import { withTransientReadRetry } from "@/util/effect-http-client"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+
+const log = Log.create({ service: "config" }) // kilocode_change
 
 // Custom merge function that concatenates array fields instead of replacing them
 // Keep remeda's deep conditional merge type out of hot config-loading paths; TS profiling showed it dominates here.
@@ -70,7 +73,7 @@ function mergeConfigConcatArrays(target: Info, source: Info): Info {
   return merged
 }
 
-function normalizeLoadedConfig(data: unknown) {
+function normalizeLoadedConfig(data: unknown, source: string) {
   if (!isRecord(data)) return data
   const copy = KilocodeConfig.retireIndexingFlag({ ...data }, source) // kilocode_change
   const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
@@ -78,6 +81,7 @@ function normalizeLoadedConfig(data: unknown) {
   delete copy.theme
   delete copy.keybinds
   delete copy.tui
+  log.warn("tui keys in the main config are deprecated; move them to tui.json", { path: source }) // kilocode_change
   return copy
 }
 
@@ -307,7 +311,7 @@ export const layer = Layer.effect(
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
-      const data = ConfigParse.schema(ConfigV1.Info, normalizeLoadedConfig(parsed), source)
+      const data = ConfigParse.schema(ConfigV1.Info, normalizeLoadedConfig(parsed, source), source)
       if (!("path" in options)) return data
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
@@ -1053,6 +1057,14 @@ export const defaultLayer = layer.pipe(
   Layer.provide(FetchHttpClient.layer),
 )
 
-export const node = LayerNode.make(layer, [FSUtil.node, Auth.node, Account.node, Env.node, Npm.node, httpClient])
+export const node = LayerNode.make(layer, [
+  FSUtil.node,
+  Auth.node,
+  Account.node,
+  Env.node,
+  Npm.node,
+  httpClient,
+  Git.node,
+]) // kilocode_change
 
 export * as Config from "./config"

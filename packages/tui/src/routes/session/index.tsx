@@ -2700,6 +2700,7 @@ function Question(props: ToolProps) {
   const { theme } = useTheme()
   const questions = createMemo(() => parseQuestions(props.input.questions))
   const answers = createMemo(() => parseQuestionAnswers(props.metadata.answers))
+  const dismissed = createMemo(() => props.metadata.dismissed === true) // kilocode_change
   const count = createMemo(() => questions().length)
 
   function format(answer?: ReadonlyArray<string>) {
@@ -2711,7 +2712,7 @@ function Question(props: ToolProps) {
   const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
   const subtitle = createMemo(() => {
     if (dismissed()) return `${count()} dismissed`
-    if ((props.metadata.answers?.length ?? 0) > 0) return `${count()} answered`
+    if ((answers()?.length ?? 0) > 0) return `${count()} answered`
     return `${count()} question${count() !== 1 ? "s" : ""}`
   })
   // kilocode_change end

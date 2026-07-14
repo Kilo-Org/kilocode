@@ -2,6 +2,7 @@ import type { ChildProcessWithoutNullStreams } from "child_process"
 import path from "path"
 import os from "os"
 import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { text } from "node:stream/consumers"
 import fs from "fs/promises"
 import { Filesystem } from "@/util/filesystem"
@@ -16,6 +17,7 @@ import { Npm } from "@opencode-ai/core/npm"
 import { TsCheck } from "../kilocode/ts-check" // kilocode_change
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 
+const log = Log.create({ service: "lsp.server" }) // kilocode_change
 const pathExists = async (p: string) =>
   fs
     .stat(p)

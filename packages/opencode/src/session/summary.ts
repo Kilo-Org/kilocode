@@ -195,6 +195,12 @@ export const DiffInput = Schema.Struct({
 })
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
 
-export const node = LayerNode.make(layer, [Session.node, Snapshot.node, EventV2Bridge.node, Config.node])
+export const node = LayerNode.make(layer, [
+  Session.node,
+  Snapshot.node,
+  EventV2Bridge.node,
+  Config.node,
+  Storage.node, // kilocode_change
+])
 
 export * as SessionSummary from "./summary"

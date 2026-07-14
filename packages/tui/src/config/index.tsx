@@ -4,6 +4,7 @@ import { createBindingLookup } from "@opentui/keymap/extras"
 import { Schema } from "effect"
 import { createContext, type JSX, useContext } from "solid-js"
 import { TuiKeybind } from "./keybind"
+import { KiloTitleIcon } from "@/kilocode/cli/cmd/tui/title-icon" // kilocode_change
 
 export const AttentionSoundName = Schema.Literals([
   "default",
@@ -58,11 +59,13 @@ export const Info = Schema.Struct({
   plugin_enabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   leader_timeout: Schema.optional(LeaderTimeout),
   attention: Schema.optional(Attention),
+  title_icon: Schema.optional(KiloTitleIcon.Value), // kilocode_change
   prompt: Schema.optional(Prompt),
   scroll_speed: Schema.optional(ScrollSpeed).annotate({ description: "TUI scroll speed" }),
   scroll_acceleration: Schema.optional(ScrollAcceleration),
   diff_style: Schema.optional(DiffStyle),
   mouse: Schema.optional(Schema.Boolean).annotate({ description: "Enable or disable mouse capture (default: true)" }),
+  vim: Schema.optional(Schema.Boolean), // kilocode_change - retain Kilo prompt editing mode
 })
 export type Info = Schema.Schema.Type<typeof Info>
 

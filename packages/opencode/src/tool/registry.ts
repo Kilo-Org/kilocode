@@ -64,6 +64,9 @@ import * as ToolNetwork from "@/kilocode/sandbox/network" // kilocode_change
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
+import { RipgrepBinary } from "@opencode-ai/core/ripgrep/binary" // kilocode_change
+import { AppProcess } from "@opencode-ai/core/process" // kilocode_change
 
 export function webSearchEnabled(
   providerID: ProviderV2.ID,
@@ -394,6 +397,8 @@ export const defaultLayer: Layer.Layer<Service> = Layer.suspend(
         // kilocode_change start
         Layer.provide(
           Ripgrep.layer.pipe(
+            Layer.provide(RipgrepBinary.layer),
+            Layer.provide(AppProcess.defaultLayer),
             Layer.provide(ToolNetwork.httpLayer),
             Layer.provide(FSUtil.defaultLayer),
             Layer.provide(CrossSpawnSpawner.defaultLayer),
@@ -408,6 +413,7 @@ export const defaultLayer: Layer.Layer<Service> = Layer.suspend(
         Layer.provide(Database.defaultLayer),
         Layer.provide(RuntimeFlags.defaultLayer),
         Layer.provide(SessionStatus.defaultLayer),
+        Layer.provide(RepositoryCache.defaultLayer),
         Layer.provide(Truncate.defaultLayer), // kilocode_change - split the pipe to stay within Effect's overload limit
       )
       .pipe(Layer.provide(Auth.defaultLayer)),
@@ -494,6 +500,7 @@ function isJsonSchemaObject(value: unknown): value is Record<string, unknown> {
 const networkNode = LayerNode.make(ToolNetwork.httpLayer, [])
 const busNode = LayerNode.make(Bus.layer, [])
 const notebookNode = LayerNode.make(Notebook.defaultLayer, [])
+const repositoryCacheNode = LayerNode.make(RepositoryCache.defaultLayer, [])
 
 export const node = LayerNode.make(layer.pipe(Layer.provide(Ripgrep.defaultLayer)), [
   Config.node,
@@ -521,6 +528,7 @@ export const node = LayerNode.make(layer.pipe(Layer.provide(Ripgrep.defaultLayer
   Auth.node,
   SessionStatus.node,
   notebookNode,
+  repositoryCacheNode,
 ])
 // kilocode_change end
 

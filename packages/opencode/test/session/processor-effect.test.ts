@@ -187,15 +187,15 @@ const env = LayerNode.buildLayer(LayerNode.group([root, LayerNode.make(TestLLMSe
 const it = testEffect(env)
 // kilocode_change start - exercise non-default output token ceilings in the processor
 const capped = testEffect(
-  Layer.mergeAll(
-    TestLLMServer.layer,
-    SessionProcessor.layer.pipe(
-      Layer.provide(summary),
-      Layer.provide(Image.defaultLayer),
-      Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true, outputTokenMax: 8_000 })),
-      Layer.provideMerge(deps),
-    ),
-  ),
+  LayerNode.buildLayer(LayerNode.group([root, LayerNode.make(TestLLMServer.layer, [])]), {
+    replacements: [
+      LayerNode.replace(SessionSummary.node, summary),
+      LayerNode.replace(
+        RuntimeFlags.node,
+        RuntimeFlags.layer({ experimentalEventSystem: true, outputTokenMax: 8_000 }),
+      ),
+    ],
+  }),
 )
 // kilocode_change end
 

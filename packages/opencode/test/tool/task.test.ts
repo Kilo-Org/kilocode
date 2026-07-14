@@ -489,7 +489,7 @@ describe("tool.task", () => {
           ]),
         )
         // kilocode_change end
-        expect(seen?.tools).toBeUndefined({
+        expect(seen?.tools).toEqual({
           question: false, // kilocode_change - subagents cannot prompt the user directly
           interactive_terminal: false, // kilocode_change - subagents cannot take over the user's terminal
           todowrite: false,

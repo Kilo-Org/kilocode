@@ -1,4 +1,5 @@
 import type { Hooks, PluginInput } from "@kilocode/plugin"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { OAUTH_DUMMY_KEY } from "../../auth"
 import os from "os"
@@ -6,6 +7,8 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { createServer } from "http"
 import { refreshCodexAuth } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { OpenAIWebSocketPool } from "./ws-pool"
+
+const log = Log.create({ service: "plugin.codex" }) // kilocode_change
 
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const ISSUER = "https://auth.openai.com"
@@ -25,9 +28,7 @@ const ALLOWED_MODELS = new Set([
   // kilocode_change end
 ])
 // kilocode_change start
-const DISALLOWED_MODELS = new Set([
-  "gpt-5.5-pro",
-])
+const DISALLOWED_MODELS = new Set(["gpt-5.5-pro"])
 // kilocode_change end
 
 interface PkceCodes {

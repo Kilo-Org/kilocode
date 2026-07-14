@@ -4,6 +4,7 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Provider } from "@/provider/provider"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
+import { Log } from "@opencode-ai/core/util/log" // kilocode_change
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool } from "ai"
@@ -38,6 +39,8 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { LLMAISDK } from "./llm/ai-sdk"
 import { LLMNativeRuntime } from "./llm/native-runtime"
 import { LLMRequestPrep } from "./llm/request"
+
+const log = Log.create({ service: "llm" }) // kilocode_change
 
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 
@@ -94,6 +97,7 @@ const live: Layer.Layer<
     const flags = yield* RuntimeFlags.Service
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
+      const l = log.clone().tag("providerID", input.model.providerID).tag("modelID", input.model.id) // kilocode_change
       yield* Effect.logInfo("stream", {
         providerID: input.model.providerID,
         modelID: input.model.id,

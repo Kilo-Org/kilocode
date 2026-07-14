@@ -1,7 +1,10 @@
 import { createConnection } from "net"
 import { createServer } from "http"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { OAUTH_CALLBACK_PORT, OAUTH_CALLBACK_PATH, parseRedirectUri } from "./oauth-provider"
 import * as KiloOAuthCallback from "../kilocode/mcp-oauth-callback" // kilocode_change
+
+const log = Log.create({ service: "mcp.oauth-callback" }) // kilocode_change
 
 // Current callback server configuration (may differ from defaults if custom redirectUri is used)
 let currentPort = OAUTH_CALLBACK_PORT

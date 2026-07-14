@@ -39,6 +39,7 @@ export type HostMetadata = {
 
 export interface Interface {
   readonly get: () => Effect.Effect<Resolved>
+  readonly info: () => Effect.Effect<Info> // kilocode_change - editable config for Kilo console
   readonly pluginOrigins: () => Effect.Effect<ConfigPlugin.Origin[]>
   readonly waitForDependencies: () => Effect.Effect<void>
 }
@@ -242,14 +243,15 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
   // kilocode_change start - inject Kilo default plugins to keep TUI aligned with server config
   const defaults = KilocodeDefaultPlugins.apply(
-    { plugin: result.plugin, plugin_origins: acc.plugin_origins },
+    { plugin: result.plugin ? [...result.plugin] : undefined, plugin_origins: acc.plugin_origins },
     { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS },
   )
-  result.plugin = defaults.plugin
+  const config = { ...result, plugin: defaults.plugin }
   // kilocode_change end
 
   return {
-    config: result,
+    config,
+    info: { ...acc.result, plugin: defaults.plugin }, // kilocode_change - include applied Kilo defaults
     pluginOrigins: defaults.plugin_origins ?? [], // kilocode_change - exclude builtins from dependency installation
     dirs: result.plugin?.length ? dirs : [],
   }
@@ -280,12 +282,13 @@ export const layer = Layer.effect(
     )
 
     const get = Effect.fn("TuiConfig.get")(() => Effect.succeed(data.config))
+    const info = Effect.fn("TuiConfig.info")(() => Effect.succeed(data.info)) // kilocode_change
     const pluginOrigins = Effect.fn("TuiConfig.pluginOrigins")(() => Effect.succeed(data.pluginOrigins))
 
     const waitForDependencies = Effect.fn("TuiConfig.waitForDependencies")(() =>
       Effect.forEach(deps, Fiber.join, { concurrency: "unbounded" }).pipe(Effect.ignore(), Effect.asVoid),
     )
-    return Service.of({ get, pluginOrigins, waitForDependencies })
+    return Service.of({ get, info, pluginOrigins, waitForDependencies }) // kilocode_change
   }).pipe(Effect.withSpan("TuiConfig.layer")),
 )
 
@@ -299,6 +302,10 @@ export async function waitForDependencies() {
 
 export async function get() {
   return runPromise((svc) => svc.get())
+}
+
+export async function info() {
+  return runPromise((svc) => svc.info())
 }
 
 export async function pluginOrigins() {

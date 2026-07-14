@@ -80,7 +80,7 @@ export function useEvent() {
       const payload = normalizeSyncEvent(event.payload)
       if (!payload) return
       if (event.directory === "global" || event.project === project.project()) {
-        handler(payload, { workspace: event.workspace })
+        handler(payload, { directory: event.directory, workspace: event.workspace })
       }
     })
   }

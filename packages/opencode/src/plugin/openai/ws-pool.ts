@@ -1,9 +1,12 @@
 import WebSocket from "ws"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { ProviderError } from "@/provider/error"
 import { isRecord } from "@/util/record"
 import { OpenAIWebSocket } from "./ws"
 
 export const TITLE_HEADER = "x-kilo-title"
+
+const log = Log.create({ service: "plugin.openai.ws" }) // kilocode_change
 
 export interface CreateWebSocketFetchOptions {
   httpFetch?: typeof globalThis.fetch

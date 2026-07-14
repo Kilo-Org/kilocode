@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import { describe, expect, test } from "bun:test"
-import { disposeAllInstances, provideTestInstance, tmpdir } from "../../../fixture/fixture"
-import { mount, wait } from "./sync-fixture"
+import { tmpdir } from "../../../fixture/fixture"
+import { json, mount, wait } from "./sync-fixture"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 
 function branchEvent(branch: string, workspace?: string): GlobalEvent {
@@ -21,7 +21,7 @@ describe("tui sync", () => {
   test("refresh scopes sessions by default and lists project sessions when disabled", async () => {
     await using tmp = await tmpdir()
     await Bun.write(`${tmp.path}/kv.json`, "{}")
-    const { app, kv, sync, session } = await provideTestInstance({ directory: tmp.path, fn: () => mount(undefined, tmp.path) }) // kilocode_change
+    const { app, kv, sync, session } = await mount(undefined, tmp.path)
 
     try {
       expect(kv.get("session_directory_filter_enabled", true)).toBe(true)
@@ -35,14 +35,16 @@ describe("tui sync", () => {
       expect(session.at(-1)?.searchParams.get("path")).toBeNull()
     } finally {
       app.renderer.destroy()
-      await disposeAllInstances() // kilocode_change
     }
   })
 
   test("vcs branch updates only apply for the active workspace", async () => {
     await using tmp = await tmpdir()
     await Bun.write(`${tmp.path}/kv.json`, "{}")
-    const { app, emit, project, sync } = await mount(undefined, tmp.path)
+    const { app, emit, project, sync } = await mount(
+      (url) => (url.pathname === "/experimental/workspace" ? json([{ id: "ws_a" }]) : undefined),
+      tmp.path,
+    ) // kilocode_change - workspace re-bootstrap retains the selected test workspace
 
     try {
       expect(sync.data.vcs?.branch).toBe("main")

@@ -7,7 +7,7 @@
  * `messages.data!` while the SDK leaves `data` undefined on error.
  */
 import { describe, expect, test } from "bun:test"
-import { disposeAllInstances, provideTestInstance, tmpdir } from "../../../fixture/fixture"
+import { tmpdir } from "../../../fixture/fixture"
 import { directory, json, mount } from "./sync-fixture"
 
 const sessionID = "ses_undef"
@@ -25,26 +25,19 @@ describe("tui sync (#26560)", () => {
       directory,
       project_id: "proj_test",
     }
-    // kilocode_change start
-    const { app, sync } = await provideTestInstance({
-      directory: tmp.path,
-      fn: () =>
-        mount((url) => {
-          if (url.pathname === `/session/${sessionID}`) return json(sessionPayload)
-          if (url.pathname === `/session/${sessionID}/messages`) return json({}, { status: 500 })
-          if (url.pathname === `/session/${sessionID}/todo`) return json([])
-          if (url.pathname === `/session/${sessionID}/diff`) return json([])
-          if (url.pathname === "/session") return json([sessionPayload])
-          return undefined
-        }, tmp.path),
-    })
-    // kilocode_change end
+    const { app, sync } = await mount((url) => {
+      if (url.pathname === `/session/${sessionID}`) return json(sessionPayload)
+      if (url.pathname === `/session/${sessionID}/messages`) return json({}, { status: 500 })
+      if (url.pathname === `/session/${sessionID}/todo`) return json([])
+      if (url.pathname === `/session/${sessionID}/diff`) return json([])
+      if (url.pathname === "/session") return json([sessionPayload])
+      return undefined
+    }, tmp.path)
 
     try {
       await expect(sync.session.sync(sessionID)).resolves.toBeUndefined()
     } finally {
       app.renderer.destroy()
-      await disposeAllInstances() // kilocode_change
     }
   })
 })

@@ -54,6 +54,6 @@ export const defaultLayer = layer.pipe(
   Layer.provide(RuntimeFlags.defaultLayer),
 )
 
-export const node = LayerNode.make(layer, [Config.node, Session.node, ShareNext.node, RuntimeFlags.node])
+export const node = LayerNode.make(layer, [Config.node, Session.node, RuntimeFlags.node]) // kilocode_change
 
 export * as SessionShare from "./session"

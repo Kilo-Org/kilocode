@@ -5,7 +5,7 @@ import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
 import { GlobalBus } from "../../src/bus/global"
-import { TuiEvent } from "../../src/cli/cmd/tui/event"
+import { TuiEvent } from "../../src/server/tui-event"
 import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -68,16 +68,11 @@ const todo = {
 
 const session = makeRuntime(Session.Service, Session.defaultLayer)
 const store = {
-  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    session.runPromise((svc) => svc.create(input)),
-  get: (id: SessionID) =>
-    session.runPromise((svc) => svc.get(id)),
-  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    session.runPromise((svc) => svc.messages(input)),
-  updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    session.runPromise((svc) => svc.updateMessage(msg)),
-  updatePart: <T extends MessageV2.Part>(part: T) =>
-    session.runPromise((svc) => svc.updatePart(part)),
+  create: (input?: Parameters<Session.Interface["create"]>[0]) => session.runPromise((svc) => svc.create(input)),
+  get: (id: SessionID) => session.runPromise((svc) => svc.get(id)),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) => session.runPromise((svc) => svc.messages(input)),
+  updateMessage: <T extends MessageV2.Info>(msg: T) => session.runPromise((svc) => svc.updateMessage(msg)),
+  updatePart: <T extends MessageV2.Part>(part: T) => session.runPromise((svc) => svc.updatePart(part)),
 }
 
 const model = {
@@ -901,7 +896,9 @@ describe("plan follow-up", () => {
 
   test("ask - falls back to configured code model when saved CLI code model is unavailable", () =>
     withInstance(async () => {
-      await writeState({ model: { code: { providerID: ProviderV2.ID.make("missing"), modelID: ModelV2.ID.make("ghost") } } })
+      await writeState({
+        model: { code: { providerID: ProviderV2.ID.make("missing"), modelID: ModelV2.ID.make("ghost") } },
+      })
       const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
         if (name === "code") {
           return {

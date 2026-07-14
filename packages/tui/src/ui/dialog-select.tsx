@@ -45,7 +45,7 @@ export interface DialogSelectProps<T> {
 }
 
 // kilocode_change start - support list-level actions when no option is selected
-type DialogSelectActionBase = {
+type DialogSelectActionBase<T> = {
   command: string
   title: string
   side?: "left" | "right"
@@ -53,7 +53,7 @@ type DialogSelectActionBase = {
   disabled?: boolean | ((option: DialogSelectOption<T> | undefined) => boolean)
 }
 
-type DialogSelectAction<T> = DialogSelectActionBase &
+type DialogSelectAction<T> = DialogSelectActionBase<T> &
   (
     | {
         requiresSelection?: true

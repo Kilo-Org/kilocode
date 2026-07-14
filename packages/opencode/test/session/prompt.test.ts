@@ -63,6 +63,7 @@ import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
@@ -225,6 +226,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Git.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
+    Layer.provide(RepositoryCache.defaultLayer), // kilocode_change - RepoCloneTool dependency
     Layer.provide(Format.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
     Layer.provide(Auth.defaultLayer), // kilocode_change
@@ -705,7 +707,7 @@ it.instance("loop surfaces content-filter finishes as session errors", () =>
     const off = yield* events.listen((event) => {
       if (event.type !== Session.Event.Error.type) return Effect.void
       const data = event.data as typeof Session.Event.Error.data.Type
-      if (data.sessionID === chat.id && data.error) errors.push(data.error)
+      if (data.sessionID === chat.id && data.error?.name === "ContentFilterError") errors.push(data.error)
       return Effect.void
     })
 
@@ -1046,7 +1048,7 @@ it.instance("subtask child inherits parent session external_directory allow", ()
   }),
 )
 
-noLLMServer.instance("prompt tools replace previous prompt tool rules", () =>
+noLLMServer.instance("prompt tools replace matching rules and preserve existing restrictions", () =>
   Effect.gen(function* () {
     const prompt = yield* SessionPrompt.Service
     const sessions = yield* Session.Service
@@ -1068,8 +1070,13 @@ noLLMServer.instance("prompt tools replace previous prompt tool rules", () =>
     })
 
     const reloaded = yield* sessions.get(session.id)
-    expect(reloaded.permission).toEqual([{ permission: "read", pattern: "*", action: "allow" }])
-    expect(Permission.evaluate("bash", "anything", reloaded.permission ?? []).action).toBe("ask")
+    // kilocode_change start - Kilo preserves existing restrictions that the new prompt does not override
+    expect(reloaded.permission).toEqual([
+      { permission: "bash", pattern: "*", action: "deny" },
+      { permission: "read", pattern: "*", action: "allow" },
+    ])
+    expect(Permission.evaluate("bash", "anything", reloaded.permission ?? []).action).toBe("deny")
+    // kilocode_change end
   }),
 )
 

@@ -32,6 +32,7 @@ import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
 import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
@@ -381,6 +382,8 @@ export namespace KiloSessions {
     Layer.provide(Config.defaultLayer),
     Layer.provide(Session.defaultLayer),
   )
+
+  export const node = LayerNode.make(layer, [Bus.node, Config.node, Session.node])
 
   export async function enableRemote() {
     if (remote) return
