@@ -1,21 +1,23 @@
+
 import { Effect } from "effect"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { Agent } from "@/agent/agent"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
-import * as Session from "./session"
+import { Session } from "./session"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import CODE_SWITCH from "./prompt/code-switch.txt" // kilocode_change
 
 export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
-  messages: MessageV2.WithParts[]
+  messages: SessionV1.WithParts[]
   agent: Agent.Info
   session: Session.Info
 }) {
   const flags = yield* RuntimeFlags.Service
-  const fsys = yield* AppFileSystem.Service
+  const fsys = yield* FSUtil.Service
   const sessions = yield* Session.Service
   const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
   if (!userMessage) return input.messages

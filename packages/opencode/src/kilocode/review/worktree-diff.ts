@@ -5,7 +5,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { Schema } from "effect"
 import { zod } from "@opencode-ai/core/effect-zod"
-import { FileIgnore } from "@/file/ignore"
+import { Ignore } from "@opencode-ai/core/filesystem/ignore"
 import { Snapshot } from "@/snapshot"
 import * as Log from "@opencode-ai/core/util/log"
 import { withStatics } from "@opencode-ai/core/schema"
@@ -37,7 +37,7 @@ export namespace WorktreeDiff {
   }
 
   function generatedLike(file: string) {
-    return FileIgnore.match(file)
+    return Ignore.match(file)
   }
 
   async function ancestor(dir: string, base: string, log: Log.Logger) {

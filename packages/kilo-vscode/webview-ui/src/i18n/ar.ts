@@ -1420,8 +1420,11 @@ export const dict = {
   "settings.sandboxing.title": "العزل",
   "settings.sandboxing.network.title": "تقييد الوصول إلى الشبكة",
   "settings.sandboxing.network.description":
-    "احظر الوصول الصادر إلى الشبكة من الأوامر الصادرة عن النموذج وأدوات HTTP. تعمل خوادم MCP المحلية وخطافات المكونات الإضافية خارج هذا التقييد. تظل حركة مرور استدلال الموفّر والنموذج متاحة.",
+    "حظر الوصول الصادر المباشر من الأوامر الصادرة عن النموذج وأدوات HTTP. تصبح أدوات MCP المحلية والبعيدة غير متاحة أثناء تفعيل التقييد. تظل حركة مرور المزوّد وخطافات الإضافات الموثوقة خارج هذا التقييد.",
 
+  "settings.sandboxing.allowedHosts.title": "وجهات الشبكة المسموح بها",
+  "settings.sandboxing.allowedHosts.description":
+    "وجهات مضيف ومنفذ DNS لحركة مرور وكيل HTTP وHTTPS المعزولة. يحتاج GitHub CLI وHTTPS Git عادةً إلى github.com:443 وapi.github.com:443. تنطبق التغييرات على الجلسات الجديدة.",
   "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
   "settings.sandboxing.writablePaths.description":
     "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
@@ -1832,4 +1835,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "الخطة جاهزة:",
+  "chat.search.placeholder": "البحث في المحادثة…",
+  "chat.search.toggle": "البحث في المحادثة",
+  "chat.search.matchCase": "مطابقة حالة الأحرف",
+  "chat.search.matchWholeWord": "مطابقة الكلمة بأكملها",
+  "chat.search.useRegex": "استخدام تعبير عادي",
+  "chat.search.previousMatch": "المطابقة السابقة",
+  "chat.search.nextMatch": "المطابقة التالية",
+  "chat.search.close": "إغلاق البحث",
+  "chat.search.invalidRegex": "تعبير عادي غير صالح",
+  "chat.search.noResults": "لا توجد نتائج",
+  "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
 }

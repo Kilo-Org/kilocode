@@ -3,7 +3,7 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
 import { InstanceRef } from "@/effect/instance-ref"
 import { disposeInstance as runDisposers } from "@/effect/instance-registry"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Context, Deferred, Duration, Effect, Exit, Layer, Scope } from "effect"
 import { context as instanceContext, type InstanceContext } from "./instance-context" // kilocode_change
 import { InstanceBootstrap } from "./bootstrap-service"
@@ -19,6 +19,7 @@ export interface Interface {
   readonly load: (input: LoadInput) => Effect.Effect<InstanceContext>
   readonly reload: (input: LoadInput) => Effect.Effect<InstanceContext>
   readonly dispose: (ctx: InstanceContext) => Effect.Effect<void>
+  readonly disposeDirectory: (directory: string) => Effect.Effect<void>
   readonly disposeAll: () => Effect.Effect<void>
   readonly provide: <A, E, R>(input: LoadInput, effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
 }
@@ -100,14 +101,16 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
 
     const disposeEntry = Effect.fnUntraced(function* (directory: string, entry: Entry, ctx: InstanceContext) {
       if (cache.get(directory) !== entry) return false
-      yield* disposeContext(ctx)
-      if (cache.get(directory) !== entry) return false
-      cache.delete(directory)
-      return true
+      // kilocode_change start - remove disposed entries even when event publication fails
+      const exit = yield* Effect.exit(disposeContext(ctx))
+      const removed = yield* removeEntry(directory, entry)
+      yield* exit
+      return removed
+      // kilocode_change end
     })
 
     const load = (input: LoadInput): Effect.Effect<InstanceContext> => {
-      const directory = AppFileSystem.resolve(input.directory)
+      const directory = FSUtil.resolve(input.directory)
       return Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
           const existing = cache.get(directory)
@@ -125,7 +128,7 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
     }
 
     const reload = (input: LoadInput): Effect.Effect<InstanceContext> => {
-      const directory = AppFileSystem.resolve(input.directory)
+      const directory = FSUtil.resolve(input.directory)
       return Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
           const previous = cache.get(directory)
@@ -161,10 +164,21 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
       yield* disposeEntry(ctx.directory, entry, ctx).pipe(Effect.asVoid)
     })
 
+    const disposeDirectory = Effect.fn("InstanceStore.disposeDirectory")(function* (input: string) {
+      const directory = FSUtil.resolve(input)
+      const entry = cache.get(directory)
+      if (!entry) return
+      const exit = yield* Deferred.await(entry.deferred).pipe(Effect.exit)
+      if (Exit.isFailure(exit)) return yield* removeEntry(directory, entry).pipe(Effect.asVoid)
+      yield* disposeEntry(directory, entry, exit.value).pipe(Effect.asVoid)
+    })
+
     const disposeAllOnce = Effect.fnUntraced(function* () {
       yield* Effect.logInfo("disposing all instances")
-      yield* Effect.forEach(
-        [...cache.entries()],
+      // kilocode_change start - dispose independent worktrees concurrently without interrupting siblings
+      const entries = [...cache.entries()]
+      const exits = yield* Effect.forEach(
+        entries,
         (item) =>
           Effect.gen(function* () {
             const exit = yield* Deferred.await(item[1].deferred).pipe(Effect.exit)
@@ -176,9 +190,18 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
               return
             }
             yield* disposeEntry(item[0], item[1], exit.value)
-          }),
-        { discard: true },
-      )
+          }).pipe(Effect.exit),
+        { concurrency: 4 },
+      ).pipe(Effect.uninterruptible)
+      for (const [index, exit] of exits.entries()) {
+        if (Exit.isSuccess(exit)) continue
+        yield* Effect.logWarning("instance dispose failed").pipe(
+          Effect.annotateLogs({ key: entries[index]![0], cause: exit.cause }),
+        )
+      }
+      const failure = exits.find(Exit.isFailure)
+      if (failure) yield* failure
+      // kilocode_change end
     })
 
     const cachedDisposeAll = yield* Effect.cachedWithTTL(disposeAllOnce(), Duration.zero)
@@ -195,6 +218,7 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
       load,
       reload,
       dispose,
+      disposeDirectory,
       disposeAll,
       provide,
     })

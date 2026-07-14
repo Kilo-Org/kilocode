@@ -1441,8 +1441,11 @@ export const dict = {
   "settings.sandboxing.title": "サンドボックス化",
   "settings.sandboxing.network.title": "ネットワークアクセスを制限",
   "settings.sandboxing.network.description":
-    "モデルから発行されたコマンドと HTTP ツールによる外部ネットワークアクセスをブロックします。ローカル MCP サーバーとプラグインフックは、この制限の対象外です。プロバイダーおよびモデルへの推論通信は引き続き利用できます。",
+    "モデル起点のコマンドと HTTP ツールによる直接のアウトバウンドアクセスをブロックします。この制限が適用されている間、ローカルおよびリモートの MCP ツールは利用できません。プロバイダーのトラフィックと信頼済みプラグインフックは、この制限の対象外です。",
 
+  "settings.sandboxing.allowedHosts.title": "許可されたネットワーク接続先",
+  "settings.sandboxing.allowedHosts.description":
+    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。変更は新しいセッションに適用されます。",
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
@@ -1858,4 +1861,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "プランの準備ができました:",
+  "chat.search.placeholder": "チャットを検索…",
+  "chat.search.toggle": "チャットを検索",
+  "chat.search.matchCase": "大文字と小文字を区別する",
+  "chat.search.matchWholeWord": "単語単位で検索する",
+  "chat.search.useRegex": "正規表現を使用する",
+  "chat.search.previousMatch": "前の一致",
+  "chat.search.nextMatch": "次の一致",
+  "chat.search.close": "検索を閉じる",
+  "chat.search.invalidRegex": "正規表現が無効です",
+  "chat.search.noResults": "見つかりませんでした",
+  "chat.search.searchingHistory": "以前のメッセージを検索しています…",
 }

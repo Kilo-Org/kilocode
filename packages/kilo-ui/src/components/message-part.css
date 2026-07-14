@@ -553,6 +553,14 @@ html[data-theme="kilo-vscode"] [data-component="todos"] {
     &:hover {
       background-color: var(--surface-inset-base-hover, var(--vscode-list-hoverBackground));
     }
+
+    &[data-static] {
+      cursor: default;
+    }
+
+    &[data-static]:hover {
+      background-color: var(--surface-inset-base);
+    }
   }
 
   [data-slot="reasoning-header"] {
@@ -667,6 +675,10 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     &:hover {
       background-color: var(--vscode-list-hoverBackground, var(--surface-raised-base-hover));
     }
+
+    &[data-static]:hover {
+      background-color: transparent;
+    }
   }
 
   [data-slot="collapsible-arrow"] {
@@ -698,7 +710,7 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     color: var(--text-weak);
   }
 
-  [data-slot="collapsible-trigger"]:hover {
+  [data-slot="collapsible-trigger"]:not([data-static]):hover {
     [data-slot="reasoning-label"],
     [data-slot="reasoning-title"] {
       color: var(--vscode-list-hoverForeground, var(--vscode-foreground, var(--text-strong)));

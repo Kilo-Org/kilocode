@@ -1061,12 +1061,27 @@ class SessionScrollTest : SessionUiTestBase() {
         assertTrue(jumpButton().isVisible)
     }
 
-    fun `test rollback click follows bottom and hides jump button`() {
+    fun `test rollback click does not scroll before marker update`() {
         showMessages()
         fillTranscript(48)
         val bar = scrollBar()
         setValue(bar, bottom(bar) / 2)
+        val value = bar.value
         assertTrue(jumpButton().isVisible)
+
+        rollback("msg_36").doClick()
+        settle()
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test rollback scrolls after marker shows banner`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
 
         rollback("msg_36").doClick()
         settle()
@@ -1077,6 +1092,25 @@ class SessionScrollTest : SessionUiTestBase() {
         assertBottom(bar)
         assertTrue(ui.scroll.following())
         assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test redo scrolls to restored message bottom`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_36"))))
+        drainScroll()
+        setValue(bar, 0)
+
+        button(KiloBundle.message("revert.banner.redo")).doClick()
+        settle()
+        drainScroll()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_37"))))
+        drainScroll()
+
+        val expected = messageBottomValue("msg_36")
+        assertTrue("expected=$expected bottom=${bottom(bar)}", expected < bottom(bar))
+        assertTrue("value=${bar.value} expected=$expected", kotlin.math.abs(bar.value - expected) <= 1)
     }
 
     // ------ helpers ------
@@ -1091,6 +1125,14 @@ class SessionScrollTest : SessionUiTestBase() {
             .mapNotNull { it.copyToolbar }
             .flatMap { findAll(it, JButton::class.java) }
             .first { it.toolTipText == KiloBundle.message("revert.message.rollback") }
+    }
+
+    private fun messageBottomValue(id: String): Int {
+        val pane = scrollComponent() as JBScrollPane
+        val messages = find<SessionMessageListPanel>(ui)
+        val message = messages.findMessage(id) ?: error("missing message $id")
+        val point = SwingUtilities.convertPoint(message, Point(0, message.height.coerceAtLeast(1)), messages)
+        return (point.y - pane.viewport.extentSize.height).coerceIn(0, bottom(scrollBar()))
     }
 
     private inline fun <reified T> option(label: String): T where T : AbstractButton =

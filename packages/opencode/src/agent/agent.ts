@@ -1,7 +1,8 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Config } from "@/config/config"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Provider } from "@/provider/provider"
-import { ModelID, ProviderID } from "../provider/schema"
+
 import { generateObject, streamObject, type ModelMessage } from "ai"
 import { Truncate } from "@/tool/truncate"
 import { Auth } from "../auth"
@@ -10,7 +11,7 @@ import { ProviderTransform } from "@/provider/transform"
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
-import PROMPT_SCOUT from "./prompt/scout.txt"
+import PROMPT_SCOUT from "@/kilocode/agent/scout.txt" // kilocode_change
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
@@ -22,6 +23,8 @@ import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
 import { Effect, Context, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
+import * as Option from "effect/Option"
+import * as OtelTracer from "@effect/opentelemetry/Tracer"
 import { type DeepMutable } from "@opencode-ai/core/schema"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -29,6 +32,8 @@ import { Reference } from "@/reference/reference" // kilocode_change
 import { ConfigReference } from "@/config/reference" // kilocode_change
 import * as AgentRequirements from "@/kilocode/agent-requirements" // kilocode_change
 import { MCP } from "@/mcp" // kilocode_change
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 
 export type RequirementBlockedError = InstanceType<typeof AgentRequirements.BlockedError> // kilocode_change
 
@@ -44,11 +49,11 @@ export const Info = Schema.Struct({
   topP: Schema.optional(Schema.Finite),
   temperature: Schema.optional(Schema.Finite),
   color: Schema.optional(Schema.String),
-  permission: Permission.Ruleset,
+  permission: PermissionV1.Ruleset,
   model: Schema.optional(
     Schema.Struct({
-      modelID: ModelID,
-      providerID: ProviderID,
+      modelID: ModelV2.ID,
+      providerID: ProviderV2.ID,
     }),
   ),
   variant: Schema.optional(Schema.String),
@@ -74,7 +79,7 @@ export interface Interface {
   readonly guardRequirements: (agent: Info) => Effect.Effect<void, RequirementBlockedError> // kilocode_change
   readonly generate: (input: {
     description: string
-    model?: { providerID: ProviderID; modelID: ModelID }
+    model?: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
   }) => Effect.Effect<
     {
       identifier: string
@@ -100,7 +105,7 @@ export const layer = Layer.effect(
     const skill = yield* Skill.Service
     const mcp = yield* MCP.Service // kilocode_change
     const provider = yield* Provider.Service
-    const flags = yield* RuntimeFlags.Service
+    const flags = yield* RuntimeFlags.Service // kilocode_change
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("Agent.state")(function* (ctx) {
@@ -133,8 +138,8 @@ export const layer = Layer.effect(
           interactive_terminal: "deny", // kilocode_change - human-driven tools are primary-agent only
           plan_enter: "deny",
           plan_exit: "deny",
-          repo_clone: "deny",
-          repo_overview: "deny",
+          repo_clone: "deny", // kilocode_change
+          repo_overview: "deny", // kilocode_change
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
@@ -229,6 +234,7 @@ export const layer = Layer.effect(
             mode: "subagent",
             native: true,
           },
+          // kilocode_change start - retain Kilo's opt-in repository research agent
           ...(flags.experimentalScout
             ? {
                 scout: {
@@ -259,6 +265,7 @@ export const layer = Layer.effect(
                 },
               }
             : {}),
+          // kilocode_change end
           compaction: {
             name: "compaction",
             mode: "primary",
@@ -539,7 +546,7 @@ export const layer = Layer.effect(
       guardRequirements, // kilocode_change
       generate: Effect.fn("Agent.generate")(function* (input: {
         description: string
-        model?: { providerID: ProviderID; modelID: ModelID }
+        model?: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
       }) {
         const cfg = yield* config.get()
         const model = input.model ?? (yield* provider.defaultModel())
@@ -603,7 +610,9 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
+// kilocode_change start - preserve the concrete layer type across Kilo's Agent/Skill cycle
+export const defaultLayer: Layer.Layer<Service> = layer.pipe(
+  // kilocode_change end
   Layer.provide(Plugin.defaultLayer),
   Layer.provide(Provider.defaultLayer),
   Layer.provide(Auth.defaultLayer),

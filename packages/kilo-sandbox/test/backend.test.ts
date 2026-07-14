@@ -189,24 +189,33 @@ describe("sandbox launch preparation", () => {
   })
 
   test("merges profile environment values and applies exact deny names", async () => {
-    const result = await Effect.runPromise(Effect.scoped(run(makeProfile("allow"), prepare(launch))))
-    expect(result.environment?.KEEP).toBe("profile")
-    expect(result.environment?.DROP).toBeUndefined()
-    expect(result.environment?.RESET).toBeUndefined()
-    expect(result.environment?.HTTPS_PROXY).toBe("http://127.0.0.1:9000")
-    expect(result.environment?.no_proxy).toBe("*")
-    expect(result.environment?.PATH).toBeUndefined()
+    const input = makeProfile("allow")
+    const result = await Effect.runPromise(Effect.scoped(run(input, prepare(launch))).pipe(Effect.result))
+    if (!backendSupport(input.network).available) {
+      expect(Result.isFailure(result)).toBe(true)
+      return
+    }
+    expect(Result.isSuccess(result)).toBe(true)
+    if (Result.isFailure(result)) return
+    expect(result.success.environment?.KEEP).toBe("profile")
+    expect(result.success.environment?.DROP).toBeUndefined()
+    expect(result.success.environment?.RESET).toBeUndefined()
+    expect(result.success.environment?.HTTPS_PROXY).toBe("http://127.0.0.1:9000")
+    expect(result.success.environment?.no_proxy).toBe("*")
+    expect(result.success.environment?.PATH).toBeUndefined()
   })
 
-  test("fails proxy mode closed before launching a process", async () => {
+  test("prepares proxy mode when platform support is available", async () => {
+    const input = makeProfile("proxy")
     const result = await Effect.runPromise(
-      Effect.scoped(run(makeProfile("proxy"), prepare(launch))).pipe(Effect.result),
+      Effect.scoped(run(input, prepare(launch))).pipe(Effect.result),
     )
-    expect(Result.isFailure(result)).toBe(true)
-    if (Result.isFailure(result)) {
-      expect(result.failure.reason._tag).toBe("BadResource")
-      expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+    if (!backendSupport(input.network).available) {
+      expect(Result.isFailure(result)).toBe(true)
+      return
     }
+    expect(Result.isSuccess(result)).toBe(true)
+    if (Result.isSuccess(result)) expect(result.success.environment?.HTTPS_PROXY).toContain("http://kilo:")
   })
 
   test("fails non-empty allowedHosts closed before launching a process", async () => {
@@ -218,8 +227,7 @@ describe("sandbox launch preparation", () => {
     )
     expect(Result.isFailure(result)).toBe(true)
     if (Result.isFailure(result)) {
-      expect(result.failure.reason._tag).toBe("BadResource")
-      expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+      expect(result.failure.message).toContain("allowedHosts require proxy network mode")
     }
   })
 
@@ -233,7 +241,7 @@ describe("sandbox launch preparation", () => {
     expect(Result.isFailure(result)).toBe(true)
     if (Result.isFailure(result)) {
       expect(result.failure.reason._tag).toBe("BadResource")
-      expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+      expect(result.failure.message).toContain("allowedHosts require proxy network mode")
     }
   })
 

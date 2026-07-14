@@ -1409,8 +1409,11 @@ export const dict = {
   "settings.sandboxing.title": "Izolacja w piaskownicy",
   "settings.sandboxing.network.title": "Ogranicz dostęp do sieci",
   "settings.sandboxing.network.description":
-    "Blokuj wychodzący dostęp do sieci z poleceń pochodzących od modelu i narzędzi HTTP. Lokalne serwery MCP i hooki wtyczek nie podlegają temu ograniczeniu. Ruch do dostawców i modeli na potrzeby wnioskowania pozostaje dostępny.",
+    "Blokuj bezpośredni dostęp wychodzący z poleceń inicjowanych przez model i narzędzi HTTP. Lokalne i zdalne narzędzia MCP są niedostępne, gdy to ograniczenie jest aktywne. Ruch dostawców i zaufane hooki wtyczek pozostają poza tym ograniczeniem.",
 
+  "settings.sandboxing.allowedHosts.title": "Dozwolone miejsca docelowe sieci",
+  "settings.sandboxing.allowedHosts.description":
+    "Docelowe hosty DNS i porty dla ruchu HTTP i HTTPS przez proxy w piaskownicy. GitHub CLI i HTTPS Git zwykle wymagają github.com:443 i api.github.com:443. Zmiany dotyczą nowych sesji.",
   "settings.sandboxing.writablePaths.title": "Dodatkowe ścieżki zapisu",
   "settings.sandboxing.writablePaths.description":
     "Dodatkowe ścieżki systemu plików, do których sandbox zezwala na zapis (np. /tmp, /var/log). Są one łączone z domyślnymi ścieżkami zapisu, gdy sandbox jest aktywny.",
@@ -1871,4 +1874,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan jest gotowy:",
+  "chat.search.placeholder": "Szukaj w czacie…",
+  "chat.search.toggle": "Szukaj w czacie",
+  "chat.search.matchCase": "Uwzględnij wielkość liter",
+  "chat.search.matchWholeWord": "Całe wyrazy",
+  "chat.search.useRegex": "Użyj wyrażenia regularnego",
+  "chat.search.previousMatch": "Poprzednie dopasowanie",
+  "chat.search.nextMatch": "Następne dopasowanie",
+  "chat.search.close": "Zamknij wyszukiwanie",
+  "chat.search.invalidRegex": "Nieprawidłowe wyrażenie regularne",
+  "chat.search.noResults": "Brak wyników",
+  "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
 }

@@ -3,7 +3,12 @@ import type { Config as ConfigV1 } from "@kilocode/sdk"
 import type { Config as ConfigV2 } from "@kilocode/sdk/v2"
 
 const value = {
-  sandbox: { enabled: true, network: "allow" as const, writable_paths: ["/tmp/output"] },
+  sandbox: {
+    enabled: true,
+    network: "deny" as const,
+    writable_paths: ["/tmp/output"],
+    allowed_hosts: ["api.github.com:443"],
+  },
 }
 
 test("both public SDK Config types expose sandbox policy fields", () => {

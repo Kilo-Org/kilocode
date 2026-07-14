@@ -2,14 +2,15 @@ import { afterEach, expect } from "bun:test"
 import { Effect, Fiber, Layer, Queue } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Question } from "../../src/question"
-import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { QuestionID } from "../../src/question/schema"
 import { SessionID } from "../../src/session/schema"
 import { disposeAllInstances } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
+const events = EventV2Bridge.defaultLayer
 const it = testEffect(
-  Layer.mergeAll(Question.layer.pipe(Layer.provideMerge(Bus.layer)), CrossSpawnSpawner.defaultLayer),
+  Layer.mergeAll(Question.layer.pipe(Layer.provide(events)), events, CrossSpawnSpawner.defaultLayer),
 )
 
 afterEach(async () => {
@@ -21,16 +22,21 @@ it.instance(
   () =>
     Effect.gen(function* () {
       const question = yield* Question.Service
-      const bus = yield* Bus.Service
+      const bridge = yield* EventV2Bridge.Service
       const asked = yield* Queue.unbounded<{ properties: Question.Request }>()
       const rejected = yield* Queue.unbounded<{
         properties: { sessionID: SessionID; requestID: QuestionID }
       }>()
-      const offAsked = yield* bus.subscribeCallback(Question.Event.Asked, (event) => Queue.offerUnsafe(asked, event))
-      const offRejected = yield* bus.subscribeCallback(Question.Event.Rejected, (event) =>
-        Queue.offerUnsafe(rejected, event),
-      )
-      yield* Effect.addFinalizer(() => Effect.sync(() => [offAsked(), offRejected()]))
+      const off = yield* bridge.listen((event) => {
+        if (event.type === Question.Event.Asked.type)
+          Queue.offerUnsafe(asked, { properties: event.data as Question.Request })
+        if (event.type === Question.Event.Rejected.type)
+          Queue.offerUnsafe(rejected, {
+            properties: event.data as { sessionID: SessionID; requestID: QuestionID },
+          })
+        return Effect.void
+      })
+      yield* Effect.addFinalizer(() => off)
 
       const fiber = yield* question
         .ask({

@@ -45,7 +45,7 @@ describe("revert session synchronization", () => {
     expect(provider).toMatch(
       /if \(event\.type === "session\.updated"\) return "source" in event && event\.source === "sync"/,
     )
-    expect(provider).toMatch(/if \(isFullSessionUpdatedEvent\(event\)\) return/)
+    expect(provider).toMatch(/if \(!isLegacySyncEvent\(event\)\) return/)
     expect(provider).toMatch(
       /this\.setCurrentSession\(applySessionPatch\(this\.currentSession, event\.properties\.info\)\)/,
     )

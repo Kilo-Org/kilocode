@@ -52,7 +52,7 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
-    fun `revert posts message and part to revert endpoint`() {
+    fun `revert posts message and part to revert endpoint`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())
         chat.start(OkHttpClient(), port, MutableSharedFlow())
@@ -65,7 +65,7 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
-    fun `revert omits part when absent`() {
+    fun `revert omits part when absent`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())
         chat.start(OkHttpClient(), port, MutableSharedFlow())
@@ -78,7 +78,7 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
-    fun `unrevert posts empty body to unrevert endpoint`() {
+    fun `unrevert posts empty body to unrevert endpoint`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())
         chat.start(OkHttpClient(), port, MutableSharedFlow())
@@ -91,7 +91,7 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
-    fun `revert failure throws on non successful response`() {
+    fun `revert failure throws on non successful response`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())
         chat.start(OkHttpClient(), port, MutableSharedFlow())
@@ -107,7 +107,7 @@ class KiloBackendChatManagerTest {
     }
 
     @Test
-    fun `unrevert failure throws on non successful response`() {
+    fun `unrevert failure throws on non successful response`() = runBlocking {
         val port = mock.start()
         val chat = KiloBackendChatManager(scope, TestLog())
         chat.start(OkHttpClient(), port, MutableSharedFlow())

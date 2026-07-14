@@ -11,6 +11,7 @@ import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
 import { ReadTool } from "./read"
 import { TaskTool } from "./task"
+import { Database } from "@opencode-ai/core/database/database"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
@@ -24,15 +25,14 @@ import { Schema } from "effect"
 import z from "zod"
 import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
-import { ProviderID, type ModelID } from "../provider/schema"
+
 import { WebSearchTool } from "./websearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
-import { RepoCloneTool } from "./repo_clone"
-import { RepoOverviewTool } from "./repo_overview"
+import { RepoOverviewTool } from "@/kilocode/tool/repo-overview" // kilocode_change
+import { RepoCloneTool } from "./repo_clone" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { Auth } from "@/auth" // kilocode_change
-import { RepositoryCache } from "@/reference/repository-cache"
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
@@ -44,7 +44,7 @@ import { Effect, Layer, Context, Option } from "effect" // kilocode_change
 import { HttpClient } from "effect/unstable/http" // kilocode_change
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Ripgrep } from "../file/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
 import { Format } from "../format"
 import { InstanceState } from "@/effect/instance-state"
 import { EffectBridge } from "@/effect/bridge"
@@ -52,26 +52,30 @@ import { Question } from "../question"
 import { Todo } from "../session/todo"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "../session/instruction"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
-import { Git } from "@/git"
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
 import { SessionStatus } from "@/session/status" // kilocode_change
 import { Reference } from "@/reference/reference"
+import { RepositoryCache } from "@/reference/repository-cache" // kilocode_change
+import { Git } from "@/git" // kilocode_change
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as ToolNetwork from "@/kilocode/sandbox/network" // kilocode_change
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 
 const log = Log.create({ service: "tool.registry" })
 
 export function webSearchEnabled(
-  providerID: ProviderID,
+  providerID: ProviderV2.ID,
   flags = { exa: Flag.KILO_ENABLE_EXA, parallel: Flag.KILO_ENABLE_PARALLEL },
 ) {
-  return providerID === ProviderID.kilo || flags.exa || flags.parallel // kilocode_change
+  return providerID === ProviderV2.ID.kilo || flags.exa || flags.parallel // kilocode_change
 }
 
 type TaskDef = Tool.InferDef<typeof TaskTool>
@@ -90,8 +94,8 @@ export interface Interface {
   readonly named: () => Effect.Effect<{ task: TaskDef; read: ReadDef }>
   // kilocode_change start
   readonly tools: (model: {
-    providerID: ProviderID
-    modelID: ModelID
+    providerID: ProviderV2.ID
+    modelID: ModelV2.ID
     family?: string
     agent: Agent.Info
   }) => Effect.Effect<Tool.Def[]>
@@ -113,13 +117,11 @@ export const layer: Layer.Layer<
   | SessionStatus.Service // kilocode_change
   | BackgroundJob.Service
   | Provider.Service
-  | Git.Service
-  | RepositoryCache.Service
   | Reference.Service
   | LSP.Service
   | Instruction.Service
-  | AppFileSystem.Service
-  | Bus.Service
+  | FSUtil.Service
+  | EventV2Bridge.Service
   | HttpClient.HttpClient
   | ChildProcessSpawner
   | Ripgrep.Service
@@ -129,6 +131,10 @@ export const layer: Layer.Layer<
   | Command.Service
   // kilocode_change end
   | RuntimeFlags.Service
+  | Database.Service
+  | Git.Service // kilocode_change
+  | RepositoryCache.Service // kilocode_change
+  | Bus.Service // kilocode_change
   | Auth.Service // kilocode_change - required by generate-image tool
 > = Layer.effect(
   Service,
@@ -149,8 +155,8 @@ export const layer: Layer.Layer<
     const plan = yield* PlanExitTool
     const webfetch = yield* WebFetchTool
     const websearch = yield* WebSearchTool
-    const repoClone = yield* RepoCloneTool
-    const repoOverview = yield* RepoOverviewTool
+    const clone = yield* RepoCloneTool // kilocode_change
+    const overview = yield* RepoOverviewTool // kilocode_change
     const shell = yield* ShellTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
@@ -269,8 +275,8 @@ export const layer: Layer.Layer<
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
-          repo_clone: Tool.init(repoClone),
-          repo_overview: Tool.init(repoOverview),
+          clone: Tool.init(clone), // kilocode_change
+          overview: Tool.init(overview), // kilocode_change
           skill: Tool.init(skilltool),
           patch: Tool.init(patchtool),
           question: Tool.init(question),
@@ -304,7 +310,7 @@ export const layer: Layer.Layer<
               tool.fetch,
               tool.todo,
               tool.search,
-              ...(flags.experimentalScout ? [tool.repo_clone, tool.repo_overview] : []),
+              ...(flags.experimentalScout ? [tool.clone, tool.overview] : []), // kilocode_change
               tool.skill,
               tool.patch,
               tool.plan,
@@ -424,7 +430,9 @@ export const layer: Layer.Layer<
   }),
 )
 
-export const defaultLayer = Layer.suspend(
+// kilocode_change start - keep Kilo registry requirements type-checked
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(
+  // kilocode_change end
   () =>
     layer
       .pipe(
@@ -437,12 +445,13 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(Session.defaultLayer),
         Layer.provide(BackgroundJob.defaultLayer),
         Layer.provide(Provider.defaultLayer),
-        Layer.provide(Layer.mergeAll(Git.defaultLayer, RepositoryCache.defaultLayer)),
+        Layer.provide(Layer.mergeAll(Git.defaultLayer, RepositoryCache.defaultLayer)), // kilocode_change
         Layer.provide(Reference.defaultLayer),
         Layer.provide(LSP.defaultLayer),
         Layer.provide(Instruction.defaultLayer),
-        Layer.provide(AppFileSystem.defaultLayer),
+        Layer.provide(FSUtil.defaultLayer),
         Layer.provide(Bus.layer),
+        Layer.provide(EventV2Bridge.defaultLayer),
         Layer.provide(ToolNetwork.httpLayer), // kilocode_change
         Layer.provide(Format.defaultLayer),
         Layer.provide(CrossSpawnSpawner.defaultLayer),
@@ -450,19 +459,22 @@ export const defaultLayer = Layer.suspend(
         Layer.provide(
           Ripgrep.layer.pipe(
             Layer.provide(ToolNetwork.httpLayer),
-            Layer.provide(AppFileSystem.defaultLayer),
+            Layer.provide(FSUtil.defaultLayer),
             Layer.provide(CrossSpawnSpawner.defaultLayer),
           ),
         ),
         // kilocode_change end
-        Layer.provide(Truncate.defaultLayer),
       )
       // kilocode_change start - provide Kilo-owned registry dependencies
       .pipe(
         Layer.provide(Command.defaultLayer),
         Layer.provide(Notebook.defaultLayer),
+        Layer.provide(Database.defaultLayer),
         Layer.provide(RuntimeFlags.defaultLayer),
         Layer.provide(SessionStatus.defaultLayer),
+        Layer.provide(Truncate.defaultLayer), // kilocode_change - split the pipe to stay within Effect's overload limit
+      )
+      .pipe(
         Layer.provide(Auth.defaultLayer),
       ),
   // kilocode_change end

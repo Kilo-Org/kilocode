@@ -9,7 +9,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { lazy } from "@/util/lazy"
 import { Language, type Node } from "web-tree-sitter"
 
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -289,15 +289,24 @@ const ask = Effect.fn("ShellTool.ask")(function* (
 ) {
   // kilocode_change
   if (scan.dirs.size > 0) {
-    const globs = Array.from(scan.dirs).map((dir) => {
-      if (process.platform === "win32") return AppFileSystem.normalizePathPattern(path.join(dir, "*"))
+    const directories = Array.from(scan.dirs)
+    const globs = directories.map((dir) => {
+      if (process.platform === "win32") return FSUtil.normalizePathPattern(path.join(dir, "*"))
       return path.join(dir, "*")
     })
     yield* ctx.ask({
       permission: "external_directory",
       patterns: globs,
       always: globs,
-      metadata: scan.access === "read" ? { command, access: "read", ...(description ? { description } : {}) } : {}, // kilocode_change
+      // kilocode_change start - retain read classification alongside upstream permission context
+      metadata: {
+        command,
+        ...(description ? { description } : {}),
+        directories,
+        patterns: globs,
+        ...(scan.access === "read" ? { access: "read" as const } : {}),
+      },
+      // kilocode_change end
     })
   }
 
@@ -320,7 +329,7 @@ type PermissionInput = {
 
 export const ShellPermission = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
 
   const cygpath = Effect.fn("ShellTool.cygpath")(function* (shell: string, text: string) {
     const lines = yield* spawner
@@ -328,16 +337,16 @@ export const ShellPermission = Effect.gen(function* () {
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
     const file = lines[0]?.trim()
     if (!file) return
-    return AppFileSystem.normalizePath(file)
+    return FSUtil.normalizePath(file)
   })
 
   const resolve = Effect.fn("ShellTool.resolvePath")(function* (text: string, root: string, shell: string) {
     if (process.platform === "win32") {
-      if (Shell.posix(shell) && text.startsWith("/") && AppFileSystem.windowsPath(text) === text) {
+      if (Shell.posix(shell) && text.startsWith("/") && FSUtil.windowsPath(text) === text) {
         const file = yield* cygpath(shell, text)
         if (file) return file
       }
-      return AppFileSystem.normalizePath(path.resolve(root, AppFileSystem.windowsPath(text)))
+      return FSUtil.normalizePath(path.resolve(root, FSUtil.windowsPath(text)))
     }
     return path.resolve(root, text)
   })
