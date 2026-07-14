@@ -2,9 +2,12 @@
 import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { AgentManagerEvent, type AgentManagerTask } from "@/kilocode/agent-manager/event"
+import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
+import type { Result } from "@/kilocode/agent-manager/protocol"
 import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Provider } from "@/provider/provider"
+import { SessionID } from "@/session/schema"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
@@ -36,7 +39,7 @@ const Task = Schema.Struct({
   ),
 )
 
-export const Params = Schema.Struct({
+const StartParams = Schema.Struct({
   mode: Schema.Literals(["worktree", "local"]).annotate({
     description: "Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions",
   }),
@@ -49,10 +52,48 @@ export const Params = Schema.Struct({
     .annotate({ description: "Agent Manager sessions to start" }),
 })
 
+const ListParams = Schema.Struct({
+  action: Schema.Literal("list"),
+  filter: Schema.optional(
+    Schema.Struct({
+      sectionIDs: Schema.optional(Schema.Array(Schema.String).check(Schema.isMaxLength(100))),
+      states: Schema.optional(
+        Schema.Array(Schema.Literals(["idle", "busy", "retry", "offline", "waiting"])).check(
+          Schema.isMaxLength(5),
+        ),
+      ),
+    }),
+  ),
+})
+
+const PromptParams = Schema.Struct({
+  action: Schema.Literal("prompt"),
+  sessionID: SessionID,
+  prompt: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100_000)).check(
+    Schema.makeFilter((value) => (value.trim() ? undefined : "Prompt must not be empty")),
+  ),
+})
+
+export const Params = Schema.Union([StartParams, ListParams, PromptParams])
+
 type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
 type Candidate = { providerID: string; model: Provider.Info["models"][string] }
 type Source = { model: NonNullable<AgentManagerTask["model"]>; variant?: string }
+
+function abort(signal: AbortSignal) {
+  return Effect.callback<never, HostError>((resume) => {
+    const err = () => new HostError({ code: "cancelled", detail: "The Agent Manager tool call was cancelled" })
+    if (signal.aborted) return resume(Effect.fail(err()))
+    const handler = () => resume(Effect.fail(err()))
+    signal.addEventListener("abort", handler, { once: true })
+    return Effect.sync(() => signal.removeEventListener("abort", handler))
+  })
+}
+
+function run(effect: Effect.Effect<Result, HostError>, signal: AbortSignal) {
+  return effect.pipe(Effect.raceFirst(abort(signal)), Effect.orDie)
+}
 
 function candidates(providers: Record<string, Provider.Info>): Candidate[] {
   return Object.values(providers).flatMap((provider) =>
@@ -184,19 +225,68 @@ function select(
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { requestID?: string; count: number },
-  Bus.Service | Provider.Service,
+  { action: "start" | "list" | "prompt"; requestID?: string; count?: number; sessionID?: string },
+  AgentManager.Service | Bus.Service | Provider.Service,
   "agent_manager"
 >(
   "agent_manager",
   Effect.gen(function* () {
     const bus = yield* Bus.Service
+    const host = yield* AgentManager.Service
     const provider = yield* Provider.Service
     return {
       description: DESCRIPTION,
       parameters: Params,
       execute: (params, ctx) =>
         Effect.gen(function* () {
+          if ("action" in params) {
+            if (params.action === "list") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["overview"],
+                always: ["overview"],
+                metadata: { action: "list" },
+              })
+              const result = yield* run(
+                host.request({ operation: "overview", sessionID: ctx.sessionID, filter: params.filter }),
+                ctx.abort,
+              )
+              if (result.operation !== "overview")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              const count =
+                (result.overview.local?.sessions.length ?? 0) +
+                result.overview.ungrouped.length +
+                result.overview.sections.reduce((sum, section) => sum + section.worktrees.length, 0)
+              return {
+                title: "Agent Manager overview",
+                output: JSON.stringify(result.overview),
+                metadata: { action: "list", count },
+              }
+            }
+            yield* ctx.ask({
+              permission: "agent_manager",
+              patterns: ["prompt"],
+              always: ["prompt"],
+              metadata: { action: "prompt", sessionID: params.sessionID },
+            })
+            const result = yield* run(
+              host.request({
+                operation: "prompt",
+                sessionID: ctx.sessionID,
+                targetSessionID: params.sessionID,
+                prompt: params.prompt.trim(),
+              }),
+              ctx.abort,
+            )
+            if (result.operation !== "prompt")
+              return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+            return {
+              title: "Prompt delivered",
+              output: `Delivered the prompt to Agent Manager session ${result.sessionID}. The session accepted it asynchronously.`,
+              metadata: { action: "prompt", sessionID: result.sessionID },
+            }
+          }
+
           const msg = KiloSessionMessageOrder.latest(ctx.messages).user
           const source: Source | undefined = msg
             ? {
@@ -226,7 +316,7 @@ export const AgentManagerTool = Tool.define<
                 ...errors,
                 "Use agent_manager_models to find available model names and reasoning variants.",
               ].join("\n"),
-              metadata: { count: 0 },
+              metadata: { action: "start", count: 0 },
             }
           }
           const tasks = selected.flatMap((item) => (item.task ? [item.task] : []))
@@ -274,7 +364,7 @@ export const AgentManagerTool = Tool.define<
               ...(resolved.length ? ["Resolved models:", ...resolved] : []),
               "The VS Code extension will create the sessions asynchronously and show progress in Agent Manager.",
             ].join("\n"),
-            metadata: { requestID, count: tasks.length },
+            metadata: { action: "start", requestID, count: tasks.length },
           }
         }),
     }

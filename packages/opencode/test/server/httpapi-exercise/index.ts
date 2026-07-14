@@ -314,6 +314,23 @@ const scenarios: Scenario[] = [
       body: { error: { code: "not_found", message: "Notebook not found" } },
     }))
     .json(404, object, "status"),
+  http.protected.get("/kilocode/agent-manager", "kilocode.agentManager.list").json(200, array),
+  http.protected
+    .post("/kilocode/agent-manager/{requestID}/reply", "kilocode.agentManager.reply")
+    .at((ctx) => ({
+      path: route("/kilocode/agent-manager/{requestID}/reply", { requestID: "amr_httpapi_reply" }),
+      headers: ctx.headers(),
+      body: { result: { operation: "overview", overview: { sections: [], ungrouped: [] } } },
+    }))
+    .json(404, object, "status"),
+  http.protected
+    .post("/kilocode/agent-manager/{requestID}/reject", "kilocode.agentManager.reject")
+    .at((ctx) => ({
+      path: route("/kilocode/agent-manager/{requestID}/reject", { requestID: "amr_httpapi_reject" }),
+      headers: ctx.headers(),
+      body: { error: { code: "unknown_session", message: "Managed session not found" } },
+    }))
+    .json(404, object, "status"),
   // kilocode_change end
   http.protected
     .post("/question/{requestID}/reply", "question.reply.invalid")

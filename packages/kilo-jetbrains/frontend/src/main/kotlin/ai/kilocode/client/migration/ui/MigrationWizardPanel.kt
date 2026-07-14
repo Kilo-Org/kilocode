@@ -22,6 +22,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 private const val ACTION_SKIP = "skip"
+private const val ACTION_LATER = "later"
 private const val ACTION_MIGRATE = "migrate"
 private const val ACTION_DONE = "done"
 private const val ACTION_CONTINUE = "continue"
@@ -35,6 +36,7 @@ class MigrationWizardPanel : JPanel(BorderLayout()) {
 
     // ------ Callbacks ------
     var onSkip: (() -> Unit)? = null
+    var onLater: (() -> Unit)? = null
     var onStart: ((MigrationUiSelections) -> Unit)? = null
     var onDone: (() -> Unit)? = null
     var onContinueFromError: (() -> Unit)? = null
@@ -83,6 +85,9 @@ class MigrationWizardPanel : JPanel(BorderLayout()) {
             listOf(
                 BaseQuestionView.Action(ACTION_SKIP, KiloBundle.message("migration.button.skip"), primary = false) {
                     onSkip?.invoke()
+                },
+                BaseQuestionView.Action(ACTION_LATER, KiloBundle.message("migration.button.later"), primary = false) {
+                    onLater?.invoke()
                 },
                 BaseQuestionView.Action(ACTION_MIGRATE, KiloBundle.message("migration.button.migrate"), primary = true) {
                     onStart?.invoke(currentSelections())
@@ -185,6 +190,7 @@ class MigrationWizardPanel : JPanel(BorderLayout()) {
 
     private fun updateButtons(phase: MigrationUiPhase, running: Boolean) {
         question.setActionVisible(ACTION_SKIP, phase == MigrationUiPhase.selecting)
+        question.setActionVisible(ACTION_LATER, phase == MigrationUiPhase.selecting)
         question.setActionVisible(ACTION_MIGRATE, phase == MigrationUiPhase.selecting || phase == MigrationUiPhase.migrating)
         question.setActionText(
             ACTION_MIGRATE,

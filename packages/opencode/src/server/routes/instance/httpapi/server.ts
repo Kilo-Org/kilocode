@@ -38,6 +38,7 @@ import { Provider } from "@/provider/provider"
 import { PtyTicket } from "@opencode-ai/core/pty/ticket"
 import { Question } from "@/question"
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
+import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Session } from "@/session/session"
 import { SessionCompaction } from "@/session/compaction"
@@ -251,6 +252,7 @@ export function createRoutes(
       Provider.defaultLayer,
       PtyTicket.defaultLayer,
       Question.defaultLayer,
+      AgentManager.defaultLayer, // kilocode_change
       Notebook.defaultLayer, // kilocode_change
       KiloViewers.defaultLayer, // kilocode_change
       Ripgrep.defaultLayer,

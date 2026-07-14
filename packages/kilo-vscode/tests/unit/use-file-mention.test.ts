@@ -101,15 +101,15 @@ describe("useFileMention", () => {
     }
 
     expect(mention.mentionResults()).toEqual([
-      FILE_PICKER_RESULT,
       { type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" },
+      FILE_PICKER_RESULT,
     ])
 
     mention.onInput("@ex", 3)
 
     expect(mention.mentionResults()).toEqual([
-      FILE_PICKER_RESULT,
       { type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" },
+      FILE_PICKER_RESULT,
     ])
 
     dispose.fn?.()
@@ -248,7 +248,7 @@ describe("useFileMention", () => {
 
     mention.onInput("@gi", 3)
 
-    expect(mention.mentionResults()).toEqual([FILE_PICKER_RESULT, { type: "file", value: "src/git.ts" }])
+    expect(mention.mentionResults()).toEqual([{ type: "file", value: "src/git.ts" }, FILE_PICKER_RESULT])
 
     dispose.fn?.()
   })
