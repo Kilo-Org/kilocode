@@ -72,8 +72,8 @@ Use this skill.
       })).find((tool) => tool.id === SkillTool.id)
       if (!tool) throw new Error("Skill tool not found")
 
-      expect(tool.description).not.toContain("tool-skill")
-      expect(tool.description).not.toContain("Skill for tool tests.")
+      expect(tool.description).toContain("tool-skill") // kilocode_change - include concise available-skill context
+      expect(tool.description).toContain("Skill for tool tests.") // kilocode_change
 
       const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
       const ctx: Tool.Context = {

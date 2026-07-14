@@ -90,7 +90,15 @@ export const layer = Layer.effectDiscard(
                 agent: context.agent,
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
-              const target = path.resolve(location.directory, input.path ?? ".")
+              // kilocode_change start - enforce the active Location despite RelativePath being a nominal brand
+              const requested = path.resolve(location.directory, input.path ?? ".")
+              if (!FSUtil.contains(location.directory, requested))
+                return yield* Effect.fail(new Error("Path escapes the active Location"))
+              const root = yield* fs.realPath(location.directory)
+              const target = yield* fs.realPath(requested)
+              if (!FSUtil.contains(root, target))
+                return yield* Effect.fail(new Error("Path escapes the active Location"))
+              // kilocode_change end
               const info = yield* fs.stat(target).pipe(Effect.catch(() => Effect.succeed(undefined)))
               return yield* ripgrep
                 .grep({

@@ -65,7 +65,8 @@ export const makeWebSocketExecutor = <E>(
   options: WebSocketRecordReplayOptions<E>,
 ): Effect.Effect<WebSocketExecutor<E>, never, Scope.Scope> =>
   Effect.gen(function* () {
-    const mode = options.mode ?? (yield* resolveAutoMode(options.cassette, options.name))
+    const mode =
+      !options.mode || options.mode === "auto" ? yield* resolveAutoMode(options.cassette, options.name) : options.mode
     const redactor = options.redactor ?? make()
     const openSnapshot = (request: WebSocketRequest) => {
       const snapshot = redactor.request({

@@ -17,10 +17,15 @@ const FindQuery = Schema.Struct({
   limit: Schema.NumberFromString.pipe(Schema.decodeTo(PositiveInt), Schema.optional),
 })
 
+const ReadQuery = Schema.Struct({
+  ...LocationQuery.fields,
+  path: RelativePath.pipe(Schema.optional), // kilocode_change - expose the wildcard resource to generated SDK callers
+})
+
 export const FileSystemGroup = HttpApiGroup.make("server.fs")
   .add(
     HttpApiEndpoint.get("fs.read", "/api/fs/read/*", {
-      query: LocationQuery,
+      query: ReadQuery, // kilocode_change
       success: Schema.Uint8Array.pipe(HttpApiSchema.asUint8Array()),
     })
       .annotateMerge(locationQueryOpenApi)

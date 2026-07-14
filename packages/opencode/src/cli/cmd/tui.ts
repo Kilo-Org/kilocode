@@ -17,6 +17,14 @@ import { writeHeapSnapshot } from "v8"
 import { KiloTuiThreadDaemon, type StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
 import { win32InstallCtrlCGuard } from "@opencode-ai/tui/terminal-win32"
 import { validateSession } from "../tui/validate-session"
+// kilocode_change start - correlate the TUI worker with its parent process
+import {
+  KILO_PROCESS_ROLE,
+  KILO_RUN_ID,
+  ensureRunID,
+  sanitizedProcessEnv,
+} from "@opencode-ai/core/util/opencode-process"
+// kilocode_change end
 
 declare global {
   const KILO_WORKER_PATH: string
@@ -166,13 +174,17 @@ export const TuiThreadCommand = cmd({
       if (await KiloTuiThreadDaemon.attach({ args, cwd, input: () => input(args.prompt), start })) return
       // kilocode_change end
       const auth = KiloTuiThreadDaemon.workerAuth() // kilocode_change - protect TUI-owned HTTP routes from unauthenticated local callers
+      // kilocode_change start - propagate stable run metadata and an explicit worker role
+      const env = sanitizedProcessEnv({
+        [KILO_PROCESS_ROLE]: "worker",
+        [KILO_RUN_ID]: ensureRunID(),
+        ...auth.env,
+        KILO_BACKGROUND_PROCESS_PORTS: "true",
+      })
+      // kilocode_change end
       const worker = new Worker(file, {
         preload: ["@opentui/solid/preload"], // kilocode_change - Bun workers do not inherit the parent preload
-        env: {
-          ...process.env,
-          ...auth.env, // kilocode_change
-          KILO_BACKGROUND_PROCESS_PORTS: "true", // kilocode_change - TUI surfaces inferred background process ports
-        },
+        env, // kilocode_change
       })
       worker.onerror = (e) => {
         console.error("TUI worker error", e.error ?? e.message)

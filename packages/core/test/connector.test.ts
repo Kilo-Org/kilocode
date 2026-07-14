@@ -358,6 +358,44 @@ describe("Connector", () => {
     }).pipe(Effect.provide(connectionLayer(created)))
   })
 
+  it.effect("fails auto OAuth when credential persistence fails", () => {
+    const failed = Connector.locationLayer.pipe(
+      Layer.provide(EventV2.defaultLayer),
+      Layer.provide(
+        Layer.mock(Credential.Service)({
+          create: () => Effect.die(new Error("database unavailable")),
+        }),
+      ),
+    )
+    return Effect.gen(function* () {
+      const connectors = yield* Connector.Service
+      const connectorID = Connector.ID.make("openai")
+      const methodID = Connector.MethodID.make("browser")
+      yield* connectors.update((editor) =>
+        editor.method.update({
+          connectorID,
+          method: new Connector.OAuthMethod({ id: methodID, type: "oauth", label: "Browser" }),
+          authorize: () =>
+            Effect.succeed({
+              mode: "auto" as const,
+              url: "https://example.com/authorize",
+              instructions: "Sign in",
+              callback: Effect.succeed(
+                new Credential.OAuth({ type: "oauth", access: "access", refresh: "refresh", expires: 1 }),
+              ),
+            }),
+        }),
+      )
+
+      const attempt = yield* connectors.connect.oauth.begin({ connectorID, methodID, inputs: {} })
+      yield* Effect.yieldNow
+      expect(yield* connectors.connect.oauth.status(attempt.attemptID)).toMatchObject({
+        status: "failed",
+        message: expect.stringContaining("database unavailable"),
+      })
+    }).pipe(Effect.provide(failed))
+  })
+
   it.effect("expires abandoned OAuth attempts", () => {
     const created: Array<{
       connectorID: Connector.ID

@@ -2,8 +2,8 @@
 import { expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
 import type { Event, GlobalEvent } from "@kilocode/sdk/v2"
-import { onMount } from "solid-js"
-import { ProjectProvider } from "../../../src/context/project"
+import { createSignal, onMount, Show, type ParentProps } from "solid-js" // kilocode_change
+import { ProjectProvider, useProject } from "../../../src/context/project" // kilocode_change
 import { SDKProvider } from "../../../src/context/sdk"
 import { DataProvider, useData } from "../../../src/context/data"
 import { createEventSource, createFetch, directory, json } from "../../fixture/tui-sdk"
@@ -24,6 +24,18 @@ function global(payload: Event): GlobalEvent {
 function emitEvent(events: ReturnType<typeof createEventSource>, payload: Event) {
   events.emit(global(payload))
 }
+
+// kilocode_change start - initialize Kilo's project filter before mounting V2 event consumers
+function Ready(props: ParentProps) {
+  const project = useProject()
+  const [ready, setReady] = createSignal(false)
+  onMount(async () => {
+    await project.sync()
+    setReady(true)
+  })
+  return <Show when={ready()}>{props.children}</Show>
+}
+// kilocode_change end
 
 test("refreshes resources into reactive getters", async () => {
   const location = {
@@ -67,9 +79,11 @@ test("refreshes resources into reactive getters", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -128,9 +142,11 @@ test("refreshes connectors after connector updates", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -176,9 +192,11 @@ test("refreshes references after updates", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -214,9 +232,11 @@ test("settles pending tools when a live failure arrives", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -343,9 +363,11 @@ test("renders admitted prompts only after promotion", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -407,9 +429,11 @@ test("renders a promoted prompt when admission was missed", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -455,9 +479,11 @@ test("projects live context updates with their message ID", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -486,3 +512,264 @@ test("projects live context updates with their message ID", async () => {
     app.renderer.destroy()
   }
 })
+
+// kilocode_change start - preserve Kilo's V2 hydration-race coverage after the DataProvider extraction
+test("preserves live events while message hydration is in flight", async () => {
+  const events = createEventSource()
+  const response = Promise.withResolvers<Response>()
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session/session-1/message") return response.promise
+    return undefined
+  })
+  let data!: ReturnType<typeof useData>
+  let ready!: () => void
+  const mounted = new Promise<void>((resolve) => {
+    ready = resolve
+  })
+
+  function Probe() {
+    data = useData()
+    onMount(ready)
+    return <box />
+  }
+
+  const app = await testRender(() => (
+    <TestTuiContexts>
+      <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
+        <ProjectProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
+        </ProjectProvider>
+      </SDKProvider>
+    </TestTuiContexts>
+  ))
+
+  try {
+    await mounted
+    const hydration = data.session.message.refresh("session-1")
+    emitEvent(events, {
+      id: "evt_agent_1",
+      type: "session.next.agent.switched",
+      properties: { sessionID: "session-1", messageID: "msg_agent_1", timestamp: 0, agent: "build" },
+    })
+    response.resolve(json({ data: [] }))
+    await hydration
+
+    expect(data.session.message.list("session-1")?.map((message) => [message.id, message.type])).toEqual([
+      ["msg_agent_1", "agent-switched"],
+    ])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("replaces stale cached messages while preserving in-flight live messages", async () => {
+  const events = createEventSource()
+  const response = Promise.withResolvers<Response>()
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session/session-1/message") return response.promise
+    return undefined
+  })
+  let data!: ReturnType<typeof useData>
+  let ready!: () => void
+  const mounted = new Promise<void>((resolve) => {
+    ready = resolve
+  })
+
+  function Probe() {
+    data = useData()
+    onMount(ready)
+    return <box />
+  }
+
+  const app = await testRender(() => (
+    <TestTuiContexts>
+      <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
+        <ProjectProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
+        </ProjectProvider>
+      </SDKProvider>
+    </TestTuiContexts>
+  ))
+
+  try {
+    await mounted
+    emitEvent(events, {
+      id: "evt_promoted_1",
+      type: "session.next.prompt.promoted",
+      properties: {
+        sessionID: "session-1",
+        messageID: "msg_user_1",
+        timestamp: 1,
+        prompt: { text: "stale" },
+        timeCreated: 0,
+      },
+    })
+    await wait(() => data.session.message.list("session-1")?.[0]?.id === "msg_user_1")
+    const hydration = data.session.message.refresh("session-1")
+    emitEvent(events, {
+      id: "evt_agent_1",
+      type: "session.next.agent.switched",
+      properties: { sessionID: "session-1", messageID: "msg_agent_1", timestamp: 2, agent: "build" },
+    })
+    await wait(() => data.session.message.list("session-1")?.[0]?.id === "msg_agent_1")
+    response.resolve(
+      json({
+        data: [{ id: "msg_user_1", type: "user", text: "fresh", time: { created: 0 } }],
+      }),
+    )
+    await hydration
+
+    expect(data.session.message.list("session-1")?.map((message) => [message.id, message.type])).toEqual([
+      ["msg_agent_1", "agent-switched"],
+      ["msg_user_1", "user"],
+    ])
+    expect(data.session.message.list("session-1")?.[1]).toMatchObject({ text: "fresh" })
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("preserves snapshot order and metadata for in-flight message updates", async () => {
+  const events = createEventSource()
+  const response = Promise.withResolvers<Response>()
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session/session-1/message") return response.promise
+    return undefined
+  })
+  let data!: ReturnType<typeof useData>
+  let ready!: () => void
+  const mounted = new Promise<void>((resolve) => {
+    ready = resolve
+  })
+
+  function Probe() {
+    data = useData()
+    onMount(ready)
+    return <box />
+  }
+
+  const app = await testRender(() => (
+    <TestTuiContexts>
+      <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
+        <ProjectProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
+        </ProjectProvider>
+      </SDKProvider>
+    </TestTuiContexts>
+  ))
+
+  try {
+    await mounted
+    emitEvent(events, {
+      id: "evt_step_older",
+      type: "session.next.step.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_older",
+        timestamp: 0,
+        agent: "build",
+        model: { id: "model", providerID: "provider" },
+      },
+    })
+    emitEvent(events, {
+      id: "evt_step_1",
+      type: "session.next.step.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_old",
+        timestamp: 1,
+        agent: "build",
+        model: { id: "model", providerID: "provider" },
+      },
+    })
+    await wait(() => data.session.message.list("session-1")?.[0]?.id === "msg_assistant_old")
+    const hydration = data.session.message.refresh("session-1")
+    emitEvent(events, {
+      id: "evt_text_1",
+      type: "session.next.text.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_old",
+        timestamp: 2,
+        textID: "text-1",
+      },
+    })
+    emitEvent(events, {
+      id: "evt_text_older",
+      type: "session.next.text.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_older",
+        timestamp: 2,
+        textID: "text-older",
+      },
+    })
+    await wait(() => {
+      const messages = data.session.message.list("session-1") ?? []
+      return messages.every((message) => message.type !== "assistant" || message.content[0]?.type === "text")
+    })
+    response.resolve(
+      json({
+        data: [
+          {
+            id: "msg_assistant_new",
+            type: "assistant",
+            agent: "build",
+            model: { id: "model", providerID: "provider" },
+            content: [],
+            time: { created: 3 },
+          },
+          {
+            id: "msg_assistant_old",
+            type: "assistant",
+            metadata: { source: "snapshot" },
+            agent: "build",
+            model: { id: "model", providerID: "provider" },
+            content: [],
+            time: { created: 1 },
+          },
+        ],
+      }),
+    )
+    await hydration
+    emitEvent(events, {
+      id: "evt_step_late_duplicate",
+      type: "session.next.step.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_old",
+        timestamp: 1,
+        agent: "build",
+        model: { id: "model", providerID: "provider" },
+      },
+    })
+
+    expect(data.session.message.list("session-1")?.map((message) => message.id)).toEqual([
+      "msg_assistant_new",
+      "msg_assistant_old",
+      "msg_assistant_older",
+    ])
+    expect(JSON.parse(JSON.stringify(data.session.message.list("session-1")?.[1]))).toMatchObject({
+      metadata: { source: "snapshot" },
+      content: [{ type: "text", id: "text-1", text: "" }],
+    })
+    expect(JSON.parse(JSON.stringify(data.session.message.list("session-1")?.[2]))).toMatchObject({
+      content: [{ type: "text", id: "text-older", text: "" }],
+    })
+  } finally {
+    app.renderer.destroy()
+  }
+})
+// kilocode_change end

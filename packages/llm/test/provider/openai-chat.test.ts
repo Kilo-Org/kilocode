@@ -56,6 +56,15 @@ describe("OpenAI Chat route", () => {
     }),
   )
 
+  it.effect("separates adjacent user text parts with newlines", () =>
+    Effect.gen(function* () {
+      const prepared = yield* LLMClient.prepare<OpenAIChat.OpenAIChatBody>(
+        LLM.request({ model, messages: [Message.user(["first", "second"].map((text) => ({ type: "text", text })))] }),
+      )
+      expect(prepared.body.messages).toEqual([{ role: "user", content: "first\nsecond" }])
+    }),
+  )
+
   it.effect("lowers chronological system updates to escaped user wrappers in order", () =>
     Effect.gen(function* () {
       const prepared = yield* LLMClient.prepare<OpenAIChat.OpenAIChatBody>(

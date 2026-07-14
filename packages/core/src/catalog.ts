@@ -107,7 +107,12 @@ export const layer = Layer.effect(
         body.apiKey = credential.value.key
         Object.assign(body, credential.value.metadata ?? {})
       }
-      if (credential.value.type === "oauth") body.apiKey = credential.value.access
+      // kilocode_change start - preserve Kilo organization routing from migrated OAuth credentials
+      if (credential.value.type === "oauth") {
+        body.apiKey = credential.value.access
+        if (credential.value.metadata?.accountID) body.kilocodeOrganizationId = credential.value.metadata.accountID
+      }
+      // kilocode_change end
       return new ProviderV2.Info({
         ...provider,
         enabled: { via: "credential", credentialID: credential.id },

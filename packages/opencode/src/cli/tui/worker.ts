@@ -11,7 +11,9 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { KiloLog } from "@/kilocode/log" // kilocode_change
+import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
 
+ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
 

@@ -27,6 +27,40 @@ const it = testEffect(
 )
 
 describe("CatalogV2", () => {
+  it.effect("projects Kilo organization routing from OAuth credentials", () => {
+    const connectorID = Connector.ID.make("kilocode")
+    const credential = new Credential.Info({
+      id: Credential.ID.create(),
+      connectorID,
+      methodID: Connector.MethodID.make("oauth"),
+      label: "Organization",
+      value: new Credential.OAuth({
+        type: "oauth",
+        access: "access",
+        refresh: "refresh",
+        expires: 1,
+        metadata: { accountID: "organization" },
+      }),
+    })
+    const layer = Catalog.locationLayer.pipe(
+      Layer.fresh,
+      Layer.provideMerge(EventV2.defaultLayer),
+      Layer.provideMerge(locationLayer),
+      Layer.provideMerge(
+        Layer.mock(Credential.Service)({ activeAll: () => Effect.succeed(new Map([[connectorID, credential]])) }),
+      ),
+    )
+
+    return Effect.gen(function* () {
+      const catalog = yield* Catalog.Service
+      const transform = yield* catalog.transform()
+      yield* transform((editor) => editor.provider.update(ProviderV2.ID.make("kilocode"), () => {}))
+      expect(yield* catalog.provider.get(ProviderV2.ID.make("kilocode"))).toMatchObject({
+        request: { body: { apiKey: "access", kilocodeOrganizationId: "organization" } },
+      })
+    }).pipe(Effect.provide(layer))
+  })
+
   it.effect("projects active credentials without rebuilding catalog state", () => {
     const connectorID = Connector.ID.make("test")
     const methodID = Connector.MethodID.make("api-key")

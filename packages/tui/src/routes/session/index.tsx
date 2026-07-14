@@ -1420,20 +1420,36 @@ export function Session() {
                 </For>
               </scrollbox>
               <box flexShrink={0}>
-                <Show when={permissions().length > 0}>
+                {/* kilocode_change start - arbitrate Kilo terminal, question, suggestion, and network input */}
+                <Show when={!terminal() && permissions().length > 0}>
                   <PermissionPrompt
                     request={permissions()[0]}
                     directory={sync.session.get(permissions()[0].sessionID)?.directory}
                   />
                 </Show>
-                <Show when={permissions().length === 0 && questions().length > 0}>
-                  <QuestionPrompt
-                    request={questions()[0]}
-                    directory={sync.session.get(questions()[0].sessionID)?.directory}
-                  />
+                <Show when={terminal()} keyed>
+                  {(value) => <TerminalPrompt sessionID={value.info.sessionID} terminalID={value.info.id} />}
+                </Show>
+                <Show when={!terminal() && permissions().length === 0 ? question() : undefined} keyed>
+                  {(request) => (
+                    <QuestionPrompt
+                      request={request}
+                      nonBlocking={request.blocking === false}
+                      inputFocused={() => prompt?.focused ?? false}
+                      directory={sync.session.get(request.sessionID)?.directory}
+                    />
+                  )}
+                </Show>
+                <Show when={!terminal() && permissions().length === 0 && !question()}>
+                  <Show when={blockingSuggestion()} keyed>
+                    {(request) => <SuggestPrompt request={request} />}
+                  </Show>
                 </Show>
                 <Show when={session()?.parentID}>
                   <SubagentFooter />
+                </Show>
+                <Show when={networkVisible()}>
+                  <NetworkPrompt request={network()[0]} />
                 </Show>
                 <Show when={visible()}>
                   <pluginRuntime.Slot
@@ -1453,6 +1469,7 @@ export function Session() {
                         toBottom()
                       }}
                       sessionID={route.sessionID}
+                      directory={session()?.directory}
                       right={<pluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
                     />
                   </pluginRuntime.Slot>
@@ -1942,6 +1959,17 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={display() === "grep"}>
           <Grep {...toolprops} />
         </Match>
+        {/* kilocode_change start - preserve Kilo tool-specific status rendering */}
+        <Match when={display() === "background_process"}>
+          <BackgroundProcess {...toolprops} />
+        </Match>
+        <Match when={display() === "interactive_terminal"}>
+          <InteractiveTerminal {...toolprops} />
+        </Match>
+        <Match when={display() === "semantic_search"}>
+          <SemanticSearch {...toolprops} />
+        </Match>
+        {/* kilocode_change end */}
         <Match when={display() === "webfetch"}>
           <WebFetch {...toolprops} />
         </Match>
@@ -2021,6 +2049,112 @@ function GenericTool(props: ToolProps) {
     </Show>
   )
 }
+
+// kilocode_change start - Kilo tool-specific status rendering
+function BackgroundProcess(props: ToolProps) {
+  const sync = useSync()
+  const paths = usePathFormatter()
+  const running = createMemo(() => props.part.state.status === "running")
+  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
+  const action = createMemo(() => stringValue(props.input.action) ?? "start")
+  const desc = createMemo(
+    () => stringValue(props.input.description) || cmd() || stringValue(props.input.id) || "background process",
+  )
+  const dir = createMemo(() => {
+    const raw = stringValue(props.input.workdir)
+    if (!raw || raw === ".") return
+    const base = sync.path.directory
+    if (!base) return paths.format(raw)
+    const abs = path.resolve(base, raw)
+    if (abs === base) return
+    return paths.format(abs)
+  })
+  const status = createMemo(() => {
+    const value = stringValue(props.metadata.status)
+    if (value) return value
+    const count = numberValue(props.metadata.count)
+    if (count !== undefined) return `${count} running`
+  })
+  const title = createMemo(() => {
+    if (action() === "list") return "List background processes"
+    if (action() === "logs") return `View background logs: ${desc()}`
+    if (action() === "status") return `Check background process: ${desc()}`
+    if (action() === "stop") return `Stop background process: ${desc()}`
+    if (action() === "restart") return `Restart background process: ${desc()}`
+    return `Start background process: ${desc()}`
+  })
+
+  return (
+    <InlineTool
+      icon="$"
+      pending="Preparing background process..."
+      complete={desc()}
+      spinner={running()}
+      part={props.part}
+    >
+      {title()}
+      <Show when={dir()}> in {dir()}</Show>
+      <Show when={cmd()}> · $ {cmd()}</Show>
+      <Show when={status()}> ({status()})</Show>
+    </InlineTool>
+  )
+}
+
+function InteractiveTerminal(props: ToolProps) {
+  const sync = useSync()
+  const paths = usePathFormatter()
+  const running = createMemo(() => props.part.state.status === "running")
+  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
+  const desc = createMemo(() => stringValue(props.input.description) || cmd() || "interactive command")
+  const dir = createMemo(() => {
+    const raw = stringValue(props.input.workdir)
+    if (!raw || raw === ".") return
+    const base = sync.path.directory
+    if (!base) return paths.format(raw)
+    const abs = path.resolve(base, raw)
+    if (abs === base) return
+    return paths.format(abs)
+  })
+  const status = createMemo(() => {
+    if (props.metadata.closedBy === "user") return "closed by user"
+    if (props.metadata.closedBy === "abort") return "cancelled"
+    if (props.metadata.closedBy !== "exit") return
+    const code = numberValue(props.metadata.exitCode)
+    return code === undefined ? "completed" : `exit ${code}`
+  })
+
+  return (
+    <InlineTool
+      icon="$"
+      pending="Opening interactive terminal..."
+      complete={desc()}
+      spinner={running()}
+      part={props.part}
+    >
+      Interactive terminal: {desc()}
+      <Show when={dir()}> in {dir()}</Show>
+      <Show when={cmd()}> · $ {cmd()}</Show>
+      <Show when={status()}> ({status()})</Show>
+    </InlineTool>
+  )
+}
+
+function SemanticSearch(props: ToolProps) {
+  const paths = usePathFormatter()
+  const query = createMemo(() => stringValue(props.input.query))
+  const target = createMemo(() => stringValue(props.input.path))
+  const count = createMemo(() => (Array.isArray(props.metadata.results) ? props.metadata.results.length : 0))
+
+  return (
+    <InlineTool icon="✱" pending="Searching codebase..." complete={query()} part={props.part}>
+      Codebase Search "{query()}" <Show when={target()}>in {paths.format(target()!)} </Show>
+      <Show when={count() > 0}>
+        ({count()} {count() === 1 ? "result" : "results"})
+      </Show>
+    </InlineTool>
+  )
+}
+// kilocode_change end
 
 function InlineTool(props: {
   icon: string
@@ -2479,7 +2613,7 @@ function Task(props: ToolProps) {
         const title = state.status === "running" || state.status === "completed" ? state.title : undefined
         content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
       } else content.push(`↳ ${formatSubagentToolcalls(tools().length)}`)
-    }
+    } else if (isRunning()) content.push(`↳ Starting...`) // kilocode_change
 
     if (!isRunning() && props.part.state.status === "completed") {
       content.push(`↳ ${formatCompletedSubagentDetail(tools().length, Locale.duration(duration()))}`)
@@ -2542,32 +2676,46 @@ function Edit(props: ToolProps) {
   const ft = createMemo(() => filetype(stringValue(props.input.filePath)))
 
   const diffContent = createMemo(() => stringValue(props.metadata.diff) ?? "")
+  const hunks = createMemo(() => splitDiffHunks(diffContent())) // kilocode_change
 
   return (
     <Switch>
       <Match when={stringValue(props.metadata.diff) !== undefined}>
         <BlockTool title={"← Edit " + pathFormatter.format(stringValue(props.input.filePath))} part={props.part}>
-          <box paddingLeft={1}>
-            <diff
-              diff={diffContent()}
-              view={view()}
-              filetype={ft()}
-              syntaxStyle={syntax()}
-              showLineNumbers={true}
-              width="100%"
-              wrapMode={ctx.diffWrapMode()}
-              fg={theme.text}
-              addedBg={theme.diffAddedBg}
-              removedBg={theme.diffRemovedBg}
-              contextBg={theme.diffContextBg}
-              addedSignColor={theme.diffHighlightAdded}
-              removedSignColor={theme.diffHighlightRemoved}
-              lineNumberFg={theme.diffLineNumber}
-              lineNumberBg={theme.diffContextBg}
-              addedLineNumberBg={theme.diffAddedLineNumberBg}
-              removedLineNumberBg={theme.diffRemovedLineNumberBg}
-            />
+          {/* kilocode_change start - preserve separated multi-hunk edit rendering */}
+          <box paddingLeft={1} flexDirection="column">
+            <For each={hunks()}>
+              {(hunk, i) => (
+                <>
+                  <Show when={i() > 0}>
+                    <text fg={theme.textMuted} alignSelf="center" height={2}>
+                      ...
+                    </text>
+                  </Show>
+                  <diff
+                    diff={hunk}
+                    view={view()}
+                    filetype={ft()}
+                    syntaxStyle={syntax()}
+                    showLineNumbers={true}
+                    width="100%"
+                    wrapMode={ctx.diffWrapMode()}
+                    fg={theme.text}
+                    addedBg={theme.diffAddedBg}
+                    removedBg={theme.diffRemovedBg}
+                    contextBg={theme.diffContextBg}
+                    addedSignColor={theme.diffHighlightAdded}
+                    removedSignColor={theme.diffHighlightRemoved}
+                    lineNumberFg={theme.diffLineNumber}
+                    lineNumberBg={theme.diffContextBg}
+                    addedLineNumberBg={theme.diffAddedLineNumberBg}
+                    removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                  />
+                </>
+              )}
+            </For>
           </box>
+          {/* kilocode_change end */}
           <Diagnostics diagnostics={props.metadata.diagnostics} filePath={stringValue(props.input.filePath) ?? ""} />
         </BlockTool>
       </Match>
@@ -2700,8 +2848,14 @@ function Question(props: ToolProps) {
   const { theme } = useTheme()
   const questions = createMemo(() => parseQuestions(props.input.questions))
   const answers = createMemo(() => parseQuestionAnswers(props.metadata.answers))
-  const dismissed = createMemo(() => props.metadata.dismissed === true) // kilocode_change
   const count = createMemo(() => questions().length)
+  // kilocode_change start - preserve dismissed content and the compact expandable summary
+  const dismissed = createMemo(
+    () =>
+      props.metadata.dismissed === true ||
+      (props.part.state.status === "error" && String(props.part.state.error ?? "").includes("dismissed")),
+  )
+  const [expanded, setExpanded] = createSignal(false)
 
   function format(answer?: ReadonlyArray<string>) {
     if (dismissed()) return "Dismissed"
@@ -2715,23 +2869,37 @@ function Question(props: ToolProps) {
     if ((answers()?.length ?? 0) > 0) return `${count()} answered`
     return `${count()} question${count() !== 1 ? "s" : ""}`
   })
-  // kilocode_change end
 
   return (
     <Switch>
-      <Match when={answers()}>
-        <BlockTool title="# Questions" part={props.part}>
-          <box gap={1}>
-            <For each={questions()}>
-              {(q, i) => (
-                <box flexDirection="column">
-                  <text fg={theme.textMuted}>{q.question}</text>
-                  <text fg={theme.text}>{format(answers()?.[i()])}</text>
-                </box>
-              )}
-            </For>
-          </box>
-        </BlockTool>
+      <Match when={count() > 0}>
+        <Show
+          when={expanded()}
+          fallback={
+            <InlineTool
+              icon="→"
+              complete={count()}
+              pending="Asking questions..."
+              part={props.part}
+              onClick={() => setExpanded(true)}
+            >
+              {subtitle()}
+            </InlineTool>
+          }
+        >
+          <BlockTool title={title()} part={props.part} onClick={() => setExpanded(false)}>
+            <box gap={1}>
+              <For each={questions()}>
+                {(q, i) => (
+                  <box flexDirection="column">
+                    <text fg={theme.textMuted}>{q.question}</text>
+                    <text fg={theme.text}>{format(answers()?.[i()])}</text>
+                  </box>
+                )}
+              </For>
+            </box>
+          </BlockTool>
+        </Show>
       </Match>
       {/* kilocode_change end */}
       <Match when={true}>
@@ -2808,6 +2976,11 @@ const toolDisplays = new Set([
   "todowrite",
   "question",
   "skill",
+  // kilocode_change start - retain dedicated Kilo tool renderers
+  "background_process",
+  "interactive_terminal",
+  "semantic_search",
+  // kilocode_change end
 ])
 
 export function toolDisplay(tool: string) {

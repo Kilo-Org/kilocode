@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema, SchemaGetter } from "effect" // kilocode_change
 import { JsonSchema, MessageRole, ProviderMetadata } from "./ids"
 import { CacheHint, CachePolicy, GenerationOptions, HttpOptions, ModelSchema, ProviderOptions } from "./options"
 import { isRecord } from "../utils/record"
@@ -54,7 +54,51 @@ export const ToolFileContent = Schema.Struct({
 export type ToolFileContent = typeof ToolFileContent.Type
 
 /** Ordered, provider-independent content shown to models and UIs after a tool succeeds. */
-export const ToolContent = Schema.Union([ToolTextContent, ToolFileContent]).pipe(Schema.toTaggedUnion("type"))
+const CanonicalToolContent = Schema.Union([ToolTextContent, ToolFileContent]).pipe(Schema.toTaggedUnion("type"))
+
+// kilocode_change start - decode persisted V2 tool file shapes and legacy media results
+const LegacyToolFileContent = Schema.Struct({
+  type: Schema.Literal("file"),
+  source: Schema.Union([
+    Schema.Struct({ type: Schema.Literal("data"), data: Schema.String }),
+    Schema.Struct({ type: Schema.Literal("url"), url: Schema.String }),
+    Schema.Struct({ type: Schema.Literal("file"), uri: Schema.String }),
+  ]).pipe(Schema.toTaggedUnion("type")),
+  mime: Schema.String,
+  name: Schema.optional(Schema.String),
+})
+const LegacyToolMediaContent = Schema.Struct({
+  type: Schema.Literal("media"),
+  mediaType: Schema.String,
+  data: Schema.String,
+  filename: Schema.optional(Schema.String),
+})
+const ToolContentInput = Schema.Union([CanonicalToolContent, LegacyToolFileContent, LegacyToolMediaContent])
+
+export const ToolContent = ToolContentInput.pipe(
+  Schema.decodeTo(CanonicalToolContent, {
+    decode: SchemaGetter.transform((item) => {
+      if (item.type === "text" || (item.type === "file" && "uri" in item)) return item
+      if (item.type === "media") {
+        return {
+          type: "file" as const,
+          uri: item.data.startsWith("data:") ? item.data : `data:${item.mediaType};base64,${item.data}`,
+          mime: item.mediaType,
+          name: item.filename,
+        }
+      }
+      const uri =
+        item.source.type === "data"
+          ? `data:${item.mime};base64,${item.source.data}`
+          : item.source.type === "url"
+            ? item.source.url
+            : item.source.uri
+      return { type: "file" as const, uri, mime: item.mime, name: item.name }
+    }),
+    encode: SchemaGetter.passthrough({ strict: false }),
+  }),
+)
+// kilocode_change end
 export type ToolContent = Schema.Schema.Type<typeof ToolContent>
 
 // kilocode_change start - avoid circular inference rejected by Kilo's newer tsgo

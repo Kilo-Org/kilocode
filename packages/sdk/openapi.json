@@ -22448,6 +22448,14 @@
             "required": false,
             "style": "deepObject",
             "explode": true
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
           }
         ],
         "security": [],
@@ -37762,6 +37770,89 @@
                     },
                     {
                       "$ref": "#/components/schemas/ToolFileContent"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["file"]
+                        },
+                        "source": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": ["data"]
+                                },
+                                "data": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["type", "data"],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": ["url"]
+                                },
+                                "url": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["type", "url"],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": ["file"]
+                                },
+                                "uri": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["type", "uri"],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "mime": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["type", "source", "mime"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["media"]
+                        },
+                        "mediaType": {
+                          "type": "string"
+                        },
+                        "data": {
+                          "type": "string"
+                        },
+                        "filename": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["type", "mediaType", "data"],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -37813,6 +37904,89 @@
                     },
                     {
                       "$ref": "#/components/schemas/ToolFileContent"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["file"]
+                        },
+                        "source": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": ["data"]
+                                },
+                                "data": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["type", "data"],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": ["url"]
+                                },
+                                "url": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["type", "url"],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": ["file"]
+                                },
+                                "uri": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["type", "uri"],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "mime": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["type", "source", "mime"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["media"]
+                        },
+                        "mediaType": {
+                          "type": "string"
+                        },
+                        "data": {
+                          "type": "string"
+                        },
+                        "filename": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["type", "mediaType", "data"],
+                      "additionalProperties": false
                     }
                   ]
                 }
@@ -41132,6 +41306,89 @@
                         },
                         {
                           "$ref": "#/components/schemas/ToolFileContent"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["file"]
+                            },
+                            "source": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": ["data"]
+                                    },
+                                    "data": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "data"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": ["url"]
+                                    },
+                                    "url": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "url"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": ["file"]
+                                    },
+                                    "uri": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "uri"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "mime": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "source", "mime"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["media"]
+                            },
+                            "mediaType": {
+                              "type": "string"
+                            },
+                            "data": {
+                              "type": "string"
+                            },
+                            "filename": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "mediaType", "data"],
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -41205,6 +41462,89 @@
                         },
                         {
                           "$ref": "#/components/schemas/ToolFileContent"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["file"]
+                            },
+                            "source": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": ["data"]
+                                    },
+                                    "data": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "data"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": ["url"]
+                                    },
+                                    "url": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "url"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": ["file"]
+                                    },
+                                    "uri": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "uri"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "mime": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "source", "mime"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["media"]
+                            },
+                            "mediaType": {
+                              "type": "string"
+                            },
+                            "data": {
+                              "type": "string"
+                            },
+                            "filename": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "mediaType", "data"],
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -42144,6 +42484,89 @@
                 },
                 {
                   "$ref": "#/components/schemas/ToolFileContent"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["file"]
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["data"]
+                            },
+                            "data": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "data"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["url"]
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "url"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["file"]
+                            },
+                            "uri": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "uri"],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "mime": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "source", "mime"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["media"]
+                    },
+                    "mediaType": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "mediaType", "data"],
+                  "additionalProperties": false
                 }
               ]
             }
@@ -42177,6 +42600,89 @@
                 },
                 {
                   "$ref": "#/components/schemas/ToolFileContent"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["file"]
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["data"]
+                            },
+                            "data": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "data"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["url"]
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "url"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["file"]
+                            },
+                            "uri": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "uri"],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "mime": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "source", "mime"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["media"]
+                    },
+                    "mediaType": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "mediaType", "data"],
+                  "additionalProperties": false
                 }
               ]
             }
@@ -42214,6 +42720,89 @@
                 },
                 {
                   "$ref": "#/components/schemas/ToolFileContent"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["file"]
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["data"]
+                            },
+                            "data": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "data"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["url"]
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "url"],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": ["file"]
+                            },
+                            "uri": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["type", "uri"],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "mime": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "source", "mime"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["media"]
+                    },
+                    "mediaType": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "mediaType", "data"],
+                  "additionalProperties": false
                 }
               ]
             }

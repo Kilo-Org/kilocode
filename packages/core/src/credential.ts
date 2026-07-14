@@ -55,6 +55,7 @@ const LegacyKey = Schema.Struct({
 })
 
 const LegacyValue = Schema.Union([LegacyOAuth, LegacyKey])
+const LegacyStore = Schema.Record(Schema.String, LegacyValue) // kilocode_change
 
 export class Info extends Schema.Class<Info>("Credential.Info")({
   id: ID,
@@ -237,6 +238,63 @@ export const layer = Layer.effect(
         value: decodeValue(row.value),
       })
 
+    // kilocode_change start - process-local workspace credentials override host storage without being persisted
+    const content = process.env.KILO_AUTH_CONTENT
+    const injected = yield* content === undefined
+      ? Effect.succeed(new Map<ConnectorSchema.ID, Info>())
+      : Effect.try({
+          try: () => JSON.parse(content) as unknown,
+          catch: (cause) => cause,
+        }).pipe(
+          Effect.flatMap((raw) => {
+            const decoded = Schema.decodeUnknownOption(LegacyStore)(raw)
+            if (Option.isNone(decoded)) return Effect.succeed(new Map<ConnectorSchema.ID, Info>())
+            return Effect.succeed(
+              new Map(
+                Object.entries(decoded.value).map(([name, credential]) => {
+                  const connectorID = ConnectorSchema.ID.make(name.replace(/\/+$/, ""))
+                  const value: Value =
+                    credential.type === "api"
+                      ? new Key({ type: "key", key: credential.key, metadata: credential.metadata })
+                      : new OAuth({
+                          type: "oauth",
+                          refresh: credential.refresh,
+                          access: credential.access,
+                          expires: credential.expires,
+                          metadata: {
+                            ...(credential.accountId ? { accountID: credential.accountId } : {}),
+                            ...(credential.enterpriseUrl ? { enterpriseURL: credential.enterpriseUrl } : {}),
+                          },
+                        })
+                  return [
+                    connectorID,
+                    new Info({
+                      id: ID.make(`cred_env_${Buffer.from(connectorID).toString("base64url")}`),
+                      connectorID,
+                      methodID: ConnectorSchema.MethodID.make(
+                        credential.type === "api"
+                          ? "api-key"
+                          : connectorID === ConnectorSchema.ID.make("openai")
+                            ? "chatgpt-browser"
+                            : "oauth",
+                      ),
+                      label: "Environment",
+                      value,
+                    }),
+                  ] as const
+                }),
+              ),
+            )
+          }),
+          Effect.catch((cause) =>
+            Effect.logWarning("invalid KILO_AUTH_CONTENT; using no process-local credentials", { cause }).pipe(
+              Effect.as(new Map<ConnectorSchema.ID, Info>()),
+            ),
+          ),
+        )
+    const isolated = content !== undefined
+    // kilocode_change end
+
     const activate = Effect.fn("Credential.activate")(function* (id: ID) {
       const switched = yield* db
         .transaction((tx) =>
@@ -263,10 +321,12 @@ export const layer = Layer.effect(
 
     return Service.of({
       get: Effect.fn("Credential.get")(function* (id) {
+        if (isolated) return [...injected.values()].find((credential) => credential.id === id) // kilocode_change
         const row = yield* db.select().from(CredentialTable).where(eq(CredentialTable.id, id)).get().pipe(Effect.orDie)
         return row ? info(row) : undefined
       }),
       all: Effect.fn("Credential.all")(function* () {
+        if (isolated) return [...injected.values()] // kilocode_change
         return (yield* db
           .select()
           .from(CredentialTable)
@@ -275,6 +335,7 @@ export const layer = Layer.effect(
           .pipe(Effect.orDie)).map(info)
       }),
       active: Effect.fn("Credential.active")(function* (connectorID) {
+        if (isolated) return injected.get(connectorID) // kilocode_change
         const row = yield* db
           .select()
           .from(CredentialTable)
@@ -284,6 +345,7 @@ export const layer = Layer.effect(
         return row ? info(row) : undefined
       }),
       activeAll: Effect.fn("Credential.activeAll")(function* () {
+        if (isolated) return new Map(injected) // kilocode_change
         const rows = yield* db
           .select()
           .from(CredentialTable)
@@ -293,6 +355,7 @@ export const layer = Layer.effect(
         return new Map(rows.map((row) => [row.connector_id, info(row)]))
       }),
       forConnector: Effect.fn("Credential.forConnector")(function* (connectorID) {
+        if (isolated) return injected.has(connectorID) ? [injected.get(connectorID)!] : [] // kilocode_change
         return (yield* db
           .select()
           .from(CredentialTable)

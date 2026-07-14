@@ -74,10 +74,10 @@ export const LocationGroup = HttpApiGroup.make("server.location")
 function ref(request: HttpServerRequest.HttpServerRequest): Location.Ref {
   const query = new URL(request.url, "http://localhost").searchParams
   const workspaceID = query.get("location[workspace]") || request.headers["x-kilo-workspace"]
+  const header = request.headers["x-kilo-directory"]
+  const directory = query.get("location[directory]") || (header ? decodeURIComponent(header) : process.cwd()) // kilocode_change
   return Location.Ref.make({
-    directory: AbsolutePath.make(
-      query.get("location[directory]") || request.headers["x-kilo-directory"] || process.cwd(),
-    ),
+    directory: AbsolutePath.make(directory), // kilocode_change
     workspaceID: workspaceID ? WorkspaceV2.ID.make(workspaceID) : undefined,
   })
 }

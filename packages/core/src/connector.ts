@@ -318,25 +318,36 @@ export const locationLayer = Layer.effect(
     }
 
     const settle = Effect.fnUntraced(function* (attemptID: AttemptID, exit: Exit.Exit<Credential.Value, unknown>) {
+      // kilocode_change start - persist before exposing completion and always close the attempt scope
+      const pending = (yield* SynchronizedRef.get(attempts)).get(attemptID)
+      if (!pending || pending.status !== "pending") return
+      const settled = Exit.isSuccess(exit)
+        ? yield* credentials
+            .create({
+              connectorID: pending.connectorID,
+              methodID: pending.methodID,
+              label: pending.label,
+              value: exit.value,
+            })
+            .pipe(Effect.asVoid, Effect.exit)
+        : Exit.failCause(exit.cause)
       const now = yield* Clock.currentTimeMillis
       const result = yield* SynchronizedRef.modify(attempts, (current) => {
         const attempt = current.get(attemptID)
         if (!attempt || attempt.status !== "pending") return [undefined, current]
-        const terminal: TerminalAttempt = Exit.isSuccess(exit)
+        const terminal: TerminalAttempt = Exit.isSuccess(settled)
           ? { status: "complete", time: attempt.time, removeAt: now + terminalRetention }
-          : { status: "failed", message: message(exit.cause), time: attempt.time, removeAt: now + terminalRetention }
+          : {
+              status: "failed",
+              message: message(settled.cause),
+              time: attempt.time,
+              removeAt: now + terminalRetention,
+            }
         return [attempt, new Map(current).set(attemptID, terminal)]
       })
       if (!result) return
-      if (Exit.isSuccess(exit)) {
-        yield* credentials.create({
-          connectorID: result.connectorID,
-          methodID: result.methodID,
-          label: result.label,
-          value: exit.value,
-        })
-      }
       yield* close(result.scope)
+      // kilocode_change end
     })
 
     const scrub = Effect.fnUntraced(function* () {

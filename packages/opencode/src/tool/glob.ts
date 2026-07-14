@@ -72,6 +72,7 @@ export const GlobTool = Tool.define(
             cwd: search,
             pattern: absolute?.pattern ?? params.pattern, // kilocode_change - absolute patterns are split into cwd + relative glob
             limit,
+            signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
           const truncated = files.length === limit
 

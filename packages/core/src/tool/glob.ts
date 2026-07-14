@@ -4,6 +4,7 @@ import { ToolFailure } from "@opencode-ai/llm"
 import { Effect, Layer, Schema } from "effect"
 import path from "path"
 import { FileSystem } from "../filesystem"
+import { FSUtil } from "../fs-util" // kilocode_change
 import { Location } from "../location"
 import { Ripgrep } from "../ripgrep"
 import { RelativePath } from "../schema"
@@ -36,6 +37,7 @@ export const toModelOutput = (output: ModelOutput) => {
 export const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
+    const fs = yield* FSUtil.Service // kilocode_change
     const ripgrep = yield* Ripgrep.Service
     const location = yield* Location.Service
     const permission = yield* PermissionV2.Service
@@ -70,12 +72,19 @@ export const layer = Layer.effectDiscard(
                 agent: context.agent,
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
-              const cwd = path.resolve(location.directory, input.path ?? ".")
+              // kilocode_change start - enforce the active Location despite RelativePath being a nominal brand
+              const requested = path.resolve(location.directory, input.path ?? ".")
+              if (!FSUtil.contains(location.directory, requested))
+                return yield* Effect.fail(new Error("Path escapes the active Location"))
+              const root = yield* fs.realPath(location.directory)
+              const cwd = yield* fs.realPath(requested)
+              if (!FSUtil.contains(root, cwd)) return yield* Effect.fail(new Error("Path escapes the active Location"))
+              // kilocode_change end
               return yield* ripgrep
                 .glob({
                   cwd,
                   pattern: input.pattern,
-                  limit: input.limit ?? Number.MAX_SAFE_INTEGER,
+                  limit: input.limit ?? 100, // kilocode_change - bound omitted limits
                 })
                 .pipe(
                   Effect.map((result) =>

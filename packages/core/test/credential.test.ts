@@ -22,6 +22,54 @@ function testLayer(directory: string) {
 }
 
 describe("Credential", () => {
+  it.live("uses KILO_AUTH_CONTENT as isolated process-local credentials", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const previous = process.env.KILO_AUTH_CONTENT
+        process.env.KILO_AUTH_CONTENT = JSON.stringify({
+          kilocode: {
+            type: "oauth",
+            refresh: "refresh",
+            access: "access",
+            expires: 123,
+            accountId: "organization",
+          },
+        })
+        return previous
+      }),
+      () =>
+        Effect.acquireRelease(
+          Effect.promise(() => tmpdir()),
+          (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+        ).pipe(
+          Effect.flatMap((tmp) =>
+            Effect.gen(function* () {
+              const service = yield* Credential.Service
+              const all = yield* service.all()
+              expect(all).toHaveLength(1)
+              expect(yield* service.active(Connector.ID.make("kilocode"))).toMatchObject({
+                connectorID: Connector.ID.make("kilocode"),
+                methodID: Connector.MethodID.make("oauth"),
+                label: "Environment",
+                value: {
+                  type: "oauth",
+                  refresh: "refresh",
+                  access: "access",
+                  expires: 123,
+                  metadata: { accountID: "organization" },
+                },
+              })
+            }).pipe(Effect.provide(testLayer(tmp.path))),
+          ),
+        ),
+      (previous) =>
+        Effect.sync(() => {
+          if (previous === undefined) delete process.env.KILO_AUTH_CONTENT
+          else process.env.KILO_AUTH_CONTENT = previous
+        }),
+    ),
+  )
+
   it.live("imports supported legacy auth.json credentials once", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),

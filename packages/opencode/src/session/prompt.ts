@@ -83,6 +83,7 @@ import { SessionTable } from "@opencode-ai/core/session/sql"
 import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -161,6 +162,7 @@ export const layer = Layer.effect(
     const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
+    const cache = Option.getOrUndefined(yield* Effect.serviceOption(RepositoryCache.Service)) // kilocode_change
     const { db } = database
     const ops = Effect.fn("SessionPrompt.ops")(function* () {
       return {
@@ -193,6 +195,7 @@ export const layer = Layer.effect(
         const reference = refs.find((item) => item.name === alias)
         if (!reference) continue
         seen.add(alias)
+        if (reference.kind === "git" && cache) yield* KiloConfiguredReference.ensure(cache, reference) // kilocode_change
         const start = match.index ?? 0
         parts.push({
           type: "file",
@@ -1123,8 +1126,7 @@ export const layer = Layer.effect(
                 const context = ctx()
                 const explicit = reference ? yield* KiloReference.path(fsys, reference.root, file.target) : false
                 const referenced =
-                  explicit ||
-                  (yield* KiloReference.contains({ fs: fsys, references, target: file.target }))
+                  explicit || (yield* KiloReference.contains({ fs: fsys, references, target: file.target }))
                 yield* assertExternalDirectoryEffect(context, file.target, { bypass: referenced, kind: "file" })
                 yield* context.ask({
                   permission: "read",
@@ -2146,6 +2148,7 @@ export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() =>
       Layer.provide(LSP.defaultLayer),
       Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(Truncate.defaultLayer),
+      Layer.provide(RepositoryCache.defaultLayer), // kilocode_change
     )
     .pipe(
       Layer.provide(Provider.defaultLayer),
@@ -2307,6 +2310,8 @@ const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
 const placeholderRegex = /\$(\d+)/g
 const quoteTrimRegex = /^["']|["']$/g
 
+const repositoryCacheNode = LayerNode.make(RepositoryCache.defaultLayer, []) // kilocode_change
+
 export const node = LayerNode.make(layer, [
   SessionStatus.node,
   Session.node,
@@ -2335,6 +2340,7 @@ export const node = LayerNode.make(layer, [
   RuntimeFlags.node,
   Database.node,
   Question.node, // kilocode_change
+  repositoryCacheNode, // kilocode_change
 ])
 
 export * as SessionPrompt from "./prompt"

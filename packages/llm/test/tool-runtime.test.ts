@@ -254,6 +254,31 @@ describe("LLMClient tools", () => {
     }),
   )
 
+  it.effect("decodes persisted legacy tool media and file content", () =>
+    Effect.sync(() => {
+      const decode = Schema.decodeUnknownSync(ToolContent)
+      expect(decode({ type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" })).toEqual({
+        type: "file",
+        uri: "data:image/png;base64,AAAA",
+        mime: "image/png",
+        name: "image.png",
+      })
+      expect(
+        decode({
+          type: "file",
+          source: { type: "url", url: "https://example.test/image.png" },
+          mime: "image/png",
+          name: "image.png",
+        }),
+      ).toEqual({
+        type: "file",
+        uri: "https://example.test/image.png",
+        mime: "image/png",
+        name: "image.png",
+      })
+    }),
+  )
+
   it.effect("preserves canonical tool file URIs", () =>
     Effect.sync(() => {
       expect(

@@ -133,11 +133,18 @@ jobs:
 
       - name: Run non-CLI unit tests
         if: matrix.settings.run && matrix.settings.packages
-        run: bun turbo test --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
+        run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
+
+      # kilocode_change start - validate the Darwin profile independently before it can suppress its own tests
+      - name: Validate Darwin CLI test profile
+        if: matrix.settings.run && matrix.settings.os == 'macos'
+        working-directory: packages/opencode
+        run: bun test test/kilocode/test-profile.test.ts
+      # kilocode_change end
 
       - name: Run CLI unit tests
         if: matrix.settings.run
-        run: bun turbo test --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
+        run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}

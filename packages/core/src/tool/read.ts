@@ -1,12 +1,10 @@
 export * as ReadTool from "./read"
 
 import { ToolFailure } from "@opencode-ai/llm"
-import path from "path"
 import { Effect, Layer, Schema } from "effect"
 import { FileSystem } from "../filesystem"
-import { FSUtil } from "../fs-util"
 import { Image } from "../image"
-import { Location } from "../location"
+import { LocationMutation } from "../location-mutation" // kilocode_change
 import { PermissionV2 } from "../permission"
 import { AbsolutePath } from "../schema"
 import { ReadToolFileSystem } from "./read-filesystem"
@@ -30,9 +28,8 @@ const Output = Schema.Union([FileSystem.Content, ReadToolFileSystem.TextPage, Re
 export const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
-    const fs = yield* FSUtil.Service
     const reader = yield* ReadToolFileSystem.Service
-    const location = yield* Location.Service
+    const mutation = yield* LocationMutation.Service // kilocode_change
     const image = yield* Image.Service
     const permission = yield* PermissionV2.Service
 
@@ -53,17 +50,20 @@ export const layer = Layer.effectDiscard(
           },
           execute: (input, context) => {
             return Effect.gen(function* () {
-              const absolute = path.resolve(location.directory, input.path)
-              const selected = path.isAbsolute(input.path) ? path.dirname(absolute) : location.directory
-              if (!path.isAbsolute(input.path) && !FSUtil.contains(location.directory, absolute))
-                return yield* Effect.die(new Error("Path escapes the allowed read root"))
-              const real = yield* fs.realPath(absolute).pipe(Effect.orDie)
-              const root = yield* fs.realPath(selected).pipe(Effect.orDie)
-              if (!FSUtil.contains(root, real))
-                return yield* Effect.die(new Error("Path escapes the allowed read root"))
-              const resource = path.relative(root, real).replaceAll("\\", "/") || "."
-              const target = AbsolutePath.make(real)
+              // kilocode_change start - retain external-directory authorization and canonical resources
+              const resolved = yield* mutation.resolve({ path: input.path })
+              const resource = resolved.resource
+              const target = AbsolutePath.make(resolved.canonical)
               const type = yield* reader.inspect(target)
+              if (resolved.externalDirectory) {
+                yield* permission.assert({
+                  ...LocationMutation.externalDirectoryPermission(resolved.externalDirectory),
+                  sessionID: context.sessionID,
+                  agent: context.agent,
+                  source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+                })
+              }
+              // kilocode_change end
               yield* permission.assert({
                 action: name,
                 resources: [resource],

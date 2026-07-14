@@ -236,17 +236,23 @@ export const read = Effect.fn("ReadTool.read")(function* (
           discard = false
           text = text.slice(index + 1)
           append(current.endsWith("\r") ? current.slice(0, -1) : current)
+          if (truncated) break // kilocode_change - stop after the first extra line proves another page exists
         }
       }
       yield* Effect.sync(() => consume(first))
       while (true) {
+        if (truncated) break // kilocode_change
         const chunk = yield* file.readAlloc(64 * 1024).pipe(Effect.orDie)
         if (Option.isNone(chunk)) break
         yield* Effect.sync(() => consume(chunk.value))
       }
-      const tail = yield* Effect.sync(() => decoder.decode())
-      if (!discard) pending += tail
-      if (pending) append(pending.endsWith("\r") ? pending.slice(0, -1) : pending)
+      // kilocode_change start - a completed page must not decode the rest of the file
+      if (!truncated) {
+        const tail = yield* Effect.sync(() => decoder.decode())
+        if (!discard) pending += tail
+        if (pending) append(pending.endsWith("\r") ? pending.slice(0, -1) : pending)
+      }
+      // kilocode_change end
       if (!found && offset !== 1) return yield* Effect.die(new Error(`Offset ${offset} is out of range`))
       return new TextPage({
         type: "text-page",

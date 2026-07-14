@@ -764,7 +764,6 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
   switch (model.api.npm) {
     case "@kilocode/kilo-gateway": // kilocode_change
-    case "@openrouter/ai-sdk-provider":
       // kilocode_change start
       if (id.includes("glm") || id.includes("kimi") || id.includes("qwen") || id.includes("minimax")) {
         return {
@@ -781,9 +780,27 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       )
         return {}
       return Object.fromEntries(
-        (model.api.npm === "@kilocode/kilo-gateway" || !id.includes("gpt") // kilocode_change
-          ? OPENAI_EFFORTS
-          : openaiCompatibleReasoningEfforts(model.api.id)
+        OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]), // kilocode_change
+      )
+
+    case "@openrouter/ai-sdk-provider":
+      // kilocode_change start - preserve Kilo thinking toggles for supported OpenRouter models
+      if (id.includes("glm") || id.includes("kimi") || id.includes("qwen") || id.includes("minimax")) {
+        return {
+          instant: { reasoning: { enabled: false } },
+          thinking: { reasoning: { enabled: true } },
+        }
+      }
+      // kilocode_change end
+      // kilocode_change start - Mercury exposes the full OpenRouter effort set
+      if (model.id.includes("mercury")) {
+        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
+      }
+      // kilocode_change end
+      return Object.fromEntries(
+        (model.api.id.startsWith("openai/") || id.includes("gpt")
+          ? openaiCompatibleReasoningEfforts(model.api.id)
+          : WIDELY_SUPPORTED_EFFORTS
         ).map((effort) => [effort, { reasoning: { effort } }]),
       )
 

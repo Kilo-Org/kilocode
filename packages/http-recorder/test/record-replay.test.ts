@@ -338,7 +338,7 @@ describe("http-recorder", () => {
       }).pipe(
         Effect.scoped,
         Effect.provide(
-          HttpRecorder.socket("websocket/public-layer", { directory }).pipe(
+          HttpRecorder.socket("websocket/public-layer", { directory, mode: "auto" }).pipe(
             Layer.provide(
               Layer.succeed(
                 Socket.Socket,

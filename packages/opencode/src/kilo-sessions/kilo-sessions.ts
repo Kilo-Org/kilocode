@@ -349,8 +349,10 @@ export namespace KiloSessions {
                 if (type === undefined) return
                 const fn = handlers.get(type)
                 if (!fn) return
-                Promise.resolve(fn({ properties: event.payload!.properties })).catch((cause) =>
-                  log.error("subscriber failed", { type, cause }),
+                // Instance.restore: handlers run async work after the emitting fiber's
+                // synchronous window, where fiber-scoped InstanceRef is no longer visible.
+                Promise.resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))).catch(
+                  (cause) => log.error("subscriber failed", { type, cause }),
                 )
               }
               GlobalBus.on("event", handler)
