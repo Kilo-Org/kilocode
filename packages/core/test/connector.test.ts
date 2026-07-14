@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Duration, Effect, Exit, Layer, Scope } from "effect"
+import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer, Scope } from "effect" // kilocode_change
 import * as TestClock from "effect/testing/TestClock"
 import { Connector } from "@opencode-ai/core/connector"
 import { Credential } from "@opencode-ai/core/credential"
@@ -396,6 +396,166 @@ describe("Connector", () => {
     }).pipe(Effect.provide(failed))
   })
 
+  // kilocode_change start - verify atomic OAuth persistence and cancellation
+  it.effect("fails code OAuth when credential persistence fails", () => {
+    const failed = Connector.locationLayer.pipe(
+      Layer.provide(EventV2.defaultLayer),
+      Layer.provide(
+        Layer.mock(Credential.Service)({
+          create: () => Effect.die(new Error("database unavailable")),
+        }),
+      ),
+    )
+    return Effect.gen(function* () {
+      const connectors = yield* Connector.Service
+      const connectorID = Connector.ID.make("openai")
+      const methodID = Connector.MethodID.make("chatgpt")
+      yield* connectors.update((editor) =>
+        editor.method.update({
+          connectorID,
+          method: new Connector.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () =>
+                Effect.succeed(
+                  new Credential.OAuth({ type: "oauth", access: "access", refresh: "refresh", expires: 1 }),
+                ),
+            }),
+        }),
+      )
+
+      const attempt = yield* connectors.connect.oauth.begin({ connectorID, methodID, inputs: {} })
+      const exit = yield* connectors.connect.oauth
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.exit)
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain("database unavailable")
+      expect(yield* connectors.connect.oauth.status(attempt.attemptID)).toMatchObject({
+        status: "failed",
+        message: expect.stringContaining("database unavailable"),
+      })
+    }).pipe(Effect.provide(failed))
+  })
+
+  it.effect("lets OAuth persistence finish after concurrent cancellation", () =>
+    Effect.gen(function* () {
+      const started = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      const created: Credential.Info[] = []
+      const delayed = Connector.locationLayer.pipe(
+        Layer.provide(EventV2.defaultLayer),
+        Layer.provide(
+          Layer.mock(Credential.Service)({
+            create: (input) =>
+              Effect.gen(function* () {
+                yield* Deferred.succeed(started, undefined)
+                yield* Deferred.await(release)
+                const credential = new Credential.Info({
+                  id: Credential.ID.create(),
+                  ...input,
+                  label: input.label ?? "default",
+                })
+                created.push(credential)
+                return credential
+              }),
+          }),
+        ),
+      )
+
+      yield* Effect.gen(function* () {
+        const connectors = yield* Connector.Service
+        const connectorID = Connector.ID.make("openai")
+        const methodID = Connector.MethodID.make("chatgpt")
+        yield* connectors.update((editor) =>
+          editor.method.update({
+            connectorID,
+            method: new Connector.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+            authorize: () =>
+              Effect.succeed({
+                mode: "code" as const,
+                url: "https://example.com/authorize",
+                instructions: "Paste the code",
+                callback: () =>
+                  Effect.succeed(
+                    new Credential.OAuth({ type: "oauth", access: "access", refresh: "refresh", expires: 1 }),
+                  ),
+              }),
+          }),
+        )
+
+        const attempt = yield* connectors.connect.oauth.begin({ connectorID, methodID, inputs: {} })
+        const fiber = yield* connectors.connect.oauth
+          .complete({ attemptID: attempt.attemptID, code: "1234" })
+          .pipe(Effect.forkScoped)
+        yield* Deferred.await(started)
+        yield* connectors.connect.oauth.cancel(attempt.attemptID)
+        yield* Deferred.succeed(release, undefined)
+        yield* Fiber.join(fiber)
+
+        expect(created).toHaveLength(1)
+        expect(yield* connectors.connect.oauth.status(attempt.attemptID)).toEqual({
+          status: "complete",
+          time: attempt.time,
+        })
+      }).pipe(Effect.provide(delayed))
+    }),
+  )
+
+  it.effect("fails and releases OAuth attempts when credential persistence times out", () =>
+    Effect.gen(function* () {
+      const started = yield* Deferred.make<void>()
+      let closed = false
+      const stalled = Connector.locationLayer.pipe(
+        Layer.provide(EventV2.defaultLayer),
+        Layer.provide(
+          Layer.mock(Credential.Service)({
+            create: () => Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
+          }),
+        ),
+      )
+
+      yield* Effect.gen(function* () {
+        const connectors = yield* Connector.Service
+        const connectorID = Connector.ID.make("openai")
+        const methodID = Connector.MethodID.make("chatgpt")
+        yield* connectors.update((editor) =>
+          editor.method.update({
+            connectorID,
+            method: new Connector.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+            authorize: () =>
+              Effect.addFinalizer(() => Effect.sync(() => (closed = true))).pipe(
+                Effect.as({
+                  mode: "code" as const,
+                  url: "https://example.com/authorize",
+                  instructions: "Paste the code",
+                  callback: () =>
+                    Effect.succeed(
+                      new Credential.OAuth({ type: "oauth", access: "access", refresh: "refresh", expires: 1 }),
+                    ),
+                }),
+              ),
+          }),
+        )
+
+        const attempt = yield* connectors.connect.oauth.begin({ connectorID, methodID, inputs: {} })
+        const fiber = yield* connectors.connect.oauth
+          .complete({ attemptID: attempt.attemptID, code: "1234" })
+          .pipe(Effect.exit, Effect.forkScoped)
+        yield* Deferred.await(started)
+        yield* TestClock.adjust(Duration.seconds(30))
+        const exit = yield* Fiber.join(fiber)
+        expect(Exit.isFailure(exit)).toBe(true)
+        yield* Effect.yieldNow
+        expect(yield* connectors.connect.oauth.status(attempt.attemptID)).toMatchObject({ status: "failed" })
+        expect(closed).toBe(true)
+      }).pipe(Effect.provide(stalled))
+    }),
+  )
+
+  // kilocode_change end
   it.effect("expires abandoned OAuth attempts", () => {
     const created: Array<{
       connectorID: Connector.ID

@@ -29,6 +29,7 @@ import { logFailure } from "./session/logging"
 import { MessageDecodeError } from "./session/error"
 import { SessionEvent } from "./session/event"
 import { SessionInput } from "./session/input"
+import { normalize } from "./kilocode/session-message" // kilocode_change
 
 // get project -> project.locations
 //
@@ -186,7 +187,8 @@ export const layer = Layer.effect(
       )
 
     const decode = (row: typeof SessionMessageTable.$inferSelect) =>
-      decodeMessage({ ...row.data, id: row.id, type: row.type }).pipe(
+      decodeMessage(normalize({ ...row.data, id: row.id, type: row.type })).pipe(
+        // kilocode_change - normalize released tool content on paginated reads
         Effect.mapError(
           () =>
             new MessageDecodeError({

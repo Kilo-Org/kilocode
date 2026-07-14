@@ -566,6 +566,273 @@ test("preserves live events while message hydration is in flight", async () => {
   }
 })
 
+test("does not replay live events already represented by the hydration snapshot", async () => {
+  const events = createEventSource()
+  const response = Promise.withResolvers<Response>()
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session/session-1/message") return response.promise
+    return undefined
+  })
+  let data!: ReturnType<typeof useData>
+  let ready!: () => void
+  const mounted = new Promise<void>((resolve) => {
+    ready = resolve
+  })
+
+  function Probe() {
+    data = useData()
+    onMount(ready)
+    return <box />
+  }
+
+  const app = await testRender(() => (
+    <TestTuiContexts>
+      <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
+        <ProjectProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
+        </ProjectProvider>
+      </SDKProvider>
+    </TestTuiContexts>
+  ))
+
+  try {
+    await mounted
+    const hydration = data.session.message.refresh("session-1")
+    emitEvent(events, {
+      id: "evt_step_1",
+      type: "session.next.step.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_1",
+        timestamp: 1,
+        agent: "build",
+        model: { id: "model", providerID: "provider" },
+      },
+    })
+    emitEvent(events, {
+      id: "evt_text_started_1",
+      type: "session.next.text.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_1",
+        timestamp: 2,
+        textID: "text-1",
+      },
+    })
+    emitEvent(events, {
+      id: "evt_text_delta_1",
+      type: "session.next.text.delta",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_1",
+        timestamp: 3,
+        textID: "text-1",
+        delta: "hello",
+      },
+    })
+    await wait(() => {
+      const message = data.session.message.list("session-1")?.[0]
+      return message?.type === "assistant" && message.content[0]?.type === "text" && message.content[0].text === "hello"
+    })
+    response.resolve(
+      json({
+        data: [
+          {
+            id: "msg_assistant_1",
+            type: "assistant",
+            agent: "build",
+            model: { id: "model", providerID: "provider" },
+            content: [{ type: "text", id: "text-1", text: "hello" }],
+            time: { created: 1 },
+          },
+        ],
+      }),
+    )
+    await hydration
+
+    const message = data.session.message.list("session-1")?.[0]
+    expect(message?.type).toBe("assistant")
+    if (message?.type !== "assistant") return
+    expect(message.content).toEqual([{ type: "text", id: "text-1", text: "hello" }])
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("keeps a complete hydration snapshot over a partial new live assistant", async () => {
+  const events = createEventSource()
+  const response = Promise.withResolvers<Response>()
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session/session-1/message") return response.promise
+    return undefined
+  })
+  let data!: ReturnType<typeof useData>
+  let ready!: () => void
+  const mounted = new Promise<void>((resolve) => {
+    ready = resolve
+  })
+
+  function Probe() {
+    data = useData()
+    onMount(ready)
+    return <box />
+  }
+
+  const app = await testRender(() => (
+    <TestTuiContexts>
+      <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
+        <ProjectProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
+        </ProjectProvider>
+      </SDKProvider>
+    </TestTuiContexts>
+  ))
+
+  try {
+    await mounted
+    const hydration = data.session.message.refresh("session-1")
+    emitEvent(events, {
+      id: "evt_step_partial",
+      type: "session.next.step.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_partial",
+        timestamp: 1,
+        agent: "build",
+        model: { id: "model", providerID: "provider" },
+      },
+    })
+    response.resolve(
+      json({
+        data: [
+          {
+            id: "msg_assistant_partial",
+            type: "assistant",
+            agent: "build",
+            model: { id: "model", providerID: "provider" },
+            content: [{ type: "text", id: "text-1", text: "complete output" }],
+            finish: "stop",
+            time: { created: 1, completed: 4 },
+          },
+        ],
+      }),
+    )
+    await hydration
+
+    expect(JSON.parse(JSON.stringify(data.session.message.list("session-1")?.[0]))).toMatchObject({
+      finish: "stop",
+      time: { created: 1, completed: 4 },
+      content: [{ type: "text", id: "text-1", text: "complete output" }],
+    })
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
+test("keeps complete snapshot content over a partial live delta", async () => {
+  const events = createEventSource()
+  const response = Promise.withResolvers<Response>()
+  const calls = createFetch((url) => {
+    if (url.pathname === "/api/session/session-1/message") return response.promise
+    return undefined
+  })
+  let data!: ReturnType<typeof useData>
+  let ready!: () => void
+  const mounted = new Promise<void>((resolve) => {
+    ready = resolve
+  })
+
+  function Probe() {
+    data = useData()
+    onMount(ready)
+    return <box />
+  }
+
+  const app = await testRender(() => (
+    <TestTuiContexts>
+      <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
+        <ProjectProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
+        </ProjectProvider>
+      </SDKProvider>
+    </TestTuiContexts>
+  ))
+
+  try {
+    await mounted
+    emitEvent(events, {
+      id: "evt_step_existing",
+      type: "session.next.step.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_existing",
+        timestamp: 1,
+        agent: "build",
+        model: { id: "model", providerID: "provider" },
+      },
+    })
+    await wait(() => data.session.message.list("session-1")?.[0]?.id === "msg_assistant_existing")
+    const hydration = data.session.message.refresh("session-1")
+    emitEvent(events, {
+      id: "evt_text_started_partial",
+      type: "session.next.text.started",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_existing",
+        timestamp: 2,
+        textID: "text-1",
+      },
+    })
+    emitEvent(events, {
+      id: "evt_text_delta_partial",
+      type: "session.next.text.delta",
+      properties: {
+        sessionID: "session-1",
+        assistantMessageID: "msg_assistant_existing",
+        timestamp: 3,
+        textID: "text-1",
+        delta: "partial",
+      },
+    })
+    response.resolve(
+      json({
+        data: [
+          {
+            id: "msg_assistant_existing",
+            type: "assistant",
+            agent: "build",
+            model: { id: "model", providerID: "provider" },
+            content: [{ type: "text", id: "text-1", text: "partial and complete" }],
+            finish: "stop",
+            time: { created: 1, completed: 5 },
+          },
+        ],
+      }),
+    )
+    await hydration
+
+    expect(JSON.parse(JSON.stringify(data.session.message.list("session-1")?.[0]))).toMatchObject({
+      finish: "stop",
+      time: { created: 1, completed: 5 },
+      content: [{ type: "text", id: "text-1", text: "partial and complete" }],
+    })
+  } finally {
+    app.renderer.destroy()
+  }
+})
+
 test("replaces stale cached messages while preserving in-flight live messages", async () => {
   const events = createEventSource()
   const response = Promise.withResolvers<Response>()

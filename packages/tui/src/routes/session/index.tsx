@@ -267,7 +267,9 @@ export function Session() {
   const terminal = createMemo(() => terminals()[0])
   const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
   const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
-  const question = createMemo(() => blockingQuestions()[0] ?? nonBlockingQuestions()[0])
+  const question = createMemo(
+    () => blockingQuestions()[0] ?? (network().length === 0 ? nonBlockingQuestions()[0] : undefined),
+  )
   const blockingSuggestions = createMemo(() => suggestions().filter((s) => s.blocking !== false))
   // non-blocking ones render inline at the tool-part slot via `SuggestBar`.
   const blockingSuggestion = createMemo(() => blockingSuggestions()[0])

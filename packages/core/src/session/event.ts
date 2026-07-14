@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { ProviderMetadata, ToolContent } from "@opencode-ai/llm"
+import { ProviderMetadata, StoredToolContent, ToolContent } from "@opencode-ai/llm" // kilocode_change - durable events decode legacy content
 import { EventV2 } from "../event"
 import { ModelV2 } from "../model"
 import { NonNegativeInt } from "../schema"
@@ -354,33 +354,43 @@ export namespace Tool {
    * Replayable bounded running-tool state. Tools should checkpoint semantic
    * transitions or at a bounded cadence, not persist every stdout/stderr chunk.
    */
+  // kilocode_change start - keep legacy persistence decoding out of public event schemas
+  const ProgressFields = {
+    ...ToolBase,
+    structured: Schema.Record(Schema.String, Schema.Any),
+    content: Schema.Array(ToolContent),
+  }
   export const Progress = EventV2.define({
     type: "session.next.tool.progress",
-    ...options,
-    schema: {
-      ...ToolBase,
-      structured: Schema.Record(Schema.String, Schema.Any),
-      content: Schema.Array(ToolContent),
+    sync: {
+      ...options.sync,
+      codec: Schema.Struct({ ...ProgressFields, content: Schema.Array(StoredToolContent) }), // kilocode_change
     },
+    schema: ProgressFields,
   })
   export type Progress = typeof Progress.Type
 
+  const SuccessFields = {
+    ...ToolBase,
+    structured: Schema.Record(Schema.String, Schema.Any),
+    content: Schema.Array(ToolContent),
+    outputPaths: Schema.Array(Schema.String).pipe(Schema.optional),
+    result: Schema.Unknown.pipe(Schema.optional),
+    provider: Schema.Struct({
+      executed: Schema.Boolean,
+      metadata: ProviderMetadata.pipe(Schema.optional),
+    }),
+  }
   export const Success = EventV2.define({
     type: "session.next.tool.success",
-    ...options,
-    schema: {
-      ...ToolBase,
-      structured: Schema.Record(Schema.String, Schema.Any),
-      content: Schema.Array(ToolContent),
-      outputPaths: Schema.Array(Schema.String).pipe(Schema.optional),
-      result: Schema.Unknown.pipe(Schema.optional),
-      provider: Schema.Struct({
-        executed: Schema.Boolean,
-        metadata: ProviderMetadata.pipe(Schema.optional),
-      }),
+    sync: {
+      ...options.sync,
+      codec: Schema.Struct({ ...SuccessFields, content: Schema.Array(StoredToolContent) }), // kilocode_change
     },
+    schema: SuccessFields,
   })
   export type Success = typeof Success.Type
+  // kilocode_change end
 
   export const Failed = EventV2.define({
     type: "session.next.tool.failed",

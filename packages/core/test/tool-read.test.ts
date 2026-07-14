@@ -39,9 +39,12 @@ let configEntries: Config.Entry[] = []
 const reader = Layer.succeed(
   ReadToolFileSystem.Service,
   ReadToolFileSystem.Service.of({
-    inspect: () => (resolveFailure === undefined ? Effect.succeed(resolvedType) : Effect.die(resolveFailure)),
-    read: (input, _resource, page = {}) => {
-      readCalls.push({ input, page })
+    inspect: (input) =>
+      resolveFailure === undefined
+        ? Effect.succeed({ path: input, type: resolvedType, dev: 0, ino: 0 })
+        : Effect.die(resolveFailure),
+    read: (target, _resource, page = {}) => {
+      readCalls.push({ input: target.path, page })
       if (readFailure !== undefined) return Effect.die(readFailure)
       return Effect.succeed(readResult)
     },
@@ -167,21 +170,33 @@ describe("ReadTool", () => {
         },
       })
       expect(assertions).toMatchObject([{ sessionID, action: "read", resources: ["README.md"], save: ["*"] }])
-      expect(readCalls).toEqual([{ input: AbsolutePath.make(`${process.cwd()}/README.md`), page: {} }])
+      expect(readCalls).toEqual([
+        {
+          input: AbsolutePath.make(path.join(process.cwd(), "README.md")),
+          page: { offset: undefined, limit: undefined },
+        },
+      ])
     }),
   )
 
   it.effect("requires external-directory approval before reading an absolute path", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
+      const target = path.resolve("/tmp/external.txt")
+      const directory = path.dirname(target)
       yield* executeTool(registry, {
         sessionID,
         ...toolIdentity,
         call: { type: "tool-call", id: "call-external", name: "read", input: { path: "/tmp/external.txt" } },
       })
       expect(assertions).toMatchObject([
-        { sessionID, action: "external_directory", resources: ["/tmp/*"], save: ["/tmp/*"] },
-        { sessionID, action: "read", resources: ["/tmp/external.txt"], save: ["*"] },
+        {
+          sessionID,
+          action: "external_directory",
+          resources: [`${directory}/*`],
+          save: [`${directory}/*`],
+        },
+        { sessionID, action: "read", resources: [target], save: ["*"] },
       ])
     }),
   )
@@ -211,7 +226,12 @@ describe("ReadTool", () => {
           { type: "file", uri: `data:image/png;base64,${png}`, mime: "image/png", name: "pixel.png" },
         ],
       })
-      expect(readCalls).toEqual([{ input: AbsolutePath.make(`${process.cwd()}/pixel.png`), page: {} }])
+      expect(readCalls).toEqual([
+        {
+          input: AbsolutePath.make(path.join(process.cwd(), "pixel.png")),
+          page: { offset: undefined, limit: undefined },
+        },
+      ])
 
       const settled = yield* settleTool(registry, {
         sessionID,
@@ -469,7 +489,7 @@ describe("ReadTool", () => {
         ),
       ).toBe(true)
       expect(readCalls).toEqual([
-        { input: AbsolutePath.make(`${process.cwd()}/archive.dat`), page: { offset: 2, limit: 1 } },
+        { input: AbsolutePath.make(path.join(process.cwd(), "archive.dat")), page: { offset: 2, limit: 1 } },
       ])
     }),
   )
@@ -576,7 +596,7 @@ describe("ReadTool", () => {
         value: { type: "text-page", content: "hello", mime: "text/plain", offset: 2, truncated: true, next: 3 },
       })
       expect(readCalls).toEqual([
-        { input: AbsolutePath.make(`${process.cwd()}/large.txt`), page: { offset: 2, limit: 1 } },
+        { input: AbsolutePath.make(path.join(process.cwd(), "large.txt")), page: { offset: 2, limit: 1 } },
       ])
     }),
   )

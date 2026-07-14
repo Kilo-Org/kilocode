@@ -4456,34 +4456,7 @@ export type EventSessionNextToolProgress = {
     structured: {
       [key: string]: unknown
     }
-    content: Array<
-      | ToolTextContent
-      | ToolFileContent
-      | {
-          type: "file"
-          source:
-            | {
-                type: "data"
-                data: string
-              }
-            | {
-                type: "url"
-                url: string
-              }
-            | {
-                type: "file"
-                uri: string
-              }
-          mime: string
-          name?: string
-        }
-      | {
-          type: "media"
-          mediaType: string
-          data: string
-          filename?: string
-        }
-    >
+    content: Array<ToolTextContent | ToolFileContent>
   }
 }
 
@@ -4498,34 +4471,7 @@ export type EventSessionNextToolSuccess = {
     structured: {
       [key: string]: unknown
     }
-    content: Array<
-      | ToolTextContent
-      | ToolFileContent
-      | {
-          type: "file"
-          source:
-            | {
-                type: "data"
-                data: string
-              }
-            | {
-                type: "url"
-                url: string
-              }
-            | {
-                type: "file"
-                uri: string
-              }
-          mime: string
-          name?: string
-        }
-      | {
-          type: "media"
-          mediaType: string
-          data: string
-          filename?: string
-        }
-    >
+    content: Array<ToolTextContent | ToolFileContent>
     outputPaths?: Array<string>
     result?: unknown
     provider: {
@@ -5598,34 +5544,7 @@ export type SyncEventSessionNextToolProgress = {
       structured: {
         [key: string]: unknown
       }
-      content: Array<
-        | ToolTextContent
-        | ToolFileContent
-        | {
-            type: "file"
-            source:
-              | {
-                  type: "data"
-                  data: string
-                }
-              | {
-                  type: "url"
-                  url: string
-                }
-              | {
-                  type: "file"
-                  uri: string
-                }
-            mime: string
-            name?: string
-          }
-        | {
-            type: "media"
-            mediaType: string
-            data: string
-            filename?: string
-          }
-      >
+      content: Array<ToolTextContent | ToolFileContent>
     }
   }
 }
@@ -5646,34 +5565,7 @@ export type SyncEventSessionNextToolSuccess = {
       structured: {
         [key: string]: unknown
       }
-      content: Array<
-        | ToolTextContent
-        | ToolFileContent
-        | {
-            type: "file"
-            source:
-              | {
-                  type: "data"
-                  data: string
-                }
-              | {
-                  type: "url"
-                  url: string
-                }
-              | {
-                  type: "file"
-                  uri: string
-                }
-            mime: string
-            name?: string
-          }
-        | {
-            type: "media"
-            mediaType: string
-            data: string
-            filename?: string
-          }
-      >
+      content: Array<ToolTextContent | ToolFileContent>
       outputPaths?: Array<string>
       result?: unknown
       provider: {
@@ -5993,34 +5885,7 @@ export type SessionMessageToolStateRunning = {
   structured: {
     [key: string]: unknown
   }
-  content: Array<
-    | ToolTextContent
-    | ToolFileContent
-    | {
-        type: "file"
-        source:
-          | {
-              type: "data"
-              data: string
-            }
-          | {
-              type: "url"
-              url: string
-            }
-          | {
-              type: "file"
-              uri: string
-            }
-        mime: string
-        name?: string
-      }
-    | {
-        type: "media"
-        mediaType: string
-        data: string
-        filename?: string
-      }
-  >
+  content: Array<ToolTextContent | ToolFileContent>
 }
 
 export type SessionMessageToolStateCompleted = {
@@ -6029,34 +5894,7 @@ export type SessionMessageToolStateCompleted = {
     [key: string]: unknown
   }
   attachments?: Array<PromptFileAttachment>
-  content: Array<
-    | ToolTextContent
-    | ToolFileContent
-    | {
-        type: "file"
-        source:
-          | {
-              type: "data"
-              data: string
-            }
-          | {
-              type: "url"
-              url: string
-            }
-          | {
-              type: "file"
-              uri: string
-            }
-        mime: string
-        name?: string
-      }
-    | {
-        type: "media"
-        mediaType: string
-        data: string
-        filename?: string
-      }
-  >
+  content: Array<ToolTextContent | ToolFileContent>
   outputPaths?: Array<string>
   structured: {
     [key: string]: unknown
@@ -6069,34 +5907,7 @@ export type SessionMessageToolStateError = {
   input: {
     [key: string]: unknown
   }
-  content: Array<
-    | ToolTextContent
-    | ToolFileContent
-    | {
-        type: "file"
-        source:
-          | {
-              type: "data"
-              data: string
-            }
-          | {
-              type: "url"
-              url: string
-            }
-          | {
-              type: "file"
-              uri: string
-            }
-        mime: string
-        name?: string
-      }
-    | {
-        type: "media"
-        mediaType: string
-        data: string
-        filename?: string
-      }
-  >
+  content: Array<ToolTextContent | ToolFileContent>
   structured: {
     [key: string]: unknown
   }

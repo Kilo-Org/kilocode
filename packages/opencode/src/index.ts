@@ -85,7 +85,7 @@ let cli = yargs(args) // kilocode_change
     // kilocode_change start - retain Kilo process/run correlation metadata in startup logs
     Log.Default.info("opencode", {
       version: InstallationVersion,
-      args: process.argv.slice(2),
+      command: args[0] ?? "", // avoid persisting prompts, passwords, tokens, headers, or environment values
       process_role: metadata.processRole,
       run_id: metadata.runID,
     })

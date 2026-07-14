@@ -22,7 +22,8 @@ function testLayer(directory: string) {
 }
 
 describe("Credential", () => {
-  it.live("uses KILO_AUTH_CONTENT as isolated process-local credentials", () =>
+  // kilocode_change start - process-provided credentials remain isolated from durable storage
+  it.live("keeps valid KILO_AUTH_CONTENT credentials and isolated mutations process-local", () =>
     Effect.acquireUseRelease(
       Effect.sync(() => {
         const previous = process.env.KILO_AUTH_CONTENT
@@ -34,6 +35,9 @@ describe("Credential", () => {
             expires: 123,
             accountId: "organization",
           },
+          azure: { type: "api", key: "key" },
+          "https://config.example.com": { type: "wellknown", key: "TOKEN", token: "config-token" },
+          invalid: { type: "api" },
         })
         return previous
       }),
@@ -46,8 +50,9 @@ describe("Credential", () => {
             Effect.gen(function* () {
               const service = yield* Credential.Service
               const all = yield* service.all()
-              expect(all).toHaveLength(1)
-              expect(yield* service.active(Connector.ID.make("kilocode"))).toMatchObject({
+              expect(all).toHaveLength(2)
+              const initial = yield* service.active(Connector.ID.make("kilocode"))
+              expect(initial).toMatchObject({
                 connectorID: Connector.ID.make("kilocode"),
                 methodID: Connector.MethodID.make("oauth"),
                 label: "Environment",
@@ -59,6 +64,27 @@ describe("Credential", () => {
                   metadata: { accountID: "organization" },
                 },
               })
+              expect(initial).toBeDefined()
+              if (!initial) return
+
+              const created = yield* service.create({
+                connectorID: Connector.ID.make("kilocode"),
+                methodID: Connector.MethodID.make("api-key"),
+                label: "Temporary",
+                value: new Credential.Key({ type: "key", key: "temporary" }),
+              })
+              yield* service.update(created.id, { label: "Updated" })
+              expect((yield* service.active(Connector.ID.make("kilocode")))?.label).toBe("Updated")
+              yield* service.activate(initial.id)
+              expect((yield* service.active(Connector.ID.make("kilocode")))?.id).toBe(initial.id)
+              yield* service.remove(initial.id)
+              expect((yield* service.active(Connector.ID.make("kilocode")))?.id).toBe(created.id)
+
+              delete process.env.KILO_AUTH_CONTENT
+              const stored = yield* Effect.gen(function* () {
+                return yield* (yield* Credential.Service).all()
+              }).pipe(Effect.provide(testLayer(tmp.path)), Effect.scoped)
+              expect(stored).toEqual([])
             }).pipe(Effect.provide(testLayer(tmp.path))),
           ),
         ),
@@ -70,6 +96,7 @@ describe("Credential", () => {
     ),
   )
 
+  // kilocode_change end
   it.live("imports supported legacy auth.json credentials once", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),

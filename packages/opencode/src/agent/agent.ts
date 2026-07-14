@@ -404,8 +404,9 @@ export const layer = Layer.effect(
         }
 
         if (flags.experimentalScout) {
+          const references = cfg.references ?? cfg.reference ?? {} // kilocode_change - prefer the supported key
           const resolvedReferences = KiloReference.resolveAll({
-            references: cfg.reference ?? {}, // kilocode_change
+            references, // kilocode_change
             directory: ctx.directory,
             worktree: ctx.worktree,
           })
@@ -430,7 +431,7 @@ export const layer = Layer.effect(
                 }),
               ),
               prompt: referencePrompt(resolved),
-              options: { reference: cfg.reference?.[resolved.name], resolved },
+              options: { reference: references[resolved.name], resolved }, // kilocode_change
               mode: "subagent",
               native: false,
             }

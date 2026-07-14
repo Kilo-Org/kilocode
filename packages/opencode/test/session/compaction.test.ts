@@ -1303,8 +1303,8 @@ describe("session.compaction.process", () => {
           })
           .pipe(Effect.forkChild)
 
-        yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
-        // kilocode_change start - avoid a scheduler-sensitive inner deadline on loaded CI runners
+        // kilocode_change start - isolate cancellation from setup latency and scheduler-sensitive inner deadlines
+        yield* Deferred.await(ready).pipe(Effect.timeout("5 seconds"))
         yield* Fiber.interrupt(fiber)
         const exit = yield* Fiber.await(fiber)
         // kilocode_change end
@@ -1315,7 +1315,7 @@ describe("session.compaction.process", () => {
         }
       }).pipe(withCompaction({ llm: stub.layer, snapshot: snap })) // kilocode_change
     },
-    { git: true },
+    {}, // kilocode_change - isolate cancellation from git setup
   )
 
   itCompaction.instance(
@@ -1337,17 +1337,17 @@ describe("session.compaction.process", () => {
             })
             .pipe(Effect.forkChild)
 
-          yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
+          yield* Deferred.await(ready).pipe(Effect.timeout("5 seconds")) // kilocode_change - allow loaded CI setup
           yield* Fiber.interrupt(fiber)
-          const exit = yield* Fiber.await(fiber).pipe(Effect.timeout("250 millis"))
+          const exit = yield* Fiber.await(fiber) // kilocode_change - rely on the test deadline, not scheduler timing
           const all = yield* ssn.messages({ sessionID: session.id })
 
           expect(Exit.isFailure(exit)).toBe(true)
           if (Exit.isFailure(exit)) expect(Cause.hasInterrupts(exit.cause)).toBe(true)
           expect(all.some((msg) => msg.info.role === "assistant" && msg.info.summary)).toBe(false)
-        }).pipe(withCompaction({ plugin: plugin(ready) }))
+        }).pipe(withCompaction({ plugin: plugin(ready), snapshot: snap })) // kilocode_change - avoid git snapshot startup
       }),
-    { git: true },
+    {}, // kilocode_change - isolate cancellation from git setup
   )
 
   itCompaction.instance(

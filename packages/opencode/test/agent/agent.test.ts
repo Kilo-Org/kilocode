@@ -166,7 +166,7 @@ scout.instance("scout agent allows repo cloning and repo cache reads", () =>
 )
 
 scout.instance(
-  "reference config creates scout-backed subagents",
+  "references config creates scout-backed subagents",
   () =>
     Effect.gen(function* () {
       const agents = yield* load((svc) => svc.list())
@@ -178,6 +178,7 @@ scout.instance(
     }),
   {
     config: {
+      // kilocode_change - Scout-backed Kilo agents use the supported references config
       references: {
         effect: "github.com/effect/effect-smol",
         effectFull: {

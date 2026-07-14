@@ -178,10 +178,11 @@ export const layer = Layer.effect(
     })
 
     // kilocode_change start - preserve configured reference mentions on the Core reference architecture
-    const resolveReferenceParts = Effect.fnUntraced(function* (template: string) {
+    const resolveReferenceParts = Effect.fnUntraced(function* (template: string, skip = new Set<string>()) {
       const ctx = yield* InstanceState.context
+      const cfg = yield* config.get()
       const refs = KiloConfiguredReference.resolveAll({
-        references: (yield* config.get()).reference ?? {},
+        references: cfg.references ?? cfg.reference ?? {},
         directory: ctx.directory,
         worktree: ctx.worktree,
       }).filter((item) => item.kind !== "invalid")
@@ -195,11 +196,13 @@ export const layer = Layer.effect(
         const reference = refs.find((item) => item.name === alias)
         if (!reference) continue
         seen.add(alias)
+        const url = pathToFileURL(reference.path).href
+        if (skip.has(url)) continue
         if (reference.kind === "git" && cache) yield* KiloConfiguredReference.ensure(cache, reference) // kilocode_change
         const start = match.index ?? 0
         parts.push({
           type: "file",
-          url: pathToFileURL(reference.path).href,
+          url,
           filename: alias,
           mime: "application/x-directory",
           source: { type: "file", text: { value: match[0], start, end: start + match[0].length }, path: alias },
@@ -215,7 +218,9 @@ export const layer = Layer.effect(
       const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }, ...roots]
       const files = ConfigMarkdown.files(template)
       const seen = new Set<string>()
-      const aliases = new Set(roots.flatMap((part) => (part.type === "file" && part.filename ? [part.filename] : []))) // kilocode_change
+      const configured = new Set(
+        roots.flatMap((part) => (part.type === "file" && part.filename ? [part.filename] : [])),
+      ) // kilocode_change
       yield* Effect.forEach(
         files,
         Effect.fnUntraced(function* (match) {
@@ -223,7 +228,7 @@ export const layer = Layer.effect(
           if (!name) return
           // kilocode_change start - configured references were already added above
           const alias = name.split("/")[0]
-          if (alias && aliases.has(alias)) return
+          if (alias && configured.has(alias)) return
           // kilocode_change end
           if (seen.has(name)) return
           seen.add(name)
@@ -1243,9 +1248,11 @@ export const layer = Layer.effect(
       )
       for (const part of input.parts) {
         if (part.type !== "text" || part.synthetic) continue
-        for (const reference of yield* resolveReferenceParts(part.text)) {
+        for (const reference of yield* resolveReferenceParts(part.text, attached)) {
           if (reference.type === "file" && attached.has(reference.url)) continue
-          if (reference.type === "file") attached.add(reference.url)
+          if (reference.type === "file") {
+            attached.add(reference.url)
+          }
           submittedParts.push(reference)
         }
       }

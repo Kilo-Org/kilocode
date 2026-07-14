@@ -53,8 +53,7 @@ export const layer = Layer.effectDiscard(
               // kilocode_change start - retain external-directory authorization and canonical resources
               const resolved = yield* mutation.resolve({ path: input.path })
               const resource = resolved.resource
-              const target = AbsolutePath.make(resolved.canonical)
-              const type = yield* reader.inspect(target)
+              const target = yield* reader.inspect(AbsolutePath.make(resolved.canonical))
               if (resolved.externalDirectory) {
                 yield* permission.assert({
                   ...LocationMutation.externalDirectoryPermission(resolved.externalDirectory),
@@ -72,11 +71,12 @@ export const layer = Layer.effectDiscard(
                 agent: context.agent,
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
-              if (type === "directory") return yield* reader.list(target, { offset: input.offset, limit: input.limit })
+              if (target.type === "directory")
+                return yield* reader.list(target, { offset: input.offset, limit: input.limit }) // kilocode_change - approved identity
               const content = yield* reader.read(target, resource, {
                 offset: input.offset,
                 limit: input.limit,
-              })
+              }) // kilocode_change - approved identity
               if ("encoding" in content && content.encoding === "base64" && SUPPORTED_IMAGE_MIMES.has(content.mime)) {
                 return yield* image
                   .normalize(resource, { ...content, encoding: "base64" })

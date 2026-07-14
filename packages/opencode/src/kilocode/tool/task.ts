@@ -64,10 +64,15 @@ export namespace KiloTask {
     const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
-    return rules.filter(
-      (r: Permission.Rule) =>
-        r.action === "deny" && (r.permission === "edit" || r.permission === "bash" || isMcp(r.permission)),
+    const mutation = new Set(["edit", "bash", "notebook_edit", "notebook_execute"])
+    const inherited = rules.filter(
+      (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
     )
+    for (const permission of mutation) {
+      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
+      inherited.push({ permission, pattern: "*", action: "deny" })
+    }
+    return merge(inherited)
   }
 
   /** Extra permission rules appended to subagent sessions */

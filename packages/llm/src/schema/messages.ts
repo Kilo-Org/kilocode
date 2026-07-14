@@ -54,7 +54,10 @@ export const ToolFileContent = Schema.Struct({
 export type ToolFileContent = typeof ToolFileContent.Type
 
 /** Ordered, provider-independent content shown to models and UIs after a tool succeeds. */
-const CanonicalToolContent = Schema.Union([ToolTextContent, ToolFileContent]).pipe(Schema.toTaggedUnion("type"))
+// kilocode_change start - keep the public schema canonical while storage accepts released shapes
+export const ToolContent = Schema.Union([ToolTextContent, ToolFileContent]).pipe(Schema.toTaggedUnion("type"))
+export type ToolContent = Schema.Schema.Type<typeof ToolContent>
+// kilocode_change end
 
 // kilocode_change start - decode persisted V2 tool file shapes and legacy media results
 const LegacyToolFileContent = Schema.Struct({
@@ -73,10 +76,10 @@ const LegacyToolMediaContent = Schema.Struct({
   data: Schema.String,
   filename: Schema.optional(Schema.String),
 })
-const ToolContentInput = Schema.Union([CanonicalToolContent, LegacyToolFileContent, LegacyToolMediaContent])
+const ToolContentInput = Schema.Union([ToolContent, LegacyToolFileContent, LegacyToolMediaContent])
 
-export const ToolContent = ToolContentInput.pipe(
-  Schema.decodeTo(CanonicalToolContent, {
+export const StoredToolContent = ToolContentInput.pipe(
+  Schema.decodeTo(ToolContent, {
     decode: SchemaGetter.transform((item) => {
       if (item.type === "text" || (item.type === "file" && "uri" in item)) return item
       if (item.type === "media") {
@@ -99,7 +102,6 @@ export const ToolContent = ToolContentInput.pipe(
   }),
 )
 // kilocode_change end
-export type ToolContent = Schema.Schema.Type<typeof ToolContent>
 
 // kilocode_change start - avoid circular inference rejected by Kilo's newer tsgo
 const toolResultValueSchema = Schema.Union([

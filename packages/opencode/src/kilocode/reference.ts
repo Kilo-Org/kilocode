@@ -4,6 +4,7 @@ import { Global } from "@opencode-ai/core/global"
 import { parseRepositoryReference, repositoryCachePath, type RemoteReference } from "@/util/repository"
 import { Effect } from "effect"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache"
+import { isInterrupted } from "@/kilocode/effect/cause"
 
 export type Resolved =
   | {
@@ -101,8 +102,9 @@ export function resolveAll(input: { references: ConfigReference.Info; directory:
 export function ensure(cache: RepositoryCache.Interface, item: Extract<Resolved, { kind: "git" }>) {
   return cache.ensure({ reference: item.reference, branch: item.branch, refresh: true }).pipe(
     Effect.asVoid,
-    Effect.catchCause((cause) =>
-      Effect.logWarning("failed to materialize reference repository", { name: item.name, cause }),
-    ),
+    Effect.catchCause((cause) => {
+      if (isInterrupted(cause)) return Effect.interrupt
+      return Effect.logWarning("failed to materialize reference repository", { name: item.name, cause })
+    }),
   )
 }

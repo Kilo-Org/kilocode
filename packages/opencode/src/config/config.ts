@@ -399,7 +399,8 @@ export const layer = Layer.effect(
     const refreshGlobal = Effect.fnUntraced(function* () {
       const stamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
       if (!globalStamp || stamp === globalStamp) return false
-      globalStamp = stamp
+      // Keep globalStamp tied to config that loadGlobal completed. Advancing it
+      // before invalidation reloads can hide a stale cached value from the next check.
       yield* invalidateGlobal
       return true
     })

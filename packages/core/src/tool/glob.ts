@@ -5,6 +5,7 @@ import { Effect, Layer, Schema } from "effect"
 import path from "path"
 import { FileSystem } from "../filesystem"
 import { FSUtil } from "../fs-util" // kilocode_change
+import * as SearchTarget from "../kilocode/search-target" // kilocode_change
 import { Location } from "../location"
 import { Ripgrep } from "../ripgrep"
 import { RelativePath } from "../schema"
@@ -76,24 +77,30 @@ export const layer = Layer.effectDiscard(
               const requested = path.resolve(location.directory, input.path ?? ".")
               if (!FSUtil.contains(location.directory, requested))
                 return yield* Effect.fail(new Error("Path escapes the active Location"))
-              const root = yield* fs.realPath(location.directory)
-              const cwd = yield* fs.realPath(requested)
-              if (!FSUtil.contains(root, cwd)) return yield* Effect.fail(new Error("Path escapes the active Location"))
+              const root = yield* SearchTarget.inspect(fs, location.directory)
+              const target = yield* SearchTarget.inspect(fs, requested)
+              if (root.type !== "directory" || target.type !== "directory" || !FSUtil.contains(root.path, target.path))
+                return yield* Effect.fail(new Error("Path escapes the active Location"))
               // kilocode_change end
               return yield* ripgrep
                 .glob({
-                  cwd,
+                  cwd: target.path, // kilocode_change
                   pattern: input.pattern,
                   limit: input.limit ?? 100, // kilocode_change - bound omitted limits
+                  validate: SearchTarget.validate(fs, target), // kilocode_change - reject post-approval replacement
                 })
                 .pipe(
                   Effect.map((result) =>
                     result.map(
+                      // kilocode_change start - report paths from the canonical validated target
                       (entry) =>
                         new FileSystem.Entry({
                           ...entry,
-                          path: RelativePath.make(path.relative(location.directory, path.resolve(cwd, entry.path))),
+                          path: RelativePath.make(
+                            path.relative(location.directory, path.resolve(target.path, entry.path)),
+                          ),
                         }),
+                      // kilocode_change end
                     ),
                   ),
                 )

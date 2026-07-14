@@ -36,15 +36,12 @@ describe("Kilo reference compatibility", () => {
         Layer.provide(Git.defaultLayer),
         Layer.provide(deps),
       )
-      const layer = Reference.layer.pipe(
-        Layer.provide(cache),
-        Layer.provide(events),
-        Layer.provide(global),
-      )
+      const layer = Reference.layer.pipe(Layer.provide(cache), Layer.provide(events), Layer.provide(global))
 
       return Effect.gen(function* () {
         const previous = process.env.KILO_REPO_CLONE_GITHUB_BASE_URL
-        process.env.KILO_REPO_CLONE_GITHUB_BASE_URL = pathToFileURL(fixture.root + path.sep).href
+        const base = pathToFileURL(fixture.root).href
+        process.env.KILO_REPO_CLONE_GITHUB_BASE_URL = base.endsWith("/") ? base : `${base}/`
         yield* Effect.addFinalizer(() =>
           Effect.sync(() => {
             if (previous === undefined) delete process.env.KILO_REPO_CLONE_GITHUB_BASE_URL
@@ -59,20 +56,22 @@ describe("Kilo reference compatibility", () => {
 
         yield* update((editor) => editor.add("docs", source))
         yield* Effect.promise(() => content(file, "one\n"))
-        expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("one\n")
+        expect(normalize(yield* Effect.promise(() => fs.readFile(file, "utf8")))).toBe("one\n")
 
         yield* Effect.promise(() => commit(fixture.source, "two\n", "update"))
         yield* update((editor) => editor.add("docs", source))
         yield* Effect.promise(() => content(file, "two\n"))
-        expect(yield* Effect.promise(() => fs.readFile(file, "utf8"))).toBe("two\n")
+        expect(normalize(yield* Effect.promise(() => fs.readFile(file, "utf8")))).toBe("two\n")
       }).pipe(Effect.scoped, Effect.provide(layer))
     }),
   )
 })
 
+const normalize = (value: string) => value.replaceAll("\r\n", "\n")
+
 async function content(file: string, expected: string, retries = 100): Promise<void> {
   const value = await fs.readFile(file, "utf8").catch(() => undefined)
-  if (value === expected) return
+  if (value !== undefined && normalize(value) === expected) return
   if (retries === 0) throw new Error(`Timed out waiting for ${file} to contain ${JSON.stringify(expected)}`)
   await Bun.sleep(20)
   return content(file, expected, retries - 1)

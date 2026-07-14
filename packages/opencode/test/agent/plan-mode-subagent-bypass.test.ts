@@ -4,6 +4,7 @@ import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { deriveSubagentSessionPermission } from "../../src/agent/subagent-permissions"
 import { Permission } from "../../src/permission"
+import { KiloTask } from "../../src/kilocode/tool/task" // kilocode_change
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(Agent.defaultLayer)
@@ -157,3 +158,21 @@ it.effect("subagent inherits parent session deny rules as hard runtime ceilings"
     expect(Permission.evaluate("bash", "git status", effective).action).toBe("deny")
   }),
 )
+
+// kilocode_change start - preserve Plan mutation ceilings across Kilo task delegation
+it.instance("Plan delegation preserves notebook and process mutation ceilings", () =>
+  Effect.gen(function* () {
+    const caller = yield* Agent.use.get("plan")
+    expect(caller).toBeDefined()
+    const rules = KiloTask.inherited({
+      caller: caller!,
+      session: { permission: [] } as unknown as Parameters<typeof KiloTask.inherited>[0]["session"],
+      mcp: {},
+    })
+
+    expect(Permission.evaluate("notebook_edit", "notebook.ipynb", rules).action).toBe("deny")
+    expect(Permission.evaluate("notebook_execute", "notebook.ipynb", rules).action).toBe("deny")
+    expect(Permission.evaluate("bash", "bun run server.ts", rules).action).toBe("deny")
+  }),
+)
+// kilocode_change end
