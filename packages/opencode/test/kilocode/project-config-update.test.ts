@@ -66,6 +66,10 @@ const clear = () =>
 type Saved = {
   snapshot?: boolean
   username?: string
+  provider?: Record<string, unknown>
+  future?: {
+    nested?: string
+  }
   indexing?: {
     provider?: string
     openai?: {
@@ -222,6 +226,50 @@ test("project config update deletes present permission in plain json", async () 
       const saved = await readConfig(tmp.path)
       expect(saved.username).toBe("alice")
       expect(saved.permission?.["*"]).toEqual({ bash: "ask" })
+    },
+  })
+})
+
+test("project config update preserves root permission shorthand during a granular update", async () => {
+  await using tmp = await tmpdir()
+  await writeConfig(tmp.path, { permission: "deny" })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      await save({ permission: { bash: { "npm *": "allow" } } } as Config.Info)
+
+      const saved = await readConfig(tmp.path)
+      expect(saved.permission).toEqual({
+        "*": "deny",
+        bash: { "npm *": "allow" },
+      })
+    },
+  })
+})
+
+test("project config update prunes the final custom provider and preserves adjacent unknown config", async () => {
+  await using tmp = await tmpdir()
+  await writeConfig(tmp.path, {
+    provider: {
+      custom: {
+        name: "Custom Provider",
+        npm: "@ai-sdk/openai-compatible",
+      },
+    },
+    future: {
+      nested: "keep",
+    },
+  })
+
+  await provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      await save({ provider: { custom: null } } as Config.Info)
+
+      const saved = await readConfig(tmp.path)
+      expect(saved.provider).toBeUndefined()
+      expect(saved.future).toEqual({ nested: "keep" })
     },
   })
 })

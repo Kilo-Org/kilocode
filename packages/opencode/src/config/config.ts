@@ -503,13 +503,13 @@ function patchJsonc(input: string, patch: unknown, path: string[] = []): string 
   // scalar (e.g. permission.bash is "ask" as a string), jsonc-parser cannot
   // add child keys to it. Detect this case and replace the whole node with
   // the patch object in a single modify() call instead of recursing.
-  // For permission keys, promote the scalar to { "*": scalarValue } so the
+  // For permission paths, promote the scalar to { "*": scalarValue } so the
   // wildcard default is preserved. For other keys, replace directly.
   if (path.length > 0) {
     const tree = parseTree(input)
     const node = tree && findNodeAtLocation(tree, path)
     if (node && node.type !== "object") {
-      const isPermissionKey = path[0] === "permission" && path.length === 2
+      const isPermissionKey = path[0] === "permission"
       const replacement = isPermissionKey ? { "*": node.value, ...patch } : patch
       const edits = modify(input, path, replacement, {
         formattingOptions: { insertSpaces: true, tabSize: 2 },
@@ -519,7 +519,25 @@ function patchJsonc(input: string, patch: unknown, path: string[] = []): string 
   }
   // kilocode_change end
 
-  return Object.entries(patch).reduce((result, [key, value]) => patchJsonc(result, value, [...path, key]), input)
+  // kilocode_change start - remove a parent only when this patch empties it,
+  // matching stripNulls without touching unrelated preserved objects.
+  const tree = path.length > 0 ? parseTree(input) : undefined
+  const node = tree ? findNodeAtLocation(tree, path) : undefined
+  const populated = node?.type === "object" && !!node.children?.length
+  const updated = Object.entries(patch).reduce(
+    (result, [key, value]) => patchJsonc(result, value, [...path, key]),
+    input,
+  )
+  if (!populated) return updated
+
+  const next = parseTree(updated)
+  const current = next ? findNodeAtLocation(next, path) : undefined
+  if (current?.type !== "object" || current.children?.length) return updated
+  const edits = modify(updated, path, undefined, {
+    formattingOptions: { insertSpaces: true, tabSize: 2 },
+  })
+  return applyEdits(updated, edits)
+  // kilocode_change end
 }
 
 function writable(info: Info) {
