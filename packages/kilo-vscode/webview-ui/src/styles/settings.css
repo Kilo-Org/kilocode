@@ -121,6 +121,18 @@
   max-width: none;
 }
 
+[data-variant="model-input"] [data-slot="settings-row-input"] {
+  flex: 0 1 350px;
+  max-width: 100%;
+
+  .model-settings-control,
+  .model-settings-selector,
+  .model-settings-selector > [data-component="tooltip-trigger"],
+  [data-slot="popover-trigger"] {
+    width: 100%;
+  }
+}
+
 .settings-font-size-control {
   display: flex;
   align-items: center;

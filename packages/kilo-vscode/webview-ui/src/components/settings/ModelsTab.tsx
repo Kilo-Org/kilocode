@@ -106,6 +106,7 @@ const ModelsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.providers.defaultModel.title")}
           description={language.t("settings.providers.defaultModel.description")}
+          modelInput
         >
           <ModelSelectorBase
             value={parseModelString(config().model ?? undefined)}
@@ -120,6 +121,7 @@ const ModelsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.providers.smallModel.title")}
           description={language.t("settings.providers.smallModel.description")}
+          modelInput
         >
           <ModelSelectorBase
             value={parseModelString(config().small_model ?? undefined)}
@@ -135,17 +137,23 @@ const ModelsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.providers.subagentModel.title")}
           description={language.t("settings.providers.subagentModel.description")}
+          modelInput
         >
-          <div style={{ display: "flex", "flex-direction": "column", "align-items": "flex-end", gap: "8px" }}>
-            <ModelSelectorBase
-              value={subagentModel()}
-              onSelect={handleSubagentModelSelect}
-              placement="bottom-start"
-              allowClear
-              clearLabel={language.t("settings.providers.notSet")}
-              label={language.t("settings.providers.subagentModel.title")}
-              description={language.t("settings.providers.subagentModel.description")}
-            />
+          <div
+            class="model-settings-control"
+            style={{ display: "flex", "flex-direction": "column", "align-items": "flex-end", gap: "8px" }}
+          >
+            <div class="model-settings-selector">
+              <ModelSelectorBase
+                value={subagentModel()}
+                onSelect={handleSubagentModelSelect}
+                placement="bottom-start"
+                allowClear
+                clearLabel={language.t("settings.providers.notSet")}
+                label={language.t("settings.providers.subagentModel.title")}
+                description={language.t("settings.providers.subagentModel.description")}
+              />
+            </div>
             <Show when={subagentVariants().length > 0}>
               <ThinkingSelectorBase
                 variants={subagentVariants()}
@@ -163,6 +171,7 @@ const ModelsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.autocomplete.model.title")}
           description={language.t("settings.autocomplete.model.description")}
+          modelInput
         >
           <ModelSelectorBase
             value={getAutocompleteSelection(autocompleteProvider(), autocompleteModel())}
@@ -235,6 +244,7 @@ const ModelsTab: Component = () => {
             <SettingsRow
               title={agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}
               last={index() === allAgents().length - 1}
+              modelInput
             >
               <ModelSelectorBase
                 value={parseModelString(config().agent?.[agent.name]?.model ?? undefined)}
