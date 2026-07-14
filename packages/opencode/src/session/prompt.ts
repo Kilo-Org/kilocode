@@ -783,7 +783,7 @@ export const layer = Layer.effect(
         role: "user",
         sessionID: input.sessionID,
         time: { created: Date.now() },
-        tools: { ...input.tools, ...input.ephemeralTools },
+        tools: { ...input.tools, ...input.ephemeralTools }, // kilocode_change - apply non-persistent remote tool restrictions
         agent: ag.name,
         model: {
           providerID: model.providerID,
@@ -2096,9 +2096,11 @@ export const PromptInput = Schema.Struct({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
+  // kilocode_change start - per-message tool restrictions that do not update session permissions
   ephemeralTools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
     description: "@internal Tool toggles applied to this message without updating session permissions.",
   }),
+  // kilocode_change end
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
