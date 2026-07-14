@@ -42,6 +42,14 @@ const SuggestionData = z.object({
   index: z.number().int().nonnegative(),
 })
 
+// kilocode_change start - create_session: strict v1 request, no other fields accepted
+const CreateSessionRequest = z
+  .object({
+    protocolVersion: z.literal(1),
+  })
+  .strict()
+// kilocode_change end
+
 const decodeSessionID = Schema.decodeUnknownOption(SessionID)
 
 // kilocode_change start - redact anything but the error class so messages/credentials
@@ -111,7 +119,19 @@ export namespace RemoteSender {
     session?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly children: (sessionID: SessionID) => Promise<Session.Info[]>
+      // kilocode_change start - injectable create hook for create_session.
+      // create_session only ever calls `create({})` for a root session, so the
+      // test hook is typed as the loose `() => Promise<Session.Info>` shape.
+      // Production falls back to Session.Service.create with `{}`.
+      readonly create?: (input?: Record<string, never>) => Promise<Session.Info>
+      // kilocode_change end
     }
+    // kilocode_change start - duplicate-safe attach hook used by create_session.
+    // Production wires this to KiloSessions.attachRemoteSession so the attached
+    // set is mutated exactly once and the relay heartbeat fires only when the
+    // set actually changes.
+    attachSession?: (sessionID: SessionID) => Promise<void>
+    // kilocode_change end
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -200,6 +220,22 @@ export namespace RemoteSender {
         return AppRuntime.runPromise(Session.Service.use((svc) => svc.children(sessionID)))
       },
     }
+    // kilocode_change start - session create + duplicate-safe attach used by create_session
+    const sessionCreate =
+      session.create ??
+      (async (input?: Record<string, never>) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(
+          Session.Service.use((svc) => svc.create(input as Parameters<typeof svc.create>[0])),
+        )
+      })
+    const attachSession =
+      options.attachSession ??
+      (async (id: SessionID) => {
+        const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+        await KiloSessions.attachRemoteSession(id)
+      })
+    // kilocode_change end
     // kilocode_change start - injectable slash command discovery + execution
     const commands = options.commands ?? RemoteCommand.live()
     // kilocode_change end
@@ -461,6 +497,45 @@ export namespace RemoteSender {
               error: errorName(error),
             })
             options.conn.send({ type: "response", id: msg.id, error: "failed to send command" })
+          }
+        })()
+        return
+      }
+      if (msg.command === "create_session") {
+        // kilocode_change start - remote /new creation: root session, attached + heartbeat before response
+        const parsed = CreateSessionRequest.safeParse(msg.data)
+        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(current)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid create_session command",
+          })
+          return
+        }
+        const run = options.provide ?? provide
+        void (async () => {
+          try {
+            const result = await run({
+              directory: (await session.get(current.value)).directory,
+              fn: async () => {
+                const created = await sessionCreate({})
+                // attachSession is the duplicate-safe seam: it mutates the
+                // attached set exactly once and fires conn.heartbeat() only
+                // when the set actually changes, so the relay learns about
+                // the new session before we respond.
+                await attachSession(created.id)
+                return created
+              },
+            })
+            options.conn.send({
+              type: "response",
+              id: msg.id,
+              result: { protocolVersion: 1, sessionID: result.id },
+            })
+          } catch (error) {
+            options.log.error("create session failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to create session" })
           }
         })()
         return
