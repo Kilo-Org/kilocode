@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -66,6 +67,29 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(0, c1.y)
         assertEquals(14, c2.y)   // 10 + 4
         assertEquals(33, c3.y)   // 10 + 4 + 15 + 4
+    }
+
+    fun `test user prompt after first component uses prompt gap`() {
+        val p = panel(gap = 4, width = 300)
+        val c1 = label(height = 20)
+        val c2 = view(height = 30, kind = SessionView.Kind.UserPrompt)
+        p.add(c1)
+        p.add(c2)
+        p.doLayout()
+
+        assertEquals(20 + JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP), c2.y)
+    }
+
+    fun `test first user prompt uses standard gap`() {
+        val p = panel(gap = 4, width = 300)
+        val c1 = view(height = 20, kind = SessionView.Kind.UserPrompt)
+        val c2 = label(height = 30)
+        p.add(c1)
+        p.add(c2)
+        p.doLayout()
+
+        assertEquals(0, c1.y)
+        assertEquals(20 + 4, c2.y)
     }
 
     fun `test all children receive full available width`() {
@@ -197,6 +221,16 @@ class SessionLayoutTest : BasePlatformTestCase() {
 
         val size = p.layout.preferredLayoutSize(p)
         assertEquals(10 + 4 + 15 + 4 + 20, size.height)
+    }
+
+    fun `test preferredLayoutSize uses prompt gap before non-first user prompt`() {
+        val p = panel(gap = 4, width = 300)
+        p.add(label(height = 10))
+        p.add(view(height = 15, kind = SessionView.Kind.UserPrompt))
+        p.doLayout()
+
+        val size = p.layout.preferredLayoutSize(p)
+        assertEquals(10 + JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP) + 15, size.height)
     }
 
     fun `test preferredLayoutSize with no children is zero`() {

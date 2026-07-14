@@ -6,6 +6,7 @@ import kotlinx.serialization.SerialName
 @Serializable
 enum class KiloAppStatusDto {
     DISCONNECTED,
+    DOWNLOADING,
     CONNECTING,
     LOADING,
     MIGRATION_REQUIRED,
@@ -155,6 +156,7 @@ data class ProfileDto(
     val email: String,
     val name: String? = null,
     val organizations: List<ProfileOrganizationDto> = emptyList(),
+    val hasPersonalAccount: Boolean = true,
     val balance: ProfileBalanceDto? = null,
     val kiloPass: ProfileKiloPassDto? = null,
     val currentOrgId: String? = null,
@@ -173,6 +175,9 @@ data class KiloAppStateDto(
     val error: String? = null,
     val errors: List<LoadErrorDto> = emptyList(),
     val progress: LoadProgressDto? = null,
+    val downloadPercent: Int? = null,
+    val downloadVersion: String? = null,
+    val downloadPlatform: String? = null,
     val warnings: List<ConfigWarningDto> = emptyList(),
     val config: ConfigDto? = null,
     val profile: ProfileDto? = null,

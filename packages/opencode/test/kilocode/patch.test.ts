@@ -14,22 +14,25 @@ import iconv from "iconv-lite"
 import { Effect, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Format } from "../../src/format"
 import { LSP } from "../../src/lsp/lsp"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
-import { provideInstance } from "../fixture/fixture"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { provideInstance, testInstanceStoreLayer } from "../fixture/fixture"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 
 const layer = Layer.mergeAll(
   Agent.defaultLayer,
-  AppFileSystem.defaultLayer,
+  FSUtil.defaultLayer,
   Bus.layer,
   Format.defaultLayer,
   LSP.defaultLayer,
   Truncate.defaultLayer,
+  testInstanceStoreLayer,
+  EventV2Bridge.defaultLayer,
 )
 
 const apply = (dir: string, patchText: string) =>

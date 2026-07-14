@@ -139,6 +139,7 @@ export const dict: Record<string, string> = {
 
   "ui.tool.read": "Читання",
   "ui.tool.loaded": "Завантажено",
+  "ui.tool.swePruned": "SWE-Pruner · збережено {{kept}} з {{total}} рядків", // kilocode_change
   "ui.tool.list": "Список",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -197,7 +198,9 @@ export const dict: Record<string, string> = {
   "ui.patch.action.patched": "Застосовано патч", // kilocode_change
 
   "ui.question.subtitle.answered": "{{count}} відповідей",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(немає відповіді)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(не відповіли)",
   "ui.question.multiHint": "Виберіть усі відповідні варіанти",
   "ui.question.singleHint": "Виберіть одну відповідь",

@@ -9,9 +9,10 @@ import path from "path"
 import fs from "fs/promises"
 import iconv from "iconv-lite"
 import { Agent } from "../../src/agent/agent"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { EditTool } from "../../src/tool/edit"
 import { Format } from "../../src/format"
@@ -45,13 +46,14 @@ afterEach(async () => {
 const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     Instruction.defaultLayer,
     LSP.defaultLayer,
     Bus.layer,
     Format.defaultLayer,
     Truncate.defaultLayer,
+    EventV2Bridge.defaultLayer,
   ),
 )
 
@@ -198,12 +200,12 @@ describe("tool encoding preservation", () => {
           const content = `${"x".repeat(80)}\n`.repeat(50_000)
           yield* Effect.promise(() => fs.writeFile(filepath, content))
 
-          const base = yield* AppFileSystem.Service
+          const base = yield* FSUtil.Service
           const counter = { bytes: 0 }
           const result = yield* runRead({ filePath: filepath }).pipe(
             Effect.provideService(
-              AppFileSystem.Service,
-              AppFileSystem.Service.of({
+              FSUtil.Service,
+              FSUtil.Service.of({
                 ...base,
                 stream: (file, options) =>
                   base.stream(file, options).pipe(
@@ -230,13 +232,13 @@ describe("tool encoding preservation", () => {
           const filepath = path.join(dir, "abort.txt")
           yield* Effect.promise(() => fs.writeFile(filepath, `${"x".repeat(80)}\n`.repeat(50_000)))
 
-          const base = yield* AppFileSystem.Service
+          const base = yield* FSUtil.Service
           const controller = new AbortController()
           const state = { chunks: 0, closed: false }
           const exit = yield* runRead({ filePath: filepath }, { ...ctx, abort: controller.signal }).pipe(
             Effect.provideService(
-              AppFileSystem.Service,
-              AppFileSystem.Service.of({
+              FSUtil.Service,
+              FSUtil.Service.of({
                 ...base,
                 stream: (file, options) =>
                   base.stream(file, options).pipe(
@@ -276,12 +278,12 @@ describe("tool encoding preservation", () => {
           ])
           yield* Effect.promise(() => fs.writeFile(filepath, content))
 
-          const base = yield* AppFileSystem.Service
+          const base = yield* FSUtil.Service
           const calls = { bytes: 0, reads: 0 }
           const result = yield* runRead({ filePath: filepath, offset: 999, limit: 5 }).pipe(
             Effect.provideService(
-              AppFileSystem.Service,
-              AppFileSystem.Service.of({
+              FSUtil.Service,
+              FSUtil.Service.of({
                 ...base,
                 readFile: (file) =>
                   Effect.sync(() => {
@@ -604,7 +606,7 @@ describe("tool encoding preservation", () => {
           Effect.gen(function* () {
             const filepath = path.join(dir, "formatted.txt")
             const content = encoding === "windows-1251" ? samples.windows1251 : samples.utf8
-            const afs = yield* AppFileSystem.Service
+            const afs = yield* FSUtil.Service
 
             // Formatters commonly rewrite through UTF-8 regardless of the source encoding.
             yield* afs.writeFile(filepath, Buffer.from(content, "utf-8"))

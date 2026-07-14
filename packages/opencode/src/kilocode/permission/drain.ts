@@ -1,8 +1,6 @@
-import { Bus } from "@/bus"
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
-import { Instance } from "@/kilocode/instance"
 
 interface PendingEntry {
   info: Permission.Request
@@ -10,6 +8,13 @@ interface PendingEntry {
   hardRuleset?: Permission.Ruleset
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
+
+// The caller supplies the reply publisher so drain uses the same EventV2Bridge channel as permission/index.ts.
+type PublishReply = (data: {
+  sessionID: Permission.Request["sessionID"]
+  requestID: Permission.Request["id"]
+  reply: Permission.Reply
+}) => Effect.Effect<void>
 
 /**
  * Auto-resolve pending permissions now fully covered by approved or denied rules.
@@ -19,7 +24,7 @@ interface PendingEntry {
 export function drainCovered(
   pending: Map<string, PendingEntry>,
   approved: Permission.Ruleset,
-  _Denied: typeof Permission.DeniedError,
+  publishReply: PublishReply,
   exclude?: string,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
@@ -40,18 +45,10 @@ export function drainCovered(
       if (!denied && !allowed) continue
       pending.delete(id)
       if (denied) {
-        void Bus.publish(Instance.current, Permission.Event.Replied, {
-          sessionID: entry.info.sessionID,
-          requestID: entry.info.id,
-          reply: "reject",
-        })
+        yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "reject" })
         yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
       } else {
-        void Bus.publish(Instance.current, Permission.Event.Replied, {
-          sessionID: entry.info.sessionID,
-          requestID: entry.info.id,
-          reply: "always",
-        })
+        yield* publishReply({ sessionID: entry.info.sessionID, requestID: entry.info.id, reply: "always" })
         yield* Deferred.succeed(entry.deferred, undefined)
       }
     }

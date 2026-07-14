@@ -1,8 +1,8 @@
 package ai.kilocode.backend.app
 
+import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
-import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 sealed class ConnectionState {
     data object Disconnected : ConnectionState()
+    data class Downloading(val percent: Int, val version: String, val platform: String) : ConnectionState()
     data object Connecting : ConnectionState()
     data class Connected(val port: Int, val password: String) : ConnectionState()
     data class Error(val message: String, val details: String? = null) : ConnectionState()
@@ -144,7 +145,7 @@ class KiloConnectionService(
     }
 
     /**
-     * Kill the CLI process, re-extract the binary from JAR, and restart.
+     * Kill the CLI process, re-download the binary, and restart.
      *
      * Called under [KiloBackendAppService]'s mutex.
      */
@@ -153,7 +154,7 @@ class KiloConnectionService(
         teardown()
         log.info("reinstall: teardown complete — setting forceExtract flag")
         server.forceExtract = true
-        log.info("reinstall: spawning new CLI process (binary will be re-extracted)")
+        log.info("reinstall: spawning new CLI process (binary will be re-downloaded)")
         open()
         log.info("reinstall: open() returned — CLI process started with fresh binary")
     }
@@ -190,7 +191,10 @@ class KiloConnectionService(
 
         setState(ConnectionState.Connecting)
 
-        val result = server.init()
+        val result = server.init(
+            onProgress = { item -> setState(ConnectionState.Downloading(item.percent, item.version, item.platform)) },
+            onResolved = { setState(ConnectionState.Connecting) },
+        )
 
         if (result is CliServer.State.Error) {
             setState(ConnectionState.Error(result.message, result.details))
@@ -198,6 +202,7 @@ class KiloConnectionService(
         }
 
         val ready = result as CliServer.State.Ready
+        setState(ConnectionState.Connecting)
         port = ready.port
         password = ready.password
 

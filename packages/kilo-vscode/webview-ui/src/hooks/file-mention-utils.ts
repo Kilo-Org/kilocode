@@ -10,6 +10,7 @@ export type MentionResult =
   | { type: "file"; value: string }
   | { type: "opened-file"; value: string }
   | { type: "folder"; value: string }
+  | { type: "file-picker"; value: "file-picker"; label: string; description: string }
 
 export const TERMINAL_RESULT: MentionResult = {
   type: "terminal",
@@ -23,6 +24,13 @@ export const GIT_CHANGES_RESULT: MentionResult = {
   value: GIT_CHANGES_MENTION,
   label: "Git changes",
   description: "Current session/worktree changes",
+}
+
+export const FILE_PICKER_RESULT: MentionResult = {
+  type: "file-picker",
+  value: "file-picker",
+  label: "Browse files...",
+  description: "Select a file outside the workspace",
 }
 
 /**
@@ -51,7 +59,12 @@ export function buildMentionResults(query: string, items: Array<FileSearchItem |
     if (item.type === "opened-file") return { type: "opened-file", value: item.path }
     return { type: "file", value: item.path }
   })
-  return [...getTerminalMentionResult(query), ...(git ? getGitChangesMentionResult(query) : []), ...results]
+  return [
+    ...getTerminalMentionResult(query),
+    ...(git ? getGitChangesMentionResult(query) : []),
+    FILE_PICKER_RESULT,
+    ...results,
+  ]
 }
 
 export function filterMentionResults(query: string, items: MentionResult[]): MentionResult[] {
@@ -60,6 +73,7 @@ export function filterMentionResults(query: string, items: MentionResult[]): Men
   return items.filter((item) => {
     if (item.type === "terminal") return TERMINAL_MENTION.startsWith(value)
     if (item.type === "git-changes") return GIT_CHANGES_MENTION.startsWith(value) || "git".startsWith(value)
+    if (item.type === "file-picker") return true
     return item.value.toLowerCase().includes(value)
   })
 }
@@ -166,8 +180,54 @@ export function findMentionRange(
   return null
 }
 
+function isAbsolutePath(path: string): boolean {
+  return path.startsWith("/") || /^[A-Za-z]:[\\\/]/.test(path) || path.startsWith("\\\\")
+}
+
+/**
+ * Collapse "." and ".." segments in a forward-slash path so a traversal like
+ * "/workspace/../../etc/passwd" resolves to its real location ("/etc/passwd")
+ * before any workspace-containment check runs. Preserves a leading drive
+ * letter (`C:`) and distinguishes a UNC root ("//server") from a plain root
+ * ("/"). ".." segments that would go above the root are dropped rather than
+ * kept, matching filesystem semantics for an absolute path.
+ */
+function normalizeAbsolutePath(input: string): string {
+  const drive = input.match(/^[A-Za-z]:/)?.[0] ?? ""
+  const rest = drive ? input.slice(drive.length) : input
+  const root = rest.startsWith("//") ? "//" : rest.startsWith("/") ? "/" : ""
+  const segments = rest
+    .slice(root.length)
+    .split("/")
+    .filter((s) => s.length > 0 && s !== ".")
+  const stack: string[] = []
+  for (const seg of segments) {
+    if (seg === "..") {
+      if (stack.length > 0) stack.pop()
+      continue
+    }
+    stack.push(seg)
+  }
+  return `${drive}${root}${stack.join("/")}`
+}
+
+/** Whether `abs` is the workspace root or lives under it (both already normalized). */
+function isInsideWorkspace(abs: string, dir: string): boolean {
+  return abs === dir || abs.startsWith(`${dir}/`)
+}
+
 /**
  * Build FileAttachment objects from currently mentioned paths in the text.
+ *
+ * Paths outside the workspace (e.g. picked via the file picker, or seeded from
+ * raw draft text via a "../.." traversal) are deliberately excluded: attaching a
+ * file reads its content on the backend through a path that bypasses the
+ * permission system, including any prior "deny" decision for that file. Such
+ * paths remain visible and clickable as a styled mention in the UI, but are not
+ * auto-attached — if the model needs their contents it must call the Read tool,
+ * which enforces the normal external-directory permission checks. Every
+ * resolved path (relative or absolute) is normalized before the containment
+ * check so a "../" sequence can't slip past a literal string-prefix match.
  */
 export function buildFileAttachments(
   text: string,
@@ -175,10 +235,12 @@ export function buildFileAttachments(
   workspaceDir: string,
 ): FileAttachment[] {
   const result: FileAttachment[] = []
-  const dir = workspaceDir.replaceAll("\\", "/")
+  const dir = normalizeAbsolutePath(workspaceDir.replaceAll("\\", "/")).replace(/\/+$/, "")
   for (const path of mentionedPaths) {
     if (text.includes(`@${path}`)) {
-      const abs = path.startsWith("/") ? path : `${dir}/${path}`
+      const raw = isAbsolutePath(path) ? path.replaceAll("\\", "/") : `${dir}/${path}`
+      const abs = normalizeAbsolutePath(raw)
+      if (!isInsideWorkspace(abs, dir)) continue
       const url = new URL("file://")
       url.pathname = abs.startsWith("/") ? abs : `/${abs}`
       result.push({ mime: "text/plain", url: url.href })

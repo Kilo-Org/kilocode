@@ -57,6 +57,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -97,7 +98,7 @@ class KiloBackendAppService private constructor(
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 1000L
         private const val APP_LOAD_TIMEOUT_MS = 30_000L
-        private const val READY_TIMEOUT_MS = 5_000L
+        private const val READY_TIMEOUT_MS = 120_000L
 
         /** Test factory — no IntelliJ deps needed. */
         internal fun create(
@@ -118,6 +119,7 @@ class KiloBackendAppService private constructor(
     private var loader: Job? = null
     private var closed = false
     private val loadLock = Any()
+    private val rev = AtomicLong()
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
@@ -146,31 +148,54 @@ class KiloBackendAppService private constructor(
     suspend fun connect() {
         mutex.withLock {
             val current = _appState.value
-            if (current is KiloAppState.Ready || current is KiloAppState.Connecting || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) return
+            if (current is KiloAppState.Ready || current is KiloAppState.Downloading || current is KiloAppState.Connecting || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) return
             ensureWatcher()
             connection.connect()
         }
     }
 
     suspend fun restart() {
+        log.info("restart: requested — waiting for lifecycle mutex")
         mutex.withLock {
-            clear()
-            connection.restart()
+            log.info("restart: acquired lifecycle mutex")
+            try {
+                clear()
+                connection.restart()
+                log.info("restart: complete")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("restart: failed", e)
+                throw e
+            }
         }
     }
 
     suspend fun reinstall() {
+        log.info("reinstall: requested — waiting for lifecycle mutex")
         mutex.withLock {
-            clear()
-            connection.reinstall()
+            log.info("reinstall: acquired lifecycle mutex")
+            try {
+                clear()
+                connection.reinstall()
+                log.info("reinstall: complete")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("reinstall: failed", e)
+                throw e
+            }
         }
     }
 
-    suspend fun shutdownForUnload() {
-        mutex.withLock {
-            shutdown()
-        }
-    }
+    /**
+     * Synchronous CLI teardown for plugin unload. Confirms process exit but does not wait on the
+     * lifecycle mutex, so an in-flight download/spawn cannot delay unload. Safe to call repeatedly.
+     */
+    fun shutdownForUnload() = shutdown(fast = false)
+
+    /** Best-effort CLI teardown for IDE app close. Non-blocking; safe to call repeatedly. */
+    fun shutdownForAppClose() = shutdown(fast = true)
 
     suspend fun retry() {
         mutex.withLock {
@@ -179,6 +204,7 @@ class KiloBackendAppService private constructor(
                     ensureWatcher()
                     connection.connect()
                 }
+                is KiloAppState.Downloading,
                 KiloAppState.Connecting,
                 is KiloAppState.Loading -> Unit
                 is KiloAppState.MigrationRequired -> {
@@ -231,10 +257,11 @@ class KiloBackendAppService private constructor(
         when (_appState.value) {
             is KiloAppState.Ready -> return
             is KiloAppState.MigrationRequired -> throw IllegalStateException("Migration required")
+            is KiloAppState.Downloading,
             is KiloAppState.Loading,
             KiloAppState.Connecting -> {
                 val state = withTimeoutOrNull(timeoutMs) {
-                    appState.first { it !is KiloAppState.Loading && it !is KiloAppState.Connecting }
+                    appState.first { it !is KiloAppState.Downloading && it !is KiloAppState.Loading && it !is KiloAppState.Connecting }
                 }
                 when (state) {
                     is KiloAppState.Ready -> return
@@ -292,7 +319,7 @@ class KiloBackendAppService private constructor(
     private suspend fun reconnect() {
         mutex.withLock {
             val current = _appState.value
-            if (current is KiloAppState.Ready || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
+            if (current is KiloAppState.Ready || current is KiloAppState.Downloading || current is KiloAppState.Loading || current is KiloAppState.MigrationRequired) {
                 log.info("reconnect: already ${current::class.simpleName} — skipping")
                 return
             }
@@ -307,6 +334,7 @@ class KiloBackendAppService private constructor(
             connection.state.collect { next ->
                 when (next) {
                     ConnectionState.Disconnected -> _appState.value = KiloAppState.Disconnected
+                    is ConnectionState.Downloading -> _appState.value = KiloAppState.Downloading(next.percent, next.version, next.platform)
                     ConnectionState.Connecting -> _appState.value = KiloAppState.Connecting
                     is ConnectionState.Connected -> {
                         load()
@@ -335,7 +363,6 @@ class KiloBackendAppService private constructor(
     private fun load() {
         synchronized(loadLock) {
             loader?.cancel()
-            eventWatcher?.cancel()
             loader = cs.launch {
                 val start = System.currentTimeMillis()
                 log.info("Application starting — loading config, profile, notifications")
@@ -652,7 +679,7 @@ class KiloBackendAppService private constructor(
     private fun setAppReady(data: AppData) {
         warnings = data.warnings
         if (data.warnings.isNotEmpty()) warnAppWarnings(data.warnings)
-        _appState.value = KiloAppState.Ready(data)
+        _appState.value = KiloAppState.Ready(data, rev.incrementAndGet())
     }
 
     private fun setAppError(message: String, errors: List<LoadError>) {
@@ -902,17 +929,17 @@ class KiloBackendAppService private constructor(
     }
 
     override fun dispose() {
-        shutdown()
+        shutdown(fast = false)
     }
 
-    private fun shutdown() {
+    private fun shutdown(fast: Boolean) {
         if (closed) return
         closed = true
         watcher?.cancel()
         watcher = null
         clearNow()
         connection.dispose()
-        server.dispose()
+        if (fast) server.closeForShutdown() else server.dispose()
     }
 }
 

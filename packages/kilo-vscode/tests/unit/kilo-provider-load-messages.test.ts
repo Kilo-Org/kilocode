@@ -66,6 +66,7 @@ function createClient(options?: {
   supportDeferred?: Deferred<{ data: { available: boolean; reason?: string } }>
   sandboxDeferred?: Deferred<{ data: unknown }>
   sandboxStarted?: Deferred<void>
+  createSession?: (params: Record<string, unknown>, index: number) => Promise<{ data: unknown }>
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
@@ -90,6 +91,7 @@ function createClient(options?: {
       list: async () => ({ data: [] }),
       create: async (params: Record<string, unknown>) => {
         created.push(params)
+        if (options?.createSession) return options.createSession(params, created.length - 1)
         return options?.createDeferred?.promise ?? { data: mkSession() }
       },
       get: async (params: { sessionID: string; directory?: string }) => {
@@ -199,6 +201,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     pruneSession: () => undefined,
     registerFocused: () => undefined,
     unregisterFocused: () => undefined,
+    registerOpen: () => undefined,
   }
 }
 
@@ -209,6 +212,8 @@ type ProviderInternals = {
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
+  openSessionIds: Set<string>
+  draftSessions: Map<string, { sid: string; dir: string; expires: number }>
   checkpoints: Map<string, Promise<void>>
   revisions: Map<string, { id: string; seq: number }>
   streams: { push: (msg: PartUpdate) => void }
@@ -222,6 +227,7 @@ type ProviderInternals = {
   setMaxCost: (value: unknown) => void
   handleRevertSession: (sid: string, messageID: string) => Promise<void>
   handleSendMessage: (text: string, messageID?: string, sessionID?: string, draftID?: string) => Promise<void>
+  trackOpenSessions: (ids: string[]) => void
   fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
   handleSetSandboxDefault: (enabled: boolean, requestID: string, directory?: string) => Promise<void>
   handleToggleSandbox: (input: { sessionID: string; requestID: string }) => Promise<void>
@@ -438,10 +444,42 @@ describe("KiloProvider sandbox toggle", () => {
   })
 })
 
+describe("KiloProvider sidebar tabs", () => {
+  it("creates distinct sessions for explicit drafts even when another session is current", async () => {
+    const client = createClient({
+      createSession: async (_params, index) => ({ data: { ...mkSession(), id: `s${index + 1}` } }),
+    })
+    const { internal } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    await internal.handleSendMessage("first", "m1", undefined, "draft-1")
+    await internal.handleSendMessage("second", "m2", undefined, "draft-2")
+    await internal.handleSendMessage("second follow-up", "m3", undefined, "draft-2")
+
+    expect(client.created).toHaveLength(2)
+    expect(client.prompted.map((call) => call.sessionID)).toEqual(["s1", "s2", "s2"])
+
+    internal.trackOpenSessions(["s1", "s2"])
+    expect(internal.draftSessions.size).toBe(0)
+  })
+
+  it("untracks sessions removed from the sidebar working set", () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+
+    internal.trackOpenSessions(["s1", "s2"])
+    internal.trackOpenSessions(["s2"])
+
+    expect(internal.openSessionIds).toEqual(new Set(["s2"]))
+    expect(internal.trackedSessionIds).toEqual(new Set(["s2"]))
+  })
+})
+
 describe("KiloProvider revert ordering", () => {
   it("unwraps the nested sync payload emitted by the live SSE endpoint", () => {
     const event = unwrapSyncEvent({
       type: "sync",
+      id: "evt_clear",
       syncEvent: {
         type: "session.updated.1",
         id: "evt_clear",

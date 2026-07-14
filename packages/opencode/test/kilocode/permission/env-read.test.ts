@@ -8,14 +8,20 @@ import { InstanceRuntime } from "../../../src/project/instance-runtime"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { Permission } from "../../../src/permission"
-import { PermissionID } from "../../../src/permission/schema"
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { Database } from "@opencode-ai/core/database/database"
 import { SessionID } from "../../../src/session/schema"
 import { provideTmpdirInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  Permission.layer.pipe(
+    Layer.provide(EventV2Bridge.defaultLayer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Database.defaultLayer),
+  ),
   bus,
   CrossSpawnSpawner.defaultLayer,
 )
@@ -98,7 +104,7 @@ describe("env read permissions", () => {
       Effect.gen(function* () {
         const session = SessionID.make("session_env")
         const first = yield* ask({
-          id: PermissionID.make("per_env_first"),
+          id: PermissionV1.ID.make("per_env_first"),
           sessionID: session,
           permission: "read",
           patterns: ["README.md"],
@@ -108,11 +114,11 @@ describe("env read permissions", () => {
         }).pipe(Effect.forkScoped)
 
         yield* waitForPending(1)
-        yield* reply({ requestID: PermissionID.make("per_env_first"), reply: "always" })
+        yield* reply({ requestID: PermissionV1.ID.make("per_env_first"), reply: "always" })
         yield* Fiber.join(first)
 
         const second = yield* ask({
-          id: PermissionID.make("per_env_second"),
+          id: PermissionV1.ID.make("per_env_second"),
           sessionID: session,
           permission: "read",
           patterns: ["project/.env"],
@@ -122,7 +128,7 @@ describe("env read permissions", () => {
         }).pipe(Effect.forkScoped)
 
         const items = yield* waitForPending(1)
-        expect(items[0].id).toBe(PermissionID.make("per_env_second"))
+        expect(items[0].id).toBe(PermissionV1.ID.make("per_env_second"))
 
         yield* rejectAll()
         yield* Fiber.await(second)
@@ -134,7 +140,7 @@ describe("env read permissions", () => {
     withDir(() =>
       Effect.gen(function* () {
         const asking = yield* ask({
-          id: PermissionID.make("per_env_everything"),
+          id: PermissionV1.ID.make("per_env_everything"),
           sessionID: SessionID.make("session_env"),
           permission: "read",
           patterns: ["project/.env"],
@@ -144,10 +150,10 @@ describe("env read permissions", () => {
         }).pipe(Effect.forkScoped)
 
         yield* waitForPending(1)
-        yield* allow({ enable: true, requestID: PermissionID.make("per_env_everything") })
+        yield* allow({ enable: true, requestID: PermissionV1.ID.make("per_env_everything") })
 
         const items = yield* waitForPending(1)
-        expect(items[0].id).toBe(PermissionID.make("per_env_everything"))
+        expect(items[0].id).toBe(PermissionV1.ID.make("per_env_everything"))
 
         yield* rejectAll()
         yield* Fiber.await(asking)

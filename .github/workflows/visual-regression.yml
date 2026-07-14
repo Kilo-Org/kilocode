@@ -5,6 +5,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   check-paths:
     name: Check changed paths
@@ -42,9 +46,10 @@ jobs:
       - name: Check baseline auto-commit permissions
         id: autocommit-check
         env:
-          BOT_PAT: ${{ secrets.BOT_PAT }}
+          MAINTAINER_APP_ID: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          MAINTAINER_APP_SECRET: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
         run: |
-          if [ "${{ steps.fork-check.outputs.is_fork }}" != "true" ] && [ -n "$BOT_PAT" ]; then
+          if [ "${{ steps.fork-check.outputs.is_fork }}" != "true" ] && [ -n "$MAINTAINER_APP_ID" ] && [ -n "$MAINTAINER_APP_SECRET" ]; then
             echo "can_autocommit=true" >> "$GITHUB_OUTPUT"
           else
             echo "can_autocommit=false" >> "$GITHUB_OUTPUT"
@@ -63,8 +68,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           lfs: true
-          # use BOT_PAT only when later baseline pushes are allowed; github.token is read-only on Dependabot PRs.
-          token: ${{ secrets.BOT_PAT }}
+          # Use github.token for LFS access. The maintainer app is used only for generated commits.
+          token: ${{ github.token }}
           ref: ${{ github.head_ref }}
 
       - name: Checkout (read-only)
@@ -171,24 +176,32 @@ jobs:
             exit 1
           fi
 
-      - name: Commit and push new baselines (if any)
+      - name: Check for baseline updates
         if: needs.check-paths.outputs.can_autocommit == 'true' && steps.check-baseline-commit.outputs.is_baseline_update != 'true'
-        id: commit-baselines
-        env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        id: baseline-changes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
           if git diff --cached --quiet; then
-            echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "chore: update visual regression baselines"
-            git lfs push --all origin
-            git push --no-verify
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Setup Git Committer
+        if: steps.baseline-changes.outputs.changed == 'true'
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
+      - name: Commit and push new baselines (if any)
+        if: steps.baseline-changes.outputs.changed == 'true'
+        id: commit-baselines
+        run: |
+          git commit -m "chore: update visual regression baselines"
+          git lfs push --all origin
+          git push --no-verify origin "HEAD:${GITHUB_HEAD_REF}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
 
       - name: Fail if baselines changed
         if: needs.check-paths.outputs.can_autocommit == 'true' && steps.commit-baselines.outputs.changed == 'true'
@@ -219,8 +232,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           lfs: true
-          # use BOT_PAT only when later baseline pushes are allowed; github.token is read-only on Dependabot PRs.
-          token: ${{ secrets.BOT_PAT }}
+          # Use github.token for LFS access. The maintainer app is used only for generated commits.
+          token: ${{ github.token }}
           ref: ${{ github.head_ref }}
 
       - name: Checkout (read-only)
@@ -357,24 +370,32 @@ jobs:
             exit 1
           fi
 
-      - name: Commit and push new baselines (if any)
+      - name: Check for baseline updates
         if: needs.check-paths.outputs.can_autocommit == 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update != 'true'
-        id: commit-baselines-vscode
-        env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        id: baseline-changes-vscode
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
           if git diff --cached --quiet; then
-            echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "chore: update kilo-vscode visual regression baselines"
-            git lfs push --all origin
-            git push --no-verify
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Setup Git Committer
+        if: steps.baseline-changes-vscode.outputs.changed == 'true'
+        uses: ./.github/actions/setup-git-committer
+        with:
+          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
+          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+
+      - name: Commit and push new baselines (if any)
+        if: steps.baseline-changes-vscode.outputs.changed == 'true'
+        id: commit-baselines-vscode
+        run: |
+          git commit -m "chore: update kilo-vscode visual regression baselines"
+          git lfs push --all origin
+          git push --no-verify origin "HEAD:${GITHUB_HEAD_REF}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
 
       - name: Fail if baselines changed
         if: needs.check-paths.outputs.can_autocommit == 'true' && steps.commit-baselines-vscode.outputs.changed == 'true'

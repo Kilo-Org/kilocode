@@ -34,6 +34,8 @@ import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
 import { IndexingProvider } from "../context/indexing"
 import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
+import { MemoryProvider } from "../context/memory"
+import { TranscriptSearchProvider } from "../context/transcript-search"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
@@ -439,30 +441,34 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                       <NotificationsContext.Provider value={notifications}>
                         <SessionContext.Provider value={session as any}>
                           <AgentRequirementsContext.Provider value={requirements}>
-                            <IndexingProvider>
-                              <KiloEmbeddingModelsProvider>
-                                <DataProvider
-                                  data={data()}
-                                  directory="/project/"
-                                  onOpenDiff={props.onOpenDiff}
-                                  onOpenFile={props.onOpenFile}
-                                >
-                                  <DiffComponentProvider component={Diff}>
-                                    <CodeComponentProvider component={Code}>
-                                      <FileComponentProvider component={File}>
-                                        <MarkedProvider>
-                                          {props.noPadding ? (
-                                            props.children
-                                          ) : (
-                                            <div style={{ padding: "12px" }}>{props.children}</div>
-                                          )}
-                                        </MarkedProvider>
-                                      </FileComponentProvider>
-                                    </CodeComponentProvider>
-                                  </DiffComponentProvider>
-                                </DataProvider>
-                              </KiloEmbeddingModelsProvider>
-                            </IndexingProvider>
+                            <MemoryProvider>
+                              <IndexingProvider>
+                                <KiloEmbeddingModelsProvider>
+                                  <DataProvider
+                                    data={data()}
+                                    directory="/project/"
+                                    onOpenDiff={props.onOpenDiff}
+                                    onOpenFile={props.onOpenFile}
+                                  >
+                                    <DiffComponentProvider component={Diff}>
+                                      <CodeComponentProvider component={Code}>
+                                        <FileComponentProvider component={File}>
+                                          <MarkedProvider>
+                                            <TranscriptSearchProvider>
+                                              {props.noPadding ? (
+                                                props.children
+                                              ) : (
+                                                <div style={{ padding: "12px" }}>{props.children}</div>
+                                              )}
+                                            </TranscriptSearchProvider>
+                                          </MarkedProvider>
+                                        </FileComponentProvider>
+                                      </CodeComponentProvider>
+                                    </DiffComponentProvider>
+                                  </DataProvider>
+                                </KiloEmbeddingModelsProvider>
+                              </IndexingProvider>
+                            </MemoryProvider>
                           </AgentRequirementsContext.Provider>
                         </SessionContext.Provider>
                       </NotificationsContext.Provider>
