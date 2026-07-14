@@ -5,7 +5,7 @@ import { formatPatch, structuredPatch } from "diff"
 import path from "path"
 import { AppProcess } from "@opencode-ai/core/process"
 import { InstanceState } from "@/effect/instance-state"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock" // kilocode_change
 import { Config } from "@/config/config"
@@ -88,13 +88,13 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@opencode/Snapshot") {}
 
 // kilocode_change start
-type Requirements = AppFileSystem.Service | AppProcess.Service | Config.Service | EffectFlock.Service
+type Requirements = FSUtil.Service | AppProcess.Service | Config.Service | EffectFlock.Service
 export const layer: Layer.Layer<Service, never, Requirements> =
   // kilocode_change end
   Layer.effect(
     Service,
     Effect.gen(function* () {
-      const fs = yield* AppFileSystem.Service
+      const fs = yield* FSUtil.Service
       const appProcess = yield* AppProcess.Service
       const config = yield* Config.Service
       const flock = yield* EffectFlock.Service // kilocode_change
@@ -641,9 +641,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
                   if (row.status === "added") {
                     return [
                       "",
-                      yield* git([...cfg, ...args(["show", `${to}:${row.file}`])]).pipe(
-                        Effect.map((item) => item.text),
-                      ),
+                      yield* git([...cfg, ...args(["show", `${to}:${row.file}`])]).pipe(Effect.map((item) => item.text)),
                     ]
                   }
                   if (row.status === "deleted") {
@@ -950,7 +948,7 @@ export const layer: Layer.Layer<Service, never, Requirements> =
 
 export const defaultLayer = layer.pipe(
   Layer.provide(AppProcess.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer), // kilocode_change
 )

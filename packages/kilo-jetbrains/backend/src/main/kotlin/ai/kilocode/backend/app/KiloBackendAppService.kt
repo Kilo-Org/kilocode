@@ -5,6 +5,7 @@ import ai.kilocode.backend.cli.KiloBackendCliManager
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
+import ai.kilocode.backend.migration.LegacyMigrationStatus
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
 import ai.kilocode.log.KiloLog
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
@@ -118,6 +119,9 @@ class KiloBackendAppService private constructor(
     private var eventWatcher: Job? = null
     private var loader: Job? = null
     private var closed = false
+    private var migrationOffered = false
+    private var migrationSuppressed = false
+    private var migrationForceRequested = false
     private val loadLock = Any()
     private val rev = AtomicLong()
 
@@ -312,9 +316,20 @@ class KiloBackendAppService private constructor(
     internal suspend fun resumeAfterMigration() {
         mutex.withLock {
             if (_appState.value !is KiloAppState.MigrationRequired) return
+            migrationSuppressed = true
             load()
+            migrationForceRequested = false
         }
     }
+
+    internal fun resetMigrationOfferForRerun() {
+        migrationOffered = false
+        migrationSuppressed = false
+        migrationForceRequested = true
+        log.info("Migration check: reset in-memory offer suppression for forced rerun")
+    }
+
+    internal fun forceMigrationRequested(): Boolean = migrationForceRequested
 
     private suspend fun reconnect() {
         mutex.withLock {
@@ -535,20 +550,34 @@ class KiloBackendAppService private constructor(
     }
 
     private suspend fun detectMigration(): LegacyMigrationDetection? = withContext(Dispatchers.IO) {
-        val http = connection.apiClient ?: run {
-            log.info("Migration check: skipped because CLI HTTP client is not connected")
-            return@withContext null
+        try {
+            val http = connection.apiClient ?: run {
+                log.info("Migration check: skipped because CLI HTTP client is not connected")
+                return@withContext null
+            }
+            log.info("Migration check: started")
+            // Status is only consulted when the in-memory flags do not already block the offer,
+            // preserving the original short-circuit order.
+            val status = if (migrationSuppressed || migrationOffered) null
+            else KiloBackendLegacyMigrationStoreService.status(log)
+            val gate = migrationGate(migrationSuppressed, migrationOffered, status)
+            if (gate != MigrationGate.Proceed) {
+                log.info("Migration check: skipped gate=$gate status=$status")
+                return@withContext null
+            }
+            val source = KiloBackendLegacyMigrationStoreService.resolveSource(log, includeFile = migrationForceRequested)
+            val store = source.store
+            val detection = KiloBackendMigrationManager(http, connection.port).detect(store)
+            log.info("Migration check: completed hasData=${detection.hasData} ${migrationSummary(detection)}")
+            if (!detection.hasData) return@withContext null
+            migrationOffered = true
+            detection
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Migration check failed: ${e.message}", e)
+            null
         }
-        log.info("Migration check: started")
-        val store = KiloBackendLegacyMigrationStoreService.store(log)
-        val status = store.status()
-        if (status != null) {
-            log.info("Migration check: skipped because status=$status")
-            return@withContext null
-        }
-        val detection = KiloBackendMigrationManager(http, connection.port).detect(store)
-        log.info("Migration check: completed hasData=${detection.hasData} ${migrationSummary(detection)}")
-        if (detection.hasData) detection else null
     }
 
     private fun migrationSummary(detection: LegacyMigrationDetection): String {
@@ -989,3 +1018,21 @@ private data class FetchResult<T>(val value: T?, val error: LoadError?) {
 
 /** Thrown when a required data fetch exhausts all retries. */
 private class LoadFailure(val error: LoadError) : Exception("Failed to load ${error.resource}")
+
+/** Why a startup migration offer is or is not made. */
+internal enum class MigrationGate { Proceed, Suppressed, AlreadyOffered, StatusSet }
+
+/**
+ * Pure startup-gating decision for the migration offer. Suppression (dismissed this startup)
+ * takes priority, then a prior offer this startup, then a persisted status.
+ */
+internal fun migrationGate(
+    suppressed: Boolean,
+    offered: Boolean,
+    status: LegacyMigrationStatus?,
+): MigrationGate = when {
+    suppressed -> MigrationGate.Suppressed
+    offered -> MigrationGate.AlreadyOffered
+    status != null -> MigrationGate.StatusSet
+    else -> MigrationGate.Proceed
+}

@@ -112,7 +112,6 @@ class KiloConnectionServiceTest {
         }
 
         ready.complete(Unit)
-        mock.awaitSseConnection()
         withTimeout(5_000) {
             svc.state.first { it is ConnectionState.Connected }
         }

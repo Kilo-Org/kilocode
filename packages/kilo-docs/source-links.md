@@ -10,7 +10,7 @@
 - <https://api.digitalocean.com>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://api.kilo.ai>
-  <!-- packages/opencode/src/cli/cmd/github.ts -->
+  <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
@@ -57,7 +57,7 @@
 - <https://developers.google.com/identity/sign-in/web/devconsole-project>
   <!-- packages/opencode/src/kilocode/provider/error.ts -->
 - <https://docs.github.com/en/actions/how-tos/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services>
-  <!-- packages/opencode/src/cli/cmd/github.ts -->
+  <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://docs.inceptionlabs.ai/capabilities/next-edit>
   <!-- packages/opencode/src/kilocode/server/httpapi/groups/kilo-gateway.ts -->
 - <https://docs.mistral.ai/studio-api/conversations/reasoning>
@@ -71,7 +71,7 @@
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
 - <https://github.com/apps/kiloconnect>
-  <!-- packages/opencode/src/cli/cmd/github.ts -->
+  <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/utils/overflow.ts>
   <!-- packages/opencode/src/provider/error.ts -->
 - <https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-23-25.ts>
@@ -111,7 +111,7 @@
 - <https://julialang.org/downloads/>
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://kilo.ai>
-  <!-- packages/opencode/src/cli/cmd/github.ts -->
+  <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
   <!-- packages/opencode/src/mcp/oauth-provider.ts -->
   <!-- packages/opencode/src/session/network.ts -->
 - <https://kilo.ai/>
@@ -134,15 +134,13 @@
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
 - <https://kilo.ai/docs/automate/mcp/what-is-mcp>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
+- <https://kilo.ai/docs/code-with-ai/platforms/github>
+  <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
-- <https://kilo.ai/docs/customize/custom-subagents>
-  <!-- packages/opencode/src/config/config.ts -->
 - <https://kilo.ai/docs/customize/marketplace>
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/InstallModal.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/marketplace/MarketplaceListView.tsx -->
-- <https://kilo.ai/docs/customize/workflows>
-  <!-- packages/opencode/src/config/config.ts -->
 - <https://kilo.ai/docs/getting-started/settings>
   <!-- packages/opencode/src/kilocode/config/config.ts -->
 - <https://kilo.ai/gateway>

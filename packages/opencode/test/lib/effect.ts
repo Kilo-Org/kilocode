@@ -1,4 +1,5 @@
 import { test, type TestOptions } from "bun:test"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Cause, Duration, Effect, Exit, Layer } from "effect"
 import * as Scope from "effect/Scope"
 import * as TestClock from "effect/testing/TestClock"
@@ -7,18 +8,25 @@ import { memoMap } from "@opencode-ai/core/effect/memo-map"
 import type { Config } from "@/config/config"
 import { Reference } from "@/reference/reference" // kilocode_change
 import { TestInstance, withTmpdirInstance } from "../fixture/fixture"
+import { InstanceStore } from "@/project/instance-store"
 
 type Body<A, E, R> = Effect.Effect<A, E, R> | (() => Effect.Effect<A, E, R>)
-type InstanceOptions = { git?: boolean; config?: Partial<Config.Info> | (() => Partial<Config.Info>) }
-
-function isInstanceOptions(options: InstanceOptions | number | TestOptions | undefined): options is InstanceOptions {
-  return !!options && typeof options === "object" && ("git" in options || "config" in options)
+type InstanceOptions<E, R> = {
+  git?: boolean
+  config?: Partial<ConfigV1.Info> | (() => Partial<ConfigV1.Info>)
+  init?: (directory: string) => Effect.Effect<void, E, R>
 }
 
-function instanceArgs(
-  options?: InstanceOptions | number | TestOptions,
+function isInstanceOptions<E, R>(
+  options: InstanceOptions<E, R> | number | TestOptions | undefined,
+): options is InstanceOptions<E, R> {
+  return !!options && typeof options === "object" && ("git" in options || "config" in options || "init" in options)
+}
+
+function instanceArgs<E, R>(
+  options?: InstanceOptions<E, R> | number | TestOptions,
   testOptions?: number | TestOptions,
-): { instanceOptions: InstanceOptions | undefined; testOptions: number | TestOptions | undefined } {
+): { instanceOptions: InstanceOptions<E, R> | undefined; testOptions: number | TestOptions | undefined } {
   if (typeof options === "number") return { instanceOptions: undefined, testOptions: options }
   if (isInstanceOptions(options)) return { instanceOptions: options, testOptions }
   return { instanceOptions: undefined, testOptions: options }
@@ -76,10 +84,10 @@ const make = <R, E>(testLayer: Layer.Layer<R, E>, liveLayer: Layer.Layer<R, E>, 
   live.skip = <A, E2>(name: string, value: Body<A, E2, R | Scope.Scope>, opts?: number | TestOptions) =>
     test.skip(name, () => run(value, liveLayer), opts)
 
-  const instance = <A, E2>(
+  const instance = <A, E2, E3 = never>(
     name: string,
-    value: Body<A, E2, R | TestInstance | Scope.Scope>,
-    options?: InstanceOptions | number | TestOptions,
+    value: Body<A, E2, R | InstanceStore.Service | TestInstance | Scope.Scope>,
+    options?: InstanceOptions<E3, R | Scope.Scope> | number | TestOptions,
     opts?: number | TestOptions,
   ) => {
     const args = instanceArgs(options, opts)
@@ -90,10 +98,10 @@ const make = <R, E>(testLayer: Layer.Layer<R, E>, liveLayer: Layer.Layer<R, E>, 
     )
   }
 
-  instance.only = <A, E2>(
+  instance.only = <A, E2, E3 = never>(
     name: string,
-    value: Body<A, E2, R | TestInstance | Scope.Scope>,
-    options?: InstanceOptions | number | TestOptions,
+    value: Body<A, E2, R | InstanceStore.Service | TestInstance | Scope.Scope>,
+    options?: InstanceOptions<E3, R | Scope.Scope> | number | TestOptions,
     opts?: number | TestOptions,
   ) => {
     const args = instanceArgs(options, opts)
@@ -104,10 +112,10 @@ const make = <R, E>(testLayer: Layer.Layer<R, E>, liveLayer: Layer.Layer<R, E>, 
     )
   }
 
-  instance.skip = <A, E2>(
+  instance.skip = <A, E2, E3 = never>(
     name: string,
-    value: Body<A, E2, R | TestInstance | Scope.Scope>,
-    options?: InstanceOptions | number | TestOptions,
+    value: Body<A, E2, R | InstanceStore.Service | TestInstance | Scope.Scope>,
+    options?: InstanceOptions<E3, R | Scope.Scope> | number | TestOptions,
     opts?: number | TestOptions,
   ) => {
     const args = instanceArgs(options, opts)
@@ -127,13 +135,15 @@ const testEnv = Layer.mergeAll(TestConsole.layer, TestClock.layer())
 // Live environment - uses real clock, but keeps TestConsole for output capture
 const liveEnv = TestConsole.layer
 
-export const it = make(testEnv, liveEnv)
+export const it = make<never, never>(testEnv, liveEnv)
 
 // kilocode_change start
 export const testEffect = <R, E>(layer: Layer.Layer<R, E>) => {
   const full = Layer.merge(layer, Reference.defaultLayer)
   return make(Layer.provideMerge(full, testEnv), Layer.provideMerge(full, liveEnv))
 }
+export const testEffectBare = <R, E>(layer: Layer.Layer<R, E>) =>
+  make<R, E>(Layer.provideMerge(layer, testEnv), Layer.provideMerge(layer, liveEnv))
 // kilocode_change end
 
 // Variant of `testEffect` that builds the test layer through the shared
@@ -141,7 +151,7 @@ export const testEffect = <R, E>(layer: Layer.Layer<R, E>) => {
 // instances Server.Default uses. Use when a test needs pub/sub identity with
 // an in-process HTTP server — most tests should stick with `testEffect`.
 export const testEffectShared = <R, E>(layer: Layer.Layer<R, E>) =>
-  make(Layer.provideMerge(layer, testEnv), Layer.provideMerge(layer, liveEnv), sharedRun)
+  make<R, E>(Layer.provideMerge(layer, testEnv), Layer.provideMerge(layer, liveEnv), sharedRun)
 
 export const awaitWithTimeout = <A, E, R>(
   self: Effect.Effect<A, E, R>,

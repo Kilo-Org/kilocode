@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import { Provider } from "../../../src/provider/provider"
-import { ModelID, ProviderID } from "../../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { filterPromptTrainingModels, nonEmptyProviders } from "../../../src/kilocode/provider/model-filter"
 
 function model(id: string, training?: boolean): Provider.Model {
   return {
-    id: ModelID.make(id),
-    providerID: ProviderID.kilo,
+    id: ModelV2.ID.make(id),
+    providerID: ProviderV2.ID.kilo,
     api: { id: "kilo", url: "https://api.kilo.ai", npm: "@kilocode/kilo-gateway" },
     name: id,
     capabilities: {
@@ -30,7 +31,7 @@ function model(id: string, training?: boolean): Provider.Model {
 
 function provider(id: string, models: Record<string, Provider.Model>): Provider.Info {
   return {
-    id: ProviderID.make(id),
+    id: ProviderV2.ID.make(id),
     name: id,
     source: "api",
     env: [],
@@ -48,7 +49,7 @@ describe("prompt-training model filter", () => {
         unknown: model("unknown"),
       }),
       other: provider("other", {
-        training: { ...model("training", true), providerID: ProviderID.make("other") },
+        training: { ...model("training", true), providerID: ProviderV2.ID.make("other") },
       }),
     }
 

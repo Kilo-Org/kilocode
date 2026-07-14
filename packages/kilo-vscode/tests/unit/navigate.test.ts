@@ -3,6 +3,7 @@ import {
   resolveNavigation,
   validateLocalSession,
   adjacentHint,
+  canOpenRootSession,
   filterUnassignedSessions,
   remoteSessions,
   LOCAL,
@@ -190,16 +191,16 @@ describe("adjacentHint", () => {
 
 describe("filterUnassignedSessions", () => {
   const at = (day: number) => `2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`
-  const info = (id: string, day: number, parentID?: string | null) => ({
+  const info = (id: string, day: number, parentID: string | null = null) => ({
     id,
     createdAt: at(day),
-    ...(parentID === undefined ? {} : { parentID }),
+    parentID,
   })
 
-  it("keeps root sessions with undefined parent IDs", () => {
-    const result = filterUnassignedSessions([info("old", 1), info("new", 3)], new Set(), new Set())
+  it("filters sparse session updates until ancestry is known", () => {
+    const result = filterUnassignedSessions([{ id: "unknown", createdAt: at(1) }], new Set(), new Set())
 
-    expect(result.map((s) => s.id)).toEqual(["new", "old"])
+    expect(result).toEqual([])
   })
 
   it("keeps root sessions with null parent IDs", () => {
@@ -284,6 +285,17 @@ describe("filterUnassignedSessions", () => {
     const result = filterUnassignedSessions([info("root", 1), info("child", 2, "root")], new Set(), new Set())
 
     expect(result.map((s) => s.id)).toEqual(["root"])
+  })
+})
+
+describe("canOpenRootSession", () => {
+  const sessions = [{ id: "root", parentID: null }, { id: "child", parentID: "root" }, { id: "sparse" }]
+
+  it("only opens sessions with known root ancestry", () => {
+    expect(canOpenRootSession("root", sessions)).toBe(true)
+    expect(canOpenRootSession("child", sessions)).toBe(false)
+    expect(canOpenRootSession("sparse", sessions)).toBe(false)
+    expect(canOpenRootSession("missing", sessions)).toBe(false)
   })
 })
 

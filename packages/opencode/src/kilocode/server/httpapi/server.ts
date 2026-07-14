@@ -8,6 +8,7 @@ import { fenceLayer } from "@/server/routes/instance/httpapi/middleware/fence"
 import * as AnacondaDesktop from "@/kilocode/anaconda-desktop/service"
 import { BackgroundJob } from "@/background/job"
 
+import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { agentBuilderHandlers } from "./handlers/agent-builder"
 import { anacondaDesktopHandlers } from "./handlers/anaconda-desktop"
 import { backgroundProcessHandlers } from "./handlers/background-process"
@@ -64,6 +65,7 @@ export function provideListener(opts?: CorsOptions) {
     corsVaryFix,
     fenceLayer,
     cors,
+    KiloViewers.defaultLayer, // kilocode_change
     FetchHttpClient.layer,
     HttpServer.layerServices,
     Layer.succeed(CorsConfig)(opts),

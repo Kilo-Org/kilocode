@@ -1,5 +1,52 @@
 # kilo-code
 
+## 7.4.7
+
+### Patch Changes
+
+- [#12176](https://github.com/Kilo-Org/kilocode/pull/12176) [`b740152`](https://github.com/Kilo-Org/kilocode/commit/b74015280aee3cf2de901f39386025073a8726f0) - Focus the sidebar prompt after closing an active session tab.
+
+## 7.4.6
+
+### Minor Changes
+
+- [#12155](https://github.com/Kilo-Org/kilocode/pull/12155) [`7a7c28c`](https://github.com/Kilo-Org/kilocode/commit/7a7c28c27139f12dbe1e674db3fbf7b7cb42c6fa) - Add in-chat search to the VS Code sidebar and editor tabs. Click the search icon in the session header to find text across the current conversation, with match case, whole word, and regular expression options, then step through highlighted matches with the next/previous controls.
+
+- [#10466](https://github.com/Kilo-Org/kilocode/pull/10466) [`4051eec`](https://github.com/Kilo-Org/kilocode/commit/4051eec1707b1b9dc59f645742739a293a0ae0aa) - Open multiple same-repository sessions as tabs from Kilo sidebar and editor-tab chats.
+
+- [#12075](https://github.com/Kilo-Org/kilocode/pull/12075) [`1e0b25a`](https://github.com/Kilo-Org/kilocode/commit/1e0b25a134a11c03494d5871be3e43a6881f1d87) - Support configuring network destinations that sandboxed tools can reach while network access is otherwise restricted.
+
+- [#12028](https://github.com/Kilo-Org/kilocode/pull/12028) [`b2831c2`](https://github.com/Kilo-Org/kilocode/commit/b2831c20d9c39aaec053672161f9ce4791374f43) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Add a "Browse files..." option to the @ mention dropdown in the VS Code extension prompt input. Selecting it opens a native file picker and mentions the chosen file, so you can point Kilo Code at files outside the current workspace. Files outside the workspace are not auto-attached; Kilo Code reads them on request through the normal Read tool, respecting your file access permissions.
+
+### Patch Changes
+
+- [#12093](https://github.com/Kilo-Org/kilocode/pull/12093) [`8b46601`](https://github.com/Kilo-Org/kilocode/commit/8b466010c58497acd35867c8a67292c063f3dac4) - Speed up VS Code settings saves by draining pending prompts and disposing worktree instances concurrently.
+
+- [#12162](https://github.com/Kilo-Org/kilocode/pull/12162) [`3ee9144`](https://github.com/Kilo-Org/kilocode/commit/3ee91448eeadf353fc611d8e42ac1f5c8cb5eac0) - Show troubleshooting and migration guidance when Google Gemini rejects API credentials.
+
+- [#12040](https://github.com/Kilo-Org/kilocode/pull/12040) [`93c209b`](https://github.com/Kilo-Org/kilocode/commit/93c209bfd1f068b26b38ac4e9b7237d4c7f095e1) Thanks [@rakshith1928](https://github.com/rakshith1928)! - Hide gpt-5.5-pro from the model picker when using ChatGPT OAuth login, since Codex rejects it with HTTP 400.
+
+- [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`7e7ab7e`](https://github.com/Kilo-Org/kilocode/commit/7e7ab7e795ca0922f16bfa549d088c23fe631c2f) - Support rollback and redo controls in JetBrains sessions and clarify when reverted changes can be redone.
+
+- [#12089](https://github.com/Kilo-Org/kilocode/pull/12089) [`e674cdf`](https://github.com/Kilo-Org/kilocode/commit/e674cdf6688383a7418441483ac55007489b6bbb) - Load expanded diff previews consistently when opening a review.
+
+- [#12077](https://github.com/Kilo-Org/kilocode/pull/12077) [`39468b0`](https://github.com/Kilo-Org/kilocode/commit/39468b0441ddb46aa24a27d2efd6d6a2662ef392) - Show effective permission defaults and clarify external-directory approvals in VS Code.
+
+- [#12078](https://github.com/Kilo-Org/kilocode/pull/12078) [`09f12c2`](https://github.com/Kilo-Org/kilocode/commit/09f12c2351ba20408b1b3030dbe32fdfbd6599b5) - Show sandbox controls only after sandboxing is enabled in settings.
+
+- [#12105](https://github.com/Kilo-Org/kilocode/pull/12105) [`e0bfed3`](https://github.com/Kilo-Org/kilocode/commit/e0bfed308ce7906e4d9ca923e82eda1c20cefd2b) - Shut down the headless `kilo serve` process automatically when the editor client that launched it exits without a clean signal, preventing orphaned CLI processes.
+
+- [#12152](https://github.com/Kilo-Org/kilocode/pull/12152) [`f6149e8`](https://github.com/Kilo-Org/kilocode/commit/f6149e8b1ff3300f4244190628e6f081811ac5b8) - Start Agent Manager local sessions on Windows when workspace drive-letter casing differs.
+
+- Updated dependencies [[`039b73d`](https://github.com/Kilo-Org/kilocode/commit/039b73dfaefe93452501a48914eaeeb2f83c572b), [`1e0b25a`](https://github.com/Kilo-Org/kilocode/commit/1e0b25a134a11c03494d5871be3e43a6881f1d87), [`94b553b`](https://github.com/Kilo-Org/kilocode/commit/94b553b91b130d996ce833e168e579df51a14957)]:
+  - @kilocode/kilo-indexing@7.4.6
+  - @kilocode/sdk@7.5.0
+  - @kilocode/kilo-ui@7.4.6
+  - @kilocode/plugin@7.4.6
+  - @opencode-ai/ui@7.4.6
+  - @kilocode/kilo-gateway@7.4.6
+  - @opencode-ai/core@7.4.6
+
 ## 7.4.4
 
 ### Patch Changes

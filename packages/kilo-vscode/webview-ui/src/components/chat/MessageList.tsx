@@ -63,6 +63,7 @@ import {
   type TranscriptHold,
   type TranscriptRow,
 } from "../../context/transcript-rows"
+import { onTimelineHighlight, type TimelineHighlight } from "../../utils/timeline/highlight"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
 import {
@@ -626,6 +627,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
   window.addEventListener("scrollToMessage", onScrollToMessage)
   onCleanup(() => window.removeEventListener("scrollToMessage", onScrollToMessage))
 
+  // Highlights the part behind the currently hovered/focused timeline bar
+  // (dispatched by TaskTimeline) so the two stay visually correlated.
+  const [highlight, setHighlight] = createSignal<TimelineHighlight>()
+  onCleanup(onTimelineHighlight(setHighlight))
+
   const measurement = createMemo(() => {
     const id = session.currentSessionID()
     const token = layout()
@@ -655,7 +661,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       return
     }
     if (!handle || saved.keys.length === 0) return
-    const index = handle.findStartIndex()
+    const index = handle.findItemIndex(handle.scrollOffset)
     const key = saved.keys[index]
     if (!key) return
     setScroll(id, { type: "anchor", key, offset: handle.scrollOffset - handle.getItemOffset(index) })
@@ -811,7 +817,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     scrollRef={scrollEl()}
                     shift={session.messageMutation() === "prepend"}
                     cache={measurement()}
-                    overscan={2}
+                    bufferSize={520}
                     itemSize={260}
                   >
                     {(row, index) => (
@@ -819,6 +825,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         row={row}
                         index={index()}
                         onForkMessage={props.onForkMessage}
+                        highlight={highlight}
                         activeSearch={activeKey() === row.key}
                       />
                     )}
@@ -829,6 +836,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     <TranscriptRowView
                       row={lookup().get(key)!}
                       onForkMessage={props.onForkMessage}
+                      highlight={highlight}
                       activeSearch={activeKey() === key}
                     />
                   )}

@@ -62,8 +62,8 @@ export function buildMentionResults(query: string, items: Array<FileSearchItem |
   return [
     ...getTerminalMentionResult(query),
     ...(git ? getGitChangesMentionResult(query) : []),
-    FILE_PICKER_RESULT,
     ...results,
+    FILE_PICKER_RESULT,
   ]
 }
 

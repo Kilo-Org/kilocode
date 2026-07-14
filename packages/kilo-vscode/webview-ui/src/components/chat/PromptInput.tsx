@@ -1119,9 +1119,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     reviewDrafts.delete(key)
     imageDrafts.delete(key)
     scrollDrafts.delete(key)
+    history.append(draft)
     if (draftKey() !== key) return
 
-    history.append(draft)
     history.reset()
     setText("")
     clearReviewComments()

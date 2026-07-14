@@ -5,7 +5,7 @@ import * as path from "path"
 import { readFile } from "fs/promises"
 import * as Tool from "../../tool/tool"
 import * as Auth from "../../auth"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { assertExternalDirectoryEffect } from "../../tool/external-directory"
@@ -150,7 +150,7 @@ type Meta = {
 export const GenerateImageTool = Tool.define(
   "generate_image",
   Effect.gen(function* () {
-    const fs = yield* AppFileSystem.Service
+    const fs = yield* FSUtil.Service
     const authSvc = yield* Auth.Service
     const configSvc = yield* Config.Service
     const http = yield* HttpClient.HttpClient
