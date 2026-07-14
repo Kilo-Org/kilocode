@@ -1,10 +1,30 @@
 import { HEADER_FEATURE } from "../api/constants.js"
 import type { DirectAutocompleteProviderID } from "../autocomplete.js"
-import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget, type FimTarget } from "../fim.js"
+import {
+  buildOpenAICompletionsRequest,
+  DIRECT_FIM_ENV,
+  isLoopbackUrl,
+  openAICompletionsUrl,
+  requestMistralFim,
+  resolveFimTarget,
+  type FimTarget,
+} from "../fim.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { AuthStore } from "./handlers.js"
 
 type Auth = Pick<AuthStore, "get">
+
+export interface ConfiguredFimProvider {
+  baseURL: string
+  apiKey?: string
+  headers?: Record<string, string>
+  model?: string
+}
+
+export type ResolveConfiguredFimProvider = (
+  providerID: string,
+  modelID: string,
+) => ConfiguredFimProvider | undefined | Promise<ConfiguredFimProvider | undefined>
 
 const FIM_TIMEOUT_MS = 30_000
 
@@ -26,7 +46,7 @@ async function getProviderKey(Auth: Auth, provider: DirectAutocompleteProviderID
 
 async function fetchFim(
   target: FimTarget,
-  key: string,
+  key: string | undefined,
   input: {
     prefix: string
     suffix: string
@@ -34,44 +54,64 @@ async function fetchFim(
     temperature: number
     signal: AbortSignal
     organizationId?: string
+    sessionId?: string
+    configured?: ConfiguredFimProvider
   },
 ): Promise<Response> {
+  const model = input.configured?.model ?? target.model
   const run = async (url: string) => {
-    console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${url}`)
+    console.info(`[FIM] request provider=${target.provider} model=${model} url=${url}`)
     return fetch(url, {
       method: "POST",
       headers: {
+        ...input.configured?.headers,
         "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
         ...(target.provider === "kilo"
           ? buildKiloHeaders(undefined, { kilocodeOrganizationId: input.organizationId })
           : {}),
         ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
+        ...(target.provider === "configured" && input.sessionId
+          ? { "x-kilo-autocomplete-session-id": input.sessionId }
+          : {}),
       },
       signal: input.signal,
-      body: JSON.stringify({
-        model: target.model,
-        prompt: input.prefix,
-        suffix: input.suffix,
-        max_tokens: input.maxTokens,
-        temperature: input.temperature,
-        stream: true,
-      }),
+      body: JSON.stringify(
+        buildOpenAICompletionsRequest({
+          model,
+          prefix: input.prefix,
+          suffix: input.suffix,
+          maxTokens: input.maxTokens,
+          temperature: input.temperature,
+        }),
+      ),
     })
   }
 
   if (target.provider === "mistral") return requestMistralFim(run)
+  if (target.provider === "configured") return run(openAICompletionsUrl(input.configured!.baseURL))
   return run(target.url)
 }
 
-export function createFimHandler(Auth: Auth) {
+export function createFimHandler(Auth: Auth, resolveConfiguredProvider?: ResolveConfiguredFimProvider) {
   return async (c: any) => {
-    const { prefix, suffix, provider, model, maxTokens, temperature } = c.req.valid("json")
+    const { prefix, suffix, provider, model, maxTokens, temperature, sessionId } = c.req.valid("json")
     const target = resolveFimTarget(provider, model)
     const fimMaxTokens = maxTokens ?? 256
     const fimTemperature = temperature ?? 0.2
+    const configured =
+      target.provider === "configured" ? await resolveConfiguredProvider?.(target.providerID, target.model) : undefined
+    if (target.provider === "configured" && !configured) {
+      return c.json({ error: "Autocomplete provider or model is not configured" }, 400)
+    }
+
     const proxy = target.provider === "kilo" ? await getProxyAuth(Auth) : undefined
-    const token = target.provider === "kilo" ? proxy?.token : await getProviderKey(Auth, target.provider)
+    const token =
+      target.provider === "kilo"
+        ? proxy?.token
+        : target.provider === "configured"
+          ? configured?.apiKey
+          : await getProviderKey(Auth, target.provider)
 
     if (target.provider === "kilo" && !proxy?.auth) {
       return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
@@ -81,8 +121,9 @@ export function createFimHandler(Auth: Auth) {
       return c.json({ error: "No valid token found" }, 401)
     }
 
-    if (!token) {
-      return c.json({ error: `Missing ${target.provider} provider API key` }, 401)
+    if (!token && (target.provider !== "configured" || !isLoopbackUrl(configured!.baseURL))) {
+      const name = target.provider === "configured" ? target.providerID : target.provider
+      return c.json({ error: `Missing ${name} provider API key` }, 401)
     }
 
     const signal = AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
@@ -95,6 +136,8 @@ export function createFimHandler(Auth: Auth) {
         temperature: fimTemperature,
         signal,
         organizationId: proxy?.organizationId,
+        sessionId,
+        configured,
       })
 
       if (!response.ok) {

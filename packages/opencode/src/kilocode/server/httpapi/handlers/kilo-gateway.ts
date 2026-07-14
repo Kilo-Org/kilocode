@@ -22,7 +22,14 @@ import {
   fetchOrganizationModes,
   fetchProfile,
 } from "@kilocode/kilo-gateway"
-import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
+import {
+  buildOpenAICompletionsRequest,
+  DIRECT_FIM_ENV,
+  isLoopbackUrl,
+  openAICompletionsUrl,
+  requestMistralFim,
+  resolveFimTarget,
+} from "@kilocode/kilo-gateway/fim"
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
 import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
@@ -40,11 +47,14 @@ import { Identifier } from "@/id/id"
 import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
+import { Provider } from "@/provider/provider"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import { Session } from "@/session/session"
 import { Database } from "@/storage/db"
 import { Storage } from "@/storage/storage"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AudioTranscriptionsBody, ClawStatus, EditBody, FimBody } from "../groups/kilo-gateway"
 import { baseKey } from "../../../session-portability/cumulative-diff"
 import { extractSessionDiffs, restoreSessionDiffs } from "../../../session-portability/session-diff-restore"
@@ -63,6 +73,7 @@ function logError(route: string, err: unknown) {
 export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo", (handlers) =>
   Effect.gen(function* () {
     const auth = yield* Auth.Service
+    const providers = yield* Provider.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
     const events = yield* EventV2Bridge.Service
@@ -113,16 +124,53 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     const fim = Effect.fn("KiloGatewayHttpApi.fim")(function* (ctx: { payload: typeof FimBody.Type }) {
       const target = resolveFimTarget(ctx.payload.provider, ctx.payload.model)
+      const configured =
+        target.provider === "configured"
+          ? yield* Effect.gen(function* () {
+              const providerID = ProviderV2.ID.make(target.providerID)
+              const modelID = ModelV2.ID.make(target.model)
+              const model = yield* providers
+                .getModel(providerID, modelID)
+                .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
+              const provider = yield* providers.getProvider(providerID)
+              if (!provider) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+              const baseURL =
+                typeof provider.options.baseURL === "string" && provider.options.baseURL
+                  ? provider.options.baseURL
+                  : model.api.url
+              if (!baseURL) return yield* Effect.fail(new HttpApiError.BadRequest({}))
+              const providerHeaders =
+                provider.options.headers && typeof provider.options.headers === "object"
+                  ? Object.fromEntries(
+                      Object.entries(provider.options.headers).filter(
+                        (entry): entry is [string, string] => typeof entry[1] === "string",
+                      ),
+                    )
+                  : {}
+              return {
+                url: openAICompletionsUrl(baseURL),
+                model: model.api.id,
+                headers: { ...providerHeaders, ...model.headers },
+                token:
+                  typeof provider.options.apiKey === "string" && provider.options.apiKey
+                    ? provider.options.apiKey
+                    : provider.key,
+              }
+            })
+          : undefined
       const info = target.provider === "kilo" ? yield* proxyAuth() : undefined
       const token = yield* Effect.gen(function* () {
         if (target.provider === "kilo") return info?.token
+        if (target.provider === "configured") return configured?.token
         const item = yield* auth.get(target.provider).pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
         if (item?.type === "api") return item.key
         return DIRECT_FIM_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
       })
 
       if (target.provider === "kilo" && !info?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!token && (target.provider !== "configured" || !isLoopbackUrl(configured!.url))) {
+        return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      }
 
       const request = yield* HttpServerRequest.HttpServerRequest
       const signal =
@@ -132,29 +180,36 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const response = yield* Effect.promise(async () => {
         try {
           const run = async (url: string): Promise<Response> => {
-            console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${url}`)
+            const requestModel = configured?.model ?? target.model
+            console.info(`[FIM] request provider=${target.provider} model=${requestModel} url=${url}`)
             return fetch(url, {
               method: "POST",
               headers: {
+                ...configured?.headers,
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 ...(target.provider === "kilo"
                   ? buildKiloHeaders(undefined, { kilocodeOrganizationId: info?.organizationId })
                   : {}),
                 ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
+                ...(target.provider === "configured" && ctx.payload.sessionId
+                  ? { "x-kilo-autocomplete-session-id": ctx.payload.sessionId }
+                  : {}),
               },
               signal,
-              body: JSON.stringify({
-                model: target.model,
-                prompt: ctx.payload.prefix,
-                suffix: ctx.payload.suffix,
-                max_tokens: ctx.payload.maxTokens ?? 256,
-                temperature: ctx.payload.temperature ?? 0.2,
-                stream: true,
-              }),
+              body: JSON.stringify(
+                buildOpenAICompletionsRequest({
+                  model: requestModel,
+                  prefix: ctx.payload.prefix,
+                  suffix: ctx.payload.suffix,
+                  maxTokens: ctx.payload.maxTokens ?? 256,
+                  temperature: ctx.payload.temperature ?? 0.2,
+                }),
+              ),
             })
           }
           if (target.provider === "mistral") return requestMistralFim(run)
+          if (target.provider === "configured") return run(configured!.url)
           return run(target.url)
         } catch (err) {
           if (err instanceof DOMException && err.name === "TimeoutError")

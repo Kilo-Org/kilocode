@@ -8,6 +8,7 @@ import { KiloGatewayApi, KiloGatewayPaths } from "../../../src/kilocode/server/h
 import { kiloGatewayHandlers } from "../../../src/kilocode/server/httpapi/handlers/kilo-gateway"
 import { InstanceStore } from "../../../src/project/instance-store"
 import { ModelCache } from "../../../src/provider/model-cache"
+import { Provider } from "../../../src/provider/provider"
 import { Session } from "../../../src/session/session"
 import { Authorization } from "../../../src/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "../../../src/server/routes/instance/httpapi/middleware/instance-context"
@@ -22,6 +23,38 @@ import { testEffect } from "../../lib/effect"
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
 const auth = Layer.mock(Auth.Service)({
   get: () => Effect.succeed(new Auth.Api({ type: "api", key: "test-token" })),
+})
+const local = {
+  id: "lmstudio",
+  name: "LM Studio",
+  source: "config",
+  env: [],
+  key: "test-token",
+  options: {
+    baseURL: "https://lmstudio.test/v1",
+    headers: { "x-test-header": "configured" },
+  },
+  models: {
+    "qwen2.5-coder-1.5b": {
+      id: "qwen2.5-coder-1.5b",
+      providerID: "lmstudio",
+      api: {
+        id: "qwen2.5-coder-1.5b-fim",
+        npm: "@ai-sdk/openai-compatible",
+        url: "",
+      },
+      name: "Qwen2.5 Coder 1.5B",
+      headers: { "x-model-header": "configured" },
+    },
+  },
+} as unknown as Provider.Info
+const providers = Layer.mock(Provider.Service, {
+  getProvider: (id) => Effect.succeed(id === "lmstudio" ? local : (undefined as unknown as Provider.Info)),
+  getModel: (pid, mid) => {
+    const model = pid === "lmstudio" ? local.models[mid] : undefined
+    if (model) return Effect.succeed(model)
+    return Effect.fail(new Provider.ModelNotFoundError({ providerID: pid, modelID: mid }))
+  },
 })
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
@@ -49,6 +82,7 @@ const layer = HttpRouter.serve(
       passthroughInstanceContext,
       testWorkspaceRouting,
       auth,
+      providers,
       store,
       cache,
       session,
@@ -59,14 +93,14 @@ const layer = HttpRouter.serve(
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 const it = testEffect(layer)
 
-function stub(run: () => Response | Promise<Response>) {
+function stub(run: (input: RequestInfo | URL, init?: RequestInit) => Response | Promise<Response>) {
   // These tests run sequentially; scope the process-global override and delegate in-process server traffic.
   const original = globalThis.fetch
   const fetch: typeof globalThis.fetch = Object.assign(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
       if (url.startsWith("http://127.0.0.1:")) return original(input, init)
-      return run()
+      return run(input, init)
     },
     { preconnect: original.preconnect },
   )
@@ -94,6 +128,57 @@ describe("Kilo gateway HttpApi statuses", () => {
 
       expect(response.status).toBe(200)
       expect(yield* response.json).toEqual({ authenticated: true, type: "api" })
+    }),
+  )
+
+  it.live("routes configured autocomplete through OpenAI-compatible completions", () =>
+    Effect.gen(function* () {
+      let upstream: Request | undefined
+      yield* stub((input, init) => {
+        upstream = new Request(input, init)
+        return new Response('data: {"choices":[]}\n\n', {
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      })
+
+      const response = yield* post(KiloGatewayPaths.fim, {
+        prefix: "function add(a, b) { return ",
+        suffix: "; }\n",
+        provider: "lmstudio",
+        model: "qwen2.5-coder-1.5b",
+        maxTokens: 64,
+        temperature: 0,
+        sessionId: "stable-file-session",
+      })
+
+      expect(response.status).toBe(200)
+      expect(upstream).toBeDefined()
+      expect(upstream?.url).toBe("https://lmstudio.test/v1/completions")
+      expect(upstream?.headers.get("authorization")).toBe("Bearer test-token")
+      expect(upstream?.headers.get("x-kilo-autocomplete-session-id")).toBe("stable-file-session")
+      expect(upstream?.headers.get("x-test-header")).toBe("configured")
+      expect(upstream?.headers.get("x-model-header")).toBe("configured")
+      const body = yield* Effect.promise(() => upstream!.json() as Promise<Record<string, unknown>>)
+      expect(body.model).toBe("qwen2.5-coder-1.5b-fim")
+      expect(body.max_tokens).toBe(64)
+      expect(body.prompt).toBe("function add(a, b) { return ")
+      expect(body.suffix).toBe("; }\n")
+      expect(body.stream).toBe(true)
+    }),
+  )
+
+  it.live("rejects an unknown configured autocomplete model without falling back to Kilo", () =>
+    Effect.gen(function* () {
+      yield* stub(() => Promise.reject(new Error("unexpected upstream request")))
+
+      const response = yield* post(KiloGatewayPaths.fim, {
+        prefix: "const value = ",
+        suffix: "\n",
+        provider: "lmstudio",
+        model: "missing-model",
+      })
+
+      expect(response.status).toBe(400)
     }),
   )
 
