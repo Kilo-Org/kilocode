@@ -2096,14 +2096,11 @@ export const PromptInput = Schema.Struct({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
-  // kilocode_change start - per-message tool restrictions that do not update session permissions
-  ephemeralTools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
-    description: "@internal Tool toggles applied to this message without updating session permissions.",
-  }),
-  // kilocode_change end
+  // kilocode_change start - keep internal ephemeral tool controls out of the public prompt schema
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
+  // kilocode_change end
   // kilocode_change start - managed product slow-snapshot policy
   snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",
@@ -2134,6 +2131,7 @@ type PartInputUnion =
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
+  ephemeralTools?: Record<string, boolean>
 }
 // kilocode_change end
 

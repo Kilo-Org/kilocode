@@ -421,7 +421,8 @@ export namespace RemoteSender {
           })
           return
         }
-        const input = SessionPrompt.PromptInput.zod.safeParse(normalizePrompt(parsed.data as RemotePromptInput))
+        const normalized = normalizePrompt(parsed.data as RemotePromptInput)
+        const input = SessionPrompt.PromptInput.zod.safeParse(normalized)
         if (!input.success) {
           options.conn.send({
             type: "response",
@@ -430,8 +431,9 @@ export namespace RemoteSender {
           })
           return
         }
-        dispatchLongRunning(msg, directoryFor(input.data.sessionID), async () => {
-          await prompt(input.data as SessionPrompt.PromptInput)
+        const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
+        dispatchLongRunning(msg, directoryFor(promptInput.sessionID), async () => {
+          await prompt(promptInput)
         })
         return
       }
