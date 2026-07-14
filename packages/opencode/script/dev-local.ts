@@ -1,9 +1,10 @@
 // kilocode_change - new file
 // Launch the kilo CLI dev build against a locally running cloud dev server.
-//   bun dev:local <project-dir> [--cloud <dir>] [--no-ingest] [--print] [-- <kilo args>]
+//   bun dev:local <project-dir> [--cloud <dir>] [--no-ingest] [--no-events] [--print] [-- <kilo args>]
 //
 // Reads ports from <cloud>/dev/logs/manifest.json (+ .dev-port), probes the web
-// server, and points the CLI at it (KILO_API_URL / KILO_SESSION_INGEST_URL).
+// server, and points the CLI at it (KILO_API_URL / KILO_SESSION_INGEST_URL /
+// EVENT_SERVICE_URL).
 // Auth/config/state/cache are isolated under ~/.kilo-dev so it can't clash with
 // your main kilo install; real HOME is kept so git/ssh still work.
 
@@ -46,11 +47,13 @@ async function main() {
   let cloud = path.join(os.homedir(), "Projects", "cloud")
   let project = ""
   let noIngest = false
+  let noEvents = false
   let dry = false
   for (let i = 0; i < local.length; i++) {
     const a = local[i]
     if (a === "--cloud") cloud = local[++i] ?? die("--cloud requires a value")
     else if (a === "--no-ingest") noIngest = true
+    else if (a === "--no-events") noEvents = true
     else if (a === "--print") dry = true
     else if (!a.startsWith("--")) project = a
   }
@@ -62,6 +65,7 @@ async function main() {
   const svc = (name: string) => m.services?.find((s) => s.name === name)?.port
   const webPort = Number(read(path.join(cloud, ".dev-port"))) || svc("nextjs")
   const ingestPort = noIngest ? undefined : svc("cloudflare-session-ingest")
+  const eventsPort = noEvents ? undefined : svc("event-service")
   if (!webPort) die(`no web port found in ${cloud} — is the dev server started? (pnpm dev:start)`)
 
   const env: NodeJS.ProcessEnv = { ...process.env }
@@ -73,11 +77,14 @@ async function main() {
   env.KILO_DISABLE_AUTOUPDATE = "1"
   if (ingestPort) env.KILO_SESSION_INGEST_URL = `http://localhost:${ingestPort}`
   else env.KILO_DISABLE_SESSION_INGEST = "1"
+  if (eventsPort) env.EVENT_SERVICE_URL = `ws://localhost:${eventsPort}`
+  else env.KILO_DISABLE_PRESENCE = "1"
 
   const webUp = await alive(webPort)
   console.log(`${dim}project${rst}  ${project}`)
   console.log(`${dim}web${rst}      :${webPort}  ${webUp ? `${grn}up${rst}` : `${red}down${rst}`}`)
   console.log(`${dim}ingest${rst}   ${ingestPort ? `:${ingestPort}` : "off"}`)
+  console.log(`${dim}events${rst}   ${eventsPort ? `:${eventsPort}` : "off"}`)
   console.log(`${dim}home${rst}     ${home}`)
 
   if (dry) { if (!webUp) console.warn(`${ylw}web down — start it (pnpm dev:start)${rst}`); return }
