@@ -155,6 +155,24 @@ describe("syncMentionedPaths", () => {
     const result = syncMentionedPaths(paths, "@foo.ts is important")
     expect(result.has("foo.ts")).toBe(true)
   })
+
+  it("does not false-match a stale shorter path against a longer, space-containing path that starts the same way", () => {
+    // "a.txt" is a known path from an earlier, unrelated mention. A space
+    // genuinely follows "a.txt" in the current text, but only because it's
+    // the start of the longer, distinct "a.txt backup.txt" -- a whitespace-only
+    // boundary check would incorrectly treat that as a valid, separate match.
+    const paths = new Set(["a.txt", "a.txt backup.txt"])
+    const result = syncMentionedPaths(paths, "@a.txt backup.txt")
+    expect(result.has("a.txt backup.txt")).toBe(true)
+    expect(result.has("a.txt")).toBe(false)
+  })
+
+  it("keeps a shorter path when it also has its own genuine, separate occurrence", () => {
+    const paths = new Set(["a.txt", "a.txt backup.txt"])
+    const result = syncMentionedPaths(paths, "@a.txt backup.txt and also @a.txt")
+    expect(result.has("a.txt backup.txt")).toBe(true)
+    expect(result.has("a.txt")).toBe(true)
+  })
 })
 
 describe("buildTextAfterMentionSelect", () => {

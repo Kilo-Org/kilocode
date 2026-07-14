@@ -33,13 +33,6 @@ export const FILE_PICKER_RESULT: MentionResult = {
   description: "Select a file outside the workspace",
 }
 
-/**
- * Escape special regex characters in a string so it can be used in a RegExp.
- */
-function escape(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
 export function getTerminalMentionResult(query: string): MentionResult[] {
   const normalized = query.toLowerCase()
   if (!TERMINAL_MENTION.startsWith(normalized)) return []
@@ -84,14 +77,38 @@ export function filterMentionResults(query: string, items: MentionResult[]): Men
  *
  * Uses boundary-aware matching (whitespace or start/end of string) and processes
  * paths longest-first to prevent `@src/a.ts` from false-matching `@src/a.tsx`.
+ *
+ * A trailing space can no longer be assumed to end a mention now that paths
+ * may contain spaces: `@a.txt` is a literal, whitespace-bounded prefix of the
+ * space-containing `@a.txt backup.txt`. Checking each candidate occurrence
+ * against every longer path already accepted at the same position (rather
+ * than relying on whitespace alone) prevents a stale, unrelated `a.txt` from
+ * a prior mention surviving just because it happens to collide with the
+ * start of a longer path mentioned in the current text.
  */
 export function syncMentionedPaths(prev: Set<string>, text: string): Set<string> {
   const next = new Set<string>()
   // Sort longest-first so e.g. "src/a.tsx" is checked before "src/a.ts"
   const sorted = [...prev].sort((a, b) => b.length - a.length)
+  const accepted: string[] = []
   for (const path of sorted) {
-    const pattern = new RegExp(`(?:^|\\s)@${escape(path)}(?:\\s|$)`)
-    if (pattern.test(text)) next.add(path)
+    const token = `@${path}`
+    let search = 0
+    const valid = (() => {
+      while (true) {
+        const idx = text.indexOf(token, search)
+        if (idx === -1) return false
+        const before = idx === 0 || /\s/.test(text[idx - 1] ?? "")
+        const end = idx + token.length
+        const after = end >= text.length || /\s/.test(text[end] ?? "")
+        const collides = accepted.some((other) => other !== path && text.startsWith(`@${other}`, idx))
+        if (before && after && !collides) return true
+        search = idx + 1
+      }
+    })()
+    if (!valid) continue
+    accepted.push(path)
+    next.add(path)
   }
   return next
 }
