@@ -49,12 +49,13 @@ describe("memory core package", () => {
   test("enable preserves existing memory settings", async () => {
     await use(async (t) => {
       const enabled = await Memory.enable({ root: t.root })
-      await MemoryFiles.writeState(t.root, { ...enabled.state, autoInject: false, autoConsolidate: false })
+      await MemoryFiles.writeState(t.root, { ...enabled.state, autoInject: false, autoConsolidate: false, verbose: true })
 
       const next = await Memory.enable({ root: t.root })
 
       expect(next.state.autoInject).toBe(true)
       expect(next.state.autoConsolidate).toBe(false)
+      expect(next.state.verbose).toBe(true)
     })
   })
 
@@ -72,8 +73,10 @@ describe("memory core package", () => {
 
     expect(paused.autoInject).toBe(true)
     expect(paused.autoConsolidate).toBe(true)
+    expect(paused.verbose).toBe(false)
     expect(missing.enabled).toBe(false)
     expect(missing.autoConsolidate).toBe(true)
+    expect(missing.verbose).toBe(false)
     expect(state.limits.maxSessionFiles).toBe(20)
     expect(state.limits.maxRecentSessions).toBe(5)
     expect(state.limits.maxProjectIndexBytes).toBe(8192)
@@ -91,7 +94,20 @@ describe("memory core package", () => {
       const state = await MemoryFiles.readState(t.root)
 
       expect(raw.limits).toBeUndefined()
+      expect(raw.verbose).toBe(false)
       expect(state.limits.maxSessionLineChars).toBe(480)
+    })
+  })
+
+  test("configures and persists verbose memory details", async () => {
+    await use(async (t) => {
+      await Memory.enable({ root: t.root })
+      const result = await Memory.configure({ root: t.root, settings: { verbose: true } })
+      const raw = JSON.parse(await Bun.file(MemoryPaths.files(t.root).state).text())
+
+      expect(result.state.verbose).toBe(true)
+      expect(raw.verbose).toBe(true)
+      expect((await MemoryFiles.readState(t.root)).verbose).toBe(true)
     })
   })
 

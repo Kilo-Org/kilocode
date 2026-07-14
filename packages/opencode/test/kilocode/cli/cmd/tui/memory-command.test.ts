@@ -43,16 +43,16 @@ describe("memory TUI command parser", () => {
     expect(shown.join("\n")).not.toContain("memory tokens")
   })
 
-  test("auto-save and purge commands call explicit endpoints", async () => {
+  test("auto-save, verbose, and purge commands call explicit endpoints", async () => {
     const shown: string[] = []
     const calls: unknown[] = []
-    const state = { autoConsolidate: true }
+    const state = { autoConsolidate: true, verbose: false }
     const client = {
       memory: {
         status: async () => ({ data: { state } }),
         configure: async (input: unknown) => {
           calls.push(input)
-          return { data: { state: { autoConsolidate: false } } }
+          return { data: { state: { autoConsolidate: false, verbose: true } } }
         },
         purge: async (input: unknown) => {
           calls.push(input)
@@ -75,15 +75,17 @@ describe("memory TUI command parser", () => {
     }
 
     await runMemoryCommand({ ...base, text: "/memory auto off" })
+    await runMemoryCommand({ ...base, text: "/memory verbose on" })
     await runMemoryCommand({ ...base, text: "/memory auto status" })
     await runMemoryCommand({ ...base, text: "/memory purge" })
     await runMemoryCommand({ ...base, text: "/memory purge confirm" })
 
     expect(shown[0]).toBe("Memory auto-save off")
-    expect(shown[1]).toContain("Missing auto mode")
-    expect(shown[2]).toContain("Purge requires confirmation")
-    expect(shown[3]).toBe("Memory purged")
-    expect(calls).toEqual([{ autoConsolidate: false }, { confirm: true }])
+    expect(shown[1]).toBe("Memory verbose on")
+    expect(shown[2]).toContain("Missing auto mode")
+    expect(shown[3]).toContain("Purge requires confirmation")
+    expect(shown[4]).toBe("Memory purged")
+    expect(calls).toEqual([{ autoConsolidate: false }, { verbose: true }, { confirm: true }])
   })
 
   test("status opens overview dialog", async () => {
@@ -181,7 +183,7 @@ describe("memory TUI command parser", () => {
 
   test("memory commands route to session directory when no workspace is active", async () => {
     const calls: unknown[] = []
-    const state = { autoConsolidate: false }
+    const state = { autoConsolidate: false, verbose: false }
     const client = {
       memory: {
         configure: async (input: unknown) => {
@@ -199,6 +201,7 @@ describe("memory TUI command parser", () => {
     }
 
     await runMemoryCommand({ ...base, text: "/memory auto off", directory: "/repo/packages/opencode" })
+    await runMemoryCommand({ ...base, text: "/memory verbose on", directory: "/repo/packages/opencode" })
     await runMemoryCommand({
       ...base,
       text: "/memory auto off",
@@ -208,6 +211,7 @@ describe("memory TUI command parser", () => {
 
     expect(calls).toEqual([
       { directory: "/repo/packages/opencode", autoConsolidate: false },
+      { directory: "/repo/packages/opencode", verbose: true },
       { workspace: "wrk_123", autoConsolidate: false },
     ])
   })

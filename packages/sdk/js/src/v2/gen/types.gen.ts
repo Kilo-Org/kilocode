@@ -13671,6 +13671,7 @@ export type MemoryStatusResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13751,6 +13752,7 @@ export type MemoryShowResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13831,6 +13833,7 @@ export type MemoryEnableResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13908,6 +13911,7 @@ export type MemoryDisableResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13947,6 +13951,7 @@ export type MemoryDisableResponse = MemoryDisableResponses[keyof MemoryDisableRe
 export type MemoryConfigureData = {
   body?: {
     autoConsolidate?: boolean
+    verbose?: boolean
   }
   path?: never
   query?: {
@@ -13981,6 +13986,7 @@ export type MemoryConfigureResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -14052,6 +14058,7 @@ export type MemoryRebuildResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean

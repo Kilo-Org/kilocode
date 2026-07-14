@@ -199,6 +199,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const meta = createMemo(() =>
     MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
   )
+  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
   const fmt = (value: number) => value.toLocaleString(language.locale())
   const count = (item: MemoryItem) => fmt(item.count)
   const tokens = (item: MemoryItem) => fmt(item.tokens)
@@ -241,6 +242,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
         <Show when={item.files.length > 0}>
           <div>{language.t("chat.memory.badge.files", { files: item.files.join(", ") })}</div>
         </Show>
+        <For each={MemoryMarkerMeta.snippets(item, verbose())}>{(value) => <div>{value}</div>}</For>
       </div>
     )
   }
@@ -365,6 +367,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           <Tooltip value={tip(item())} placement="top">
             <div data-component="assistant-memory-badge">
               {label(item())} · {detail(item())} · {language.t("chat.memory.badge.tokens", { tokens: tokens(item()) })}
+              <Show when={MemoryMarkerMeta.snippets(item(), verbose())[0]}>{(value) => <> · {value()}</>}</Show>
             </div>
           </Tooltip>
         )}
