@@ -989,6 +989,105 @@ export const TaskHeaderWithTodosAllDone: Story = {
   },
 }
 
+export const TaskHeaderWithSteps: Story = {
+  name: "TaskHeader — with step dividers + timing",
+  render: () => {
+    const stepParts: Record<string, Part[]> = {
+      [headerAssistantID]: [
+        {
+          id: "s1-start",
+          sessionID: SESSION_ID,
+          messageID: headerAssistantID,
+          type: "step-start",
+          time: { start: headerNow - 9000 },
+        },
+        {
+          id: "s1-read",
+          sessionID: SESSION_ID,
+          messageID: headerAssistantID,
+          type: "tool",
+          tool: "read",
+          state: {
+            status: "completed",
+            input: { filePath: "packages/opencode/src/cli/index.ts" },
+            output: "export async function main() { /* existing CLI bootstrap */ }",
+            title: "Read CLI entrypoint",
+          },
+        },
+        {
+          id: "s1-text",
+          sessionID: SESSION_ID,
+          messageID: headerAssistantID,
+          type: "text",
+          text: "I found the existing command registration flow.",
+        },
+        {
+          id: "s1-finish",
+          sessionID: SESSION_ID,
+          messageID: headerAssistantID,
+          type: "step-finish",
+          reason: "tool",
+          cost: 0.0123,
+          tokens: { input: 1200, output: 340, reasoning: 0, cache: { read: 100, write: 50 } },
+          time: { start: headerNow - 9000, end: headerNow - 6000 },
+        },
+        {
+          id: "s2-start",
+          sessionID: SESSION_ID,
+          messageID: headerAssistantID,
+          type: "step-start",
+          time: { start: headerNow - 5000 },
+        },
+        {
+          id: "s2-edit",
+          sessionID: SESSION_ID,
+          messageID: headerAssistantID,
+          type: "tool",
+          tool: "edit",
+          state: {
+            status: "completed",
+            input: { filePath: "packages/opencode/src/cli/index.ts" },
+            output: "Updated the command registry to expose the new interface hook.",
+            title: "Update CLI registry",
+          },
+        },
+        {
+          id: "s2-finish",
+          sessionID: SESSION_ID,
+          messageID: headerAssistantID,
+          type: "step-finish",
+          reason: "tool",
+          cost: 0.0456,
+          tokens: { input: 2100, output: 620, reasoning: 0, cache: { read: 200, write: 80 } },
+          time: { start: headerNow - 5000, end: headerNow - 2000 },
+        },
+      ],
+    }
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages: () => headerMessages,
+      currentSession: () => ({
+        id: SESSION_ID,
+        title: "CLI interface implementation",
+        createdAt: new Date(headerNow - 12000).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
+      }),
+      getParts: (id: string) => stepParts[id] ?? [],
+      contextUsage: () => ({ tokens: 34300, percentage: 17 }),
+      costBreakdown: () => [{ label: "Session", cost: 0.058 }],
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%" }}>
+            <TaskHeader />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 const mockMemory: MemoryContextValue = {
   status: () => ({}) as any,
   show: () => undefined,

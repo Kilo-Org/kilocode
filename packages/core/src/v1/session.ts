@@ -225,6 +225,14 @@ export const StepStartPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("step-start"),
   snapshot: Schema.optional(Schema.String),
+  // kilocode_change start - authoritative step timing for the activity timeline
+  time: Schema.optional(
+    Schema.Struct({
+      start: NonNegativeInt,
+      end: Schema.optional(NonNegativeInt),
+    }),
+  ),
+  // kilocode_change end
 }).annotate({ identifier: "StepStartPart" })
 export type StepStartPart = Types.DeepMutable<Schema.Schema.Type<typeof StepStartPart>>
 
@@ -252,6 +260,14 @@ export const StepFinishPart = Schema.Struct({
       write: Schema.Finite,
     }),
   }),
+  // kilocode_change start - authoritative step timing for the activity timeline
+  time: Schema.optional(
+    Schema.Struct({
+      start: NonNegativeInt,
+      end: NonNegativeInt,
+    }),
+  ),
+  // kilocode_change end
 }).annotate({ identifier: "StepFinishPart" })
 export type StepFinishPart = Types.DeepMutable<Schema.Schema.Type<typeof StepFinishPart>>
 
