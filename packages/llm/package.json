@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "setup:recording-env": "bun run script/setup-recording-env.ts",
-    "test": "bun test --timeout 30000",
+    "test": "bun test --timeout 30000 --only-failures",
     "typecheck": "tsgo --noEmit"
   },
   "exports": {
@@ -47,5 +47,6 @@
     "@smithy/util-utf8": "4.2.2",
     "aws4fetch": "1.0.20",
     "effect": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

@@ -27,7 +27,7 @@ exports[`Kilo CLI help-text snapshots every documented command emits stable help
 manage MCP (Model Context Protocol) servers
 
 Commands:
-  kilo mcp add            add an MCP server
+  kilo mcp add [name]     add an MCP server
   kilo mcp list           list MCP servers and their status                        [aliases: ls]
   kilo mcp auth [name]    authenticate with an OAuth-enabled MCP server
   kilo mcp logout [name]  remove OAuth credentials for an MCP server
@@ -59,9 +59,8 @@ Options:
   -c, --continue    continue the last session                                              [boolean]
   -s, --session     session id to continue                                                  [string]
       --fork        fork the session when continuing (use with --continue or --session)    [boolean]
-      --cloud-fork  fetch session from cloud and continue locally (use with --session)     [boolean]
-  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)                  [string]
-  -u, --username    basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')        [string]"
+  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)              [string]
+  -u, --username    basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')[string]"
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo run --help 1`] = `
@@ -83,8 +82,6 @@ Options:
   -s, --session                       session id to continue                                [string]
       --fork                          fork the session before continuing (requires --continue or
                                       --session)                                           [boolean]
-      --cloud-fork                    fetch session from cloud and continue locally (use with
-                                      --session)                                           [boolean]
       --share                         share the session                                    [boolean]
   -m, --model                         model to use in the format of provider/model          [string]
       --agent                         agent to use                                          [string]
@@ -93,11 +90,12 @@ Options:
   -f, --file                          file(s) to attach to message                           [array]
       --title                         title for the session (uses truncated prompt if no value
                                       provided)                                             [string]
-      --attach                        attach to a running kilo server (e.g., http://localhost:4096)
+      --attach                        attach to a running kilo server (e.g.,
+                                      http://localhost:4096)                                [string]
+  -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)
                                                                                             [string]
-  -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)[string]
   -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or
-                                      'kilo')                                               [string]
+                                      'kilo')                                           [string]
       --dir                           directory to run in, path on remote server if attaching
                                                                                             [string]
       --port                          port for the local server (defaults to random port if no value
@@ -113,8 +111,6 @@ Options:
                                                                           [boolean] [default: false]
       --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied
                                       (dangerous!)                        [boolean] [default: false]
-      --auto                          auto-approve all permissions (for autonomous/pipeline usage)
-                                                                          [boolean] [default: false]
       --demo                          enable direct interactive demo slash commands; pass one as the
                                       message to run it immediately       [boolean] [default: false]"
 `;
@@ -148,14 +144,14 @@ Options:
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo providers --help 1`] = `
-"kilo auth
+"kilo providers
 
 manage AI providers and credentials
 
 Commands:
-  kilo providers list         list providers and credentials                       [aliases: ls]
-  kilo providers login [url]  log in to a provider
-  kilo providers logout       log out from a configured provider
+  kilo providers list               list providers and credentials                 [aliases: ls]
+  kilo providers login [url]        log in to a provider
+  kilo providers logout [provider]  log out from a configured provider
 
 Options:
   -h, --help        show help                                                              [boolean]
@@ -197,7 +193,7 @@ Options:
       --log-level   log level                   [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure        run without external plugins                                           [boolean]
   -m, --method      installation method to use
-                  [string] [choices: "curl", "npm", "yarn", "pnpm", "bun", "brew", "choco", "scoop"]"
+                          [string] [choices: "curl", "npm", "pnpm", "bun", "brew", "choco", "scoop"]"
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo uninstall --help 1`] = `
@@ -400,7 +396,7 @@ exports[`Kilo CLI help-text snapshots every documented command emits stable help
 database tools
 
 Commands:
-  kilo db [query]     open an interactive sqlite3 shell or run a query                     [default]
+  kilo db [query]     open an interactive sqlite3 shell or run a query                 [default]
   kilo db path        print the database path
 
 Positionals:
@@ -429,16 +425,22 @@ Options:
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo mcp add --help 1`] = `
-"kilo mcp add
+"kilo mcp add [name]
 
 add an MCP server
+
+Positionals:
+  name  name of the MCP server                                                              [string]
 
 Options:
   -h, --help        show help                                                              [boolean]
   -v, --version     show version number                                                    [boolean]
       --print-logs  print logs to stderr                                                   [boolean]
       --log-level   log level                   [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
-      --pure        run without external plugins                                           [boolean]"
+      --pure        run without external plugins                                           [boolean]
+      --url         URL for a remote MCP server                                             [string]
+      --env         environment variable for a local MCP server (KEY=VALUE)                  [array]
+      --header      HTTP header for a remote MCP server (KEY=VALUE)                          [array]"
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo mcp auth --help 1`] = `
@@ -495,7 +497,7 @@ exports[`Kilo CLI help-text snapshots every documented command emits stable help
 log in to a provider
 
 Positionals:
-  url  kilo auth provider                                                                   [string]
+  url  kilo auth provider                                                               [string]
 
 Options:
   -h, --help        show help                                                              [boolean]
@@ -508,9 +510,12 @@ Options:
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo providers logout --help 1`] = `
-"kilo providers logout
+"kilo providers logout [provider]
 
 log out from a configured provider
+
+Positionals:
+  provider  provider id or name to log out from                                             [string]
 
 Options:
   -h, --help        show help                                                              [boolean]
@@ -565,9 +570,7 @@ Options:
       --log-level   log level                   [string] [choices: "DEBUG", "INFO", "WARN", "ERROR"]
       --pure        run without external plugins                                           [boolean]
   -n, --max-count   limit to N most recent sessions                                         [number]
-      --format      output format             [string] [choices: "table", "json"] [default: "table"]
-  -a, --all         list sessions from all projects                       [boolean] [default: false]
-  -s, --search      filter sessions by title                                                [string]"
+      --format      output format             [string] [choices: "table", "json"] [default: "table"]"
 `;
 
 exports[`Kilo CLI help-text snapshots every documented command emits stable help text: kilo session delete --help 1`] = `

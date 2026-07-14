@@ -1,7 +1,6 @@
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer, Queue, Schema, Stream } from "effect"
 import * as Sse from "effect/unstable/encoding/Sse" // kilocode_change - decode the legacy SSE wire format
-import * as Log from "@opencode-ai/core/util/log"
 import { EventPaths } from "../../src/server/routes/instance/httpapi/groups/event"
 // kilocode_change start - verify transformed EventV2 values at the legacy SSE boundary
 import { Catalog } from "@opencode-ai/core/catalog"
@@ -24,8 +23,6 @@ import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect, testEffectShared } from "../lib/effect"
 import { httpApiLayer, requestInDirectory } from "./httpapi-layer"
-
-void Log.init({ print: false })
 
 const EventData = Schema.Struct({
   id: Schema.optional(Schema.String),

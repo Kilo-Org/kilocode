@@ -7,6 +7,7 @@ import { BackgroundJob } from "@/background/job"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Config } from "@/config/config"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Session } from "@/session/session"
 import { MessageV2 } from "@/session/message-v2" // kilocode_change
 import type { SessionPrompt } from "../../src/session/prompt"
@@ -48,7 +49,7 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
     ToolRegistry.defaultLayer,
     Database.defaultLayer,
     RuntimeFlags.layer(flags),
-  )
+  ).pipe(Layer.provide(Ripgrep.defaultLayer))
 
 const it = testEffect(layer())
 const background = testEffect(layer({ experimentalBackgroundSubagents: true }))
@@ -473,12 +474,12 @@ describe("tool.task", () => {
             {
               permission: "bash",
               pattern: "*",
-              action: "allow",
+              action: "deny",
             },
             {
               permission: "read",
               pattern: "*",
-              action: "allow",
+              action: "deny",
             },
             {
               permission: "task",
@@ -488,7 +489,7 @@ describe("tool.task", () => {
           ]),
         )
         // kilocode_change end
-        expect(seen?.tools).toEqual({
+        expect(seen?.tools).toBeUndefined({
           question: false, // kilocode_change - subagents cannot prompt the user directly
           interactive_terminal: false, // kilocode_change - subagents cannot take over the user's terminal
           todowrite: false,

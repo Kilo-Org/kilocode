@@ -133,11 +133,11 @@ jobs:
 
       - name: Run non-CLI unit tests
         if: matrix.settings.run && matrix.settings.packages
-        run: bun turbo test:ci --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
+        run: bun turbo test --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
 
       - name: Run CLI unit tests
         if: matrix.settings.run
-        run: bun turbo test:ci --filter='@kilocode/cli'
+        run: bun turbo test --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
         env:
           KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
