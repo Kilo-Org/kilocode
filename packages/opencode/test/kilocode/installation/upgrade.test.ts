@@ -215,7 +215,7 @@ describe("Kilo installation upgrade", () => {
     Effect.gen(function* () {
       yield* Installation.Service.use((svc) => svc.upgrade("curl", "9.9.9"))
       expect(curl).toContain("https://kilo.ai/cli/install")
-      expect(curl).toContain("bash")
+      expect(curl).toContain("sh")
     }),
   )
 })

@@ -7,7 +7,7 @@ import { Global } from "@opencode-ai/core/global"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { ModelsDev } from "../../src/provider/models"
 import { Provider } from "../../src/provider/provider"
-import { ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { it } from "../lib/effect"
 
 const model = (id: string, name: string): ModelsDev.Model => ({
@@ -84,13 +84,13 @@ it.instance(
           const models = yield* ModelsDev.Service
           const provider = yield* Provider.Service
           const before = yield* provider.list()
-          expect(before[ProviderID.make("acme")]?.models["acme-1"]).toBeDefined()
-          expect(before[ProviderID.make("acme")]?.models["acme-2"]).toBeUndefined()
+          expect(before[ProviderV2.ID.make("acme")]?.models["acme-1"]).toBeDefined()
+          expect(before[ProviderV2.ID.make("acme")]?.models["acme-2"]).toBeUndefined()
 
           yield* models.refresh()
 
           const after = yield* provider.list()
-          expect(after[ProviderID.make("acme")]?.models["acme-2"]).toBeDefined()
+          expect(after[ProviderV2.ID.make("acme")]?.models["acme-2"]).toBeDefined()
         }).pipe(Effect.provide(Layer.merge(ModelsDev.defaultLayer, Provider.defaultLayer))),
       () =>
         Effect.promise(async () => {

@@ -1,7 +1,8 @@
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionRevert } from "@/session/revert"
 import { MessageID, PartID } from "@/session/schema"
@@ -27,13 +28,13 @@ describe("partial assistant revert", () => {
           const sessions = yield* Session.Service
           const revert = yield* SessionRevert.Service
           const session = yield* sessions.create({})
-          const providerID = ProviderID.make("test")
+          const providerID = ProviderV2.ID.make("test")
           const user = yield* sessions.updateMessage({
             id: MessageID.ascending(),
             sessionID: session.id,
             role: "user",
             agent: "default",
-            model: { providerID, modelID: ModelID.make("test") },
+            model: { providerID, modelID: ModelV2.ID.make("test") },
             time: { created: Date.now() },
           })
           const assistant = yield* sessions.updateMessage({
@@ -46,7 +47,7 @@ describe("partial assistant revert", () => {
             path: { cwd: dir, root: dir },
             cost: 1,
             tokens: { input: 1, output: 1, reasoning: 0, cache: { read: 0, write: 0 } },
-            modelID: ModelID.make("test"),
+            modelID: ModelV2.ID.make("test"),
             providerID,
             time: { created: Date.now(), completed: Date.now() },
             finish: "error",

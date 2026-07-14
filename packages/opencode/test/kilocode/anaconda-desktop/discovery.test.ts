@@ -1,5 +1,5 @@
 import { expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { FetchHttpClient } from "effect/unstable/http"
 import { Effect, Layer, Redacted } from "effect"
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
@@ -162,10 +162,10 @@ function fixture(settings: Settings = {}) {
             home: value.home,
             env: { PATH: path.join(value.home, "bin") },
           }
-          const platform = DesktopPlatform.makeLayer(info).pipe(Layer.provide(AppFileSystem.defaultLayer))
+          const platform = DesktopPlatform.makeLayer(info).pipe(Layer.provide(FSUtil.defaultLayer))
           const layer = Discovery.makeLayer({ timeout: "100 millis" }).pipe(
             Layer.provide(platform),
-            Layer.provide(AppFileSystem.defaultLayer),
+            Layer.provide(FSUtil.defaultLayer),
             Layer.provide(FetchHttpClient.layer),
           )
           return { ...value, layer }

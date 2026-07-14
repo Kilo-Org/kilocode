@@ -251,6 +251,48 @@
   margin-inline: auto;
 }
 
+/* Lights up the part behind a hovered/focused task-timeline bar, using the
+   bar's own color, so it's easy to follow which bar belongs to which tool
+   call (mirrors the legacy extension's task-timeline row gutter highlight).
+   Drawn as an absolutely positioned strip flush with the card's left edge,
+   not an inset box-shadow: a box-shadow paints as part of the wrapper's own
+   background layer, underneath every child, so tool cards with a negative-
+   margin background (bleeding past this edge) would otherwise cover it.
+   An absolutely positioned element always paints above normal-flow
+   (position: static) children, so it stays visible without needing to
+   extend past the wrapper's own box — virtua's row virtualizer clips its
+   content to exactly that box (`overflow: clip`). */
+[data-component="tool-part-wrapper"] {
+  position: relative;
+}
+
+[data-component="tool-part-wrapper"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  /* Use the turn's existing 4px inset: the 3px strip stays within the
+     virtualized row and leaves a 1px gap before the card. */
+  left: -4px;
+  width: 3px;
+  border-radius: 2px 0 0 2px;
+  background: var(--timeline-color, transparent);
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+[data-component="tool-part-wrapper"][data-timeline-highlight]::before {
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-component="tool-part-wrapper"]::before {
+    transition: none;
+  }
+}
+
 .chat-view .message-list-content > .revert-banner,
 .chat-view .message-list-content > [data-component="question-dock"],
 .chat-view .message-list-content > .working-indicator-slot,

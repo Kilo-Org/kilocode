@@ -1,5 +1,5 @@
 import { Config } from "@/config/config"
-import { ConfigPlugin } from "@/config/plugin"
+import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
 import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
 import { KiloTitleIcon } from "@/kilocode/cli/cmd/tui/title-icon"
 import { Authorization } from "@/server/routes/instance/httpapi/middleware/authorization"
@@ -107,7 +107,7 @@ const TuiConfigShape = {
   $schema: Schema.optional(Schema.String),
   theme: Schema.optional(Schema.String),
   keybinds: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-  plugin: Schema.optional(Schema.Array(ConfigPlugin.Spec)),
+  plugin: Schema.optional(Schema.Array(ConfigPluginV1.Spec)),
   plugin_enabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   title_icon: Schema.optional(KiloTitleIcon.Value),
   scroll_speed: Schema.optional(Schema.Number),

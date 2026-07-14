@@ -41,7 +41,8 @@ import { ACPEvent } from "./event"
 import { ACPSession } from "./session"
 import { UsageService } from "./usage"
 import { ACPProfile } from "./profile"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "@/provider/provider"
 import type { Command } from "@/command"
 
@@ -215,11 +216,7 @@ export function make(input: {
       "session",
     )
     const messages = yield* request(
-      () =>
-        input.sdk.session.messages(
-          { directory: params.cwd, sessionID: params.sessionId, limit: 100 },
-          { throwOnError: true },
-        ),
+      () => input.sdk.session.messages({ directory: params.cwd, sessionID: params.sessionId }, { throwOnError: true }),
       "session",
     )
     const restored = restoreFromMessages(messages.map((item) => item.info))
@@ -332,23 +329,32 @@ export function make(input: {
     }
   })
 
+  const abortBackingSession = Effect.fn("ACP.abortBackingSession")(function* (current: ACPSession.Info) {
+    yield* request(
+      () => input.sdk.session.abort({ directory: current.cwd, sessionID: current.id }, { throwOnError: true }),
+      "session",
+    ).pipe(
+      Effect.catch((error) =>
+        Effect.sync(() => {
+          log.error("failed to abort ACP backing session", { error, sessionID: current.id })
+        }),
+      ),
+    )
+  })
+
   const closeSession = Effect.fn("ACP.closeSession")(function* (params: CloseSessionRequest) {
     const removed = yield* session.remove(params.sessionId)
     registeredMcp.delete(params.sessionId)
     sessionSnapshots.delete(params.sessionId)
     if (!removed) return {}
 
-    yield* request(
-      () => input.sdk.session.abort({ directory: removed.cwd, sessionID: params.sessionId }, { throwOnError: true }),
-      "session",
-    ).pipe(
-      Effect.catch((error) =>
-        Effect.sync(() => {
-          log.error("failed to abort session while closing ACP session", { error, sessionID: params.sessionId })
-        }),
-      ),
-    )
+    yield* abortBackingSession(removed)
     return {}
+  })
+
+  const cancel = Effect.fn("ACP.cancel")(function* (params: CancelNotification) {
+    const current = yield* session.get(params.sessionId)
+    yield* abortBackingSession(current)
   })
 
   const forkSession = Effect.fn("ACP.forkSession")(function* (params: ForkSessionRequest) {
@@ -565,9 +571,7 @@ export function make(input: {
       yield* sendUsageUpdate(input.usage, input.sdk, input.connection, current.id, current.cwd)
       return promptResponse(undefined, params.messageId)
     }),
-    cancel: Effect.fn("ACP.cancel")(function* (_input: CancelNotification) {
-      return yield* new ACPError.UnsupportedOperationError({ method: "session/cancel" })
-    }),
+    cancel,
   }
 }
 
@@ -605,7 +609,7 @@ function makeUsageService(sdk: KiloClient) {
         .then((response) => {
           const providers = Object.fromEntries(
             (response.data?.providers ?? []).map((provider) => [provider.id, provider]),
-          ) as Record<ProviderID, Provider.Info>
+          ) as Record<ProviderV2.ID, Provider.Info>
           return UsageService.findContextLimit(providers, params.providerID, params.modelID)
         })
         .catch((error: unknown) => {
@@ -644,8 +648,8 @@ function makeUsageService(sdk: KiloClient) {
 
     const size = yield* contextLimit({
       directory: params.directory,
-      providerID: ProviderID.make(message.providerID),
-      modelID: ModelID.make(message.modelID),
+      providerID: ProviderV2.ID.make(message.providerID),
+      modelID: ModelV2.ID.make(message.modelID),
     })
     if (!size) return
 
@@ -747,7 +751,7 @@ async function loadDirectorySnapshot(sdk: KiloClient, directory: string) {
     const commandsData = commandsResponse.data!
     const skills = skillsResponse.data!
     const providers = Object.fromEntries(providersData.providers.map((provider) => [provider.id, provider])) as Record<
-      ProviderID,
+      ProviderV2.ID,
       Provider.Info
     >
     const defaultModelStarted = performance.now()
@@ -786,7 +790,7 @@ async function loadDirectorySnapshot(sdk: KiloClient, directory: string) {
 
 function defaultModelFromConfig(
   configuredModel: string | undefined,
-  providers: Record<ProviderID, Provider.Info>,
+  providers: Record<ProviderV2.ID, Provider.Info>,
 ): Directory.DefaultModel | undefined {
   const configured = configuredModel ? Provider.parseModel(configuredModel) : undefined
   if (configured && providers[configured.providerID]?.models[configured.modelID]) return configured
@@ -794,7 +798,7 @@ function defaultModelFromConfig(
   // First-session ACP startup must not scan historical sessions just to infer
   // a default. Configured model, opencode provider, then sorted best model keep
   // the protocol response deterministic without extra session/message reads.
-  const kiloProvider = providers[ProviderID.kilo] // kilocode_change
+  const kiloProvider = providers[ProviderV2.ID.make("kilo")] // kilocode_change
   const kiloModel = kiloProvider ? Provider.sort(Object.values(kiloProvider.models))[0] : undefined // kilocode_change
   if (kiloProvider && kiloModel) return { providerID: kiloProvider.id, modelID: kiloModel.id } // kilocode_change
 
@@ -807,7 +811,7 @@ function selectDefaultModel(snapshot: Directory.Snapshot) {
   if (snapshot.defaultModel) return snapshot.defaultModel
   const model = snapshot.modelOptions[0]
   if (model) return { providerID: model.providerID, modelID: model.modelID }
-  return { providerID: "unknown" as ProviderID, modelID: "unknown" as ModelID }
+  return { providerID: "unknown" as ProviderV2.ID, modelID: "unknown" as ModelV2.ID }
 }
 
 function detectSlashCommand(parts: ReturnType<typeof promptContentToParts>) {
@@ -866,8 +870,8 @@ function configOptions(snapshot: Directory.Snapshot, session: ConfigState) {
 
 function parseSelectedModel(snapshot: Directory.Snapshot, modelId: string) {
   const selected = parseModelSelection(modelId, Object.values(snapshot.providers))
-  const provider = snapshot.providers[ProviderID.make(selected.model.providerID)]
-  const model = provider?.models[ModelID.make(selected.model.modelID)]
+  const provider = snapshot.providers[ProviderV2.ID.make(selected.model.providerID)]
+  const model = provider?.models[ModelV2.ID.make(selected.model.modelID)]
   if (!model) {
     return Effect.fail(
       new ACPError.InvalidModelError({
@@ -995,7 +999,7 @@ function restoreFromMessages(messages: readonly MessageInfo[]) {
   )
   if (user?.model?.providerID && user.model.modelID) {
     return {
-      model: { providerID: user.model.providerID as ProviderID, modelID: user.model.modelID as ModelID },
+      model: { providerID: user.model.providerID as ProviderV2.ID, modelID: user.model.modelID as ModelV2.ID },
       variant: user.model.variant,
       modeId: user.agent,
     }
@@ -1004,7 +1008,7 @@ function restoreFromMessages(messages: readonly MessageInfo[]) {
   const assistant = messages.findLast((message) => message.providerID && message.modelID)
   if (assistant?.providerID && assistant.modelID) {
     return {
-      model: { providerID: assistant.providerID as ProviderID, modelID: assistant.modelID as ModelID },
+      model: { providerID: assistant.providerID as ProviderV2.ID, modelID: assistant.modelID as ModelV2.ID },
       variant: assistant.variant,
       modeId: assistant.mode ?? assistant.agent,
     }

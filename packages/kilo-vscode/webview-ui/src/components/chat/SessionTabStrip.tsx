@@ -35,7 +35,7 @@ export const SessionTabStrip: Component = () => {
     if (event.button !== 1) return
     event.preventDefault()
     event.stopPropagation()
-    close(id)
+    close(id, false)
   }
   const key = (id: string, event: KeyboardEvent) => {
     const root = event.currentTarget instanceof HTMLElement ? event.currentTarget.closest(".am-tab-list") : null
@@ -59,10 +59,11 @@ export const SessionTabStrip: Component = () => {
   const root = () => document.querySelector("[data-component=session-tabs] .am-tab-list")
   const freeze = () => setTabWidths(true, document)
   const release = () => setTabWidths(false, document)
-  const close = (id: string) => {
+  const close = (id: string, restore = true) => {
     freeze()
+    const active = tabs.active() === id
     tabs.close(id)
-    focusSelectedTab(document, focusPrompt)
+    if (!active && restore) focusSelectedTab(document, focusPrompt)
     requestAnimationFrame(release)
   }
   const closeOthers = (id: string) => {
