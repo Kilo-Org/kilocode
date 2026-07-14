@@ -108,6 +108,13 @@ export const layer: Layer.Layer<
       const opts = yield* options(filepath, origin)
       return yield* Effect.promise(() => KilocodeInstruction.read(filepath, opts).catch(() => ""))
     })
+
+    const parse = Effect.fnUntraced(function* (filepath: string, origin: KilocodeMarkdown.Source) {
+      const opts = yield* options(filepath, origin)
+      return yield* Effect.promise(() =>
+        KilocodeInstruction.parse(filepath, opts).catch(() => ({ content: "", paths: undefined })),
+      )
+    })
     // kilocode_change end
 
     const fetch = Effect.fnUntraced(function* (url: string) {
@@ -157,6 +164,19 @@ export const layer: Layer.Layer<
         }
       }
 
+      const claude = flags.disableClaudeCodePrompt
+        ? { global: [], project: [] }
+        : yield* Effect.promise(() =>
+            KilocodeInstruction.claude({
+              home: global.home,
+              directory: ctx.directory,
+              worktree: ctx.worktree,
+              project: !Flag.KILO_DISABLE_PROJECT_CONFIG,
+            }),
+          )
+      claude.global.forEach((item) => add(item, { trusted: true, source: item }))
+      claude.project.forEach((item) => add(item, { trusted: false, source: item, root }))
+
       if (config.instructions) {
         for (const raw of config.instructions) {
           if (raw.startsWith("https://") || raw.startsWith("http://")) continue
@@ -180,14 +200,28 @@ export const layer: Layer.Layer<
       return paths
     })
 
+    const startupSources = Effect.fn("Instruction.startupSources")(function* () {
+      const sources = yield* systemSources()
+      const entries = yield* Effect.forEach(
+        Array.from(sources.entries()),
+        (item) =>
+          Effect.gen(function* () {
+            if (!KilocodeInstruction.rule(item[0])) return item
+            return (yield* parse(item[0], item[1])).paths ? undefined : item
+          }),
+        { concurrency: 8 },
+      )
+      return new Map(entries.filter((item): item is [string, KilocodeMarkdown.Source] => item !== undefined))
+    })
+
     const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
-      return new Set((yield* systemSources()).keys())
+      return new Set((yield* startupSources()).keys())
     })
     // kilocode_change end
 
     const system = Effect.fn("Instruction.system")(function* () {
       const config = yield* cfg.get()
-      const sources = yield* systemSources() // kilocode_change
+      const sources = yield* startupSources() // kilocode_change
       const paths = Array.from(sources.keys()) // kilocode_change
       const urls = (config.instructions ?? []).filter(
         (item) => item.startsWith("https://") || item.startsWith("http://"),
@@ -254,6 +288,29 @@ export const layer: Layer.Layer<
 
         current = path.dirname(current)
       }
+
+      // kilocode_change start - attach configured path-scoped rules after existing nearby instructions
+      const sources = yield* systemSources()
+      const ctx = yield* InstanceState.context
+      const worktree = path.resolve(ctx.worktree === "/" ? ctx.directory : ctx.worktree)
+      for (const [item, origin] of sources) {
+        if (!KilocodeInstruction.rule(item) || item === target || sys.has(item) || already.has(item)) continue
+        const parsed = yield* parse(item, origin)
+        if (!parsed.paths || !KilocodeInstruction.match(parsed.paths, target, worktree)) continue
+
+        let set = s.claims.get(messageID)
+        if (!set) {
+          set = new Set()
+          s.claims.set(messageID, set)
+        }
+        if (set.has(item)) continue
+
+        set.add(item)
+        if (parsed.content) {
+          results.push({ filepath: item, content: `Instructions from: ${item}\n${parsed.content}` })
+        }
+      }
+      // kilocode_change end
 
       return results
     })

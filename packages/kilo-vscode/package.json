@@ -1025,7 +1025,7 @@
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,
-          "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
+          "description": "Load CLAUDE.md instructions, .claude/rules, and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions, rules, and skills."
         },
         "kilo-code.new.extraCaCerts": {
           "type": "string",
