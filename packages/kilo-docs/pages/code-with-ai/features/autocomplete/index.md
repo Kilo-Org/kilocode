@@ -11,10 +11,11 @@ Kilo Code's autocomplete feature provides intelligent code suggestions and compl
 
 The extension uses **Fill-in-the-Middle (FIM)** completion routed through the **Kilo Gateway**. It analyzes the code before and after your cursor to generate contextually accurate inline suggestions.
 
-You can choose between two FIM models:
+You can choose between these completion models:
 
 - **Codestral** (`mistralai/codestral-2508`) by Mistral AI — the default, billed through your Kilo account.
 - **Mercury Edit 2** (`inception/mercury-edit-2`) by Inception — temporarily available via **BYOK** (Bring Your Own Key) only; Kilo Gateway support is coming soon.
+- **Qwen3.5 9B** (`Qwen3.5-9B-MTPLX`) through a local MTPLX server — runs on your own Apple Silicon Mac and does not use Kilo credits.
 
 ## Triggering Options
 
@@ -36,10 +37,36 @@ Autocomplete requests are routed through the **Kilo Gateway**. You can pick the 
 
 - **Codestral** (`mistralai/codestral-2508`) — the default. Billed through your Kilo account, or free when you add your own Mistral Codestral key via BYOK. See [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
 - **Mercury Edit 2** (`inception/mercury-edit-2`) — a fast diffusion-based FIM model by Inception. Temporarily requires an **Inception BYOK key** until Kilo Gateway support lands. Add one from the [BYOK page](https://app.kilo.ai/byok) in the Kilo platform. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for setup details.
+- **Qwen3.5 9B (MTPLX)** (`Qwen3.5-9B-MTPLX`) — a local, cache-aware completion model served by MTPLX.
 
 {% callout type="note" %}
 Mercury Edit 2 is only available through BYOK for now — Kilo Gateway support is coming soon. If you select Mercury Edit 2 without a valid Inception BYOK key configured, autocomplete requests will fail — switch back to Codestral or add an Inception key to continue.
 {% /callout %}
+
+### Local MTPLX setup
+
+Start MTPLX with the `Qwen3.5-9B-MTPLX` model on port `8001`, then add this provider to `~/.config/kilo/kilo.jsonc`:
+
+```json
+{
+  "provider": {
+    "mtplx": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "MTPLX",
+      "options": {
+        "baseURL": "http://127.0.0.1:8001/v1"
+      },
+      "models": {
+        "Qwen3.5-9B-MTPLX": {
+          "name": "Qwen3.5 9B (MTPLX)"
+        }
+      }
+    }
+  }
+}
+```
+
+In VS Code settings, set **Autocomplete provider** to **MTPLX** and **Autocomplete model** to **Qwen3.5 9B (MTPLX)**. Loopback MTPLX servers do not require an API key. For a remote server, configure the provider API key and use an HTTPS `baseURL`.
 
 ## Status Bar
 

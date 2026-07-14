@@ -30,3 +30,17 @@ describe("Next Edit FIM models", () => {
     }
   })
 })
+
+describe("MTPLX autocomplete model", () => {
+  test("uses deterministic short completions for Qwen3.5 9B", () => {
+    const model = AUTOCOMPLETE_MODELS.find((candidate) => candidate.id === "mtplx/Qwen3.5-9B-MTPLX")
+
+    expect(model).toMatchObject({
+      providerID: "mtplx",
+      directProvider: "mtplx",
+      requestModel: "Qwen3.5-9B-MTPLX",
+      temperature: 0,
+      maxTokens: 64,
+    })
+  })
+})

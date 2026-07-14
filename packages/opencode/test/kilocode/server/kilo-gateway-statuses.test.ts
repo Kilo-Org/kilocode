@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
 import { HttpApi, HttpApiBuilder } from "effect/unstable/httpapi"
 import { Auth } from "../../../src/auth"
+import { Config } from "../../../src/config/config"
 import { KiloGatewayApi, KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { kiloGatewayHandlers } from "../../../src/kilocode/server/httpapi/handlers/kilo-gateway"
 import { InstanceStore } from "../../../src/project/instance-store"
@@ -22,6 +23,24 @@ import { testEffect } from "../../lib/effect"
 const TestHttpApi = HttpApi.make("opencode-instance").addHttpApi(KiloGatewayApi)
 const auth = Layer.mock(Auth.Service)({
   get: () => Effect.succeed(new Auth.Api({ type: "api", key: "test-token" })),
+})
+const config = Layer.mock(Config.Service)({
+  get: () =>
+    Effect.succeed({
+      provider: {
+        mtplx: {
+          npm: "@ai-sdk/openai-compatible",
+          name: "MTPLX",
+          options: {
+            baseURL: "https://mtplx.test/v1",
+            headers: { "x-test-header": "configured" },
+          },
+          models: {
+            "Qwen3.5-9B-MTPLX": { name: "Qwen3.5 9B (MTPLX)" },
+          },
+        },
+      },
+    } as Config.Info),
 })
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
@@ -49,6 +68,7 @@ const layer = HttpRouter.serve(
       passthroughInstanceContext,
       testWorkspaceRouting,
       auth,
+      config,
       store,
       cache,
       session,
@@ -59,14 +79,14 @@ const layer = HttpRouter.serve(
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
 const it = testEffect(layer)
 
-function stub(run: () => Response | Promise<Response>) {
+function stub(run: (input: RequestInfo | URL, init?: RequestInit) => Response | Promise<Response>) {
   // These tests run sequentially; scope the process-global override and delegate in-process server traffic.
   const original = globalThis.fetch
   const fetch: typeof globalThis.fetch = Object.assign(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
       if (url.startsWith("http://127.0.0.1:")) return original(input, init)
-      return run()
+      return run(input, init)
     },
     { preconnect: original.preconnect },
   )
@@ -94,6 +114,42 @@ describe("Kilo gateway HttpApi statuses", () => {
 
       expect(response.status).toBe(200)
       expect(yield* response.json).toEqual({ authenticated: true, type: "api" })
+    }),
+  )
+
+  it.live("routes MTPLX autocomplete through chat completions with a stable session", () =>
+    Effect.gen(function* () {
+      let upstream: Request | undefined
+      yield* stub((input, init) => {
+        upstream = new Request(input, init)
+        return new Response('data: {"choices":[]}\n\n', {
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      })
+
+      const response = yield* post(KiloGatewayPaths.fim, {
+        prefix: "function add(a, b) { return ",
+        suffix: "; }\n",
+        provider: "mtplx",
+        model: "Qwen3.5-9B-MTPLX",
+        maxTokens: 64,
+        temperature: 0,
+        sessionId: "stable-file-session",
+      })
+
+      expect(response.status).toBe(200)
+      expect(upstream).toBeDefined()
+      expect(upstream?.url).toBe("https://mtplx.test/v1/chat/completions")
+      expect(upstream?.headers.get("authorization")).toBe("Bearer test-token")
+      expect(upstream?.headers.get("x-mtplx-client")).toBe("kilocode")
+      expect(upstream?.headers.get("x-mtplx-session-id")).toBe("stable-file-session")
+      expect(upstream?.headers.get("x-test-header")).toBe("configured")
+      const body = yield* Effect.promise(() => upstream!.json() as Promise<Record<string, unknown>>)
+      expect(body.model).toBe("Qwen3.5-9B-MTPLX")
+      expect(body.max_tokens).toBe(64)
+      expect(body.enable_thinking).toBe(false)
+      expect(body).not.toHaveProperty("prompt")
+      expect(body).not.toHaveProperty("suffix")
     }),
   )
 

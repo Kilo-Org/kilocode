@@ -1,6 +1,14 @@
 import { HEADER_FEATURE } from "../api/constants.js"
 import type { DirectAutocompleteProviderID } from "../autocomplete.js"
-import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget, type FimTarget } from "../fim.js"
+import {
+  buildMtplxRequest,
+  DIRECT_FIM_ENV,
+  isLoopbackMtplxUrl,
+  mtplxChatUrl,
+  requestMistralFim,
+  resolveFimTarget,
+  type FimTarget,
+} from "../fim.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { AuthStore } from "./handlers.js"
 
@@ -26,7 +34,7 @@ async function getProviderKey(Auth: Auth, provider: DirectAutocompleteProviderID
 
 async function fetchFim(
   target: FimTarget,
-  key: string,
+  key: string | undefined,
   input: {
     prefix: string
     suffix: string
@@ -34,6 +42,8 @@ async function fetchFim(
     temperature: number
     signal: AbortSignal
     organizationId?: string
+    sessionId?: string
+    mtplxBaseURL?: string
   },
 ): Promise<Response> {
   const run = async (url: string) => {
@@ -42,34 +52,48 @@ async function fetchFim(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
         ...(target.provider === "kilo"
           ? buildKiloHeaders(undefined, { kilocodeOrganizationId: input.organizationId })
           : {}),
         ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
+        ...(target.provider === "mtplx" ? { "x-mtplx-client": "kilocode" } : {}),
+        ...(target.provider === "mtplx" && input.sessionId ? { "x-mtplx-session-id": input.sessionId } : {}),
       },
       signal: input.signal,
-      body: JSON.stringify({
-        model: target.model,
-        prompt: input.prefix,
-        suffix: input.suffix,
-        max_tokens: input.maxTokens,
-        temperature: input.temperature,
-        stream: true,
-      }),
+      body: JSON.stringify(
+        target.provider === "mtplx"
+          ? buildMtplxRequest({
+              model: target.model,
+              prefix: input.prefix,
+              suffix: input.suffix,
+              maxTokens: input.maxTokens,
+              temperature: input.temperature,
+            })
+          : {
+              model: target.model,
+              prompt: input.prefix,
+              suffix: input.suffix,
+              max_tokens: input.maxTokens,
+              temperature: input.temperature,
+              stream: true,
+            },
+      ),
     })
   }
 
   if (target.provider === "mistral") return requestMistralFim(run)
+  if (target.provider === "mtplx") return run(mtplxChatUrl(input.mtplxBaseURL))
   return run(target.url)
 }
 
 export function createFimHandler(Auth: Auth) {
   return async (c: any) => {
-    const { prefix, suffix, provider, model, maxTokens, temperature } = c.req.valid("json")
+    const { prefix, suffix, provider, model, maxTokens, temperature, sessionId } = c.req.valid("json")
     const target = resolveFimTarget(provider, model)
     const fimMaxTokens = maxTokens ?? 256
     const fimTemperature = temperature ?? 0.2
+    const mtplxBaseURL = target.provider === "mtplx" ? process.env.MTPLX_BASE_URL : undefined
     const proxy = target.provider === "kilo" ? await getProxyAuth(Auth) : undefined
     const token = target.provider === "kilo" ? proxy?.token : await getProviderKey(Auth, target.provider)
 
@@ -81,7 +105,7 @@ export function createFimHandler(Auth: Auth) {
       return c.json({ error: "No valid token found" }, 401)
     }
 
-    if (!token) {
+    if (!token && (target.provider !== "mtplx" || !isLoopbackMtplxUrl(mtplxChatUrl(mtplxBaseURL)))) {
       return c.json({ error: `Missing ${target.provider} provider API key` }, 401)
     }
 
@@ -95,6 +119,8 @@ export function createFimHandler(Auth: Auth) {
         temperature: fimTemperature,
         signal,
         organizationId: proxy?.organizationId,
+        sessionId,
+        mtplxBaseURL,
       })
 
       if (!response.ok) {

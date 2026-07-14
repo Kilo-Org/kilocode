@@ -343,6 +343,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           model: z.string().optional(),
           maxTokens: z.number().optional(),
           temperature: z.number().optional(),
+          sessionId: z.string().optional(),
         }),
       ),
       createFimHandler(Auth),

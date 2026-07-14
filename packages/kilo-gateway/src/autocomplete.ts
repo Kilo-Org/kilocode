@@ -1,4 +1,4 @@
-export type AutocompleteProviderID = "kilo" | "mistral" | "inception"
+export type AutocompleteProviderID = "kilo" | "mistral" | "inception" | "mtplx"
 export type DirectAutocompleteProviderID = Exclude<AutocompleteProviderID, "kilo">
 
 interface AutocompleteModelBase {
@@ -18,6 +18,8 @@ interface AutocompleteModelBase {
   readonly directProvider?: DirectAutocompleteProviderID
   /** Request temperature. */
   readonly temperature: number
+  /** Maximum number of completion tokens requested from the provider. */
+  readonly maxTokens?: number
 }
 
 export type AutocompleteModelDef = AutocompleteModelBase &
@@ -102,6 +104,17 @@ const models: AutocompleteModelDef[] = [
     temperature: 0,
     kind: "edit",
     fimModelID: "inception/mercury-edit-2",
+  },
+  {
+    id: "mtplx/Qwen3.5-9B-MTPLX",
+    modelID: "Qwen3.5-9B-MTPLX",
+    label: "Qwen3.5 9B (MTPLX)",
+    providerID: "mtplx",
+    provider: "MTPLX",
+    requestModel: "Qwen3.5-9B-MTPLX",
+    directProvider: "mtplx",
+    temperature: 0,
+    maxTokens: 64,
   },
 ]
 

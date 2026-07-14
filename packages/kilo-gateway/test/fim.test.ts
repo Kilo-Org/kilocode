@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { resolveFimTarget } from "../src/fim"
+import { buildMtplxRequest, isLoopbackMtplxUrl, mtplxChatUrl, resolveFimTarget } from "../src/fim"
 
 describe("FIM target resolution", () => {
   test("keeps gateway autocomplete models on Kilo Gateway", () => {
@@ -25,6 +25,10 @@ describe("FIM target resolution", () => {
       model: "mercury-edit-2",
       url: "https://api.inceptionlabs.ai/v1/fim/completions",
     })
+    expect(resolveFimTarget("mtplx", "Qwen3.5-9B-MTPLX")).toEqual({
+      provider: "mtplx",
+      model: "Qwen3.5-9B-MTPLX",
+    })
   })
 
   test("preserves gateway model pass-through behavior", () => {
@@ -48,5 +52,32 @@ describe("FIM target resolution", () => {
       model: "custom/fim-model",
       url: "https://api.kilo.ai/api/fim/completions",
     })
+  })
+})
+
+describe("MTPLX chat transport", () => {
+  test("places the stable suffix before the changing prefix and disables thinking", () => {
+    const request = buildMtplxRequest({
+      model: "Qwen3.5-9B-MTPLX",
+      prefix: "function add(a, b) { return ",
+      suffix: "; }\n",
+      maxTokens: 256,
+      temperature: 0,
+    })
+
+    expect(request.max_tokens).toBe(64)
+    expect(request.enable_thinking).toBe(false)
+    expect(request.chat_template_kwargs).toEqual({ enable_thinking: false })
+    expect(request.stop).toEqual(["; }"])
+    expect(request.messages[1]?.content).toBe(
+      "SUFFIX AFTER CURSOR:\n; }\n\n\nPREFIX BEFORE CURSOR:\nfunction add(a, b) { return \n\nINSERT AT CURSOR:",
+    )
+  })
+
+  test("builds the chat endpoint and recognizes only loopback URLs as local", () => {
+    expect(mtplxChatUrl()).toBe("http://127.0.0.1:8001/v1/chat/completions")
+    expect(mtplxChatUrl("https://bifrost.example/v1/")).toBe("https://bifrost.example/v1/chat/completions")
+    expect(isLoopbackMtplxUrl("http://localhost:8001/v1/chat/completions")).toBe(true)
+    expect(isLoopbackMtplxUrl("https://bifrost.example/v1/chat/completions")).toBe(false)
   })
 })

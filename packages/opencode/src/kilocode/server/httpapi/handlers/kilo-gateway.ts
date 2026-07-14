@@ -22,7 +22,14 @@ import {
   fetchOrganizationModes,
   fetchProfile,
 } from "@kilocode/kilo-gateway"
-import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
+import {
+  buildMtplxRequest,
+  DIRECT_FIM_ENV,
+  isLoopbackMtplxUrl,
+  mtplxChatUrl,
+  requestMistralFim,
+  resolveFimTarget,
+} from "@kilocode/kilo-gateway/fim"
 import { DIRECT_EDIT_ENV, extractFencedBody, resolveEditTarget } from "@kilocode/kilo-gateway/edit"
 import { buildMercuryEditPrompt } from "@kilocode/kilo-gateway/edit-prompt"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
@@ -34,6 +41,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
+import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Identifier } from "@/id/id"
@@ -63,6 +71,7 @@ function logError(route: string, err: unknown) {
 export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo", (handlers) =>
   Effect.gen(function* () {
     const auth = yield* Auth.Service
+    const config = yield* Config.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
     const events = yield* EventV2Bridge.Service
@@ -113,6 +122,12 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
 
     const fim = Effect.fn("KiloGatewayHttpApi.fim")(function* (ctx: { payload: typeof FimBody.Type }) {
       const target = resolveFimTarget(ctx.payload.provider, ctx.payload.model)
+      const cfg = target.provider === "mtplx" ? yield* config.get() : undefined
+      const opts = cfg?.provider?.mtplx?.options
+      const baseURL =
+        target.provider === "mtplx" && typeof opts?.baseURL === "string" ? opts.baseURL : process.env.MTPLX_BASE_URL
+      const headers = target.provider === "mtplx" && opts?.headers ? opts.headers : {}
+      const mtplxURL = mtplxChatUrl(baseURL)
       const info = target.provider === "kilo" ? yield* proxyAuth() : undefined
       const token = yield* Effect.gen(function* () {
         if (target.provider === "kilo") return info?.token
@@ -122,7 +137,9 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       })
 
       if (target.provider === "kilo" && !info?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!token && (target.provider !== "mtplx" || !isLoopbackMtplxUrl(mtplxURL))) {
+        return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      }
 
       const request = yield* HttpServerRequest.HttpServerRequest
       const signal =
@@ -136,25 +153,41 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
             return fetch(url, {
               method: "POST",
               headers: {
+                ...headers,
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 ...(target.provider === "kilo"
                   ? buildKiloHeaders(undefined, { kilocodeOrganizationId: info?.organizationId })
                   : {}),
                 ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
+                ...(target.provider === "mtplx" ? { "x-mtplx-client": "kilocode" } : {}),
+                ...(target.provider === "mtplx" && ctx.payload.sessionId
+                  ? { "x-mtplx-session-id": ctx.payload.sessionId }
+                  : {}),
               },
               signal,
-              body: JSON.stringify({
-                model: target.model,
-                prompt: ctx.payload.prefix,
-                suffix: ctx.payload.suffix,
-                max_tokens: ctx.payload.maxTokens ?? 256,
-                temperature: ctx.payload.temperature ?? 0.2,
-                stream: true,
-              }),
+              body: JSON.stringify(
+                target.provider === "mtplx"
+                  ? buildMtplxRequest({
+                      model: target.model,
+                      prefix: ctx.payload.prefix,
+                      suffix: ctx.payload.suffix,
+                      maxTokens: ctx.payload.maxTokens ?? 64,
+                      temperature: ctx.payload.temperature ?? 0,
+                    })
+                  : {
+                      model: target.model,
+                      prompt: ctx.payload.prefix,
+                      suffix: ctx.payload.suffix,
+                      max_tokens: ctx.payload.maxTokens ?? 256,
+                      temperature: ctx.payload.temperature ?? 0.2,
+                      stream: true,
+                    },
+              ),
             })
           }
           if (target.provider === "mistral") return requestMistralFim(run)
+          if (target.provider === "mtplx") return run(mtplxURL)
           return run(target.url)
         } catch (err) {
           if (err instanceof DOMException && err.name === "TimeoutError")

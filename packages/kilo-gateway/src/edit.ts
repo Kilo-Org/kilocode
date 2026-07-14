@@ -8,6 +8,7 @@ import { getAutocompleteModel, type DirectAutocompleteProviderID } from "./autoc
 export const DIRECT_EDIT_ENV: Record<DirectAutocompleteProviderID, string[]> = {
   mistral: ["MISTRAL_API_KEY"],
   inception: ["INCEPTION_API_KEY"],
+  mtplx: [],
 }
 
 export type EditTarget =
