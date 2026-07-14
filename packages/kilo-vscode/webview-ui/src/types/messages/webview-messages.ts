@@ -980,6 +980,11 @@ export interface SidebarOpenSessionsMessage {
   sessionIDs: string[]
 }
 
+export interface AgentManagerVisibleSessionMessage {
+  type: "agentManager.visibleSession"
+  sessionID: string | null
+}
+
 export interface RequestAutoApproveStateMessage {
   type: "requestAutoApproveState"
 }
@@ -1366,6 +1371,7 @@ export type WebviewMessage =
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
   | SidebarOpenSessionsMessage
+  | AgentManagerVisibleSessionMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage

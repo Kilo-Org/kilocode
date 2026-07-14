@@ -8798,11 +8798,18 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "BadRequest | InvalidRequestError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
                 }
               }
             }
@@ -8816,19 +8823,41 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "focused": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
+                  "viewer": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000)$",
+                        "format": "uuid"
+                      },
+                      "active": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": ["id", "active"],
+                    "additionalProperties": false
                   },
-                  "open": {
+                  "attached": {
                     "type": "array",
                     "items": {
-                      "type": "string"
-                    }
+                      "type": "string",
+                      "pattern": "^ses",
+                      "maxLength": 234
+                    },
+                    "maxItems": 1000
+                  },
+                  "visible": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^ses",
+                      "maxLength": 234
+                    },
+                    "maxItems": 199
                   }
                 },
+                "required": ["viewer", "attached", "visible"],
                 "additionalProperties": false
               }
             }

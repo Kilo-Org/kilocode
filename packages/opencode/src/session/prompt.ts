@@ -769,6 +769,8 @@ export const layer = Layer.effect(
         .get()
         .pipe(Effect.orDie)
       const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
+      // kilocode_change start - retain the source session variant across Agent Manager's model-less fork handoff
+      const stored = !input.model && !ag.model ? model : undefined
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -776,7 +778,11 @@ export const layer = Layer.effect(
               .getModel(model.providerID, model.modelID)
               .pipe(Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)))
           : undefined
-      const variant = input.variant ?? (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      const variant =
+        input.variant ??
+        (stored && "variant" in stored && typeof stored.variant === "string" ? stored.variant : undefined) ??
+        (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      // kilocode_change end
 
       const info: SessionV1.User = {
         id: input.messageID ?? MessageID.ascending(),

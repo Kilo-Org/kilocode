@@ -38,6 +38,12 @@ async function provide<R>(input: { directory: string; fn: () => R }): Promise<R>
   return provide(input)
 }
 
+function same(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false
+  for (const id of a) if (!b.has(id)) return false
+  return true
+}
+
 export namespace KiloSessions {
   export const Event = {
     RemoteStatusChanged: BusEvent.define(
@@ -203,8 +209,7 @@ export namespace KiloSessions {
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
-  const focused = new Set<string>()
-  const opened = new Set<string>()
+  const attached = new Set<string>()
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
@@ -416,8 +421,7 @@ export namespace KiloSessions {
         const statusMap = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list()))
         const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
         const ids = new Set(Object.keys(statuses))
-        for (const id of focused) ids.add(id)
-        for (const id of opened) ids.add(id)
+        for (const id of attached) ids.add(id)
         const results = await AppRuntime.runPromise(
           Session.Service.use((svc) =>
             Effect.all(
@@ -438,11 +442,7 @@ export namespace KiloSessions {
           ),
         )
         const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
-        return {
-          sessions,
-          focused: focused.size > 0 ? [...focused] : undefined,
-          open: opened.size > 0 ? [...opened] : undefined,
-        }
+        return { sessions }
       }
 
       const conn = RemoteWS.connect({
@@ -515,15 +515,11 @@ export namespace KiloSessions {
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSessions(input: { focused: readonly string[]; open?: readonly string[] }) {
-    focused.clear()
-    opened.clear()
-    for (const id of input.focused) {
-      focused.add(id)
-    }
-    for (const id of input.open ?? []) {
-      opened.add(id)
-    }
+  export function setAttachedSessions(ids: readonly string[]) {
+    const next = new Set(ids)
+    if (same(next, attached)) return
+    attached.clear()
+    for (const id of next) attached.add(id)
     if (remote) void remote.conn.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
   }
 

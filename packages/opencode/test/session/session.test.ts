@@ -8,6 +8,7 @@ import { Session as SessionNs } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, type SessionID } from "../../src/session/schema"
+type SessionModel = NonNullable<SessionNs.Info["model"]> // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
@@ -248,4 +249,88 @@ describe("Session", () => {
       expect(saved.metadata).toBeUndefined()
     }),
   )
+
+  // kilocode_change start
+  it.instance("fork preserves model and variant", () =>
+    Effect.gen(function* () {
+      const session = yield* SessionNs.Service
+      const model = {
+        id: "test-model",
+        providerID: "test-provider",
+        variant: "high",
+      } as SessionModel
+      const created = yield* Effect.acquireRelease(
+        session.create({ title: "with-model", model }),
+        (info) => session.remove(info.id).pipe(Effect.ignore),
+      )
+      const saved = yield* session.get(created.id)
+      expect(saved.model).toEqual(model)
+
+      const fork = yield* Effect.acquireRelease(session.fork({ sessionID: created.id }), (info) =>
+        session.remove(info.id).pipe(Effect.ignore),
+      )
+      const forked = yield* session.get(fork.id)
+
+      expect(forked.model).toEqual(model)
+      expect(forked.model?.variant).toBe("high")
+      expect(forked.model).not.toBe(saved.model)
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start
+  it.instance("historical fork preserves the model at the fork point", () =>
+    Effect.gen(function* () {
+      const session = yield* SessionNs.Service
+      const source = yield* Effect.acquireRelease(
+        session.create({
+          model: {
+            id: "test-model",
+            providerID: "test-provider",
+            variant: "high",
+          } as SessionModel,
+        }),
+        (info) => session.remove(info.id).pipe(Effect.ignore),
+      )
+      yield* session.updateMessage({
+        id: MessageID.ascending(),
+        sessionID: source.id,
+        role: "user",
+        time: { created: Date.now() },
+        agent: "code",
+        model: {
+          providerID: source.model!.providerID,
+          modelID: source.model!.id,
+          variant: "low",
+        },
+        tools: {},
+        mode: "",
+      } as unknown as MessageV2.Info)
+      const latest = yield* session.updateMessage({
+        id: MessageID.ascending(),
+        sessionID: source.id,
+        role: "user",
+        time: { created: Date.now() },
+        agent: "code",
+        model: {
+          providerID: source.model!.providerID,
+          modelID: source.model!.id,
+          variant: "high",
+        },
+        tools: {},
+        mode: "",
+      } as unknown as MessageV2.Info)
+      const fork = yield* Effect.acquireRelease(
+        session.fork({ sessionID: source.id, messageID: latest.id }),
+        (info) => session.remove(info.id).pipe(Effect.ignore),
+      )
+
+      expect(fork.model).toEqual({
+        id: source.model!.id,
+        providerID: source.model!.providerID,
+        variant: "low",
+      })
+    }),
+  )
+  // kilocode_change end
 })

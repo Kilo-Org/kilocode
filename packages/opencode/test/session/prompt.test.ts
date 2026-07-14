@@ -2532,6 +2532,41 @@ it.instance(
 
 // Agent variant
 
+// kilocode_change start - Agent Manager records a model-less synthetic prompt after forking
+noLLMServer.instance(
+  "preserves the session variant through a model-less handoff",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({
+        model: {
+          id: ref.modelID,
+          providerID: ref.providerID,
+          variant: "high",
+        },
+      })
+
+      const handoff = yield* prompt.prompt({
+        sessionID: session.id,
+        noReply: true,
+        parts: [{ type: "text", text: "fork handoff", synthetic: true }],
+      })
+      if (handoff.info.role !== "user") throw new Error("expected user message")
+
+      expect(handoff.info.model).toEqual({
+        providerID: ref.providerID,
+        modelID: ref.modelID,
+        variant: "high",
+      })
+
+      const saved = yield* sessions.get(session.id)
+      expect(saved.model?.variant).toBe("high")
+    }),
+  { config: cfg },
+)
+// kilocode_change end
+
 noLLMServer.instance(
   "applies agent variant only when using agent model",
   () =>
