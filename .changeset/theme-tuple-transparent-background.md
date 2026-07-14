@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Support `[r, g, b, a]` tuple color values in custom themes so transparent backgrounds (e.g. `[0, 0, 0, 0]`) resolve correctly instead of falling back to an opaque default.
+Fix custom theme backgrounds given as `[r, g, b, a]` tuples (e.g. `[0, 0, 0, 0]`) falling back to an opaque color. Tuple values now resolve with their alpha channel intact, so transparent backgrounds render as intended.
