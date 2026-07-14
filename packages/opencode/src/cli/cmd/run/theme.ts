@@ -69,7 +69,8 @@ type Variant = {
   dark: HexColor | RefName
   light: HexColor | RefName
 }
-type ColorValue = HexColor | RefName | Variant | RGBA | number
+type ColorTuple = [number, number, number] | [number, number, number, number] // kilocode_change
+type ColorValue = HexColor | RefName | Variant | RGBA | number | ColorTuple // kilocode_change
 type ThemeJson = {
   defs?: Record<string, HexColor | RefName>
   theme: Omit<Record<ThemeColor, ColorValue>, "selectedListItemText" | "backgroundMenu"> & {
@@ -233,6 +234,19 @@ function splashShadow(indexed: RGBA[], base: RGBA, overlay: RGBA, value: number)
   return nearestIndexed(indexed, mixed)
 }
 
+// kilocode_change start - support [r,g,b,a] tuple color values
+function isColorChannel(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 255
+}
+
+function tupleToRgba(c: readonly unknown[]): RGBA {
+  if ((c.length === 3 || c.length === 4) && c.every(isColorChannel)) {
+    return RGBA.fromInts(c[0] as number, c[1] as number, c[2] as number, (c[3] as number) ?? 255)
+  }
+  throw new Error(`Invalid color tuple: ${JSON.stringify(c)}`)
+}
+// kilocode_change end
+
 export function resolveTheme(theme: ThemeJson, pick: "dark" | "light"): TuiThemeCurrent {
   const defs = theme.defs ?? {}
 
@@ -242,6 +256,12 @@ export function resolveTheme(theme: ThemeJson, pick: "dark" | "light"): TuiTheme
     if (typeof value === "number") {
       return RGBA.fromIndex(value, ansiToRgba(value))
     }
+
+    // kilocode_change start - support [r,g,b,a] tuple color values
+    if (Array.isArray(value)) {
+      return tupleToRgba(value)
+    }
+    // kilocode_change end
 
     if (typeof value !== "string") {
       return resolveColor(value[pick], chain)

@@ -78,7 +78,8 @@ type Variant = {
   dark: HexColor | RefName
   light: HexColor | RefName
 }
-type ColorValue = HexColor | RefName | Variant | RGBA
+type ColorTuple = [number, number, number] | [number, number, number, number] // kilocode_change
+type ColorValue = HexColor | RefName | Variant | RGBA | ColorTuple // kilocode_change
 export type ThemeJson = {
   $schema?: string
   defs?: Record<string, HexColor | RefName>
@@ -211,6 +212,19 @@ export function upsertTheme(name: string, theme: unknown) {
   return true
 }
 
+// kilocode_change start - support [r,g,b,a] tuple color values
+function isColorChannel(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 255
+}
+
+function tupleToRgba(c: readonly unknown[]): RGBA {
+  if ((c.length === 3 || c.length === 4) && c.every(isColorChannel)) {
+    return RGBA.fromInts(c[0] as number, c[1] as number, c[2] as number, (c[3] as number) ?? 255)
+  }
+  throw new Error(`Invalid color tuple: ${JSON.stringify(c)}`)
+}
+// kilocode_change end
+
 export function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
   const defs = theme.defs ?? {}
   function resolveColor(c: ColorValue, chain: string[] = []): RGBA {
@@ -233,6 +247,7 @@ export function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
     if (typeof c === "number") {
       return ansiToRgba(c)
     }
+    if (Array.isArray(c)) return tupleToRgba(c) // kilocode_change
     return resolveColor(c[mode], chain)
   }
 

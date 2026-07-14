@@ -52,3 +52,45 @@ test("resolveTheme rejects circular color refs", () => {
 
   expect(() => resolveTheme(item, "dark")).toThrow("Circular color reference")
 })
+
+// kilocode_change start - support [r,g,b,a] tuple color values
+test("resolveTheme resolves [r, g, b, a] tuple with alpha passthrough", () => {
+  const item = structuredClone(DEFAULT_THEMES.opencode)
+  item.theme.background = [10, 20, 30, 40]
+
+  const resolved = resolveTheme(item, "dark")
+  expect(resolved.background.toInts()).toEqual([10, 20, 30, 40])
+})
+
+test("resolveTheme resolves fully transparent [0, 0, 0, 0] tuple", () => {
+  const item = structuredClone(DEFAULT_THEMES.opencode)
+  item.theme.background = [0, 0, 0, 0]
+
+  const resolved = resolveTheme(item, "dark")
+  expect(resolved.background.toInts()[3]).toBe(0)
+})
+
+test("resolveTheme defaults [r, g, b] tuple to opaque alpha", () => {
+  const item = structuredClone(DEFAULT_THEMES.opencode)
+  item.theme.background = [10, 20, 30]
+
+  const resolved = resolveTheme(item, "dark")
+  expect(resolved.background.toInts()).toEqual([10, 20, 30, 255])
+})
+
+test("resolveTheme keeps 'none' background transparent", () => {
+  const item = structuredClone(DEFAULT_THEMES.opencode)
+  item.theme.background = "none"
+
+  const resolved = resolveTheme(item, "dark")
+  expect(resolved.background.toInts()[3]).toBe(0)
+})
+
+test("resolveTheme rejects malformed color tuples", () => {
+  for (const bad of [[], [10], [10, 20], [10, 20, 30, 40, 50], [10, 20, "30"], [10, 20, 300], [10, 20, 30.5], [10, 20, -1]]) {
+    const item = structuredClone(DEFAULT_THEMES.opencode)
+    item.theme.background = bad as never
+    expect(() => resolveTheme(item, "dark")).toThrow("Invalid color tuple")
+  }
+})
+// kilocode_change end

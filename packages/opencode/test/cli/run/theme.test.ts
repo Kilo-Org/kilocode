@@ -113,3 +113,29 @@ test("keeps light surfaces close to neutral on warm backgrounds", () => {
   expect(spread(theme.backgroundPanel)).toBeLessThan(60)
   expect(spread(theme.backgroundElement)).toBeLessThan(60)
 })
+
+// kilocode_change start - support [r,g,b,a] tuple color values
+test("resolves [r, g, b, a] tuple background with alpha passthrough", () => {
+  const base = generateSystem(terminalColors(), "dark")
+  base.theme.background = [10, 20, 30, 40]
+
+  const theme = resolveTheme(base, "dark")
+  expect(theme.background.toInts()).toEqual([10, 20, 30, 40])
+})
+
+test("defaults [r, g, b] tuple background to opaque alpha", () => {
+  const base = generateSystem(terminalColors(), "dark")
+  base.theme.background = [10, 20, 30]
+
+  const theme = resolveTheme(base, "dark")
+  expect(theme.background.toInts()).toEqual([10, 20, 30, 255])
+})
+
+test("rejects malformed color tuples", () => {
+  for (const bad of [[], [10], [10, 20], [10, 20, 30, 40, 50], [10, 20, "30"], [10, 20, 300], [10, 20, 30.5], [10, 20, -1]]) {
+    const base = generateSystem(terminalColors(), "dark")
+    base.theme.background = bad as never
+    expect(() => resolveTheme(base, "dark")).toThrow("Invalid color tuple")
+  }
+})
+// kilocode_change end
