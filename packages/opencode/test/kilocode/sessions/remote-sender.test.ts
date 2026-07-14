@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { afterEach, mock, spyOn } from "bun:test"
 import { Effect } from "effect"
 import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
+import type { RemoteCommand } from "../../../src/kilo-sessions/remote-command"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
@@ -12,6 +13,8 @@ import { Permission } from "../../../src/permission"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import type { Info as SessionInfo } from "../../../src/session/session"
 import { SessionID } from "../../../src/session/schema"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
 
@@ -71,6 +74,18 @@ function questions(items: Question.Request[] = []) {
 function prompts(calls: SessionPrompt.PromptInput[]) {
   return async (input: SessionPrompt.PromptInput) => {
     calls.push(input)
+  }
+}
+
+function sessionInfo(id: string, directory: string): SessionInfo {
+  return {
+    id: SessionID.make(id),
+    slug: id,
+    projectID: ProjectV2.ID.global,
+    directory,
+    title: id,
+    version: "test",
+    time: { created: 1, updated: 1 },
   }
 }
 
@@ -324,6 +339,278 @@ describe("RemoteSender", () => {
       id: "req_unknown",
       error: "unknown command: unknown_command",
     })
+  })
+
+  test("list_commands returns each catalog from the exact session directory", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const state = { directory: "" }
+    const first = Promise.withResolvers<void>()
+    const second = Promise.withResolvers<void>()
+    const send = conn.send.bind(conn)
+    conn.send = (message: RemoteProtocol.Outbound) => {
+      send(message)
+      if (message.type !== "response") return
+      if (message.id === "req_commands_first") first.resolve()
+      if (message.id === "req_commands_second") second.resolve()
+    }
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        state.directory = input.directory
+        const result = await input.fn()
+        state.directory = ""
+        return result
+      },
+      commands: {
+        list: async () => ({
+          protocolVersion: 1,
+          commands: [{ name: state.directory.endsWith("first") ? "first" : "second", hints: [] }],
+        }),
+        execute: async () => {},
+      },
+      catalog: {
+        get: async (sessionID) =>
+          sessionInfo(sessionID, sessionID === SessionID.make("ses_first") ? "/workspace/first" : "/workspace/second"),
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_commands_first",
+      command: "list_commands",
+      sessionId: "ses_first",
+      data: { protocolVersion: 1 },
+    })
+    await first.promise
+    sender.handle({
+      type: "command",
+      id: "req_commands_second",
+      command: "list_commands",
+      sessionId: "ses_second",
+      data: { protocolVersion: 1 },
+    })
+    await second.promise
+
+    expect(dirs).toEqual(["/workspace/first", "/workspace/second"])
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_commands_first",
+        result: { protocolVersion: 1, commands: [{ name: "first", hints: [] }] },
+      },
+      {
+        type: "response",
+        id: "req_commands_second",
+        result: { protocolVersion: 1, commands: [{ name: "second", hints: [] }] },
+      },
+    ])
+  })
+
+  test("send_command validates the session directory before ACK and executes asynchronously", async () => {
+    const { conn, sent } = fakeConn()
+    const steps: unknown[] = []
+    const started = Promise.withResolvers<void>()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        steps.push(["provide", input.directory])
+        return input.fn()
+      },
+      commands: {
+        list: async () => ({ protocolVersion: 1, commands: [{ name: "review", hints: [] }] }),
+        execute: async (input) => {
+          steps.push(["execute", input])
+          started.resolve()
+          await new Promise(() => {})
+        },
+      },
+      catalog: {
+        get: async () => {
+          steps.push("get")
+          return sessionInfo("ses_commands", "/workspace/project-a")
+        },
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_send_command",
+      command: "send_command",
+      sessionId: "ses_commands",
+      data: {
+        protocolVersion: 1,
+        command: "review",
+        arguments: "  main  ",
+        messageID: "msg_remote",
+      },
+    })
+
+    expect(sent).toEqual([])
+    await started.promise
+    expect(sent).toEqual([{ type: "response", id: "req_send_command", result: {} }])
+    expect(steps).toEqual([
+      "get",
+      ["provide", "/workspace/project-a"],
+      [
+        "execute",
+        {
+          sessionID: SessionID.make("ses_commands"),
+          protocolVersion: 1,
+          command: "review",
+          arguments: "  main  ",
+          messageID: "msg_remote",
+        },
+      ],
+    ])
+  })
+
+  test("send_command rejects a command missing from the catalog without ACK", async () => {
+    const { conn, sent } = fakeConn()
+    const delivered = Promise.withResolvers<void>()
+    const send = conn.send.bind(conn)
+    conn.send = (message: RemoteProtocol.Outbound) => {
+      send(message)
+      if (message.type === "response" && message.id === "req_stale_command") delivered.resolve()
+    }
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      commands: {
+        list: async () => ({ protocolVersion: 1, commands: [{ name: "compact", hints: [] }] }),
+        execute: async () => {
+          throw new Error("must not execute")
+        },
+      },
+      catalog: {
+        get: async () => sessionInfo("ses_commands", "/workspace/project-a"),
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_stale_command",
+      command: "send_command",
+      sessionId: "ses_commands",
+      data: { protocolVersion: 1, command: "deleted-command", arguments: "main" },
+    })
+
+    await delivered.promise
+    expect(sent).toEqual([{ type: "response", id: "req_stale_command", error: "unknown slash command" }])
+  })
+
+  test("send_command returns a safe error without ACK when the session is missing", async () => {
+    const { conn, sent } = fakeConn()
+    const delivered = Promise.withResolvers<void>()
+    const send = conn.send.bind(conn)
+    conn.send = (message: RemoteProtocol.Outbound) => {
+      send(message)
+      if (message.type === "response" && message.id === "req_missing_command") delivered.resolve()
+    }
+    const dirs: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      commands: {
+        list: async () => ({ protocolVersion: 1, commands: [] }),
+        execute: async () => {
+          throw new Error("must not execute")
+        },
+      },
+      catalog: {
+        get: async () => {
+          throw new Error("private lookup detail")
+        },
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_missing_command",
+      command: "send_command",
+      sessionId: "ses_missing",
+      data: { protocolVersion: 1, command: "review", arguments: "main" },
+    })
+
+    expect(sent).toEqual([])
+    await delivered.promise
+    expect(dirs).toEqual([])
+    expect(sent).toEqual([{ type: "response", id: "req_missing_command", error: "failed to send command" }])
+    expect(JSON.stringify(sent)).not.toContain("private lookup detail")
+  })
+
+  test("send_command logs only the error class after ACK", async () => {
+    class CredentialLeakError extends Error {
+      override name = "CredentialLeakError"
+    }
+    const { conn, sent } = fakeConn()
+    const logged = Promise.withResolvers<unknown[]>()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: {
+        ...nolog,
+        error: (...args: unknown[]) => logged.resolve(args),
+      },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      commands: {
+        list: async () => ({ protocolVersion: 1, commands: [{ name: "review", hints: [] }] }),
+        execute: async () => {
+          throw new CredentialLeakError("credential=must-not-leak")
+        },
+      },
+      catalog: {
+        get: async () => sessionInfo("ses_commands", "/workspace/project-a"),
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_failed_command",
+      command: "send_command",
+      sessionId: "ses_commands",
+      data: { protocolVersion: 1, command: "review", arguments: "main" },
+    })
+
+    const entry = await logged.promise
+    expect(sent).toEqual([{ type: "response", id: "req_failed_command", result: {} }])
+    expect(entry).toEqual([
+      "send command failed after ACK",
+      { id: "req_failed_command", operation: "send_command", error: "CredentialLeakError" },
+    ])
+    expect(JSON.stringify(entry)).not.toContain("credential=must-not-leak")
   })
 
   test("list_models returns the effective catalog from the exact session directory", async () => {
