@@ -9804,8 +9804,12 @@ export type PartUpdateResponse = PartUpdateResponses[keyof PartUpdateResponses]
 
 export type SessionViewedData = {
   body?: {
-    focused?: Array<string>
-    open?: Array<string>
+    viewer: {
+      id: string
+      active: boolean
+    }
+    attached: Array<string>
+    visible: Array<string>
   }
   path?: never
   query?: {
@@ -9817,9 +9821,9 @@ export type SessionViewedData = {
 
 export type SessionViewedErrors = {
   /**
-   * Bad request
+   * BadRequest | InvalidRequestError
    */
-  400: BadRequestError
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
 
 export type SessionViewedError = SessionViewedErrors[keyof SessionViewedErrors]

@@ -216,8 +216,12 @@ describe("Agent Manager Provider Messages", () => {
 
   it("clears remote session registrations when the panel closes", () => {
     const body = getMethodBody("attachPanel")
-    expect(body).toContain('this.connectionService.unregisterFocused("agent-manager")')
-    expect(body).toContain('this.connectionService.registerOpen("agent-manager", [])')
+    // Presence must be cleared via visiblePresence.clear() — a direct
+    // registerVisible("agent-manager", []) would leave a stale displayed id
+    // that re-registers on the next flush after the panel reopens.
+    expect(body).toContain("this.visiblePresence.clear()")
+    expect(body).not.toContain('this.connectionService.registerVisible("agent-manager"')
+    expect(body).not.toContain('this.connectionService.registerAttached("agent-manager"')
     expect(body).toContain("this.activeSessionId = undefined")
   })
 

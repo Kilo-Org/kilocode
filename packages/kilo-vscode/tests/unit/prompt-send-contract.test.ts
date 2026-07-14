@@ -194,9 +194,9 @@ describe("KiloProvider pruneDeletedSession contract", () => {
   })
 
   it("unfocuses the streams when the deleted id matches the focused session", () => {
-    // Without this, connectionService.focused still reports the deleted id to
-    // the backend (viewed.focused), and focusSession() never calls
-    // unregisterFocused for this instance.
+    // Without this, connectionService still reports the deleted id to the
+    // backend as visible, and focusSession() never clears the visible
+    // registration for this instance.
     const match = source.match(/pruneDeletedSession\(sessionID: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
     expect(match![1]).toMatch(/if \(this\.streams\.focused === sessionID\) this\.focusSession\(undefined\)/)
@@ -542,15 +542,15 @@ describe("Cloud import parts cleanup contract", () => {
 describe("KiloConnectionService pruneSession contract", () => {
   const source = readFile(CONNECTION_SERVICE_FILE)
 
-  it("drops the deleted session from focused and opened Maps", () => {
+  it("drops the deleted session from attached and visible Maps", () => {
     // KiloProvider's pruneDeletedSession calls connectionService.pruneSession.
-    // Without clearing focused/opened entries whose value is the deleted id,
-    // the backend keeps receiving viewed.focused with the dead session id and
-    // any background tab opener stays registered for it.
+    // Without clearing attached/visible entries whose value is the deleted id,
+    // the backend keeps receiving the dead session id and any background tab
+    // opener stays registered for it.
     const match = source.match(/pruneSession\(sessionId: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
-    expect(match![1]).toMatch(/this\.focused\.delete\(key\)/)
-    expect(match![1]).toMatch(/this\.opened\.(?:set|delete)/)
+    expect(match![1]).toMatch(/this\.attached\.(?:set|delete)/)
+    expect(match![1]).toMatch(/this\.visible\.(?:set|delete)/)
     expect(match![1]).toMatch(/this\.flushViewed\(\)/)
   })
 })
