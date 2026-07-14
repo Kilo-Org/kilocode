@@ -1,3 +1,4 @@
+import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
@@ -42,6 +43,14 @@ const SuggestionData = z.object({
 })
 
 const decodeSessionID = Schema.decodeUnknownOption(SessionID)
+
+// kilocode_change start - redact anything but the error class so messages/credentials
+// never end up in logs
+function errorName(error: unknown): string {
+  if (error instanceof Error && error.name) return error.name
+  return typeof error
+}
+// kilocode_change end
 
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
@@ -109,6 +118,7 @@ export namespace RemoteSender {
       readonly providers: () => Promise<Record<ProviderV2.ID, Provider.Info>>
       readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
     }
+    commands?: RemoteCommand.Interface
   }
 
   export type Sender = {
@@ -190,6 +200,9 @@ export namespace RemoteSender {
         return AppRuntime.runPromise(Session.Service.use((svc) => svc.children(sessionID)))
       },
     }
+    // kilocode_change start - injectable slash command discovery + execution
+    const commands = options.commands ?? RemoteCommand.live()
+    // kilocode_change end
 
     const sub =
       options.subscribe ??
@@ -369,6 +382,90 @@ export namespace RemoteSender {
     }
 
     function dispatch(msg: RemoteProtocol.Command) {
+      // kilocode_change start - slash command discovery and execution
+      if (msg.command === "list_commands") {
+        const parsed = RemoteCommand.ListRequest.safeParse(msg.data)
+        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(session)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid list_commands request",
+          })
+          return
+        }
+        const run = options.provide ?? provide
+        void (async () => {
+          try {
+            const info = await catalog.get(session.value)
+            const result = await run({ directory: info.directory, fn: () => commands.list() })
+            options.conn.send({ type: "response", id: msg.id, result })
+          } catch (error) {
+            options.log.error("list commands failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to list commands" })
+          }
+        })()
+        return
+      }
+      if (msg.command === "send_command") {
+        const parsed = RemoteCommand.SendRequest.safeParse(msg.data)
+        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(session)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid send_command request",
+          })
+          return
+        }
+        const run = options.provide ?? provide
+        const state = { acked: false }
+        void (async () => {
+          try {
+            const info = await catalog.get(session.value)
+            await run({
+              directory: info.directory,
+              fn: async () => {
+                // Reject stale catalog entries (command deleted or renamed since the
+                // client listed) before the ACK — after it, failures are only logged.
+                const available = await commands.list()
+                if (!available.commands.some((item) => item.name === parsed.data.command)) {
+                  options.conn.send({ type: "response", id: msg.id, error: "unknown slash command" })
+                  return
+                }
+                state.acked = true
+                options.conn.send({ type: "response", id: msg.id, result: {} })
+                try {
+                  await commands.execute({ ...parsed.data, sessionID: session.value, catalog: available })
+                } catch (error) {
+                  options.log.error("send command failed after ACK", {
+                    id: msg.id,
+                    operation: "send_command",
+                    error: errorName(error),
+                  })
+                }
+              },
+            })
+          } catch (error) {
+            if (state.acked) {
+              options.log.error("send command context failed after ACK", {
+                id: msg.id,
+                operation: "send_command",
+                error: errorName(error),
+              })
+              return
+            }
+            options.log.error("send command preflight failed", {
+              id: msg.id,
+              operation: "send_command",
+              error: errorName(error),
+            })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to send command" })
+          }
+        })()
+        return
+      }
+      // kilocode_change end
       if (msg.command === "list_models") {
         const parsed = RemoteModelCatalog.Request.safeParse(msg.data)
         const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
