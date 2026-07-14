@@ -5,6 +5,7 @@ import { describe, expect, test } from "bun:test"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "../../../src/kilocode/paths"
+import { tmpdir } from "../../fixture/fixture"
 
 describe("ConfigProtection.isRequest", () => {
   const config = path.resolve(Global.Path.config)
@@ -213,8 +214,8 @@ describe("ConfigProtection.isGlobalSkillRequest", () => {
     const root = path.join(roots[1], "skills", "axiom-sre")
     const patterns = [path.join(root, "*"), path.join(root, "scripts", "*")]
     expect(ConfigProtection.isGlobalSkillRequest({ permission: "external_directory", patterns })).toBe(true)
-    expect(ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns })).toBe(
-      path.join(root, "*").replaceAll("\\", "/"),
+    expect(ConfigProtection.globalSkillPattern({ permission: "external_directory", patterns })).toMatch(
+      /\/skills\/axiom-sre\/\*$/,
     )
   })
 
@@ -265,6 +266,49 @@ describe("ConfigProtection.isGlobalSkillRequest", () => {
       await fs.rm(root, { recursive: true, force: true })
       await fs.rm(nested, { recursive: true, force: true })
       await fs.rm(outside, { recursive: true, force: true })
+    }
+  })
+
+  test("canonicalizes aliases to the physical global skill root", async () => {
+    await using globalTmp = await tmpdir()
+    await using aliasTmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    const skill = path.join(globalTmp.path, "skills", "canonical-skill")
+    const alias = path.join(aliasTmp.path, "alias")
+    await fs.mkdir(skill, { recursive: true })
+    await fs.symlink(skill, alias, process.platform === "win32" ? "junction" : "dir")
+
+    try {
+      const request = { permission: "external_directory", patterns: [path.join(alias, "*")] }
+      const pattern = ConfigProtection.globalSkillPattern(request)
+      expect(pattern).toMatch(/\/skills\/canonical-skill\/\*$/)
+      expect(pattern).not.toContain(aliasTmp.path.replaceAll("\\", "/"))
+      expect(ConfigProtection.isRequest(request)).toBe(true)
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await fs.rm(alias, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects glob characters in the canonical rule", async () => {
+    await using tmp = await tmpdir()
+    const prev = process.env.XDG_CONFIG_HOME
+    const root = path.join(tmp.path, "profile[")
+    const skill = path.join(root, "kilo", "skills", "unsafe-root")
+    process.env.XDG_CONFIG_HOME = root
+    await fs.mkdir(skill, { recursive: true })
+
+    try {
+      expect(
+        ConfigProtection.globalSkillPattern({
+          permission: "external_directory",
+          patterns: [path.join(skill, "*")],
+        }),
+      ).toBeUndefined()
+    } finally {
+      if (prev === undefined) delete process.env.XDG_CONFIG_HOME
+      else process.env.XDG_CONFIG_HOME = prev
     }
   })
 })

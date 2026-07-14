@@ -95,27 +95,18 @@ export namespace ConfigProtection {
   function skillRoot(pattern: string): string | undefined {
     const dir = pattern.replace(/[\\/]\*$/, "")
     if (!path.isAbsolute(dir)) return
-    const normalized = normalize(dir)
-    const dirResolved = physical(dir) ?? dir
+    const target = physical(dir)
+    if (!target) return
 
     const roots = [...configs(), ...KilocodePaths.globalDirs()]
     for (const root of roots) {
       for (const name of ["skill", "skills"]) {
-        const skills = path.join(root, name)
-        const skillsResolved = physical(skills) ?? skills
-        if (!within(dirResolved, skillsResolved) || within(skillsResolved, dirResolved)) continue
-        const marker = `/${name}/`
-        const offset = normalized.toLowerCase().lastIndexOf(marker)
-        if (offset === -1) continue
-        const skill = normalized.slice(offset + marker.length).split("/")[0]
+        const skills = physical(path.join(root, name))
+        if (!skills || !within(target, skills) || within(skills, target)) continue
+        const skill = path.relative(skills, target).split(path.sep)[0]
         if (!skill || /[*?\[\]{}]/.test(skill)) continue
-        const candidate = normalized.slice(0, offset + marker.length + skill.length)
-        const base = physical(skills)
-        const actual = physical(candidate)
-        if (!base || !actual) continue
-        const expected = path.join(base, skill)
-        if (!within(actual, expected) || !within(expected, actual)) continue
-        if (!within(dirResolved, actual)) continue
+        const candidate = normalize(path.join(skills, skill))
+        if (/[*?\[\]{}]/.test(candidate)) continue
         return candidate
       }
     }
@@ -143,15 +134,18 @@ export namespace ConfigProtection {
   /** Check if an absolute path is inside a known CLI config directory. */
   export function isAbsolute(filepath: string): boolean {
     if (fallback(filepath)) return true
+    const target = physical(filepath)
 
     // ~/.config/kilo/ (XDG config)
     for (const dir of configs()) {
-      if (within(filepath, dir)) return true
+      const root = physical(dir)
+      if (within(filepath, dir) || (target && root && within(target, root))) return true
     }
 
     // ~/.kilo/ and ~/.kilocode/ (legacy global dirs)
     for (const dir of KilocodePaths.globalDirs()) {
-      if (within(filepath, dir)) return true
+      const root = physical(dir)
+      if (within(filepath, dir) || (target && root && within(target, root))) return true
     }
 
     return false
@@ -194,7 +188,8 @@ export namespace ConfigProtection {
       if (request.metadata?.access === "read") return false
       for (const pattern of request.patterns) {
         const dir = pattern.replace(/[\\/]\*$/, "")
-        if (isAbsolute(dir)) return true
+        const target = physical(dir)
+        if (isAbsolute(dir) || (target && isAbsolute(target))) return true
       }
       return false
     }

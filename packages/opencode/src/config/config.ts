@@ -261,6 +261,7 @@ export const layer = Layer.effect(
     const npmSvc = yield* Npm.Service
     const http = yield* HttpClient.HttpClient
     const git = yield* Git.Service // kilocode_change
+    const flock = yield* EffectFlock.Service // kilocode_change - serialize global config read-merge-write updates
 
     const readConfigFile = (filepath: string) => fs.readFileStringSafe(filepath).pipe(Effect.orDie)
 
@@ -327,7 +328,7 @@ export const layer = Layer.effect(
 
     let globalStamp = "" // kilocode_change
 
-    const loadGlobal = Effect.fnUntraced(function* (env?: Record<string, string>) {
+    const loadGlobalUnlocked = Effect.fnUntraced(function* (env?: Record<string, string>) {
       // kilocode_change start
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission())
       globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
@@ -371,6 +372,14 @@ export const layer = Layer.effect(
       globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config) // kilocode_change
       return result
     })
+
+    // kilocode_change start - serialize every global config migration and update under one stable lock
+    const loadGlobal = Effect.fnUntraced(function* (env?: Record<string, string>) {
+      return yield* flock
+        .withLock(loadGlobalUnlocked(env), `config:global:${path.resolve(Global.Path.config)}`)
+        .pipe(Effect.orDie)
+    })
+    // kilocode_change end
 
     const [cachedGlobal, invalidateGlobal] = yield* Effect.cachedInvalidateWithTTL(
       loadGlobal().pipe(
@@ -971,24 +980,34 @@ export const layer = Layer.effect(
       const dispose = options?.dispose ?? true
       // kilocode_change end
       const file = globalConfigFile()
-      const before = (yield* readConfigFile(file)) ?? "{}"
-      const patch = writableGlobal(config)
+      // kilocode_change start - serialize read-merge-write so concurrent approvals cannot lose rules
+      const result = yield* flock
+        .withLock(
+          Effect.gen(function* () {
+            const before = (yield* readConfigFile(file)) ?? "{}"
+            const patch = writableGlobal(config)
 
-      let next: Info
-      let changed: boolean
-      if (!file.endsWith(".jsonc")) {
-        const existing = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(before, file), file)
-        const merged = KilocodeConfig.mergeConfig(writable(existing), patch) // kilocode_change
-        const serialized = JSON.stringify(merged, null, 2)
-        changed = serialized !== before
-        if (changed) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
-        next = merged
-      } else {
-        const updated = patchJsonc(before, patch)
-        next = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(updated, file), file)
-        changed = updated !== before
-        if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
-      }
+            if (!file.endsWith(".jsonc")) {
+              const existing = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(before, file), file)
+              const next = KilocodeConfig.mergeConfig(writable(existing), patch)
+              const serialized = JSON.stringify(next, null, 2)
+              const changed = serialized !== before
+              if (changed) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
+              return { next, changed }
+            }
+
+            const updated = patchJsonc(before, patch)
+            const next = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(updated, file), file)
+            const changed = updated !== before
+            if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
+            return { next, changed }
+          }),
+          `config:global:${path.resolve(Global.Path.config)}`,
+        )
+        .pipe(Effect.orDie)
+      const next = result.next
+      const changed = result.changed
+      // kilocode_change end
 
       // kilocode_change start - skip dispose when caller opts out
       if (!dispose) {
@@ -1037,11 +1056,10 @@ export const layer = Layer.effect(
       warnings, // kilocode_change
     })
   }),
-)
+).pipe(Layer.provide(EffectFlock.defaultLayer)) // kilocode_change - serialize global config updates in every layer
 
 export const defaultLayer = layer.pipe(
   Layer.provide(Git.defaultLayer), // kilocode_change
-  Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Env.defaultLayer),
   Layer.provide(Auth.defaultLayer),

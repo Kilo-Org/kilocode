@@ -193,16 +193,18 @@ export const layer = Layer.effect(
       const isProtected = ConfigProtection.isRequest(request)
       const skill = ConfigProtection.globalSkillPattern(request)
       const trusted = skill
-        ? yield* config.getGlobal().pipe(
+        ? (() => {
+            const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, approved)
+            return rule.action === "allow" && rule.pattern === skill
+          })() ||
+          (yield* config.getGlobal().pipe(
             Effect.map((global) => fromConfig(global.permission ?? {})),
-            Effect.map((rules) =>
-              request.patterns.every((pattern) => {
-                const rule = ExternalDirectoryPermission.evaluate(request.permission, pattern, rules)
-                return rule.action === "allow" && rule.pattern === skill
-              }),
-            ),
+            Effect.map((rules) => {
+              const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, rules)
+              return rule.action === "allow" && rule.pattern === skill
+            }),
             Effect.catch(() => Effect.succeed(false)),
-          )
+          ))
         : false
       // kilocode_change end
 

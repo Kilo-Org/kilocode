@@ -31,15 +31,19 @@ export function drainCovered(
     for (const [id, entry] of pending) {
       if (id === exclude) continue
       // Never auto-resolve config file edit permissions
-      if (ConfigProtection.isRequest(entry.info)) continue
+      const skill = ConfigProtection.globalSkillPattern(entry.info)
+      if (ConfigProtection.isRequest(entry.info) && !skill) continue
       const actions = entry.info.patterns.map((pattern: string) => {
-        const rule = Permission.resolve(entry.info.permission, pattern, entry.ruleset, approved)
+        const rule = skill
+          ? Permission.evaluate(entry.info.permission, skill, approved)
+          : Permission.resolve(entry.info.permission, pattern, entry.ruleset, approved)
         const hard = entry.hardRuleset
           ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset)
           : undefined
         if (hard?.action === "deny") return hard
         return rule
       })
+      if (skill && actions.some((rule) => rule.pattern !== skill)) continue
       const denied = actions.some((r: Permission.Rule) => r.action === "deny")
       const allowed = !denied && actions.every((r: Permission.Rule) => r.action === "allow")
       if (!denied && !allowed) continue
