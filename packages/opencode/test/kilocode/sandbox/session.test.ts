@@ -1,29 +1,31 @@
 import fs from "node:fs/promises"
 import path from "node:path"
 import { $ } from "bun"
-import { describe, expect } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { Deferred, Effect, Exit, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
+import { SessionV2 } from "@opencode-ai/core/session"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { BackgroundProcess } from "@/kilocode/background-process"
 import { Notebook } from "@/kilocode/notebook/service"
 import * as SandboxActivation from "@/kilocode/sandbox/activation"
+import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy"
 import { SandboxStore } from "@/kilocode/sandbox/store"
-import { InstanceBootstrap } from "@/project/bootstrap-service"
-import { InstanceStore } from "@/project/instance-store"
+import type { SessionID } from "@/session/schema"
 import { Session } from "@/session/session"
 import { SessionStatus } from "@/session/status"
 import { Shell } from "@/shell/shell"
 import { Storage } from "@/storage/storage"
 import { SyncEvent } from "@/sync"
-import { provideInstance, tmpdirScoped } from "../../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const bootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const it = testEffect(
   Layer.mergeAll(
     Session.layer.pipe(
@@ -32,12 +34,16 @@ const it = testEffect(
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(RuntimeFlags.layer({ experimentalWorkspaces: false })),
       Layer.provide(BackgroundJob.defaultLayer),
+      Layer.provide(Database.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(SessionV2.defaultLayer),
     ),
     BackgroundJob.defaultLayer,
     Bus.layer,
     Config.defaultLayer,
+    Database.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
-    InstanceStore.defaultLayer.pipe(Layer.provide(bootstrap)),
+    testInstanceStoreLayer,
     Notebook.defaultLayer,
     SessionStatus.defaultLayer,
   ),
@@ -91,6 +97,19 @@ function activate(sessionID: Session.Info["id"]) {
 }
 
 describe("sandbox session cleanup", () => {
+  test("keeps inheritance grants valid across slow worktree setup", () => {
+    const now = Date.now
+    try {
+      Date.now = () => 1_700_000_000_000
+      const sid = "session" as SessionID
+      const token = SandboxInheritance.issue({ sessionID: sid, directory: "/repo", count: 1 })
+      Date.now = () => 1_700_000_000_000 + 6 * 60 * 1000
+      expect(SandboxInheritance.consume(token)).toEqual({ sessionID: sid, directory: "/repo" })
+    } finally {
+      Date.now = now
+    }
+  })
+
   it.live("forks inherit the source session snapshot", () =>
     Effect.gen(function* () {
       const sessions = yield* Session.Service
@@ -105,6 +124,25 @@ describe("sandbox session cleanup", () => {
       yield* provideInstance(dir)(SandboxPolicy.toggle(source.id))
       expect((yield* provideInstance(dir)(SandboxPolicy.status(source.id))).enabled).toBe(false)
       expect((yield* provideInstance(dir)(SandboxPolicy.status(fork.id))).enabled).toBe(true)
+    }),
+  )
+
+  it.live("created sessions inherit the source snapshot across directories", () =>
+    Effect.gen(function* () {
+      const sessions = yield* Session.Service
+      const dir = yield* tmpdirScoped({ git: true, config: { sandbox: { enabled: true } } })
+      const worktree = yield* tmpdirScoped({ git: true })
+      const source = yield* provideInstance(dir)(sessions.create({ title: "sandbox-source" }))
+      const status = yield* provideInstance(dir)(SandboxPolicy.status(source.id))
+      if (!status.available) return
+      const token = SandboxInheritance.issue({ sessionID: source.id, directory: dir, count: 1 })
+
+      const child = yield* provideInstance(worktree)(sessions.create({ title: "sandbox-child", sandboxInheritanceToken: token }))
+      expect((yield* provideInstance(worktree)(SandboxPolicy.status(child.id))).enabled).toBe(true)
+
+      yield* provideInstance(dir)(SandboxPolicy.toggle(source.id))
+      expect((yield* provideInstance(dir)(SandboxPolicy.status(source.id))).enabled).toBe(false)
+      expect((yield* provideInstance(worktree)(SandboxPolicy.status(child.id))).enabled).toBe(true)
     }),
   )
 

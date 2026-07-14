@@ -13,6 +13,9 @@
       "packages/opencode/migration/*": "deny",
     },
   },
+  "reference": {
+    "effect": "github.com/Effect-TS/effect-smol",
+  },
   "mcp": {},
   "tools": {
     "github-triage": false,

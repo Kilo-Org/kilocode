@@ -66,6 +66,7 @@ export async function mount(override?: FetchHandler) {
   ))
 
   await ready
+  await project.sync() // kilocode_change - event routing requires the resolved project
   await wait(() => sync.status === "complete")
   return { app, emit: events.emit, kv, project, sync, session: calls.session }
 }

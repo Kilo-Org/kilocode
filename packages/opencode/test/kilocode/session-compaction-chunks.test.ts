@@ -1,7 +1,11 @@
-import { afterEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
+import fs from "fs/promises"
+import os from "os"
+import path from "path"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
+import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Config } from "../../src/config/config"
@@ -10,8 +14,9 @@ import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { provideTestInstance } from "../fixture/fixture"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { disposeTestRuntime, provideTestInstance } from "../fixture/fixture"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Snapshot } from "../../src/snapshot"
 import { KiloCompactionChunks } from "../../src/kilocode/session/compaction-chunks"
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
@@ -28,10 +33,27 @@ import { SessionSummary } from "../../src/session/summary"
 import { SyncEvent } from "../../src/sync"
 import { ProviderTest } from "../fake/provider"
 import { tmpdir } from "../fixture/fixture"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { AppRuntime } from "../../src/effect/app-runtime"
+import { remove as cleanup } from "./cleanup"
 
-const providerID = ProviderID.make("test")
-const modelID = ModelID.make("test-model")
+const providerID = ProviderV2.ID.make("test")
+const modelID = ModelV2.ID.make("test-model")
 const ref = { providerID, modelID }
+const previous = Flag.KILO_DB
+const dbfile = path.join(os.tmpdir(), `kilo-compaction-chunks-${process.pid}-${crypto.randomUUID()}.db`)
+
+beforeAll(async () => {
+  await fs.rm(dbfile, { force: true })
+  Flag.KILO_DB = dbfile
+})
+
+afterAll(async () => {
+  await AppRuntime.dispose()
+  await disposeTestRuntime()
+  Flag.KILO_DB = previous
+  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
+})
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {
   return Effect.runPromise(fx.pipe(Effect.provide(SessionNs.defaultLayer)))
@@ -146,7 +168,7 @@ function reply(text: string, capture?: (input: LLM.StreamInput) => void) {
   }
 }
 
-function fakeRuntime(outputTokenMax?: number) {
+function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error"], empty = false) {
   const calls: string[] = []
   const outputs: number[] = []
   const bus = Bus.layer
@@ -167,6 +189,12 @@ function fakeRuntime(outputTokenMax?: number) {
               Effect.gen(function* () {
                 outputs.push(input.model.limit.output)
                 calls.push(JSON.stringify(stream.messages))
+                if (error) {
+                  input.assistantMessage.error = error
+                  input.assistantMessage.finish = "error"
+                  yield* sessions.updateMessage(input.assistantMessage)
+                  return "stop" as const
+                }
                 const text = stream.messages.some((msg) =>
                   JSON.stringify(msg).includes("Create a new anchored summary"),
                 )
@@ -174,13 +202,14 @@ function fakeRuntime(outputTokenMax?: number) {
                   : calls.length === 1
                     ? "chunk one"
                     : "chunk two"
-                yield* sessions.updatePart({
-                  id: PartID.ascending(),
-                  messageID: input.assistantMessage.id,
-                  sessionID: input.sessionID,
-                  type: "text",
-                  text,
-                })
+                if (!empty)
+                  yield* sessions.updatePart({
+                    id: PartID.ascending(),
+                    messageID: input.assistantMessage.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    text,
+                  })
                 input.assistantMessage.finish = "stop"
                 return "continue" as const
               }),
@@ -202,6 +231,7 @@ function fakeRuntime(outputTokenMax?: number) {
         Layer.provide(Plugin.defaultLayer),
         Layer.provide(SyncEvent.defaultLayer),
         Layer.provide(EventV2Bridge.defaultLayer),
+        Layer.provide(Database.defaultLayer),
         Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
         Layer.provide(Reference.defaultLayer),
         Layer.provide(bus),
@@ -215,9 +245,51 @@ function fakeRuntime(outputTokenMax?: number) {
   }
 }
 
+async function failure(error?: MessageV2.Assistant["error"], empty = false) {
+  await using tmp = await tmpdir()
+  return provideTestInstance({
+    directory: tmp.path,
+    fn: async () => {
+      const session = await svc.create({})
+      await user(session.id, "oversized " + "x".repeat(80_000))
+      await Effect.runPromise(
+        KiloSessionCompaction.create({
+          session: store,
+          sessionID: session.id,
+          agent: "build",
+          model: ref,
+          auto: false,
+        }),
+      )
+
+      const { rt } = fakeRuntime(undefined, error, empty)
+      try {
+        const msgs = await svc.messages({ sessionID: session.id })
+        const parent = msgs.at(-1)?.info.id
+        expect(parent).toBeTruthy()
+        const result = await rt.runPromise(
+          SessionCompaction.Service.use((svc) =>
+            svc.process({
+              parentID: parent!,
+              messages: msgs,
+              sessionID: session.id,
+              auto: false,
+            }),
+          ),
+        )
+        const all = await svc.messages({ sessionID: session.id })
+        const summary = all.find((msg) => msg.info.role === "assistant" && msg.info.summary)
+        return { result, summary }
+      } finally {
+        await rt.dispose()
+      }
+    },
+  })
+}
+
 function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
   const bus = Bus.layer
-  const status = SessionStatus.layer.pipe(Layer.provide(bus))
+  const status = SessionStatus.layer.pipe(Layer.provide(bus), Layer.provide(EventV2Bridge.defaultLayer))
   const processor = SessionProcessorModule.SessionProcessor.layer.pipe(
     Layer.provide(summary),
     Layer.provide(Image.defaultLayer),
@@ -235,6 +307,7 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(Database.defaultLayer),
       Layer.provide(RuntimeFlags.layer()),
       Layer.provide(Reference.defaultLayer),
       Layer.provide(status),
@@ -291,6 +364,53 @@ describe("KiloCompactionChunks", () => {
 
     expect(KiloCompactionChunks.needed({ cfg, model, tokens: 5_000, outputTokenMax })).toBe(false)
     expect(KiloCompactionChunks.budget({ cfg, model, outputTokenMax })).toBe(5_692)
+  })
+
+  test("preserves gateway errors from chunk workers", async () => {
+    const error = new MessageV2.APIError({
+      message: "The operation was aborted",
+      statusCode: 504,
+      isRetryable: true,
+      responseBody: '{"error_type":"timeout"}',
+    }).toObject()
+
+    const result = await failure(error)
+
+    expect(result.result).toBe("stop")
+    expect(result.summary?.info.role).toBe("assistant")
+    if (result.summary?.info.role !== "assistant") return
+    expect(result.summary.info.finish).toBe("error")
+    expect(result.summary.info.error).toEqual(error)
+  })
+
+  test("keeps context overflow on the terminal compaction path", async () => {
+    const result = await failure(
+      new MessageV2.ContextOverflowError({
+        message: "worker context overflow",
+      }).toObject(),
+    )
+
+    expect(result.result).toBe("stop")
+    expect(result.summary?.info.role).toBe("assistant")
+    if (result.summary?.info.role !== "assistant") return
+    expect(result.summary.info.error?.name).toBe("ContextOverflowError")
+    if (result.summary.info.error?.name !== "ContextOverflowError") return
+    expect(result.summary.info.error.data.message).toBe(
+      "Session too large to compact - context exceeds model limit even after stripping media",
+    )
+  })
+
+  test("reports empty chunk worker responses as API errors", async () => {
+    const result = await failure(undefined, true)
+
+    expect(result.result).toBe("stop")
+    expect(result.summary?.info.role).toBe("assistant")
+    if (result.summary?.info.role !== "assistant") return
+    expect(result.summary.info.finish).toBe("error")
+    expect(result.summary.info.error?.name).toBe("APIError")
+    if (result.summary.info.error?.name !== "APIError") return
+    expect(result.summary.info.error.data.message).toBe("Compaction worker returned an empty response")
+    expect(result.summary.info.error.data.isRetryable).toBe(true)
   })
 
   test("falls back to chunk workers after the first compaction overflows", async () => {

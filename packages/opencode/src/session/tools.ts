@@ -1,6 +1,7 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { MCP } from "@/mcp"
@@ -9,18 +10,20 @@ import { Tool } from "@/tool/tool"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
-import { ModelID } from "@/provider/schema"
+
 import { Plugin } from "@/plugin"
 import type { TaskPromptOps } from "@/tool/task"
 import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import { Effect } from "effect"
 import { MessageV2 } from "./message-v2"
-import * as Session from "./session"
+import { Session } from "./session"
 import { SessionProcessor } from "./processor"
 import { PartID } from "./schema"
-import * as Log from "@opencode-ai/core/util/log"
+import { Log } from "@opencode-ai/core/util/log"
 import { EffectBridge } from "@/effect/bridge"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 // kilocode_change start
 import { SwePruner } from "@/kilocode/swe-pruner"
 import { Config } from "@/config/config"
@@ -34,7 +37,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   session: Session.Info
   processor: Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall"> // kilocode_change
   bypassAgentCheck: boolean
-  messages: MessageV2.WithParts[]
+  messages: SessionV1.WithParts[]
   promptOps: TaskPromptOps
   memoryCache: MemoryMarker.Cache // kilocode_change
 }) {
@@ -82,7 +85,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   // kilocode_change end
 
   for (const item of yield* registry.tools({
-    modelID: ModelID.make(input.model.api.id),
+    modelID: ModelV2.ID.make(input.model.api.id),
     providerID: input.model.providerID,
     family: input.model.family, // kilocode_change
     agent: input.agent,
@@ -180,7 +183,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           )
 
           const textParts: string[] = []
-          const attachments: Omit<MessageV2.FilePart, "id" | "sessionID" | "messageID">[] = []
+          const attachments: Omit<SessionV1.FilePart, "id" | "sessionID" | "messageID">[] = []
           for (const contentItem of result.content) {
             if (contentItem.type === "text") textParts.push(contentItem.text)
             else if (contentItem.type === "image") {

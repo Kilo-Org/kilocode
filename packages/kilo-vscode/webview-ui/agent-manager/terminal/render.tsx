@@ -23,6 +23,10 @@ export interface TerminalTabRenderDeps {
   onMiddleClick: (id: string, e: MouseEvent) => void
   onClose: (id: string) => void
   onCloseOthers: (id: string) => void
+  role?: "tab"
+  selected?: boolean
+  tabIndex?: number
+  onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>
 }
 
 /** Render the terminal entry inside the agent-manager tab bar `<For>`. */
@@ -38,6 +42,10 @@ export function renderTerminalTab(deps: TerminalTabRenderDeps): JSX.Element {
       keybind={isActive() ? "" : deps.keybind()}
       closeKeybind={deps.closeKeybind()}
       active={isActive()}
+      role={deps.role}
+      selected={deps.selected}
+      tabIndex={deps.tabIndex}
+      onKeyDown={deps.onKeyDown}
       onSelect={() => deps.onSelect(deps.id)}
       onMiddleClick={(e: MouseEvent) => deps.onMiddleClick(deps.id, e)}
       onClose={(e: MouseEvent) => {

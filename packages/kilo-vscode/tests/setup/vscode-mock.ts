@@ -80,6 +80,8 @@ const mockVscode = {
   },
   window: {
     activeTextEditor: undefined,
+    state: { focused: true },
+    onDidChangeWindowState: () => ({ dispose: noop }),
     activeNotebookEditor: undefined,
     visibleTextEditors: [],
     visibleNotebookEditors: [],

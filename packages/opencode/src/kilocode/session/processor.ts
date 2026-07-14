@@ -4,7 +4,7 @@ import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { MessageV2 } from "@/session/message-v2"
-import type { ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { isRecord } from "@/util/record"
 import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
@@ -200,17 +200,17 @@ export namespace KiloSessionProcessor {
     }
   }
 
-  export function ensureFinish(msg: MessageV2.Assistant) {
+  export function ensureFinish(
+    msg: MessageV2.Assistant,
+    step: { reasoning: boolean; text: boolean; tool: boolean },
+  ) {
     if (msg.finish) return Effect.void
     msg.finish = "unknown"
-    const visible = MessageV2.parts(msg.id).some(
-      (part) => part.type === "text" || part.type === "reasoning" || part.type === "tool",
-    )
-    if (visible) return Effect.void
+    if (step.reasoning || step.text || step.tool) return Effect.void
     return Effect.fail(new MissingFinishError())
   }
 
-  export function parseError(error: unknown, input: { providerID: ProviderID; aborted: boolean }) {
+  export function parseError(error: unknown, input: { providerID: ProviderV2.ID; aborted: boolean }) {
     if (!(error instanceof MissingFinishError)) return MessageV2.fromError(error, input)
     return new MessageV2.APIError({
       message: error.message,

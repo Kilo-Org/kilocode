@@ -8,7 +8,8 @@
 
 import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
-import { ProviderID, ModelID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"

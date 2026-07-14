@@ -1,4 +1,4 @@
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Context, Duration, Effect, Layer, Option, Redacted, Result, Schema } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import * as DesktopPlatform from "./platform"
@@ -259,7 +259,7 @@ export function makeLayer(options: Options = {}) {
   return Layer.effect(
     Service,
     Effect.gen(function* () {
-      const fs = yield* AppFileSystem.Service
+      const fs = yield* FSUtil.Service
       const http = yield* HttpClient.HttpClient
       const platform = yield* DesktopPlatform.Service
       const timeout = options.timeout ?? REQUEST_TIMEOUT
@@ -283,7 +283,7 @@ export function makeLayer(options: Options = {}) {
           } satisfies DiscoveryResult
         }
 
-        const cfg = yield* readConfig(dir).pipe(Effect.provideService(AppFileSystem.Service, fs), Effect.result)
+        const cfg = yield* readConfig(dir).pipe(Effect.provideService(FSUtil.Service, fs), Effect.result)
         if (Result.isFailure(cfg)) {
           return {
             status: { type: "invalid-config", reason: cfg.failure.reason },
@@ -299,7 +299,7 @@ export function makeLayer(options: Options = {}) {
           return management(new RequestError({ target: "management", reason: "malformed" }))
         }
 
-        const signed = yield* readStore(dir).pipe(Effect.provideService(AppFileSystem.Service, fs), Effect.result)
+        const signed = yield* readStore(dir).pipe(Effect.provideService(FSUtil.Service, fs), Effect.result)
         if (Result.isFailure(signed) || !signed.success) {
           return { status: { type: "signed-out" } } satisfies DiscoveryResult
         }
@@ -408,6 +408,6 @@ export function makeLayer(options: Options = {}) {
 export const layer = makeLayer()
 export const defaultLayer = layer.pipe(
   Layer.provide(DesktopPlatform.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(FetchHttpClient.layer),
 )

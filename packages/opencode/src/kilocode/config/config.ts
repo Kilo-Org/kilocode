@@ -7,12 +7,12 @@ import { mergeDeep } from "remeda"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { NamedError } from "@opencode-ai/core/util/error"
-import type { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { Bus } from "@/bus"
+import type { FSUtil } from "@opencode-ai/core/fs-util"
+import { InstanceRef } from "@/effect/instance-ref"
 import { isRecord } from "@/util/record"
-import { ConfigError } from "../../config/error"
+import { ConfigErrorV1 as ConfigError } from "@opencode-ai/core/v1/config/error"
 import type { Config } from "../../config/config"
-import type { ConfigAgent } from "../../config/agent"
+import type { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ModesMigrator } from "../modes-migrator"
 import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
 import { RulesMigrator } from "../rules-migrator"
@@ -65,7 +65,7 @@ export namespace KilocodeConfig {
    * `.kilo/kilo.jsonc` when no project config exists yet.
    */
   export const projectConfigUpdateTarget = Effect.fn("KilocodeConfig.projectConfigUpdateTarget")(function* (input: {
-    fs: AppFileSystem.Interface
+    fs: FSUtil.Interface
     directory: string
     worktree?: string
   }) {
@@ -80,7 +80,7 @@ export namespace KilocodeConfig {
   })
 
   export const updateProjectConfig = Effect.fn("KilocodeConfig.updateProjectConfig")(function* (input: {
-    fs: AppFileSystem.Interface
+    fs: FSUtil.Interface
     directory: string
     worktree?: string
     config: Config.Info
@@ -178,9 +178,19 @@ export namespace KilocodeConfig {
     const err = new ConfigError.InvalidError({ path: item, issues }, { cause })
     if (warnings) warnings.push({ path: item, message, detail: text || undefined })
     try {
-      const [{ Session }, { capture }] = await Promise.all([import("@/session/session"), import("@/kilocode/instance")])
+      const [{ Session }, { capture }, { AppRuntime }, { EventV2Bridge }] = await Promise.all([
+        import("@/session/session"),
+        import("@/kilocode/instance"),
+        import("@/effect/app-runtime"),
+        import("@/event-v2-bridge"),
+      ])
       const ctx = capture()
-      if (ctx) Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+      if (ctx)
+        await AppRuntime.runPromise(
+          EventV2Bridge.Service.use((events) =>
+            events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() }),
+          ).pipe(Effect.provideService(InstanceRef, ctx)),
+        )
     } catch (e) {
       log.warn("could not publish session error", { message, err: e })
     }
@@ -300,7 +310,7 @@ export namespace KilocodeConfig {
    */
   export async function loadOrganizationModes(
     auth: Record<string, any>,
-  ): Promise<{ agents: Record<string, ConfigAgent.Info>; warnings: Config.Warning[] }> {
+  ): Promise<{ agents: Record<string, ConfigAgentV1.Info>; warnings: Config.Warning[] }> {
     const warnings: Config.Warning[] = []
     try {
       const kilo = auth["kilo"]
